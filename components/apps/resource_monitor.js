@@ -1,153 +1,128 @@
-import React, { useEffect, useRef } from 'react';
-import usePersistentState from '../../hooks/usePersistentState';
-import { subscribe } from '../../utils/pubsub';
+import React, { useEffect, useRef, useState } from 'react';
 
-const MAX_POINTS = 50;
-
+// Number of samples to keep in the timeline
+const MAX_POINTS = 60;
 
 const ResourceMonitor = () => {
-  const cpuRef = useRef(null);
-  const memoryRef = useRef(null);
-  const gpuRef = useRef(null);
-  const dataRef = useRef({ cpu: [], memory: [], gpu: [] });
-  const fpsRef = useRef(0);
+  const cpuCanvas = useRef(null);
+  const memCanvas = useRef(null);
+  const fpsCanvas = useRef(null);
 
-  const [paused, setPaused] = usePersistentState('rm_paused', false);
-  const [speed, setSpeed] = usePersistentState('rm_speed', 1);
-  const [layout, setLayout] = usePersistentState('rm_layout', 'row');
+  const dataRef = useRef({ cpu: [], mem: [], fps: [] });
 
+  const [paused, setPaused] = useState(false);
+  const [stress, setStress] = useState(false);
+  const [fps, setFps] = useState(0);
+
+  const stressWindows = useRef([]);
+  const stressEls = useRef([]);
+  const containerRef = useRef(null);
+
+  // Sampling loop using requestAnimationFrame
   useEffect(() => {
-    return subscribe('fps', (fps) => {
-      fpsRef.current = fps;
-    });
-  }, []);
-
-
-  useEffect(() => {
-    if (paused) return undefined;
-    let last = performance.now();
-    const interval = setInterval(() => {
-      const now = performance.now();
-      const expected = 1000 / speed;
-      const delay = now - last - expected;
-      last = now;
-
-      const cpu = Math.min(100, Math.max(0, (delay / expected) * 100));
-      let memory = 0;
-      if (performance && performance.memory) {
-        const { usedJSHeapSize, totalJSHeapSize } = performance.memory;
-        memory = (usedJSHeapSize / totalJSHeapSize) * 100;
-      }
-      const gpu = fpsRef.current;
-
-      const data = dataRef.current;
-      data.cpu.push(cpu);
-      data.memory.push(memory);
-      data.gpu.push(gpu);
-      Object.keys(data).forEach((k) => {
-        if (data[k].length > MAX_POINTS) data[k].shift();
-      });
-    }, 1000 / speed);
-    return () => clearInterval(interval);
-  }, [paused, speed]);
-
-  useEffect(() => {
-    const cpuCtx = cpuRef.current?.getContext('2d');
-    const memCtx = memoryRef.current?.getContext('2d');
-    const gpuCtx = gpuRef.current?.getContext('2d');
     let raf;
-    const draw = () => {
-      if (!paused) {
-        drawChart(cpuCtx, dataRef.current.cpu, '#00ff00', 'CPU %', 100);
-        drawChart(memCtx, dataRef.current.memory, '#ffd700', 'Memory %', 100);
-        drawChart(gpuCtx, dataRef.current.gpu, '#00ffff', 'FPS', 120);
+    let lastFrame = performance.now();
+    let lastSample = performance.now();
+
+    const sample = (now) => {
+      const dt = now - lastFrame;
+      lastFrame = now;
+      const currentFps = 1000 / dt;
+      if (!paused) setFps(currentFps);
+
+      if (!paused && now - lastSample >= 1000) {
+        const target = 1000 / 60; // 60 FPS ideal frame time
+        const cpu = Math.min(100, Math.max(0, ((dt - target) / target) * 100));
+        let mem = 0;
+        if (performance && performance.memory) {
+          const { usedJSHeapSize, totalJSHeapSize } = performance.memory;
+          mem = (usedJSHeapSize / totalJSHeapSize) * 100;
+        }
+        pushSample('cpu', cpu);
+        pushSample('mem', mem);
+        pushSample('fps', currentFps);
+        drawCharts();
+        lastSample = now;
       }
-      raf = requestAnimationFrame(draw);
+      raf = requestAnimationFrame(sample);
     };
-    raf = requestAnimationFrame(draw);
+    raf = requestAnimationFrame(sample);
     return () => cancelAnimationFrame(raf);
   }, [paused]);
 
-  const changeSpeed = (e) => setSpeed(parseFloat(e.target.value));
-  const toggleLayout = () => setLayout((l) => (l === 'row' ? 'col' : 'row'));
+  // Stress test animation – many moving windows
+  useEffect(() => {
+    let raf;
+    const animate = () => {
+      if (stress && !paused) {
+        const rect = containerRef.current?.getBoundingClientRect();
+        stressWindows.current.forEach((w, i) => {
+          w.x += w.vx;
+          w.y += w.vy;
+          if (rect) {
+            if (w.x < 0 || w.x > rect.width - 20) w.vx *= -1;
+            if (w.y < 0 || w.y > rect.height - 20) w.vy *= -1;
+          }
+          const el = stressEls.current[i];
+          if (el) el.style.transform = `translate(${w.x}px, ${w.y}px)`;
+        });
+      }
+      raf = requestAnimationFrame(animate);
+    };
+    raf = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(raf);
+  }, [stress, paused]);
 
-  const togglePause = () => {
-    const next = !paused;
-    setPaused(next);
-    if (workerRef.current) workerRef.current.postMessage({ type: 'pause', value: next });
+  // Create or clear stress windows when toggled
+  useEffect(() => {
+    if (stress) {
+      const rect = containerRef.current?.getBoundingClientRect();
+      const width = rect?.width || 300;
+      const height = rect?.height || 200;
+      stressWindows.current = Array.from({ length: 40 }, () => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 4,
+        vy: (Math.random() - 0.5) * 4,
+      }));
+    } else {
+      stressWindows.current = [];
+      stressEls.current = [];
+    }
+  }, [stress]);
+
+  const pushSample = (key, value) => {
+    const arr = dataRef.current[key];
+    arr.push(value);
+    if (arr.length > MAX_POINTS) arr.shift();
   };
 
-  const updateLayout = useCallback(
-    (key, updates) => {
-      setLayout((l) => ({ ...l, [key]: { ...l[key], ...updates } }));
-    },
-    [setLayout]
-  );
+  const drawCharts = () => {
+    drawChart(cpuCanvas.current, dataRef.current.cpu, '#00ff00', 'CPU %', 100);
+    drawChart(memCanvas.current, dataRef.current.mem, '#ffd700', 'Memory %', 100);
+    drawChart(fpsCanvas.current, dataRef.current.fps, '#00ffff', 'FPS', 120);
+  };
 
-  useEffect(() => {
-    const pairs = [
-      ['cpu', cpuBoxRef],
-      ['memory', memBoxRef],
-      ['network', netBoxRef],
-    ];
-    const observers = pairs.map(([key, ref]) => {
-      if (!ref.current) return null;
-      const obs = new ResizeObserver((entries) => {
-        const rect = entries[0].contentRect;
-        const size = { w: Math.round(rect.width), h: Math.round(rect.height) };
-        updateLayout(key, size);
-        if (workerRef.current) {
-          workerRef.current.postMessage({ type: 'resize', sizes: { [key]: size } });
-        }
-      });
-      obs.observe(ref.current);
-      return obs;
-    });
-    return () => observers.forEach((o) => o && o.disconnect());
-  }, [updateLayout]);
+  const togglePause = () => setPaused((p) => !p);
+  const toggleStress = () => setStress((s) => !s);
 
   return (
-    <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white font-ubuntu">
+    <div
+      ref={containerRef}
+      className="relative h-full w-full flex flex-col bg-ub-cool-grey text-white font-ubuntu overflow-hidden"
+    >
       <div className="p-2 flex gap-2 items-center">
-
-        <button
-          onClick={togglePause}
-          className="px-2 py-1 bg-ub-dark-grey rounded"
-        >
+        <button onClick={togglePause} className="px-2 py-1 bg-ub-dark-grey rounded">
           {paused ? 'Resume' : 'Pause'}
         </button>
-        <label className="flex items-center gap-1">
-          Speed
-          <select
-            value={speed}
-            onChange={changeSpeed}
-            className="bg-ub-dark-grey rounded px-1 py-0.5"
-          >
-            <option value={0.5}>0.5x</option>
-            <option value={1}>1x</option>
-            <option value={2}>2x</option>
-            <option value={4}>4x</option>
-          </select>
-        </label>
-        <button
-          onClick={toggleLayout}
-          className="px-2 py-1 bg-ub-dark-grey rounded"
-        >
-          Layout
+        <button onClick={toggleStress} className="px-2 py-1 bg-ub-dark-grey rounded">
+          {stress ? 'Stop Stress' : 'Stress Test'}
         </button>
-        <button
-          onClick={togglePause}
-          aria-pressed={paused}
-          className="px-2 py-1 bg-ub-dark-grey rounded"
-        >
-          {paused ? 'Resume' : 'Pause'}
-        </button>
+        <span className="ml-auto text-sm">FPS: {fps.toFixed(1)}</span>
       </div>
-      <div
-        className={`flex flex-${layout} flex-1 items-center justify-evenly gap-4 p-4`}
-      >
+      <div className="flex flex-1 items-center justify-evenly gap-4 p-4">
         <canvas
-          ref={cpuRef}
+          ref={cpuCanvas}
           width={300}
           height={100}
           role="img"
@@ -155,7 +130,7 @@ const ResourceMonitor = () => {
           className="bg-ub-dark-grey"
         />
         <canvas
-          ref={memoryRef}
+          ref={memCanvas}
           width={300}
           height={100}
           role="img"
@@ -163,23 +138,34 @@ const ResourceMonitor = () => {
           className="bg-ub-dark-grey"
         />
         <canvas
-          ref={gpuRef}
+          ref={fpsCanvas}
           width={300}
           height={100}
           role="img"
-          aria-label="GPU usage chart"
+          aria-label="FPS chart"
           className="bg-ub-dark-grey"
         />
-
       </div>
+      {stressWindows.current.map((_, i) => (
+        <div
+          // eslint-disable-next-line react/no-array-index-key
+          key={i}
+          ref={(el) => {
+            stressEls.current[i] = el;
+          }}
+          className="absolute w-8 h-6 bg-white bg-opacity-20 border border-gray-500 pointer-events-none"
+        />
+      ))}
     </div>
   );
 };
 
-function drawChart(ctx, values, color, label, maxVal) {
+function drawChart(canvas, values, color, label, maxVal) {
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
   if (!ctx) return;
-  const w = ctx.canvas.width;
-  const h = ctx.canvas.height;
+  const w = canvas.width;
+  const h = canvas.height;
   ctx.clearRect(0, 0, w, h);
   ctx.strokeStyle = color;
   ctx.lineWidth = 2;
@@ -199,7 +185,6 @@ function drawChart(ctx, values, color, label, maxVal) {
 
 export default ResourceMonitor;
 
-export const displayResourceMonitor = (addFolder, openApp) => {
-  return <ResourceMonitor addFolder={addFolder} openApp={openApp} />;
-};
-
+export const displayResourceMonitor = (addFolder, openApp) => (
+  <ResourceMonitor addFolder={addFolder} openApp={openApp} />
+);
