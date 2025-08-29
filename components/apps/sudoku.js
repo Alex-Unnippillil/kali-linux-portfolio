@@ -5,6 +5,7 @@ import {
   getCandidates,
   isValidPlacement,
 } from '../../apps/games/sudoku';
+import useOPFS from '../../hooks/useOPFS.js';
 
 // Interactive Sudoku game with puzzle generation and solving utilities.
 const SIZE = 9;
@@ -46,6 +47,19 @@ const Sudoku = () => {
   const inputRefs = useRef(
     Array.from({ length: SIZE }, () => Array(SIZE).fill(null))
   );
+  const [savedProgress, setSavedProgress, progressReady] = useOPFS(
+    'sudoku-progress.json',
+    null,
+  );
+  const [bestTimes, setBestTimes, bestReady] = useOPFS(
+    'sudoku-best.json',
+    {},
+  );
+
+  useEffect(() => {
+    if (!bestReady) return;
+    setBestTime(bestTimes[difficulty] ?? null);
+  }, [bestReady, bestTimes, difficulty]);
 
   const startGame = (seed) => {
     const { puzzle, solution } = generateSudoku(difficulty, seed);
@@ -74,14 +88,7 @@ const Sudoku = () => {
     }, {});
     setHintStats(stats);
     setTime(0);
-    setBestTime(() => {
-      if (typeof window === 'undefined') return null;
-      const stored = localStorage.getItem(`sudoku-best-${difficulty}`);
-      return stored ? parseInt(stored, 10) : null;
-    });
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('sudoku-progress');
-    }
+    setBestTime(bestTimes[difficulty] ?? null);
     if (autoNotes) {
       const fresh = puzzle.map((r) => r.slice());
       applyAutoNotes(fresh, emptyManual, emptyNotes);
@@ -89,45 +96,39 @@ const Sudoku = () => {
   };
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('sudoku-progress');
-      if (saved) {
-        try {
-          const data = JSON.parse(saved);
-          setDifficulty(data.difficulty || 'easy');
-          setUseDaily(data.useDaily ?? true);
-          setPuzzle(data.puzzle);
-          setBoard(data.board);
-          setNotes(data.notes);
-          setManualNotes(
-            data.manualNotes ||
-              Array(SIZE)
-                .fill(0)
-                .map(() => Array(SIZE).fill(false)),
-          );
-          setCompleted(data.completed);
-          setTime(data.time || 0);
-          if (data.solution) setSolution(data.solution);
-          else
-            try {
-              const { solution } = solve(data.puzzle);
-              setSolution(solution);
-            } catch (e) {
-              setSolution([]);
-            }
-          const stored = localStorage.getItem(
-            `sudoku-best-${data.difficulty || 'easy'}`,
-          );
-          setBestTime(stored ? parseInt(stored, 10) : null);
-          return;
-        } catch (e) {
-          // ignore malformed storage
-        }
+    if (!progressReady) return;
+    if (savedProgress) {
+      try {
+        const data = savedProgress;
+        setDifficulty(data.difficulty || 'easy');
+        setUseDaily(data.useDaily ?? true);
+        setPuzzle(data.puzzle);
+        setBoard(data.board);
+        setNotes(data.notes);
+        setManualNotes(
+          data.manualNotes ||
+            Array(SIZE)
+              .fill(0)
+              .map(() => Array(SIZE).fill(false)),
+        );
+        setCompleted(data.completed);
+        setTime(data.time || 0);
+        if (data.solution) setSolution(data.solution);
+        else
+          try {
+            const { solution } = solve(data.puzzle);
+            setSolution(solution);
+          } catch (e) {
+            setSolution([]);
+          }
+        return;
+      } catch (e) {
+        // ignore malformed storage
       }
     }
     startGame(useDaily ? dailySeed() : Date.now());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [progressReady]);
 
   useEffect(() => {
     if (completed) {
@@ -140,7 +141,7 @@ const Sudoku = () => {
   }, [completed, puzzle]);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || puzzle.length === 0) return;
+    if (!progressReady || puzzle.length === 0) return;
     const data = {
       puzzle,
       board,
@@ -152,19 +153,39 @@ const Sudoku = () => {
       time,
       completed,
     };
-    localStorage.setItem('sudoku-progress', JSON.stringify(data));
-  }, [board, notes, manualNotes, solution, time, puzzle, difficulty, useDaily, completed]);
+    setSavedProgress(data);
+  }, [
+    board,
+    notes,
+    manualNotes,
+    solution,
+    time,
+    puzzle,
+    difficulty,
+    useDaily,
+    completed,
+    progressReady,
+    setSavedProgress,
+  ]);
 
   useEffect(() => {
-    if (!completed || typeof window === 'undefined') return;
-    const key = `sudoku-best-${difficulty}`;
-    const stored = localStorage.getItem(key);
-    if (!stored || time < parseInt(stored, 10)) {
-      localStorage.setItem(key, time.toString());
+    if (!completed || !bestReady) return;
+    const prev = bestTimes[difficulty];
+    if (prev == null || time < prev) {
+      setBestTimes({ ...bestTimes, [difficulty]: time });
       setBestTime(time);
     }
-    localStorage.removeItem('sudoku-progress');
-  }, [completed, time, difficulty]);
+    if (progressReady) setSavedProgress(null);
+  }, [
+    completed,
+    time,
+    difficulty,
+    bestReady,
+    bestTimes,
+    progressReady,
+    setBestTimes,
+    setSavedProgress,
+  ]);
 
   const handleValue = (r, c, value, forceNote = false) => {
     if (!puzzle[r] || puzzle[r][c] !== 0) return;
