@@ -16,6 +16,8 @@ import {
   setLargeHitAreas as saveLargeHitAreas,
   getPongSpin as loadPongSpin,
   setPongSpin as savePongSpin,
+  getTictactoeUnbeatable as loadTictactoeUnbeatable,
+  setTictactoeUnbeatable as saveTictactoeUnbeatable,
   defaults,
 } from '../utils/settingsStore';
 type Density = 'regular' | 'compact';
@@ -45,6 +47,7 @@ interface SettingsContextValue {
   highContrast: boolean;
   largeHitAreas: boolean;
   pongSpin: boolean;
+  tictactoeUnbeatable: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -53,6 +56,7 @@ interface SettingsContextValue {
   setHighContrast: (value: boolean) => void;
   setLargeHitAreas: (value: boolean) => void;
   setPongSpin: (value: boolean) => void;
+  setTictactoeUnbeatable: (value: boolean) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -64,6 +68,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   highContrast: defaults.highContrast,
   largeHitAreas: defaults.largeHitAreas,
   pongSpin: defaults.pongSpin,
+  tictactoeUnbeatable: defaults.tictactoeUnbeatable,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -72,6 +77,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setHighContrast: () => {},
   setLargeHitAreas: () => {},
   setPongSpin: () => {},
+  setTictactoeUnbeatable: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -83,6 +89,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
+  const [tictactoeUnbeatable, setTictactoeUnbeatable] = useState<boolean>(defaults.tictactoeUnbeatable);
 
   useEffect(() => {
     (async () => {
@@ -94,6 +101,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setHighContrast(await loadHighContrast());
       setLargeHitAreas(await loadLargeHitAreas());
       setPongSpin(await loadPongSpin());
+      setTictactoeUnbeatable(await loadTictactoeUnbeatable());
     })();
   }, []);
 
@@ -165,8 +173,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     savePongSpin(pongSpin);
   }, [pongSpin]);
 
+  useEffect(() => {
+    saveTictactoeUnbeatable(tictactoeUnbeatable);
+  }, [tictactoeUnbeatable]);
+
   return (
-    <SettingsContext.Provider value={{ accent, wallpaper, density, reducedMotion, fontScale, highContrast, largeHitAreas, pongSpin, setAccent, setWallpaper, setDensity, setReducedMotion, setFontScale, setHighContrast, setLargeHitAreas, setPongSpin }}>
+    <SettingsContext.Provider value={{ accent, wallpaper, density, reducedMotion, fontScale, highContrast, largeHitAreas, pongSpin, tictactoeUnbeatable, setAccent, setWallpaper, setDensity, setReducedMotion, setFontScale, setHighContrast, setLargeHitAreas, setPongSpin, setTictactoeUnbeatable }}>
       {children}
     </SettingsContext.Provider>
   );

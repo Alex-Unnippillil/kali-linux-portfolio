@@ -1,4 +1,5 @@
-import { minimax, checkWinner, createBoard } from '../apps/games/tictactoe/logic';
+import { minimax } from '../apps/games/tictactoe/ai';
+import { checkWinner, createBoard } from '../apps/games/tictactoe/logic';
 
 describe('tic tac toe AI', () => {
   const simulate = (firstMove: number) => {

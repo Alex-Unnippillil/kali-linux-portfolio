@@ -4,7 +4,7 @@ import { resetSettings, defaults, exportSettings as exportSettingsData, importSe
 import { getTheme, setTheme } from '../../utils/theme';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, tictactoeUnbeatable, setTictactoeUnbeatable } = useSettings();
     const [theme, setThemeState] = useState(getTheme());
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
@@ -149,6 +149,17 @@ export function Settings() {
                         className="mr-2"
                     />
                     Pong Spin
+                </label>
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey flex items-center">
+                    <input
+                        type="checkbox"
+                        checked={tictactoeUnbeatable}
+                        onChange={(e) => setTictactoeUnbeatable(e.target.checked)}
+                        className="mr-2"
+                    />
+                    Unbeatable TicTacToe
                 </label>
             </div>
             <div className="flex justify-center my-4">

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import GameLayout from './GameLayout';
-import { checkWinner, minimax, createBoard } from '../../apps/games/tictactoe/logic';
+import { checkWinner, createBoard } from '../../apps/games/tictactoe/logic';
+import { minimax } from '../../apps/games/tictactoe/ai';
+import { useSettings } from '../../hooks/useSettings';
 
 const SKINS = {
   classic: { X: 'X', O: 'O' },
@@ -27,6 +29,7 @@ const TicTacToe = () => {
   });
 
   const variantKey = `${mode}-${size}`;
+  const { tictactoeUnbeatable } = useSettings();
   const recordResult = (res) => {
     setStats((prev) => {
       const cur = prev[variantKey] || { wins: 0, losses: 0, draws: 0 };
@@ -82,7 +85,12 @@ const TicTacToe = () => {
     const isPlayerTurn =
       (player === 'X' && filled % 2 === 0) || (player === 'O' && filled % 2 === 1);
     if (!isPlayerTurn) {
-      const move = minimax(board.slice(), ai, size, mode === 'misere').index;
+      const available = board
+        .map((c, i) => (c ? -1 : i))
+        .filter((i) => i !== -1);
+      const move = tictactoeUnbeatable
+        ? minimax(board.slice(), ai, size, mode === 'misere').index
+        : available[Math.floor(Math.random() * available.length)];
       if (move >= 0) {
         const newBoard = board.slice();
         newBoard[move] = ai;
@@ -91,7 +99,7 @@ const TicTacToe = () => {
     } else {
       setStatus(`${SKINS[skin][player]}'s turn`);
     }
-  }, [board, player, ai, size, skin, mode]);
+  }, [board, player, ai, size, skin, mode, tictactoeUnbeatable]);
 
   const currentSkin = SKINS[skin];
 
@@ -207,7 +215,8 @@ const TicTacToe = () => {
   );
 };
 
-export { checkWinner, minimax } from '../../apps/games/tictactoe/logic';
+export { checkWinner } from '../../apps/games/tictactoe/logic';
+export { minimax } from '../../apps/games/tictactoe/ai';
 
 export default function TicTacToeApp() {
   return (
