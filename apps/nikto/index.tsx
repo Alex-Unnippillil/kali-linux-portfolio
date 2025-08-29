@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import ReportRenderer from './components/ReportRenderer';
 
 interface NiktoFinding {
   path: string;
@@ -151,9 +152,9 @@ const NiktoPage: React.FC = () => {
                   </tr>
                 ))}
               </React.Fragment>
-            ))}
-          </tbody>
-        </table>
+      ))}
+      </tbody>
+       </table>
       </div>
       {selected && (
         <div className="fixed top-0 right-0 w-80 h-full bg-gray-800 p-4 overflow-auto shadow-lg">
@@ -178,6 +179,10 @@ const NiktoPage: React.FC = () => {
           </p>
         </div>
       )}
+      <div>
+        <h2 className="text-lg mb-2">Sample XML Report</h2>
+        <ReportRenderer />
+      </div>
       <div>
         <h2 className="text-lg mb-2">HTML Report Preview</h2>
         <div className="flex space-x-2 mb-2">

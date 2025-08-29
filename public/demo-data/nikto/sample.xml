@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<niktoscan>
+  <scandetails targetip="192.168.56.10" targethostname="example.com">
+    <item>
+      <uri>/admin</uri>
+      <description>Admin interface accessible</description>
+    </item>
+    <item>
+      <uri>/cgi-bin/test</uri>
+      <description>Outdated test script</description>
+    </item>
+  </scandetails>
+  <scandetails targetip="192.168.56.20" targethostname="test.local">
+    <item>
+      <uri>/login</uri>
+      <description>Default credentials allow access</description>
+    </item>
+  </scandetails>
+</niktoscan>
