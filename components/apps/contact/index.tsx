@@ -24,6 +24,8 @@ const errorMap: Record<string, string> = {
   invalid_input: 'Please check your input and try again.',
   invalid_csrf: 'Security token mismatch. Refresh and retry.',
   invalid_recaptcha: 'Captcha verification failed. Please try again.',
+  recaptcha_disabled:
+    'Captcha service is not configured. Please use the options above.',
 };
 
 export const processContactForm = async (
