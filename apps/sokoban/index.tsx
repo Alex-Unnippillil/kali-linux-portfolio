@@ -20,6 +20,61 @@ import {
 
 const CELL = 32;
 
+const LEVEL_THUMB_CELL = 8;
+
+const LevelThumb: React.FC<{ level: string[] }> = ({ level }) => {
+  const width = Math.max(...level.map((r) => r.length));
+  const height = level.length;
+  const tileStyle = { width: LEVEL_THUMB_CELL, height: LEVEL_THUMB_CELL } as React.CSSProperties;
+  return (
+    <div
+      className="relative bg-gray-700 shadow-md"
+      style={{ width: width * LEVEL_THUMB_CELL, height: height * LEVEL_THUMB_CELL }}
+    >
+      {level.map((row, y) =>
+        row.split('').map((cell, x) => {
+          const k = `${x},${y}`;
+          const isWall = cell === '#';
+          const isTarget = cell === '.' || cell === '+' || cell === '*';
+          return (
+            <div
+              key={`t-${k}`}
+              className={`absolute ${isWall ? 'bg-gray-800' : 'bg-gray-600'} ${
+                isTarget ? 'ring-1 ring-yellow-400' : ''
+              } shadow-inner`}
+              style={{ ...tileStyle, left: x * LEVEL_THUMB_CELL, top: y * LEVEL_THUMB_CELL }}
+            />
+          );
+        })
+      )}
+      {level.map((row, y) =>
+        row.split('').map((cell, x) => {
+          const k = `${x},${y}`;
+          if (cell === '$' || cell === '*') {
+            return (
+              <div
+                key={`b-${k}`}
+                className="absolute bg-orange-400"
+                style={{ ...tileStyle, left: x * LEVEL_THUMB_CELL, top: y * LEVEL_THUMB_CELL }}
+              />
+            );
+          }
+          if (cell === '@' || cell === '+') {
+            return (
+              <div
+                key={`p-${k}`}
+                className="absolute bg-blue-400"
+                style={{ ...tileStyle, left: x * LEVEL_THUMB_CELL, top: y * LEVEL_THUMB_CELL }}
+              />
+            );
+          }
+          return null;
+        })
+      )}
+    </div>
+  );
+};
+
 interface SokobanProps {
   getDailySeed?: () => Promise<string>;
 }
@@ -39,6 +94,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
   const [ghost, setGhost] = useState<Set<string>>(new Set());
   const [puffs, setPuffs] = useState<{ id: number; x: number; y: number }[]>([]);
   const puffId = React.useRef(0);
+  const [lastPush, setLastPush] = useState<string | null>(null);
   const [showLevels, setShowLevels] = useState(false);
   const [minPushes, setMinPushes] = useState<number | null>(null);
   const [showStats, setShowStats] = useState(false);
@@ -209,11 +265,16 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
             setGhost(new Set());
             if (newState.pushes > state.pushes) {
               const from = Array.from(state.boxes).find((b) => !newState.boxes.has(b));
+              const to = Array.from(newState.boxes).find((b) => !state.boxes.has(b));
               if (from) {
                 const [fx, fy] = from.split(',').map(Number);
                 const id = puffId.current++;
                 setPuffs((p) => [...p, { id, x: fx, y: fy }]);
                 setTimeout(() => setPuffs((p) => p.filter((pp) => pp.id !== id)), 300);
+              }
+              if (to) {
+                setLastPush(to);
+                setTimeout(() => setLastPush(null), 200);
               }
               logEvent({ category: 'sokoban', action: 'push' });
             }
@@ -253,11 +314,16 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
       setGhost(new Set());
       if (newState.pushes > state.pushes) {
         const from = Array.from(state.boxes).find((b) => !newState.boxes.has(b));
+        const to = Array.from(newState.boxes).find((b) => !state.boxes.has(b));
         if (from) {
           const [fx, fy] = from.split(',').map(Number);
           const id = puffId.current++;
           setPuffs((p) => [...p, { id, x: fx, y: fy }]);
           setTimeout(() => setPuffs((p) => p.filter((pp) => pp.id !== id)), 300);
+        }
+        if (to) {
+          setLastPush(to);
+          setTimeout(() => setLastPush(null), 200);
         }
         logEvent({ category: 'sokoban', action: 'push' });
       }
@@ -373,15 +439,6 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
         >
           Levels
         </button>
-        <button type="button" onClick={handleUndo} className="px-2 py-1 bg-gray-300 rounded">
-          Undo
-        </button>
-        <button type="button" onClick={handleRedo} className="px-2 py-1 bg-gray-300 rounded">
-          Redo
-        </button>
-        <button type="button" onClick={handleReset} className="px-2 py-1 bg-gray-300 rounded">
-          Reset
-        </button>
         <button type="button" onClick={handleHint} className="px-2 py-1 bg-gray-300 rounded">
           Hint
         </button>
@@ -393,7 +450,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
         {status && <div className="ml-4 text-red-500">{status}</div>}
       </div>
       <div
-        className="relative bg-gray-700"
+        className="relative bg-gray-700 shadow-lg"
         style={{ width: state.width * CELL, height: state.height * CELL }}
         onMouseLeave={() => setGhost(new Set())}
       >
@@ -407,7 +464,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
             return (
               <React.Fragment key={k}>
                 <div
-                  className={`absolute ${isWall ? 'bg-gray-800' : 'bg-gray-600'} ${
+                  className={`absolute shadow-inner ${isWall ? 'bg-gray-800' : 'bg-gray-600'} ${
                     isTarget ? 'ring-2 ring-yellow-400' : ''
                   }`}
                   style={{ ...cellStyle, left: x * CELL, top: y * CELL }}
@@ -437,10 +494,10 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
               key={b}
               className={`absolute transition-transform duration-100 ${
                 dead ? 'bg-red-500' : 'bg-orange-400'
-              }`}
+              } shadow-md`}
               style={{
                 ...cellStyle,
-                transform: `translate(${x * CELL}px, ${y * CELL}px)`,
+                transform: `translate(${x * CELL}px, ${y * CELL}px) scale(${b === lastPush ? 1.1 : 1})`,
               }}
             />
           );
@@ -459,6 +516,29 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
             transform: `translate(${state.player.x * CELL}px, ${state.player.y * CELL}px)`,
           }}
         />
+      </div>
+      <div className="flex justify-center space-x-4 mt-2">
+        <button
+          type="button"
+          onClick={handleUndo}
+          className="px-3 py-1 bg-gray-300 rounded shadow"
+        >
+          Undo
+        </button>
+        <button
+          type="button"
+          onClick={handleRedo}
+          className="px-3 py-1 bg-gray-300 rounded shadow"
+        >
+          Redo
+        </button>
+        <button
+          type="button"
+          onClick={handleReset}
+          className="px-3 py-1 bg-gray-300 rounded shadow"
+        >
+          Reset
+        </button>
       </div>
       {showStats && (
         <div
@@ -489,10 +569,10 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
           onClick={() => setShowLevels(false)}
         >
           <div
-            className="bg-white p-4 w-80 max-w-full flex space-x-4"
+            className="bg-white p-4 w-[600px] max-w-full flex space-x-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-1/2 overflow-y-auto max-h-96">
+            <div className="w-1/4 overflow-y-auto max-h-96">
               {packs.map((p, i) => (
                 <div
                   key={p.name}
@@ -503,19 +583,23 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
                 </div>
               ))}
             </div>
-            <div className="w-1/2 overflow-y-auto max-h-96">
-              {packs[packIndex].levels.map((_, i) => (
-                <div
-                  key={i}
-                  className={`p-2 cursor-pointer ${i === index ? 'bg-blue-200' : ''}`}
-                  onClick={() => {
-                    selectLevel(i);
-                    setShowLevels(false);
-                  }}
-                >
-                  {`Level ${i + 1}`}
-                </div>
-              ))}
+            <div className="flex-1 overflow-y-auto max-h-96">
+              <div className="grid grid-cols-3 gap-2">
+                {packs[packIndex].levels.map((lvl, i) => (
+                  <div
+                    key={i}
+                    className={`p-1 border cursor-pointer ${
+                      i === index ? 'border-blue-500' : 'border-transparent'
+                    }`}
+                    onClick={() => {
+                      selectLevel(i);
+                      setShowLevels(false);
+                    }}
+                  >
+                    <LevelThumb level={lvl} />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
