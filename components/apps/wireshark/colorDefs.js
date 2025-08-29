@@ -1,6 +1,6 @@
 export const colorDefinitions = [
-  { name: 'Red', className: 'text-red-500' },
-  { name: 'Blue', className: 'text-blue-500' },
-  { name: 'Green', className: 'text-green-500' },
-  { name: 'Yellow', className: 'text-yellow-500' },
+  { name: 'Red', className: 'border-red-500' },
+  { name: 'Blue', className: 'border-blue-500' },
+  { name: 'Green', className: 'border-green-500' },
+  { name: 'Yellow', className: 'border-yellow-500' },
 ];
