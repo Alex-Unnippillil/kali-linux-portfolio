@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import ReactGA from 'react-ga4';
-import { Analytics } from '@vercel/analytics/next';
+import { Analytics, type BeforeSendEvent } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import 'tailwindcss/tailwind.css';
 import '../styles/globals.css';
@@ -12,6 +12,7 @@ import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
+import FlagValuesEmitter from '../components/FlagValuesEmitter';
 
 /**
  * @param {import('next/app').AppProps} props
@@ -128,7 +129,14 @@ function MyApp({ Component, pageProps }) {
         <div aria-live="polite" id="live-region" />
         <Component {...pageProps} />
         <ShortcutOverlay />
-        <Analytics />
+        <Analytics
+          beforeSend={(e: BeforeSendEvent) => {
+            if (e.url.includes('/admin') || e.url.includes('/private')) return null;
+            if (e.metadata?.email) delete e.metadata.email;
+            return e;
+          }}
+        />
+
         {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
       </PipPortalProvider>
     </SettingsProvider>
