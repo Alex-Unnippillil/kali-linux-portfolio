@@ -2,6 +2,43 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as chrono from 'chrono-node';
 
 const STORAGE_KEY = 'portfolio-tasks';
+const FILE_NAME = `${STORAGE_KEY}.json`;
+
+const parseQuickInput = (input) => {
+  let due;
+  try {
+    const date = chrono.parseDate(input);
+    if (date) {
+      due = date.toISOString().split('T')[0];
+    }
+  } catch {}
+  const priorityMatch = input.match(/!([1-3])/);
+  const sectionMatch = input.match(/#(\w+)/);
+  const recurringMatch = input.match(/every\s+([a-z]+)/i);
+  const priorityMap = { '1': 'high', '2': 'medium', '3': 'low' };
+  const priority = priorityMatch ? priorityMap[priorityMatch[1]] : 'medium';
+  let title = input;
+  if (due) {
+    const parsed = chrono.parse(input)[0];
+    if (parsed) {
+      title = title.replace(parsed.text, '').trim();
+    }
+  }
+  if (priorityMatch) title = title.replace(priorityMatch[0], '').trim();
+  if (sectionMatch) title = title.replace(sectionMatch[0], '').trim();
+  if (recurringMatch) title = title.replace(recurringMatch[0], '').trim();
+  const section = sectionMatch ? sectionMatch[1] : undefined;
+  let recurring = recurringMatch ? recurringMatch[1].toLowerCase() : undefined;
+  if (recurring && !due) {
+    try {
+      const next = chrono.parseDate(`next ${recurring}`);
+      if (next) {
+        due = next.toISOString().split('T')[0];
+      }
+    } catch {}
+  }
+  return { title: title || input, due, priority, section, recurring };
+};
 
 const initialGroups = {
   Today: [],
@@ -34,23 +71,67 @@ export default function Todoist() {
   const liveRef = useRef(null);
   const workerRef = useRef(null);
   const quickRef = useRef(null);
+  const fileHandleRef = useRef(null);
   const prefersReducedMotion = useRef(
     typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
   );
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const data = localStorage.getItem(STORAGE_KEY);
-      if (data) {
-        try {
-          setGroups({ ...initialGroups, ...JSON.parse(data) });
-        } catch {
-          // ignore bad data
+  const saveGroups = useCallback(async (data) => {
+    if (typeof window === 'undefined') return;
+    try {
+      if (navigator.storage?.getDirectory) {
+        if (!fileHandleRef.current) {
+          const root = await navigator.storage.getDirectory();
+          fileHandleRef.current = await root.getFileHandle(FILE_NAME, { create: true });
         }
+        const writable = await fileHandleRef.current.createWritable();
+        await writable.write(JSON.stringify(data));
+        await writable.close();
+      } else {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       }
+    } catch {
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      } catch {}
     }
   }, []);
+
+  useEffect(() => {
+    (async () => {
+      if (typeof window === 'undefined') return;
+      let data = initialGroups;
+      try {
+        if (navigator.storage?.getDirectory) {
+          const root = await navigator.storage.getDirectory();
+          fileHandleRef.current = await root.getFileHandle(FILE_NAME, { create: true });
+          const file = await fileHandleRef.current.getFile();
+          const text = await file.text();
+          if (text) data = { ...initialGroups, ...JSON.parse(text) };
+        } else {
+          const stored = window.localStorage.getItem(STORAGE_KEY);
+          if (stored) data = { ...initialGroups, ...JSON.parse(stored) };
+        }
+      } catch {
+        try {
+          const stored = window.localStorage.getItem(STORAGE_KEY);
+          if (stored) data = { ...initialGroups, ...JSON.parse(stored) };
+        } catch {}
+      }
+      const params = new URLSearchParams(window.location.search);
+      const shared = params.get('text');
+      if (shared) {
+        const parsed = parseQuickInput(shared);
+        const newTask = { id: Date.now(), ...parsed, completed: false };
+        data = { ...data, Today: [...data.Today, newTask] };
+        await saveGroups(data);
+        params.delete('text');
+        window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+      }
+      setGroups(data);
+    })();
+  }, [saveGroups]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -89,13 +170,7 @@ export default function Todoist() {
   const finalizeMove = useCallback(
     (newGroups, taskTitle, to) => {
       setGroups(newGroups);
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
-        } catch {
-          // ignore
-        }
-      }
+      saveGroups(newGroups);
       announce(taskTitle, to);
       if (!prefersReducedMotion.current) {
         requestAnimationFrame(() => {
@@ -104,7 +179,7 @@ export default function Todoist() {
         });
       }
     },
-    [announce],
+    [announce, saveGroups],
   );
 
   const handleDragStart = (group, task) => (e) => {
@@ -210,13 +285,16 @@ export default function Todoist() {
       }),
     };
     setGroups(newGroups);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
-      } catch {
-        // ignore
-      }
-    }
+    saveGroups(newGroups);
+  };
+
+  const handleDelete = (group, id) => {
+    const newGroups = {
+      ...groups,
+      [group]: groups[group].filter((t) => t.id !== id),
+    };
+    setGroups(newGroups);
+    saveGroups(newGroups);
   };
 
   const handleAdd = (e) => {
@@ -243,57 +321,8 @@ export default function Todoist() {
   const handleQuickAdd = (e) => {
     e.preventDefault();
     if (!quick.trim()) return;
-    let due;
-    try {
-      const date = chrono.parseDate(quick);
-      if (date) {
-        due = date.toISOString().split('T')[0];
-      }
-    } catch {
-      // ignore
-    }
-    const priorityMatch = quick.match(/!([1-3])/);
-    const sectionMatch = quick.match(/#(\w+)/);
-    const recurringMatch = quick.match(/every\s+([a-z]+)/i);
-    const priorityMap = { '1': 'high', '2': 'medium', '3': 'low' };
-    const priority = priorityMatch ? priorityMap[priorityMatch[1]] : 'medium';
-    let title = quick;
-    if (due) {
-      const parsed = chrono.parse(quick)[0];
-      if (parsed) {
-        title = title.replace(parsed.text, '').trim();
-      }
-    }
-    if (priorityMatch) {
-      title = title.replace(priorityMatch[0], '').trim();
-    }
-    if (sectionMatch) {
-      title = title.replace(sectionMatch[0], '').trim();
-    }
-    if (recurringMatch) {
-      title = title.replace(recurringMatch[0], '').trim();
-    }
-    const section = sectionMatch ? sectionMatch[1] : undefined;
-    let recurring = recurringMatch ? recurringMatch[1].toLowerCase() : undefined;
-    if (recurring && !due) {
-      try {
-        const next = chrono.parseDate(`next ${recurring}`);
-        if (next) {
-          due = next.toISOString().split('T')[0];
-        }
-      } catch {
-        // ignore
-      }
-    }
-    const newTask = {
-      id: Date.now(),
-      title: title || quick,
-      due,
-      priority,
-      section,
-      recurring,
-      completed: false,
-    };
+    const parsed = parseQuickInput(quick);
+    const newTask = { id: Date.now(), ...parsed, completed: false };
     const newGroups = {
       ...groups,
       Today: [...groups.Today, newTask],
@@ -327,9 +356,7 @@ export default function Todoist() {
         const parsed = JSON.parse(reader.result);
         const newGroups = { ...initialGroups, ...parsed };
         setGroups(newGroups);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
-        }
+        saveGroups(newGroups);
       } catch {
         // ignore
       }
@@ -370,6 +397,13 @@ export default function Todoist() {
         {task.section && <div className="text-xs text-gray-500">{task.section}</div>}
         <div className="text-xs text-gray-500">Priority: {task.priority}</div>
       </div>
+      <button
+        onClick={() => handleDelete(group, task.id)}
+        aria-label="Delete task"
+        className="ml-2 text-red-600"
+      >
+        ×
+      </button>
     </div>
   );
 
