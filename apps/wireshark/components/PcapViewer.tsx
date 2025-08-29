@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { protocolName } from '../../../components/apps/wireshark/utils';
+import FilterHelper from './FilterHelper';
 
 interface PcapViewerProps {
   showLegend?: boolean;
@@ -169,13 +170,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
       />
       {packets.length > 0 && (
         <>
-          <input
-            type="text"
-            placeholder="Filter"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="text-black p-1 rounded"
-          />
+          <FilterHelper value={filter} onChange={setFilter} />
           {showLegend && (
             <div className="flex space-x-4 text-xs">
               {Object.entries(protocolColors).map(([proto, color]) => (
