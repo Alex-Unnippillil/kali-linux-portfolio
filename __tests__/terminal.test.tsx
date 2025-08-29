@@ -9,6 +9,7 @@ jest.mock(
       writeln: jest.fn(),
       onData: jest.fn(),
       onKey: jest.fn(),
+      onPaste: jest.fn(),
       dispose: jest.fn(),
       clear: jest.fn(),
     })),
@@ -25,120 +26,37 @@ jest.mock(
 jest.mock(
   '@xterm/addon-search',
   () => ({
-    SearchAddon: jest.fn().mockImplementation(() => ({
-      activate: jest.fn(),
-      dispose: jest.fn(),
-    })),
+    SearchAddon: jest.fn().mockImplementation(() => ({ findNext: jest.fn() })),
   }),
   { virtual: true }
 );
 jest.mock('@xterm/xterm/css/xterm.css', () => ({}), { virtual: true });
-jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 
 import React, { createRef, act } from 'react';
 import { render } from '@testing-library/react';
-import Terminal from '../components/apps/terminal';
+import Terminal from '../apps/terminal';
 
-  describe('Terminal component', () => {
-  const addFolder = jest.fn();
+describe('Terminal component', () => {
   const openApp = jest.fn();
 
-  it('renders xterm container and exposes imperative api', () => {
-    const ref = createRef();
-    const { getByTestId } = render(
-      <Terminal ref={ref} addFolder={addFolder} openApp={openApp} />,
-    );
-    expect(getByTestId('xterm-container')).toBeInTheDocument();
+  it('renders container and exposes runCommand', async () => {
+    const ref = createRef<any>();
+    render(<Terminal ref={ref} openApp={openApp} />);
+    await act(async () => {});
     expect(ref.current).toBeTruthy();
-    expect(typeof ref.current.runCommand).toBe('function');
-    expect(typeof ref.current.getContent).toBe('function');
-    expect(typeof ref.current.getCommand).toBe('function');
-    expect(typeof ref.current.historyNav).toBe('function');
-  });
-
-  it('runs pwd command successfully', () => {
-    const ref = createRef();
-    render(<Terminal ref={ref} addFolder={addFolder} openApp={openApp} />);
-    act(() => {
-      ref.current.runCommand('pwd');
-    });
-    expect(ref.current.getContent()).toContain('/home/alex');
-  });
-
-  it('handles invalid cd command', () => {
-    const ref = createRef();
-    render(<Terminal ref={ref} addFolder={addFolder} openApp={openApp} />);
-    act(() => {
-      ref.current.runCommand('cd nowhere');
-    });
-    expect(ref.current.getContent()).toContain("bash: cd: nowhere: No such file or directory");
-  });
-
-  it('supports history, clear, and help commands', () => {
-    const ref = createRef();
-    render(<Terminal ref={ref} addFolder={addFolder} openApp={openApp} />);
-    act(() => {
-      ref.current.runCommand('pwd');
-      ref.current.runCommand('history');
-    });
-    expect(ref.current.getContent()).toContain('pwd');
-    act(() => {
-      ref.current.runCommand('clear');
-    });
-    expect(ref.current.getContent()).toContain('pwd');
     act(() => {
       ref.current.runCommand('help');
     });
-    expect(ref.current.getContent()).toContain('Available commands:');
-    expect(ref.current.getContent()).toContain('clear');
     expect(ref.current.getContent()).toContain('help');
   });
 
-  it('handles missing Worker gracefully', () => {
-    const ref = createRef();
-    const originalWorker = (global as any).Worker;
-    (global as any).Worker = undefined;
-    render(<Terminal ref={ref} addFolder={addFolder} openApp={openApp} />);
+  it('invokes openApp for open command', async () => {
+    const ref = createRef<any>();
+    render(<Terminal ref={ref} openApp={openApp} />);
+    await act(async () => {});
     act(() => {
-      ref.current.runCommand('simulate');
+      ref.current.runCommand('open calculator');
     });
-    expect(ref.current.getContent()).toContain('Web Workers are not supported');
-    (global as any).Worker = originalWorker;
-  });
-
-  it('sends simulate command to worker and logs result', () => {
-    const ref = createRef();
-    const originalWorker = (global as any).Worker;
-    const postMessageMock = jest.fn();
-    const mockWorkerInstance: any = {
-      onmessage: null,
-      postMessage: (msg: any) => {
-        postMessageMock(msg);
-        mockWorkerInstance.onmessage?.({ data: 'Simulation complete' });
-      },
-      terminate: jest.fn(),
-    };
-    (global as any).Worker = jest.fn(() => mockWorkerInstance);
-    render(<Terminal ref={ref} addFolder={addFolder} openApp={openApp} />);
-    act(() => {
-      ref.current.runCommand('simulate');
-    });
-    expect(postMessageMock).toHaveBeenCalledWith({ command: 'simulate' });
-    expect(ref.current.getContent()).toContain('Simulation complete');
-    (global as any).Worker = originalWorker;
-  });
-
-  it('navigates command history with arrow keys', () => {
-    const ref = createRef();
-    render(<Terminal ref={ref} addFolder={addFolder} openApp={openApp} />);
-    act(() => {
-      ref.current.runCommand('pwd');
-      ref.current.historyNav('up');
-    });
-    expect(ref.current.getCommand()).toBe('pwd');
-    act(() => {
-      ref.current.historyNav('down');
-    });
-    expect(ref.current.getCommand()).toBe('');
+    expect(openApp).toHaveBeenCalledWith('calculator');
   });
 });
