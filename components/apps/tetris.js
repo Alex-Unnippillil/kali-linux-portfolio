@@ -7,19 +7,164 @@ const HEIGHT = 20;
 const CELL_SIZE = 16;
 
 const TETROMINOS = {
-  I: { shape: [[1,1,1,1]], color: '#06b6d4' },
-  J: { shape: [[1,0,0],[1,1,1]], color: '#3b82f6' },
-  L: { shape: [[0,0,1],[1,1,1]], color: '#f97316' },
-  O: { shape: [[1,1],[1,1]], color: '#eab308' },
-  S: { shape: [[0,1,1],[1,1,0]], color: '#22c55e' },
-  T: { shape: [[0,1,0],[1,1,1]], color: '#a855f7' },
-  Z: { shape: [[1,1,0],[0,1,1]], color: '#ef4444' },
+  I: { shape: [[1, 1, 1, 1]], color: '#06b6d4' },
+  J: { shape: [[1, 0, 0], [1, 1, 1]], color: '#3b82f6' },
+  L: { shape: [[0, 0, 1], [1, 1, 1]], color: '#f97316' },
+  O: { shape: [[1, 1], [1, 1]], color: '#eab308' },
+  S: { shape: [[0, 1, 1], [1, 1, 0]], color: '#22c55e' },
+  T: { shape: [[0, 1, 0], [1, 1, 1]], color: '#a855f7' },
+  Z: { shape: [[1, 1, 0], [0, 1, 1]], color: '#ef4444' },
 };
 const PIECES = Object.keys(TETROMINOS);
 
 const createBoard = () => Array.from({ length: HEIGHT }, () => Array(WIDTH).fill(0));
 
 const rotate = (matrix) => matrix[0].map((_, i) => matrix.map((row) => row[i]).reverse());
+
+const createPiece = (type) => ({
+  shape: TETROMINOS[type].shape.map((r) => r.slice()),
+  color: TETROMINOS[type].color,
+  type,
+  rotation: 0,
+});
+
+const KICKS = {
+  JLSTZ: {
+    0: {
+      1: [
+        [0, 0],
+        [-1, 0],
+        [-1, 1],
+        [0, -2],
+        [-1, -2],
+      ],
+      3: [
+        [0, 0],
+        [1, 0],
+        [1, 1],
+        [0, -2],
+        [1, -2],
+      ],
+    },
+    1: {
+      0: [
+        [0, 0],
+        [1, 0],
+        [1, -1],
+        [0, 2],
+        [1, 2],
+      ],
+      2: [
+        [0, 0],
+        [1, 0],
+        [1, -1],
+        [0, 2],
+        [1, 2],
+      ],
+    },
+    2: {
+      1: [
+        [0, 0],
+        [-1, 0],
+        [-1, 1],
+        [0, -2],
+        [-1, -2],
+      ],
+      3: [
+        [0, 0],
+        [1, 0],
+        [1, 1],
+        [0, -2],
+        [1, -2],
+      ],
+    },
+    3: {
+      2: [
+        [0, 0],
+        [-1, 0],
+        [-1, -1],
+        [0, 2],
+        [-1, 2],
+      ],
+      0: [
+        [0, 0],
+        [-1, 0],
+        [-1, -1],
+        [0, 2],
+        [-1, 2],
+      ],
+    },
+  },
+  I: {
+    0: {
+      1: [
+        [0, 0],
+        [-2, 0],
+        [1, 0],
+        [-2, -1],
+        [1, 2],
+      ],
+      3: [
+        [0, 0],
+        [-1, 0],
+        [2, 0],
+        [-1, 2],
+        [2, -1],
+      ],
+    },
+    1: {
+      0: [
+        [0, 0],
+        [2, 0],
+        [-1, 0],
+        [2, 1],
+        [-1, -2],
+      ],
+      2: [
+        [0, 0],
+        [-1, 0],
+        [2, 0],
+        [-1, 2],
+        [2, -1],
+      ],
+    },
+    2: {
+      1: [
+        [0, 0],
+        [1, 0],
+        [-2, 0],
+        [1, -2],
+        [-2, 1],
+      ],
+      3: [
+        [0, 0],
+        [2, 0],
+        [-1, 0],
+        [2, 1],
+        [-1, -2],
+      ],
+    },
+    3: {
+      2: [
+        [0, 0],
+        [-2, 0],
+        [1, 0],
+        [-2, -1],
+        [1, 2],
+      ],
+      0: [
+        [0, 0],
+        [1, 0],
+        [-2, 0],
+        [1, -2],
+        [-2, 1],
+      ],
+    },
+  },
+};
+
+const LINE_SCORES = [0, 100, 300, 500, 800];
+const TSPIN_SCORES = [400, 800, 1200, 1600];
 
 const canMove = (board, shape, x, y) => {
   for (let r = 0; r < shape.length; r += 1) {
@@ -71,12 +216,12 @@ const Tetris = () => {
   const bagRef = useRef([]);
   const randomPiece = useCallback(() => {
     const type = PIECES[Math.floor(Math.random() * PIECES.length)];
-    return { ...TETROMINOS[type], type };
+    return createPiece(type);
   }, []);
   const bagPiece = useCallback(() => {
     if (bagRef.current.length === 0) bagRef.current = shuffle([...PIECES]);
     const type = bagRef.current.pop();
-    return { ...TETROMINOS[type], type };
+    return createPiece(type);
   }, []);
   const [useBag, setUseBag] = usePersistentState('tetris-use-bag', true);
   const getPiece = useCallback(() => (useBag ? bagPiece() : randomPiece()), [useBag, bagPiece, randomPiece]);
@@ -95,7 +240,12 @@ const Tetris = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [paused, setPaused] = useState(false);
   const [sound, setSound] = usePersistentState('tetris-sound', true);
-  const [tSpin, setTSpin] = useState(false);
+  const [tSpin, setTSpin] = useState('');
+  const [mode, setMode] = useState('marathon');
+  const sprintStartRef = useRef(null);
+  const [sprintTime, setSprintTime] = useState(0);
+  const [bestTime, setBestTime] = usePersistentState('tetris-best-time', null);
+  const [finishTime, setFinishTime] = useState(null);
 
   const [glow, setGlow] = useState([]);
   const [danger, setDanger] = useState(false);
@@ -181,23 +331,42 @@ const Tetris = () => {
     return dy;
   }, []);
 
-  const resetGame = useCallback(() => {
-    setBoard(createBoard());
-    bagRef.current = [];
-    setPiece(getPiece());
-    setNext([getPiece(), getPiece(), getPiece()]);
-    setPos({ x: Math.floor(WIDTH/2) - 2, y: 0 });
-    setScore(0);
-    setLevel(1);
-    setLines(0);
-    setHold(null);
-    setCanHold(true);
-    setGlow([]);
-    if (lockRef.current) {
-      clearTimeout(lockRef.current);
-      lockRef.current = null;
-    }
-  }, [getPiece]);
+  const endSprint = useCallback(() => {
+    const time = performance.now() - sprintStartRef.current;
+    setFinishTime(time);
+    if (!bestTime || time < bestTime) setBestTime(time);
+    setPaused(true);
+  }, [bestTime, setBestTime]);
+
+  const resetGame = useCallback(
+    (m = mode) => {
+      setBoard(createBoard());
+      bagRef.current = [];
+      setPiece(getPiece());
+      setNext([getPiece(), getPiece(), getPiece()]);
+      setPos({ x: Math.floor(WIDTH / 2) - 2, y: 0 });
+      setScore(0);
+      setLevel(1);
+      setLines(0);
+      setHold(null);
+      setCanHold(true);
+      setGlow([]);
+      setPaused(false);
+      if (lockRef.current) {
+        clearTimeout(lockRef.current);
+        lockRef.current = null;
+      }
+      if (m === 'sprint') {
+        sprintStartRef.current = performance.now();
+      } else {
+        sprintStartRef.current = null;
+      }
+      setSprintTime(0);
+      setFinishTime(null);
+      setMode(m);
+    },
+    [getPiece, mode],
+  );
 
   const isTSpin = useCallback((b, p, position) => {
     if (p.type !== 'T' || !lastRotateRef.current) return false;
@@ -231,17 +400,21 @@ const Tetris = () => {
     for (let r = 0; r < HEIGHT; r += 1) {
       if (newBoard[r].every((c) => c)) filled.push(r);
     }
-    let tSpinScore = 0;
-    if (isTSpin(newBoard, pieceRef.current, posRef.current)) {
-      setTSpin(true);
+    const tSpinFlag = isTSpin(newBoard, pieceRef.current, posRef.current);
+    let gained = 0;
+    if (tSpinFlag) {
+      const msg = ['T-Spin', 'T-Spin Single', 'T-Spin Double', 'T-Spin Triple'][filled.length];
+      setTSpin(msg);
       playSound(880, 0.2);
-      tSpinScore = 400;
-      setTimeout(() => setTSpin(false), 1000);
+      gained = TSPIN_SCORES[filled.length];
+      setTimeout(() => setTSpin(''), 1000);
+    } else if (filled.length) {
+      playSound();
+      gained = LINE_SCORES[filled.length];
     }
     const [currentNext, ...restQueue] = next;
     const upcoming = [...restQueue, getPiece()];
     if (filled.length) {
-      playSound();
       confetti({ particleCount: 80, spread: 70 });
       setBoard(newBoard);
       setGlow(filled);
@@ -249,7 +422,6 @@ const Tetris = () => {
         const compact = newBoard.filter((_, r) => !filled.includes(r));
         while (compact.length < HEIGHT) compact.unshift(Array(WIDTH).fill(0));
         setBoard(compact);
-        const gained = filled.length * 100 + tSpinScore;
         setScore((s) => {
           const ns = s + gained;
           if (ns > highScore) setHighScore(ns);
@@ -262,37 +434,38 @@ const Tetris = () => {
             setLevel(nlvl);
             if (nlvl > maxLevel) setMaxLevel(nlvl);
           }
+          if (mode === 'sprint' && nl >= 40) endSprint();
           return nl;
         });
         setGlow([]);
         setPiece(currentNext);
         setNext(upcoming);
-        setPos({ x: Math.floor(WIDTH/2) - 2, y: 0 });
+        setPos({ x: Math.floor(WIDTH / 2) - 2, y: 0 });
         setCanHold(true);
         lastRotateRef.current = false;
-        if (!canMove(compact, currentNext.shape, Math.floor(WIDTH/2) - 2, 0)) {
-          resetGame();
+        if (!canMove(compact, currentNext.shape, Math.floor(WIDTH / 2) - 2, 0)) {
+          resetGame(mode);
         }
       }, 100);
     } else {
       setBoard(newBoard);
-      if (tSpinScore) {
+      if (gained) {
         setScore((s) => {
-          const ns = s + tSpinScore;
+          const ns = s + gained;
           if (ns > highScore) setHighScore(ns);
           return ns;
         });
       }
       setPiece(currentNext);
       setNext(upcoming);
-      setPos({ x: Math.floor(WIDTH/2) - 2, y: 0 });
+      setPos({ x: Math.floor(WIDTH / 2) - 2, y: 0 });
       setCanHold(true);
       lastRotateRef.current = false;
-      if (!canMove(newBoard, currentNext.shape, Math.floor(WIDTH/2) - 2, 0)) {
-        resetGame();
+      if (!canMove(newBoard, currentNext.shape, Math.floor(WIDTH / 2) - 2, 0)) {
+        resetGame(mode);
       }
     }
-  }, [getPiece, highScore, isTSpin, level, maxLevel, next, playSound, resetGame, setHighScore, setMaxLevel, thud]);
+  }, [endSprint, getPiece, highScore, isTSpin, level, maxLevel, mode, next, playSound, resetGame, setHighScore, setMaxLevel, thud]);
 
   const moveDown = useCallback((soft = false) => {
     softDropRef.current = soft;
@@ -327,18 +500,29 @@ const Tetris = () => {
   }, [placePiece]);
 
   const rotatePiece = useCallback(() => {
-    const rotated = rotate(pieceRef.current.shape);
-    if (canMove(boardRef.current, rotated, posRef.current.x, posRef.current.y)) {
-      setPiece({ ...pieceRef.current, shape: rotated });
-      lastRotateRef.current = true;
-      if (lockRef.current) {
-        clearTimeout(lockRef.current);
-        lockRef.current = null;
-      }
-      if (!canMove(boardRef.current, rotated, posRef.current.x, posRef.current.y + 1)) {
-        lockRef.current = setTimeout(() => {
-          placePiece();
-        }, 500);
+    const p = pieceRef.current;
+    const from = p.rotation;
+    const to = (p.rotation + 1) % 4;
+    const rotated = rotate(p.shape);
+    const table = p.type === 'O' ? { [to]: [[0, 0]] } : KICKS[p.type === 'I' ? 'I' : 'JLSTZ'];
+    const kicks = table[from]?.[to] || [[0, 0]];
+    for (const [dx, dy] of kicks) {
+      const nx = posRef.current.x + dx;
+      const ny = posRef.current.y + dy;
+      if (canMove(boardRef.current, rotated, nx, ny)) {
+        setPiece({ ...p, shape: rotated, rotation: to });
+        setPos({ x: nx, y: ny });
+        lastRotateRef.current = true;
+        if (lockRef.current) {
+          clearTimeout(lockRef.current);
+          lockRef.current = null;
+        }
+        if (!canMove(boardRef.current, rotated, nx, ny + 1)) {
+          lockRef.current = setTimeout(() => {
+            placePiece();
+          }, 500);
+        }
+        return;
       }
     }
   }, [placePiece]);
@@ -361,16 +545,17 @@ const Tetris = () => {
       clearTimeout(lockRef.current);
       lockRef.current = null;
     }
+    const current = createPiece(pieceRef.current.type);
     if (hold) {
       const temp = hold;
-      setHold(pieceRef.current);
+      setHold(current);
       setPiece(temp);
     } else {
-      setHold(pieceRef.current);
+      setHold(current);
       setPiece(next[0]);
       setNext([...next.slice(1), getPiece()]);
     }
-    setPos({ x: Math.floor(WIDTH/2) - 2, y: 0 });
+    setPos({ x: Math.floor(WIDTH / 2) - 2, y: 0 });
     lastRotateRef.current = false;
   }, [canHold, getPiece, hold, next]);
 
@@ -501,6 +686,9 @@ const Tetris = () => {
       const delta = time - lastTime.current;
       lastTime.current = time;
       if (!paused) {
+        if (mode === 'sprint' && sprintStartRef.current) {
+          setSprintTime(time - sprintStartRef.current);
+        }
         dropCounter.current += delta;
         const interval = softDropRef.current ? dropInterval / 10 : dropInterval;
         if (dropCounter.current > interval) {
@@ -513,7 +701,7 @@ const Tetris = () => {
     };
     animationRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animationRef.current);
-  }, [draw, moveDown, paused, dropInterval]);
+  }, [draw, moveDown, paused, dropInterval, mode]);
 
   const cellPreview = (p) => (
     p.shape.map((row, r) =>
@@ -574,12 +762,20 @@ const Tetris = () => {
             <div>Score: {score}</div>
             <div>High: {highScore}</div>
             <div>Level: {level}</div>
-            <div>Lines: {lines}</div>
+            <div>Lines: {mode === 'sprint' ? `${lines}/40` : lines}</div>
+            {mode === 'sprint' && (
+              <>
+                <div>Time: {(sprintTime / 1000).toFixed(2)}</div>
+                <div>Best: {bestTime ? (bestTime / 1000).toFixed(2) : '--'}</div>
+              </>
+            )}
           </div>
           <div className="mt-2 space-x-1">
-            <button className="px-2 py-1 bg-blue-500" onClick={resetGame}>Reset</button>
+            <button className="px-2 py-1 bg-blue-500" onClick={() => resetGame()}>Reset</button>
             <button className="px-2 py-1 bg-blue-500" onClick={togglePause}>{paused ? 'Resume' : 'Pause'}</button>
             <button className="px-2 py-1 bg-blue-500" onClick={toggleSound}>{sound ? 'Sound On' : 'Sound Off'}</button>
+            <button className="px-2 py-1 bg-blue-500" onClick={() => resetGame('marathon')}>Marathon</button>
+            <button className="px-2 py-1 bg-blue-500" onClick={() => resetGame('sprint')}>Sprint 40</button>
           </div>
         </div>
       </div>
@@ -587,9 +783,15 @@ const Tetris = () => {
         <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-red-800/40 to-transparent" />
       )}
       {tSpin && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-4xl">T-Spin!</div>
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-4xl">{tSpin}</div>
       )}
-      {paused && (
+      {finishTime !== null && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-4xl">
+          Time: {(finishTime / 1000).toFixed(2)}s
+          {bestTime === finishTime ? ' (PB)' : ''}
+        </div>
+      )}
+      {paused && finishTime === null && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-4xl">Paused</div>
       )}
       {showSettings && (
