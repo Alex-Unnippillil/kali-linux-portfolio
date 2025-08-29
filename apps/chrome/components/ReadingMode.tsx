@@ -43,19 +43,50 @@ const ReadingMode = () => {
 
   return (
     <div className="p-4 h-full overflow-auto">
-      <div className="mb-4 space-x-2">
+      <div className="mb-4 flex space-x-2">
         <button
-          className="border px-2 py-1 rounded"
+          className="p-2 border rounded"
           onClick={() => setMode(mode === 'live' ? 'snapshot' : 'live')}
         >
-          {mode === 'live' ? 'Show Saved' : 'Show Live'}
+          <svg
+            viewBox="0 0 24 24"
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden="true"
+          >
+            <path
+              d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+          <span className="sr-only">
+            {mode === 'live' ? 'Show Saved' : 'Show Live'}
+          </span>
         </button>
         <button
-          className="border px-2 py-1 rounded"
+          className="p-2 border rounded"
           onClick={saveSnapshot}
           disabled={!content}
         >
-          Save snapshot
+          <svg
+            viewBox="0 0 24 24"
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden="true"
+          >
+            <path
+              d="M12 5v8m0 0l3-3m-3 3l-3-3M5 19h14"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span className="sr-only">Save snapshot</span>
         </button>
       </div>
       <article dangerouslySetInnerHTML={{ __html: displayed }} />

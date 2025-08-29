@@ -54,22 +54,50 @@ export default function FullPageCapture() {
 
   return (
     <div className="p-4 space-y-4">
-      <div className="space-x-2">
+      <div className="flex space-x-2">
         <button
           type="button"
           onClick={() => capture('png')}
           disabled={processing}
-          className="px-3 py-1 rounded bg-blue-600 text-white"
+          className="p-2 rounded bg-blue-600 text-white"
         >
-          Download PNG
+          <svg
+            viewBox="0 0 24 24"
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden="true"
+          >
+            <path
+              d="M12 5v8m0 0l3-3m-3 3l-3-3M5 19h14"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span className="sr-only">Download PNG</span>
         </button>
         <button
           type="button"
           onClick={() => capture('pdf')}
           disabled={processing}
-          className="px-3 py-1 rounded bg-green-600 text-white"
+          className="p-2 rounded bg-green-600 text-white"
         >
-          Download PDF
+          <svg
+            viewBox="0 0 24 24"
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden="true"
+          >
+            <path
+              d="M12 5v8m0 0l3-3m-3 3l-3-3M5 19h14"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span className="sr-only">Download PDF</span>
         </button>
       </div>
       <div ref={canvasContainer} />
