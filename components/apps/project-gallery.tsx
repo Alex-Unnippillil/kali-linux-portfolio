@@ -135,6 +135,11 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
     openApp && openApp('chrome');
   };
 
+  const openDemoTab = (url: string) => {
+    const href = `/apps/project-gallery/demo?src=${encodeURIComponent(url)}`;
+    window.open(href, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <div className="p-4 h-full overflow-auto bg-ub-cool-grey text-white">
       <div className="flex flex-wrap gap-2 mb-4">
@@ -190,7 +195,22 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
         {filtered.map((project) => (
           <div
             key={project.id}
-            className="mb-4 break-inside-avoid bg-gray-800 rounded shadow overflow-hidden"
+            role={project.demo ? 'button' : undefined}
+            tabIndex={project.demo ? 0 : undefined}
+            onClick={(e) => {
+              if (!project.demo) return;
+              const target = e.target as HTMLElement;
+              if (target.closest('a,button')) return;
+              openDemoTab(project.demo);
+            }}
+            onKeyDown={(e) => {
+              if (!project.demo) return;
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openDemoTab(project.demo);
+              }
+            }}
+            className="mb-4 break-inside-avoid bg-gray-800 rounded shadow overflow-hidden cursor-pointer"
           >
             <div className="flex flex-col md:flex-row h-48">
               <img
