@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Image from 'next/image';
 import seedrandom from 'seedrandom';
 import capture from './sampleCapture.json';
 import clients from './sampleClients.json';
@@ -17,6 +18,34 @@ const signalBg = (s) => {
   if (s >= -50) return 'bg-green-600';
   if (s >= -70) return 'bg-yellow-600';
   return 'bg-red-600';
+};
+
+const signalLevel = (s) => {
+  if (s >= -50) return 4;
+  if (s >= -60) return 3;
+  if (s >= -70) return 2;
+  if (s >= -80) return 1;
+  return 0;
+};
+
+const wifiIcon = (lvl) =>
+  lvl > 0
+    ? '/themes/Yaru/status/network-wireless-signal-good-symbolic.svg'
+    : '/themes/Yaru/status/network-wireless-signal-none-symbolic.svg';
+
+const SignalBars = ({ strength }) => {
+  const lvl = signalLevel(strength);
+  return (
+    <div className="flex items-end space-x-0.5" aria-label={`${strength} dBm`}>
+      {[1, 2, 3, 4].map((b) => (
+        <span
+          key={b}
+          className={`${b <= lvl ? 'bg-green-500' : 'bg-gray-700'} w-1.5 rounded-sm`}
+          style={{ height: b * 4 }}
+        />
+      ))}
+    </div>
+  );
 };
 
 const SignalTimeline = ({ history }) => {
@@ -414,7 +443,13 @@ const KismetApp = ({ onNetworkDiscovered = () => {} }) => {
 
   return (
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white select-none">
-      <div className="px-3 py-1 border-b border-gray-700">
+      <div className="px-3 py-1 border-b border-gray-700 flex items-center space-x-2">
+        <Image
+          src={wifiIcon(4)}
+          width={16}
+          height={16}
+          alt="Wi-Fi"
+        />
         <span className="font-bold">Kismet</span>
         <HeaderSpectrum networks={networks} />
       </div>
@@ -446,20 +481,27 @@ const KismetApp = ({ onNetworkDiscovered = () => {} }) => {
           {networks.length ? (
             <VirtualizedList
               items={networks}
-              rowHeight={40}
+              rowHeight={80}
               keyExtractor={(n) => n.bssid}
               className="flex-grow"
               renderRow={(net) => (
                 <div
                   id={net.bssid}
                   onClick={() => setSelected(net)}
-                  className={`flex items-center justify-between p-1 transition-colors duration-500 cursor-pointer ${
+                  className={`flex items-center h-full p-2 border-b border-gray-700 transition-colors duration-500 cursor-pointer ${
                     net.highlight ? 'bg-yellow-700' : ''
                   }`}
                 >
-                  <div className="flex flex-col w-32">
+                  <Image
+                    src={wifiIcon(signalLevel(net.strength))}
+                    width={64}
+                    height={64}
+                    alt="network"
+                    className="flex-shrink-0"
+                  />
+                  <div className="ml-2 flex flex-col flex-grow">
                     <span
-                      className="truncate"
+                      className="font-semibold truncate"
                       title={`${net.ssid} (${net.bssid})`}
                     >
                       {net.ssid}
@@ -470,31 +512,25 @@ const KismetApp = ({ onNetworkDiscovered = () => {} }) => {
                     >
                       {net.vendor}
                     </span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="px-1 text-xs rounded bg-gray-700">
-                      Ch {net.channel}
-                    </span>
-                    <span
-                      className={`px-1 text-xs rounded text-white ${signalBg(
-                        net.strength,
-                      )}`}
-                    >
-                      {net.strength} dBm
-                    </span>
-                    <div className="flex space-x-1">
-                      {net.encryption.map((enc) => (
-                        <span
-                          key={enc}
-                          title={enc}
-                          style={{
-                            width: 6,
-                            height: 6,
-                            backgroundColor: encryptionColors[enc],
-                          }}
-                          className="inline-block rounded-sm"
-                        />
-                      ))}
+                    <div className="flex items-center space-x-2 mt-1">
+                      <span className="px-1 rounded bg-gray-700 text-xs font-mono">
+                        Ch {net.channel}
+                      </span>
+                      <SignalBars strength={net.strength} />
+                      <div className="flex space-x-1">
+                        {net.encryption.map((enc) => (
+                          <span
+                            key={enc}
+                            title={enc}
+                            style={{
+                              width: 6,
+                              height: 6,
+                              backgroundColor: encryptionColors[enc],
+                            }}
+                            className="inline-block rounded-sm"
+                          />
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>

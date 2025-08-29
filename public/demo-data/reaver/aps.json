@@ -2,16 +2,19 @@
   {
     "ssid": "CafeWiFi",
     "bssid": "00:11:22:33:44:55",
+    "channel": 6,
     "wps": "enabled"
   },
   {
     "ssid": "HomeSecure",
     "bssid": "66:77:88:99:AA:BB",
+    "channel": 11,
     "wps": "locked"
   },
   {
     "ssid": "Guest",
     "bssid": "CC:DD:EE:FF:00:11",
+    "channel": 1,
     "wps": "disabled"
   }
 ]
