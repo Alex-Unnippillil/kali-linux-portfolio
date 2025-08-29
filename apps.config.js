@@ -4,7 +4,6 @@ import { displayX } from './components/apps/x';
 import { displaySpotify } from './components/apps/spotify';
 import { displaySettings } from './components/apps/settings';
 import { displayChrome } from './components/apps/Chrome';
-import { displayTrash } from './components/apps/trash';
 import { displayGedit } from './components/apps/gedit';
 import { displayTodoist } from './components/apps/todoist';
 import { displayWeather } from './components/apps/weather';
@@ -67,6 +66,7 @@ const InputLabApp = createDynamicApp('input-lab', 'Input Lab');
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 
 const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
+const TrashApp = createDynamicApp('trash', 'Trash');
 const SerialTerminalApp = createDynamicApp('serial-terminal', 'Serial Terminal');
 
 
@@ -146,6 +146,7 @@ const displayQr = createDisplay(QrApp);
 const displayAsciiArt = createDisplay(AsciiArtApp);
 const displayQuoteGenerator = createDisplay(QuoteGeneratorApp);
 const displayProjectGallery = createDisplay(ProjectGalleryApp);
+const displayTrash = createDisplay(TrashApp);
 const displayStickyNotes = createDisplay(StickyNotesApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);
 const displayWeatherWidget = createDisplay(WeatherWidgetApp);
