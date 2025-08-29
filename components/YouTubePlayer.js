@@ -1,6 +1,7 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
+import useDocPiP from '../hooks/useDocPiP';
 
 // Basic YouTube player with keyboard shortcuts, playback rate cycling,
 // chapter drawer and Picture-in-Picture helpers. The Doc-PiP window is a
@@ -13,7 +14,95 @@ export default function YouTubePlayer({ videoId }) {
   const [chapters, setChapters] = useState([]); // [{title, startTime}]
   const [showChapters, setShowChapters] = useState(false);
   const [showDoc, setShowDoc] = useState(false);
+  const [transcript, setTranscript] = useState([]);
+  const [transcriptError, setTranscriptError] = useState('');
+  const [loadingTranscript, setLoadingTranscript] = useState(false);
+  const [docPipSupported, setDocPipSupported] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
+
+  useEffect(() => {
+    setDocPipSupported(
+      typeof window !== 'undefined' && !!window.documentPictureInPicture
+    );
+  }, []);
+
+  const fetchTranscript = useCallback(async () => {
+    setLoadingTranscript(true);
+    try {
+      const res = await fetch(`/api/transcript/${videoId}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setTranscript(data.transcript || []);
+      setTranscriptError(
+        data.transcript && data.transcript.length
+          ? ''
+          : 'Transcript not available.'
+      );
+    } catch {
+      setTranscript([]);
+      setTranscriptError('Transcript unavailable.');
+    } finally {
+      setLoadingTranscript(false);
+    }
+  }, [videoId]);
+
+  const renderDoc = useCallback(
+    () => (
+      <div
+        style={{
+          padding: 8,
+          background: 'black',
+          color: 'white',
+          fontFamily: 'sans-serif',
+          height: '100%',
+          overflowY: 'auto',
+        }}
+      >
+        {loadingTranscript ? (
+          <p>Loading transcript...</p>
+        ) : transcript.length > 0 ? (
+          transcript.map((t) => (
+            <p
+              key={t.start}
+              style={{ cursor: 'pointer', margin: '4px 0' }}
+              onClick={() => playerRef.current?.seekTo(t.start, true)}
+            >
+              {t.text}
+            </p>
+          ))
+        ) : (
+          <p>{transcriptError || 'No transcript available.'}</p>
+        )}
+      </div>
+    ),
+    [loadingTranscript, transcript, transcriptError]
+  );
+
+  const { isPinned, pin, togglePin } = useDocPiP(renderDoc);
+
+  useEffect(() => {
+    if (isPinned) {
+      pin();
+    }
+  }, [isPinned, transcript, transcriptError, loadingTranscript, pin]);
+
+  useEffect(() => {
+    if (
+      (showDoc || isPinned) &&
+      !loadingTranscript &&
+      transcript.length === 0 &&
+      !transcriptError
+    ) {
+      fetchTranscript();
+    }
+  }, [
+    showDoc,
+    isPinned,
+    loadingTranscript,
+    transcript.length,
+    transcriptError,
+    fetchTranscript,
+  ]);
 
   // Load the YouTube IFrame API lazily on user interaction
   const loadPlayer = () => {
@@ -121,8 +210,10 @@ export default function YouTubePlayer({ videoId }) {
         break;
       }
       case 'c':
-      case 'C':
-        if (chapters.length) setShowChapters((s) => !s);
+        setShowChapters((s) => !s);
+        break;
+      case 'n':
+        setShowDoc((s) => !s);
         break;
       default:
     }
@@ -205,7 +296,13 @@ export default function YouTubePlayer({ videoId }) {
             <button
               type="button"
               aria-label="Notes"
-              onClick={() => setShowDoc((s) => !s)}
+              onClick={() => {
+                if (docPipSupported) {
+                  togglePin();
+                } else {
+                  setShowDoc((s) => !s);
+                }
+              }}
               className="bg-black/60 text-white px-2 py-1 rounded"
             >
               Doc-PiP
@@ -243,7 +340,25 @@ export default function YouTubePlayer({ videoId }) {
             >
               ✕
             </button>
-            <p className="pr-4">No transcript available.</p>
+            {loadingTranscript ? (
+              <p className="pr-4">Loading transcript...</p>
+            ) : transcript.length > 0 ? (
+              <ul className="pr-4 space-y-1">
+                {transcript.map((line) => (
+                  <li key={line.start}>
+                    <button
+                      type="button"
+                      className="text-left hover:underline"
+                      onClick={() => playerRef.current?.seekTo(line.start, true)}
+                    >
+                      {line.text}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="pr-4">{transcriptError || 'No transcript available.'}</p>
+            )}
           </div>
         )}
       </div>
