@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import ModeSwitcher from './components/ModeSwitcher';
 import './styles.css';
+import MemorySlots from './components/MemorySlots';
 
 export default function Calculator() {
   const [tape, setTape] = usePersistentState<{expr: string; result: string}[]>('calc-tape', () => [], (v): v is {expr: string; result: string}[] => Array.isArray(v) && v.every(item => typeof item?.expr === 'string' && typeof item?.result === 'string'));
@@ -61,6 +62,7 @@ export default function Calculator() {
         <button className="btn" data-action="mminus">M&minus;</button>
         <button className="btn" data-action="mr">MR</button>
       </div>
+      <MemorySlots />
       <div className="button-grid">
         <button className="btn" data-value="7">7</button>
         <button className="btn" data-value="8">8</button>
