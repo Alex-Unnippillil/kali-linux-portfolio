@@ -13,15 +13,15 @@
   "entities": {
     "nodes": [
       { "data": { "id": "domains", "label": "Domains" } },
-      { "data": { "id": "people", "label": "People" } },
-      { "data": { "id": "assets", "label": "Assets" } },
+      { "data": { "id": "ips", "label": "IPs" } },
+      { "data": { "id": "entities", "label": "Entities" } },
       { "data": { "id": "example.com", "label": "example.com", "parent": "domains", "type": "domain" } },
-      { "data": { "id": "Jane Smith", "label": "Jane Smith", "parent": "people", "type": "person" } },
-      { "data": { "id": "Server1", "label": "Server1", "parent": "assets", "type": "asset" } }
+      { "data": { "id": "93.184.216.34", "label": "93.184.216.34", "parent": "ips", "type": "ip" } },
+      { "data": { "id": "Jane Smith", "label": "Jane Smith", "parent": "entities", "type": "entity" } }
     ],
     "edges": [
-      { "data": { "id": "e1", "source": "example.com", "target": "Jane Smith" } },
-      { "data": { "id": "e2", "source": "Jane Smith", "target": "Server1" } }
+      { "data": { "id": "e1", "source": "example.com", "target": "93.184.216.34" } },
+      { "data": { "id": "e2", "source": "93.184.216.34", "target": "Jane Smith" } }
     ]
   }
 }
