@@ -67,12 +67,13 @@ function randomLayout(
     const len = shipLens[i];
     const options: Layout[] = [];
     for (let dir: 0 | 1 = 0; dir < 2; dir++) {
+      const dir01 = dir as 0 | 1;
       const maxX = dir === 0 ? BOARD_SIZE - len : BOARD_SIZE - 1;
       const maxY = dir === 1 ? BOARD_SIZE - len : BOARD_SIZE - 1;
       for (let x = 0; x <= maxX; x++) {
         for (let y = 0; y <= maxY; y++) {
-          const cells = canPlace(x, y, dir, len);
-          if (cells) options.push({ x, y, dir, len, cells });
+          const cells = canPlace(x, y, dir01, len);
+          if (cells) options.push({ x, y, dir: dir01, len, cells });
         }
       }
     }
