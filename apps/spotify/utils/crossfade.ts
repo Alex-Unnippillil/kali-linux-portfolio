@@ -1,7 +1,10 @@
 export default class CrossfadePlayer {
   private ctx: AudioContext | null = null;
   private gains: [GainNode, GainNode] | null = null;
-  private sources: [AudioBufferSourceNode | null, AudioBufferSourceNode | null] = [null, null];
+  private sources: [AudioBufferSourceNode | null, AudioBufferSourceNode | null] = [
+    null,
+    null,
+  ];
   private analyser: AnalyserNode | null = null;
   private current = 0;
   private startTime = 0;
@@ -24,7 +27,7 @@ export default class CrossfadePlayer {
     this.analyser = analyser;
   }
 
-  async play(url: string, fadeSec = 0) {
+  async play(url: string, fadeSec = 0, offset = 0) {
     this.ensureContext();
     const ctx = this.ctx;
     const gains = this.gains;
@@ -38,8 +41,8 @@ export default class CrossfadePlayer {
       src.buffer = buffer;
       src.connect(gains[nextIndex]);
       const now = ctx.currentTime;
-      src.start();
-      this.startTime = now;
+      src.start(0, offset);
+      this.startTime = now - offset;
       if (fadeSec > 0) {
         gains[nextIndex].gain.setValueAtTime(0, now);
         gains[nextIndex].gain.linearRampToValueAtTime(1, now + fadeSec);
@@ -71,6 +74,27 @@ export default class CrossfadePlayer {
   getCurrentTime() {
     if (!this.ctx) return 0;
     return this.ctx.currentTime - this.startTime;
+  }
+
+  getDuration() {
+    return this.sources[this.current]?.buffer?.duration ?? 0;
+  }
+
+  seek(time: number) {
+    this.ensureContext();
+    const ctx = this.ctx;
+    const gains = this.gains;
+    const buffer = this.sources[this.current]?.buffer;
+    if (!ctx || !gains || !buffer) return;
+    const gain = gains[this.current];
+    this.sources[this.current]?.stop();
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.connect(gain);
+    gain.gain.setValueAtTime(1, ctx.currentTime);
+    src.start(0, time);
+    this.sources[this.current] = src;
+    this.startTime = ctx.currentTime - time;
   }
 
   dispose() {
