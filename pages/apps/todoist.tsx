@@ -1,3 +1,4 @@
+import React from 'react';
 import dynamic from 'next/dynamic';
 
 const Todoist = dynamic(() => import('../../apps/todoist'), {
@@ -5,5 +6,6 @@ const Todoist = dynamic(() => import('../../apps/todoist'), {
   loading: () => <p>Loading...</p>,
 });
 
-export default Todoist;
-export const displayTodoist = () => <Todoist />;
+export default function TodoistPage(): React.ReactElement {
+  return <Todoist />;
+}
