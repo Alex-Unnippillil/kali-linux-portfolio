@@ -235,7 +235,7 @@ const VirtualizedList = ({
   );
 };
 
-const KismetApp = () => {
+const KismetApp = ({ onNetworkDiscovered = () => {} }) => {
   const [networks, setNetworks] = useState([]);
   const [playing, setPlaying] = useState(false);
   const [frameIndex, setFrameIndex] = useState(0);
@@ -282,22 +282,31 @@ const KismetApp = () => {
               : n
           );
         }
-        return [
-          ...prev,
-          {
-            ssid: frame.ssid,
-            bssid: frame.bssid,
-            vendor:
-              vendors[frame.bssid.slice(0, 8).toUpperCase()] || 'Unknown',
-            strength: frame.signal,
-            channel: frame.channel,
-            history: [frame.signal],
-          },
-        ];
+        const discoveredAt = Date.now();
+        const newNetwork = {
+          ssid: frame.ssid,
+          bssid: frame.bssid,
+          vendor:
+            vendors[frame.bssid.slice(0, 8).toUpperCase()] || 'Unknown',
+          strength: frame.signal,
+          channel: frame.channel,
+          history: [frame.signal],
+          discoveredAt,
+          highlight: true,
+        };
+        onNetworkDiscovered(newNetwork);
+        setTimeout(() => {
+          setNetworks((p) =>
+            p.map((n) =>
+              n.bssid === newNetwork.bssid ? { ...n, highlight: false } : n
+            )
+          );
+        }, 3000);
+        return [...prev, newNetwork];
       });
       return idx + 1;
     });
-  }, []);
+  }, [onNetworkDiscovered]);
 
   useEffect(() => {
     if (!playing) return;
@@ -347,8 +356,10 @@ const KismetApp = () => {
               rowHeight={40}
               keyExtractor={(n) => n.bssid}
               className="flex-grow"
-              renderRow={(net) => (
-                <div className="flex items-center justify-between p-1">
+                renderRow={(net) => (
+                  <div
+                    className={`flex items-center justify-between p-1 transition-colors duration-500 ${net.highlight ? 'bg-yellow-700' : ''}`}
+                  >
                   <span
                     className="truncate w-24"
                     title={`${net.ssid} (${net.bssid})`}
