@@ -17,6 +17,12 @@ const WIP_LIMITS = {
   Someday: 0,
 };
 
+const PRIORITY_COLORS = {
+  high: 'bg-red-500',
+  medium: 'bg-ubt-gedit-orange',
+  low: 'bg-ubt-green',
+};
+
 export default function Todoist() {
   const [groups, setGroups] = useState(initialGroups);
   const [animating, setAnimating] = useState('');
@@ -575,13 +581,13 @@ export default function Todoist() {
       else if (task.due === today) chipColor = 'bg-yellow-100 text-yellow-700';
     }
     return (
-      <div key={task.id} className="mb-2">
+      <div key={task.id} className="mb-1.5">
         <div
           tabIndex={0}
           draggable
           onDragStart={handleDragStart(group, task)}
           onKeyDown={handleKeyDown(group, task)}
-          className="rounded shadow bg-white text-black flex items-center min-h-[44px] px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="rounded shadow bg-white text-black flex items-center px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
           role="listitem"
         >
           <label className="mr-2 inline-flex items-center">
@@ -594,7 +600,13 @@ export default function Todoist() {
             />
           </label>
           <div className="flex-1">
-            <div className={`font-medium ${task.completed ? 'line-through text-gray-500' : ''}`}>{task.title}</div>
+            <div className="flex items-center">
+              <span
+                className={`w-2 h-2 rounded-full mr-2 ${PRIORITY_COLORS[task.priority]}`}
+                aria-label={`priority ${task.priority}`}
+              />
+              <div className={`font-medium ${task.completed ? 'line-through text-gray-500' : ''}`}>{task.title}</div>
+            </div>
             <div className="flex flex-wrap gap-2 text-xs text-gray-500">
               {task.due && (
                 <span className={`inline-flex items-center gap-1 px-2 py-[2px] rounded-full ${chipColor}`}>
@@ -603,7 +615,6 @@ export default function Todoist() {
                 </span>
               )}
               {task.section && <span>{task.section}</span>}
-              <span>Priority: {task.priority}</span>
             </div>
           </div>
           <button
@@ -626,7 +637,7 @@ export default function Todoist() {
               }
               onBlur={saveEditing}
               onKeyDown={(e) => e.key === 'Enter' && saveEditing()}
-              className="mt-2 w-full border p-1"
+              className="mt-1.5 w-full border p-1.5"
               autoFocus
             />
           )}
@@ -643,27 +654,35 @@ export default function Todoist() {
       if (!bySection[sec]) bySection[sec] = [];
       bySection[sec].push(t);
     });
+    const groupClass = `flex-1 px-2 py-1.5 border-r last:border-r-0 border-gray-300 overflow-y-auto ${
+      !prefersReducedMotion.current ? 'transition-colors' : ''
+    } ${animating === name ? 'bg-blue-200' : ''}`;
     return (
       <div
         key={name}
         onDragOver={handleDragOver}
         onDrop={handleDrop(name)}
-        className={`flex-1 p-2 border-r last:border-r-0 border-gray-300 overflow-y-auto ${
-          !prefersReducedMotion.current ? 'transition-colors' : ''
-        } ${animating === name ? 'bg-blue-200' : ''}`}
+        className={groupClass}
         role="list"
         aria-label={name}
       >
-        <h2 className="mb-2 font-bold text-lg text-gray-800">
+        <h2 className="mb-1.5 font-bold text-lg text-gray-800">
           {name}
           {WIP_LIMITS[name] ? ` (${groups[name].length}/${WIP_LIMITS[name]})` : ''}
         </h2>
-        {Object.keys(bySection).map((sec) => (
-          <div key={sec} className="mb-4">
-            {sec !== 'General' && <h3 className="font-semibold">{sec}</h3>}
-            {bySection[sec].map((task) => renderTask(name, task))}
+        {filtered.length === 0 ? (
+          <div className="flex flex-col items-center text-gray-500 mt-3">
+            <img src="/empty-tasks.svg" alt="" className="w-16 h-16 mb-1.5" />
+            <span className="text-sm">No tasks</span>
           </div>
-        ))}
+        ) : (
+          Object.keys(bySection).map((sec) => (
+            <div key={sec} className="mb-4">
+              {sec !== 'General' && <h3 className="font-semibold">{sec}</h3>}
+              {bySection[sec].map((task) => renderTask(name, task))}
+            </div>
+          ))
+        )}
       </div>
     );
   };

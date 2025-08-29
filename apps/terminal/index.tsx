@@ -11,6 +11,57 @@ import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
 
+const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    viewBox="0 0 24 24"
+    width={24}
+    height={24}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <rect x={9} y={9} width={13} height={13} rx={2} ry={2} />
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+  </svg>
+);
+
+const PasteIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    viewBox="0 0 24 24"
+    width={24}
+    height={24}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <path d="M8 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+    <rect x={9} y={2} width={6} height={4} rx={1} />
+  </svg>
+);
+
+const SettingsIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    viewBox="0 0 24 24"
+    width={24}
+    height={24}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <circle cx={12} cy={12} r={3} />
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.06a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.06a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.06a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+  </svg>
+);
+
 export interface TerminalProps {
   openApp?: (id: string) => void;
 }
@@ -48,10 +99,29 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   });
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
   const [overflow, setOverflow] = useState({ top: false, bottom: false });
+  const ansiColors = [
+    '#000000',
+    '#AA0000',
+    '#00AA00',
+    '#AA5500',
+    '#0000AA',
+    '#AA00AA',
+    '#00AAAA',
+    '#AAAAAA',
+    '#555555',
+    '#FF5555',
+    '#55FF55',
+    '#FFFF55',
+    '#5555FF',
+    '#FF55FF',
+    '#55FFFF',
+    '#FFFFFF',
+  ];
 
   function updateOverflow() {
     const term = termRef.current;
@@ -74,6 +144,17 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   function prompt() {
     if (termRef.current) termRef.current.write('$ ');
   }
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(contentRef.current).catch(() => {});
+  };
+
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      handleInput(text);
+    } catch {}
+  };
 
   async function runWorker(command: string) {
     const worker = workerRef.current;
@@ -310,7 +391,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   return (
     <div className="relative h-full w-full">
       {paletteOpen && (
-        <div className="absolute inset-0 bg-black bg-opacity-75 flex items-start justify-center">
+        <div className="absolute inset-0 bg-black bg-opacity-75 flex items-start justify-center z-10">
           <div className="mt-10 w-80 bg-gray-800 p-4 rounded">
             <input
               autoFocus
@@ -341,17 +422,73 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           </div>
         </div>
       )}
-      <TerminalContainer
-        ref={containerRef}
-        className="resize overflow-hidden"
-        style={{ width: '80ch', height: '24em' }}
-      />
-      {overflow.top && (
-        <div className="pointer-events-none absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-black" />
+      {settingsOpen && (
+        <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-10">
+          <div className="bg-gray-900 p-4 rounded space-y-4">
+            <div className="grid grid-cols-8 gap-2">
+              {ansiColors.map((c, i) => (
+                <div key={i} className="h-4 w-4 rounded" style={{ backgroundColor: c }} />
+              ))}
+            </div>
+            <pre className="text-sm leading-snug">
+              <span className="text-blue-400">bin</span>{' '}
+              <span className="text-green-400">script.sh</span>{' '}
+              <span className="text-gray-300">README.md</span>
+            </pre>
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-2 py-1 bg-gray-700 rounded"
+                onClick={() => {
+                  setSettingsOpen(false);
+                  termRef.current?.focus();
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-2 py-1 bg-blue-600 rounded"
+                onClick={() => {
+                  setSettingsOpen(false);
+                  termRef.current?.focus();
+                }}
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
       )}
-      {overflow.bottom && (
-        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-black" />
-      )}
+      <div className="flex flex-col h-full">
+        <div className="flex items-center gap-2 bg-gray-800 p-1">
+          <button onClick={handleCopy} aria-label="Copy">
+            <CopyIcon />
+          </button>
+          <button onClick={handlePaste} aria-label="Paste">
+            <PasteIcon />
+          </button>
+          <button onClick={() => setSettingsOpen(true)} aria-label="Settings">
+            <SettingsIcon />
+          </button>
+        </div>
+        <div className="relative">
+          <TerminalContainer
+            ref={containerRef}
+            className="resize overflow-hidden font-mono"
+            style={{
+              width: '80ch',
+              height: '24em',
+              fontSize: 'clamp(1rem, 0.6vw + 1rem, 1.1rem)',
+              lineHeight: 1.4,
+            }}
+          />
+          {overflow.top && (
+            <div className="pointer-events-none absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-black" />
+          )}
+          {overflow.bottom && (
+            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-black" />
+          )}
+        </div>
+      </div>
     </div>
   );
 });

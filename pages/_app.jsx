@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import ReactGA from 'react-ga4';
 import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import 'tailwindcss/tailwind.css';
 import '../styles/globals.css';
 import '../styles/index.css';
@@ -128,6 +129,7 @@ function MyApp({ Component, pageProps }) {
         <Component {...pageProps} />
         <ShortcutOverlay />
         <Analytics />
+        {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
       </PipPortalProvider>
     </SettingsProvider>
   );

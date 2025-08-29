@@ -5,6 +5,8 @@ import useTrashState from './state';
 import HistoryList from './components/HistoryList';
 
 const DEFAULT_ICON = './themes/Yaru/system/folder.png';
+const EMPTY_ICON = './themes/Yaru/status/user-trash-symbolic.svg';
+const FULL_ICON = './themes/Yaru/status/user-trash-full-symbolic.svg';
 
 export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   const {
@@ -139,7 +141,7 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
       <div className="flex items-center justify-between w-full bg-ub-warm-grey bg-opacity-40 text-sm">
         <span className="font-bold ml-2">Trash</span>
         <div className="flex items-center">
-          <div className="flex space-x-3 mr-2">
+          <div className="flex mr-2">
             <button
               onClick={restore}
               disabled={selected === null}
@@ -150,14 +152,14 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
             <button
               onClick={remove}
               disabled={selected === null}
-              className="px-3 py-1 my-1 rounded bg-red-600 text-white hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50"
+              className="px-3 py-1 my-1 ml-3 rounded bg-red-600 text-white hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50"
             >
               Delete
             </button>
             <button
               onClick={purge}
               disabled={selected === null}
-              className="px-3 py-1 my-1 rounded bg-yellow-600 text-white hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:opacity-50"
+              className="px-3 py-1 my-1 ml-3 rounded bg-yellow-600 text-white hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:opacity-50"
             >
               Purge
             </button>
@@ -179,30 +181,29 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
         </div>
       </div>
       <div className="flex-1 overflow-auto">
-        {items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center mt-12 space-y-1.5">
-            <img
-              src="./themes/Yaru/status/user-trash-symbolic.svg"
-              alt="Empty trash"
-              className="h-12 w-12 opacity-60"
-            />
-            <span>Trash is empty</span>
-          </div>
-        ) : (
-          <ul className="p-2 space-y-1.5">
+        <div className="flex flex-col items-center justify-center mt-12 space-y-1.5">
+          <img
+            src={items.length ? FULL_ICON : EMPTY_ICON}
+            alt={items.length ? 'Full trash' : 'Empty trash'}
+            className="h-16 w-16 opacity-60"
+          />
+          {items.length === 0 && <span>Trash is empty</span>}
+        </div>
+        {items.length > 0 && (
+          <ul className="p-2 space-y-1.5 mt-4">
             {items.map((item, idx) => (
               <li
                 key={item.closedAt}
                 tabIndex={0}
                 onClick={() => setSelected(idx)}
-                className={`flex items-center p-1 cursor-pointer ${selected === idx ? 'bg-ub-drk-abrgn' : ''}`}
+                className={`flex items-center h-9 px-1 cursor-pointer ${selected === idx ? 'bg-ub-drk-abrgn' : ''}`}
               >
                 <img
                   src={item.icon || DEFAULT_ICON}
                   alt=""
-                  className="h-6 w-6 mr-2"
+                  className="h-4 w-4 mr-2"
                 />
-                <span className="truncate" title={item.title}>
+                <span className="truncate font-mono" title={item.title}>
                   {item.title}
                 </span>
                 <span

@@ -20,6 +20,7 @@ type ScriptData = Record<string, Omit<Script, 'tag'>[]>;
 const NmapNSE: React.FC = () => {
   const [data, setData] = useState<Script[]>([]);
   const [activeTag, setActiveTag] = useState('');
+  const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Script | null>(null);
   const [result, setResult] = useState<{ script: string; output: string } | null>(
     null
@@ -47,8 +48,13 @@ const NmapNSE: React.FC = () => {
   ]);
 
   const scripts = useMemo(
-    () => (activeTag ? data.filter((s) => s.tag === activeTag) : data),
-    [activeTag, data]
+    () =>
+      data.filter(
+        (s) =>
+          (!activeTag || s.tag === activeTag) &&
+          s.name.toLowerCase().includes(search.toLowerCase())
+      ),
+    [activeTag, data, search]
   );
 
   const run = () => {
@@ -74,87 +80,136 @@ const NmapNSE: React.FC = () => {
     share(JSON.stringify(result, null, 2), 'Nmap NSE Result');
   };
 
-  return (
-    <div className="flex h-full min-h-screen bg-gray-900 text-white">
-      {/* script browser */}
-      <aside className="w-1/3 border-r border-gray-700 flex flex-col">
-        <div className="sticky top-0 p-2 bg-gray-900 z-10 flex flex-wrap items-center gap-2">
-          {tags.map((tag) => (
-            <button
-              key={tag}
-              className={`px-2 py-1 rounded-full text-xs capitalize bg-gray-700 hover:bg-gray-600 ${
-                activeTag === tag ? 'bg-blue-600' : ''
-              }`}
-              onClick={() => setActiveTag(activeTag === tag ? '' : tag)}
-            >
-              {tag}
-            </button>
-          ))}
-          <button
-            className="ml-auto px-3 py-1 bg-green-700 rounded disabled:opacity-50"
-            onClick={run}
-            disabled={!selected}
-          >
-            Run
-          </button>
-        </div>
-        <div className="overflow-y-auto flex-1 p-2 space-y-1">
-          {scripts.map((s) => (
-            <button
-              key={s.name}
-              onClick={() => setSelected(s)}
-              className={`block w-full text-left px-2 py-1 rounded font-mono text-sm hover:bg-gray-800 ${
-                selected?.name === s.name ? 'bg-gray-800' : ''
-              }`}
-            >
-              {s.name}
-            </button>
-          ))}
-        </div>
-      </aside>
+  const severityColor = (tag: string) => {
+    switch (tag) {
+      case 'vuln':
+        return 'border-red-500';
+      case 'safe':
+        return 'border-green-500';
+      default:
+        return 'border-blue-500';
+    }
+  };
 
-      {/* details */}
-      <main className="flex-1 p-4 overflow-y-auto">
-        {selected ? (
-          <div>
-            <h1 className="text-2xl mb-2 font-mono">{selected.name}</h1>
-            <p className="mb-4">{selected.description}</p>
-            <p className="mb-2 text-sm">Tag: {selected.tag}</p>
-            <h2 className="text-xl mb-2">Sample Output</h2>
-            <pre className="bg-black text-green-400 p-2 rounded overflow-auto font-mono leading-[1.2]">
-              {selected.example}
-            </pre>
-            {result && (
-              <div className="mt-4">
-                <h2 className="text-xl mb-2">Result</h2>
-                <pre className="bg-black text-green-400 p-2 rounded overflow-auto font-mono leading-[1.2]">
-                  {JSON.stringify(result, null, 2)}
+  const CollapsibleSection: React.FC<{
+    title: string;
+    tag?: string;
+    children: React.ReactNode;
+  }> = ({ title, tag, children }) => {
+    const [open, setOpen] = useState(true);
+    return (
+      <div className={`mb-4 border-l-4 ${severityColor(tag || '')}`}>
+        <button
+          className="w-full flex justify-between items-center bg-gray-800 px-2 py-1.5"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+        >
+          <span>{title}</span>
+          <span className="text-xl leading-none">{open ? '−' : '+'}</span>
+        </button>
+        {open && <div className="p-1.5">{children}</div>}
+      </div>
+    );
+  };
+
+  return (
+    <div className="flex flex-col h-full min-h-screen bg-gray-900 text-white">
+      <header className="flex items-center gap-2 p-2 bg-gray-800">
+        <img
+          src="/themes/Yaru/apps/radar-symbolic.svg"
+          alt="Radar"
+          className="w-5 h-5"
+        />
+        <h1 className="font-mono">Nmap NSE</h1>
+      </header>
+      <div className="flex flex-1">
+        {/* script browser */}
+        <aside className="w-1/3 border-r border-gray-700 flex flex-col">
+          <div className="sticky top-0 p-2 bg-gray-900 z-10 flex flex-wrap items-center gap-2">
+            {tags.map((tag) => (
+              <button
+                key={tag}
+                className={`h-6 px-2 rounded-full text-xs capitalize bg-gray-700 hover:bg-gray-600 flex items-center ${
+                  activeTag === tag ? 'bg-blue-600' : ''
+                }`}
+                onClick={() => setActiveTag(activeTag === tag ? '' : tag)}
+              >
+                {tag}
+              </button>
+            ))}
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search"
+              className="h-6 px-2 rounded text-black font-mono flex-1"
+            />
+            <button
+              className="ml-auto px-3 py-1 bg-green-700 rounded disabled:opacity-50"
+              onClick={run}
+              disabled={!selected}
+            >
+              Run
+            </button>
+          </div>
+          <div className="overflow-y-auto flex-1 p-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {scripts.map((s) => (
+              <button
+                key={s.name}
+                onClick={() => setSelected(s)}
+                className={`w-full text-left px-2 py-1 rounded font-mono text-sm hover:bg-gray-800 ${
+                  selected?.name === s.name ? 'bg-gray-800' : 'bg-gray-700'
+                }`}
+              >
+                {s.name}
+              </button>
+            ))}
+          </div>
+        </aside>
+
+        {/* details */}
+        <main className="flex-1 p-4 overflow-y-auto">
+          {selected ? (
+            <div>
+              <h1 className="text-2xl mb-2 font-mono">{selected.name}</h1>
+              <p className="mb-4">{selected.description}</p>
+              <p className="mb-2 text-sm">Tag: {selected.tag}</p>
+              <CollapsibleSection title="Sample Output" tag={selected.tag}>
+                <pre className="bg-black text-green-400 rounded overflow-auto font-mono leading-[1.2]">
+                  {selected.example}
                 </pre>
-                <div className="mt-2 flex gap-2">
-                  <button
-                    className="px-2 py-1 bg-blue-700 rounded"
-                    onClick={download}
-                    type="button"
-                  >
-                    Download JSON
-                  </button>
-                  {canShare() && (
+              </CollapsibleSection>
+              {result && (
+                <CollapsibleSection title="Result" tag={selected.tag}>
+                  <pre className="bg-black text-green-400 rounded overflow-auto font-mono leading-[1.2]">
+                    {JSON.stringify(result, null, 2)}
+                  </pre>
+                  <div className="mt-2 flex gap-2">
                     <button
-                      className="px-2 py-1 bg-purple-700 rounded"
-                      onClick={shareResult}
+                      className="px-2 py-1 bg-blue-700 rounded"
+                      onClick={download}
                       type="button"
                     >
-                      Share
+                      Download JSON
                     </button>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <p>Select a script to view details.</p>
-        )}
-      </main>
+                    {canShare() && (
+                      <button
+                        className="px-2 py-1 bg-purple-700 rounded"
+                        onClick={shareResult}
+                        type="button"
+                      >
+                        Share
+                      </button>
+                    )}
+                  </div>
+                </CollapsibleSection>
+              )}
+            </div>
+          ) : (
+            <p>Select a script to view details.</p>
+          )}
+        </main>
+      </div>
     </div>
   );
 };

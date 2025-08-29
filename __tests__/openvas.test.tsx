@@ -36,10 +36,7 @@ describe('OpenVASApp', () => {
       screen.getByPlaceholderText('Group (e.g. Servers)'),
       { target: { value: 'servers' } }
     );
-    fireEvent.change(
-      screen.getByLabelText('Scan profile'),
-      { target: { value: 'HIPAA' } }
-    );
+    fireEvent.click(screen.getByRole('tab', { name: 'HIPAA' }));
     fireEvent.click(screen.getByText('Scan'));
     await waitFor(() => expect(fetch).toHaveBeenCalled());
     expect(fetch).toHaveBeenCalledWith(

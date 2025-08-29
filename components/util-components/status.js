@@ -3,6 +3,8 @@ import Image from 'next/image';
 import SmallArrow from "./small_arrow";
 import { useSettings } from '../../hooks/useSettings';
 
+const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
+
 export default function Status() {
   const { allowNetwork } = useSettings();
   const [online, setOnline] = useState(
@@ -60,8 +62,8 @@ export default function Status() {
         <Image
           width={16}
           height={16}
-          src="/themes/Yaru/status/audio-volume-medium-symbolic.svg"
-          alt="ubuntu sound"
+          src={VOLUME_ICON}
+          alt="volume"
           className="inline status-symbol w-4 h-4"
           sizes="16px"
         />

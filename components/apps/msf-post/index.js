@@ -55,21 +55,29 @@ const buildTree = (catalog) => {
   return root;
 };
 
-const Tree = ({ data, onSelect }) => (
-  <ul className="pl-4">
+const Tree = ({ data, onSelect, depth = 0 }) => (
+  <ul className="pl-0 list-none">
     {Object.entries(data).map(([name, node]) => (
-      <TreeNode key={name} name={name} node={node} onSelect={onSelect} />
+      <TreeNode
+        key={name}
+        name={name}
+        node={node}
+        onSelect={onSelect}
+        depth={depth}
+      />
     ))}
   </ul>
 );
 
-const TreeNode = ({ name, node, onSelect }) => {
+const TreeNode = ({ name, node, onSelect, depth }) => {
+  const indent = depth * 6;
   if (node.module) {
     return (
       <li>
         <button
           onClick={() => onSelect(node.module)}
-          className="text-left hover:underline focus:outline-none"
+          className="text-left hover:underline focus:outline-none h-8 flex items-center w-full"
+          style={{ paddingLeft: indent }}
         >
           {name}
         </button>
@@ -79,8 +87,13 @@ const TreeNode = ({ name, node, onSelect }) => {
   return (
     <li>
       <details>
-        <summary className="cursor-pointer">{name}</summary>
-        <Tree data={node.children} onSelect={onSelect} />
+        <summary
+          className="cursor-pointer h-8 flex items-center"
+          style={{ paddingLeft: indent }}
+        >
+          {name}
+        </summary>
+        <Tree data={node.children} onSelect={onSelect} depth={depth + 1} />
       </details>
     </li>
   );

@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { toPng } from "html-to-image";
+import { toPng, toSvg } from "html-to-image";
 import AlignmentControls from "./components/AlignmentControls";
-import SearchableSelect from "./components/SearchableSelect";
+import FontGrid from "./components/FontGrid";
 import usePersistentState from "../../hooks/usePersistentState";
 
 interface FontInfo {
@@ -213,6 +213,23 @@ const FigletApp: React.FC = () => {
       });
   };
 
+  const exportSVG = () => {
+    if (!preRef.current) return;
+    toSvg(preRef.current)
+      .then((dataUrl) => {
+        const link = document.createElement("a");
+        link.download = "figlet.svg";
+        link.href = dataUrl;
+        link.click();
+        setAnnounce("Downloaded SVG");
+        if (announceTimer.current) clearTimeout(announceTimer.current);
+        announceTimer.current = setTimeout(() => setAnnounce(""), 2000);
+      })
+      .catch(() => {
+        /* ignore */
+      });
+  };
+
   const exportText = () => {
     if (!output) return;
     const blob = new Blob([output], { type: "text/plain" });
@@ -312,16 +329,7 @@ const FigletApp: React.FC = () => {
           />
           Monospace only
         </label>
-        <SearchableSelect
-          value={font}
-          onChange={setFont}
-          options={displayedFonts.map((f) => ({
-            value: f.name,
-            label: f.preview,
-          }))}
-          placeholder="Font"
-          ariaLabel="Select font"
-        />
+        <FontGrid fonts={displayedFonts} value={font} onChange={setFont} />
         <input
           type="file"
           accept=".flf"
@@ -441,10 +449,25 @@ const FigletApp: React.FC = () => {
         </button>
         <button
           onClick={exportPNG}
-          className="px-2 bg-green-700 hover:bg-green-600 rounded text-white"
+          className="p-1 bg-green-700 hover:bg-green-600 rounded"
           aria-label="Export PNG"
         >
-          PNG
+          <img
+            src="/themes/Yaru/actions/document-save-as-png-symbolic.svg"
+            alt=""
+            className="w-6 h-6"
+          />
+        </button>
+        <button
+          onClick={exportSVG}
+          className="p-1 bg-yellow-700 hover:bg-yellow-600 rounded"
+          aria-label="Export SVG"
+        >
+          <img
+            src="/themes/Yaru/actions/document-save-as-svg-symbolic.svg"
+            alt=""
+            className="w-6 h-6"
+          />
         </button>
         <button
           onClick={exportText}

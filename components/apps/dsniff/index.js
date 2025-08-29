@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import urlsnarfFixture from '../../../public/demo-data/dsniff/urlsnarf.json';
 import arpspoofFixture from '../../../public/demo-data/dsniff/arpspoof.json';
 import pcapFixture from '../../../public/demo-data/dsniff/pcap.json';
+import TerminalOutput from '../../TerminalOutput';
 
 // Simple parser that attempts to extract protocol, host and remaining details
 // Each parsed line is also given a synthetic timestamp for display purposes
@@ -26,6 +27,7 @@ const parseLines = (text) =>
         host,
         details: rest.join(' '),
         timestamp,
+
       };
     });
 
@@ -112,6 +114,7 @@ const LogRow = ({ log, prefersReduced }) => {
     <tr ref={rowRef} className="odd:bg-black even:bg-ub-grey">
       <td className="pr-2 text-gray-400 whitespace-nowrap">{log.timestamp}</td>
       <td className="pr-2 text-green-400">
+
         <abbr
           title={protocolInfo[log.protocol] || log.protocol}
           className="underline decoration-dotted cursor-help"
@@ -120,8 +123,8 @@ const LogRow = ({ log, prefersReduced }) => {
           {log.protocol}
         </abbr>
       </td>
-      <td className="pr-2 text-white">{log.host}</td>
-      <td className="text-green-400">{log.details}</td>
+      <td className="px-2 py-[6px] text-white">{log.host}</td>
+      <td className="px-2 py-[6px] text-green-400">{log.details}</td>
     </tr>
   );
 };
@@ -437,9 +440,10 @@ const Dsniff = () => {
               Copy sample command
             </button>
           </div>
-          <pre className="text-xs bg-ub-dark p-2 flex-1 overflow-auto" aria-label="sample command output">
-            {`${sampleCommand}\n${sampleOutput}`}
-          </pre>
+          <TerminalOutput
+            text={`${sampleCommand}\n${sampleOutput}`}
+            ariaLabel="sample command output"
+          />
         </div>
       </div>
       <div className="mb-4" data-testid="pcap-demo">
@@ -628,7 +632,7 @@ const Dsniff = () => {
         </div>
       </div>
       <div
-        className="bg-black text-green-400 p-2 h-40 overflow-auto"
+        className="bg-black text-green-400 p-2 h-40 overflow-auto font-mono"
         aria-live="polite"
         role="log"
       >

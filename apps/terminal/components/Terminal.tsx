@@ -10,7 +10,13 @@ const Terminal = forwardRef<HTMLDivElement, TerminalContainerProps>(
       ref={ref}
       data-testid="xterm-container"
       className={`text-white ${className}`}
-      style={{ background: 'var(--kali-bg)', fontFamily: 'monospace', ...style }}
+      style={{
+        background: 'var(--kali-bg)',
+        fontFamily: 'monospace',
+        fontSize: 'clamp(1rem, 0.6vw + 1rem, 1.1rem)',
+        lineHeight: 1.4,
+        ...style,
+      }}
       {...props}
     />
   ),
