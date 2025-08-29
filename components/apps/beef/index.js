@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import PayloadBuilder from '../../../apps/beef/components/PayloadBuilder';
 
 export default function Beef() {
   const targetPage = `\n<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="utf-8"/>\n  <title>Sandboxed Target</title>\n</head>\n<body>\n  <h1>Sandboxed Target Page</h1>\n  <p>This page is isolated and cannot make network requests.</p>\n  <script>document.body.append(' - loaded');<\/script>\n</body>\n</html>`;
@@ -34,6 +35,12 @@ export default function Beef() {
       render: (
         <pre className="bg-black text-white p-2 text-xs rounded">{`Demo module executed\nResult: success`}</pre>
       ),
+      action: 'Next',
+    },
+    {
+      title: 'Payload Builder',
+      body: 'Craft benign payload pages. Copy or preview the generated HTML locally.',
+      render: <PayloadBuilder />,
       action: 'Next',
     },
     {
