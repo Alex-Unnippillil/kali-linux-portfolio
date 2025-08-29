@@ -98,6 +98,7 @@ const HashcatApp = createDynamicApp('hashcat', 'Hashcat');
 const MsfPostApp = createDynamicApp('msf-post', 'Metasploit Post');
 const EvidenceVaultApp = createDynamicApp('evidence-vault', 'Evidence Vault');
 const MimikatzApp = createDynamicApp('mimikatz', 'Mimikatz');
+const MimikatzOfflineApp = createDynamicApp('mimikatz/offline', 'Mimikatz Offline');
 const EttercapApp = createDynamicApp('ettercap', 'Ettercap');
 const ReaverApp = createDynamicApp('reaver', 'Reaver');
 const HydraApp = createDynamicApp('hydra', 'Hydra');
@@ -182,6 +183,7 @@ const displayVolatility = createDisplay(VolatilityApp);
 const displayMsfPost = createDisplay(MsfPostApp);
 const displayEvidenceVault = createDisplay(EvidenceVaultApp);
 const displayMimikatz = createDisplay(MimikatzApp);
+const displayMimikatzOffline = createDisplay(MimikatzOfflineApp);
 const displayEttercap = createDisplay(EttercapApp);
 const displayReaver = createDisplay(ReaverApp);
 const displayHydra = createDisplay(HydraApp);
@@ -868,6 +870,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayMimikatz,
+  },
+  {
+    id: 'mimikatz-offline',
+    title: 'Mimikatz Offline',
+    icon: './themes/Yaru/apps/mimikatz.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMimikatzOffline,
   },
   {
     id: 'ssh',
