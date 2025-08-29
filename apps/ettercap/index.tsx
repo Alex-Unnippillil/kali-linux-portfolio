@@ -1,59 +1,60 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import FilterEditor from './components/FilterEditor';
+import LogPane, { LogEntry } from './components/LogPane';
+import ArpDiagram from './components/ArpDiagram';
+
+const MODES = ['Unified', 'Sniff', 'ARP'];
 
 export default function EttercapPage() {
-  const [showModal, setShowModal] = useState(false);
-  const [captureEnabled, setCaptureEnabled] = useState(false);
+  const [mode, setMode] = useState('Unified');
+  const [started, setStarted] = useState(false);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
 
-  const handleEnableClick = () => {
-    setShowModal(true);
-  };
-
-  const confirmEnable = () => {
-    setCaptureEnabled(true);
-    setShowModal(false);
-  };
+  useEffect(() => {
+    if (!started) return;
+    const id = setInterval(() => {
+      const levels: LogEntry['level'][] = ['info', 'warn', 'error'];
+      const level = levels[Math.floor(Math.random() * levels.length)];
+      const message = `Sample ${level} message ${new Date().toLocaleTimeString()}`;
+      setLogs((l) => [...l, { id: Date.now(), level, message }]);
+    }, 2000);
+    return () => clearInterval(id);
+  }, [started]);
 
   return (
-    <div className="relative p-4">
-      <h1 className="mb-4 text-xl font-bold">Ettercap Filter Editor</h1>
-      <button
-        type="button"
-        className="mb-4 border px-2 py-1"
-        onClick={handleEnableClick}
-        disabled={captureEnabled}
-      >
-        {captureEnabled ? 'Packet Capture Enabled' : 'Enable Packet Capture'}
-      </button>
-      <FilterEditor />
-      {showModal && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/70">
-          <div className="w-72 rounded bg-white p-4 text-black">
-            <p className="mb-4 text-sm">
-              Enabling packet capture may impact network performance and could
-              expose sensitive information. Do you want to proceed?
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                className="border px-2 py-1"
-                onClick={() => setShowModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="border px-2 py-1"
-                onClick={confirmEnable}
-              >
-                Enable
-              </button>
-            </div>
-          </div>
+    <div className="p-4">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex gap-2">
+          {MODES.map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMode(m)}
+              className={`px-3 py-1 rounded-full border text-sm ${
+                mode === m ? 'bg-blue-600 text-white' : 'bg-gray-800 text-white'
+              }`}
+            >
+              {m}
+            </button>
+          ))}
         </div>
-      )}
+        <button
+          type="button"
+          className="px-4 py-2 rounded bg-green-600 text-white"
+          onClick={() => setStarted(true)}
+          disabled={started}
+        >
+          {started ? 'Demo running' : 'Start demo'}
+        </button>
+      </div>
+
+      {started && <LogPane logs={logs} />}
+      {started && <ArpDiagram />}
+
+      <h1 className="mt-6 mb-4 text-xl font-bold">Ettercap Filter Editor</h1>
+      <FilterEditor />
     </div>
   );
 }
