@@ -9,13 +9,16 @@ interface WifiData {
   encryption: 'WPA' | 'WEP' | 'nopass';
 }
 
-const Presets: React.FC = () => {
+interface Props {
+  canvasRef: React.RefObject<HTMLCanvasElement>;
+}
+
+const Presets: React.FC<Props> = ({ canvasRef }) => {
   const [preset, setPreset] = useState<Preset>('text');
   const [text, setText] = useState('');
   const [url, setUrl] = useState('');
   const [wifi, setWifi] = useState<WifiData>({ ssid: '', password: '', encryption: 'WPA' });
   const [payload, setPayload] = useState('');
-  const [qr, setQr] = useState('');
 
   useEffect(() => {
     let value = '';
@@ -30,14 +33,20 @@ const Presets: React.FC = () => {
   }, [preset, text, url, wifi]);
 
   useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
     if (!payload) {
-      setQr('');
+      const ctx = canvas.getContext('2d');
+      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
       return;
     }
-    QRCode.toDataURL(payload, { margin: 1 })
-      .then((data) => setQr(data))
-      .catch(() => setQr(''));
-  }, [payload]);
+
+    QRCode.toCanvas(canvas, payload, { margin: 1 }).catch(() => {
+      const ctx = canvas.getContext('2d');
+      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+  }, [payload, canvasRef]);
 
   const copyPayload = async () => {
     if (!payload) return;
@@ -48,16 +57,8 @@ const Presets: React.FC = () => {
     }
   };
 
-  const downloadPng = () => {
-    if (!qr) return;
-    const link = document.createElement('a');
-    link.href = qr;
-    link.download = 'qr.png';
-    link.click();
-  };
-
   return (
-    <div className="p-4 space-y-4 text-white bg-ub-cool-grey h-full overflow-auto">
+    <div className="space-y-4">
       <div className="space-y-2">
         <label htmlFor="preset-type" className="block text-sm">
           Type
@@ -148,18 +149,11 @@ const Presets: React.FC = () => {
             >
               Copy
             </button>
-            <button
-              type="button"
-              onClick={downloadPng}
-              className="px-2 py-1 bg-blue-600 rounded"
-            >
-              Download
-            </button>
           </div>
         </div>
       )}
 
-      {qr && <img src={qr} alt="Generated QR code" className="h-48 w-48 bg-white" />}
+      <canvas ref={canvasRef} className="h-48 w-48 bg-white" />
     </div>
   );
 };
