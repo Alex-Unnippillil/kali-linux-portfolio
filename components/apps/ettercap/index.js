@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import data from './data.json';
+import ArpLab from './components/ArpLab';
 
 const { arpTable, flows } = data;
 const attackerMac = 'aa:aa:aa:aa:aa:aa';
@@ -710,6 +711,7 @@ const stopSpoof = () => {
           />
         </pre>
       </div>
+      <ArpLab />
       <div className="mt-4 text-xs bg-gray-800 p-2 rounded">
         <p>
           ARP poisoning works by sending forged Address Resolution Protocol
