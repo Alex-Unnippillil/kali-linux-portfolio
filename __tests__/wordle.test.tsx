@@ -1,17 +1,9 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import wordList from '../components/apps/wordle_words.json';
-import { getDailySeed } from '../utils/dailyChallenge';
+import { getWordOfTheDay, buildResultMosaic } from '../utils/wordle';
 import type { ComponentType } from 'react';
 
 let Wordle: ComponentType;
 
-const hash = (str: string) => {
-  let h = 0;
-  for (let i = 0; i < str.length; i += 1) {
-    h = Math.imul(31, h) + str.charCodeAt(i);
-  }
-  return Math.abs(h);
-};
 
 describe('Wordle', () => {
   beforeEach(() => {
@@ -28,8 +20,10 @@ describe('Wordle', () => {
 
   test('solves puzzle and shares result', async () => {
     render(<Wordle />);
-    const seed = getDailySeed('wordle-common', new Date('2024-01-01T00:00:00Z'));
-    const solution = wordList[hash(seed) % wordList.length];
+    const solution = getWordOfTheDay(
+      'common',
+      new Date('2024-01-01T00:00:00Z')
+    );
     const input = screen.getByPlaceholderText('Guess');
     fireEvent.change(input, { target: { value: solution } });
     fireEvent.submit(input.closest('form')!);
@@ -51,5 +45,47 @@ describe('Wordle', () => {
     fireEvent.submit(input.closest('form')!);
 
     expect(await screen.findByText(/Hard mode:/)).toBeInTheDocument();
+  });
+
+  test('word of the day is based on date seed', () => {
+    const d1 = new Date('2024-01-01T00:00:00Z');
+    const d2 = new Date('2024-01-02T00:00:00Z');
+    const w1 = getWordOfTheDay('common', d1);
+    const w2 = getWordOfTheDay('common', d1);
+    const w3 = getWordOfTheDay('common', d2);
+    expect(w1).toBe(w2);
+    expect(w1).not.toBe(w3);
+  });
+
+  test('stores attempt history locally', async () => {
+    render(<Wordle />);
+    const solution = getWordOfTheDay(
+      'common',
+      new Date('2024-01-01T00:00:00Z')
+    );
+    const input = screen.getByPlaceholderText('Guess');
+    fireEvent.change(input, { target: { value: solution } });
+    fireEvent.submit(input.closest('form')!);
+    await screen.findByText('Share');
+    const historyRaw = localStorage.getItem('wordle-history-common');
+    const history = JSON.parse(historyRaw as string);
+    expect(history['2024-01-01'].solution).toBe(solution);
+    expect(history['2024-01-01'].success).toBe(true);
+  });
+
+  test('builds shareable result text mosaic', () => {
+    const mosaic = buildResultMosaic([
+      ['correct', 'present', 'absent'] as (
+        | 'correct'
+        | 'present'
+        | 'absent'
+      )[],
+      ['absent', 'correct', 'present'] as (
+        | 'correct'
+        | 'present'
+        | 'absent'
+      )[],
+    ]);
+    expect(mosaic).toBe('🟩🟨⬛\n⬛🟩🟨');
   });
 });
