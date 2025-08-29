@@ -7,6 +7,7 @@ import {
   BOARD_SIZE,
   randomizePlacement,
 } from '../../apps/games/battleship/ai';
+import { fireShots } from '../../apps/games/battleship/logic';
 import GameLayout from './battleship/GameLayout';
 import usePersistentState from '../hooks/usePersistentState';
 import useGameControls from './useGameControls';
@@ -84,6 +85,7 @@ const Battleship = () => {
   const [fog, setFog] = useState(false);
   const [playerShots, setPlayerShots] = useState(1);
   const [aiShots, setAiShots] = useState(1);
+  const [selected, setSelected] = useState([]);
   const [stats, setStats] = usePersistentState('battleship-stats', {
     wins: 0,
     losses: 0,
@@ -145,6 +147,7 @@ const Battleship = () => {
       setPlayerAi(playerAiInstance);
       setGuessHeat(playerAiInstance.getHeatmap().slice());
       setCursor(0);
+      setSelected([]);
       const pShots = salvo ? newShips.length : 1;
       const aShots = salvo ? enemyLayout.length : 1;
       setPlayerShots(pShots);
@@ -244,35 +247,42 @@ const Battleship = () => {
     [ai, aiHeat, playerBoard, salvo, enemyBoard, enemyShips, countRemaining, ships, setPlayerBoard, setAiHeat, setMessage, setPhase, setStats]
   );
 
-  const fire = useCallback(
+  const toggleSelect = useCallback(
     (idx) => {
       if (phase !== 'battle' || enemyBoard[idx]) return;
-      const newBoard = enemyBoard.slice();
-      const hit = newBoard[idx] === 'ship';
-      newBoard[idx] = hit ? 'hit' : 'miss';
-      setEnemyBoard(newBoard);
-      if (playerAi) {
-        playerAi.record(idx, hit);
-        playerAi.nextMove();
-        setGuessHeat(playerAi.getHeatmap().slice());
-      }
-      if (!newBoard.includes('ship')) {
-        setMessage('You win!');
-        setPhase('done');
-        setStats((s) => ({ ...s, wins: s.wins + 1 }));
-        return;
-      }
-      let shots = salvo ? playerShots - 1 : 0;
-      setPlayerShots(shots);
-      if (salvo && shots > 0) {
-        setMessage(hit ? 'Hit!' : 'Miss!');
-        return;
-      }
-      const aiCount = salvo ? aiShots : 1;
-      setTimeout(() => aiTurn(aiCount, hit), 100);
+      setSelected((sel) => {
+        if (sel.includes(idx)) return sel.filter((s) => s !== idx);
+        if (sel.length >= playerShots) return sel;
+        return [...sel, idx];
+      });
     },
-    [phase, enemyBoard, salvo, playerShots, aiShots, aiTurn, setEnemyBoard, playerAi, setGuessHeat, setMessage, setPhase, setStats]
+    [phase, enemyBoard, playerShots],
   );
+
+  const fireSelected = useCallback(() => {
+    if (phase !== 'battle' || !selected.length) return;
+    const hit = selected.some((i) => enemyBoard[i] === 'ship');
+    const { board: newBoard } = fireShots(enemyBoard, selected);
+    setEnemyBoard(newBoard);
+    if (playerAi) {
+      selected.forEach((idx) => {
+        const wasHit = enemyBoard[idx] === 'ship';
+        playerAi.record(idx, wasHit);
+      });
+      playerAi.nextMove();
+      setGuessHeat(playerAi.getHeatmap().slice());
+    }
+    setSelected([]);
+    setPlayerShots(0);
+    if (!newBoard.includes('ship')) {
+      setMessage('You win!');
+      setPhase('done');
+      setStats((s) => ({ ...s, wins: s.wins + 1 }));
+      return;
+    }
+    const aiCount = salvo ? aiShots : 1;
+    setTimeout(() => aiTurn(aiCount, hit), 100);
+  }, [phase, selected, enemyBoard, fireShots, playerAi, setGuessHeat, salvo, aiShots, aiTurn, setEnemyBoard, setPlayerShots, setMessage, setPhase, setStats]);
 
   useGameControls(({ x, y }) => {
     if (phase !== 'battle') return;
@@ -289,12 +299,15 @@ const Battleship = () => {
       if (phase !== 'battle') return;
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        fire(cursor);
+        toggleSelect(cursor);
+      } else if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        fireSelected();
       }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [phase, cursor, fire]);
+  }, [phase, cursor, toggleSelect, fireSelected]);
 
   const renderBoard = (board, opts = {}) => {
     const { isEnemy = false, hideInfo = false } = opts;
@@ -310,18 +323,22 @@ const Battleship = () => {
               ? `rgba(0,150,255,${norm * 0.6})`
               : `rgba(255,0,0,${norm * 0.7})`
             : 'transparent';
+          const selectedMark = isEnemy && phase === 'battle' && selected.includes(idx);
           return (
             <div key={idx} className="border border-ub-dark-grey relative" style={{ width: CELL, height: CELL }}>
               {isEnemy && phase === 'battle' && !['hit', 'miss'].includes(cell) ? (
                 <button
                   className="w-full h-full"
-                  onClick={() => fire(idx)}
-                  aria-label={`fire at ${Math.floor(idx / BOARD_SIZE) + 1},${(idx % BOARD_SIZE) + 1}`}
+                  onClick={() => toggleSelect(idx)}
+                  aria-label={`select target at ${Math.floor(idx / BOARD_SIZE) + 1},${(idx % BOARD_SIZE) + 1}`}
                 />
               ) : null}
               {cell === 'hit' && !hideInfo && <HitMarker />}
               {cell === 'miss' && !hideInfo && <MissMarker />}
               <div className="absolute inset-0" style={{ background: color }} aria-hidden="true" />
+              {selectedMark && (
+                <div className="absolute inset-0 bg-yellow-300 opacity-50 pointer-events-none" />
+              )}
               {hideInfo && phase === 'battle' && (
                 <div className="absolute inset-0 bg-gray-800" aria-hidden="true" />
               )}
@@ -388,9 +405,25 @@ const Battleship = () => {
           </div>
         )}
         {phase!=='placement' && (
-          <div className="flex space-x-8">
-            <div>{renderBoard(playerBoard, { hideInfo: fog && phase==='battle' })}</div>
-            <div>{renderBoard(enemyBoard, { isEnemy: true })}</div>
+          <div className="flex flex-col items-center">
+            <div className="flex space-x-8">
+              <div>{renderBoard(playerBoard, { hideInfo: fog && phase==='battle' })}</div>
+              <div>{renderBoard(enemyBoard, { isEnemy: true })}</div>
+            </div>
+            {phase==='battle' && (
+              <div className="mt-2 flex flex-col items-center">
+                <div className="mb-1">
+                  Selected {selected.length}/{playerShots}
+                </div>
+                <button
+                  className="px-2 py-1 bg-gray-700 disabled:opacity-50"
+                  onClick={fireSelected}
+                  disabled={!selected.length}
+                >
+                  Fire
+                </button>
+              </div>
+            )}
           </div>
         )}
       </GameLayout>
