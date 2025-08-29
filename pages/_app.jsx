@@ -9,6 +9,7 @@ import '../styles/print.css';
 import '@xterm/xterm/css/xterm.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
+import PipPortalProvider from '../components/common/PipPortal';
 
 /**
  * @param {import('next/app').AppProps} props
@@ -109,10 +110,12 @@ function MyApp({ Component, pageProps }) {
   }, []);
   return (
     <SettingsProvider>
-      <div aria-live="polite" id="live-region" />
-      <Component {...pageProps} />
-      <ShortcutOverlay />
-      <Analytics />
+      <PipPortalProvider>
+        <div aria-live="polite" id="live-region" />
+        <Component {...pageProps} />
+        <ShortcutOverlay />
+        <Analytics />
+      </PipPortalProvider>
     </SettingsProvider>
   );
 }

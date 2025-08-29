@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import progressInfo from './progress.json';
+import { usePipPortal } from '../../common/PipPortal';
 
 const hashTypes = [
   {
@@ -156,6 +157,17 @@ const ProgressGauge = ({ progress, info, reduceMotion }) => {
   );
 };
 
+const PipGauges = ({ gpuUsage, progress, info, reduceMotion }) => (
+  <div className="p-2 bg-gray-900 text-white">
+    <Gauge value={gpuUsage} />
+    <ProgressGauge
+      progress={progress}
+      info={info}
+      reduceMotion={reduceMotion}
+    />
+  </div>
+);
+
 function HashcatApp() {
   const [hashType, setHashType] = useState(hashTypes[0].id);
   const [hashInput, setHashInput] = useState('');
@@ -177,6 +189,7 @@ function HashcatApp() {
   const rulePreview = (ruleSets[ruleSet] || []).slice(0, 10).join('\n');
   const workerRef = useRef(null);
   const frameRef = useRef(null);
+  const { open, close, isOpen, isSupported } = usePipPortal();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -269,6 +282,34 @@ function HashcatApp() {
     attackModes.find((m) => m.value === attackMode)?.label ||
     attackModes[0].label;
   const info = { ...progressInfo, mode: selectedMode };
+
+  useEffect(() => {
+    if (isOpen) {
+      open(
+        <PipGauges
+          gpuUsage={gpuUsage}
+          progress={progress}
+          info={info}
+          reduceMotion={prefersReducedMotion}
+        />,
+      );
+    }
+  }, [isOpen, gpuUsage, progress, info, prefersReducedMotion, open]);
+
+  const togglePin = () => {
+    if (isOpen) {
+      close();
+    } else {
+      open(
+        <PipGauges
+          gpuUsage={gpuUsage}
+          progress={progress}
+          info={info}
+          reduceMotion={prefersReducedMotion}
+        />,
+      );
+    }
+  };
 
   const handleHashChange = (e) => {
     const value = e.target.value.trim();
@@ -498,6 +539,15 @@ function HashcatApp() {
           Session completed.
         </pre>
       </div>
+      {isSupported && (
+        <button
+          type="button"
+          onClick={togglePin}
+          className="px-2 py-1 bg-gray-700 rounded"
+        >
+          {isOpen ? 'Unpin' : 'Pin'}
+        </button>
+      )}
       <Gauge value={gpuUsage} />
       <div className="text-xs">Note: real hashcat requires a compatible GPU.</div>
       {!isCracking ? (
