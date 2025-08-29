@@ -1,0 +1,35 @@
+[
+  {
+    "id": 1,
+    "title": "Portfolio Website",
+    "description": "Personal website built with Next.js and Tailwind CSS.",
+    "stack": ["Next.js", "Tailwind", "TypeScript"],
+    "year": 2023,
+    "type": "web",
+    "thumbnail": "https://via.placeholder.com/400x300?text=Portfolio",
+    "repo": "https://github.com/example/portfolio",
+    "demo": "https://portfolio.example.com"
+  },
+  {
+    "id": 2,
+    "title": "Weather Widget",
+    "description": "A widget to display current weather conditions.",
+    "stack": ["React", "API"],
+    "year": 2022,
+    "type": "widget",
+    "thumbnail": "https://via.placeholder.com/400x300?text=Weather",
+    "repo": "https://github.com/example/weather-widget",
+    "demo": "https://weather.example.com"
+  },
+  {
+    "id": 3,
+    "title": "CLI Helper",
+    "description": "Command line tool for automation.",
+    "stack": ["Node.js"],
+    "year": 2021,
+    "type": "cli",
+    "thumbnail": "https://via.placeholder.com/400x300?text=CLI",
+    "repo": "https://github.com/example/cli-helper",
+    "demo": ""
+  }
+]
