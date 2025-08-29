@@ -64,6 +64,7 @@ export default function XTimeline() {
   const timelineRef = useRef<HTMLDivElement>(null);
   const timeoutsRef = useRef<Record<string, number>>({});
   const [scheduled, setScheduled] = useScheduledTweets();
+  const [showSetup, setShowSetup] = useState(true);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -207,6 +208,36 @@ export default function XTimeline() {
 
   return (
     <>
+      {showSetup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded max-w-sm text-sm">
+            <p className="mb-2">
+              To use this app you need X API credentials: API key, API secret,
+              access token and access token secret.
+            </p>
+            <p className="mb-4">
+              You can explore with a demo account{' '}
+              <a
+                href="https://x.com/AUnnippillil"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                @AUnnippillil
+              </a>
+              .
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowSetup(false)}
+              className="px-3 py-1 rounded text-white"
+              style={{ backgroundColor: accent }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
       <Script
         src="https://platform.twitter.com/widgets.js"
         strategy="lazyOnload"
