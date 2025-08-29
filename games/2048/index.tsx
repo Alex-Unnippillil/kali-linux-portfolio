@@ -13,6 +13,7 @@ import {
   boardsEqual,
 } from '../../apps/games/_2048/logic';
 import { reset, serialize, deserialize } from '../../apps/games/rng';
+import { startRecording, recordMove, downloadReplay } from './replay';
 
 // limit of undo operations per game
 const UNDO_LIMIT = 5;
@@ -91,6 +92,7 @@ const Game2048 = () => {
     setUndosLeft(UNDO_LIMIT);
     setWon(false);
     setLost(false);
+    startRecording(b);
   }, []);
 
   useEffect(() => {
@@ -122,6 +124,7 @@ const Game2048 = () => {
       const next = fn(board.map((row) => [...row]));
       if (boardsEqual(board, next)) return;
       setHistory((h) => [...h, { board: board.map((row) => [...row]), rng: serialize() }]);
+      recordMove(dir);
       addRandomTile(next);
       const hi = highestTile(next);
       if (hi > best) setBest(hi);
@@ -186,6 +189,12 @@ const Game2048 = () => {
             disabled={!history.length || undosLeft === 0}
           >
             Undo ({undosLeft})
+          </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={downloadReplay}
+          >
+            Download
           </button>
           <select
             className="text-black px-1 rounded"
