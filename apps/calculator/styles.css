@@ -31,6 +31,10 @@ body {
   box-sizing: border-box;
 }
 
+.display.error {
+  background: #ffdddd;
+}
+
 .toggle {
   width: 100%;
   margin-bottom: 0.5rem;
