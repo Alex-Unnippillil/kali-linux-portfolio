@@ -21,9 +21,17 @@ describe('Volatility PluginBrowser', () => {
     });
     expect(screen.getByText('netscan')).toBeInTheDocument();
     expect(screen.queryByText('pslist')).toBeNull();
+    expect(
+      screen.getByText(/Incompatible with Volatility 3.0/i)
+    ).toBeInTheDocument();
 
     // display plugin output
     fireEvent.click(screen.getByText('netscan'));
     expect(screen.getByText(/Proto LocalAddr/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Plugin targets Volatility 2.0; app supports 3.0./i
+      )
+    ).toBeInTheDocument();
   });
 });
