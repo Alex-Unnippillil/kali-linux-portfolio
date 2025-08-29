@@ -7,6 +7,7 @@ import RouterProfiles, {
   ROUTER_PROFILES,
   RouterProfile,
 } from './components/RouterProfiles';
+import { appendLog, clearLog } from './log';
 
 interface RouterMeta {
   model: string;
@@ -105,11 +106,18 @@ const ReaverPanel: React.FC = () => {
     setLockRemaining(0);
   }, [profile]);
 
+  // persist attempts and rate to reaver/log
+  useEffect(() => {
+    if (!running) return;
+    appendLog({ time: Date.now(), attempts, rate });
+  }, [attempts, rate, running]);
+
   const start = () => {
     setAttempts(0);
     burstRef.current = 0;
     lockRef.current = 0;
     setLockRemaining(0);
+    clearLog();
     setRunning(true);
   };
 
@@ -162,8 +170,9 @@ const ReaverPanel: React.FC = () => {
           </button>
         </div>
         <div className="text-sm mb-1">
-          Attempts: {attempts} / {TOTAL_PINS}
+          Attempts: {attempts} / {TOTAL_PINS} ({((attempts / TOTAL_PINS) * 100).toFixed(2)}%)
         </div>
+        <div className="text-sm mb-1">Rate: {rate} attempts/sec</div>
         <div className="w-full bg-gray-700 h-2 mb-1" aria-hidden="true">
           <div
             className="bg-green-500 h-2"
