@@ -52,7 +52,6 @@ export default function AsciiArt() {
   const undoStack = useRef([]);
   const redoStack = useRef([]);
   const [colors, setColors] = useState(null);
-  const workerRef = useRef(null);
   const canvasRef = useRef(null);
   const editorRef = useRef(null);
   const fileRef = useRef(null);
@@ -95,36 +94,7 @@ export default function AsciiArt() {
     }
   }, [font]);
 
-  // Setup worker
-  useEffect(() => {
-    if (typeof window !== 'undefined' && typeof Worker === 'function') {
-      workerRef.current = new Worker(new URL('./ascii.worker.js', import.meta.url));
-      workerRef.current.onmessage = (e) => {
-        const { type } = e.data;
-        if (type === 'chunk') {
-          const { plain, html, ansi } = e.data;
-          setPlainAscii((p) => p + plain);
-          setAsciiHtml((h) => h + DOMPurify.sanitize(html));
-          setAnsiAscii((a) => a + ansi);
-        } else if (type === 'done') {
-          const { colors: colorArr, width, height } = e.data;
-          const update = () => {
-            setColors({ data: colorArr, width, height });
-            setAltText(`ASCII art ${width}x${height}`);
-          };
-          if (prefersReducedMotion.current) {
-            update();
-          } else {
-            requestAnimationFrame(update);
-          }
-        }
-      };
-      return () => {
-        workerRef.current?.terminate();
-      };
-    }
-    return undefined;
-  }, []);
+  // Canvas will be used for processing and exporting
 
   const processFile = useCallback(async () => {
     if (!fileRef.current) return;
@@ -132,6 +102,7 @@ export default function AsciiArt() {
     if (file.size > 2 * 1024 * 1024) return; // limit 2MB
     const bitmap = await createImageBitmap(file);
     if (bitmap.width * bitmap.height > 4_000_000) return; // size limit
+
     const effectiveCharSet = (() => {
       const chars = charSet.split('');
       const step = chars.length / density;
@@ -141,20 +112,118 @@ export default function AsciiArt() {
       }
       return result;
     })();
+
+    const width = Math.floor(bitmap.width / cellSize);
+    const height = Math.floor(bitmap.height / cellSize);
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    canvas.width = width;
+    canvas.height = height;
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+    const colorsArr = new Uint8ClampedArray(width * height * 3);
+    const gray = new Float32Array(width * height);
+
+    for (let i = 0; i < width * height; i += 1) {
+      const idx = i * 4;
+      const r = data[idx];
+      const g = data[idx + 1];
+      const b = data[idx + 2];
+      let val = 0.299 * r + 0.587 * g + 0.114 * b;
+      val = (val - 128) * contrast + 128;
+      gray[i] = Math.max(0, Math.min(255, val));
+    }
+
+    const paletteArr = palettes[paletteName] || [];
+    const mapToPalette = (r, g, b) => {
+      if (!paletteArr.length) return [r, g, b];
+      let best = paletteArr[0];
+      let bestDist = Infinity;
+      for (let i = 0; i < paletteArr.length; i += 1) {
+        const p = paletteArr[i];
+        const dr = r - p[0];
+        const dg = g - p[1];
+        const db = b - p[2];
+        const dist = dr * dr + dg * dg + db * db;
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = p;
+        }
+      }
+      return best;
+    };
+
     setPlainAscii('');
     setAsciiHtml('');
     setAnsiAscii('');
-    workerRef.current?.postMessage(
-      {
-        bitmap,
-        charSet: effectiveCharSet,
-        cellSize,
-        useColor,
-        palette: palettes[paletteName],
-        contrast,
-      },
-      [bitmap]
-    );
+
+    let y = 0;
+    const step = () => {
+      const start = performance.now();
+      let plainChunk = '';
+      let htmlChunk = '';
+      let ansiChunk = '';
+      while (y < height && performance.now() - start < 16) {
+        let plainRow = '';
+        let htmlRow = '';
+        let ansiRow = '';
+        for (let x = 0; x < width; x += 1) {
+          const idx = y * width + x;
+          const gx = gray[idx];
+          const charIndex = Math.floor((gx / 255) * (effectiveCharSet.length - 1));
+          const newPixel = (charIndex / (effectiveCharSet.length - 1)) * 255;
+          const error = gx - newPixel;
+          if (x + 1 < width) gray[idx + 1] += error * (7 / 16);
+          if (y + 1 < height) {
+            if (x > 0) gray[idx + width - 1] += error * (3 / 16);
+            gray[idx + width] += error * (5 / 16);
+            if (x + 1 < width) gray[idx + width + 1] += error * (1 / 16);
+          }
+          const pixelIndex = idx * 4;
+          let r = data[pixelIndex];
+          let g = data[pixelIndex + 1];
+          let b = data[pixelIndex + 2];
+          [r, g, b] = mapToPalette(r, g, b);
+          const cIdx = idx * 3;
+          colorsArr[cIdx] = r;
+          colorsArr[cIdx + 1] = g;
+          colorsArr[cIdx + 2] = b;
+          const ch = effectiveCharSet[effectiveCharSet.length - 1 - charIndex];
+          plainRow += ch;
+          if (useColor) {
+            htmlRow += `<span style="color: rgb(${r},${g},${b})">${ch}</span>`;
+            ansiRow += `\u001b[38;2;${r};${g};${b}m${ch}`;
+          } else {
+            htmlRow += ch;
+            ansiRow += ch;
+          }
+        }
+        plainChunk += `${plainRow}\n`;
+        htmlChunk += `${htmlRow}<br/>`;
+        ansiChunk += `${ansiRow}\u001b[0m\n`;
+        y += 1;
+      }
+      if (plainChunk) {
+        setPlainAscii((p) => p + plainChunk);
+        setAsciiHtml((h) => h + DOMPurify.sanitize(htmlChunk));
+        setAnsiAscii((a) => a + ansiChunk);
+      }
+      if (y < height) {
+        requestAnimationFrame(step);
+      } else {
+        const update = () => {
+          setColors({ data: colorsArr, width, height });
+          setAltText(`ASCII art ${width}x${height}`);
+        };
+        if (prefersReducedMotion.current) {
+          update();
+        } else {
+          requestAnimationFrame(update);
+        }
+      }
+    };
+    requestAnimationFrame(step);
   }, [charSet, density, cellSize, paletteName, useColor, contrast]);
 
   const handleFile = useCallback(
