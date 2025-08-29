@@ -1,0 +1,2 @@
+history
+Display the list of previously entered commands.
