@@ -10,6 +10,9 @@ const FigletApp = () => {
   const [inverted, setInverted] = useState(false);
   const [fontSize, setFontSize] = useState(16);
   const [lineHeight, setLineHeight] = useState(1);
+  const [width, setWidth] = useState(80);
+  const [kerning, setKerning] = useState('default');
+  const [align, setAlign] = useState('left');
   const [announce, setAnnounce] = useState('');
   const workerRef = useRef(null);
   const frameRef = useRef(null);
@@ -44,9 +47,9 @@ const FigletApp = () => {
 
   const updateFiglet = useCallback(() => {
     if (workerRef.current && font) {
-      workerRef.current.postMessage({ type: 'render', text, font });
+      workerRef.current.postMessage({ type: 'render', text, font, width, layout: kerning });
     }
-  }, [text, font]);
+  }, [text, font, width, kerning]);
 
   useEffect(() => {
     if (frameRef.current) cancelAnimationFrame(frameRef.current);
@@ -151,12 +154,51 @@ const FigletApp = () => {
             aria-label="Line height"
           />
         </label>
+        <label className="flex items-center gap-1 text-sm">
+          Width
+          <input
+            type="number"
+            min="20"
+            max="200"
+            value={width}
+            onChange={(e) => setWidth(Number(e.target.value))}
+            className="w-16 px-1 bg-gray-700 text-white"
+            aria-label="Width"
+          />
+        </label>
+        <label className="flex items-center gap-1 text-sm">
+          Kerning
+          <select
+            value={kerning}
+            onChange={(e) => setKerning(e.target.value)}
+            className="px-1 bg-gray-700 text-white"
+            aria-label="Kerning"
+          >
+            <option value="default">Default</option>
+            <option value="full">Full</option>
+            <option value="fitted">Fitted</option>
+            <option value="smush">Smush</option>
+          </select>
+        </label>
+        <label className="flex items-center gap-1 text-sm">
+          Align
+          <select
+            value={align}
+            onChange={(e) => setAlign(e.target.value)}
+            className="px-1 bg-gray-700 text-white"
+            aria-label="Alignment"
+          >
+            <option value="left">Left</option>
+            <option value="center">Center</option>
+            <option value="right">Right</option>
+          </select>
+        </label>
         <button
           onClick={copyOutput}
           className="px-2 bg-blue-700 hover:bg-blue-600 rounded text-white"
-          aria-label="Copy ASCII art"
+          aria-label="Banner to clipboard"
         >
-          Copy
+          Banner to Clipboard
         </button>
         <button
           onClick={exportPNG}
@@ -170,7 +212,7 @@ const FigletApp = () => {
           className="px-2 bg-purple-700 hover:bg-purple-600 rounded text-white"
           aria-label="Export text file"
         >
-          Text
+          TXT
         </button>
         <button
           onClick={() => setInverted((i) => !i)}
@@ -186,7 +228,7 @@ const FigletApp = () => {
           className={`min-w-full p-2 whitespace-pre font-mono transition-colors motion-reduce:transition-none ${
             inverted ? 'bg-white text-black' : 'bg-black text-white'
           }`}
-          style={{ fontSize: `${fontSize}px`, lineHeight }}
+          style={{ fontSize: `${fontSize}px`, lineHeight, textAlign: align }}
         >
           {output}
         </pre>

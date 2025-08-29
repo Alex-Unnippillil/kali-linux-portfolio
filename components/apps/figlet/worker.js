@@ -48,12 +48,16 @@ function init() {
 init();
 
 self.onmessage = (e) => {
-  const { text = '', font } = e.data;
+  const { text = '', font, width = 80, layout = 'default' } = e.data;
   if (!font) return;
   const normalized = String(text)
     .split(/\r\n|\r|\n/)
     .map((line) => line.trim())
     .join('\n');
-  const rendered = figlet.textSync(normalized, { font });
+  const rendered = figlet.textSync(normalized, {
+    font,
+    width,
+    horizontalLayout: layout,
+  });
   self.postMessage({ type: 'render', output: rendered });
 };
