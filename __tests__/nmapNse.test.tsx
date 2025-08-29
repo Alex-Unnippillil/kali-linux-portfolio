@@ -7,8 +7,15 @@ describe('NmapNSEApp', () => {
   it('shows example output for selected script', async () => {
     const mockFetch = jest
       .spyOn(global, 'fetch')
-      .mockImplementation(() =>
-        Promise.resolve({ json: () => Promise.resolve({ 'ftp-anon': 'FTP output' }) })
+      .mockImplementation((url: RequestInfo | URL) =>
+        Promise.resolve({
+          json: () =>
+            Promise.resolve(
+              typeof url === 'string' && url.includes('nmap-results')
+                ? { hosts: [] }
+                : { 'ftp-anon': 'FTP output' }
+            ),
+        })
       );
 
     render(<NmapNSEApp />);
@@ -23,7 +30,16 @@ describe('NmapNSEApp', () => {
   it('copies command to clipboard', async () => {
     const mockFetch = jest
       .spyOn(global, 'fetch')
-      .mockImplementation(() => Promise.resolve({ json: () => Promise.resolve({}) }));
+      .mockImplementation((url: RequestInfo | URL) =>
+        Promise.resolve({
+          json: () =>
+            Promise.resolve(
+              typeof url === 'string' && url.includes('nmap-results')
+                ? { hosts: [] }
+                : {}
+            ),
+        })
+      );
     const writeText = jest.fn();
     // @ts-ignore
     navigator.clipboard = { writeText };
@@ -43,9 +59,14 @@ describe('NmapNSEApp', () => {
   it('copies example output to clipboard', async () => {
     const mockFetch = jest
       .spyOn(global, 'fetch')
-      .mockImplementation(() =>
+      .mockImplementation((url: RequestInfo | URL) =>
         Promise.resolve({
-          json: () => Promise.resolve({ 'http-title': 'Sample output' }),
+          json: () =>
+            Promise.resolve(
+              typeof url === 'string' && url.includes('nmap-results')
+                ? { hosts: [] }
+                : { 'http-title': 'Sample output' }
+            ),
         })
       );
     const writeText = jest.fn();

@@ -1,31 +1,38 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Toast from '../../ui/Toast';
+import DiscoveryMap from './DiscoveryMap';
 
 // Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
 const scripts = [
   {
     name: 'http-title',
-    description: 'Fetches page titles from HTTP services.'
+    description: 'Fetches page titles from HTTP services.',
+    tags: ['discovery', 'http']
   },
   {
     name: 'ssl-cert',
-    description: 'Retrieves TLS certificate information.'
+    description: 'Retrieves TLS certificate information.',
+    tags: ['ssl', 'discovery']
   },
   {
     name: 'smb-os-discovery',
-    description: 'Discovers remote OS information via SMB.'
+    description: 'Discovers remote OS information via SMB.',
+    tags: ['smb', 'discovery']
   },
   {
     name: 'ftp-anon',
-    description: 'Checks for anonymous FTP access.'
+    description: 'Checks for anonymous FTP access.',
+    tags: ['ftp', 'auth']
   },
   {
     name: 'http-enum',
-    description: 'Enumerates directories on web servers.'
+    description: 'Enumerates directories on web servers.',
+    tags: ['http', 'vuln']
   },
   {
     name: 'dns-brute',
-    description: 'Performs DNS subdomain brute force enumeration.'
+    description: 'Performs DNS subdomain brute force enumeration.',
+    tags: ['dns', 'brute']
   }
 ];
 
@@ -35,12 +42,21 @@ const portPresets = [
   { label: 'Full', flag: '-p-' }
 ];
 
+const cvssColor = (score) => {
+  if (score >= 9) return 'bg-red-700';
+  if (score >= 7) return 'bg-orange-700';
+  if (score >= 4) return 'bg-yellow-700';
+  return 'bg-green-700';
+};
+
 const NmapNSEApp = () => {
   const [target, setTarget] = useState('example.com');
   const [selectedScripts, setSelectedScripts] = useState([scripts[0].name]);
   const [scriptQuery, setScriptQuery] = useState('');
   const [portFlag, setPortFlag] = useState('');
   const [examples, setExamples] = useState({});
+  const [results, setResults] = useState({ hosts: [] });
+  const [scriptOptions, setScriptOptions] = useState({});
   const [toast, setToast] = useState('');
   const outputRef = useRef(null);
 
@@ -49,6 +65,10 @@ const NmapNSEApp = () => {
       .then((r) => r.json())
       .then(setExamples)
       .catch(() => setExamples({}));
+    fetch('/demo/nmap-results.json')
+      .then((r) => r.json())
+      .then(setResults)
+      .catch(() => setResults({ hosts: [] }));
   }, []);
 
   const toggleScript = (name) => {
@@ -63,9 +83,13 @@ const NmapNSEApp = () => {
     s.name.toLowerCase().includes(scriptQuery.toLowerCase())
   );
 
+  const argsString = selectedScripts
+    .map((s) => scriptOptions[s])
+    .filter(Boolean)
+    .join(',');
   const command = `nmap ${portFlag} ${
     selectedScripts.length ? `--script ${selectedScripts.join(',')}` : ''
-  } ${target}`
+  } ${argsString ? `--script-args ${argsString}` : ''} ${target}`
     .replace(/\s+/g, ' ')
     .trim();
 
@@ -146,7 +170,9 @@ const NmapNSEApp = () => {
           />
         </div>
         <div className="mb-4">
-          <label className="block text-sm mb-1" htmlFor="scripts">Scripts</label>
+          <label className="block text-sm mb-1" htmlFor="scripts">
+            Scripts
+          </label>
           <input
             id="scripts"
             value={scriptQuery}
@@ -154,16 +180,40 @@ const NmapNSEApp = () => {
             placeholder="Search scripts"
             className="w-full p-2 text-black mb-2"
           />
-          <div className="h-32 overflow-y-auto bg-white text-black rounded p-2">
+          <div className="max-h-64 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
             {filteredScripts.map((s) => (
-              <label key={s.name} className="flex items-center space-x-2 mb-1">
-                <input
-                  type="checkbox"
-                  checked={selectedScripts.includes(s.name)}
-                  onChange={() => toggleScript(s.name)}
-                />
-                <span className="font-mono">{s.name}</span>
-              </label>
+              <div key={s.name} className="bg-white text-black p-2 rounded">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedScripts.includes(s.name)}
+                    onChange={() => toggleScript(s.name)}
+                  />
+                  <span className="font-mono">{s.name}</span>
+                </label>
+                <p className="text-xs mb-1">{s.description}</p>
+                <div className="flex flex-wrap gap-1 mb-1">
+                  {s.tags.map((t) => (
+                    <span key={t} className="px-1 text-xs bg-gray-200 rounded">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+                {selectedScripts.includes(s.name) && (
+                  <input
+                    type="text"
+                    value={scriptOptions[s.name] || ''}
+                    onChange={(e) =>
+                      setScriptOptions((prev) => ({
+                        ...prev,
+                        [s.name]: e.target.value,
+                      }))
+                    }
+                    placeholder="arg=value"
+                    className="w-full p-1 border rounded text-black"
+                  />
+                )}
+              </div>
             ))}
             {filteredScripts.length === 0 && (
               <p className="text-sm">No scripts found.</p>
@@ -201,6 +251,29 @@ const NmapNSEApp = () => {
         </div>
       </div>
       <div className="md:w-1/2 p-4 bg-black overflow-y-auto">
+        <h2 className="text-lg mb-2">Topology</h2>
+        <DiscoveryMap hosts={results.hosts} />
+        <h2 className="text-lg mb-2">Parsed output</h2>
+        <ul className="mb-4 space-y-2">
+          {results.hosts.map((host) => (
+            <li key={host.ip}>
+              <div className="text-blue-400 font-mono">{host.ip}</div>
+              <ul className="ml-4">
+                {host.ports.map((p) => (
+                  <li key={p.port} className="flex items-center gap-2">
+                    <span className="font-mono">{p.port}/tcp {p.service}</span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-xs ${cvssColor(p.cvss)}`}
+                      aria-label={`CVSS score ${p.cvss}`}
+                    >
+                      CVSS {p.cvss}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ul>
         <h2 className="text-lg mb-2">Example output</h2>
         <div
           ref={outputRef}
