@@ -11,18 +11,46 @@ const SKINS = {
 
 const TicTacToe = () => {
   const [size, setSize] = useState(3);
+  const [mode, setMode] = useState('classic');
   const [skin, setSkin] = useState('classic');
   const [board, setBoard] = useState(createBoard(3));
   const [player, setPlayer] = useState(null);
   const [ai, setAi] = useState(null);
   const [status, setStatus] = useState('Choose X or O');
+  const [stats, setStats] = useState(() => {
+    if (typeof window === 'undefined') return {};
+    try {
+      return JSON.parse(localStorage.getItem('tictactoeStats') || '{}');
+    } catch {
+      return {};
+    }
+  });
+
+  const variantKey = `${mode}-${size}`;
+  const recordResult = (res) => {
+    setStats((prev) => {
+      const cur = prev[variantKey] || { wins: 0, losses: 0, draws: 0 };
+      const updated = {
+        ...prev,
+        [variantKey]: {
+          wins: res === 'win' ? cur.wins + 1 : cur.wins,
+          losses: res === 'loss' ? cur.losses + 1 : cur.losses,
+          draws: res === 'draw' ? cur.draws + 1 : cur.draws,
+        },
+      };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('tictactoeStats', JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
 
   useEffect(() => {
     setBoard(createBoard(size));
     setPlayer(null);
     setAi(null);
     setStatus('Choose X or O');
-  }, [size]);
+  }, [size, mode]);
 
   const startGame = (p) => {
     const a = p === 'X' ? 'O' : 'X';
@@ -43,15 +71,22 @@ const TicTacToe = () => {
   useEffect(() => {
     if (player === null || ai === null) return;
     const result = checkWinner(board, size);
-    if (result.winner) {
-      setStatus(result.winner === 'draw' ? 'Draw' : `${SKINS[skin][result.winner]} wins`);
+    let winner = result.winner;
+    if (mode === 'misere' && winner && winner !== 'draw') {
+      winner = winner === 'X' ? 'O' : 'X';
+    }
+    if (winner) {
+      setStatus(winner === 'draw' ? 'Draw' : `${SKINS[skin][winner]} wins`);
+      if (winner === 'draw') recordResult('draw');
+      else if (winner === player) recordResult('win');
+      else recordResult('loss');
       return;
     }
     const filled = board.filter(Boolean).length;
     const isPlayerTurn =
       (player === 'X' && filled % 2 === 0) || (player === 'O' && filled % 2 === 1);
     if (!isPlayerTurn) {
-      const move = minimax(board.slice(), ai, size).index;
+      const move = minimax(board.slice(), ai, size, mode === 'misere').index;
       if (move >= 0) {
         const newBoard = board.slice();
         newBoard[move] = ai;
@@ -60,7 +95,7 @@ const TicTacToe = () => {
     } else {
       setStatus(`${SKINS[skin][player]}'s turn`);
     }
-  }, [board, player, ai, size, skin]);
+  }, [board, player, ai, size, skin, mode]);
 
   const currentSkin = SKINS[skin];
 
@@ -75,7 +110,16 @@ const TicTacToe = () => {
           >
             <option value={3}>3×3</option>
             <option value={4}>4×4</option>
-            <option value={5}>5×5</option>
+          </select>
+        </div>
+        <div className="mb-4">Mode:
+          <select
+            value={mode}
+            onChange={(e) => setMode(e.target.value)}
+            className="bg-gray-700 rounded p-1 ml-2"
+          >
+            <option value="classic">Classic</option>
+            <option value="misere">Misère</option>
           </select>
         </div>
         <div className="mb-4">Skin:
@@ -105,6 +149,12 @@ const TicTacToe = () => {
           >
             {currentSkin.O}
           </button>
+        </div>
+        <div className="mt-4 text-sm">
+          <div>Stats for {mode} {size}×{size}:</div>
+          <div>
+            Wins: {stats[variantKey]?.wins || 0} | Losses: {stats[variantKey]?.losses || 0} | Draws: {stats[variantKey]?.draws || 0}
+          </div>
         </div>
       </div>
     );
@@ -150,6 +200,12 @@ const TicTacToe = () => {
         >
           Reset
         </button>
+      </div>
+      <div className="mt-4 text-sm">
+        <div>Stats for {mode} {size}×{size}:</div>
+        <div>
+          Wins: {stats[variantKey]?.wins || 0} | Losses: {stats[variantKey]?.losses || 0} | Draws: {stats[variantKey]?.draws || 0}
+        </div>
       </div>
     </div>
   );
