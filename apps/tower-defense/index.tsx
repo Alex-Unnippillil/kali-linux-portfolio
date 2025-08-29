@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import GameLayout from "../../components/apps/GameLayout";
 import DpsCharts from "../games/tower-defense/components/DpsCharts";
+import RangeUpgradeTree from "../games/tower-defense/components/RangeUpgradeTree";
 import {
   ENEMY_TYPES,
   Tower,
@@ -46,6 +47,7 @@ const TowerDefense = () => {
       life: number;
     }[]
   >([]);
+  const damageTicksRef = useRef<{ x: number; y: number; life: number }[]>([]);
 
   const togglePath = (x: number, y: number) => {
     const key = `${x},${y}`;
@@ -145,6 +147,18 @@ const TowerDefense = () => {
       );
       ctx.fill();
     });
+    damageTicksRef.current.forEach((t) => {
+      ctx.strokeStyle = `rgba(255,0,0,${t.life})`;
+      ctx.beginPath();
+      ctx.arc(
+        t.x * CELL_SIZE + CELL_SIZE / 2,
+        t.y * CELL_SIZE + CELL_SIZE / 2,
+        (CELL_SIZE / 2) * (1 - t.life),
+        0,
+        Math.PI * 2,
+      );
+      ctx.stroke();
+    });
     damageNumbersRef.current.forEach((d) => {
       ctx.fillStyle = `rgba(255,255,255,${d.life})`;
       ctx.font = "12px sans-serif";
@@ -234,6 +248,11 @@ const TowerDefense = () => {
               value: t.damage,
               life: 1,
             });
+            damageTicksRef.current.push({
+              x: enemy.x,
+              y: enemy.y,
+              life: 1,
+            });
             (t as any).cool = 1;
           }
         }
@@ -245,6 +264,10 @@ const TowerDefense = () => {
       damageNumbersRef.current = damageNumbersRef.current.filter(
         (d) => d.life > 0,
       );
+      damageTicksRef.current.forEach((t) => {
+        t.life -= dt * 2;
+      });
+      damageTicksRef.current = damageTicksRef.current.filter((t) => t.life > 0);
       if (
         enemiesSpawnedRef.current >= waveRef.current * 5 &&
         enemiesRef.current.length === 0
@@ -318,7 +341,8 @@ const TowerDefense = () => {
             onMouseLeave={handleCanvasLeave}
           />
           {selected !== null && (
-            <div className="ml-2 flex flex-col space-y-1">
+            <div className="ml-2 flex flex-col space-y-1 items-center">
+              <RangeUpgradeTree tower={towers[selected]} />
               <button
                 className="bg-gray-700 text-xs px-2 py-1 rounded"
                 onClick={() => upgrade("range")}
