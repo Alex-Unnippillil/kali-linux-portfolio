@@ -11,6 +11,7 @@ import {
   serialize as serializeRng,
   deserialize as deserializeRng,
 } from '../../apps/games/rng';
+import { useSettings } from '../../hooks/useSettings';
 
 // Basic 2048 game logic with tile merging mechanics.
 
@@ -189,6 +190,20 @@ const SKINS = {
   neon: neonColors,
 };
 
+const tileSymbols = {
+  2: '●',
+  4: '■',
+  8: '▲',
+  16: '◆',
+  32: '✚',
+  64: '★',
+  128: '⬟',
+  256: '⬢',
+  512: '⬣',
+  1024: '⬡',
+  2048: '✦',
+};
+
 const validateBoard = (b) =>
   Array.isArray(b) &&
   b.length === SIZE &&
@@ -222,6 +237,7 @@ const Game2048 = () => {
   const [best, setBest] = useState(0);
   const [undosLeft, setUndosLeft] = useState(UNDO_LIMIT);
   const moveLock = useRef(false);
+  const { highContrast } = useSettings();
 
   useEffect(() => {
     if (animCells.size > 0) {
@@ -554,7 +570,15 @@ const Game2048 = () => {
                       cell ? colors[cell] || 'bg-gray-700' : 'bg-gray-800'
                     } ${animCells.has(key) ? 'tile-pop' : ''}`}
                   >
-                    {cell !== 0 ? cell : ''}
+                    {highContrast && cell !== 0 && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute inset-0 flex items-center justify-center text-4xl text-white opacity-50 mix-blend-difference pointer-events-none"
+                      >
+                        {tileSymbols[cell] || ''}
+                      </span>
+                    )}
+                    <span className="relative z-10">{cell !== 0 ? cell : ''}</span>
                     {mergeCells.has(key) && <span className="merge-ripple" />}
                   </div>
                 );
