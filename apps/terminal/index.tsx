@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
+import TerminalContainer from './components/Terminal';
 
 export interface TerminalProps {
   openApp?: (id: string) => void;
@@ -197,14 +198,19 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   useEffect(() => {
     let disposed = false;
     (async () => {
-      const [{ Terminal }, { FitAddon }, { SearchAddon }] = await Promise.all([
+      const [{ Terminal: XTerm }, { FitAddon }, { SearchAddon }] = await Promise.all([
         import('@xterm/xterm'),
         import('@xterm/addon-fit'),
         import('@xterm/addon-search'),
       ]);
       await import('@xterm/xterm/css/xterm.css');
       if (disposed) return;
-      const term = new Terminal({ cursorBlink: true, scrollback: 1000 });
+      const term = new XTerm({
+        cursorBlink: true,
+        scrollback: 1000,
+        cols: 80,
+        rows: 24,
+      });
       const fit = new FitAddon();
       const search = new SearchAddon();
       termRef.current = term;
@@ -335,10 +341,10 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           </div>
         </div>
       )}
-      <div
-        data-testid="xterm-container"
+      <TerminalContainer
         ref={containerRef}
-        className="h-full w-full bg-black text-white"
+        className="resize overflow-hidden"
+        style={{ width: '80ch', height: '24em' }}
       />
       {overflow.top && (
         <div className="pointer-events-none absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-black" />
