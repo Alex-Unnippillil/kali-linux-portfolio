@@ -1,5 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import usePersistedState from '../../hooks/usePersistedState';
+import {
+  calculateRiskMap,
+  drawOverlay,
+  toggleOverlay,
+} from '../../games/minesweeper/solver';
 
 /**
  * Classic Minesweeper implementation.
@@ -153,54 +158,6 @@ const calculateBV = (board) => {
 const checkWin = (board) =>
   board.flat().every((cell) => cell.revealed || cell.mine);
 
-const calculateRiskMap = (board) => {
-  const risk = Array.from({ length: BOARD_SIZE }, () =>
-    Array(BOARD_SIZE).fill(0),
-  );
-  for (let x = 0; x < BOARD_SIZE; x++) {
-    for (let y = 0; y < BOARD_SIZE; y++) {
-      const cell = board[x][y];
-      if (cell.revealed || cell.flagged) continue;
-      let maxProb = 0;
-      for (let dx = -1; dx <= 1; dx++) {
-        for (let dy = -1; dy <= 1; dy++) {
-          if (dx === 0 && dy === 0) continue;
-          const nx = x + dx;
-          const ny = y + dy;
-          if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE) continue;
-          const nCell = board[nx][ny];
-          if (!nCell.revealed || nCell.mine || nCell.adjacent === 0) continue;
-          let flagged = 0;
-          let hidden = 0;
-          for (let ox = -1; ox <= 1; ox++) {
-            for (let oy = -1; oy <= 1; oy++) {
-              if (ox === 0 && oy === 0) continue;
-              const mx = nx + ox;
-              const my = ny + oy;
-              if (
-                mx < 0 ||
-                mx >= BOARD_SIZE ||
-                my < 0 ||
-                my >= BOARD_SIZE
-              )
-                continue;
-              const around = board[mx][my];
-              if (around.flagged) flagged++;
-              if (!around.revealed && !around.flagged) hidden++;
-            }
-          }
-          const remaining = nCell.adjacent - flagged;
-          if (remaining > 0 && hidden > 0) {
-            const prob = remaining / hidden;
-            if (prob > maxProb) maxProb = prob;
-          }
-        }
-      }
-      risk[x][y] = maxProb;
-    }
-  }
-  return risk;
-};
 
 const Minesweeper = () => {
   const canvasRef = useRef(null);
@@ -254,6 +211,16 @@ const Minesweeper = () => {
       const best = localStorage.getItem('minesweeper-best-time');
       if (best) setBestTime(parseFloat(best));
     }
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key?.toLowerCase() === 'h') {
+        setShowRisk((v) => toggleOverlay(v));
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, []);
 
   useEffect(() => {
@@ -362,15 +329,12 @@ const Minesweeper = () => {
             } else if (cell.question) {
               ctx.fillStyle = '#fff';
               ctx.fillText('?', px + CELL_SIZE / 2, py + CELL_SIZE / 2);
-            } else if (showRisk && riskMap) {
-              const r = riskMap[x][y];
-              if (r > 0) {
-                ctx.fillStyle = `rgba(255,0,0,${r * 0.4})`;
-                ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
-              }
             }
           }
         }
+      }
+      if (showRisk && riskMap && board) {
+        drawOverlay(ctx, board, CELL_SIZE, riskMap);
       }
       if (paused && status === 'playing') {
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
