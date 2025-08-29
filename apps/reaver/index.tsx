@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import LegalInterstitial from '../../components/ui/LegalInterstitial';
 import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
+import LockoutModel from './components/LockoutModel';
 
 interface RouterMeta {
   model: string;
@@ -138,6 +139,8 @@ const ReaverPanel: React.FC = () => {
           Est. time remaining: {formatTime(timeRemaining)}
         </div>
       </div>
+
+      <LockoutModel />
 
       <div>
         <h2 className="text-lg mb-2">Router Metadata</h2>
