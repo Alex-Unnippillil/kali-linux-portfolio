@@ -2,7 +2,12 @@
 
 # dependencies
 /node_modules
-/.yarn
+# yarn 4
+.yarn/*
+!.yarn/releases
+!.yarn/plugins
+!.yarn/sdks
+!.yarn/versions
 /.pnp
 .pnp.cjs
 .pnp.loader.mjs
