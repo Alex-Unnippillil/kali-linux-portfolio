@@ -1,4 +1,4 @@
-import React, { Component, useEffect } from 'react';
+import React, { Component, useEffect, useRef } from 'react';
 import BootingScreen from './screen/booting_screen';
 import Desktop from './screen/desktop';
 import LockScreen from './screen/lock_screen';
@@ -157,14 +157,21 @@ export class Ubuntu extends Component<UbuntuProps, UbuntuState, UbuntuContext> {
 export default function UbuntuWithSession() {
   const { session, setSession, resetSession } = useSession();
   const { wallpaper, setWallpaper } = useSettings();
+  const sessionRef = useRef(session);
 
   useEffect(() => {
     setWallpaper(session.wallpaper);
   }, [session.wallpaper, setWallpaper]);
 
   useEffect(() => {
-    setSession({ ...session, wallpaper });
-  }, [wallpaper]);
+    sessionRef.current = session;
+  }, [session]);
+
+  useEffect(() => {
+    if (sessionRef.current.wallpaper !== wallpaper) {
+      setSession({ ...sessionRef.current, wallpaper });
+    }
+  }, [wallpaper, session, setSession]);
 
   return (
     <Ubuntu
