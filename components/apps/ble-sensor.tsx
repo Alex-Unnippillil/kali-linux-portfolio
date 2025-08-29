@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import FormError from '../ui/FormError';
 
+// These types are intentionally loose as the Web Bluetooth API is
+// unavailable in the test environment and has limited TypeScript
+// definitions without DOM lib support in this project.
 type BluetoothDevice = any;
 type BluetoothRemoteGATTServer = any;
 
@@ -24,6 +27,7 @@ const BleSensor: React.FC = () => {
   const [services, setServices] = useState<ServiceData[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [device, setDevice] = useState<BluetoothDevice | null>(null);
 
   const connectWithRetry = async (
     device: BluetoothDevice,
@@ -57,35 +61,46 @@ const BleSensor: React.FC = () => {
     }
 
     try {
-      const device = await (navigator as any).bluetooth.requestDevice({
+      const reqDevice = await (navigator as any).bluetooth.requestDevice({
         acceptAllDevices: true,
         optionalServices: ['battery_service', 'device_information'],
       });
 
-      setDeviceName(device.name || 'Unknown device');
+      setDevice(reqDevice);
+      setDeviceName(reqDevice.name || 'Unknown device');
 
-      const server = await connectWithRetry(device);
+      const server = await connectWithRetry(reqDevice);
 
-      device.addEventListener('gattserverdisconnected', () =>
-        setError('Device disconnected.')
-      );
+      const onDisconnect = () => {
+        setError('Device disconnected.');
+        setDevice(null);
+        setDeviceName('');
+        setServices([]);
+      };
+      reqDevice.addEventListener('gattserverdisconnected', onDisconnect);
 
       const primServices = await server.getPrimaryServices();
       const serviceData: ServiceData[] = [];
 
       for (const service of primServices) {
         const chars = await service.getCharacteristics();
-        const charData = await Promise.all(
-          chars.map(async (char: any) => {
-            try {
-              const val = await char.readValue();
+        const charData: CharacteristicData[] = [];
+        for (const char of chars) {
+          try {
+            const val = await char.readValue();
+            let value: string;
+            // Battery level characteristic returns a single unsigned byte (0-100)
+            if (char.uuid.toLowerCase().includes('2a19')) {
+              value = `${val.getUint8(0)}%`;
+            } else {
               const decoder = new TextDecoder();
-              return { uuid: char.uuid, value: decoder.decode(val.buffer) };
-            } catch {
-              return { uuid: char.uuid, value: '[unreadable]' };
+              value = decoder.decode(val.buffer);
             }
-          })
-        );
+            charData.push({ uuid: char.uuid, value });
+          } catch {
+            charData.push({ uuid: char.uuid, value: '[unreadable]' });
+          }
+        }
         serviceData.push({ uuid: service.uuid, characteristics: charData });
       }
       setServices(serviceData);
@@ -103,6 +118,22 @@ const BleSensor: React.FC = () => {
     }
   };
 
+  const handleDisconnect = () => {
+    try {
+      if (device?.gatt?.connected) device.gatt.disconnect();
+    } catch {
+      // ignore disconnect errors
+    }
+    setDevice(null);
+    setDeviceName('');
+    setServices([]);
+  };
+
+  const handleRescan = async () => {
+    handleDisconnect();
+    await handleScan();
+  };
+
   return (
     <div className="h-full w-full bg-black p-4 text-white">
       {!supported && (
@@ -111,13 +142,24 @@ const BleSensor: React.FC = () => {
         </p>
       )}
 
-      <button
-        onClick={handleScan}
-        disabled={!supported || busy}
-        className="mb-4 rounded bg-blue-600 px-3 py-1 disabled:opacity-50"
-      >
-        Scan for Devices
-      </button>
+      <div className="mb-4 space-x-2">
+        <button
+          onClick={device ? handleDisconnect : handleScan}
+          disabled={!supported || busy}
+          className="rounded bg-blue-600 px-3 py-1 disabled:opacity-50"
+        >
+          {device ? 'Disconnect' : 'Scan for Devices'}
+        </button>
+        {device && (
+          <button
+            onClick={handleRescan}
+            disabled={busy}
+            className="rounded bg-gray-700 px-3 py-1 disabled:opacity-50"
+          >
+            Rescan
+          </button>
+        )}
+      </div>
 
       {error && <FormError className="mt-0 mb-4">{error}</FormError>}
 
@@ -126,14 +168,18 @@ const BleSensor: React.FC = () => {
       <ul className="space-y-2 overflow-auto">
         {services.map((service) => (
           <li key={service.uuid} className="border-b border-gray-700 pb-2">
-            <p className="font-bold">Service: {service.uuid}</p>
-            <ul className="ml-4 list-disc">
-              {service.characteristics.map((char) => (
-                <li key={char.uuid}>
-                  {char.uuid}: {char.value}
-                </li>
-              ))}
-            </ul>
+            <details open>
+              <summary className="cursor-pointer font-bold">
+                Service: {service.uuid}
+              </summary>
+              <ul className="ml-4 list-disc">
+                {service.characteristics.map((char) => (
+                  <li key={char.uuid}>
+                    {char.uuid}: {char.value}
+                  </li>
+                ))}
+              </ul>
+            </details>
           </li>
         ))}
       </ul>
