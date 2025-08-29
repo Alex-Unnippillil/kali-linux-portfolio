@@ -18,6 +18,7 @@ const banner = `Metasploit Framework Console (mock)\nFor legal and ethical use o
 
 const MetasploitApp = ({
   demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true',
+  onLoadingChange = () => {},
 } = {}) => {
   const [command, setCommand] = useState('');
   const [output, setOutput] = usePersistentState('metasploit-history', banner);
@@ -37,6 +38,10 @@ const MetasploitApp = ({
   const [timeline, setTimeline] = useState([]);
   const [replaying, setReplaying] = useState(false);
   const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    onLoadingChange(loading);
+  }, [loading, onLoadingChange]);
 
   const workerRef = useRef();
   const moduleRaf = useRef();
@@ -142,23 +147,28 @@ const MetasploitApp = ({
   };
 
   const runDemo = async () => {
-    const exploit = modules[0];
-    const post = modules.find((m) => m.type === 'post');
-    if (!exploit || !post) return;
-    setOutput(
-      (prev) =>
-        `${prev}\nmsf6 > use ${exploit.name}\n${exploit.transcript || ''}`
-    );
-    await new Promise((r) => setTimeout(r, 500));
-    setOutput(
-      (prev) =>
-        `${prev}\nmsf6 exploit(${exploit.name}) > sessions -i 1\n[*] Session 1 opened`
-    );
-    await new Promise((r) => setTimeout(r, 500));
-    setOutput(
-      (prev) =>
-        `${prev}\nmsf6 exploit(${exploit.name}) > run ${post.name}\n${post.transcript || ''}`
-    );
+    setLoading(true);
+    try {
+      const exploit = modules[0];
+      const post = modules.find((m) => m.type === 'post');
+      if (!exploit || !post) return;
+      setOutput(
+        (prev) =>
+          `${prev}\nmsf6 > use ${exploit.name}\n${exploit.transcript || ''}`
+      );
+      await new Promise((r) => setTimeout(r, 500));
+      setOutput(
+        (prev) =>
+          `${prev}\nmsf6 exploit(${exploit.name}) > sessions -i 1\n[*] Session 1 opened`
+      );
+      await new Promise((r) => setTimeout(r, 500));
+      setOutput(
+        (prev) =>
+          `${prev}\nmsf6 exploit(${exploit.name}) > run ${post.name}\n${post.transcript || ''}`
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const showModule = (mod) => {
