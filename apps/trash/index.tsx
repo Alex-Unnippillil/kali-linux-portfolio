@@ -1,70 +1,53 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-
-interface TrashItem {
-  id: string;
-  title: string;
-  icon?: string;
-  image?: string;
-  closedAt: number;
-}
+import useTrashState from './state';
+import HistoryList from './components/HistoryList';
+import type { TrashItem } from './state';
 
 export default function Trash({ openApp }: { openApp: (id: string) => void }) {
-  const [items, setItems] = useState<TrashItem[]>([]);
+  const {
+    items,
+    setItems,
+    history,
+    pushHistory,
+    restoreFromHistory,
+    restoreAllFromHistory,
+  } = useTrashState();
   const [selected, setSelected] = useState<number | null>(null);
-
-  useEffect(() => {
-    const purgeDays = parseInt(localStorage.getItem('trash-purge-days') || '30', 10);
-    const ms = purgeDays * 24 * 60 * 60 * 1000;
-    const now = Date.now();
-    let data: TrashItem[] = [];
-    try {
-      data = JSON.parse(localStorage.getItem('window-trash') || '[]');
-    } catch (e) {
-      data = [];
-    }
-    data = data.filter(item => now - item.closedAt <= ms);
-    localStorage.setItem('window-trash', JSON.stringify(data));
-    setItems(data);
-  }, []);
-
-  const persist = (next: TrashItem[]) => {
-    setItems(next);
-    localStorage.setItem('window-trash', JSON.stringify(next));
-  };
 
   const restore = useCallback(() => {
     if (selected === null) return;
     const item = items[selected];
     if (!window.confirm(`Restore ${item.title}?`)) return;
     openApp(item.id);
-    const next = items.filter((_, i) => i !== selected);
-    persist(next);
+    setItems(items => items.filter((_, i) => i !== selected));
     setSelected(null);
-  }, [items, selected, openApp]);
+  }, [items, selected, openApp, setItems]);
 
   const remove = useCallback(() => {
     if (selected === null) return;
     const item = items[selected];
     if (!window.confirm(`Delete ${item.title}?`)) return;
     const next = items.filter((_, i) => i !== selected);
-    persist(next);
+    setItems(next);
+    pushHistory(item);
     setSelected(null);
-  }, [items, selected]);
+  }, [items, selected, setItems, pushHistory]);
 
   const restoreAll = () => {
     if (items.length === 0) return;
     if (!window.confirm('Restore all windows?')) return;
     items.forEach(item => openApp(item.id));
-    persist([]);
+    setItems([]);
     setSelected(null);
   };
 
   const empty = () => {
     if (items.length === 0) return;
     if (!window.confirm('Empty trash?')) return;
-    persist([]);
+    pushHistory(items);
+    setItems([]);
     setSelected(null);
   };
 
@@ -119,7 +102,7 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
           </button>
         </div>
       </div>
-      <div className="flex flex-wrap content-start p-2 overflow-auto">
+      <div className="flex flex-wrap content-start p-2 overflow-auto flex-1">
         {items.length === 0 && <div className="w-full text-center mt-10">Trash is empty</div>}
         {items.map((item, idx) => (
           <div
@@ -139,6 +122,7 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
           </div>
         ))}
       </div>
+      <HistoryList history={history} onRestore={restoreFromHistory} onRestoreAll={restoreAllFromHistory} />
     </div>
   );
 }
