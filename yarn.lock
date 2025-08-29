@@ -11611,6 +11611,7 @@ __metadata:
     wait-on: "npm:^8.0.4"
     workbox-build: "npm:^7.3.0"
     workbox-window: "npm:^7.3.0"
+    ws: "npm:^8.18.0"
     zod: "npm:^3.23.8"
   languageName: unknown
   linkType: soft

@@ -33,35 +33,39 @@ class ImageMock {
 // @ts-ignore - allow overriding the global Image for the test env
 global.Image = ImageMock as unknown as typeof Image;
 
-// Provide a minimal canvas mock so libraries like xterm.js can run under JSDOM
-// @ts-ignore
-HTMLCanvasElement.prototype.getContext = () => ({
-  fillRect: () => {},
-  clearRect: () => {},
-  getImageData: () => ({ data: new Uint8ClampedArray() } as ImageData),
-  putImageData: () => {},
-  createImageData: () => new ImageData(0, 0),
-  setTransform: () => {},
-  drawImage: () => {},
-  save: () => {},
-  restore: () => {},
-  beginPath: () => {},
-  moveTo: () => {},
-  lineTo: () => {},
-  closePath: () => {},
-  stroke: () => {},
-  translate: () => {},
-  scale: () => {},
-  rotate: () => {},
-  arc: () => {},
-  fill: () => {},
-  fillText: () => {},
-  measureText: () => ({ width: 0 } as TextMetrics),
-  transform: () => {},
-  rect: () => {},
-  clip: () => {},
-  createLinearGradient: () => ({ addColorStop: () => {} } as unknown as CanvasGradient),
-});
+// Provide a minimal canvas mock so libraries like xterm.js can run under JSDOM.
+// In non-browser environments (like Jest's node environment) HTMLCanvasElement may
+// not exist, so guard against it before patching the prototype.
+if (typeof HTMLCanvasElement !== 'undefined') {
+  // @ts-ignore
+  HTMLCanvasElement.prototype.getContext = () => ({
+    fillRect: () => {},
+    clearRect: () => {},
+    getImageData: () => ({ data: new Uint8ClampedArray() } as ImageData),
+    putImageData: () => {},
+    createImageData: () => new ImageData(0, 0),
+    setTransform: () => {},
+    drawImage: () => {},
+    save: () => {},
+    restore: () => {},
+    beginPath: () => {},
+    moveTo: () => {},
+    lineTo: () => {},
+    closePath: () => {},
+    stroke: () => {},
+    translate: () => {},
+    scale: () => {},
+    rotate: () => {},
+    arc: () => {},
+    fill: () => {},
+    fillText: () => {},
+    measureText: () => ({ width: 0 } as TextMetrics),
+    transform: () => {},
+    rect: () => {},
+    clip: () => {},
+    createLinearGradient: () => ({ addColorStop: () => {} } as unknown as CanvasGradient),
+  });
+}
 
 // Basic matchMedia mock for libraries that expect it
 if (typeof window !== 'undefined' && !window.matchMedia) {
