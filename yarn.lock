@@ -7859,6 +7859,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"kaitai-struct@npm:^0.10.0":
+  version: 0.10.0
+  resolution: "kaitai-struct@npm:0.10.0"
+  checksum: 10c0/f07fb1af46916be3f039f7c09e3b57655222c7461d83399bed8a1cae7fcf3f06d1de5ac34257704acbc3dbdd2f286ea203c0a47f034ebdd04b837b92daca9a69
+  languageName: node
+  linkType: hard
+
 "kapsule@npm:^1.16":
   version: 1.16.3
   resolution: "kapsule@npm:1.16.3"
@@ -9041,6 +9048,13 @@ __metadata:
     lru-cache: "npm:^10.2.0"
     minipass: "npm:^5.0.0 || ^6.0.2 || ^7.0.0"
   checksum: 10c0/32a13711a2a505616ae1cc1b5076801e453e7aae6ac40ab55b388bb91b9d0547a52f5aaceff710ea400205f18691120d4431e520afbe4266b836fadede15872d
+  languageName: node
+  linkType: hard
+
+"pcap-parser@npm:^0.2.1":
+  version: 0.2.1
+  resolution: "pcap-parser@npm:0.2.1"
+  checksum: 10c0/7db254292ede58ae3378bac2adf000ff960d8ab02203e1dda999c39ec403f4aed36539c6e3cd1511ed2e9ceba3b1b5fe859a2e8612520f3eb4b73e0a34744ab0
   languageName: node
   linkType: hard
 
@@ -11290,10 +11304,12 @@ __metadata:
     idb-keyval: "npm:^6.2.1"
     jest: "npm:30.0.5"
     jest-environment-jsdom: "npm:30.0.5"
+    kaitai-struct: "npm:^0.10.0"
     mathjs: "npm:^14.6.0"
     matter-js: "npm:0.20.0"
     next: "npm:^15.0.0"
     pa11y: "npm:^9.0.0"
+    pcap-parser: "npm:^0.2.1"
     pdfjs-dist: "npm:^5.4.54"
     phaser: "npm:3.70.0"
     playwright-core: "npm:^1.55.0"

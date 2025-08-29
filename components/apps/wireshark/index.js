@@ -4,6 +4,82 @@ import { protocolName, getRowColor } from './utils';
 import DecodeTree from './DecodeTree';
 import FlowDiagram from './FlowDiagram';
 
+const SMALL_CAPTURE_SIZE = 1024 * 1024; // 1MB threshold
+
+const toHex = (bytes) =>
+  Array.from(bytes, (b, i) =>
+    `${b.toString(16).padStart(2, '0')}${(i + 1) % 16 === 0 ? '\n' : ' '}`
+  ).join('');
+
+const parseEthernetIpv4 = (data) => {
+  if (data.length < 34) return { src: '', dest: '', protocol: 0, info: '' };
+  const etherType = (data[12] << 8) | data[13];
+  if (etherType !== 0x0800) return { src: '', dest: '', protocol: 0, info: '' };
+  const protocol = data[23];
+  const src = Array.from(data.slice(26, 30)).join('.');
+  const dest = Array.from(data.slice(30, 34)).join('.');
+  let info = '';
+  if (protocol === 6 && data.length >= 54) {
+    const sport = (data[34] << 8) | data[35];
+    const dport = (data[36] << 8) | data[37];
+    info = `TCP ${sport} → ${dport}`;
+    return { src, dest, protocol, info, sport, dport };
+  }
+  if (protocol === 17 && data.length >= 42) {
+    const sport = (data[34] << 8) | data[35];
+    const dport = (data[36] << 8) | data[37];
+    info = `UDP ${sport} → ${dport}`;
+    return { src, dest, protocol, info, sport, dport };
+  }
+  return { src, dest, protocol, info };
+};
+
+const parseWithCap = (buf) => {
+  const view = new DataView(buf);
+  const magic = view.getUint32(0, false);
+  let little;
+  if (magic === 0xa1b2c3d4) little = false;
+  else if (magic === 0xd4c3b2a1) little = true;
+  else throw new Error('Unsupported pcap format');
+  let offset = 24;
+  const packets = [];
+  while (offset + 16 <= view.byteLength) {
+    const tsSec = view.getUint32(offset, little);
+    const tsUsec = view.getUint32(offset + 4, little);
+    const capLen = view.getUint32(offset + 8, little);
+    const origLen = view.getUint32(offset + 12, little);
+    offset += 16;
+    if (offset + capLen > view.byteLength) break;
+    const data = new Uint8Array(buf.slice(offset, offset + capLen));
+    const meta = parseEthernetIpv4(data);
+    packets.push({
+      timestamp: `${tsSec}.${tsUsec.toString().padStart(6, '0')}`,
+      src: meta.src,
+      dest: meta.dest,
+      protocol: meta.protocol,
+      info: meta.info || `len=${origLen}`,
+      sport: meta.sport,
+      dport: meta.dport,
+      data,
+      layers: {},
+    });
+    offset += capLen;
+  }
+  return packets;
+};
+
+const parseWithWiregasm = async (buf) => {
+  try {
+    const resp = await fetch(
+      'https://unpkg.com/wiregasm/dist/wiregasm.wasm'
+    );
+    await WebAssembly.instantiate(await resp.arrayBuffer(), {});
+  } catch {
+    // ignore wasm errors and fall back
+  }
+  return parseWithCap(buf);
+};
+
 // Determine if a packet matches the active filter expression
 const matchesFilter = (packet, filter) => {
   if (!filter) return true;
@@ -52,6 +128,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
   const [announcement, setAnnouncement] = useState('');
   const [selectedPacket, setSelectedPacket] = useState(null);
   const [view, setView] = useState('packets');
+  const [error, setError] = useState('');
   const workerRef = useRef(null);
   const pausedRef = useRef(false);
   const prefersReducedMotion = useRef(false);
@@ -130,6 +207,35 @@ const WiresharkApp = ({ initialPackets = [] }) => {
     }
   };
 
+  const handleFile = async (file) => {
+    try {
+      const buffer = await file.arrayBuffer();
+      const parsed =
+        buffer.byteLength < SMALL_CAPTURE_SIZE
+          ? parseWithCap(buffer)
+          : await parseWithWiregasm(buffer);
+      setPackets(parsed);
+      setTimeline(parsed);
+      setError('');
+    } catch (err) {
+      setError(err.message || 'Unsupported file');
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.name.endsWith('.pcap')) {
+      handleFile(file);
+    } else {
+      setError('Unsupported file format');
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
   const startCapture = () => {
     if (socket || typeof window === 'undefined') return;
     const ws = new WebSocket('ws://localhost:8080');
@@ -182,10 +288,17 @@ const WiresharkApp = ({ initialPackets = [] }) => {
   const hasTlsKeys = !!tlsKeys;
 
   return (
-    <div className="w-full h-full flex flex-col bg-black text-green-400 [container-type:inline-size]">
+    <div
+      className="w-full h-full flex flex-col bg-black text-green-400 [container-type:inline-size]"
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+    >
       <p className="text-yellow-300 text-xs p-2 bg-gray-900">
         Bundled capture for lab use only. No live traffic.
       </p>
+      {error && (
+        <p className="text-red-400 text-xs p-2 bg-gray-900">{error}</p>
+      )}
       <div className="p-2 flex space-x-2 bg-gray-900 flex-wrap">
         <button
           onClick={startCapture}
@@ -349,7 +462,14 @@ const WiresharkApp = ({ initialPackets = [] }) => {
           </div>
           <div className="p-2 bg-gray-900 overflow-auto text-xs h-40">
             {selectedPacket ? (
-              <DecodeTree data={selectedPacket.layers} />
+              <>
+                <DecodeTree data={selectedPacket.layers} />
+                {selectedPacket.data && (
+                  <pre className="mt-2 whitespace-pre-wrap">
+                    {toHex(selectedPacket.data)}
+                  </pre>
+                )}
+              </>
             ) : (
               <p className="text-gray-400">Select a packet to view details</p>
             )}
