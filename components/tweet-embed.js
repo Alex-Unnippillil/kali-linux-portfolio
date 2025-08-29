@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import DOMPurify from 'dompurify';
 
 export default function TweetEmbed({ id }) {
   const [html, setHtml] = useState(null);
@@ -16,7 +17,8 @@ export default function TweetEmbed({ id }) {
       })
       .then((data) => {
         if (active) {
-          setHtml(data?.html || null);
+          const sanitized = DOMPurify.sanitize(data?.html || '');
+          setHtml(sanitized);
         }
       })
       .catch(() => active && setError(true));
@@ -25,6 +27,19 @@ export default function TweetEmbed({ id }) {
       active = false;
     };
   }, [id]);
+
+  useEffect(() => {
+    const hook = (node) => {
+      if (node.tagName === 'A') {
+        node.setAttribute('target', '_blank');
+        node.setAttribute('rel', 'noopener noreferrer');
+      }
+    };
+    DOMPurify.addHook('afterSanitizeAttributes', hook);
+    return () => {
+      DOMPurify.removeHook('afterSanitizeAttributes', hook);
+    };
+  }, []);
 
   if (error) {
     return <div className="p-4 text-center">Unable to load tweet.</div>;
