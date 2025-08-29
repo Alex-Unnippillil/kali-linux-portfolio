@@ -10,22 +10,27 @@ import {
   cardToString,
   Suit,
   Card,
+  setDrawMode,
 } from '../games/solitaire/logic';
 
 const Solitaire = () => {
-  const [state, setState] = useState<GameState>(() => initGame());
-  const [drawMode, setDrawMode] = useState<'draw1' | 'draw3'>('draw1');
+  const getStoredMode = (): 'draw1' | 'draw3' => {
+    if (typeof window === 'undefined') return 'draw1';
+    return (localStorage.getItem('solitaire-mode') as 'draw1' | 'draw3' | null) || 'draw1';
+  };
+
+  const [state, setState] = useState<GameState>(() => initGame(getStoredMode()));
   const [hint, setHint] = useState<string | null>(null);
 
   const refresh = () => setState({ ...state });
 
   const onDraw = () => {
-    draw(state, drawMode);
+    draw(state);
     refresh();
   };
 
   const onReset = () => {
-    setState(initGame());
+    setState(initGame(state.drawMode));
     setHint(null);
   };
 
@@ -58,8 +63,13 @@ const Solitaire = () => {
         <label htmlFor="draw-mode">Draw:</label>
         <select
           id="draw-mode"
-          value={drawMode}
-          onChange={(e) => setDrawMode(e.target.value as 'draw1' | 'draw3')}
+          value={state.drawMode}
+          onChange={(e) => {
+            const mode = e.target.value as 'draw1' | 'draw3';
+            setDrawMode(state, mode);
+            localStorage.setItem('solitaire-mode', mode);
+            refresh();
+          }}
           className="rounded border p-1"
         >
           <option value="draw1">1</option>
