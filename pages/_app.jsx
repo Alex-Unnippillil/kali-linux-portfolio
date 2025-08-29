@@ -12,6 +12,7 @@ import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
+import FlagValuesEmitter from '../components/FlagValuesEmitter';
 
 /**
  * @param {import('next/app').AppProps} props
@@ -135,6 +136,7 @@ function MyApp({ Component, pageProps }) {
             return e;
           }}
         />
+
         {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
       </PipPortalProvider>
     </SettingsProvider>
