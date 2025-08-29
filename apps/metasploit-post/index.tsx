@@ -3,6 +3,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import modules from './modules.json';
 import privTree from './priv-esc.json';
+import HostNotebook from './components/HostNotebook';
 
 interface ModuleOption {
   name: string;
@@ -244,6 +245,7 @@ const MetasploitPost: React.FC = () => {
             <PrivTree node={privTree as PrivNode} />
           </div>
           <EvidenceVault />
+          <HostNotebook />
         </div>
       </div>
     </div>
