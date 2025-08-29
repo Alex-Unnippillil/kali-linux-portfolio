@@ -8,41 +8,13 @@ export interface HangmanGame {
 // Basic dictionaries used by the hangman game. Having them here keeps the
 // engine self‑contained so consumers do not need to supply their own word
 // lists.
-export const FAMILY_WORDS = [
-  'mother',
-  'father',
-  'sister',
-  'brother',
-  'cousin',
-  'uncle',
-  'aunt',
-];
+import topics from '../../games/hangman/data/topics.json';
 
-export const SAT_WORDS = [
-  'aberration',
-  'convivial',
-  'equivocate',
-  'laconic',
-  'obdurate',
-  'quandary',
-  'venerate',
-];
+export const DICTIONARIES: Record<string, string[]> = topics;
 
-export const MOVIE_WORDS = [
-  'inception',
-  'avatar',
-  'casablanca',
-  'gladiator',
-  'titanic',
-  'goodfellas',
-  'amelie',
-];
-
-export const DICTIONARIES: Record<string, string[]> = {
-  family: FAMILY_WORDS,
-  sat: SAT_WORDS,
-  movie: MOVIE_WORDS,
-};
+export const FAMILY_WORDS = DICTIONARIES.family;
+export const SAT_WORDS = DICTIONARIES.sat;
+export const MOVIE_WORDS = DICTIONARIES.movie;
 
 const allWords = () => Object.values(DICTIONARIES).flat();
 

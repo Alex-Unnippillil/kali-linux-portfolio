@@ -17,11 +17,6 @@ import { DICTIONARIES } from '../../apps/hangman/engine';
 
 const letters = 'abcdefghijklmnopqrstuvwxyz'.split('');
 
-const PACKS_BY_DIFFICULTY = {
-  Easy: ['family', 'movie'],
-  Hard: ['sat'],
-};
-
 
 // Helper to draw a line segment with a dashed reveal animation
 const drawLine = (ctx, x1, y1, x2, y2, progress) => {
@@ -56,6 +51,7 @@ const HANGMAN_PARTS = [
 const maxWrong = HANGMAN_PARTS.length;
 
 const Hangman = () => {
+  const topics = useMemo(() => Object.keys(DICTIONARIES), []);
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
   const audioCtxRef = useRef(null);
@@ -65,7 +61,8 @@ const Hangman = () => {
   const gallowsStartRef = useRef(0);
   const reduceMotionRef = useRef(false);
 
-  const [dict, setDict] = useState('family');
+  const [pendingDict, setPendingDict] = useState(topics[0]);
+  const [dict, setDict] = useState('');
   const [word, setWord] = useState('');
   const [guessed, setGuessed] = useState([]);
   const [wrong, setWrong] = useState(0);
@@ -136,8 +133,8 @@ const Hangman = () => {
   const reset = useCallback(
     (forcedWord, forcedDict) => {
       try {
-        const dictToUse = forcedDict || dict;
-        const list = DICTIONARIES[dictToUse] || DICTIONARIES.family;
+        const dictToUse = forcedDict || dict || topics[0];
+        const list = DICTIONARIES[dictToUse] || DICTIONARIES[topics[0]];
         const chosen =
           forcedWord && list.includes(forcedWord)
             ? forcedWord
@@ -158,7 +155,7 @@ const Hangman = () => {
         logGameError('hangman', err?.message || String(err));
       }
     },
-    [dict],
+    [dict, topics],
   );
 
   useEffect(() => {
@@ -174,8 +171,8 @@ const Hangman = () => {
       reset(paramWord.toLowerCase(), validDict);
       setGuessed(paramGuessed.split(''));
       setWrong(Number.isNaN(paramWrong) ? 0 : paramWrong);
-    } else {
-      reset(undefined, validDict);
+    } else if (validDict) {
+      setPendingDict(validDict);
     }
   }, [reset]);
 
@@ -451,22 +448,41 @@ const Hangman = () => {
     return () => cancelAnimationFrame(animationRef.current);
   }, [draw]);
 
+  if (!word) {
+    return (
+      <div className="flex flex-col items-center">
+        <select
+          className="text-black px-1 mb-2"
+          value={pendingDict}
+          onChange={(e) => setPendingDict(e.target.value)}
+        >
+          {topics.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={() => reset(undefined, pendingDict)}
+          className="px-2 py-1 bg-ubt-blue text-black rounded"
+        >
+          Start Game
+        </button>
+      </div>
+    );
+  }
   return (
     <>
       <div className="flex justify-center space-x-2 mb-2">
         <select
           className="text-black px-1"
           value={dict}
-          onChange={(e) => setDict(e.target.value)}
+          onChange={(e) => reset(undefined, e.target.value)}
         >
-          {Object.entries(PACKS_BY_DIFFICULTY).map(([diff, names]) => (
-            <optgroup key={diff} label={diff}>
-              {names.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </optgroup>
+          {topics.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
           ))}
         </select>
         <button

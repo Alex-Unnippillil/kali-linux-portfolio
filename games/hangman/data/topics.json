@@ -1,0 +1,29 @@
+{
+  "family": [
+    "mother",
+    "father",
+    "sister",
+    "brother",
+    "cousin",
+    "uncle",
+    "aunt"
+  ],
+  "sat": [
+    "aberration",
+    "convivial",
+    "equivocate",
+    "laconic",
+    "obdurate",
+    "quandary",
+    "venerate"
+  ],
+  "movie": [
+    "inception",
+    "avatar",
+    "casablanca",
+    "gladiator",
+    "titanic",
+    "goodfellas",
+    "amelie"
+  ]
+}
