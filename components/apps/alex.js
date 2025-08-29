@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
-import LazyGitHubButton from '../LazyGitHubButton';
+import GitHubStars from '../GitHubStars';
 import Certs from './certs';
 import data from './alex/data.json';
 import resumeData from './alex/resume.json';
@@ -425,7 +425,7 @@ function Projects({ projects }) {
                                 <div className="flex flex-wrap justify-between items-center">
                                     <div className='flex justify-center items-center'>
                                         <a href={project.link} target="_blank" rel="noopener noreferrer" className="text-base md:text-lg mr-2">{project.name.toLowerCase()}</a>
-                                        <LazyGitHubButton user="alex-unnippillil" repo={projectName} />
+                                        <GitHubStars user="alex-unnippillil" repo={projectName} />
                                     </div>
                                     <div className="text-gray-300 font-light text-sm">{project.date}</div>
                                 </div>
