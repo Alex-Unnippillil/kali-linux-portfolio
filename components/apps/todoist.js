@@ -432,6 +432,130 @@ export default function Todoist() {
     reader.readAsText(file);
   };
 
+  const handleExportCsv = () => {
+    try {
+      const header = ['title', 'due', 'priority', 'section', 'recurring'];
+      const rows = Object.values(groups)
+        .flat()
+        .map((t) => [
+          t.title,
+          t.due || '',
+          t.priority,
+          t.section || '',
+          t.recurring || '',
+        ]);
+      const csv = [header, ...rows]
+        .map((r) =>
+          r
+            .map((c) => `"${String(c).replace(/"/g, '""')}"`)
+            .join(',')
+        )
+        .join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'tasks.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // ignore
+    }
+  };
+
+  const parseCsvLine = (line) => {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (inQuotes) {
+        if (ch === '"') {
+          if (line[i + 1] === '"') {
+            current += '"';
+            i++;
+          } else {
+            inQuotes = false;
+          }
+        } else {
+          current += ch;
+        }
+      } else if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ',') {
+        result.push(current);
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+    result.push(current);
+    return result.map((c) => c.trim());
+  };
+
+  const handleImportCsv = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const text = String(reader.result || '');
+        const lines = text
+          .split(/\r?\n/)
+          .map((l) => l.trim())
+          .filter(Boolean);
+        if (lines.length < 2) return;
+        const headers = parseCsvLine(lines[0]).map((h) => h.toLowerCase());
+        const idx = {
+          title: headers.indexOf('title'),
+          due: headers.indexOf('due'),
+          priority: headers.indexOf('priority'),
+          section: headers.indexOf('section'),
+          recurring: headers.indexOf('recurring'),
+        };
+        const imported = lines.slice(1).map((line) => {
+          const cols = parseCsvLine(line);
+          let due = cols[idx.due] || '';
+          let recurring = cols[idx.recurring] || '';
+          let rrule;
+          if (recurring) {
+            const text = recurring.trim().toLowerCase();
+            const full = text.startsWith('every') ? text : `every ${text}`;
+            const parsed = parseRecurring(
+              full,
+              due ? new Date(due) : new Date()
+            );
+            rrule = parsed?.rrule;
+            if (!due && parsed?.preview[0]) {
+              due = parsed.preview[0].toISOString().split('T')[0];
+            }
+          }
+          return {
+            id: Date.now() + Math.random(),
+            title: cols[idx.title] || '',
+            due: due || undefined,
+            priority: cols[idx.priority] || 'medium',
+            section: cols[idx.section] || undefined,
+            recurring: recurring || undefined,
+            rrule,
+            completed: false,
+          };
+        });
+        const newGroups = {
+          ...groups,
+          Today: [...groups.Today, ...imported],
+        };
+        setGroups(newGroups);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
+        }
+      } catch {
+        // ignore
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const matchesTask = (task) => {
     if (search && !task.title.toLowerCase().includes(search.toLowerCase())) {
       return false;
@@ -781,9 +905,14 @@ export default function Todoist() {
           <button className="px-2 py-1 border rounded" onClick={() => setView('upcoming')}>Upcoming</button>
           <button className="px-2 py-1 border rounded" onClick={() => setView('calendar')}>Calendar</button>
           <button className="px-2 py-1 border rounded" onClick={handleExport}>Export</button>
+          <button className="px-2 py-1 border rounded" onClick={handleExportCsv}>Export CSV</button>
           <label className="px-2 py-1 border rounded cursor-pointer">
             Import
             <input type="file" accept="application/json" onChange={handleImport} className="sr-only" />
+          </label>
+          <label className="px-2 py-1 border rounded cursor-pointer">
+            Import CSV
+            <input type="file" accept="text/csv" onChange={handleImportCsv} className="sr-only" />
           </label>
         </div>
         <div className="flex flex-1">
