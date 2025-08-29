@@ -7,14 +7,7 @@ import Slant from 'figlet/importable-fonts/Slant.js';
 import Big from 'figlet/importable-fonts/Big.js';
 import { useRouter } from 'next/router';
 
-// preload a small set of fonts
-const fontData: Record<string, any> = {
-  Standard,
-  Slant,
-  Big,
-};
-Object.entries(fontData).forEach(([name, data]) => figlet.parseFont(name, data));
-const fontList = Object.keys(fontData);
+const fontList = ['Standard', 'Slant', 'Big'];
 
 const ramp = '@%#*+=-:. ';
 
@@ -32,20 +25,26 @@ const AsciiArtApp = () => {
   const router = useRouter();
   const [tab, setTab] = useState<'text' | 'image'>('text');
   const [text, setText] = useState('');
-  const [font, setFont] = useState('Standard');
+    const [font, setFont] = useState<figlet.Fonts>('Standard');
   const [output, setOutput] = useState('');
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [imgOutput, setImgOutput] = useState('');
-  const [brightness, setBrightness] = useState(0); // -1 to 1
-  const [contrast, setContrast] = useState(1); // 0 to 2
+    const [imgOutput, setImgOutput] = useState('');
+    const [brightness, setBrightness] = useState(0); // -1 to 1
+    const [contrast, setContrast] = useState(1); // 0 to 2
 
-  // load from query string on first render
-  useEffect(() => {
+    useEffect(() => {
+      figlet.parseFont('Standard', Standard);
+      figlet.parseFont('Slant', Slant);
+      figlet.parseFont('Big', Big);
+    }, []);
+
+    // load from query string on first render
+    useEffect(() => {
     if (!router.isReady) return;
     const { t, f, b, c } = router.query;
     if (typeof t === 'string') setText(t);
-    if (typeof f === 'string' && fontList.includes(f)) setFont(f);
+      if (typeof f === 'string' && fontList.includes(f)) setFont(f as figlet.Fonts);
     if (typeof b === 'string') {
       const br = parseFloat(b);
       if (!Number.isNaN(br) && br >= -1 && br <= 1) setBrightness(br);
@@ -161,7 +160,7 @@ const AsciiArtApp = () => {
           />
           <select
             value={font}
-            onChange={(e) => setFont(e.target.value)}
+            onChange={(e) => setFont(e.target.value as figlet.Fonts)}
             className="px-2 py-1 text-black rounded"
           >
             {fontList.map((f) => (

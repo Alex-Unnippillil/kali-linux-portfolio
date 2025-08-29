@@ -15,6 +15,6 @@
     "incremental": true,
     "types": ["jest", "node"]
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "types/**/*.d.ts"],
   "exclude": ["node_modules", "__tests__"]
 }
