@@ -10,3 +10,4 @@ export const trackEvent = (
     // Ignore analytics errors
   }
 };
+
