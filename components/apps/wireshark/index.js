@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import Waterfall from './Waterfall';
 import { protocolName, getRowColor } from './utils';
 import DecodeTree from './DecodeTree';
-import FlowDiagram from './FlowDiagram';
+import FlowGraph from '../../../apps/wireshark/components/FlowGraph';
 import filters from './filters.json';
 
 const SMALL_CAPTURE_SIZE = 1024 * 1024; // 1MB threshold
@@ -503,7 +503,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
           </div>
         </>
       ) : (
-        <FlowDiagram packets={filteredPackets} />
+        <FlowGraph packets={filteredPackets} />
       )}
       <div aria-live="polite" className="sr-only">
         {announcement}
