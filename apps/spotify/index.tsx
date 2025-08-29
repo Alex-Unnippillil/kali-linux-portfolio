@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import CrossfadePlayer from './utils/crossfade';
 import Visualizer from './Visualizer';
+import Lyrics from './Lyrics';
 
 interface Track {
   title: string;
@@ -160,6 +161,7 @@ const SpotifyApp = () => {
         <div className="mt-2">
           <p className="mb-2">{currentTrack.title}</p>
           {analyser && <Visualizer analyser={analyser} />}
+          <Lyrics title={currentTrack.title} player={playerRef.current} />
         </div>
       )}
       {!mini && (

@@ -4,6 +4,7 @@ export default class CrossfadePlayer {
   private sources: [AudioBufferSourceNode | null, AudioBufferSourceNode | null] = [null, null];
   private analyser: AnalyserNode | null = null;
   private current = 0;
+  private startTime = 0;
 
   private ensureContext() {
     if (this.ctx) return;
@@ -38,6 +39,7 @@ export default class CrossfadePlayer {
       src.connect(gains[nextIndex]);
       const now = ctx.currentTime;
       src.start();
+      this.startTime = now;
       if (fadeSec > 0) {
         gains[nextIndex].gain.setValueAtTime(0, now);
         gains[nextIndex].gain.linearRampToValueAtTime(1, now + fadeSec);
@@ -66,6 +68,11 @@ export default class CrossfadePlayer {
     return this.analyser;
   }
 
+  getCurrentTime() {
+    if (!this.ctx) return 0;
+    return this.ctx.currentTime - this.startTime;
+  }
+
   dispose() {
     this.sources.forEach((s) => s?.stop());
     this.sources = [null, null];
@@ -74,6 +81,7 @@ export default class CrossfadePlayer {
       this.ctx = null;
       this.gains = null;
       this.analyser = null;
+      this.startTime = 0;
     }
   }
 }
