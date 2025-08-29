@@ -75,7 +75,7 @@ describe('WiresharkApp', () => {
     expect(screen.queryByText('tcp packet')).not.toBeInTheDocument();
   });
 
-  it('reveals decrypted column when TLS keys uploaded', async () => {
+  it('reveals plaintext column when TLS keys uploaded', async () => {
     const packets = [
       {
         timestamp: '1',
@@ -83,19 +83,19 @@ describe('WiresharkApp', () => {
         dest: '2.2.2.2',
         protocol: 6,
         info: 'foo',
-        decrypted: 'secret',
+        plaintext: 'secret',
       },
     ];
     const user = userEvent.setup();
     render(<WiresharkApp initialPackets={packets} />);
 
-    expect(screen.queryByText(/decrypted/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/plaintext/i)).not.toBeInTheDocument();
 
     const file = new File(['dummy'], 'key.log', { type: 'text/plain' });
     const upload = screen.getByLabelText(/tls key file/i);
     fireEvent.change(upload, { target: { files: [file] } });
 
-    expect(await screen.findByText(/decrypted/i)).toBeInTheDocument();
+    expect(await screen.findByText(/plaintext/i)).toBeInTheDocument();
     expect(screen.getByText('secret')).toBeInTheDocument();
   });
 
