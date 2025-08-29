@@ -28,6 +28,7 @@ const FlappyBirdApp = createDynamicApp('flappy-bird', 'Flappy Bird');
 const Game2048App = createDynamicApp('2048', '2048');
 const SnakeApp = createDynamicApp('snake', 'Snake');
 const MemoryApp = createDynamicApp('memory', 'Memory');
+// Classic puzzle where players clear a minefield.
 const MinesweeperApp = createDynamicApp('minesweeper', 'Minesweeper');
 const PongApp = createDynamicApp('pong', 'Pong');
 const PacmanApp = createDynamicApp('pacman', 'Pacman');
