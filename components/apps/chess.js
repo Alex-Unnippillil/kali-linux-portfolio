@@ -292,6 +292,7 @@ const ChessGame = () => {
   const chessRef = useRef(new Chess());
   const sideRef = useRef(WHITE);
   const historyRef = useRef([boardRef.current.slice()]);
+  const lastMoveRef = useRef(null);
   const [selected, setSelected] = useState(null);
   const [cursor, setCursor] = useState(0);
   const [moves, setMoves] = useState([]);
@@ -314,6 +315,7 @@ const ChessGame = () => {
   const reduceMotionRef = useRef(false);
   const spritesRef = useRef({});
   const [spritesReady, setSpritesReady] = useState(false);
+  const [pieceSet, setPieceSet] = useState('sprites');
   const [analysisMoves, setAnalysisMoves] = useState([]);
   const evalPercent =
     (1 / (1 + Math.exp(-displayEval / 200))) * 100;
@@ -420,7 +422,6 @@ const ChessGame = () => {
   };
 
   useEffect(() => {
-    if (!spritesReady) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     const render = () => {
@@ -434,16 +435,24 @@ const ChessGame = () => {
           ctx.fillRect(x, y, SQ, SQ);
 
           const sq = r * 16 + f;
+          if (
+            lastMoveRef.current &&
+            (sq === lastMoveRef.current.from || sq === lastMoveRef.current.to)
+          ) {
+            ctx.strokeStyle = '#ff0';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x + 1, y + 1, SQ - 2, SQ - 2);
+          }
           if (selected === sq) {
-            ctx.fillStyle = 'rgba(255,255,0,0.4)';
-            ctx.fillRect(x, y, SQ, SQ);
+            ctx.strokeStyle = '#ff0';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x + 2, y + 2, SQ - 4, SQ - 4);
           } else {
             const move = moves.find((m) => m.to === sq);
             if (move) {
-              ctx.fillStyle = move.capture
-                ? 'rgba(255,0,0,0.3)'
-                : 'rgba(0,255,0,0.3)';
-              ctx.fillRect(x, y, SQ, SQ);
+              ctx.strokeStyle = '#ff0';
+              ctx.lineWidth = 2;
+              ctx.strokeRect(x + 4, y + 4, SQ - 8, SQ - 8);
             }
           }
 
@@ -466,7 +475,7 @@ const ChessGame = () => {
               spritesRef.current[Math.abs(piece)]?.[
                 piece > 0 ? WHITE : BLACK
               ];
-            if (img && spritesReady) {
+            if (pieceSet === 'sprites' && img && spritesReady) {
               ctx.drawImage(img, x + 2, y + 2, SQ - 4, SQ - 4);
             } else {
               ctx.font = `${SQ - 10}px serif`;
@@ -524,7 +533,7 @@ const ChessGame = () => {
     };
     animRef.current = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animRef.current);
-  }, [selected, moves, mateSquares, cursor, spritesReady]);
+  }, [selected, moves, mateSquares, cursor, spritesReady, pieceSet]);
 
   const endGame = (result) => {
     // result: 1 win, 0 draw, -1 loss
@@ -583,6 +592,7 @@ const ChessGame = () => {
       if (sound) playBeep();
       setSelected(null);
       setMoves([]);
+      lastMoveRef.current = { from: move.from, to: move.to };
       updateEval();
       updateMateHints();
       checkGameState('Your move');
@@ -614,6 +624,7 @@ const ChessGame = () => {
           sideRef.current = -side;
           setSelected(null);
           setMoves([]);
+          lastMoveRef.current = { from: legal.from, to: legal.to };
           updateEval();
           updateMateHints();
           if (!checkGameState('AI thinking...')) {
@@ -678,11 +689,14 @@ const ChessGame = () => {
     updateMateHints();
     setPaused(false);
     setStatus('Your move');
+    lastMoveRef.current = null;
   };
 
   const togglePause = () => setPaused((p) => !p);
   const toggleSound = () => setSound((s) => !s);
   const toggleHints = () => setShowHints((s) => !s);
+  const togglePieces = () =>
+    setPieceSet((p) => (p === 'sprites' ? 'unicode' : 'sprites'));
   const undoMove = () => {
     let undone = 0;
     if (historyRef.current.length <= 1) return;
@@ -705,6 +719,7 @@ const ChessGame = () => {
     setSanLog((l) => l.slice(0, -undone));
     updateEval();
     updateMateHints();
+    lastMoveRef.current = null;
     setStatus('Your move');
   };
 
@@ -745,6 +760,7 @@ const ChessGame = () => {
       boardRef.current[from] = EMPTY;
       addTrail(from, to);
       if (capture) addCaptureSparks(to);
+      lastMoveRef.current = { from, to };
       historyRef.current.push(boardRef.current.slice());
       setSanLog((l) => [...l, res.san]);
       sideRef.current = chessRef.current.turn() === 'w' ? WHITE : BLACK;
@@ -764,85 +780,102 @@ const ChessGame = () => {
     );
   }
 
+  const statusClass = status.includes('Checkmate')
+    ? 'bg-red-700 text-white'
+    : status.includes('Check')
+    ? 'bg-yellow-300 text-black'
+    : '';
+
   return (
-    <div className="h-full w-full max-w-[60ch] mx-auto flex flex-col items-center justify-center bg-ub-cool-grey text-white p-2 select-none">
-      <canvas
-        ref={canvasRef}
-        width={SIZE}
-        height={SIZE}
-        onClick={handleClick}
-        onKeyDown={handleKey}
-        tabIndex={0}
-        aria-label="Chess board"
-        className="border border-gray-600"
-      />
-      <div className="mt-2 flex gap-2">
-        <button className="px-2 py-1 bg-gray-700" onClick={reset}>
-          Reset
-        </button>
-        <button className="px-2 py-1 bg-gray-700" onClick={undoMove}>
-          Undo
-        </button>
-        <button className="px-2 py-1 bg-gray-700" onClick={togglePause}>
-          {paused ? 'Resume' : 'Pause'}
-        </button>
-        <button className="px-2 py-1 bg-gray-700" onClick={toggleSound}>
-          {sound ? 'Sound Off' : 'Sound On'}
-        </button>
-        <button className="px-2 py-1 bg-gray-700" onClick={toggleHints}>
-          {showHints ? 'Hide Hints' : 'Mate in 1'}
-        </button>
-        <button className="px-2 py-1 bg-gray-700" onClick={runAnalysis}>
-          Analyze
-        </button>
-        <button className="px-2 py-1 bg-gray-700" onClick={loadPGN}>
-          Load PGN
-        </button>
-      </div>
-      <div className="mt-2">{status}</div>
-      <div className="mt-2 w-full" aria-label="Evaluation">
-        <div
-          className="h-4 bg-gray-700"
-          role="progressbar"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={evalPercent.toFixed(0)}
-        >
-          <div
-            className={`h-full ${displayEval >= 0 ? 'bg-green-600' : 'bg-red-600'}`}
-            style={{ width: `${evalPercent}%` }}
+    <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white p-2 select-none">
+      <div className="flex gap-4">
+        <div className="flex flex-col items-center">
+          <canvas
+            ref={canvasRef}
+            width={SIZE}
+            height={SIZE}
+            onClick={handleClick}
+            onKeyDown={handleKey}
+            tabIndex={0}
+            aria-label="Chess board"
+            className="border border-gray-600"
           />
+          <div className="mt-2 flex flex-wrap gap-2 justify-center">
+            <button className="px-2 py-1 bg-gray-700" onClick={reset}>
+              Reset
+            </button>
+            <button className="px-2 py-1 bg-gray-700" onClick={undoMove}>
+              Undo
+            </button>
+            <button className="px-2 py-1 bg-gray-700" onClick={togglePause}>
+              {paused ? 'Resume' : 'Pause'}
+            </button>
+            <button className="px-2 py-1 bg-gray-700" onClick={toggleSound}>
+              {sound ? 'Sound Off' : 'Sound On'}
+            </button>
+            <button className="px-2 py-1 bg-gray-700" onClick={togglePieces}>
+              {pieceSet === 'sprites' ? 'Unicode' : 'Sprites'}
+            </button>
+            <button className="px-2 py-1 bg-gray-700" onClick={toggleHints}>
+              {showHints ? 'Hide Hints' : 'Mate in 1'}
+            </button>
+            <button className="px-2 py-1 bg-gray-700" onClick={runAnalysis}>
+              Analyze
+            </button>
+            <button className="px-2 py-1 bg-gray-700" onClick={loadPGN}>
+              Load PGN
+            </button>
+          </div>
         </div>
-        <div className="mt-1 text-sm" aria-live="polite">
-          Eval: {(evalScore / 100).toFixed(2)}
-        </div>
-      </div>
-      <div className="mt-1">ELO: {elo}</div>
-      {analysisMoves.length > 0 && (
-        <div className="mt-2 w-full text-sm" aria-label="Suggested moves">
-          <div>Suggested moves:</div>
-          <ol className="list-decimal ml-4">
-            {analysisMoves.map((m, idx) => (
-              <li key={idx}>
-                {m.san} ({(m.evaluation / 100).toFixed(2)})
-              </li>
+        <div className="w-40 flex flex-col text-sm font-mono">
+          <div className={`mb-2 p-1 text-center font-bold ${statusClass}`} aria-live="polite">
+            {status}
+          </div>
+          <div className="w-full" aria-label="Evaluation">
+            <div
+              className="h-4 bg-gray-700"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={evalPercent.toFixed(0)}
+            >
+              <div
+                className={`h-full ${displayEval >= 0 ? 'bg-green-600' : 'bg-red-600'}`}
+                style={{ width: `${evalPercent}%` }}
+              />
+            </div>
+            <div className="mt-1" aria-live="polite">
+              Eval: {(evalScore / 100).toFixed(2)}
+            </div>
+          </div>
+          <div className="mt-1">ELO: {elo}</div>
+          {analysisMoves.length > 0 && (
+            <div className="mt-2 w-full" aria-label="Suggested moves">
+              <div>Suggested moves:</div>
+              <ol className="list-decimal ml-4">
+                {analysisMoves.map((m, idx) => (
+                  <li key={idx}>
+                    {m.san} ({(m.evaluation / 100).toFixed(2)})
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+          <ol
+            className="mt-2 flex-1 overflow-y-auto bg-gray-800 p-2"
+            aria-label="Move history"
+          >
+            {moveLines.map((line, idx) => (
+              <li key={idx}>{line}</li>
             ))}
           </ol>
+          <button className="mt-2 px-2 py-1 bg-gray-700" onClick={copyMoves}>
+            Copy Moves
+          </button>
+          <div className="mt-1 text-xs break-words">
+            PGN: {chessRef.current.pgn()}
+          </div>
         </div>
-      )}
-      <ol
-        className="mt-2 w-full h-24 overflow-y-auto bg-gray-800 p-2 text-sm font-mono"
-        aria-label="Move history"
-      >
-        {moveLines.map((line, idx) => (
-          <li key={idx}>{line}</li>
-        ))}
-      </ol>
-      <button className="mt-1 px-2 py-1 bg-gray-700" onClick={copyMoves}>
-        Copy Moves
-      </button>
-      <div className="mt-1 text-xs w-full break-words">
-        PGN: {chessRef.current.pgn()}
       </div>
     </div>
   );
