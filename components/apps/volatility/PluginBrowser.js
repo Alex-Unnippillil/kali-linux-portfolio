@@ -67,9 +67,13 @@ const PluginBrowser = () => {
         </div>
       ))}
       {selected && (
-        <pre className="text-xs bg-black p-3 rounded overflow-auto">
-          {selected.output}
-        </pre>
+        <div className="text-xs bg-black rounded overflow-auto">
+          {selected.output.split('\n').map((line, i) => (
+            <div key={i} className={`px-2 ${i % 2 ? 'bg-gray-900' : 'bg-gray-800'}`}>
+              {line || '\u00A0'}
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
