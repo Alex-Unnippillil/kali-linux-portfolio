@@ -283,7 +283,7 @@ const Game2048 = () => {
         }, 200);
       }
     },
-    [board, won, lost, hardMode, score, moves, setBoard, setLost, setWon],
+    [board, won, lost, hardMode, score, moves, setBoard, setLost, setWon, setScore],
   );
 
   useGameControls(handleDirection, '2048');
