@@ -3,6 +3,8 @@
   "functions": {
     "api/**/*.js": { "runtime": "nodejs22.x" },
     "api/**/*.ts": { "runtime": "nodejs22.x" }
-
+  },
+  "env": {
+    "FLAGS_SECRET": "@flags_secret"
   }
 }
