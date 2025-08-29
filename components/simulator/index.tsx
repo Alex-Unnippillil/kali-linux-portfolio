@@ -1,7 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import usePersistentState from '../usePersistentState.js';
-
-interface ParsedLine { line: number; key: string; value: string; raw: string; }
+import type {
+  SimulatorParserRequest,
+  SimulatorParserResponse,
+  ParsedLine,
+} from '../../workers/simulatorParser.worker';
 interface TabDefinition { id: string; title: string; content: React.ReactNode; }
 
 const LAB_BANNER = 'For lab use only. Commands are never executed.';
@@ -26,9 +29,11 @@ const Simulator: React.FC = () => {
   const [sortDir, setSortDir] = useState<'asc'|'desc'>('asc');
 
   useEffect(() => {
-    const worker = new Worker(new URL('../../workers/simulatorParser.worker.js', import.meta.url));
+    const worker = new Worker(
+      new URL('../../workers/simulatorParser.worker.ts', import.meta.url),
+    );
     workerRef.current = worker;
-    worker.onmessage = (e: MessageEvent) => {
+    worker.onmessage = (e: MessageEvent<SimulatorParserResponse>) => {
       const data = e.data;
       if (data.type === 'progress') {
         setProgress(data.progress);
@@ -47,10 +52,11 @@ const Simulator: React.FC = () => {
     setParsed([]);
     setProgress(0);
     setEta(0);
-    workerRef.current?.postMessage({ action: 'parse', text });
+    workerRef.current?.postMessage({ action: 'parse', text } as SimulatorParserRequest);
   }, []);
 
-  const cancelParse = () => workerRef.current?.postMessage({ action: 'cancel' });
+  const cancelParse = () =>
+    workerRef.current?.postMessage({ action: 'cancel' } as SimulatorParserRequest);
 
   const onSampleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;

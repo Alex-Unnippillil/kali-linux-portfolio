@@ -13,7 +13,7 @@ export default class Clock extends Component {
 
     componentDidMount() {
         if (typeof window !== 'undefined' && typeof Worker === 'function') {
-            this.worker = new Worker(new URL('../../workers/timer.worker.js', import.meta.url));
+            this.worker = new Worker(new URL('../../workers/timer.worker.ts', import.meta.url));
             this.worker.onmessage = () => {
                 this.setState({ current_time: new Date() });
             };
