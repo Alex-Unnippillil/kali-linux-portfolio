@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { randomBytes } from 'crypto';
+import trackServerEvent from '@/lib/analytics-server';
+import { reportValue, beta } from 'flags';
 import { contactSchema } from '../../utils/contactSchema';
 import { validateServerEnv } from '../../lib/validate';
 
@@ -116,5 +118,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return;
   }
 
+  const isBeta = await beta();
+  reportValue('beta', isBeta);
+  await trackServerEvent('contact_submit', { method: 'api' }, { flags: ['beta'] });
   res.status(200).json({ ok: true });
 }
