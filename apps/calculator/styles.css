@@ -48,14 +48,14 @@ body {
 .memory-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0.5rem;
+  gap: 6px;
   margin-bottom: 0.5rem;
 }
 
 .button-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 0.5rem;
+  gap: 6px;
 }
 
 @container (max-width: 200px) {
@@ -71,10 +71,13 @@ body {
   border-radius: 4px;
   font-size: 1rem;
   cursor: pointer;
+  min-height: 48px;
+  transition: transform 150ms;
 }
 
 .btn:hover {
   background: #e0e0e0;
+  transform: translateY(-2px);
 }
 
 .btn.active-key {
@@ -87,6 +90,10 @@ body {
 
 .hidden {
   display: none !important;
+}
+
+.button-grid .btn {
+  font-family: monospace;
 }
 
 
