@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
+import PipPlayer from './components/PipPlayer';
 
 interface Track {
   title: string;
@@ -117,17 +118,7 @@ const SpotifyApp = () => {
       onKeyDown={handleKey}
     >
       <div className="flex items-center justify-between mb-2">
-        <div className="space-x-2">
-          <button onClick={previous} title="Previous" disabled={!queue.length}>
-            ⏮
-          </button>
-          <button onClick={togglePlay} title="Play/Pause" disabled={!queue.length}>
-            ⏯
-          </button>
-          <button onClick={next} title="Next" disabled={!queue.length}>
-            ⏭
-          </button>
-        </div>
+        <PipPlayer onTogglePlay={togglePlay} onNext={next} onPrevious={previous} disabled={!queue.length} />
         <div className="space-x-4 text-sm flex items-center">
           <label className="flex items-center space-x-1">
             <span>Crossfade</span>
