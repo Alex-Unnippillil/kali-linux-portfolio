@@ -19,6 +19,7 @@ export interface City {
   name: string;
   lat: number;
   lon: number;
+  unit?: 'C' | 'F';
   lastReading?: WeatherReading;
   forecast?: ForecastDay[];
 }
@@ -37,6 +38,7 @@ const isCity = (v: any): v is City =>
   typeof v.name === 'string' &&
   typeof v.lat === 'number' &&
   typeof v.lon === 'number' &&
+  (v.unit === undefined || v.unit === 'C' || v.unit === 'F') &&
   (v.lastReading === undefined || isWeatherReading(v.lastReading)) &&
   (v.forecast === undefined || isForecastArray(v.forecast));
 
