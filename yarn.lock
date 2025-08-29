@@ -3421,6 +3421,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@zxing/browser@npm:^0.1.5":
+  version: 0.1.5
+  resolution: "@zxing/browser@npm:0.1.5"
+  dependencies:
+    "@zxing/text-encoding": "npm:^0.9.0"
+  peerDependencies:
+    "@zxing/library": ^0.21.0
+  dependenciesMeta:
+    "@zxing/text-encoding":
+      optional: true
+  checksum: 10c0/458042ed56402d20a673b7f58cdd346cf15b0b2b84860c2529f7b86e774bd74a02b007bd2e6e5b6231b624a3f28d8e296ce943f7c6c78999d19300cae87d35e3
+  languageName: node
+  linkType: hard
+
 "@zxing/library@npm:^0.21.3":
   version: 0.21.3
   resolution: "@zxing/library@npm:0.21.3"
@@ -3434,7 +3448,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@zxing/text-encoding@npm:~0.9.0":
+"@zxing/text-encoding@npm:^0.9.0, @zxing/text-encoding@npm:~0.9.0":
   version: 0.9.0
   resolution: "@zxing/text-encoding@npm:0.9.0"
   checksum: 10c0/d15bff181d46c2ab709e7242801a8d40408aa8c19b44462e5f60e766bf59105b44957914ab6baab60d10d466a5e965f21fe890c67dfdb7d5c7f940df457b4d0d
@@ -11285,6 +11299,7 @@ __metadata:
     "@xterm/addon-fit": "npm:^0.10.0"
     "@xterm/addon-search": "npm:^0.15.0"
     "@xterm/xterm": "npm:^5.5.0"
+    "@zxing/browser": "npm:^0.1.5"
     "@zxing/library": "npm:^0.21.3"
     aframe: "npm:^1.5.0"
     autoprefixer: "npm:^10.4.13"
