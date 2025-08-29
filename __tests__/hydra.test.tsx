@@ -30,6 +30,21 @@ describe('Hydra wordlists', () => {
   });
 });
 
+describe('Hydra target validation', () => {
+  it('disables run button for empty or malformed targets', () => {
+    render(<HydraApp />);
+    const targetInput = screen.getByPlaceholderText('192.168.0.1');
+    const runBtn = screen.getByText('Run Hydra');
+    expect(runBtn).toBeDisabled();
+
+    fireEvent.change(targetInput, { target: { value: 'not a host' } });
+    expect(runBtn).toBeDisabled();
+
+    fireEvent.change(targetInput, { target: { value: '1.2.3.4' } });
+    expect(runBtn).not.toBeDisabled();
+  });
+});
+
 describe('Hydra pause and resume', () => {
   beforeEach(() => {
     localStorage.setItem(

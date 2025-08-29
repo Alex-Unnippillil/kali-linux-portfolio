@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
 
@@ -82,6 +82,16 @@ const HydraApp = () => {
 
   const LOCKOUT_THRESHOLD = 10;
   const BACKOFF_THRESHOLD = 5;
+
+  const isTargetValid = useMemo(() => {
+    const trimmed = target.trim();
+    if (!trimmed) return false;
+    const [host, port] = trimmed.split(':');
+    if (port && !/^\d+$/.test(port)) return false;
+    const ipv4 = /^(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)){3}$/;
+    const hostname = /^(?=.{1,253}$)(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))*$/;
+    return ipv4.test(host) || hostname.test(host);
+  }, [target]);
 
   useEffect(() => {
     setUserLists(loadWordlists('hydraUserLists'));
@@ -296,8 +306,8 @@ const HydraApp = () => {
   const runHydra = async () => {
     const user = selectedUserList;
     const pass = selectedPassList;
-    if (!target || !user || !pass) {
-      setOutput('Please provide target, user list and password list');
+    if (!isTargetValid || !user || !pass) {
+      setOutput('Please provide a valid target, user list and password list');
       return;
     }
 
@@ -572,7 +582,7 @@ const HydraApp = () => {
         </div>
         <button
           onClick={runHydra}
-          disabled={running}
+          disabled={running || !isTargetValid}
           className="px-4 py-2 bg-green-600 rounded disabled:opacity-50"
         >
           {running ? 'Running...' : 'Run Hydra'}
