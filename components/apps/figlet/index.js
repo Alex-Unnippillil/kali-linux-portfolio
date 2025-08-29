@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { toPng } from 'html-to-image';
 import AlignmentControls from '../../../apps/figlet/components/AlignmentControls';
+import FontDropdown from '../../../apps/figlet/components/FontDropdown';
 
 const FigletApp = () => {
   const [text, setText] = useState('');
@@ -9,7 +10,7 @@ const FigletApp = () => {
   const [monoOnly, setMonoOnly] = useState(false);
   const [output, setOutput] = useState('');
   const [rawOutput, setRawOutput] = useState('');
-  const [inverted, setInverted] = useState(false);
+  const [theme, setTheme] = useState('dark');
   const [fontSize, setFontSize] = useState(16);
   const [lineHeight, setLineHeight] = useState(1);
   const [width, setWidth] = useState(80);
@@ -18,6 +19,7 @@ const FigletApp = () => {
   const [gradient, setGradient] = useState(0);
   const [align, setAlign] = useState('left');
   const [padding, setPadding] = useState(0);
+  const [wrap, setWrap] = useState(false);
   const [announce, setAnnounce] = useState('');
   const workerRef = useRef(null);
   const frameRef = useRef(null);
@@ -155,13 +157,23 @@ const FigletApp = () => {
     setOutput(transformed);
   }, [rawOutput, align, padding]);
 
-  const copyOutput = () => {
-    if (output) {
-      navigator.clipboard.writeText(output);
-      setAnnounce('Copied to clipboard');
-      clearTimeout(announceTimer.current);
-      announceTimer.current = setTimeout(() => setAnnounce(''), 2000);
-    }
+  const selectAll = () => {
+    if (!preRef.current) return;
+    const sel = window.getSelection();
+    if (!sel) return;
+    const range = document.createRange();
+    range.selectNodeContents(preRef.current);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  };
+
+  const copyAll = () => {
+    if (!preRef.current) return;
+    selectAll();
+    navigator.clipboard.writeText(preRef.current.textContent || '');
+    setAnnounce('Copied to clipboard');
+    clearTimeout(announceTimer.current);
+    announceTimer.current = setTimeout(() => setAnnounce(''), 2000);
   };
 
   const exportPNG = () => {
@@ -263,18 +275,11 @@ const FigletApp = () => {
           />
           Monospace only
         </label>
-        <select
+        <FontDropdown
+          fonts={displayedFonts}
           value={font}
-          onChange={(e) => setFont(e.target.value)}
-          className="px-1 bg-gray-700 text-white"
-          aria-label="Select font"
-        >
-          {displayedFonts.map((f) => (
-            <option key={f.name} value={f.name} title={f.preview}>
-              {f.name}
-            </option>
-          ))}
-        </select>
+          onChange={setFont}
+        />
         <input
           type="file"
           accept=".flf"
@@ -386,11 +391,18 @@ const FigletApp = () => {
           setPadding={setPadding}
         />
         <button
-          onClick={copyOutput}
-          className="px-2 bg-blue-700 hover:bg-blue-600 rounded text-white"
-          aria-label="Banner to clipboard"
+          onClick={() => setWrap((w) => !w)}
+          className="px-2 bg-gray-700 hover:bg-gray-600 rounded text-white"
+          aria-label="Toggle wrap"
         >
-          Banner to Clipboard
+          {wrap ? 'No Wrap' : 'Wrap'}
+        </button>
+        <button
+          onClick={copyAll}
+          className="px-2 bg-blue-700 hover:bg-blue-600 rounded text-white"
+          aria-label="Copy all"
+        >
+          Copy All
         </button>
         <button
           onClick={exportPNG}
@@ -406,27 +418,37 @@ const FigletApp = () => {
         >
           TXT
         </button>
-        <button
-          onClick={() => setInverted((i) => !i)}
-          className="px-2 bg-gray-700 hover:bg-gray-600 rounded text-white"
-          aria-label="Invert colors"
-        >
-          Invert
-        </button>
+        <label className="flex items-center gap-1 text-sm">
+          Theme
+          <select
+            value={theme}
+            onChange={(e) => setTheme(e.target.value)}
+            className="px-1 bg-gray-700 text-white"
+            aria-label="Theme"
+          >
+            <option value="dark">Green on Black</option>
+            <option value="light">Black on Green</option>
+          </select>
+        </label>
       </div>
       <div className="flex-1 overflow-auto">
         <pre
           ref={preRef}
-          className={`min-w-full p-2 whitespace-pre font-mono transition-colors motion-reduce:transition-none ${
-            inverted ? 'bg-white' : 'bg-black'
+          className={`min-w-full p-2 font-mono transition-colors motion-reduce:transition-none ${
+            wrap ? 'whitespace-pre-wrap break-words' : 'whitespace-pre'
           }`}
           style={{
             fontSize: `${fontSize}px`,
             lineHeight,
             letterSpacing: `${kerning}px`,
-            backgroundImage: `linear-gradient(to right, hsl(${gradient},100%,50%), hsl(${(gradient + 120) % 360},100%,50%))`,
-            WebkitBackgroundClip: 'text',
-            color: 'transparent',
+            ...(theme === 'light'
+              ? { backgroundColor: '#0f0', color: '#000' }
+              : {
+                  backgroundColor: '#000',
+                  backgroundImage: `linear-gradient(to right, hsl(${gradient},100%,50%), hsl(${(gradient + 120) % 360},100%,50%))`,
+                  WebkitBackgroundClip: 'text',
+                  color: 'transparent',
+                }),
           }}
         >
           {output}
