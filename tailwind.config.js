@@ -8,6 +8,9 @@ module.exports = {
   ],
   theme: {
     extend: {
+      screens: {
+        '3xl': '1920px',
+      },
       colors: {
         'ub-grey': 'var(--color-ub-grey)',
         'ub-warm-grey': 'var(--color-ub-warm-grey)',
@@ -50,6 +53,18 @@ module.exports = {
       },
       zIndex: {
         '-10': '-10',
+      },
+      width: {
+        'app-icon': '64px',
+        'app-icon-lg': '96px',
+        'tray-icon': '16px',
+        'tray-icon-lg': '32px',
+      },
+      height: {
+        'app-icon': '64px',
+        'app-icon-lg': '96px',
+        'tray-icon': '16px',
+        'tray-icon-lg': '32px',
       },
       keyframes: {
         glow: {

@@ -11751,6 +11751,7 @@ __metadata:
     react-twitter-embed: "npm:^4.0.4"
     rrule: "npm:2.7.2"
     seedrandom: "npm:^3.0.5"
+    sharp: "npm:^0.34.3"
     stockfish: "npm:^16.0.0"
     swr: "npm:^2.2.5"
     tailwindcss: "npm:^3.2.4"
