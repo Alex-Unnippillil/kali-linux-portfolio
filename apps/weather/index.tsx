@@ -1,7 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import useWeatherState, { City, ForecastDay } from './state';
+import useWeatherState, {
+  City,
+  ForecastDay,
+  useWeatherGroups,
+  useCurrentGroup,
+} from './state';
 import Forecast from './components/Forecast';
 import CityDetail from './components/CityDetail';
 
@@ -27,14 +32,23 @@ function CityTile({ city }: { city: City }) {
 
 export default function WeatherApp() {
   const [cities, setCities] = useWeatherState();
+  const [groups, setGroups] = useWeatherGroups();
+  const [currentGroup, setCurrentGroup] = useCurrentGroup();
   const [name, setName] = useState('');
   const [lat, setLat] = useState('');
   const [lon, setLon] = useState('');
+  const [groupName, setGroupName] = useState('');
   const [offline, setOffline] = useState(
     typeof navigator !== 'undefined' ? !navigator.onLine : false,
   );
   const [selected, setSelected] = useState<City | null>(null);
   const dragSrc = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!currentGroup) return;
+    const group = groups.find((g) => g.name === currentGroup);
+    if (group) setCities(group.cities);
+  }, [currentGroup, groups, setCities]);
 
   useEffect(() => {
     const onOnline = () => setOffline(false);
@@ -109,8 +123,49 @@ export default function WeatherApp() {
     });
   };
 
+  const saveGroup = () => {
+    if (!groupName) return;
+    const idx = groups.findIndex((g) => g.name === groupName);
+    const next = [...groups];
+    const data = { name: groupName, cities };
+    if (idx >= 0) next[idx] = data;
+    else next.push(data);
+    setGroups(next);
+    setCurrentGroup(groupName);
+  };
+
+  const switchGroup = (name: string) => {
+    const group = groups.find((g) => g.name === name);
+    if (group) {
+      setCities(group.cities);
+      setCurrentGroup(name);
+    }
+  };
+
   return (
     <div className="p-4 text-white">
+      <div className="flex gap-2 mb-4">
+        <input
+          className="text-black px-1"
+          placeholder="Group"
+          value={groupName}
+          onChange={(e) => setGroupName(e.target.value)}
+        />
+        <button className="bg-blue-600 px-2 rounded" onClick={saveGroup}>
+          Save Group
+        </button>
+        {groups.map((g) => (
+          <button
+            key={g.name}
+            className={`px-2 rounded ${
+              currentGroup === g.name ? 'bg-blue-800' : 'bg-white/20'
+            }`}
+            onClick={() => switchGroup(g.name)}
+          >
+            {g.name}
+          </button>
+        ))}
+      </div>
       <div className="flex gap-2 mb-4">
         <input
           className="text-black px-1"
