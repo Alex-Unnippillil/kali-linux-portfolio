@@ -8,16 +8,28 @@ export interface WeatherReading {
   time: number;
 }
 
+export interface ForecastDay {
+  date: string;
+  temp: number;
+  condition: number;
+}
+
 export interface City {
   id: string;
   name: string;
   lat: number;
   lon: number;
   lastReading?: WeatherReading;
+  forecast?: ForecastDay[];
 }
 
 const isWeatherReading = (v: any): v is WeatherReading =>
   v && typeof v.temp === 'number' && typeof v.condition === 'number' && typeof v.time === 'number';
+
+const isForecastDay = (v: any): v is ForecastDay =>
+  v && typeof v.date === 'string' && typeof v.temp === 'number' && typeof v.condition === 'number';
+
+const isForecastArray = (v: any): v is ForecastDay[] => Array.isArray(v) && v.every(isForecastDay);
 
 const isCity = (v: any): v is City =>
   v &&
@@ -25,7 +37,8 @@ const isCity = (v: any): v is City =>
   typeof v.name === 'string' &&
   typeof v.lat === 'number' &&
   typeof v.lon === 'number' &&
-  (v.lastReading === undefined || isWeatherReading(v.lastReading));
+  (v.lastReading === undefined || isWeatherReading(v.lastReading)) &&
+  (v.forecast === undefined || isForecastArray(v.forecast));
 
 const isCityArray = (v: unknown): v is City[] => Array.isArray(v) && v.every(isCity);
 
