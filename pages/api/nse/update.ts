@@ -6,6 +6,8 @@ interface VersionInfo {
   sha: string;
 }
 
+export const runtime = 'nodejs';
+
 export default async function handler(_req: NextApiRequest, res: NextApiResponse) {
   try {
     const versionPath = path.join(process.cwd(), 'public', 'demo-data', 'nmap', 'script-db-version.json');

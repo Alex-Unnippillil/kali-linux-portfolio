@@ -2,6 +2,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs';
 import path from 'path';
 
+export const runtime = 'nodejs';
+
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   const fontsDir = path.join(process.cwd(), 'figlet', 'fonts');
   let fonts: { name: string; data: string }[] = [];

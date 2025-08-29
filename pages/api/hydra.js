@@ -7,6 +7,8 @@ import path from 'path';
 const execFileAsync = promisify(execFile);
 const allowed = new Set(['http', 'https', 'ssh', 'ftp', 'smtp']);
 
+export const runtime = 'nodejs';
+
 export default async function handler(req, res) {
   if (
     process.env.FEATURE_TOOL_APIS !== 'enabled' ||
