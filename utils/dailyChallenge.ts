@@ -72,4 +72,4 @@ export const recordCompletion = (
   return board;
 };
 
-export { LeaderboardEntry };
+export type { LeaderboardEntry };
