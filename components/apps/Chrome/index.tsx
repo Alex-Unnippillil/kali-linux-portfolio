@@ -1,4 +1,10 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import React, {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  useMemo,
+} from 'react';
 import { toPng } from 'html-to-image';
 import { Readability } from '@mozilla/readability';
 import DOMPurify from 'dompurify';
@@ -14,7 +20,16 @@ interface TabData {
   muted?: boolean;
 }
 
-const STORAGE_KEY = 'chrome-tabs';
+interface Bookmark {
+  url: string;
+  title: string;
+  favicon: string;
+}
+
+const STORAGE_KEY_PREFIX = 'chrome-tabs-';
+const BOOKMARK_KEY = 'chrome-bookmarks';
+const FAVICON_KEY = 'chrome-favicons';
+const LAST_URL_KEY = 'chrome-last-url';
 const HOME_URL = 'https://www.google.com/webhp?igu=1';
 const SANDBOX_FLAGS = ['allow-scripts', 'allow-forms', 'allow-popups'] as const;
 const CSP = "default-src 'self'; script-src 'none'; connect-src 'none';";
@@ -32,30 +47,88 @@ const formatUrl = (value: string) => {
   return encodeURI(url);
 };
 
-const readTabs = (): { tabs: TabData[]; active: number } => {
+const readTabs = (id: string): { tabs: TabData[]; active: number } => {
   if (typeof window === 'undefined') return { tabs: [], active: 0 };
   try {
-    const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '');
+    const data = JSON.parse(
+      localStorage.getItem(`${STORAGE_KEY_PREFIX}${id}`) || '',
+    );
     return data || { tabs: [], active: 0 };
   } catch {
     return { tabs: [], active: 0 };
   }
 };
 
-const saveTabs = (tabs: TabData[], active: number) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ tabs, active }));
+const saveTabs = (id: string, tabs: TabData[], active: number) => {
+  localStorage.setItem(
+    `${STORAGE_KEY_PREFIX}${id}`,
+    JSON.stringify({ tabs, active }),
+  );
+  const last = tabs.find((t) => t.id === active)?.url;
+  if (last) {
+    const map = JSON.parse(localStorage.getItem(LAST_URL_KEY) || '{}');
+    map[id] = last;
+    localStorage.setItem(LAST_URL_KEY, JSON.stringify(map));
+  }
 };
 
-const Chrome: React.FC = () => {
-  const { tabs: storedTabs, active: storedActive } = readTabs();
+const loadLastUrl = (id: string): string => {
+  if (typeof window === 'undefined') return '';
+  try {
+    const map = JSON.parse(localStorage.getItem(LAST_URL_KEY) || '{}');
+    return map[id] || '';
+  } catch {
+    return '';
+  }
+};
+
+const readBookmarks = (): Bookmark[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const data = localStorage.getItem(BOOKMARK_KEY);
+    return data ? (JSON.parse(data) as Bookmark[]) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveBookmarks = (items: Bookmark[]) => {
+  localStorage.setItem(BOOKMARK_KEY, JSON.stringify(items));
+};
+
+const getFavicon = (url: string): string => {
+  try {
+    const origin = new URL(url).origin;
+    const cache = JSON.parse(localStorage.getItem(FAVICON_KEY) || '{}');
+    if (cache[origin]) return cache[origin];
+    const fav = `https://www.google.com/s2/favicons?domain=${origin}`;
+    cache[origin] = fav;
+    localStorage.setItem(FAVICON_KEY, JSON.stringify(cache));
+    return fav;
+  } catch {
+    return '';
+  }
+};
+
+const Chrome: React.FC<{ initialUrl?: string }> = ({ initialUrl }) => {
+  const windowIdRef = useRef('');
+  if (typeof window !== 'undefined') {
+    if (!window.name) {
+      window.name = `chrome-${Date.now()}`;
+    }
+    windowIdRef.current = window.name;
+  }
+  const { tabs: storedTabs, active: storedActive } = readTabs(windowIdRef.current);
+  const lastUrl = loadLastUrl(windowIdRef.current);
+  const startUrl = initialUrl || lastUrl || HOME_URL;
   const [tabs, setTabs] = useState<TabData[]>(
     storedTabs.length
       ? storedTabs.map((t) => ({ blocked: false, muted: false, ...t }))
       : [
           {
             id: Date.now(),
-            url: HOME_URL,
-            history: [HOME_URL],
+            url: startUrl,
+            history: [startUrl],
             historyIndex: 0,
             scroll: 0,
             blocked: false,
@@ -64,11 +137,15 @@ const Chrome: React.FC = () => {
         ]
   );
   const [activeId, setActiveId] = useState<number>(storedActive || tabs[0].id);
-  const [address, setAddress] = useState<string>(tabs.find((t) => t.id === activeId)?.url || HOME_URL);
+  const [address, setAddress] = useState<string>(
+    tabs.find((t) => t.id === activeId)?.url || startUrl,
+  );
   const [searchTerm, setSearchTerm] = useState('');
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [showFlags, setShowFlags] = useState(false);
   const dragTabId = useRef<number | null>(null);
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>(readBookmarks);
+  const importRef = useRef<HTMLInputElement | null>(null);
   const setIframeMuted = useCallback((mute: boolean) => {
     try {
       const doc = iframeRef.current?.contentDocument;
@@ -89,7 +166,7 @@ const Chrome: React.FC = () => {
   );
 
   useEffect(() => {
-    saveTabs(tabs, activeId);
+    saveTabs(windowIdRef.current, tabs, activeId);
   }, [tabs, activeId]);
 
   const activeTab = tabs.find((t) => t.id === activeId)!;
@@ -137,14 +214,15 @@ const Chrome: React.FC = () => {
     fetchArticle(activeId, url);
   }, [activeId, fetchArticle]);
 
-  const addTab = useCallback(() => {
+  const addTab = useCallback((url?: string) => {
+    const target = url || HOME_URL;
     const id = Date.now();
     setTabs((prev) => [
       ...prev,
       {
         id,
-        url: HOME_URL,
-        history: [HOME_URL],
+        url: target,
+        history: [target],
         historyIndex: 0,
         scroll: 0,
         blocked: false,
@@ -152,7 +230,7 @@ const Chrome: React.FC = () => {
       },
     ]);
     setActiveId(id);
-    setAddress(HOME_URL);
+    setAddress(target);
   }, []);
 
   const closeTab = useCallback(
@@ -201,6 +279,77 @@ const Chrome: React.FC = () => {
   const allowDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
   }, []);
+
+  const [menu, setMenu] = useState<
+    { x: number; y: number; url: string } | null
+  >(null);
+
+  const handleTabContext = useCallback(
+    (id: number) => (e: React.MouseEvent) => {
+      e.preventDefault();
+      const t = tabs.find((tab) => tab.id === id);
+      if (t) setMenu({ x: e.clientX, y: e.clientY, url: t.url });
+    },
+    [tabs],
+  );
+
+  const openInNewTab = useCallback(
+    (url: string) => {
+      addTab(url);
+    },
+    [addTab],
+  );
+
+  const openInNewWindow = useCallback((url: string) => {
+    const u = `/apps/chrome?url=${encodeURIComponent(url)}`;
+    window.open(u, '_blank', 'noopener');
+  }, []);
+
+  const toggleBookmark = useCallback(() => {
+    const url = activeTab.url;
+    setBookmarks((prev) => {
+      const exists = prev.some((b) => b.url === url);
+      let next: Bookmark[];
+      if (exists) {
+        next = prev.filter((b) => b.url !== url);
+      } else {
+        next = [...prev, { url, title: url, favicon: getFavicon(url) }];
+      }
+      saveBookmarks(next);
+      return next;
+    });
+  }, [activeTab.url]);
+
+  const exportBookmarks = useCallback(() => {
+    const blob = new Blob([JSON.stringify(bookmarks, null, 2)], {
+      type: 'application/json',
+    });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'bookmarks.json';
+    a.click();
+  }, [bookmarks]);
+
+  const importBookmarks = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result as string) as Bookmark[];
+          setBookmarks(data);
+          saveBookmarks(data);
+        } catch {
+          /* ignore */
+        }
+      };
+      reader.readAsText(file);
+    },
+    [],
+  );
+
+  const bookmarked = bookmarks.some((b) => b.url === activeTab.url);
 
   const reload = useCallback(() => {
     iframeRef.current?.contentWindow?.location.reload();
@@ -322,7 +471,10 @@ const Chrome: React.FC = () => {
   );
 
   return (
-    <div className="flex flex-col w-full h-full bg-ub-cool-grey text-white">
+    <div
+      className="flex flex-col w-full h-full bg-ub-cool-grey text-white relative"
+      onClick={() => setMenu(null)}
+    >
       <div className="flex items-center bg-gray-800 text-sm p-1 space-x-1">
         <button onClick={goBack} aria-label="Back" className="px-2">◀</button>
         <button onClick={goForward} aria-label="Forward" className="px-2">▶</button>
@@ -350,15 +502,48 @@ const Chrome: React.FC = () => {
         >
           ⚑
         </button>
+        <button
+          onClick={toggleBookmark}
+          aria-label="Bookmark"
+          className="px-2"
+        >
+          {bookmarked ? '★' : '☆'}
+        </button>
+        <button
+          onClick={exportBookmarks}
+          aria-label="Export Bookmarks"
+          className="px-2"
+        >
+          ⭳
+        </button>
+        <button
+          onClick={() => importRef.current?.click()}
+          aria-label="Import Bookmarks"
+          className="px-2"
+        >
+          ⭱
+        </button>
+        <input
+          type="file"
+          accept="application/json"
+          ref={importRef}
+          className="hidden"
+          onChange={importBookmarks}
+        />
         <AddressBar value={address} onChange={setAddress} onNavigate={navigate} />
-        <button onClick={addTab} aria-label="New Tab" className="px-2">+</button>
+        <button onClick={() => addTab()} aria-label="New Tab" className="px-2">
+          +
+        </button>
       </div>
       <div className="flex space-x-1 bg-gray-700 text-sm overflow-x-auto">
         {tabs.map((t) => (
           <div
             key={t.id}
-            className={`flex items-center px-2 py-1 cursor-pointer ${t.id === activeId ? 'bg-gray-600' : 'bg-gray-700'} `}
+            className={`flex items-center px-2 py-1 cursor-pointer ${
+              t.id === activeId ? 'bg-gray-600' : 'bg-gray-700'
+            } `}
             onClick={() => setActiveId(t.id)}
+            onContextMenu={handleTabContext(t.id)}
             draggable
             onDragStart={handleDragStart(t.id)}
             onDragOver={allowDrop}
@@ -382,6 +567,25 @@ const Chrome: React.FC = () => {
           </div>
         ))}
       </div>
+      {menu && (
+        <div
+          className="absolute z-50 bg-gray-800 text-white text-sm rounded shadow"
+          style={{ top: menu.y, left: menu.x }}
+        >
+          <button
+            onClick={() => openInNewTab(menu.url)}
+            className="block w-full text-left px-2 py-1 hover:bg-gray-700"
+          >
+            Open in New Tab
+          </button>
+          <button
+            onClick={() => openInNewWindow(menu.url)}
+            className="block w-full text-left px-2 py-1 hover:bg-gray-700"
+          >
+            Open in New Window
+          </button>
+        </div>
+      )}
         <div className="flex-grow bg-white relative overflow-auto">
           {articles[activeId] ? (
             <main
