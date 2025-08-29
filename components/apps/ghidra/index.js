@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import PseudoDisasmViewer from './PseudoDisasmViewer';
 import FunctionTree from './FunctionTree';
 import CallGraph from './CallGraph';
+import DecompilerTour from '../../apps/ghidra/components/DecompilerTour';
 
 // Applies S1–S8 guidelines for responsive and accessible binary analysis UI
 const DEFAULT_WASM = '/wasm/ghidra.wasm';
@@ -69,6 +70,8 @@ export default function GhidraApp() {
   const [liveMessage, setLiveMessage] = useState('');
   const decompileRef = useRef(null);
   const hexRef = useRef(null);
+  const funcTreeRef = useRef(null);
+  const cfgRef = useRef(null);
   const syncing = useRef(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const hexWorkerRef = useRef(null);
@@ -82,6 +85,7 @@ export default function GhidraApp() {
   const capstoneRef = useRef(null);
   const [instructions, setInstructions] = useState([]);
   const [arch, setArch] = useState('x86');
+  const [showTour, setShowTour] = useState(false);
   // S1: Detect GHIDRA web support and fall back to Capstone
   const ensureCapstone = useCallback(async () => {
     if (capstoneRef.current) return capstoneRef.current;
@@ -287,16 +291,25 @@ export default function GhidraApp() {
 
   return (
     <div className="w-full h-full flex flex-col bg-gray-900 text-gray-100">
-      <div className="p-2">
+      <div className="p-2 flex space-x-2">
         <button
           onClick={switchEngine}
           className="px-2 py-1 bg-gray-700 rounded"
         >
           Use Capstone
         </button>
+        <button
+          onClick={() => setShowTour(true)}
+          className="px-2 py-1 bg-gray-700 rounded"
+        >
+          Help
+        </button>
       </div>
       <div className="flex flex-1">
-        <div className="w-1/4 border-r border-gray-700 overflow-auto">
+        <div
+          ref={funcTreeRef}
+          className="w-1/4 border-r border-gray-700 overflow-auto"
+        >
           <div className="p-2">
             <input
               type="text"
@@ -323,7 +336,10 @@ export default function GhidraApp() {
             <FunctionTree functions={functions} onSelect={setSelected} selected={selected} />
           )}
         </div>
-        <div className="w-1/4 border-r border-gray-700">
+        <div
+          ref={cfgRef}
+          className="w-1/4 border-r border-gray-700"
+        >
           <ControlFlowGraph
             blocks={currentFunc.blocks}
             selected={null}
@@ -463,6 +479,17 @@ export default function GhidraApp() {
       <div aria-live="polite" role="status" className="sr-only">
         {liveMessage}
       </div>
+      {showTour && (
+        <DecompilerTour
+          targets={{
+            functions: funcTreeRef,
+            cfg: cfgRef,
+            decompile: decompileRef,
+            hex: hexRef,
+          }}
+          onClose={() => setShowTour(false)}
+        />
+      )}
     </div>
   );
 }
