@@ -120,6 +120,7 @@
     "fake-indexeddb": "^6.1.0",
     "jest": "30.0.5",
     "jest-environment-jsdom": "30.0.5",
+    "node-mocks-http": "1.17.2",
     "pa11y": "^9.0.0",
     "playwright-core": "^1.55.0",
     "typescript": "^5.9.2",
