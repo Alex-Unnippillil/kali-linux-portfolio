@@ -1,0 +1,6 @@
+[
+  { "time": 0, "user": "alice", "password": "123456", "result": "fail" },
+  { "time": 1, "user": "bob", "password": "password", "result": "fail" },
+  { "time": 3, "user": "carol", "password": "qwerty", "result": "fail" },
+  { "time": 7, "user": "alice", "password": "letmein", "result": "lockout" }
+]
