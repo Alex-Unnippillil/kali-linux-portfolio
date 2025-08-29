@@ -8,6 +8,8 @@ import {
 } from './utils';
 import GraphView from '../../../apps/radare2/components/GraphView';
 import GuideOverlay from './GuideOverlay';
+import { useTheme } from '../../../hooks/useTheme';
+import './theme.css';
 
 const Radare2 = ({ initialData = {} }) => {
   const { file = 'demo', hex = '', disasm = [], xrefs = {}, blocks = [] } =
@@ -21,6 +23,7 @@ const Radare2 = ({ initialData = {} }) => {
   const [bookmarks, setBookmarks] = useState([]);
   const [showGuide, setShowGuide] = useState(false);
   const disasmRef = useRef(null);
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -86,18 +89,32 @@ const Radare2 = ({ initialData = {} }) => {
   };
 
   return (
-    <div className="h-full w-full bg-ub-cool-grey text-white p-4 overflow-auto">
+    <div
+      className={`h-full w-full p-4 overflow-auto ${
+        theme === 'dark' ? 'r2-dark' : 'r2-light'
+      }`}
+      style={{ backgroundColor: 'var(--r2-bg)', color: 'var(--r2-text)' }}
+    >
       {showGuide && <GuideOverlay onClose={() => setShowGuide(false)} />}
       <div className="flex gap-2 mb-2 flex-wrap">
         <input
           value={seekAddr}
           onChange={(e) => setSeekAddr(e.target.value)}
           placeholder="seek 0x..."
-          className="px-2 py-1 bg-gray-800 rounded text-white"
+          className="px-2 py-1 rounded"
+          style={{
+            backgroundColor: 'var(--r2-surface)',
+            color: 'var(--r2-text)',
+            border: '1px solid var(--r2-border)',
+          }}
         />
         <button
           onClick={handleSeek}
-          className="px-3 py-1 bg-gray-700 rounded"
+          className="px-3 py-1 rounded"
+          style={{
+            backgroundColor: 'var(--r2-surface)',
+            border: '1px solid var(--r2-border)',
+          }}
         >
           Seek
         </button>
@@ -105,45 +122,80 @@ const Radare2 = ({ initialData = {} }) => {
           value={findTerm}
           onChange={(e) => setFindTerm(e.target.value)}
           placeholder="find"
-          className="px-2 py-1 bg-gray-800 rounded text-white"
+          className="px-2 py-1 rounded"
+          style={{
+            backgroundColor: 'var(--r2-surface)',
+            color: 'var(--r2-text)',
+            border: '1px solid var(--r2-border)',
+          }}
         />
         <button
           onClick={handleFind}
-          className="px-3 py-1 bg-gray-700 rounded"
+          className="px-3 py-1 rounded"
+          style={{
+            backgroundColor: 'var(--r2-surface)',
+            border: '1px solid var(--r2-border)',
+          }}
         >
           Find
         </button>
         <button
           onClick={() => setMode((m) => (m === 'code' ? 'graph' : 'code'))}
-          className="px-3 py-1 bg-gray-700 rounded"
+          className="px-3 py-1 rounded"
+          style={{
+            backgroundColor: 'var(--r2-surface)',
+            border: '1px solid var(--r2-border)',
+          }}
         >
           {mode === 'code' ? 'Graph' : 'Code'}
         </button>
         <button
           onClick={() => setShowGuide(true)}
-          className="px-3 py-1 bg-gray-700 rounded"
+          className="px-3 py-1 rounded"
+          style={{
+            backgroundColor: 'var(--r2-surface)',
+            border: '1px solid var(--r2-border)',
+          }}
         >
           Help
+        </button>
+        <button
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className="px-3 py-1 rounded"
+          style={{
+            backgroundColor: 'var(--r2-surface)',
+            border: '1px solid var(--r2-border)',
+          }}
+        >
+          {theme === 'dark' ? 'Light' : 'Dark'}
         </button>
       </div>
 
       {mode === 'graph' ? (
-        <GraphView blocks={blocks} />
+        <GraphView blocks={blocks} theme={theme} />
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
-          <HexEditor hex={hex} />
+          <HexEditor hex={hex} theme={theme} />
           <div
             ref={disasmRef}
-            className="overflow-auto border border-gray-600 rounded p-2 max-h-64"
+            className="overflow-auto rounded p-2 max-h-64"
+            style={{
+              backgroundColor: 'var(--r2-surface)',
+              border: '1px solid var(--r2-border)',
+            }}
           >
             <ul className="font-mono text-sm">
               {disasm.map((line, idx) => (
                 <li
                   key={line.addr}
                   id={`asm-${idx}`}
-                  className={`cursor-pointer ${
-                    currentAddr === line.addr ? 'bg-gray-700' : ''
-                  }`}
+                  className="cursor-pointer"
+                  style={{
+                    backgroundColor:
+                      currentAddr === line.addr ? 'var(--r2-accent)' : 'transparent',
+                    color:
+                      currentAddr === line.addr ? '#000' : 'var(--r2-text)',
+                  }}
                   onClick={() => setCurrentAddr(line.addr)}
                 >
                   <button
@@ -173,11 +225,20 @@ const Radare2 = ({ initialData = {} }) => {
             value={noteText}
             onChange={(e) => setNoteText(e.target.value)}
             placeholder="Add note"
-            className="w-full bg-gray-800 text-white p-2 rounded"
+            className="w-full p-2 rounded"
+            style={{
+              backgroundColor: 'var(--r2-surface)',
+              color: 'var(--r2-text)',
+              border: '1px solid var(--r2-border)',
+            }}
           />
           <button
             onClick={handleAddNote}
-            className="mt-2 px-3 py-1 bg-gray-700 rounded"
+            className="mt-2 px-3 py-1 rounded"
+            style={{
+              backgroundColor: 'var(--r2-surface)',
+              border: '1px solid var(--r2-border)',
+            }}
           >
             Save Note
           </button>
@@ -187,7 +248,13 @@ const Radare2 = ({ initialData = {} }) => {
       {notes.length > 0 && (
         <div className="mt-4">
           <h2 className="text-lg">Notes</h2>
-          <ul className="bg-black rounded p-2">
+          <ul
+            className="rounded p-2"
+            style={{
+              backgroundColor: 'var(--r2-surface)',
+              border: '1px solid var(--r2-border)',
+            }}
+          >
             {notes.map((n, i) => (
               <li key={i}>
                 {n.addr}: {n.text}

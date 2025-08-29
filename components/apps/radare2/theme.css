@@ -1,0 +1,15 @@
+.r2-light {
+  --r2-bg: #f9fafb;
+  --r2-text: #111827;
+  --r2-surface: #e5e7eb;
+  --r2-border: #d1d5db;
+  --r2-accent: #fbbf24;
+}
+
+.r2-dark {
+  --r2-bg: #1a1f26;
+  --r2-text: #f3f4f6;
+  --r2-surface: #374151;
+  --r2-border: #4b5563;
+  --r2-accent: #fbbf24;
+}
