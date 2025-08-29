@@ -1,3 +1,5 @@
+import openings from '../../games/reversi/openings.json';
+
 export const SIZE = 8;
 export const DIRECTIONS = [
   [0, 1],
@@ -68,17 +70,17 @@ export const countPieces = (board) => {
   return { black, white };
 };
 
-// Very small opening book for the first AI move
-// Returns a preset move for white based on board symmetry
+const boardKey = (board) =>
+  board.map((row) => row.map((cell) => cell || '.').join('')).join('/');
+
+// Opening book lookup for early moves
 export const getBookMove = (board, player) => {
   if (player !== 'W') return null;
   const { black, white } = countPieces(board);
-  // Only apply book in the early opening (after one black move)
+  // Only apply book in the very early opening
   if (black + white > 5) return null;
-  const moves = computeLegalMoves(board, player);
-  if (moves['2-2']) return [2, 2];
-  if (moves['5-5']) return [5, 5];
-  return null;
+  const key = boardKey(board);
+  return openings[key] || null;
 };
 
 const corners = [
