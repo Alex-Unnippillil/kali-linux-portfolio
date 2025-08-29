@@ -8,6 +8,7 @@ import Big from 'figlet/importable-fonts/Big.js';
 import { useRouter } from 'next/router';
 
 const fontList = ['Standard', 'Slant', 'Big'];
+const fontSizes = [10, 12, 14];
 
 const ramp = '@%#*+=-:. ';
 
@@ -78,6 +79,23 @@ const palette = {
   },
 };
 
+const CopyIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={1.5}
+    stroke="currentColor"
+    className="w-6 h-6"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2M16 8h2a2 2 0 012 2v8a2 2 0 01-2 2h-8a2 2 0 01-2-2v-2"
+    />
+  </svg>
+);
+
 type PaletteKey = keyof typeof palette;
 
 function download(text: string, filename: string) {
@@ -99,6 +117,7 @@ const AsciiArtApp = () => {
   const [output, setOutput] = useState('');
   const [fg, setFg] = useState<PaletteKey>('green');
   const [bg, setBg] = useState<PaletteKey>('black');
+  const [fontSize, setFontSize] = useState<number>(12);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [imgOutput, setImgOutput] = useState('');
@@ -239,7 +258,7 @@ const AsciiArtApp = () => {
             ref={textAreaRef}
             rows={1}
             className="px-2 py-1 text-black rounded resize-none overflow-hidden font-mono leading-none"
-            style={{ fontFamily: 'monospace', lineHeight: '1' }}
+            style={{ fontFamily: 'monospace', lineHeight: '1', fontSize: `${fontSize}px` }}
             placeholder="Enter text"
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -252,6 +271,17 @@ const AsciiArtApp = () => {
             {fontList.map((f) => (
               <option key={f} value={f}>
                 {f}
+              </option>
+            ))}
+          </select>
+          <select
+            value={fontSize}
+            onChange={(e) => setFontSize(Number(e.target.value))}
+            className="px-2 py-1 text-black rounded"
+          >
+            {fontSizes.map((s) => (
+              <option key={s} value={s}>
+                {s}
               </option>
             ))}
           </select>
@@ -279,10 +309,11 @@ const AsciiArtApp = () => {
           </select>
           <div className="flex gap-2">
             <button
-              className="px-2 py-1 bg-blue-700 rounded"
+              className="px-2 py-1 bg-blue-700 rounded flex items-center gap-1"
               onClick={() => copy(output)}
             >
-              Copy
+              <CopyIcon />
+              <span>Copy ASCII</span>
             </button>
             <button
               className="px-2 py-1 bg-green-700 rounded"
@@ -297,8 +328,8 @@ const AsciiArtApp = () => {
             </button>
           </div>
           <pre
-            className={`p-2 whitespace-pre overflow-auto font-mono leading-none ${palette[bg].bgClass} ${palette[fg].fgClass}`}
-            style={{ imageRendering: 'pixelated' }}
+            className="p-[6px] whitespace-pre overflow-auto font-mono leading-none bg-gray-900 text-white"
+            style={{ imageRendering: 'pixelated', fontSize: `${fontSize}px` }}
           >
             {output}
           </pre>
@@ -362,12 +393,24 @@ const AsciiArtApp = () => {
               </option>
             ))}
           </select>
+          <select
+            value={fontSize}
+            onChange={(e) => setFontSize(Number(e.target.value))}
+            className="px-2 py-1 text-black rounded"
+          >
+            {fontSizes.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
           <div className="flex gap-2">
             <button
-              className="px-2 py-1 bg-blue-700 rounded"
+              className="px-2 py-1 bg-blue-700 rounded flex items-center gap-1"
               onClick={() => copy(imgOutput)}
             >
-              Copy
+              <CopyIcon />
+              <span>Copy ASCII</span>
             </button>
             <button
               className="px-2 py-1 bg-green-700 rounded"
@@ -383,8 +426,8 @@ const AsciiArtApp = () => {
           </div>
           <canvas ref={canvasRef} className="hidden" />
           <pre
-            className={`p-2 whitespace-pre overflow-auto font-mono leading-none ${palette[bg].bgClass} ${palette[fg].fgClass}`}
-            style={{ imageRendering: 'pixelated' }}
+            className="p-[6px] whitespace-pre overflow-auto font-mono leading-none bg-gray-900 text-white"
+            style={{ imageRendering: 'pixelated', fontSize: `${fontSize}px` }}
           >
             {imgOutput}
           </pre>
