@@ -2,9 +2,15 @@
 
 import React from 'react';
 import MimikatzApp from '../../components/apps/mimikatz';
+import ExposureExplainer from './components/ExposureExplainer';
 
 const MimikatzPage: React.FC = () => {
-  return <MimikatzApp />;
+  return (
+    <>
+      <MimikatzApp />
+      <ExposureExplainer />
+    </>
+  );
 };
 
 export default MimikatzPage;
