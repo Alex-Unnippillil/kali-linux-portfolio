@@ -6,6 +6,9 @@ import {
   splitAsteroidTree,
   updateShipPosition,
   handleBulletAsteroidCollision,
+  spawnPowerUp,
+  applyPowerUp,
+  POWER_UPS,
 } from '../components/apps/asteroids-utils';
 
 describe('wrap', () => {
@@ -69,5 +72,26 @@ describe('updateShipPosition', () => {
     const ship = { x: 115, y: 50, velX: 0, velY: 0, r: 10 };
     updateShipPosition(ship, 100, 100);
     expect(ship.x).toBe(-5);
+  });
+});
+
+describe('power-ups', () => {
+  it('spawns a valid power-up', () => {
+    const list = [];
+    spawnPowerUp(list, 0, 0);
+    expect(list).toHaveLength(1);
+    expect(Object.values(POWER_UPS)).toContain(list[0].type);
+  });
+
+  it('applies effects when collected', () => {
+    const ship = { shield: 0, rapidFire: 0 };
+    let lives = 3;
+    lives = applyPowerUp({ type: POWER_UPS.SHIELD }, ship, lives, 50, 30);
+    expect(ship.shield).toBe(50);
+    expect(lives).toBe(3);
+    lives = applyPowerUp({ type: POWER_UPS.EXTRA_LIFE }, ship, lives);
+    expect(lives).toBe(4);
+    lives = applyPowerUp({ type: POWER_UPS.RAPID_FIRE }, ship, lives, 50, 40);
+    expect(ship.rapidFire).toBe(40);
   });
 });

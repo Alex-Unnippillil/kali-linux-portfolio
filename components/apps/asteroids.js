@@ -8,6 +8,7 @@ import {
   spawnPowerUp,
   updatePowerUps,
   POWER_UPS,
+  applyPowerUp,
   createSeededRNG,
 } from './asteroids-utils';
 import useGameControls from './useGameControls';
@@ -564,8 +565,7 @@ const Asteroids = () => {
       powerUps.forEach((p, i) => {
         const dist = Math.hypot(p.x - ship.x, p.y - ship.y);
         if (dist < p.r + ship.r) {
-        if (p.type === POWER_UPS.SHIELD) ship.shield = SHIELD_DURATION;
-          else ship.rapidFire = 600;
+          lives = applyPowerUp(p, ship, lives, SHIELD_DURATION);
           powerUps.splice(i, 1);
         }
       });
