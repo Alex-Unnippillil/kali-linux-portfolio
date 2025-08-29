@@ -9,6 +9,7 @@ import { toPng } from 'html-to-image';
 import { Readability } from '@mozilla/readability';
 import DOMPurify from 'dompurify';
 import AddressBar from '../chrome/AddressBar';
+import { getCachedFavicon, cacheFavicon } from '../chrome/bookmarks';
 
 interface TabData {
   id: number;
@@ -59,14 +60,16 @@ const saveTabs = (tabs: TabData[], active: number) => {
 
 const Chrome: React.FC = () => {
   const { tabs: storedTabs, active: storedActive } = readTabs();
+  const sessionUrl =
+    typeof window !== 'undefined' ? sessionStorage.getItem('chrome-last-url') : null;
   const [tabs, setTabs] = useState<TabData[]>(
     storedTabs.length
       ? storedTabs.map((t) => ({ blocked: false, muted: false, ...t }))
       : [
           {
             id: Date.now(),
-            url: HOME_URL,
-            history: [HOME_URL],
+            url: sessionUrl || HOME_URL,
+            history: [sessionUrl || HOME_URL],
             historyIndex: 0,
             scroll: 0,
             blocked: false,
@@ -114,14 +117,25 @@ const Chrome: React.FC = () => {
   );
 
   const updateFavicon = useCallback(
-    (url: string) => {
+    async (url: string) => {
       try {
         const origin = new URL(url).origin;
         if (favicons[origin]) return;
-        const icon = `https://www.google.com/s2/favicons?sz=32&domain_url=${origin}`;
-        const img = new Image();
-        img.src = icon;
-        setFavicons((prev) => ({ ...prev, [origin]: icon }));
+        const cached = await getCachedFavicon(origin);
+        if (cached) {
+          setFavicons((prev) => ({ ...prev, [origin]: cached }));
+          return;
+        }
+        const iconUrl = `https://www.google.com/s2/favicons?sz=32&domain_url=${origin}`;
+        const res = await fetch(iconUrl);
+        const blob = await res.blob();
+        const dataUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+        await cacheFavicon(origin, dataUrl);
+        setFavicons((prev) => ({ ...prev, [origin]: dataUrl }));
       } catch {
         /* ignore */
       }
@@ -203,6 +217,7 @@ const Chrome: React.FC = () => {
         ),
       );
       setAddress(url);
+      sessionStorage.setItem('chrome-last-url', url);
       updateFavicon(url);
       if (!blocked) {
         fetchArticle(activeId, url);
@@ -211,24 +226,28 @@ const Chrome: React.FC = () => {
     [activeId, fetchArticle, isAllowed, updateFavicon],
   );
 
-  const addTab = useCallback(() => {
-    const id = Date.now();
-    setTabs((prev) => [
-      ...prev,
-      {
-        id,
-        url: HOME_URL,
-        history: [HOME_URL],
-        historyIndex: 0,
-        scroll: 0,
-        blocked: false,
-        muted: false,
-      },
-    ]);
-    setActiveId(id);
-    setAddress(HOME_URL);
-    updateFavicon(HOME_URL);
-  }, [updateFavicon]);
+  const addTab = useCallback(
+    (url: string = HOME_URL) => {
+      const id = Date.now();
+      setTabs((prev) => [
+        ...prev,
+        {
+          id,
+          url,
+          history: [url],
+          historyIndex: 0,
+          scroll: 0,
+          blocked: false,
+          muted: false,
+        },
+      ]);
+      setActiveId(id);
+      setAddress(url);
+      updateFavicon(url);
+      fetchArticle(id, url);
+    },
+    [updateFavicon, fetchArticle],
+  );
 
   const closeTab = useCallback(
     (id: number) => {
@@ -311,6 +330,7 @@ const Chrome: React.FC = () => {
 
   useEffect(() => {
     updateFavicon(activeTab.url);
+    sessionStorage.setItem('chrome-last-url', activeTab.url);
   }, [activeTab.url, updateFavicon]);
 
   useEffect(() => {
@@ -488,8 +508,16 @@ const Chrome: React.FC = () => {
         >
           ⚑
         </button>
-        <AddressBar value={address} onChange={setAddress} onNavigate={navigate} />
-        <button onClick={addTab} aria-label="New Tab" className="px-2">+</button>
+        <AddressBar
+          value={address}
+          onChange={setAddress}
+          onNavigate={navigate}
+          onOpenNewTab={(url) => addTab(url)}
+          onOpenNewWindow={(url) => window.open(url, '_blank')}
+        />
+        <button onClick={() => addTab()} aria-label="New Tab" className="px-2">
+          +
+        </button>
       </div>
       <div
         className="flex space-x-1 bg-gray-700 text-sm overflow-x-auto"
