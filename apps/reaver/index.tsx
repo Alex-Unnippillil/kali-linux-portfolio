@@ -34,6 +34,15 @@ const stages = [
 
 const TOTAL_PINS = 11000; // example PIN space for demonstration
 
+const formatTime = (seconds: number) => {
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  return [hrs, mins, secs]
+    .map((v) => String(v).padStart(2, '0'))
+    .join(':');
+};
+
 const ReaverPanel: React.FC = () => {
   const [routers, setRouters] = useState<RouterMeta[]>([]);
   const [routerIdx, setRouterIdx] = useState(0);
@@ -126,7 +135,7 @@ const ReaverPanel: React.FC = () => {
           />
         </div>
         <div className="text-sm">
-          Est. time remaining: {timeRemaining.toFixed(0)}s
+          Est. time remaining: {formatTime(timeRemaining)}
         </div>
       </div>
 
