@@ -1,5 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import dynamic from 'next/dynamic';
+import React, { useEffect, useRef, useState } from 'react';
 import HexEditor from './HexEditor';
 import {
   loadNotes,
@@ -7,11 +6,7 @@ import {
   loadBookmarks,
   saveBookmarks,
 } from './utils';
-
-const ForceGraph2D = dynamic(
-  () => import('react-force-graph').then((mod) => mod.ForceGraph2D),
-  { ssr: false }
-);
+import GraphView from '../../../apps/radare2/components/GraphView';
 
 const Radare2 = ({ initialData = {} }) => {
   const { file = 'demo', hex = '', disasm = [], xrefs = {}, blocks = [] } =
@@ -32,15 +27,6 @@ const Radare2 = ({ initialData = {} }) => {
 
     }
   }, [file]);
-
-  const graphData = useMemo(() => {
-    const nodes = blocks.map((b) => ({ id: b.addr }));
-    const links = [];
-    blocks.forEach((b) =>
-      (b.edges || []).forEach((e) => links.push({ source: b.addr, target: e }))
-    );
-    return { nodes, links };
-  }, [blocks]);
 
   const scrollToAddr = (addr) => {
     const idx = disasm.findIndex(
@@ -123,9 +109,7 @@ const Radare2 = ({ initialData = {} }) => {
       </div>
 
       {mode === 'graph' ? (
-        <div className="h-64 bg-black rounded">
-          <ForceGraph2D graphData={graphData} />
-        </div>
+        <GraphView blocks={blocks} />
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
           <HexEditor hex={hex} />
