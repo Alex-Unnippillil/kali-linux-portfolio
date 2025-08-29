@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useReducer } from 'react';
 import ReactGA from 'react-ga4';
-import { BlackjackGame, handValue, basicStrategy, cardValue, Shoe } from './engine';
+import { BlackjackGame, handValue, cardValue, Shoe } from './engine';
+import { recommendAction } from '../../../games/blackjack/coach';
 
 const CHIP_VALUES = [1, 5, 25, 100];
 const CHIP_COLORS = {
@@ -240,11 +241,7 @@ const Blackjack = () => {
   const recommended = () => {
     const hand = playerHands[current];
     if (!hand) return '';
-    return basicStrategy(hand.cards, dealerHand[0], {
-      canDouble: bankroll >= hand.bet,
-      canSplit: hand.cards.length === 2 && cardValue(hand.cards[0]) === cardValue(hand.cards[1]) && bankroll >= hand.bet,
-      canSurrender: hand.cards.length === 2,
-    });
+    return recommendAction(hand, dealerHand[0], bankroll);
   };
 
   const startPractice = () => {
@@ -447,11 +444,11 @@ const Blackjack = () => {
           {idx === current && playerHands.length > 0 && (
             <div className="mt-2 flex flex-col items-start">
               <div className="flex space-x-2">
-                <button className={`px-3 py-1 bg-gray-700 ${rec === 'hit' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('hit')}>Hit</button>
-                <button className={`px-3 py-1 bg-gray-700 ${rec === 'stand' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('stand')}>Stand</button>
-                <button className={`px-3 py-1 bg-gray-700 ${rec === 'double' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('double')}>Double</button>
-                <button className={`px-3 py-1 bg-gray-700 ${rec === 'split' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('split')}>Split</button>
-                <button className={`px-3 py-1 bg-gray-700 ${rec === 'surrender' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('surrender')}>Surrender</button>
+                <button className={`px-3 py-1 bg-gray-700 ${rec === 'hit' ? 'border-2 border-yellow-400 text-yellow-300' : ''}`} onClick={() => act('hit')}>Hit</button>
+                <button className={`px-3 py-1 bg-gray-700 ${rec === 'stand' ? 'border-2 border-yellow-400 text-yellow-300' : ''}`} onClick={() => act('stand')}>Stand</button>
+                <button className={`px-3 py-1 bg-gray-700 ${rec === 'double' ? 'border-2 border-yellow-400 text-yellow-300' : ''}`} onClick={() => act('double')}>Double</button>
+                <button className={`px-3 py-1 bg-gray-700 ${rec === 'split' ? 'border-2 border-yellow-400 text-yellow-300' : ''}`} onClick={() => act('split')}>Split</button>
+                <button className={`px-3 py-1 bg-gray-700 ${rec === 'surrender' ? 'border-2 border-yellow-400 text-yellow-300' : ''}`} onClick={() => act('surrender')}>Surrender</button>
               </div>
               {showHints && rec && <div className="mt-1 text-sm">Hint: {rec.toUpperCase()}</div>}
             </div>
