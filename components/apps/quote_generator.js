@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo } from "react";
+import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import Filter from "bad-words";
 import { toPng } from "html-to-image";
 
@@ -85,10 +85,10 @@ const QuoteGenerator = () => {
   const rafRef = useRef();
   const liveRef = useRef(null);
 
-  const getBase = () => {
+  const getBase = useCallback(() => {
     const base = PACKS[pack] || [];
     return category ? base.filter((q) => q.tags.includes(category)) : base;
-  };
+  }, [pack, category]);
 
   const categories = useMemo(() => {
     const base = PACKS[pack] || [];
@@ -126,7 +126,7 @@ const QuoteGenerator = () => {
       setIndex(0);
     }
     setOrder(storedOrder);
-  }, [pack, category]);
+  }, [pack, category, getBase]);
 
   useEffect(() => {
     const base = getBase();
@@ -135,7 +135,7 @@ const QuoteGenerator = () => {
       return;
     }
     setCurrent(base[order[index]]);
-  }, [pack, category, order, index]);
+  }, [pack, category, order, index, getBase]);
 
   useEffect(() => {
     if (category) return;
