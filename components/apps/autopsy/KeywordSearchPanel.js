@@ -64,6 +64,12 @@ function KeywordSearchPanel({ keyword, setKeyword, artifacts, onSelect }) {
             <div className="text-xs">
               {new Date(a.timestamp).toLocaleString()}
             </div>
+            {a.user && (
+              <div
+                className="text-xs"
+                dangerouslySetInnerHTML={{ __html: `User: ${highlight(a.user)}` }}
+              />
+            )}
             <div
               className="text-xs"
               dangerouslySetInnerHTML={{ __html: highlight(a.description) }}
