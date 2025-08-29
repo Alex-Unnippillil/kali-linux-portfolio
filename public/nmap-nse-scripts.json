@@ -1,0 +1,31 @@
+[
+  {
+    "name": "http-title",
+    "categories": ["discovery", "safe"],
+    "synopsis": "Fetches page titles from HTTP services.",
+    "args": {
+      "http.useragent": "User-Agent header to send in requests",
+      "http.max-cache-size": "Maximum number of titles to cache"
+    }
+  },
+  {
+    "name": "ftp-anon",
+    "categories": ["auth", "safe"],
+    "synopsis": "Checks for anonymous FTP access.",
+    "args": {}
+  },
+  {
+    "name": "smb-os-discovery",
+    "categories": ["discovery", "safe"],
+    "synopsis": "Attempts to determine the OS of the remote SMB server.",
+    "args": {}
+  },
+  {
+    "name": "smb-vuln-ms17-010",
+    "categories": ["vuln"],
+    "synopsis": "Detects MS17-010 SMB vulnerabilities.",
+    "args": {
+      "smbv1": "Force use of SMBv1 protocol"
+    }
+  }
+]
