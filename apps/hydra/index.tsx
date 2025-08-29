@@ -1,9 +1,10 @@
-'use client';
+"use client";
 
-import React, { useRef, useState } from 'react';
-import LegalInterstitial from '../../components/ui/LegalInterstitial';
-import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
-import HydraApp from '../../components/apps/hydra';
+import React, { useRef, useState } from "react";
+import LegalInterstitial from "../../components/ui/LegalInterstitial";
+import TabbedWindow, { TabDefinition } from "../../components/ui/TabbedWindow";
+import HydraApp from "../../components/apps/hydra";
+import CredentialHygiene from "./components/CredentialHygiene";
 
 const HydraPreview: React.FC = () => {
   const [accepted, setAccepted] = useState(false);
@@ -19,11 +20,16 @@ const HydraPreview: React.FC = () => {
   };
 
   return (
-    <TabbedWindow
-      className="min-h-screen bg-gray-900 text-white"
-      initialTabs={[createTab()]}
-      onNewTab={createTab}
-    />
+    <>
+      <TabbedWindow
+        className="min-h-screen bg-gray-900 text-white"
+        initialTabs={[createTab()]}
+        onNewTab={createTab}
+      />
+      <div className="bg-gray-900 text-white p-4">
+        <CredentialHygiene />
+      </div>
+    </>
   );
 };
 
