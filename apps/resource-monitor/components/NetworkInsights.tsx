@@ -7,6 +7,7 @@ import {
   getActiveFetches,
   FetchEntry,
 } from '../../../lib/fetchProxy';
+import { exportMetrics } from '../export';
 
 const HISTORY_KEY = 'network-insights-history';
 
@@ -45,7 +46,15 @@ export default function NetworkInsights() {
           </li>
         ))}
       </ul>
-      <h2 className="font-bold mb-1">History</h2>
+      <div className="flex items-center mb-1">
+        <h2 className="font-bold">History</h2>
+        <button
+          onClick={() => exportMetrics(history)}
+          className="ml-auto px-2 py-1 bg-ub-dark-grey rounded"
+        >
+          Export
+        </button>
+      </div>
       <ul className="divide-y divide-gray-700 border border-gray-700 rounded">
         {history.length === 0 && <li className="p-1 text-gray-400">No requests</li>}
         {history.map((f) => (
