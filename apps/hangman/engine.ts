@@ -2,6 +2,7 @@ export interface HangmanGame {
   word: string;
   guessed: string[];
   wrong: number;
+  hints: number;
 }
 
 // Basic dictionaries used by the hangman game. Having them here keeps the
@@ -37,25 +38,35 @@ export const MOVIE_WORDS = [
   'amelie',
 ];
 
-export const DICTIONARIES = {
+export const DICTIONARIES: Record<string, string[]> = {
   family: FAMILY_WORDS,
   sat: SAT_WORDS,
   movie: MOVIE_WORDS,
 };
 
-export const WORDS = [
-  ...FAMILY_WORDS,
-  ...SAT_WORDS,
-  ...MOVIE_WORDS,
-];
+const allWords = () => Object.values(DICTIONARIES).flat();
 
-export const createGame = (word?: string): HangmanGame => {
-  const chosen =
-    word || WORDS[Math.floor(Math.random() * WORDS.length)];
+type GameOptions =
+  | string
+  | {
+      word?: string;
+      category?: string;
+      hints?: number;
+    };
+
+export const createGame = (opts?: GameOptions): HangmanGame => {
+  let word: string | undefined;
+  let category: string | undefined;
+  let hints: number | undefined;
+  if (typeof opts === 'string') word = opts;
+  else if (opts) ({ word, category, hints } = opts);
+  const dict = category ? DICTIONARIES[category] || allWords() : allWords();
+  const chosen = word || dict[Math.floor(Math.random() * dict.length)];
   return {
     word: chosen,
     guessed: [],
     wrong: 0,
+    hints: hints ?? 3,
   };
 };
 
@@ -71,6 +82,7 @@ export const guess = (game: HangmanGame, letter: string): boolean => {
 };
 
 export const useHint = (game: HangmanGame): string | null => {
+  if (game.hints <= 0) return null;
   const remaining = game.word
     .split('')
     .filter((l) => !game.guessed.includes(l));
@@ -78,6 +90,7 @@ export const useHint = (game: HangmanGame): string | null => {
   const unique = Array.from(new Set(remaining));
   const reveal = unique[Math.floor(Math.random() * unique.length)];
   game.guessed.push(reveal);
+  game.hints -= 1;
   return reveal;
 };
 
@@ -89,3 +102,8 @@ export const isLoser = (game: HangmanGame, maxWrong = 6): boolean =>
 
 export const isGameOver = (game: HangmanGame, maxWrong = 6): boolean =>
   isWinner(game) || isLoser(game, maxWrong);
+
+export const importWordList = (category: string, words: string[]) => {
+  if (DICTIONARIES[category]) DICTIONARIES[category].push(...words);
+  else DICTIONARIES[category] = [...words];
+};
