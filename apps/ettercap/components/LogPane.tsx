@@ -17,17 +17,53 @@ const levelColors: Record<LogEntry['level'], string> = {
 export default function LogPane({ logs }: { logs: LogEntry[] }) {
   const [collapsed, setCollapsed] = useState(false);
 
+  const copyAll = () => {
+    const text = logs
+      .map((log) => `[${log.level.toUpperCase()}] ${log.message}`)
+      .join('\n');
+    navigator.clipboard.writeText(text);
+  };
+
+  const downloadAll = () => {
+    const text = logs
+      .map((log) => `[${log.level.toUpperCase()}] ${log.message}`)
+      .join('\n');
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'logs.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="mt-4 border rounded bg-gray-900 text-white text-sm">
       <div className="flex items-center justify-between px-2 py-1 bg-gray-800">
         <span className="font-bold">Logs</span>
-        <button
-          type="button"
-          className="text-xs underline"
-          onClick={() => setCollapsed((c) => !c)}
-        >
-          {collapsed ? 'Expand' : 'Collapse'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            className="text-xs underline"
+            onClick={copyAll}
+          >
+            Copy all
+          </button>
+          <button
+            type="button"
+            className="text-xs underline"
+            onClick={downloadAll}
+          >
+            Download
+          </button>
+          <button
+            type="button"
+            className="text-xs underline"
+            onClick={() => setCollapsed((c) => !c)}
+          >
+            {collapsed ? 'Expand' : 'Collapse'}
+          </button>
+        </div>
       </div>
       {!collapsed && (
         <ul className="max-h-40 overflow-auto">
