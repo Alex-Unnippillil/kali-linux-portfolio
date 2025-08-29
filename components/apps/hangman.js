@@ -14,8 +14,7 @@ import {
   logGameError,
 } from '../../utils/analytics';
 import { DICTIONARIES } from '../../apps/hangman/engine';
-
-const letters = 'abcdefghijklmnopqrstuvwxyz'.split('');
+import { getGuessPool } from '../../apps/games/hangman/logic';
 
 const PACKS_BY_DIFFICULTY = {
   Easy: ['family', 'movie'],
@@ -91,9 +90,18 @@ const Hangman = () => {
     {},
     (v) => v !== null && typeof v === 'object',
   );
+  const [filterCommonLetters, setFilterCommonLetters] = usePersistentState(
+    'hangman-filter-common',
+    false,
+    (v) => typeof v === 'boolean',
+  );
   const [hardMode, setHardMode] = useState(false);
   const [announcement, setAnnouncement] = useState('');
 
+  const letters = useMemo(
+    () => getGuessPool(filterCommonLetters),
+    [filterCommonLetters],
+  );
   const won = word && word.split('').every((l) => guessed.includes(l));
   const lost = wrong >= maxWrong && !won;
   const frequencies = useMemo(() => {
@@ -105,7 +113,7 @@ const Hangman = () => {
     );
     const max = Math.max(...Object.values(counts));
     return { counts, max };
-  }, [dict]);
+  }, [dict, letters]);
 
   const playTone = useCallback(
     (freq) => {
@@ -312,9 +320,9 @@ const Hangman = () => {
       else if (k === 'p') togglePause();
       else if (k === 'h') useHint();
       else if (k === 's') toggleSound();
-      else if (/^[a-z]$/.test(k)) handleGuess(k);
+      else if (/^[a-z]$/.test(k) && letters.includes(k)) handleGuess(k);
     },
-    [reset, togglePause, useHint, toggleSound, handleGuess],
+    [reset, togglePause, useHint, toggleSound, handleGuess, letters],
   );
 
   useEffect(() => {
@@ -483,6 +491,14 @@ const Hangman = () => {
           }`}
         >
           {hardMode ? 'Hard On' : 'Hard Off'}
+        </button>
+        <button
+          onClick={() => setFilterCommonLetters((v) => !v)}
+          className={`px-2 py-1 rounded text-black ${
+            filterCommonLetters ? 'bg-purple-600' : 'bg-ubt-blue'
+          }`}
+        >
+          {filterCommonLetters ? 'No Common On' : 'No Common Off'}
         </button>
         <button
           onClick={shareLink}
