@@ -8,5 +8,6 @@ export default async function trackServerEvent(
     await mod.track(event, properties, options);
   } catch {
     // ignore analytics errors
+
   }
 }
