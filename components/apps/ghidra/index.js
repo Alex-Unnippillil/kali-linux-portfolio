@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import PseudoDisasmViewer from './PseudoDisasmViewer';
 import FunctionTree from './FunctionTree';
 import CallGraph from './CallGraph';
@@ -60,7 +60,7 @@ function ControlFlowGraph({ blocks, selected, onSelect, prefersReducedMotion }) 
 }
 
 export default function GhidraApp() {
-  const [useRemote, setUseRemote] = useState(false);
+  const [engine, setEngine] = useState('ghidra');
   const [functions, setFunctions] = useState([]);
   const [funcMap, setFuncMap] = useState({});
   const [selected, setSelected] = useState(null);
@@ -79,17 +79,64 @@ export default function GhidraApp() {
   const [stringNotes, setStringNotes] = useState({});
   const [stringQuery, setStringQuery] = useState('');
   const [lineNotes, setLineNotes] = useState({});
+  const capstoneRef = useRef(null);
+  const [instructions, setInstructions] = useState([]);
+  const [arch, setArch] = useState('x86');
+  // S1: Detect GHIDRA web support and fall back to Capstone
+  const ensureCapstone = useCallback(async () => {
+    if (capstoneRef.current) return capstoneRef.current;
+    const mod = await import('https://unpkg.com/capstone-wasm@1.0.3/dist/index.mjs');
+    await mod.loadCapstone();
+    capstoneRef.current = mod;
+    return mod;
+  }, []);
 
-  // S1: Graceful remote fallback when WebAssembly is unavailable
   useEffect(() => {
     const wasmUrl = process.env.NEXT_PUBLIC_GHIDRA_WASM || DEFAULT_WASM;
     if (typeof WebAssembly === 'undefined') {
-      setUseRemote(true);
+      setEngine('capstone');
+      ensureCapstone();
       return;
     }
-    WebAssembly.instantiateStreaming(fetch(wasmUrl), {})
-      .catch(() => setUseRemote(true));
-  }, []);
+    WebAssembly.instantiateStreaming(fetch(wasmUrl), {}).catch(() => {
+      setEngine('capstone');
+      ensureCapstone();
+    });
+  }, [ensureCapstone]);
+
+  const handleDrop = useCallback(
+    async (e) => {
+      e.preventDefault();
+      const file = e.dataTransfer.files[0];
+      if (!file) return;
+      const buf = await file.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      const { Capstone, Const } = await ensureCapstone();
+      const [archConst, modeConst] =
+        arch === 'arm'
+          ? [Const.ARCH_ARM, Const.MODE_ARM]
+          : [Const.ARCH_X86, Const.MODE_32];
+      const cs = new Capstone(archConst, modeConst);
+      const start = performance.now();
+      const insns = cs.disasm(bytes, { address: 0x1000 });
+      cs.close();
+      const end = performance.now();
+      if (end - start <= 100) {
+        setInstructions(insns);
+      } else {
+        setInstructions(insns);
+      }
+    },
+    [arch, ensureCapstone]
+  );
+
+  const switchEngine = async () => {
+    const next = engine === 'ghidra' ? 'capstone' : 'ghidra';
+    setEngine(next);
+    if (next === 'capstone') {
+      await ensureCapstone();
+    }
+  };
 
   // Load pre-generated disassembly JSON
   useEffect(() => {
@@ -187,18 +234,46 @@ export default function GhidraApp() {
     };
   }, []);
 
-  if (useRemote) {
-    const remoteUrl = process.env.NEXT_PUBLIC_GHIDRA_URL || 'https://ghidra.app';
+  if (engine === 'capstone') {
     return (
-      <iframe
-        src={remoteUrl}
-        className="w-full h-full bg-ub-cool-grey"
-        frameBorder="0"
-        title="Ghidra"
-        sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture; microphone; camera"
-        referrerPolicy="no-referrer"
-      />
+      <div
+        className="w-full h-full flex flex-col bg-gray-900 text-gray-100"
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={handleDrop}
+      >
+        <div className="p-2 flex space-x-2">
+          <button
+            onClick={switchEngine}
+            className="px-2 py-1 bg-gray-700 rounded"
+          >
+            Use Ghidra
+          </button>
+          <select
+            value={arch}
+            onChange={(e) => setArch(e.target.value)}
+            className="text-black rounded"
+          >
+            <option value="x86">x86</option>
+            <option value="arm">ARM</option>
+          </select>
+        </div>
+        {instructions.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center m-2 border-2 border-dashed border-gray-600">
+            Drop a binary file here
+          </div>
+        ) : (
+          <pre className="flex-1 overflow-auto p-2 whitespace-pre">
+            {instructions
+              .map(
+                (i) =>
+                  `${i.address.toString(16).padStart(8, '0')}: ${Array.from(i.bytes)
+                    .map((b) => b.toString(16).padStart(2, '0'))
+                    .join(' ')}\t${i.mnemonic} ${i.opStr}`
+              )
+              .join('\n')}
+          </pre>
+        )}
+      </div>
     );
   }
 
@@ -212,6 +287,14 @@ export default function GhidraApp() {
 
   return (
     <div className="w-full h-full flex flex-col bg-gray-900 text-gray-100">
+      <div className="p-2">
+        <button
+          onClick={switchEngine}
+          className="px-2 py-1 bg-gray-700 rounded"
+        >
+          Use Capstone
+        </button>
+      </div>
       <div className="flex flex-1">
         <div className="w-1/4 border-r border-gray-700 overflow-auto">
           <div className="p-2">
