@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import events from '../events.json';
+import { Artifact } from '../types';
 
 const escapeHtml = (str: string = '') =>
   str
@@ -43,8 +44,9 @@ function KeywordTester() {
     return safe;
   };
 
-  const matches = events.artifacts.filter((a) => {
-    const content = `${a.name} ${a.description} ${a.user || ''}`.toLowerCase();
+  const matches: Artifact[] = (events.artifacts as Artifact[]).filter((a) => {
+    const userPart = 'user' in a ? (a as any).user : '';
+    const content = `${a.name} ${a.description} ${userPart}`.toLowerCase();
     return keywords.some((k) => content.includes(k.toLowerCase()));
   });
 
@@ -72,10 +74,12 @@ function KeywordTester() {
               dangerouslySetInnerHTML={{ __html: highlight(a.name) }}
             />
             <div className="text-gray-400">{a.type}</div>
-            {a.user && (
+            {'user' in a && (
               <div
                 className="text-xs"
-                dangerouslySetInnerHTML={{ __html: `User: ${highlight(a.user)}` }}
+                dangerouslySetInnerHTML={{
+                  __html: `User: ${highlight((a as any).user)}`,
+                }}
               />
             )}
             <div
