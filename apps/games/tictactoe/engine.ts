@@ -43,16 +43,17 @@ export const minimax = (
   board: Board,
   player: Player,
   size = Math.sqrt(board.length),
+  misere = false,
   depth = 0,
-  maxDepth = size === 3 ? Infinity : size === 4 ? 4 : 3,
 ): { index: number; score: number } => {
-  const { winner } = checkWinner(board, size);
+  const result = checkWinner(board, size);
+  let winner = result.winner;
+  if (misere && winner && winner !== 'draw') winner = winner === 'X' ? 'O' : 'X';
   if (winner === 'O') return { score: 10 - depth, index: -1 };
   if (winner === 'X') return { score: depth - 10, index: -1 };
-  if (winner === 'draw' || depth === maxDepth)
-    return { score: 0, index: -1 };
+  if (winner === 'draw') return { score: 0, index: -1 };
 
-  const key = player + boardKey(board);
+  const key = player + (misere ? 'M' : 'N') + boardKey(board);
   const cached = memo.get(key);
   if (cached && cached.index !== undefined) return cached as any;
 
@@ -67,8 +68,8 @@ export const minimax = (
         board,
         player === 'O' ? 'X' : 'O',
         size,
+        misere,
         depth + 1,
-        maxDepth,
       );
       board[i] = null;
       if (player === 'O') {
