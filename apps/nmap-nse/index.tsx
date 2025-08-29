@@ -17,6 +17,7 @@ const NmapNSE: React.FC = () => {
   const workerRef = useRef<Worker>();
   const [report, setReport] = useState<Report | null>(null);
   const [parseError, setParseError] = useState('');
+  const [updates, setUpdates] = useState<string[]>([]);
   const copyExample = useCallback((text: string) => {
     if (typeof window !== 'undefined') {
       try {
@@ -76,6 +77,21 @@ const NmapNSE: React.FC = () => {
     load();
   }, []);
 
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const res = await fetch('/api/nse/update');
+        const json = await res.json();
+        if (Array.isArray(json.updates)) {
+          setUpdates(json.updates);
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+    check();
+  }, []);
+
   const queryLower = query.toLowerCase();
   const filtered: [string, Script[]][] = Object.entries(data).flatMap(
     ([category, scripts]) => {
@@ -106,6 +122,11 @@ const NmapNSE: React.FC = () => {
         Script details use static demo data for learning purposes only. Links open
         in isolated tabs.
       </p>
+      {updates.length > 0 && (
+        <div className="mb-4 p-2 bg-yellow-700 text-black rounded" role="alert">
+          New scripts available: {updates.join(', ')}
+        </div>
+      )}
       {filtered.map(([category, scripts]) => (
         <div key={category} className="mb-6">
           <h2 className="text-xl mb-2 capitalize">{category}</h2>
