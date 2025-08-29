@@ -19,6 +19,7 @@ describe('Wordle', () => {
     Object.assign(navigator, {
       clipboard: { writeText: jest.fn() },
     });
+    localStorage.clear();
     Wordle = require('../components/apps/wordle').default;
   });
   afterEach(() => {
@@ -46,7 +47,7 @@ describe('Wordle', () => {
     fireEvent.change(input, { target: { value: 'ABDOM' } });
     fireEvent.submit(input.closest('form')!);
 
-    fireEvent.change(input, { target: { value: 'ABASE' } });
+    fireEvent.change(input, { target: { value: 'ACORN' } });
     fireEvent.submit(input.closest('form')!);
 
     expect(await screen.findByText(/Hard mode:/)).toBeInTheDocument();

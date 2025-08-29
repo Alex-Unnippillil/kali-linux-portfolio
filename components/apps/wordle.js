@@ -32,7 +32,7 @@ function usePersistentState(key, defaultValue) {
     } catch {
       setState(defaultValue);
     }
-  }, [key, defaultValue]);
+  }, [key]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -91,6 +91,18 @@ const Wordle = () => {
     `wordle-streak-${dictName}`,
     { current: 0, max: 0 }
   );
+  const defaultStats = useMemo(
+    () => ({
+      played: 0,
+      won: 0,
+      guessDist: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, fail: 0 },
+    }),
+    [dictName]
+  );
+  const [stats, setStats] = usePersistentState(
+    `wordle-stats-${dictName}`,
+    defaultStats
+  );
   const [guess, setGuess] = useState('');
   const [message, setMessage] = useState('');
   const [analysis, setAnalysis] = useState('');
@@ -124,6 +136,25 @@ const Wordle = () => {
         present: 'bg-yellow-500 border-yellow-500',
         absent: 'bg-gray-700 border-gray-700',
       };
+
+  const keyColors = colorBlind
+    ? { correct: 'bg-blue-800', present: 'bg-orange-600', absent: 'bg-gray-700' }
+    : { correct: 'bg-green-600', present: 'bg-yellow-500', absent: 'bg-gray-700' };
+
+  const letterHints = useMemo(() => {
+    const map = {};
+    const priority = { absent: 0, present: 1, correct: 2 };
+    guesses.forEach(({ guess: g, result }) => {
+      for (let i = 0; i < g.length; i += 1) {
+        const ch = g[i];
+        const res = result[i];
+        if (!map[ch] || priority[res] > priority[map[ch]]) {
+          map[ch] = res;
+        }
+      }
+    });
+    return map;
+  }, [guesses]);
 
   const emojiMap = colorBlind
     ? { correct: '🟦', present: '🟧', absent: '⬛' }
@@ -265,6 +296,19 @@ const Wordle = () => {
       };
       setHistory(newHistory);
       updateStreaks(newHistory);
+
+      const newStats = {
+        ...stats,
+        played: stats.played + 1,
+        won: stats.won + (upper === solution ? 1 : 0),
+        guessDist: { ...stats.guessDist },
+      };
+      if (upper === solution) {
+        newStats.guessDist[next.length] += 1;
+      } else {
+        newStats.guessDist.fail += 1;
+      }
+      setStats(newStats);
     }
   };
 
@@ -352,6 +396,23 @@ const Wordle = () => {
     );
   };
 
+  const keyboardRows = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
+  const renderKey = (ch) => {
+    const status = letterHints[ch];
+    let classes =
+      'w-6 h-10 md:w-8 md:h-10 flex items-center justify-center rounded font-bold text-sm';
+    if (status) {
+      classes += ` ${keyColors[status]} text-white`;
+    } else {
+      classes += ' bg-gray-600';
+    }
+    return (
+      <div key={ch} className={classes} aria-label={`${ch} ${status || ''}`.trim()}>
+        {ch}
+      </div>
+    );
+  };
+
   return (
     <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 space-y-4 overflow-y-auto">
       <h1 className="text-xl font-bold">Wordle</h1>
@@ -387,6 +448,14 @@ const Wordle = () => {
         {Array.from({ length: 6 }).map((_, row) => (
           <div key={row} className="grid grid-cols-5 gap-1" role="row">
             {Array.from({ length: 5 }).map((_, col) => renderCell(row, col))}
+          </div>
+        ))}
+      </div>
+
+      <div className="space-y-1" aria-label="Keyboard">
+        {keyboardRows.map((row) => (
+          <div key={row} className="flex justify-center space-x-1">
+            {row.split('').map((ch) => renderKey(ch))}
           </div>
         ))}
       </div>
@@ -445,6 +514,16 @@ const Wordle = () => {
       </div>
 
       <div className="flex flex-col items-center space-y-1">
+        <div className="text-sm">
+          Played: {stats.played} | Win %:{' '}
+          {stats.played ? Math.round((stats.won / stats.played) * 100) : 0}
+        </div>
+        <div className="text-xs">
+          Guess dist: {Array.from({ length: 6 })
+            .map((_, i) => `${i + 1}:${stats.guessDist[i + 1]}`)
+            .join(' ')}{' '}
+          X:{stats.guessDist.fail}
+        </div>
         <div className="text-sm">
           Current streak: {streak.current} (max: {streak.max})
         </div>
