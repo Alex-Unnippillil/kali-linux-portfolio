@@ -20,7 +20,7 @@ Checking the **Live fetch** box sends a limited request to the schema's `fetchUr
 
 ## Data Storage
 
-- API keys are persisted in `localStorage` under the key `reconng-api-keys`.
+ - Per-module API keys are persisted in `localStorage` under the key `reconng-api-keys` and inputs are masked by default.
 - Workspace graphs and entity sets exist only in memory but can be exported as CSV or JSON.
 - Static marketplace and chain data live in the `public/` directory.
 

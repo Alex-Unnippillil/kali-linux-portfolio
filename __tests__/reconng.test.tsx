@@ -29,6 +29,13 @@ describe('ReconNG app', () => {
     });
   });
 
+  it('hides API keys by default', async () => {
+    render(<ReconNG />);
+    await userEvent.click(screen.getByText('Settings'));
+    const input = screen.getByPlaceholderText('DNS Enumeration API Key');
+    expect(input).toHaveAttribute('type', 'password');
+  });
+
   it('loads marketplace modules', async () => {
     render(<ReconNG />);
     await userEvent.click(screen.getByText('Marketplace'));
