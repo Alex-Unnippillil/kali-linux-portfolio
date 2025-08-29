@@ -14,12 +14,6 @@ import useScheduledTweets, {
   ScheduledTweet,
 } from './state/scheduled';
 
-declare global {
-  interface Window {
-    twttr?: any;
-  }
-}
-
 export default function XTimeline() {
   const { accent } = useSettings();
   const [profilePresets, setProfilePresets] = usePersistentState<string[]>(

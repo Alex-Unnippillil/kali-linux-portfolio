@@ -3,13 +3,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import copyToClipboard from '../../../utils/clipboard';
 
-declare global {
-  interface Window {
-    YT: any;
-    onYouTubeIframeAPIReady: () => void;
-  }
-}
-
 function extractVideoId(input: string): string {
   try {
     const url = new URL(input);
