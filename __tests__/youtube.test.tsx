@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import YouTubeApp from '../components/apps/youtube';
 
@@ -49,6 +49,31 @@ describe('YouTube search app', () => {
     );
     expect(stored).toHaveLength(1);
     expect(stored[0].id).toBe('a');
+  });
+
+  it('renders watch later playlist from storage', () => {
+    window.localStorage.setItem('youtube:watch-later', JSON.stringify(mockVideos));
+    render(<YouTubeApp initialResults={[]} />);
+    const list = within(screen.getByTestId('watch-later-list'));
+    expect(list.getByText('Video A')).toBeInTheDocument();
+    expect(list.getByText('Video B')).toBeInTheDocument();
+  });
+
+  it('reorders watch later with keyboard', async () => {
+    const user = userEvent.setup();
+    render(<YouTubeApp initialResults={mockVideos} />);
+    const laterButtons = screen.getAllByRole('button', { name: 'Later' });
+    await user.click(laterButtons[0]);
+    await user.click(laterButtons[1]);
+
+    const list = screen.getByTestId('watch-later-list');
+    const first = within(list).getByText('Video A').parentElement as HTMLElement;
+    fireEvent.keyDown(first, { key: 'ArrowDown' });
+    await waitFor(() => {
+      const items = within(list).getAllByText(/Video/);
+      expect(items[0].textContent).toBe('Video B');
+      expect(items[1].textContent).toBe('Video A');
+    });
   });
 });
 

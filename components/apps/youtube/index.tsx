@@ -1,6 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import useWatchLater, {
+  Video as WatchLaterVideo,
+} from '../../../apps/youtube/state/watchLater';
 
 declare global {
   interface Window {
@@ -9,15 +12,7 @@ declare global {
   }
 }
 
-interface Video {
-  id: string;
-  title: string;
-  thumbnail: string;
-  channelName: string;
-  channelId: string;
-}
-
-const WATCH_LATER_KEY = 'youtube:watch-later';
+type Video = WatchLaterVideo;
 
 interface Props {
   initialResults?: Video[];
@@ -68,11 +63,29 @@ function Sidebar({
   queue,
   watchLater,
   onPlay,
+  onReorder,
 }: {
   queue: Video[];
   watchLater: Video[];
   onPlay: (v: Video) => void;
+  onReorder: (from: number, to: number) => void;
 }) {
+  const handleKey = (index: number, e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'ArrowUp' && index > 0) {
+      e.preventDefault();
+      onReorder(index, index - 1);
+    } else if (e.key === 'ArrowDown' && index < watchLater.length - 1) {
+      e.preventDefault();
+      onReorder(index, index + 1);
+    }
+  };
+
+  const handleDrop = (index: number, e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const from = Number(e.dataTransfer.getData('text/plain'));
+    if (!Number.isNaN(from)) onReorder(from, index);
+  };
+
   return (
     <aside className="w-64 overflow-y-auto border-l border-gray-700 bg-gray-800 p-2 text-sm" role="complementary">
       <h2 className="mb-2 text-lg font-semibold">Queue</h2>
@@ -91,11 +104,17 @@ function Sidebar({
       </div>
       <h2 className="mb-2 mt-4 text-lg font-semibold">Watch Later</h2>
       <div data-testid="watch-later-list">
-        {watchLater.map((v) => (
+        {watchLater.map((v, i) => (
           <div
             key={v.id}
             className="mb-2 cursor-pointer"
             onClick={() => onPlay(v)}
+            draggable
+            onDragStart={(e) => e.dataTransfer.setData('text/plain', String(i))}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => handleDrop(i, e)}
+            tabIndex={0}
+            onKeyDown={(e) => handleKey(i, e)}
           >
             <img src={v.thumbnail} alt="" className="h-24 w-full rounded object-cover" />
             <div>{v.title}</div>
@@ -195,7 +214,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const [results, setResults] = useState<Video[]>(initialResults);
   const [current, setCurrent] = useState<Video | null>(null);
   const [queue, setQueue] = useState<Video[]>([]);
-  const [watchLater, setWatchLater] = useState<Video[]>([]);
+  const [watchLater, setWatchLater] = useWatchLater();
   const searchRef = useRef<HTMLInputElement>(null);
   const playerRef = useRef<any>(null);
   const playerDivRef = useRef<HTMLDivElement>(null);
@@ -207,16 +226,6 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const [looping, setLooping] = useState(false);
   const [theater, setTheater] = useState(false);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const saved = window.localStorage.getItem(WATCH_LATER_KEY);
-    if (saved) setWatchLater(JSON.parse(saved));
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(WATCH_LATER_KEY, JSON.stringify(watchLater));
-  }, [watchLater]);
 
   useEffect(() => {
     if (!current) return;
@@ -323,6 +332,17 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
     (v: Video) =>
       setWatchLater((w) => (w.some((x) => x.id === v.id) ? w : [...w, v])),
     []
+  );
+  const moveWatchLater = useCallback(
+    (from: number, to: number) => {
+      setWatchLater((list) => {
+        const next = [...list];
+        const [item] = next.splice(from, 1);
+        next.splice(to, 0, item);
+        return next;
+      });
+    },
+    [setWatchLater],
   );
   const playNext = useCallback(() => {
     setQueue((q) => {
@@ -445,7 +465,12 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
           onWatchLater={addWatchLater}
         />
       </div>
-      <Sidebar queue={queue} watchLater={watchLater} onPlay={setCurrent} />
+      <Sidebar
+        queue={queue}
+        watchLater={watchLater}
+        onPlay={setCurrent}
+        onReorder={moveWatchLater}
+      />
     </div>
   );
 }
