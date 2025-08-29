@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
-const SNIPPET = [
+const DEFAULT_SNIPPET = [
   { pseudo: 'int square(int x) {', asm: 'square:' },
   { pseudo: '  return x * x;', asm: '  imul eax, edi, edi' },
   { pseudo: '}', asm: '  ret' },
@@ -8,6 +8,16 @@ const SNIPPET = [
 
 export default function PseudoDisasmViewer() {
   const [hover, setHover] = useState(null);
+  const [snippet, setSnippet] = useState(DEFAULT_SNIPPET);
+
+  useEffect(() => {
+    fetch('/demo-data/ghidra/pseudocode.json')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.snippet) setSnippet(data.snippet);
+      })
+      .catch(() => {});
+  }, []);
 
   const handleCopy = (text) => {
     if (navigator && navigator.clipboard) {
@@ -21,7 +31,7 @@ export default function PseudoDisasmViewer() {
       aria-describedby={descId}
       className="w-1/2 overflow-auto p-2 whitespace-pre-wrap"
     >
-      {SNIPPET.map((line, idx) => (
+      {snippet.map((line, idx) => (
         <div
           key={`${key}-${idx}`}
           onMouseEnter={() => setHover(idx)}

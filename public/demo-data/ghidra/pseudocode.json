@@ -1,0 +1,7 @@
+{
+  "snippet": [
+    { "pseudo": "int square(int x) {", "asm": "square:" },
+    { "pseudo": "  return x * x;", "asm": "  imul eax, edi, edi" },
+    { "pseudo": "}", "asm": "  ret" }
+  ]
+}

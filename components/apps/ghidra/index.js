@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import PseudoDisasmViewer from './PseudoDisasmViewer';
 import FunctionTree from './FunctionTree';
+import CallGraph from './CallGraph';
 
 // Applies S1–S8 guidelines for responsive and accessible binary analysis UI
 const DEFAULT_WASM = '/wasm/ghidra.wasm';
@@ -76,6 +77,8 @@ export default function GhidraApp() {
   const [strings, setStrings] = useState([]);
   const [selectedString, setSelectedString] = useState(null);
   const [stringNotes, setStringNotes] = useState({});
+  const [stringQuery, setStringQuery] = useState('');
+  const [lineNotes, setLineNotes] = useState({});
 
   // S1: Graceful remote fallback when WebAssembly is unavailable
   useEffect(() => {
@@ -203,6 +206,9 @@ export default function GhidraApp() {
   const filteredFunctions = functions.filter((f) =>
     f.name.toLowerCase().includes(query.toLowerCase())
   );
+  const filteredStrings = strings.filter((s) =>
+    s.value.toLowerCase().includes(stringQuery.toLowerCase())
+  );
 
   return (
     <div className="w-full h-full flex flex-col bg-gray-900 text-gray-100">
@@ -250,19 +256,40 @@ export default function GhidraApp() {
         >
           {currentFunc.code.map((line, idx) => {
             const m = line.match(/call\s+(\w+)/);
+            let codeElem;
             if (m && funcMap[m[1]]) {
               const target = m[1];
-              return (
+              codeElem = (
                 <div
-                  key={idx}
                   onClick={() => setSelected(target)}
                   className="cursor-pointer text-blue-400 hover:underline"
                 >
                   {line}
                 </div>
               );
+            } else {
+              codeElem = <div>{line}</div>;
             }
-            return <div key={idx}>{line}</div>;
+            const note = lineNotes[selected]?.[idx] || '';
+            return (
+              <div key={idx} className="flex items-start">
+                <div className="flex-1">{codeElem}</div>
+                <input
+                  value={note}
+                  onChange={(e) =>
+                    setLineNotes({
+                      ...lineNotes,
+                      [selected]: {
+                        ...(lineNotes[selected] || {}),
+                        [idx]: e.target.value,
+                      },
+                    })
+                  }
+                  placeholder="note"
+                  className="ml-2 w-24 text-xs text-black rounded"
+                />
+              </div>
+            );
           })}
           {(xrefs[selected] || []).length > 0 && (
             <div className="mt-2 text-xs">
@@ -288,6 +315,13 @@ export default function GhidraApp() {
         </pre>
       </div>
       <PseudoDisasmViewer />
+      <div className="h-48 border-t border-gray-700">
+        <CallGraph
+          func={currentFunc}
+          callers={xrefs[selected] || []}
+          onSelect={setSelected}
+        />
+      </div>
       <div className="border-t border-gray-700 p-2">
         <label className="block text-sm mb-1">
           Notes for {selected || 'function'}
@@ -302,8 +336,15 @@ export default function GhidraApp() {
       </div>
       <div className="flex border-t border-gray-700 h-40">
         <div className="w-1/2 overflow-auto p-2">
+          <input
+            type="text"
+            value={stringQuery}
+            onChange={(e) => setStringQuery(e.target.value)}
+            placeholder="Search strings"
+            className="w-full mb-2 p-1 rounded text-black"
+          />
           <ul className="text-sm space-y-1">
-            {strings.map((s) => (
+            {filteredStrings.map((s) => (
               <li key={s.id}>
                 <button
                   onClick={() => setSelectedString(s.id)}
