@@ -7,6 +7,7 @@ import React, {
 import dynamic from 'next/dynamic';
 import usePersistentState from '../../hooks/usePersistentState';
 import ReportTemplates from './components/ReportTemplates';
+import { useSettings } from '../../../hooks/useSettings';
 
 const CytoscapeComponent = dynamic(
   async () => {
@@ -133,6 +134,7 @@ const createWorkspace = (index) => ({
 });
 
 const ReconNG = () => {
+  const { allowNetwork } = useSettings();
   const [selectedModule, setSelectedModule] = useState(modules[0]);
   const [target, setTarget] = useState('');
   const [output, setOutput] = useState('');
@@ -152,21 +154,20 @@ const ReconNG = () => {
   const currentWorkspace = workspaces[activeWs];
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const originalFetch = window.fetch.bind(window);
-      window.fetch = (input, init) => {
-        const url = typeof input === 'string' ? input : input.url;
-        if (/^https?:/i.test(url) && !url.startsWith(window.location.origin) && !url.startsWith('/')) {
-          return Promise.reject(new Error('Outbound requests blocked'));
-        }
-        return originalFetch(input, init);
-      };
-      return () => {
-        window.fetch = originalFetch;
-      };
-    }
-    return undefined;
-  }, []);
+    if (typeof window === 'undefined') return undefined;
+    if (allowNetwork) return undefined;
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      const url = typeof input === 'string' ? input : input.url;
+      if (/^https?:/i.test(url) && !url.startsWith(window.location.origin) && !url.startsWith('/')) {
+        return Promise.reject(new Error('Outbound requests blocked'));
+      }
+      return originalFetch(input, init);
+    };
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, [allowNetwork]);
 
   useEffect(() => {
     fetch('/reconng-marketplace.json')
