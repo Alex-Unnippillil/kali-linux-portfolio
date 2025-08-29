@@ -21,6 +21,7 @@ const ForceGraph2D = dynamic(
 const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
   const fgRef = useRef<any>();
   const [center, setCenter] = useState({ x: 0, y: 0 });
+  const [selected, setSelected] = useState<Block | null>(null);
   const [colors, setColors] = useState({
     bg: '#000',
     surface: '#374151',
@@ -103,22 +104,27 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
     ctx.closePath();
   };
 
-  const nodeCanvasObject = (node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
+  const nodeCanvasObject = (
+    node: any,
+    ctx: CanvasRenderingContext2D,
+    globalScale: number
+  ) => {
     const label = node.id;
     const fontSize = 12 / globalScale;
+    const isSelected = selected && selected.addr === node.id;
     ctx.font = `${fontSize}px Sans-Serif`;
     const textWidth = ctx.measureText(label).width;
     const width = textWidth + 8;
     const height = fontSize + 6;
     const x = node.x - width / 2;
     const y = node.y - height / 2;
-    ctx.fillStyle = colors.surface;
+    ctx.fillStyle = isSelected ? colors.accent : colors.surface;
     ctx.strokeStyle = colors.accent;
     ctx.lineWidth = 1;
     roundRect(ctx, x, y, width, height, 6);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = colors.text;
+    ctx.fillStyle = isSelected ? '#000' : colors.text;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(label, node.x, node.y);
@@ -141,6 +147,33 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
     roundRect(ctx, x, y, width, height, 6);
     ctx.fillStyle = color;
     ctx.fill();
+  };
+
+  const handleNodeClick = (node: any) => {
+    const block = blocks.find((b) => b.addr === node.id) || null;
+    setSelected(block);
+  };
+
+  const linkColor = (link: any) => {
+    if (
+      selected &&
+      typeof link.source !== 'string' &&
+      link.source.id === selected.addr
+    ) {
+      return colors.accent;
+    }
+    return colors.border;
+  };
+
+  const linkWidth = (link: any) => {
+    if (
+      selected &&
+      typeof link.source !== 'string' &&
+      link.source.id === selected.addr
+    ) {
+      return 2;
+    }
+    return 1;
   };
 
   return (
@@ -197,11 +230,27 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
           ref={fgRef}
           graphData={graphData}
           backgroundColor={colors.surface}
-          linkColor={() => colors.border}
+          linkColor={linkColor}
+          linkWidth={linkWidth}
           nodeCanvasObject={nodeCanvasObject}
           nodePointerAreaPaint={nodePointerAreaPaint}
+          onNodeClick={handleNodeClick}
         />
       </div>
+      {selected && (
+        <div
+          className="mt-2 p-2 rounded text-sm"
+          style={{
+            backgroundColor: 'var(--r2-surface)',
+            border: '1px solid var(--r2-border)',
+          }}
+        >
+          <div>Block: {selected.addr}</div>
+          <div>
+            Outgoing edges: {selected.edges?.join(', ') || 'None'}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

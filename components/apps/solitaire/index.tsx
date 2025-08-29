@@ -7,6 +7,7 @@ import {
   moveTableauToTableau,
   moveWasteToTableau,
   moveToFoundation,
+  autoComplete,
   valueToString,
   GameState,
   Card,
@@ -592,10 +593,22 @@ const Solitaire = () => {
       game.stock.length === 0 &&
       game.tableau.every((p) => p.every((c) => c.faceUp))
     ) {
+      if (prefersReducedMotion) {
+        // When animations are disabled we can instantly finish the game using
+        // the engine's autoComplete helper.
+        setGame((g) => autoComplete(g));
+        return;
+      }
       setAutoCompleting(true);
       autoCompleteNext(game);
     }
-  }, [game, autoCompleteNext, autoCompleting]);
+  }, [
+    game,
+    autoCompleteNext,
+    autoCompleting,
+    prefersReducedMotion,
+    setGame,
+  ]);
   if (variant !== 'klondike') {
     return (
       <div className="h-full w-full bg-green-700 text-white select-none p-2">

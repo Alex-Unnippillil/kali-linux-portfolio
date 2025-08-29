@@ -19,9 +19,21 @@ export default function Converter() {
   const [fromValue, setFromValue] = useState('');
   const [toValue, setToValue] = useState('');
   const [focused, setFocused] = useState<'from' | 'to' | null>(null);
+  const HISTORY_KEY = 'converter-history';
   const [history, setHistory] = useState<
     { fromValue: string; fromUnit: string; toValue: string; toUnit: string }[]
   >([]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(HISTORY_KEY);
+    if (saved) {
+      try {
+        setHistory(JSON.parse(saved));
+      } catch {
+        /* ignore bad data */
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -56,9 +68,13 @@ export default function Converter() {
     toVal: string,
     toU: string,
   ) =>
-    setHistory((h) =>
-      [{ fromValue: fromVal, fromUnit: fromU, toValue: toVal, toUnit: toU }, ...h].slice(0, 20),
-    );
+    setHistory((h) => {
+      const newHistory = (
+        [{ fromValue: fromVal, fromUnit: fromU, toValue: toVal, toUnit: toU }, ...h]
+      ).slice(0, 10);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
+      return newHistory;
+    });
 
   const convertFrom = (val: string) => {
     setFromValue(val);

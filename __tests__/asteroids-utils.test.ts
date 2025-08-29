@@ -8,6 +8,8 @@ import {
   handleBulletAsteroidCollision,
   spawnPowerUp,
   applyPowerUp,
+  addToInventory,
+  useInventory,
   POWER_UPS,
 } from '../components/apps/asteroids-utils';
 
@@ -93,5 +95,21 @@ describe('power-ups', () => {
     expect(lives).toBe(4);
     lives = applyPowerUp({ type: POWER_UPS.RAPID_FIRE }, ship, lives, 50, 40);
     expect(ship.rapidFire).toBe(40);
+  });
+});
+
+describe('inventory', () => {
+  it('stores and uses power-ups', () => {
+    const inv: string[] = [];
+    addToInventory(inv, POWER_UPS.SHIELD);
+    addToInventory(inv, POWER_UPS.EXTRA_LIFE);
+    const ship: any = { shield: 0, rapidFire: 0 };
+    let lives = 3;
+    lives = useInventory(inv, 0, ship, lives, 50, 30);
+    expect(ship.shield).toBe(50);
+    expect(inv).toHaveLength(1);
+    lives = useInventory(inv, 0, ship, lives, 50, 30);
+    expect(lives).toBe(4);
+    expect(inv).toHaveLength(0);
   });
 });

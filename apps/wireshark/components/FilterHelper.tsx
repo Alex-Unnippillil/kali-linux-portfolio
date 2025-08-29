@@ -19,6 +19,7 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
 
   const allPresets = [...customPresets, ...presets];
 
+
   const suggestions = Array.from(
     new Set([
       ...recent,
@@ -45,14 +46,10 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
     }
   };
 
-  const handlePresetSelect = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    const val = e.target.value;
-    if (!val) return;
-    onChange(val);
-    setRecent((prev) => [val, ...prev.filter((f) => f !== val)].slice(0, 5));
-    e.target.selectedIndex = 0;
+  const handlePresetClick = (expression: string) => {
+    onChange(expression);
+    setRecent((prev) => [expression, ...prev.filter((f) => f !== expression)].slice(0, 5));
+    setApplied((prev) => ({ ...prev, [expression]: true }));
   };
 
   const handleSavePreset = () => {
@@ -87,8 +84,9 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
           <option key={label} value={expression}>
             {label}
           </option>
+
         ))}
-      </select>
+      </div>
       <input
         list="display-filter-suggestions"
         value={value}

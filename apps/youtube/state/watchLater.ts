@@ -6,6 +6,9 @@ export interface Video {
   thumbnail: string;
   channelName: string;
   channelId: string;
+  start?: number;
+  end?: number;
+  name?: string;
 }
 
 const WATCH_LATER_KEY = 'youtube:watch-later';
@@ -17,7 +20,10 @@ function isVideo(v: any): v is Video {
     typeof v.title === 'string' &&
     typeof v.thumbnail === 'string' &&
     typeof v.channelName === 'string' &&
-    typeof v.channelId === 'string'
+    typeof v.channelId === 'string' &&
+    (v.start === undefined || typeof v.start === 'number') &&
+    (v.end === undefined || typeof v.end === 'number') &&
+    (v.name === undefined || typeof v.name === 'string')
   );
 }
 

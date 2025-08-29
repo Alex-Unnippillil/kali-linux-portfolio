@@ -20,6 +20,9 @@ export interface OPFSHook {
     name: string,
     dir?: FileSystemDirectoryHandle | null,
   ) => Promise<boolean>;
+  listFiles: (
+    dir?: FileSystemDirectoryHandle | null,
+  ) => Promise<FileSystemFileHandle[]>;
 }
 
 export default function useOPFS(): OPFSHook {
@@ -111,6 +114,20 @@ export default function useOPFS(): OPFSHook {
     [root],
   );
 
-  return { supported, root, getDir, readFile, writeFile, deleteFile };
+  const listFiles = useCallback<OPFSHook['listFiles']>(
+    async (dir: FileSystemDirectoryHandle | null | undefined = root) => {
+      if (!dir) return [];
+      const files: FileSystemFileHandle[] = [];
+      try {
+        for await (const entry of dir.values()) {
+          if (entry.kind === 'file') files.push(entry as FileSystemFileHandle);
+        }
+      } catch {}
+      return files;
+    },
+    [root],
+  );
+
+  return { supported, root, getDir, readFile, writeFile, deleteFile, listFiles };
 }
 

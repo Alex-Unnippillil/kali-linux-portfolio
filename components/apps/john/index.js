@@ -7,6 +7,7 @@ import {
   parsePotfile,
 } from './utils';
 import FormError from '../../ui/FormError';
+import StatsChart from '../../StatsChart';
 
 // Enhanced John the Ripper interface that supports rule uploads,
 // basic hash analysis and mock distribution of cracking tasks.
@@ -171,24 +172,6 @@ const JohnApp = () => {
     if (hours < 24) return `${hours.toFixed(2)}h`;
     const days = hours / 24;
     return `${days.toFixed(2)}d`;
-  };
-
-  const StatsChart = ({ count, time }) => {
-    const max = Math.max(count, time, 1);
-    const cH = (count / max) * 80;
-    const tH = (time / max) * 80;
-    return (
-      <svg viewBox="0 0 120 100" className="w-full h-24 mt-2">
-        <rect x="10" y={90 - cH} width="40" height={cH} fill="#10b981" />
-        <rect x="70" y={90 - tH} width="40" height={tH} fill="#3b82f6" />
-        <text x="30" y="95" textAnchor="middle" fontSize="8" fill="white">
-          candidates
-        </text>
-        <text x="90" y="95" textAnchor="middle" fontSize="8" fill="white">
-          seconds
-        </text>
-      </svg>
-    );
   };
 
   const handleModeChange = (e) => {

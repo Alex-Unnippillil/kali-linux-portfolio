@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 const algorithms = [
+  'MD5',
   'SHA-1',
   'SHA-256',
   'SHA-384',

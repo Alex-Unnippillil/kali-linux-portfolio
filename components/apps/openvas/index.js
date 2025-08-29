@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import chartData from './chart-data.json';
 import TaskOverview from './task-overview';
 import PolicySettings from './policy-settings';
 import pciProfile from './templates/pci.json';
@@ -27,7 +26,7 @@ const escapeHtml = (str = '') =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
-const SeverityChart = ({ data }) => {
+const SeverityChart = ({ data, selected, onSelect }) => {
   const levels = ['low', 'medium', 'high', 'critical'];
   const max = Math.max(...levels.map((l) => data[l] || 0), 1);
   return (
@@ -42,6 +41,14 @@ const SeverityChart = ({ data }) => {
         const height = (value / max) * 50;
         const x = i * 24 + 5;
         const y = 55 - height;
+        const isSelected = selected === level;
+        const handle = () => onSelect && onSelect(level);
+        const handleKeyDown = (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handle();
+          }
+        };
         return (
           <g key={level}>
             <rect
@@ -49,7 +56,14 @@ const SeverityChart = ({ data }) => {
               y={y}
               width="20"
               height={height}
-              className={severityColors[level]}
+              className={`${severityColors[level]} ${onSelect ? 'cursor-pointer' : ''} ${
+                isSelected ? 'stroke-white stroke-2' : ''
+              }`}
+              role={onSelect ? 'button' : undefined}
+              tabIndex={onSelect ? 0 : undefined}
+              aria-label={`${value} ${level} findings`}
+              onClick={handle}
+              onKeyDown={handleKeyDown}
             />
             <text
               x={x + 10}
@@ -137,6 +151,26 @@ const hostReports = [
   },
 ];
 
+// Persist in-progress scans so they can resume after reload
+const loadSession = () => {
+  if (typeof window === 'undefined') return null;
+  try {
+    return JSON.parse(localStorage.getItem('openvas/session') || 'null');
+  } catch {
+    return null;
+  }
+};
+
+const saveSession = (session) => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('openvas/session', JSON.stringify(session));
+};
+
+const clearSession = () => {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('openvas/session');
+};
+
 const OpenVASApp = () => {
   const [target, setTarget] = useState('');
   const [group, setGroup] = useState('');
@@ -153,6 +187,7 @@ const OpenVASApp = () => {
   const [activeHost, setActiveHost] = useState(null);
   const workerRef = useRef(null);
   const reduceMotion = useRef(false);
+  const sessionRef = useRef({});
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -162,13 +197,30 @@ const OpenVASApp = () => {
         workerRef.current = new Worker(new URL('./openvas.worker.js', import.meta.url));
         workerRef.current.onmessage = (e) => {
           const { type, data } = e.data || {};
-          if (type === 'progress') setProgress(data);
+          if (type === 'progress') {
+            setProgress(data);
+            saveSession({ ...sessionRef.current, progress: data });
+          }
           if (type === 'result')
             setFindings(data.map((f) => ({ ...f, remediation: remediationMap[f.severity] })));
         };
       }
+
+      const session = loadSession();
+      if (session) {
+        sessionRef.current = session;
+        setTarget(session.target || '');
+        setGroup(session.group || '');
+        setProfile(session.profile || 'PCI');
+        setProgress(session.progress || 0);
+        if (session.target && session.progress < 1) {
+          runScan(session.target, session.group || '', session.profile || 'PCI');
+        }
+      }
     }
     return () => workerRef.current?.terminate();
+    // runScan is stable
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const generateSummary = (data) => {
@@ -177,27 +229,38 @@ const OpenVASApp = () => {
     setSummaryUrl(URL.createObjectURL(blob));
   };
 
-  const runScan = async () => {
-    if (!target) return;
+  const runScan = async (
+    t = target,
+    g = group,
+    p = profile,
+  ) => {
+    if (!t) return;
+    sessionRef.current = { target: t, group: g, profile: p };
+    saveSession({ ...sessionRef.current, progress: 0 });
+    setTarget(t);
+    setGroup(g);
+    setProfile(p);
     setLoading(true);
     setProgress(0);
     setOutput('');
     setSummaryUrl(null);
     try {
       const res = await fetch(
-        `/api/openvas?target=${encodeURIComponent(target)}&group=${encodeURIComponent(group)}&profile=${encodeURIComponent(profile)}`
+        `/api/openvas?target=${encodeURIComponent(t)}&group=${encodeURIComponent(g)}&profile=${encodeURIComponent(p)}`
       );
       if (!res.ok) throw new Error(`Request failed with ${res.status}`);
       const data = await res.text();
       setOutput(data);
       workerRef.current?.postMessage({ text: data });
       generateSummary(data);
-      notify('OpenVAS Scan Complete', `Target ${target} finished`);
+      notify('OpenVAS Scan Complete', `Target ${t} finished`);
     } catch (e) {
       setOutput(e.message);
       notify('OpenVAS Scan Failed', e.message);
     } finally {
       setLoading(false);
+      clearSession();
+      sessionRef.current = {};
     }
   };
 
@@ -240,6 +303,11 @@ const OpenVASApp = () => {
     severity === 'All'
       ? filteredFindings
       : filteredFindings.filter((f) => f.severity === severity.toLowerCase());
+
+  const severityCounts = findings.reduce((acc, f) => {
+    acc[f.severity] = (acc[f.severity] || 0) + 1;
+    return acc;
+  }, {});
 
   const matrix = ['low', 'medium', 'high', 'critical'].map((likelihood) =>
     ['low', 'medium', 'high', 'critical'].map((impact) =>
@@ -314,7 +382,7 @@ const OpenVASApp = () => {
         </select>
         <button
           type="button"
-          onClick={runScan}
+          onClick={() => runScan()}
           disabled={loading}
           className="px-4 py-2 bg-green-600 rounded disabled:opacity-50"
         >
@@ -329,7 +397,17 @@ const OpenVASApp = () => {
           />
         </div>
       )}
-      <SeverityChart data={chartData} />
+      <SeverityChart
+        data={severityCounts}
+        selected={severity === 'All' ? null : severity.toLowerCase()}
+        onSelect={(level) =>
+          handleSeverityChange(
+            severity.toLowerCase() === level
+              ? 'All'
+              : level.charAt(0).toUpperCase() + level.slice(1)
+          )
+        }
+      />
       {findings.length > 0 && (
         <div className="mb-4">
           <div className="grid grid-cols-5 gap-1 text-center">

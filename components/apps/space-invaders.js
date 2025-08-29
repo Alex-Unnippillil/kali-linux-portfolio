@@ -35,6 +35,7 @@ const SpaceInvaders = () => {
   const enemyCooldown = useRef(1);
   const baseInterval = 0.6;
   const stepTimer = useRef(0);
+  const waveTime = useRef(0);
   const playerBullets = useRef([]);
   const enemyBullets = useRef([]);
   const particles = useRef([]); // explosion particles
@@ -191,11 +192,25 @@ const SpaceInvaders = () => {
     playerBullets.current = createBulletPool(20, -200);
     enemyBullets.current = createBulletPool(50, 200);
 
-    const createShelters = () => [
-      { x: w * 0.2 - 20, y: h - 60, w: 40, h: 20, hp: 6 },
-      { x: w * 0.5 - 20, y: h - 60, w: 40, h: 20, hp: 6 },
-      { x: w * 0.8 - 20, y: h - 60, w: 40, h: 20, hp: 6 },
-    ];
+    const createShelters = () => {
+      const positions = [w * 0.2 - 20, w * 0.5 - 20, w * 0.8 - 20];
+      const tiles = [];
+      const tileSize = 10;
+      positions.forEach((baseX) => {
+        for (let r = 0; r < 2; r += 1) {
+          for (let c = 0; c < 4; c += 1) {
+            tiles.push({
+              x: baseX + c * tileSize,
+              y: h - 60 + r * tileSize,
+              w: tileSize,
+              h: tileSize,
+              hp: 3,
+            });
+          }
+        }
+      });
+      return tiles;
+    };
 
     const spacing = 30;
 
@@ -240,6 +255,7 @@ const SpaceInvaders = () => {
       player.current.shield = false;
       player.current.shieldHp = 0;
       player.current.rapid = 0;
+      waveTime.current = 0;
 
       playerBullets.current.forEach((b) => {
         b.active = false;
@@ -384,6 +400,8 @@ const SpaceInvaders = () => {
         reqRef.current = requestAnimationFrame(loop);
         return;
       }
+
+      waveTime.current += dt;
 
       const p = player.current;
       p.cooldown = Math.max(0, p.cooldown - dt);
@@ -551,30 +569,33 @@ const SpaceInvaders = () => {
           loseLife();
           return requestAnimationFrame(loop);
         }
-        for (const s of shelters.current) {
-          if (
-            s.hp > 0 &&
-            b.x >= s.x &&
-            b.x <= s.x + s.w &&
-            b.y >= s.y &&
-            b.y <= s.y + s.h
-          ) {
-            s.hp -= 1;
-            b.active = false;
-            break;
-          }
+      for (const s of shelters.current) {
+        if (
+          s.hp > 0 &&
+          b.x >= s.x &&
+          b.x <= s.x + s.w &&
+          b.y >= s.y &&
+          b.y <= s.y + s.h
+        ) {
+          s.hp -= 1;
+          b.active = false;
+          break;
         }
       }
+    }
 
-      if (!boss.current.active) {
-        const aliveCount = aliveInv.length;
+    shelters.current = shelters.current.filter((s) => s.hp > 0);
+
+    if (!boss.current.active) {
+      const aliveCount = aliveInv.length;
         const aliveRatio = aliveCount / initialCount.current || 1;
         let lowest = 0;
         for (const inv of aliveInv) if (inv.y > lowest) lowest = inv.y;
         const descent = lowest / h;
+        const timeFactor = 1 + waveTime.current * 0.05;
         const interval =
           (baseInterval * aliveRatio) /
-          (stageRef.current * (1 + descent) * difficultyRef.current);
+          (stageRef.current * (1 + descent) * difficultyRef.current * timeFactor);
         stepTimer.current += dt;
         if (stepTimer.current >= interval) {
           stepTimer.current -= interval;
@@ -709,7 +730,7 @@ const SpaceInvaders = () => {
 
       shelters.current.forEach((s) => {
         if (s.hp > 0) {
-          const shade = ['#555', '#666', '#777', '#888', '#aaa', '#ccc'][s.hp - 1];
+          const shade = ['#555', '#888', '#ccc'][s.hp - 1];
           ctx.fillStyle = shade;
           ctx.fillRect(s.x, s.y, s.w, s.h);
         }

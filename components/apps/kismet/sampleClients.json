@@ -1,5 +1,13 @@
 [
-  {"mac": "00:11:22:33:44:55", "ssid": "HomeWiFi"},
-  {"mac": "66:77:88:99:AA:BB", "ssid": "CoffeeShopWiFi"},
-  {"mac": "AA:BB:CC:DD:EE:FF", "ssid": "FreeAirport"}
+  {"mac": "00:11:22:33:44:55", "history": [
+    {"ssid": "HomeWiFi", "bssid": "00:11:22:00:00:01"},
+    {"ssid": "CoffeeShopWiFi", "bssid": "66:77:88:00:00:01"}
+  ]},
+  {"mac": "66:77:88:99:AA:BB", "history": [
+    {"ssid": "CoffeeShopWiFi", "bssid": "66:77:88:00:00:01"},
+    {"ssid": "FreeAirport", "bssid": "AA:BB:CC:00:00:01"}
+  ]},
+  {"mac": "AA:BB:CC:DD:EE:FF", "history": [
+    {"ssid": "FreeAirport", "bssid": "AA:BB:CC:00:00:01"}
+  ]}
 ]

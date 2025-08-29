@@ -1,5 +1,6 @@
 import React from 'react';
 import FeedStatusCard from './feed-status-card';
+import TaskRunChart from './task-run-chart';
 
 const TaskOverview = () => {
   const tasks = [
@@ -13,7 +14,9 @@ const TaskOverview = () => {
       <FeedStatusCard />
       <div className="p-4 bg-gray-800 rounded">
         <h3 className="text-md font-bold mb-2">Demo Task Overview</h3>
-        <ul className="text-sm space-y-1">
+        <h4 className="text-sm font-bold mb-1">Run History</h4>
+        <TaskRunChart />
+        <ul className="text-sm space-y-1 mt-2">
           {tasks.map((t) => (
             <li key={t.name} className="flex justify-between">
               <span>{t.name}</span>
@@ -21,7 +24,9 @@ const TaskOverview = () => {
             </li>
           ))}
         </ul>
-        <p className="text-xs text-gray-400 mt-2">All task data is canned for demonstration purposes.</p>
+        <p className="text-xs text-gray-400 mt-2">
+          All task data is canned for demonstration purposes.
+        </p>
       </div>
     </div>
   );

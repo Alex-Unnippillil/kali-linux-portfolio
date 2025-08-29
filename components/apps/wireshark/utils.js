@@ -49,7 +49,7 @@ export const matchesDisplayFilter = (packet, filter) => {
     packet.dest.toLowerCase().includes(f) ||
     protocolName(packet.protocol).toLowerCase().includes(f) ||
     (packet.info || '').toLowerCase().includes(f) ||
-    (packet.decrypted || '').toLowerCase().includes(f)
+    (packet.plaintext || packet.decrypted || '').toLowerCase().includes(f)
   );
 };
 

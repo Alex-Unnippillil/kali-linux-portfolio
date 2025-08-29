@@ -20,6 +20,8 @@ const getRecaptchaToken = (siteKey: string): Promise<string> =>
     });
   });
 
+const QUEUE_KEY = 'input-hub-queue';
+
 const InputHub = () => {
   const router = useRouter();
   const [name, setName] = useState('');
@@ -78,6 +80,56 @@ const InputHub = () => {
     }
   }, []);
 
+  useEffect(() => {
+    const serviceId = process.env.NEXT_PUBLIC_SERVICE_ID as string;
+    const templateId = process.env.NEXT_PUBLIC_TEMPLATE_ID as string;
+    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
+
+    const flushQueue = async () => {
+      if (!emailjsReady || !navigator.onLine) return;
+      try {
+        const raw = localStorage.getItem(QUEUE_KEY);
+        const queue: any[] = raw ? JSON.parse(raw) : [];
+        for (const q of queue) {
+          const token = q.useCaptcha
+            ? await getRecaptchaToken(siteKey)
+            : '';
+          await emailjs.send(serviceId, templateId, {
+            name: q.name,
+            email: q.email,
+            subject: q.subject,
+            message: q.message,
+            'g-recaptcha-response': token,
+          });
+        }
+        if (queue.length) localStorage.removeItem(QUEUE_KEY);
+      } catch {
+        // ignore errors
+      }
+    };
+
+    window.addEventListener('online', flushQueue);
+    flushQueue();
+    return () => window.removeEventListener('online', flushQueue);
+  }, [emailjsReady]);
+
+  const enqueueMessage = (msg: {
+    name: string;
+    email: string;
+    subject: string;
+    message: string;
+    useCaptcha: boolean;
+  }) => {
+    try {
+      const raw = localStorage.getItem(QUEUE_KEY);
+      const queue = raw ? JSON.parse(raw) : [];
+      queue.push(msg);
+      localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+    } catch {
+      // ignore errors
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!emailjsReady) {
@@ -87,6 +139,14 @@ const InputHub = () => {
     const serviceId = process.env.NEXT_PUBLIC_SERVICE_ID as string;
     const templateId = process.env.NEXT_PUBLIC_TEMPLATE_ID as string;
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
+    if (!navigator.onLine) {
+      enqueueMessage({ name, email, subject, message, useCaptcha });
+      setStatus('Message queued; will send when online.');
+      setName('');
+      setEmail('');
+      setMessage('');
+      return;
+    }
     const token = useCaptcha ? await getRecaptchaToken(siteKey) : '';
     setStatus('Sending...');
     try {

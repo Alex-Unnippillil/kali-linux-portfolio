@@ -6,6 +6,7 @@ import {
   loadNotes,
   saveBookmarks,
   loadBookmarks,
+  extractStrings,
 } from '../components/apps/radare2/utils';
 
 describe('Radare2 utilities', () => {
@@ -49,5 +50,13 @@ describe('Radare2 utilities', () => {
     saveBookmarks('b.bin', bmB);
     expect(loadBookmarks('a.bin')).toEqual(bmA);
     expect(loadBookmarks('b.bin')).toEqual(bmB);
+  });
+
+  test('extracts ASCII and UTF-16 strings', () => {
+    const hex = '746573740068006900';
+    expect(extractStrings(hex, '0x1000')).toEqual([
+      { addr: '0x1000', text: 'test' },
+      { addr: '0x1005', text: 'hi' },
+    ]);
   });
 });

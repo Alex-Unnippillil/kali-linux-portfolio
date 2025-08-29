@@ -15,6 +15,7 @@
     "lint": "eslint --max-warnings=0 .",
     "a11y": "node scripts/a11y.mjs",
     "smoke": "node scripts/smoke-all-apps.mjs",
+    "module-report": "node scripts/generate-module-report.mjs",
     "build:sw": "node scripts/generate-sw.mjs"
   },
   "engines": {
@@ -37,6 +38,7 @@
     "chart.js": "^4.5.0",
     "chess.js": "^1.0.0",
     "chrono-node": "^2.8.4",
+    "cron-parser": "^5.3.0",
     "cytoscape": "^3.33.1",
     "cytoscape-cose-bilkent": "^4.1.0",
     "diff": "^5.1.0",

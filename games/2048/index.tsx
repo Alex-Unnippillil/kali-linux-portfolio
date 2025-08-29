@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import GameShell from '../../components/games/GameShell';
+import { toPng } from 'html-to-image';
+import useOPFSLeaderboard from '../../hooks/useOPFSLeaderboard';
 import {
   Board,
   SIZE,
@@ -66,6 +68,11 @@ const Game2048 = () => {
   const [lost, setLost] = useState(false);
   const [boardSize, setBoardSize] = useState(4);
   const [merged, setMerged] = useState<Array<[number, number]>>([]);
+  const [paused, setPaused] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const boardRef = useRef<HTMLDivElement>(null);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const { scores, addScore } = useOPFSLeaderboard('game_2048');
 
   // load best score from localStorage
   useEffect(() => {
@@ -119,7 +126,7 @@ const Game2048 = () => {
 
   const move = useCallback(
     (dir: 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown') => {
-      if (won || lost) return;
+      if (won || lost || paused) return;
       const fn =
         dir === 'ArrowLeft'
           ? moveLeft
@@ -149,11 +156,11 @@ const Game2048 = () => {
       if (hi >= 2048) setWon(true);
       else if (!hMoves(moved)) setLost(true);
     },
-    [board, best, won, lost, score]
+    [board, best, won, lost, score, paused]
   );
 
   const undo = useCallback(() => {
-    if (!history.length || undosLeft === 0) return;
+    if (!history.length || undosLeft === 0 || paused) return;
     const last = history[history.length - 1];
     deserialize(last.rng);
     setBoard(last.board.map((row) => [...row]));
@@ -167,6 +174,7 @@ const Game2048 = () => {
   // keyboard controls
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (paused) return;
       if ([
         'ArrowLeft',
         'ArrowRight',
@@ -187,7 +195,51 @@ const Game2048 = () => {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [move, undo, init]);
+  }, [move, undo, init, paused]);
+
+  // touch controls
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchStart.current = { x: t.clientX, y: t.clientY };
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStart.current || paused) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStart.current.x;
+    const dy = t.clientY - touchStart.current.y;
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+    if (Math.max(absX, absY) < 30) return;
+    if (absX > absY) {
+      move(dx > 0 ? 'ArrowRight' : 'ArrowLeft');
+    } else {
+      move(dy > 0 ? 'ArrowDown' : 'ArrowUp');
+    }
+    touchStart.current = null;
+  };
+
+  // record score when game ends
+  useEffect(() => {
+    if ((won || lost) && !submitted) {
+      addScore(score);
+      setSubmitted(true);
+    }
+    if (!won && !lost && submitted) setSubmitted(false);
+  }, [won, lost, score, addScore, submitted]);
+
+  const shareCard = useCallback(async () => {
+    if (!boardRef.current) return;
+    try {
+      const url = await toPng(boardRef.current);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = '2048-share.png';
+      link.click();
+    } catch {
+      /* ignore errors */
+    }
+  }, []);
 
   const currentSkin = SKINS[skin];
 
@@ -215,8 +267,15 @@ const Game2048 = () => {
   );
 
   return (
-    <GameShell settings={settings}>
-      <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
+    <GameShell
+      settings={settings}
+      onPause={() => setPaused(true)}
+      onResume={() => setPaused(false)}
+    >
+      <div
+        ref={boardRef}
+        className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4"
+      >
         <div className="flex space-x-2 items-center">
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
@@ -236,6 +295,12 @@ const Game2048 = () => {
             onClick={downloadReplay}
           >
             Download
+          </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={shareCard}
+          >
+            Share Card
           </button>
           <select
             className="text-black px-1 rounded"
@@ -258,6 +323,8 @@ const Game2048 = () => {
           </div>
         </div>
         <div
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
           className={`grid w-full max-w-sm ${
             boardSize === 5 ? 'grid-cols-5' : 'grid-cols-4'
           } gap-1.5`}
@@ -285,6 +352,21 @@ const Game2048 = () => {
         </div>
         {(won || lost) && (
           <div className="mt-4 text-xl">{won ? 'You win!' : 'Game over'}</div>
+        )}
+        <div className="text-sm text-gray-400">
+          Use arrow keys or swipe. U=Undo, R=Restart, Esc=Pause.
+        </div>
+        {scores.length > 0 && (
+          <div className="mt-4 text-sm">
+            <div className="font-bold">Leaderboard</div>
+            <ol className="list-decimal list-inside space-y-1">
+              {scores.map((s, i) => (
+                <li key={i}>
+                  {new Date(s.date).toLocaleDateString()}: {s.score}
+                </li>
+              ))}
+            </ol>
+          </div>
         )}
       </div>
     </GameShell>

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -16,6 +16,8 @@ import {
   setLargeHitAreas as saveLargeHitAreas,
   getPongSpin as loadPongSpin,
   setPongSpin as savePongSpin,
+  getAllowNetwork as loadAllowNetwork,
+  setAllowNetwork as saveAllowNetwork,
   defaults,
 } from '../utils/settingsStore';
 type Density = 'regular' | 'compact';
@@ -45,6 +47,7 @@ interface SettingsContextValue {
   highContrast: boolean;
   largeHitAreas: boolean;
   pongSpin: boolean;
+  allowNetwork: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -53,6 +56,7 @@ interface SettingsContextValue {
   setHighContrast: (value: boolean) => void;
   setLargeHitAreas: (value: boolean) => void;
   setPongSpin: (value: boolean) => void;
+  setAllowNetwork: (value: boolean) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -64,6 +68,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   highContrast: defaults.highContrast,
   largeHitAreas: defaults.largeHitAreas,
   pongSpin: defaults.pongSpin,
+  allowNetwork: defaults.allowNetwork,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -72,6 +77,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setHighContrast: () => {},
   setLargeHitAreas: () => {},
   setPongSpin: () => {},
+  setAllowNetwork: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -83,6 +89,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
+  const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
+  const fetchRef = useRef<typeof fetch>();
 
   useEffect(() => {
     (async () => {
@@ -94,6 +102,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setHighContrast(await loadHighContrast());
       setLargeHitAreas(await loadLargeHitAreas());
       setPongSpin(await loadPongSpin());
+      setAllowNetwork(await loadAllowNetwork());
     })();
   }, []);
 
@@ -165,8 +174,50 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     savePongSpin(pongSpin);
   }, [pongSpin]);
 
+  useEffect(() => {
+    saveAllowNetwork(allowNetwork);
+    if (typeof window === 'undefined') return;
+    if (!fetchRef.current) fetchRef.current = window.fetch.bind(window);
+    if (!allowNetwork) {
+      window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.url;
+        if (
+          /^https?:/i.test(url) &&
+          !url.startsWith(window.location.origin) &&
+          !url.startsWith('/')
+        ) {
+          return Promise.reject(new Error('Network requests disabled'));
+        }
+        return fetchRef.current!(input, init);
+      };
+    } else {
+      window.fetch = fetchRef.current!;
+    }
+  }, [allowNetwork]);
+
   return (
-    <SettingsContext.Provider value={{ accent, wallpaper, density, reducedMotion, fontScale, highContrast, largeHitAreas, pongSpin, setAccent, setWallpaper, setDensity, setReducedMotion, setFontScale, setHighContrast, setLargeHitAreas, setPongSpin }}>
+    <SettingsContext.Provider
+      value={{
+        accent,
+        wallpaper,
+        density,
+        reducedMotion,
+        fontScale,
+        highContrast,
+        largeHitAreas,
+        pongSpin,
+        allowNetwork,
+        setAccent,
+        setWallpaper,
+        setDensity,
+        setReducedMotion,
+        setFontScale,
+        setHighContrast,
+        setLargeHitAreas,
+        setPongSpin,
+        setAllowNetwork,
+      }}
+    >
       {children}
     </SettingsContext.Provider>
   );

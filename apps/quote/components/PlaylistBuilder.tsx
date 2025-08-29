@@ -15,6 +15,25 @@ interface PlaylistBuilderProps {
 
 export default function PlaylistBuilder({ quotes, playlist, setPlaylist }: PlaylistBuilderProps) {
   const [search, setSearch] = useState('');
+  const [playlistName, setPlaylistName] = useState('');
+  const [saved, setSaved] = useState<Record<string, number[]>>({});
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = localStorage.getItem('quote-playlists');
+    if (stored) {
+      try {
+        setSaved(JSON.parse(stored));
+      } catch {
+        /* ignore */
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('quote-playlists', JSON.stringify(saved));
+  }, [saved]);
 
   const items = useMemo(
     () =>
@@ -33,6 +52,26 @@ export default function PlaylistBuilder({ quotes, playlist, setPlaylist }: Playl
         ? playlist.filter((p) => p !== i)
         : [...playlist, i],
     );
+  };
+
+  const saveCurrent = () => {
+    const name = playlistName.trim();
+    if (!name || !playlist.length) return;
+    setSaved((s) => ({ ...s, [name]: [...playlist] }));
+    setPlaylistName('');
+  };
+
+  const loadPlaylist = (name: string) => {
+    const list = saved[name];
+    if (list) setPlaylist(list);
+  };
+
+  const deletePlaylist = (name: string) => {
+    setSaved((s) => {
+      const next = { ...s };
+      delete next[name];
+      return next;
+    });
   };
 
   useEffect(() => {
@@ -70,6 +109,52 @@ export default function PlaylistBuilder({ quotes, playlist, setPlaylist }: Playl
           </li>
         ))}
       </ul>
+      <div className="flex gap-2 mb-2">
+        <input
+          value={playlistName}
+          onChange={(e) => setPlaylistName(e.target.value)}
+          placeholder="Playlist name"
+          className="px-2 py-1 w-full rounded text-black"
+        />
+        <button
+          onClick={saveCurrent}
+          className="px-2 py-1 bg-gray-700 rounded"
+          disabled={!playlist.length}
+        >
+          Save
+        </button>
+      </div>
+      {Object.keys(saved).length > 0 && (
+        <div className="mb-2">
+          <h3 className="text-md mb-1">Saved Playlists</h3>
+          <ul className="max-h-32 overflow-auto border border-gray-700 rounded">
+            {Object.entries(saved).map(([name, list]) => (
+              <li
+                key={name}
+                className="px-2 py-1 text-sm border-b border-gray-700 last:border-b-0 flex justify-between items-center"
+              >
+                <span className="flex-1 mr-2 truncate">
+                  {name} ({list.length})
+                </span>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => loadPlaylist(name)}
+                    className="px-2 py-1 bg-gray-700 rounded"
+                  >
+                    Load
+                  </button>
+                  <button
+                    onClick={() => deletePlaylist(name)}
+                    className="px-2 py-1 bg-gray-700 rounded"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <h3 className="text-md mb-1">Current Playlist</h3>
       <ol className="max-h-32 overflow-auto border border-gray-700 rounded">
         {playlist.map((i, idx) => (

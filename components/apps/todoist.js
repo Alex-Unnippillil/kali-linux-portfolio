@@ -36,6 +36,11 @@ export default function Todoist() {
   const [view, setView] = useState('all');
   const [activeProject, setActiveProject] = useState('all');
   const [editingTask, setEditingTask] = useState({ id: null, group: '', title: '' });
+  const [calendarDate, setCalendarDate] = useState(() => {
+    const d = new Date();
+    d.setDate(1);
+    return d;
+  });
   const dragged = useRef({ group: '', id: null, title: '' });
   const liveRef = useRef(null);
   const workerRef = useRef(null);
@@ -156,6 +161,27 @@ export default function Todoist() {
         // ignore
       }
     }
+  };
+
+  const handleDayDrop = (date) => (e) => {
+    e.preventDefault();
+    const { group, id, title } = dragged.current;
+    if (!id) return;
+    const newGroups = {
+      ...groups,
+      [group]: groups[group].map((t) =>
+        t.id === id ? { ...t, due: date } : t,
+      ),
+    };
+    setGroups(newGroups);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
+      } catch {
+        // ignore
+      }
+    }
+    announce(title, date);
   };
 
   const saveEditing = () => {
@@ -406,6 +432,130 @@ export default function Todoist() {
     reader.readAsText(file);
   };
 
+  const handleExportCsv = () => {
+    try {
+      const header = ['title', 'due', 'priority', 'section', 'recurring'];
+      const rows = Object.values(groups)
+        .flat()
+        .map((t) => [
+          t.title,
+          t.due || '',
+          t.priority,
+          t.section || '',
+          t.recurring || '',
+        ]);
+      const csv = [header, ...rows]
+        .map((r) =>
+          r
+            .map((c) => `"${String(c).replace(/"/g, '""')}"`)
+            .join(',')
+        )
+        .join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'tasks.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // ignore
+    }
+  };
+
+  const parseCsvLine = (line) => {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (inQuotes) {
+        if (ch === '"') {
+          if (line[i + 1] === '"') {
+            current += '"';
+            i++;
+          } else {
+            inQuotes = false;
+          }
+        } else {
+          current += ch;
+        }
+      } else if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ',') {
+        result.push(current);
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+    result.push(current);
+    return result.map((c) => c.trim());
+  };
+
+  const handleImportCsv = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const text = String(reader.result || '');
+        const lines = text
+          .split(/\r?\n/)
+          .map((l) => l.trim())
+          .filter(Boolean);
+        if (lines.length < 2) return;
+        const headers = parseCsvLine(lines[0]).map((h) => h.toLowerCase());
+        const idx = {
+          title: headers.indexOf('title'),
+          due: headers.indexOf('due'),
+          priority: headers.indexOf('priority'),
+          section: headers.indexOf('section'),
+          recurring: headers.indexOf('recurring'),
+        };
+        const imported = lines.slice(1).map((line) => {
+          const cols = parseCsvLine(line);
+          let due = cols[idx.due] || '';
+          let recurring = cols[idx.recurring] || '';
+          let rrule;
+          if (recurring) {
+            const text = recurring.trim().toLowerCase();
+            const full = text.startsWith('every') ? text : `every ${text}`;
+            const parsed = parseRecurring(
+              full,
+              due ? new Date(due) : new Date()
+            );
+            rrule = parsed?.rrule;
+            if (!due && parsed?.preview[0]) {
+              due = parsed.preview[0].toISOString().split('T')[0];
+            }
+          }
+          return {
+            id: Date.now() + Math.random(),
+            title: cols[idx.title] || '',
+            due: due || undefined,
+            priority: cols[idx.priority] || 'medium',
+            section: cols[idx.section] || undefined,
+            recurring: recurring || undefined,
+            rrule,
+            completed: false,
+          };
+        });
+        const newGroups = {
+          ...groups,
+          Today: [...groups.Today, ...imported],
+        };
+        setGroups(newGroups);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
+        }
+      } catch {
+        // ignore
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const matchesTask = (task) => {
     if (search && !task.title.toLowerCase().includes(search.toLowerCase())) {
       return false;
@@ -528,6 +678,99 @@ export default function Todoist() {
     .sort((a, b) => a.due.localeCompare(b.due));
 
   const projectNames = Object.keys(groups);
+
+  const renderCalendar = () => {
+    const start = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1);
+    const end = new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 0);
+    const tasksByDate = {};
+    flatTasks
+      .filter((t) => t.due && matchesTask(t))
+      .forEach((t) => {
+        (tasksByDate[t.due] ||= []).push(t);
+      });
+    const days = [];
+    for (let i = 0; i < start.getDay(); i++) days.push(null);
+    for (let d = 1; d <= end.getDate(); d++) {
+      const dateStr = new Date(
+        calendarDate.getFullYear(),
+        calendarDate.getMonth(),
+        d,
+      )
+        .toISOString()
+        .split('T')[0];
+      days.push({ dateStr, tasks: tasksByDate[dateStr] || [] });
+    }
+    while (days.length % 7 !== 0) days.push(null);
+    const monthLabel = start.toLocaleString('default', { month: 'long', year: 'numeric' });
+    return (
+      <div className="flex-1 p-2 overflow-y-auto">
+        <div className="flex items-center justify-between mb-2">
+          <button
+            onClick={() => {
+              setCalendarDate(
+                new Date(
+                  calendarDate.getFullYear(),
+                  calendarDate.getMonth() - 1,
+                  1,
+                ),
+              );
+            }}
+            aria-label="Previous month"
+          >
+            &lt;
+          </button>
+          <h2 className="font-bold text-lg">{monthLabel}</h2>
+          <button
+            onClick={() => {
+              setCalendarDate(
+                new Date(
+                  calendarDate.getFullYear(),
+                  calendarDate.getMonth() + 1,
+                  1,
+                ),
+              );
+            }}
+            aria-label="Next month"
+          >
+            &gt;
+          </button>
+        </div>
+        <div className="grid grid-cols-7 gap-1 text-sm">
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+            <div key={d} className="text-center font-semibold">
+              {d}
+            </div>
+          ))}
+          {days.map((day, idx) => (
+            <div
+              key={idx}
+              className="border min-h-[80px] p-1"
+              onDragOver={handleDragOver}
+              onDrop={day ? handleDayDrop(day.dateStr) : undefined}
+            >
+              {day && (
+                <React.Fragment>
+                  <div className="text-xs">
+                    {parseInt(day.dateStr.split('-')[2], 10)}
+                  </div>
+                  {day.tasks.map((t) => (
+                    <div
+                      key={t.id}
+                      draggable
+                      onDragStart={handleDragStart(t.group, t)}
+                      className="mt-1 p-1 bg-white text-black rounded text-xs"
+                    >
+                      {t.title}
+                    </div>
+                  ))}
+                </React.Fragment>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="flex h-full w-full" role="application">
@@ -660,10 +903,16 @@ export default function Todoist() {
           <button className="px-2 py-1 border rounded" onClick={() => setView('all')}>All</button>
           <button className="px-2 py-1 border rounded" onClick={() => setView('today')}>Today</button>
           <button className="px-2 py-1 border rounded" onClick={() => setView('upcoming')}>Upcoming</button>
+          <button className="px-2 py-1 border rounded" onClick={() => setView('calendar')}>Calendar</button>
           <button className="px-2 py-1 border rounded" onClick={handleExport}>Export</button>
+          <button className="px-2 py-1 border rounded" onClick={handleExportCsv}>Export CSV</button>
           <label className="px-2 py-1 border rounded cursor-pointer">
             Import
             <input type="file" accept="application/json" onChange={handleImport} className="sr-only" />
+          </label>
+          <label className="px-2 py-1 border rounded cursor-pointer">
+            Import CSV
+            <input type="file" accept="text/csv" onChange={handleImportCsv} className="sr-only" />
           </label>
         </div>
         <div className="flex flex-1">
@@ -671,20 +920,22 @@ export default function Todoist() {
             ? (activeProject === 'all'
                 ? projectNames.map((name) => renderGroup(name))
                 : renderGroup(activeProject))
-            : (
-              <div
-                className="flex-1 p-2 overflow-y-auto"
-                role="list"
-                aria-label={view === 'today' ? 'Today' : 'Upcoming'}
-              >
-                <h2 className="mb-2 font-bold text-lg text-gray-800">
-                  {view === 'today' ? 'Today' : 'Upcoming'}
-                </h2>
-                {(view === 'today' ? todayTasks : upcomingTasks).map((task) =>
-                  renderTask(task.group, task)
-                )}
-              </div>
-            )}
+            : view === 'calendar'
+              ? renderCalendar()
+              : (
+                <div
+                  className="flex-1 p-2 overflow-y-auto"
+                  role="list"
+                  aria-label={view === 'today' ? 'Today' : 'Upcoming'}
+                >
+                  <h2 className="mb-2 font-bold text-lg text-gray-800">
+                    {view === 'today' ? 'Today' : 'Upcoming'}
+                  </h2>
+                  {(view === 'today' ? todayTasks : upcomingTasks).map((task) =>
+                    renderTask(task.group, task)
+                  )}
+                </div>
+              )}
         </div>
       </div>
     </div>

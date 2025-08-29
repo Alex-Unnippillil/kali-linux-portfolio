@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import MetasploitApp from '../components/apps/metasploit';
 
 describe('Metasploit app', () => {
@@ -70,6 +70,19 @@ describe('Metasploit app', () => {
     fireEvent.click(screen.getByText('Toggle Loot/Notes'));
     expect(await screen.findByText(/10.0.0.2: secret/)).toBeInTheDocument();
     expect(screen.getByText(/priv user/)).toBeInTheDocument();
+  });
+
+  it('logs loot during replay', async () => {
+    jest.useFakeTimers();
+    render(<MetasploitApp demoMode />);
+    fireEvent.click(screen.getByText('Replay Mock Exploit'));
+    await act(async () => {
+      jest.runAllTimers();
+    });
+    expect(
+      await screen.findByText('10.0.0.3: ssh-creds.txt'),
+    ).toBeInTheDocument();
+    jest.useRealTimers();
   });
 });
 

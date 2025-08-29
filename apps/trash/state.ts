@@ -38,13 +38,45 @@ export default function useTrashState() {
     [setHistory],
   );
 
+  const resolveNameConflict = (
+    restored: TrashItem,
+    items: TrashItem[],
+  ): { resolved: boolean; items: TrashItem[] } => {
+    if (items.some(item => item.title === restored.title)) {
+      const replace = window.confirm(
+        `${restored.title} already exists. Click OK to replace or Cancel to rename.`,
+      );
+      if (replace) {
+        const filtered = items.filter(item => item.title !== restored.title);
+        return { resolved: true, items: [...filtered, restored] };
+      }
+      const newName = window.prompt('Enter new name', restored.title);
+      if (newName && newName.trim()) {
+        return {
+          resolved: true,
+          items: [...items, { ...restored, title: newName.trim() }],
+        };
+      }
+      return { resolved: false, items };
+    }
+    return { resolved: true, items: [...items, restored] };
+  };
+
   const restoreFromHistory = useCallback(
     (index: number) => {
       setHistory(prev => {
         const next = [...prev];
         const [restored] = next.splice(index, 1);
         if (restored) {
-          setItems(items => [...items, restored]);
+          let didRestore = false;
+          setItems(items => {
+            const result = resolveNameConflict(restored, items);
+            didRestore = result.resolved;
+            return result.items;
+          });
+          if (!didRestore) {
+            next.splice(index, 0, restored);
+          }
         }
         return next;
       });
@@ -54,10 +86,21 @@ export default function useTrashState() {
 
   const restoreAllFromHistory = useCallback(() => {
     setHistory(prev => {
-      if (prev.length) {
-        setItems(items => [...items, ...prev]);
-      }
-      return [];
+      if (!prev.length) return prev;
+      const remaining: TrashItem[] = [];
+      setItems(items => {
+        let nextItems = [...items];
+        prev.forEach(restored => {
+          const result = resolveNameConflict(restored, nextItems);
+          if (result.resolved) {
+            nextItems = result.items;
+          } else {
+            remaining.push(restored);
+          }
+        });
+        return nextItems;
+      });
+      return remaining;
     });
   }, [setHistory, setItems]);
 

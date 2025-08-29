@@ -34,6 +34,7 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
   const [type, setType] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [ariaMessage, setAriaMessage] = useState('');
+  const [selected, setSelected] = useState<Project[]>([]);
 
   const readFilters = async () => {
     try {
@@ -144,6 +145,15 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
     openApp && openApp('chrome');
   };
 
+  const toggleSelect = (project: Project) => {
+    setSelected((prev) => {
+      const exists = prev.find((p) => p.id === project.id);
+      if (exists) return prev.filter((p) => p.id !== project.id);
+      if (prev.length === 2) return [prev[1], project];
+      return [...prev, project];
+    });
+  };
+
   return (
     <div className="p-4 h-full overflow-auto bg-ub-cool-grey text-white">
       <div className="flex flex-wrap gap-2 mb-4">
@@ -215,6 +225,34 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
           </label>
         ))}
       </div>
+      {selected.length === 2 && (
+        <div className="mb-4 overflow-auto">
+          <table className="w-full text-sm text-left" role="table">
+            <thead>
+              <tr>
+                <th />
+                {selected.map((p) => (
+                  <th key={p.id}>{p.title}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th>Stack</th>
+                {selected.map((p) => (
+                  <td key={`${p.id}-stack`}>{p.stack.join(', ')}</td>
+                ))}
+              </tr>
+              <tr>
+                <th>Highlights</th>
+                {selected.map((p) => (
+                  <td key={`${p.id}-tags`}>{p.tags.join(', ')}</td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
       <div className="columns-1 sm:columns-2 md:columns-3 gap-4">
         {filtered.map((project) => (
           <div
@@ -241,6 +279,15 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
             <div className="p-4 space-y-2">
               <h3 className="text-lg font-semibold">{project.title}</h3>
               <p className="text-sm">{project.description}</p>
+              <button
+                onClick={() => toggleSelect(project)}
+                aria-label={`Select ${project.title} for comparison`}
+                className="bg-gray-700 text-xs px-2 py-1 rounded-full"
+              >
+                {selected.some((p) => p.id === project.id)
+                  ? 'Deselect'
+                  : 'Compare'}
+              </button>
               <div className="flex flex-wrap gap-1">
                 {project.stack.map((s) => (
                   <button

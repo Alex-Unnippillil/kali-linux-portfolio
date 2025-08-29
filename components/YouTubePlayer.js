@@ -1,6 +1,7 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
+import useOPFS from '../hooks/useOPFS';
 
 // Basic YouTube player with keyboard shortcuts, playback rate cycling,
 // chapter drawer and Picture-in-Picture helpers. The Doc-PiP window is a
@@ -12,8 +13,12 @@ export default function YouTubePlayer({ videoId }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [chapters, setChapters] = useState([]); // [{title, startTime}]
   const [showChapters, setShowChapters] = useState(false);
-  const [showDoc, setShowDoc] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
+  const [notes, setNotes] = useState('');
+  const [search, setSearch] = useState('');
+  const [results, setResults] = useState([]);
   const prefersReducedMotion = usePrefersReducedMotion();
+  const { supported, getDir, readFile, writeFile, listFiles } = useOPFS();
 
   // Load the YouTube IFrame API lazily on user interaction
   const loadPlayer = () => {
@@ -136,6 +141,57 @@ export default function YouTubePlayer({ videoId }) {
     }
   };
 
+  useEffect(() => {
+    let cancelled = false;
+    if (!supported) return;
+    (async () => {
+      const dir = await getDir('video-notes');
+      if (!dir) return;
+      const text = await readFile(`${videoId}.txt`, dir);
+      if (!cancelled && text !== null) setNotes(text);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [videoId, supported, getDir, readFile]);
+
+  const handleNoteChange = useCallback(
+    async (e) => {
+      const text = e.target.value;
+      setNotes(text);
+      if (!supported) return;
+      const dir = await getDir('video-notes');
+      if (dir) await writeFile(`${videoId}.txt`, text, dir);
+    },
+    [videoId, supported, getDir, writeFile],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!search) {
+      setResults([]);
+      return;
+    }
+    (async () => {
+      if (!supported) return;
+      const dir = await getDir('video-notes', { create: false });
+      if (!dir) return;
+      const files = await listFiles(dir);
+      const q = search.toLowerCase();
+      const found = [];
+      for (const file of files) {
+        const text = await readFile(file.name, dir);
+        if (text && text.toLowerCase().includes(q)) {
+          found.push({ id: file.name.replace(/\.txt$/, ''), text });
+        }
+      }
+      if (!cancelled) setResults(found);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [search, supported, getDir, listFiles, readFile]);
+
   return (
     <>
       <Head>
@@ -205,10 +261,10 @@ export default function YouTubePlayer({ videoId }) {
             <button
               type="button"
               aria-label="Notes"
-              onClick={() => setShowDoc((s) => !s)}
+              onClick={() => setShowNotes((s) => !s)}
               className="bg-black/60 text-white px-2 py-1 rounded"
             >
-              Doc-PiP
+              Notes
             </button>
           </div>
         )}
@@ -232,18 +288,45 @@ export default function YouTubePlayer({ videoId }) {
           </div>
         )}
 
-        {/* Doc-PiP overlay */}
-        {showDoc && (
-          <div className="absolute top-12 right-2 w-64 h-40 bg-black/90 text-white text-sm p-2 overflow-auto z-50 rounded shadow-lg">
+        {/* Notes side panel */}
+        {showNotes && (
+          <div className="absolute top-0 right-0 w-64 h-full bg-black/90 text-white text-sm p-2 z-50 flex flex-col">
             <button
               type="button"
               aria-label="Close notes"
               className="absolute top-1 right-1 px-2"
-              onClick={() => setShowDoc(false)}
+              onClick={() => setShowNotes(false)}
             >
               ✕
             </button>
-            <p className="pr-4">No transcript available.</p>
+            {supported ? (
+              <>
+                <input
+                  type="search"
+                  placeholder="Search notes"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="mb-2 bg-black/80 border border-white/20 p-1"
+                />
+                {search && results.length > 0 && (
+                  <ul className="mb-2 overflow-auto max-h-24 border border-white/20 p-1">
+                    {results.map((r) => (
+                      <li key={r.id} className="mb-1">
+                        <strong>{r.id}</strong>: {r.text.slice(0, 50)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <textarea
+                  value={notes}
+                  onChange={handleNoteChange}
+                  className="flex-1 bg-black/80 border border-white/20 p-1"
+                  placeholder="Write notes…"
+                />
+              </>
+            ) : (
+              <p className="pr-4">OPFS not supported.</p>
+            )}
           </div>
         )}
       </div>

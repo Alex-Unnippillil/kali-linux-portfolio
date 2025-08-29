@@ -31,11 +31,27 @@ const contrastRatio = (c1: string, c2: string) => {
   return (light + 0.05) / (dark + 0.05);
 };
 
+const STYLES = [
+  { name: 'Classic', bg: '#000000', fg: '#ffffff', font: 'serif' },
+  { name: 'Inverted', bg: '#ffffff', fg: '#000000', font: 'sans-serif' },
+  { name: 'Retro', bg: '#1e3a8a', fg: '#fef3c7', font: 'monospace' },
+];
+
 export default function Posterizer({ quote }: { quote: Quote | null }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [bg, setBg] = useState('#000000');
-  const [fg, setFg] = useState('#ffffff');
-  const [font, setFont] = useState('serif');
+  const [styleIndex, setStyleIndex] = useState(0);
+  const [bg, setBg] = useState(STYLES[0].bg);
+  const [fg, setFg] = useState(STYLES[0].fg);
+  const [font, setFont] = useState(STYLES[0].font);
+
+  const cycleStyle = () => {
+    const next = (styleIndex + 1) % STYLES.length;
+    setStyleIndex(next);
+    const s = STYLES[next];
+    setBg(s.bg);
+    setFg(s.fg);
+    setFont(s.font);
+  };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -117,6 +133,13 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
         <span className={accessible ? 'text-green-400' : 'text-red-400'}>
           Contrast: {ratio.toFixed(2)}
         </span>
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={cycleStyle}
+        >
+          Next Style
+        </button>
+        <span>Style: {STYLES[styleIndex].name}</span>
         <button
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
           onClick={download}

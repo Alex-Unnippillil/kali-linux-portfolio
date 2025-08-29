@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import data from './data.json';
 import ArpLab from './components/ArpLab';
+import vendors from '../kismet/oui.json';
 
 const { arpTable, flows } = data;
 const attackerMac = 'aa:aa:aa:aa:aa:aa';
@@ -43,6 +44,15 @@ const EttercapApp = () => {
   });
   const canvasRef = useRef(null);
   const hostPositions = useRef({});
+  const arpEntries = useMemo(
+    () =>
+      arpTable.map(({ ip, mac }) => ({
+        ip,
+        mac,
+        vendor: vendors[mac.slice(0, 8).toUpperCase()] || 'Unknown',
+      })),
+    []
+  );
 
   // storyboard state for interactive canvas
   const boardRef = useRef(null);
@@ -647,13 +657,17 @@ const stopSpoof = () => {
               <th scope="col" className="border-b px-2 py-1">
                 MAC Address
               </th>
+              <th scope="col" className="border-b px-2 py-1">
+                Vendor
+              </th>
             </tr>
           </thead>
           <tbody>
-            {arpTable.map(({ ip, mac }) => (
+            {arpEntries.map(({ ip, mac, vendor }) => (
               <tr key={ip}>
                 <td className="px-2 py-1 font-mono">{ip}</td>
                 <td className="px-2 py-1 font-mono">{mac}</td>
+                <td className="px-2 py-1">{vendor}</td>
               </tr>
             ))}
           </tbody>

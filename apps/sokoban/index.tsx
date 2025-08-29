@@ -13,6 +13,7 @@ import {
   directionKeys,
   findHint,
   findMinPushes,
+  findSolution,
   wouldDeadlock,
   Position,
   DirectionKey,
@@ -92,6 +93,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
   const [status, setStatus] = useState<string>('');
   const [warnDir, setWarnDir] = useState<DirectionKey | null>(null);
   const [ghost, setGhost] = useState<Set<string>>(new Set());
+  const [solutionPath, setSolutionPath] = useState<Set<string>>(new Set());
   const [puffs, setPuffs] = useState<{ id: number; x: number; y: number }[]>([]);
   const puffId = React.useRef(0);
   const [lastPush, setLastPush] = useState<string | null>(null);
@@ -113,6 +115,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
       setReach(reachable(st));
       setHint('');
       setStatus('');
+      setSolutionPath(new Set());
       setShowStats(false);
       setMinPushes(null);
       setTimeout(() => setMinPushes(findMinPushes(st)), 0);
@@ -137,6 +140,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
       setHint('');
       setStatus('');
       setGhost(new Set());
+      setSolutionPath(new Set());
       setShowStats(false);
       logEvent({ category: 'sokoban', action: 'undo' });
     }
@@ -150,6 +154,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
       setHint('');
       setStatus('');
       setGhost(new Set());
+      setSolutionPath(new Set());
       setShowStats(false);
       logEvent({ category: 'sokoban', action: 'redo' });
     }
@@ -159,11 +164,12 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
     const st = resetLevel(currentPack.levels[index]);
     setState(st);
     setReach(reachable(st));
-    setHint('');
-    setStatus('');
-    setGhost(new Set());
-    setShowStats(false);
-    setMinPushes(null);
+      setHint('');
+      setStatus('');
+      setGhost(new Set());
+      setSolutionPath(new Set());
+      setShowStats(false);
+      setMinPushes(null);
     setTimeout(() => setMinPushes(findMinPushes(st)), 0);
   }, [currentPack, index]);
 
@@ -263,6 +269,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
             setHint('');
             setStatus(newState.deadlocks.size ? 'Deadlock!' : '');
             setGhost(new Set());
+            setSolutionPath(new Set());
             if (newState.pushes > state.pushes) {
               const from = Array.from(state.boxes).find((b) => !newState.boxes.has(b));
               const to = Array.from(newState.boxes).find((b) => !state.boxes.has(b));
@@ -312,6 +319,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
       setHint('');
       setStatus(newState.deadlocks.size ? 'Deadlock!' : '');
       setGhost(new Set());
+      setSolutionPath(new Set());
       if (newState.pushes > state.pushes) {
         const from = Array.from(state.boxes).find((b) => !newState.boxes.has(b));
         const to = Array.from(newState.boxes).find((b) => !state.boxes.has(b));
@@ -355,6 +363,26 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
       setHint(dir ? dir.replace('Arrow', '') : 'No hint');
     }, 0);
   }, [state]);
+
+  const handlePreview = useCallback(() => {
+    setSolutionPath(new Set());
+    setStatus('...');
+    setTimeout(() => {
+      const sol = findSolution(state);
+      if (!sol) {
+        setStatus('No solution');
+        return;
+      }
+      const positions: string[] = [];
+      let st = state;
+      sol.forEach((dir) => {
+        st = move(st, dir);
+        positions.push(keyPos(st.player));
+      });
+      setSolutionPath(new Set(positions));
+      setStatus('');
+    }, 0);
+  }, [state, keyPos]);
 
   const cellStyle = useMemo(
     () => ({ width: CELL, height: CELL } as React.CSSProperties),
@@ -442,6 +470,9 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
         <button type="button" onClick={handleHint} className="px-2 py-1 bg-gray-300 rounded">
           Hint
         </button>
+        <button type="button" onClick={handlePreview} className="px-2 py-1 bg-gray-300 rounded">
+          Preview
+        </button>
         <div className="ml-4">Moves: {state.moves}</div>
         <div>Pushes: {state.pushes}</div>
         <div>Best: {best ?? '-'}</div>
@@ -461,6 +492,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
             const isTarget = state.targets.has(k);
             const isReach = reach.has(k);
             const inGhost = ghost.has(k);
+            const inSolution = solutionPath.has(k);
             return (
               <React.Fragment key={k}>
                 <div
@@ -479,6 +511,12 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
                 {inGhost && (
                   <div
                     className="absolute bg-blue-300 opacity-40"
+                    style={{ ...cellStyle, left: x * CELL, top: y * CELL }}
+                  />
+                )}
+                {inSolution && (
+                  <div
+                    className="absolute bg-purple-300 opacity-40"
                     style={{ ...cellStyle, left: x * CELL, top: y * CELL }}
                   />
                 )}

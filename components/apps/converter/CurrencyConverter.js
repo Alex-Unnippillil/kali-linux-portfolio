@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 const apiBase = process.env.NEXT_PUBLIC_CURRENCY_API_URL || 'https://api.exchangerate.host/latest';
 const isDemo = !process.env.NEXT_PUBLIC_CURRENCY_API_URL;
@@ -10,9 +10,11 @@ const CurrencyConverter = () => {
   const [amount, setAmount] = useState('');
   const [result, setResult] = useState('');
   const [lastUpdated, setLastUpdated] = useState('');
+  const [history, setHistory] = useState([]);
 
   useEffect(() => {
     const cacheKey = `currencyRates_${base}`;
+    const historyKey = `currencyHistory_${base}`;
     const cached = typeof window !== 'undefined' ? localStorage.getItem(cacheKey) : null;
     if (cached) {
       try {
@@ -32,11 +34,34 @@ const CurrencyConverter = () => {
           setLastUpdated(ts);
           if (typeof window !== 'undefined') {
             localStorage.setItem(cacheKey, JSON.stringify({ rates: data.rates, timestamp: ts }));
+            try {
+              const raw = localStorage.getItem(historyKey);
+              const arr = raw ? JSON.parse(raw) : [];
+              arr.push({ timestamp: ts, rates: data.rates });
+              localStorage.setItem(historyKey, JSON.stringify(arr.slice(-30)));
+            } catch {
+              /* ignore */
+            }
           }
         }
       })
       .catch(() => {});
   }, [base]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const historyKey = `currencyHistory_${base}`;
+    try {
+      const raw = localStorage.getItem(historyKey);
+      const arr = raw ? JSON.parse(raw) : [];
+      const mapped = arr
+        .map(({ timestamp, rates }) => ({ timestamp, rate: rates[quote] }))
+        .filter((p) => typeof p.rate === 'number');
+      setHistory(mapped);
+    } catch {
+      setHistory([]);
+    }
+  }, [base, quote, lastUpdated]);
 
   useEffect(() => {
     if (!amount || !rates[quote]) {
@@ -55,6 +80,19 @@ const CurrencyConverter = () => {
 
   const formatAmount = (val, curr) =>
     new Intl.NumberFormat(undefined, { style: 'currency', currency: curr }).format(val);
+
+  const chartPoints = useMemo(() => {
+    if (history.length < 2) return '';
+    const max = Math.max(...history.map((h) => h.rate));
+    const min = Math.min(...history.map((h) => h.rate));
+    return history
+      .map((h, i) => {
+        const x = (i / (history.length - 1)) * 100;
+        const y = 100 - ((h.rate - min) / ((max - min) || 1)) * 100;
+        return `${x},${y}`;
+      })
+      .join(' ');
+  }, [history]);
 
   return (
     <div className="bg-gray-700 p-4 rounded flex flex-col gap-2">
@@ -104,6 +142,22 @@ const CurrencyConverter = () => {
       </div>
       {lastUpdated && (
         <div className="text-xs">Last updated: {new Date(lastUpdated).toLocaleString()}</div>
+      )}
+      {chartPoints && (
+        <svg
+          className="mt-2"
+          width="100%"
+          height="100"
+          role="img"
+          aria-label="exchange rate chart"
+        >
+          <polyline
+            fill="none"
+            stroke="#4ade80"
+            strokeWidth="2"
+            points={chartPoints}
+          />
+        </svg>
       )}
     </div>
   );

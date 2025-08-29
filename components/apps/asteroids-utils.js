@@ -95,6 +95,24 @@ export function applyPowerUp(powerUp, ship, lives, shieldDuration = 600, rapidFi
   return lives;
 }
 
+// Manage simple inventory of collected power-ups
+export function addToInventory(inv, type) {
+  inv.push(type);
+}
+
+export function useInventory(
+  inv,
+  index,
+  ship,
+  lives,
+  shieldDuration = 600,
+  rapidFireDuration = 600,
+) {
+  if (index < 0 || index >= inv.length) return lives;
+  const type = inv.splice(index, 1)[0];
+  return applyPowerUp({ type }, ship, lives, shieldDuration, rapidFireDuration);
+}
+
 export function updatePowerUps(list) {
   for (let i = list.length - 1; i >= 0; i -= 1) {
     const p = list[i];

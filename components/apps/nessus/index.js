@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import HostBubbleChart from './HostBubbleChart';
 import PluginFeedViewer from './PluginFeedViewer';
 import ScanComparison from './ScanComparison';
+import PluginScoreHeatmap from './PluginScoreHeatmap';
 import FormError from '../../ui/FormError';
 
 // helpers for persistent storage of jobs and false positives
@@ -31,10 +32,10 @@ export const loadFalsePositives = () => {
   }
 };
 
-export const recordFalsePositive = (scanId, reason) => {
+export const recordFalsePositive = (findingId, reason) => {
   if (typeof window === 'undefined') return [];
   const fps = loadFalsePositives();
-  const updated = [...fps, { scanId, reason }];
+  const updated = [...fps, { findingId, reason }];
   localStorage.setItem('nessusFalsePositives', JSON.stringify(updated));
   return updated;
 };
@@ -48,11 +49,12 @@ const Nessus = () => {
   const [error, setError] = useState('');
   const [jobs, setJobs] = useState([]);
   const [newJob, setNewJob] = useState({ scanId: '', schedule: '' });
-  const [feedbackScan, setFeedbackScan] = useState(null);
+  const [feedbackId, setFeedbackId] = useState(null);
   const [feedbackText, setFeedbackText] = useState('');
   const [falsePositives, setFalsePositives] = useState([]);
   const [findings, setFindings] = useState([]);
   const [parseError, setParseError] = useState('');
+  const [selected, setSelected] = useState(null);
   const parserWorkerRef = useRef(null);
 
   const hostData = useMemo(
@@ -73,7 +75,7 @@ const Nessus = () => {
     parserWorkerRef.current = new Worker(
       new URL('../../../workers/nessus-parser.ts', import.meta.url)
     );
-    parserWorkerRef.current.onmessage = (e) => {
+      parserWorkerRef.current.onmessage = (e) => {
       const { findings: parsed = [], error: err } = e.data || {};
       if (err) {
         setParseError(err);
@@ -165,9 +167,9 @@ const Nessus = () => {
 
   const submitFeedback = (e) => {
     e.preventDefault();
-    recordFalsePositive(feedbackScan, feedbackText);
+    recordFalsePositive(feedbackId, feedbackText);
     setFalsePositives(loadFalsePositives());
-    setFeedbackScan(null);
+    setFeedbackId(null);
     setFeedbackText('');
   };
 
@@ -260,15 +262,56 @@ const Nessus = () => {
                     <th className="text-left p-1">Vulnerability</th>
                     <th className="text-left p-1">CVSS</th>
                     <th className="text-left p-1">Severity</th>
+                    <th className="text-left p-1">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {findings.map((f, i) => (
-                    <tr key={i} className="border-t border-gray-700">
+                    <tr
+                      key={i}
+                      className="border-t border-gray-700 cursor-pointer"
+                      onClick={() => setSelected(f)}
+                    >
                       <td className="p-1">{f.host}</td>
                       <td className="p-1">{f.name}</td>
                       <td className="p-1">{f.cvss}</td>
                       <td className="p-1">{f.severity}</td>
+                      <td className="p-1">
+                        {falsePositives.some((fp) => fp.findingId === f.id) ? (
+                          <span className="text-xs text-green-400">Marked</span>
+                        ) : feedbackId === f.id ? (
+                          <form onSubmit={submitFeedback} className="space-y-1">
+                            <input
+                              className="w-full p-1 rounded text-black"
+                              value={feedbackText}
+                              onChange={(e) => setFeedbackText(e.target.value)}
+                              placeholder="Reason"
+                            />
+                            <div className="flex space-x-2">
+                              <button
+                                type="submit"
+                                className="bg-green-600 px-2 py-1 rounded text-xs"
+                              >
+                                Submit
+                              </button>
+                              <button
+                                type="button"
+                                className="bg-gray-600 px-2 py-1 rounded text-xs"
+                                onClick={() => setFeedbackId(null)}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </form>
+                        ) : (
+                          <button
+                            className="text-xs bg-yellow-600 px-2 py-1 rounded"
+                            onClick={() => setFeedbackId(f.id)}
+                          >
+                            False Positive
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -280,6 +323,7 @@ const Nessus = () => {
       <HostBubbleChart hosts={hostData} />
       <PluginFeedViewer />
       <ScanComparison />
+      <PluginScoreHeatmap findings={findings} />
       {error && <FormError className="mb-2">{error}</FormError>}
       <form onSubmit={addJob} className="mb-4 space-x-2">
         <input
@@ -319,12 +363,12 @@ const Nessus = () => {
               </span>
               <button
                 className="text-xs bg-yellow-600 px-2 py-1 rounded"
-                onClick={() => setFeedbackScan(scan.id)}
+                onClick={() => setFeedbackId(scan.id)}
               >
                 False Positive
               </button>
             </div>
-            {feedbackScan === scan.id && (
+            {feedbackId === scan.id && (
               <form onSubmit={submitFeedback} className="mt-2 space-y-1">
                 <input
                   className="w-full p-1 rounded text-black"
@@ -342,7 +386,7 @@ const Nessus = () => {
                   <button
                     type="button"
                     className="bg-gray-600 px-2 py-1 rounded text-xs"
-                    onClick={() => setFeedbackScan(null)}
+                    onClick={() => setFeedbackId(null)}
                   >
                     Cancel
                   </button>
@@ -352,6 +396,28 @@ const Nessus = () => {
           </li>
         ))}
       </ul>
+      {selected && (
+        <div className="fixed top-0 right-0 w-80 h-full bg-gray-800 p-4 overflow-auto shadow-lg">
+          <button
+            type="button"
+            onClick={() => setSelected(null)}
+            className="mb-2 bg-red-600 px-2 py-1 rounded text-sm"
+          >
+            Close
+          </button>
+          <h3 className="text-xl mb-2">{selected.name}</h3>
+          <p className="text-sm mb-2">
+            <span className="font-bold">Host:</span> {selected.host}
+          </p>
+          <p className="text-sm mb-2">
+            <span className="font-bold">CVSS:</span> {selected.cvss} ({selected.severity})
+          </p>
+          <p className="mb-2 text-sm whitespace-pre-wrap">{selected.description}</p>
+          <p className="text-sm text-green-300">
+            {selected.solution || 'No solution provided.'}
+          </p>
+        </div>
+      )}
     </div>
   );
 };

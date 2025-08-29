@@ -26,4 +26,26 @@ describe('PluginManager', () => {
     );
     expect(button.textContent).toBe('Installed');
   });
+
+  test('persists last plugin run and exports CSV', async () => {
+    const { unmount } = render(<PluginManager />);
+    const installBtn = await screen.findByText('Install');
+    fireEvent.click(installBtn);
+    await waitFor(() =>
+      expect(localStorage.getItem('installedPlugins')).toContain('demo')
+    );
+    const runBtn = await screen.findByText('Run');
+    fireEvent.click(runBtn);
+    await waitFor(() =>
+      expect(localStorage.getItem('lastPluginRun')).toContain('demo')
+    );
+    unmount();
+    (global as any).URL.createObjectURL = jest.fn();
+    (global as any).URL.revokeObjectURL = jest.fn();
+    render(<PluginManager />);
+    expect(await screen.findByText(/Last Run: demo/)).toBeInTheDocument();
+    const exportBtn = screen.getByText('Export CSV');
+    fireEvent.click(exportBtn);
+    expect((global as any).URL.createObjectURL).toHaveBeenCalled();
+  });
 });
