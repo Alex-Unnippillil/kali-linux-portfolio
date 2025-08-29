@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useSettings } from '../../hooks/useSettings';
+import BackgroundSlideshow from './components/BackgroundSlideshow';
 import {
   resetSettings,
   defaults,
@@ -170,6 +171,9 @@ export default function Settings() {
           }
           className="ubuntu-slider"
         />
+      </div>
+      <div className="flex justify-center my-4">
+        <BackgroundSlideshow />
       </div>
       <div className="flex justify-center my-4">
         <label className="mr-2 text-ubt-grey">Icon Size:</label>
