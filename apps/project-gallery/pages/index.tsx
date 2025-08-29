@@ -13,6 +13,8 @@ interface Project {
   year: number;
   type: string;
   thumbnail: string;
+  repo?: string;
+  demo?: string;
 }
 
 export default function ProjectGalleryPage() {
@@ -140,9 +142,31 @@ export default function ProjectGalleryPage() {
             aria-label={`${p.title}: ${p.description}`}
           >
             <img src={p.thumbnail} alt={p.title} className="w-full h-40 object-cover" />
-            <div className="p-2">
+            <div className="p-2 space-y-2">
               <h3 className="font-semibold">{p.title}</h3>
               <p className="text-sm">{p.description}</p>
+              <div className="flex gap-2">
+                {p.repo && (
+                  <a
+                    href={p.repo}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-2 py-1 text-sm text-white bg-gray-800 rounded"
+                  >
+                    Repo
+                  </a>
+                )}
+                {p.demo && (
+                  <a
+                    href={p.demo}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-2 py-1 text-sm text-white bg-blue-600 rounded"
+                  >
+                    Live
+                  </a>
+                )}
+              </div>
             </div>
           </div>
         ))}
