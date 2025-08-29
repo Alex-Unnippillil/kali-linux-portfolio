@@ -1,0 +1,7 @@
+{
+  "strings": [
+    {"id": "s1", "value": "Hello, world!"},
+    {"id": "s2", "value": "Error occurred"},
+    {"id": "s3", "value": "Done"}
+  ]
+}

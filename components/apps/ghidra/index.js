@@ -71,6 +71,11 @@ export default function GhidraApp() {
   const syncing = useRef(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const hexWorkerRef = useRef(null);
+  const [query, setQuery] = useState('');
+  const [funcNotes, setFuncNotes] = useState({});
+  const [strings, setStrings] = useState([]);
+  const [selectedString, setSelectedString] = useState(null);
+  const [stringNotes, setStringNotes] = useState({});
 
   // S1: Graceful remote fallback when WebAssembly is unavailable
   useEffect(() => {
@@ -104,6 +109,18 @@ export default function GhidraApp() {
         setXrefs(xr);
         setSelected(data.functions[0]?.name || null);
       });
+  }, []);
+
+  useEffect(() => {
+    fetch('/demo-data/ghidra/strings.json')
+      .then((r) => r.json())
+      .then((data) => {
+        setStrings(data.strings || []);
+        if (data.strings && data.strings[0]) {
+          setSelectedString(data.strings[0].id);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // S2: Respect reduced motion preference
@@ -183,12 +200,39 @@ export default function GhidraApp() {
   }
 
   const currentFunc = funcMap[selected] || { code: [], blocks: [], calls: [] };
+  const filteredFunctions = functions.filter((f) =>
+    f.name.toLowerCase().includes(query.toLowerCase())
+  );
 
   return (
     <div className="w-full h-full flex flex-col bg-gray-900 text-gray-100">
       <div className="flex flex-1">
         <div className="w-1/4 border-r border-gray-700 overflow-auto">
-          <FunctionTree functions={functions} onSelect={setSelected} selected={selected} />
+          <div className="p-2">
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search symbols"
+              className="w-full mb-2 p-1 rounded text-black"
+            />
+          </div>
+          {query ? (
+            <ul className="p-2 text-sm space-y-1">
+              {filteredFunctions.map((f) => (
+                <li key={f.name}>
+                  <button
+                    onClick={() => setSelected(f.name)}
+                    className={`text-left w-full ${selected === f.name ? 'font-bold' : ''}`}
+                  >
+                    {f.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <FunctionTree functions={functions} onSelect={setSelected} selected={selected} />
+          )}
         </div>
         <div className="w-1/4 border-r border-gray-700">
           <ControlFlowGraph
@@ -244,6 +288,53 @@ export default function GhidraApp() {
         </pre>
       </div>
       <PseudoDisasmViewer />
+      <div className="border-t border-gray-700 p-2">
+        <label className="block text-sm mb-1">
+          Notes for {selected || 'function'}
+        </label>
+        <textarea
+          value={funcNotes[selected] || ''}
+          onChange={(e) =>
+            setFuncNotes({ ...funcNotes, [selected]: e.target.value })
+          }
+          className="w-full h-16 p-1 rounded text-black"
+        />
+      </div>
+      <div className="flex border-t border-gray-700 h-40">
+        <div className="w-1/2 overflow-auto p-2">
+          <ul className="text-sm space-y-1">
+            {strings.map((s) => (
+              <li key={s.id}>
+                <button
+                  onClick={() => setSelectedString(s.id)}
+                  className={`text-left w-full ${
+                    selectedString === s.id ? 'font-bold' : ''
+                  }`}
+                >
+                  {s.value}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="w-1/2 p-2">
+          <label className="block text-sm mb-1">
+            Notes for {
+              strings.find((s) => s.id === selectedString)?.value || 'string'
+            }
+          </label>
+          <textarea
+            value={stringNotes[selectedString] || ''}
+            onChange={(e) =>
+              setStringNotes({
+                ...stringNotes,
+                [selectedString]: e.target.value,
+              })
+            }
+            className="w-full h-full p-1 rounded text-black"
+          />
+        </div>
+      </div>
       {/* S8: Hidden live region for assistive tech announcements */}
       <div aria-live="polite" role="status" className="sr-only">
         {liveMessage}
