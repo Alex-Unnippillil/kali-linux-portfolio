@@ -5,6 +5,8 @@ import useGameControls from './useGameControls';
 import { findHint } from '../../apps/games/_2048/ai';
 import { vibrate } from './Games/common/haptics';
 
+// Basic 2048 game logic with tile merging mechanics.
+
 const SIZE = 4;
 
 // seeded RNG so tests can be deterministic
@@ -439,5 +441,6 @@ const Game2048 = () => {
   );
 };
 
+export { slide };
 export default Game2048;
 

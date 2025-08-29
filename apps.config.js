@@ -116,7 +116,7 @@ const displayConnectFour = createDisplay(ConnectFourApp);
 const displayHangman = createDisplay(HangmanApp);
 const displayFrogger = createDisplay(FroggerApp);
 const displayFlappyBird = createDisplay(FlappyBirdApp);
-const display2048 = createDisplay(Game2048App);
+const displayGame2048 = createDisplay(Game2048App);
 const displaySnake = createDisplay(SnakeApp);
 const displayMemory = createDisplay(MemoryApp);
 const displayMinesweeper = createDisplay(MinesweeperApp);
@@ -273,7 +273,7 @@ const gameList = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: display2048,
+    screen: displayGame2048,
     defaultWidth: 35,
     defaultHeight: 45,
   },
