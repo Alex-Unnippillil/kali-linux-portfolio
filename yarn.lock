@@ -12280,6 +12280,9 @@ __metadata:
     "@monaco-editor/react": "npm:^4.7.0"
     "@mozilla/readability": "npm:^0.6.0"
     "@playwright/test": "npm:^1.55.0"
+
+    "@supabase/supabase-js": "npm:^2"
+
     "@supabase/ssr": "npm:^0.7.0"
     "@supabase/supabase-js": "npm:^2.56.1"
 
