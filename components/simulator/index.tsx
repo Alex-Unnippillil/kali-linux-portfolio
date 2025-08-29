@@ -113,24 +113,24 @@ const Simulator: React.FC = () => {
   };
 
   useEffect(() => {
-    if (activeTab === 'chart') {
-      import('chart.js/auto').then((Chart) => {
-        const ctx = document.getElementById('sim-chart') as HTMLCanvasElement | null;
-        if (!ctx) return;
-        new Chart.default(ctx, {
-          type: 'bar',
-          data: {
-            labels: parsed.map(p => p.key),
-            datasets: [{
-              label: 'Line',
-              backgroundColor: '#0072B2',
-              data: parsed.map(p => p.line),
-            }],
-          },
-          options: { responsive: true, maintainAspectRatio: false },
+      if (activeTab === 'chart') {
+        import('chart.js/auto').then(({ default: Chart }) => {
+          const ctx = document.getElementById('sim-chart') as HTMLCanvasElement | null;
+          if (!ctx) return;
+          new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: parsed.map((p) => p.key),
+              datasets: [{
+                label: 'Line',
+                backgroundColor: '#0072B2',
+                data: parsed.map((p) => p.line),
+              }],
+            },
+            options: { responsive: true, maintainAspectRatio: false },
+          });
         });
-      });
-    }
+      }
   }, [activeTab, parsed]);
 
   const tabs: TabDefinition[] = [

@@ -75,10 +75,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: new URLSearchParams({
-          secret,
-          response: recaptchaToken,
-        }),
+          body: new URLSearchParams({
+            secret: secret ?? '',
+            response: recaptchaToken,
+          }),
       }
     );
     const captcha = await verify.json();

@@ -109,9 +109,9 @@ export default function VSCodeApp() {
 
   const files = Object.keys(fs);
 
-  const filtered = quickQuery
-    ? files.filter((f) => f.toLowerCase().includes(quickQuery.toLowerCase()))
-    : JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+    const filtered: string[] = quickQuery
+      ? files.filter((f) => f.toLowerCase().includes(quickQuery.toLowerCase()))
+      : (JSON.parse(localStorage.getItem(RECENT_KEY) || '[]') as string[]);
 
   const runFind = () => {
     try {
