@@ -1,3 +1,7 @@
+import { POWER_UPS } from '../../games/asteroids/powerups';
+
+export { POWER_UPS };
+
 export function wrap(value, max, margin = 0) {
   const range = max + margin * 2;
   let m = (value + margin) % range;
@@ -68,14 +72,27 @@ export function createGA(handler) {
   };
 }
 
-export const POWER_UPS = {
-  SHIELD: 'shield',
-  RAPID_FIRE: 'rapid-fire',
-};
-
 export function spawnPowerUp(list, x, y) {
-  const type = Math.random() < 0.5 ? POWER_UPS.SHIELD : POWER_UPS.RAPID_FIRE;
+  const types = Object.values(POWER_UPS);
+  const type = types[Math.floor(Math.random() * types.length)];
   list.push({ type, x, y, r: 12, life: 600 });
+}
+
+export function applyPowerUp(powerUp, ship, lives, shieldDuration = 600, rapidFireDuration = 600) {
+  switch (powerUp.type) {
+    case POWER_UPS.SHIELD:
+      ship.shield = shieldDuration;
+      break;
+    case POWER_UPS.RAPID_FIRE:
+      ship.rapidFire = rapidFireDuration;
+      break;
+    case POWER_UPS.EXTRA_LIFE:
+      lives += 1;
+      break;
+    default:
+      break;
+  }
+  return lives;
 }
 
 export function updatePowerUps(list) {
