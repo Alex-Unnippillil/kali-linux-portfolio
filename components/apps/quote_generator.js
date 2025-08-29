@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Filter from 'bad-words';
 import { toPng } from 'html-to-image';
 
-import offlineQuotes from './quotes.json';
+import defaultQuotes from './quotes.json';
+import techQuotes from './quotes_tech.json';
 
 const SAFE_CATEGORIES = [
   'inspirational',
@@ -55,14 +56,25 @@ const processQuotes = (data) => {
         q.tags.some((t) => SAFE_CATEGORIES.includes(t))
     );
 };
+const PACKS = {
+  default: processQuotes(defaultQuotes),
+  tech: processQuotes(techQuotes),
+};
 
-const allOfflineQuotes = processQuotes(offlineQuotes);
+const shuffleArray = (arr) => {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+};
 
 const QuoteGenerator = () => {
-  const [quotes, setQuotes] = useState(allOfflineQuotes);
+  const [pack, setPack] = useState(() => localStorage.getItem('quotePack') || 'default');
+  const [order, setOrder] = useState([]);
+  const [index, setIndex] = useState(0);
   const [current, setCurrent] = useState(null);
-  const [category, setCategory] = useState('');
-  const [search, setSearch] = useState('');
   const [displayedText, setDisplayedText] = useState('');
   const [prefersReduced, setPrefersReduced] = useState(false);
   const rafRef = useRef();
@@ -75,80 +87,39 @@ const QuoteGenerator = () => {
     media.addEventListener('change', handler);
     return () => media.removeEventListener('change', handler);
   }, []);
-
   useEffect(() => {
-    const stored = localStorage.getItem('quotesData');
-    if (stored) {
-      try {
-        setQuotes(processQuotes(JSON.parse(stored)));
-      } catch {
-        // ignore parse error
-      }
+    const base = PACKS[pack] || [];
+    let storedOrder;
+    try {
+      storedOrder = JSON.parse(localStorage.getItem('quoteOrder_' + pack));
+    } catch {
+      // ignore parse error
     }
-
-    const fetchQuotes = () => {
-      const etag = localStorage.getItem('quotesEtag');
-      fetch('https://api.quotable.io/quotes?limit=500', {
-        headers: etag ? { 'If-None-Match': etag } : {},
-      })
-        .then((res) => {
-          if (res.status === 200) {
-            const newEtag = res.headers.get('ETag');
-            res
-              .json()
-              .then((d) => {
-                localStorage.setItem('quotesData', JSON.stringify(d.results));
-                if (newEtag) localStorage.setItem('quotesEtag', newEtag);
-                setQuotes(processQuotes(d.results));
-              })
-              .catch(() => {
-                /* ignore parse errors */
-              });
-          }
-        })
-        .catch(() => {
-          /* ignore network errors */
-        });
-    };
-
-    if (navigator.onLine) fetchQuotes();
-    window.addEventListener('online', fetchQuotes);
-    return () => window.removeEventListener('online', fetchQuotes);
-  }, []);
-
-  const filteredQuotes = useMemo(
-    () =>
-      quotes.filter(
-        (q) =>
-          (!category || q.tags.includes(category)) &&
-          (!search ||
-            q.content.toLowerCase().includes(search.toLowerCase()) ||
-            q.author.toLowerCase().includes(search.toLowerCase()))
-      ),
-    [quotes, category, search]
-  );
+    if (!Array.isArray(storedOrder) || storedOrder.length !== base.length) {
+      storedOrder = shuffleArray(base.map((_, i) => i));
+    }
+    setOrder(storedOrder);
+    const savedIndex = parseInt(
+      localStorage.getItem('quoteIndex_' + pack) || '0',
+      10
+    );
+    setIndex(Math.min(savedIndex, storedOrder.length - 1));
+  }, [pack]);
 
   useEffect(() => {
-    if (!filteredQuotes.length) {
+    const base = PACKS[pack] || [];
+    if (!order.length) {
       setCurrent(null);
       return;
     }
-    const seed = new Date().toISOString().slice(0, 10);
-    const index =
-      Math.abs(
-        seed
-          .split('')
-          .reduce((a, c) => Math.imul(a, 31) + c.charCodeAt(0), 0)
-      ) % filteredQuotes.length;
-    setCurrent(filteredQuotes[index]);
-  }, [filteredQuotes]);
+    setCurrent(base[order[index]]);
+  }, [pack, order, index]);
 
-  const changeQuote = () => {
-    if (!filteredQuotes.length) return;
-    const newQuote =
-      filteredQuotes[Math.floor(Math.random() * filteredQuotes.length)];
-    setCurrent(newQuote);
-  };
+  useEffect(() => {
+    localStorage.setItem('quotePack', pack);
+    localStorage.setItem('quoteIndex_' + pack, index.toString());
+    localStorage.setItem('quoteOrder_' + pack, JSON.stringify(order));
+  }, [pack, index, order]);
 
   useEffect(() => {
     if (!current || !liveRef.current) return;
@@ -158,6 +129,23 @@ const QuoteGenerator = () => {
       if (liveRef.current) liveRef.current.textContent = announcement;
     });
   }, [current]);
+
+  const nextQuote = () => {
+    if (!order.length) return;
+    if (index + 1 >= order.length) {
+      const base = PACKS[pack] || [];
+      const newOrder = shuffleArray(base.map((_, i) => i));
+      setOrder(newOrder);
+      setIndex(0);
+    } else {
+      setIndex(index + 1);
+    }
+  };
+
+  const prevQuote = () => {
+    if (!order.length) return;
+    setIndex(index === 0 ? order.length - 1 : index - 1);
+  };
 
   useEffect(() => {
     if (!current) return;
@@ -247,14 +235,6 @@ const QuoteGenerator = () => {
     }
   };
 
-  const categories = useMemo(
-    () =>
-      Array.from(new Set(quotes.flatMap((q) => q.tags))).filter((c) =>
-        SAFE_CATEGORIES.includes(c)
-      ),
-    [quotes]
-  );
-
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 overflow-auto">
       <div className="w-full max-w-md flex flex-col items-center">
@@ -277,9 +257,15 @@ const QuoteGenerator = () => {
         <div className="flex flex-wrap justify-center gap-2 mt-4">
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={changeQuote}
+            onClick={prevQuote}
           >
-            New Quote
+            Prev
+          </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={nextQuote}
+          >
+            Next
           </button>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
@@ -300,26 +286,17 @@ const QuoteGenerator = () => {
             Share as Card
           </button>
         </div>
-        <div className="mt-4 flex flex-col w-full gap-2">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search"
-            className="px-2 py-1 rounded text-black"
-          />
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="px-2 py-1 rounded text-black"
-          >
-            <option value="">All Categories</option>
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
-        </div>
+        <select
+          value={pack}
+          onChange={(e) => setPack(e.target.value)}
+          className="px-2 py-1 rounded text-black mt-4"
+        >
+          {Object.keys(PACKS).map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </select>
       </div>
     </div>
   );
