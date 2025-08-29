@@ -137,7 +137,9 @@
   "resolutions": {
     "magic-string": "^0.30.10",
     "postcss": "^8.5.6",
-    "test-exclude": "^7.0.1"
+    "test-exclude": "^7.0.1",
+    "bare-fs@npm:^4.0.1": "patch:bare-fs@npm%3A4.2.1#~/.yarn/patches/bare-fs-npm-4.2.1-033b0791f0.patch",
+    "bare-os@npm:^3.0.1": "patch:bare-os@npm%3A3.6.2#~/.yarn/patches/bare-os-npm-3.6.2-fb7820f69d.patch"
   },
   "packageManager": "yarn@4.9.2"
 }
