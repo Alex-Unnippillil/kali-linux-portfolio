@@ -1,14 +1,4 @@
 {
-  "version": 2,
-  "functions": {
-    "api/**/*.js": { "runtime": "nodejs22.x" },
-    "api/**/*.ts": { "runtime": "nodejs22.x" }
-  },
-  "env": {
-    "FLAGS_SECRET": "@flags_secret"
+  "$schema": "https://openapi.vercel.sh/vercel.json"
 
-  },
-  "env": {
-    "ADMIN_READ_KEY": "@admin-read-key"
-  }
 }
