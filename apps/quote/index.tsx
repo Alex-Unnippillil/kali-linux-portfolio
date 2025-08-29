@@ -5,6 +5,7 @@ import { toPng } from 'html-to-image';
 import offlineQuotes from '../../public/quotes.json';
 import PlaylistBuilder from './components/PlaylistBuilder';
 import share, { canShare } from '../../utils/share';
+import Posterizer from './components/Posterizer';
 
 interface Quote {
   content: string;
@@ -61,6 +62,7 @@ export default function QuoteApp() {
   const [search, setSearch] = useState('');
   const [favorites, setFavorites] = useState<string[]>([]);
   const [dailyQuote, setDailyQuote] = useState<Quote | null>(null);
+  const [posterize, setPosterize] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const [playlist, setPlaylist] = useState<number[]>([]);
   const [playIndex, setPlayIndex] = useState(0);
@@ -269,6 +271,12 @@ export default function QuoteApp() {
           <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={shareCard}>
             Share as Card
           </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={() => setPosterize((p) => !p)}
+          >
+            {posterize ? 'Close Posterizer' : 'Posterize'}
+          </button>
           {canShare() && (
             <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={shareQuote}>
               Share
@@ -279,6 +287,11 @@ export default function QuoteApp() {
             <input type="file" accept="application/json" className="hidden" onChange={importQuotes} />
           </label>
         </div>
+        {posterize && (
+          <div className="mt-4 w-full">
+            <Posterizer quote={current} />
+          </div>
+        )}
         <div className="mt-4 flex flex-col w-full gap-2">
           <input
             value={search}
