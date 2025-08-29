@@ -135,6 +135,8 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
       padJumpWasPressed = false;
       parallax: Phaser.GameObjects.Rectangle[] = [];
       checkpointFlags: { body: MatterJS.BodyType; flag: Phaser.GameObjects.Rectangle }[] = [];
+      coins: { body: MatterJS.BodyType; sprite: Phaser.GameObjects.Rectangle }[] = [];
+      coinText!: Phaser.GameObjects.Text;
 
       constructor() {
         super('level');
@@ -178,6 +180,19 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
           });
         });
 
+        // Coins
+        data.coins?.forEach((c: any) => {
+          const body = this.matter.add.rectangle(c.x, c.y, c.width, c.height, {
+            isStatic: true,
+            isSensor: true,
+            label: 'coin',
+          });
+          const sprite = this.add
+            .rectangle(c.x, c.y, c.width, c.height, 0xffd700)
+            .setOrigin(0.5);
+          this.coins.push({ body, sprite });
+        });
+
         // Checkpoints with flags
         data.checkpoints.forEach((c: any) => {
           const body = this.matter.add.rectangle(c.x, c.y, c.width, c.height, {
@@ -195,6 +210,10 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
         this.player = this.matter.add.image(data.spawn.x, data.spawn.y, 'player', undefined, {
           shape: { type: 'rectangle', width: 32, height: 32 },
         });
+
+        this.coinText = this.add
+          .text(16, 16, 'Coins: 0', { color: '#ffffff' })
+          .setScrollFactor(0);
 
         // Camera dead-zone
         this.cameras.main.setBounds(0, 0, data.bounds.width, data.bounds.height);
@@ -214,6 +233,16 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
               const s = this.state.getRespawnPoint();
               this.player.setPosition(s.x, s.y);
               this.player.setVelocity(0, 0);
+            }
+            if (body.label === 'coin') {
+              const idx = this.coins.findIndex((c) => c.body === body);
+              if (idx >= 0) {
+                const [coin] = this.coins.splice(idx, 1);
+                coin.sprite.destroy();
+                this.matter.world.remove(body);
+                const count = this.state.addCoin();
+                this.coinText.setText(`Coins: ${count}`);
+              }
             }
           });
         });

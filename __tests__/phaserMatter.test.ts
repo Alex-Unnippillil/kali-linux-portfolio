@@ -24,4 +24,15 @@ describe('phaser matter platformer', () => {
     expect(Array.isArray((level as any).checkpoints)).toBe(true);
     expect((level as any).checkpoints.length).toBeGreaterThan(0);
   });
+
+  test('level data defines coins', () => {
+    expect(Array.isArray((level as any).coins)).toBe(true);
+    expect((level as any).coins.length).toBeGreaterThan(0);
+  });
+
+  test('collecting coins increments count', () => {
+    const gs = new GameState({ x: 0, y: 0 });
+    expect(gs.addCoin()).toBe(1);
+    expect(gs.addCoin()).toBe(2);
+  });
 });
