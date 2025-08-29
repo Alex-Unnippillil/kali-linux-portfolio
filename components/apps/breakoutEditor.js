@@ -1,55 +1,76 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import useOPFS from '../../hooks/useOPFS';
+import React, { useState, useRef, useEffect } from 'react';
 
 const ROWS = 5;
 const COLS = 10;
+const KEY_PREFIX = 'breakout-level:';
+
+const cellClass = (cell) =>
+  cell === 0
+    ? 'bg-gray-800'
+    : cell === 1
+      ? 'bg-blue-500'
+      : cell === 2
+        ? 'bg-green-500'
+        : 'bg-red-500';
 
 /**
  * Simple level editor for Breakout.
- * Allows creating a brick layout and storing it in OPFS as JSON.
- * Cells cycle through: 0-empty, 1-normal, 2-multi-ball, 3-magnet.
+ * Provides a drag-and-drop grid for placing bricks and stores layouts in
+ * localStorage. Cell types: 0-empty, 1-normal, 2-multi-ball, 3-magnet.
  */
 export default function BreakoutEditor({ onLoad }) {
   const [grid, setGrid] = useState(
     Array.from({ length: ROWS }, () => Array(COLS).fill(0)),
   );
   const [name, setName] = useState('level1');
-  const { supported, getDir, writeFile } = useOPFS();
-  const dirRef = useRef(null);
+  const currentType = useRef(1);
+  const dragging = useRef(false);
 
-  useEffect(() => {
-    if (supported) {
-      getDir('breakout-levels').then((d) => {
-        dirRef.current = d;
-      });
-    }
-  }, [supported, getDir]);
-
-  const cycleCell = (r, c) => {
+  const setCell = (r, c, t) => {
     setGrid((g) => {
       const copy = g.map((row) => row.slice());
-      copy[r][c] = (copy[r][c] + 1) % 4;
+      copy[r][c] = t;
       return copy;
     });
   };
 
-  const save = async () => {
-    if (!dirRef.current) return;
-    await writeFile(`${name}.json`, JSON.stringify(grid), dirRef.current);
+  const handleDrop = (r, c) => {
+    setCell(r, c, currentType.current);
   };
 
-  const exportJson = () => {
-    const blob = new Blob([JSON.stringify(grid)], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${name}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleMouseDown = (r, c) => {
+    dragging.current = true;
+    handleDrop(r, c);
+  };
+
+  const handleMouseEnter = (r, c) => {
+    if (dragging.current) handleDrop(r, c);
+  };
+
+  useEffect(() => {
+    const up = () => {
+      dragging.current = false;
+    };
+    window.addEventListener('mouseup', up);
+    return () => window.removeEventListener('mouseup', up);
+  }, []);
+
+  const save = () => {
+    localStorage.setItem(`${KEY_PREFIX}${name}`, JSON.stringify(grid));
+  };
+
+  const load = () => {
+    const txt = localStorage.getItem(`${KEY_PREFIX}${name}`);
+    if (txt) {
+      try {
+        const arr = JSON.parse(txt);
+        if (Array.isArray(arr)) setGrid(arr);
+      } catch {
+        /* ignore */
+      }
+    }
   };
 
   const play = () => {
@@ -58,24 +79,34 @@ export default function BreakoutEditor({ onLoad }) {
 
   return (
     <div className="text-white space-y-2">
+      <div className="flex space-x-1">
+        {[0, 1, 2, 3].map((t) => (
+          <div
+            key={t}
+            draggable
+            onDragStart={() => {
+              currentType.current = t;
+            }}
+            onClick={() => {
+              currentType.current = t;
+            }}
+            className={`w-5 h-5 cursor-pointer ${cellClass(t)}`}
+          />
+        ))}
+      </div>
       <div
-        className="grid gap-1"
+        className="grid gap-1 select-none"
         style={{ gridTemplateColumns: `repeat(${COLS}, 20px)` }}
       >
         {grid.map((row, r) =>
           row.map((cell, c) => (
             <div
               key={`${r}-${c}`}
-              onClick={() => cycleCell(r, c)}
-              className={
-                cell === 0
-                  ? 'bg-gray-800'
-                  : cell === 1
-                    ? 'bg-blue-500'
-                    : cell === 2
-                      ? 'bg-green-500'
-                      : 'bg-red-500'
-              }
+              className={cellClass(cell)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => handleDrop(r, c)}
+              onMouseDown={() => handleMouseDown(r, c)}
+              onMouseEnter={() => handleMouseEnter(r, c)}
               style={{ width: 20, height: 10 }}
             />
           )),
@@ -96,10 +127,10 @@ export default function BreakoutEditor({ onLoad }) {
         </button>
         <button
           type="button"
-          onClick={exportJson}
+          onClick={load}
           className="px-2 py-1 bg-gray-700 rounded"
         >
-          Export
+          Load
         </button>
         <button
           type="button"

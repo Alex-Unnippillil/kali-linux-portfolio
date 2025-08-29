@@ -1,39 +1,35 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import useOPFS from '../../hooks/useOPFS';
+import React, { useState, useEffect } from 'react';
+
+const KEY_PREFIX = 'breakout-level:';
 
 /**
  * Level selection overlay for Breakout.
- * Lists saved layouts from OPFS and allows loading them.
+ * Lists saved layouts from localStorage and allows loading them.
  */
 export default function BreakoutLevels({ onSelect }) {
-  const { supported, getDir, readFile } = useOPFS();
   const [levels, setLevels] = useState([]);
-  const dirRef = useRef(null);
 
   useEffect(() => {
-    if (supported) {
-      getDir('breakout-levels').then(async (d) => {
-        dirRef.current = d;
-        if (d) {
-          const arr = [];
-          for await (const [name, handle] of d.entries()) {
-            if (handle.kind === 'file' && name.endsWith('.json')) {
-              arr.push(name.replace(/\.json$/, ''));
-            }
-          }
-          setLevels(arr);
-        }
-      });
+    const arr = [];
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(KEY_PREFIX)) {
+        arr.push(key.slice(KEY_PREFIX.length));
+      }
     }
-  }, [supported, getDir]);
+    setLevels(arr);
+  }, []);
 
-  const load = async (name) => {
-    if (!dirRef.current) return;
-    const txt = await readFile(`${name}.json`, dirRef.current);
+  const load = (name) => {
+    const txt = localStorage.getItem(`${KEY_PREFIX}${name}`);
     if (txt && onSelect) {
-      onSelect(JSON.parse(txt));
+      try {
+        onSelect(JSON.parse(txt));
+      } catch {
+        /* ignore */
+      }
     }
   };
 
