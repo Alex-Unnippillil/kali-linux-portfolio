@@ -4,6 +4,7 @@ import { protocolName, getRowColor } from './utils';
 import DecodeTree from './DecodeTree';
 import FlowDiagram from './FlowDiagram';
 import filters from './filters.json';
+import FilterHelper from '../../../apps/wireshark/components/FilterHelper';
 
 const SMALL_CAPTURE_SIZE = 1024 * 1024; // 1MB threshold
 
@@ -120,7 +121,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
   const [tlsKeys, setTlsKeys] = useState('');
   const [protocolFilter, setProtocolFilter] = useState('');
   const [filter, setFilter] = useState('');
-   const [bpf, setBpf] = useState('');
+  const [bpf, setBpf] = useState('');
   const [colorRuleText, setColorRuleText] = useState('[]');
   const [colorRules, setColorRules] = useState([]);
   const [paused, setPaused] = useState(false);
@@ -176,8 +177,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
     }
   }, [timeline, paused]);
 
-  const handleFilterChange = (e) => {
-    const val = e.target.value;
+  const handleFilterChange = (val) => {
     setFilter(val);
     if (typeof window !== 'undefined') {
       window.localStorage.setItem('wireshark-filter', val);
@@ -343,13 +343,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
             </option>
           ))}
         </select>
-        <input
-          value={filter}
-          onChange={handleFilterChange}
-          placeholder="Quick search (e.g. tcp)"
-          aria-label="Quick search"
-          className="px-2 py-1 bg-gray-800 rounded text-white"
-        />
+        <FilterHelper value={filter} onChange={handleFilterChange} />
         <input
           value={bpf}
           onChange={handleBpfChange}
