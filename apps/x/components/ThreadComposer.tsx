@@ -1,31 +1,83 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { toPng } from 'html-to-image';
 import usePersistentState from '../../../hooks/usePersistentState';
 import { useSettings } from '../../../hooks/useSettings';
+import type { ScheduledTweet } from '../state/scheduled';
 
-const isStringArray = (val: unknown): val is string[] =>
-  Array.isArray(val) && val.every((v) => typeof v === 'string');
+interface TweetDraft {
+  text: string;
+  timestamp: string;
+}
+
+const isTweetArray = (val: unknown): val is TweetDraft[] =>
+  Array.isArray(val) &&
+  val.every(
+    (v) =>
+      typeof v === 'object' &&
+      v !== null &&
+      typeof (v as any).text === 'string' &&
+      typeof (v as any).timestamp === 'string',
+  );
 
 export default function ThreadComposer() {
   const { accent } = useSettings();
-  const [tweets, setTweets] = usePersistentState<string[]>(
+  const [tweets, setTweets] = usePersistentState<TweetDraft[]>(
     'x-thread-draft',
-    () => [''],
-    isStringArray
+    () => [{ text: '', timestamp: '' }],
+    isTweetArray,
+  );
+  const [scheduled, setScheduled] = usePersistentState<ScheduledTweet[]>(
+    'x-thread-scheduled',
+    [],
+  );
+  const [published, setPublished] = usePersistentState<ScheduledTweet[]>(
+    'x-thread-published',
+    [],
   );
   const previewRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const workerRef = useRef<Worker>();
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const worker = new Worker(
+      new URL('../../../workers/postPublisher.ts', import.meta.url),
+    );
+    worker.onmessage = ({ data }) => {
+      if (data.action === 'publish') {
+        const tweet = data.tweet as ScheduledTweet;
+        setScheduled((prev) => prev.filter((t) => t.id !== tweet.id));
+        setPublished((prev) => [...prev, tweet]);
+      }
+    };
+    worker.postMessage({ action: 'setQueue', tweets: scheduled });
+    workerRef.current = worker;
+    return () => worker.terminate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    workerRef.current?.postMessage({ action: 'setQueue', tweets: scheduled });
+  }, [scheduled]);
 
   const updateTweet = (index: number, value: string) => {
     setTweets((ts) => {
       const next = [...ts];
-      next[index] = value;
+      next[index] = { ...next[index], text: value };
       return next;
     });
   };
 
-  const addTweet = () => setTweets((ts) => [...ts, '']);
+  const updateTime = (index: number, value: string) => {
+    setTweets((ts) => {
+      const next = [...ts];
+      next[index] = { ...next[index], timestamp: value };
+      return next;
+    });
+  };
+
+  const addTweet = () => setTweets((ts) => [...ts, { text: '', timestamp: '' }]);
 
   const removeTweet = (index: number) => {
     setTweets((ts) => ts.filter((_, i) => i !== index));
@@ -48,22 +100,42 @@ export default function ThreadComposer() {
     });
   };
 
+  const queueTweets = () => {
+    const newTweets = tweets
+      .filter((t) => t.text.trim() && t.timestamp)
+      .map((t, i) => ({
+        id: `${Date.now()}-${i}`,
+        text: t.text.trim(),
+        time: new Date(t.timestamp).getTime(),
+      }));
+    if (newTweets.length === 0) return;
+    setScheduled((prev) => [...prev, ...newTweets]);
+    setTweets([{ text: '', timestamp: '' }]);
+    previewRefs.current = [];
+  };
+
   return (
     <div className="space-y-4 p-4">
       {tweets.map((tweet, i) => (
         <div key={i} className="space-y-2">
           <textarea
-            value={tweet}
+            value={tweet.text}
             onChange={(e) => updateTweet(i, e.target.value)}
             placeholder={`Tweet ${i + 1}`}
             maxLength={280}
+            className="w-full p-2 border rounded bg-transparent"
+          />
+          <input
+            type="datetime-local"
+            value={tweet.timestamp}
+            onChange={(e) => updateTime(i, e.target.value)}
             className="w-full p-2 border rounded bg-transparent"
           />
           <div
             ref={(el) => (previewRefs.current[i] = el)}
             className="p-2 border rounded whitespace-pre-wrap bg-white text-black dark:bg-black dark:text-white"
           >
-            {tweet || <span className="text-gray-400">Preview...</span>}
+            {tweet.text || <span className="text-gray-400">Preview...</span>}
           </div>
           {tweets.length > 1 && (
             <button
@@ -93,7 +165,39 @@ export default function ThreadComposer() {
         >
           Export Thread
         </button>
+        <button
+          type="button"
+          onClick={queueTweets}
+          className="px-3 py-1 rounded text-white"
+          style={{ backgroundColor: accent }}
+        >
+          Queue Posts
+        </button>
       </div>
+      {scheduled.length > 0 && (
+        <div>
+          <h3 className="font-semibold">Scheduled Posts</h3>
+          <ul className="space-y-1">
+            {scheduled.map((t) => (
+              <li key={t.id} className="text-sm">
+                {new Date(t.time).toLocaleString()} - {t.text}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {published.length > 0 && (
+        <div>
+          <h3 className="font-semibold">Published Posts</h3>
+          <ul className="space-y-1">
+            {published.map((t) => (
+              <li key={t.id} className="text-sm">
+                {new Date(t.time).toLocaleString()} - {t.text}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
