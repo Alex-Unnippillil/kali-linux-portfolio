@@ -18,7 +18,7 @@ const numberColors = [
   '#0000ff',
   '#008000',
   '#ff0000',
-  '#800080',
+  '#000080',
   '#800000',
   '#008080',
   '#000000',
@@ -198,6 +198,10 @@ const Minesweeper = () => {
   );
   const [showSettings, setShowSettings] = useState(false);
   const [hasSave, setHasSave] = useState(false);
+  const [facePressed, setFacePressed] = useState(false);
+  const [faceBtnDown, setFaceBtnDown] = useState(false);
+  const [cursor, setCursor] = useState({ x: 0, y: 0 });
+  const [cursorVisible, setCursorVisible] = useState(false);
   const leftDown = useRef(false);
   const rightDown = useRef(false);
   const chorded = useRef(false);
@@ -274,7 +278,7 @@ const Minesweeper = () => {
     let frame;
     const draw = () => {
       ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-      ctx.font = '20px sans-serif';
+      ctx.font = '16px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       const riskMap = showRisk && board ? calculateRiskMap(board) : null;
@@ -293,7 +297,15 @@ const Minesweeper = () => {
           const py = x * CELL_SIZE;
           ctx.strokeStyle = '#111';
           ctx.lineWidth = 1;
-          ctx.fillStyle = cell.revealed ? '#d1d5db' : '#1f2937';
+          const isCursor =
+            cursorVisible && cursor.x === x && cursor.y === y && !cell.revealed;
+          ctx.fillStyle = cell.revealed
+            ? '#d1d5db'
+            : isCursor
+            ? leftDown.current || rightDown.current
+              ? '#4b5563'
+              : '#374151'
+            : '#1f2937';
           ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
           ctx.strokeRect(px, py, CELL_SIZE, CELL_SIZE);
           const key = `${x},${y}`;
@@ -714,6 +726,9 @@ const Minesweeper = () => {
     const rect = canvasRef.current.getBoundingClientRect();
     const y = Math.floor((e.clientX - rect.left) / CELL_SIZE);
     const x = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+    setCursor({ x, y });
+    setCursorVisible(true);
+    setFacePressed(true);
     if (e.button === 0) {
       leftDown.current = true;
     } else if (e.button === 2) {
@@ -728,6 +743,8 @@ const Minesweeper = () => {
     const rect = canvasRef.current.getBoundingClientRect();
     const y = Math.floor((e.clientX - rect.left) / CELL_SIZE);
     const x = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+    setCursor({ x, y });
+    setFacePressed(false);
     if (e.button === 0) {
       if (rightDown.current) {
         handleChord(x, y);
@@ -750,10 +767,47 @@ const Minesweeper = () => {
     if (!leftDown.current && !rightDown.current) chorded.current = false;
   };
 
+  const handleMouseMove = (e) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const y = Math.floor((e.clientX - rect.left) / CELL_SIZE);
+    const x = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+    setCursor({ x, y });
+    setCursorVisible(true);
+  };
+
   const handleMouseLeave = () => {
     leftDown.current = false;
     rightDown.current = false;
     chorded.current = false;
+    setCursorVisible(false);
+    setFacePressed(false);
+  };
+
+  const handleContextMenu = (e) => {
+    e.preventDefault();
+    if (e.clientX === 0 && e.clientY === 0) {
+      toggleFlag(cursor.x, cursor.y);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'ArrowUp') {
+      setCursor((c) => ({ x: Math.max(0, c.x - 1), y: c.y }));
+      setCursorVisible(true);
+    } else if (e.key === 'ArrowDown') {
+      setCursor((c) => ({ x: Math.min(BOARD_SIZE - 1, c.x + 1), y: c.y }));
+      setCursorVisible(true);
+    } else if (e.key === 'ArrowLeft') {
+      setCursor((c) => ({ x: c.x, y: Math.max(0, c.y - 1) }));
+      setCursorVisible(true);
+    } else if (e.key === 'ArrowRight') {
+      setCursor((c) => ({ x: c.x, y: Math.min(BOARD_SIZE - 1, c.y + 1) }));
+      setCursorVisible(true);
+    } else if (e.key.toLowerCase() === 'f') {
+      toggleFlag(cursor.x, cursor.y);
+    } else if (e.key === ' ' || e.key === 'Enter') {
+      handleClick(cursor.x, cursor.y);
+    }
   };
 
   const reset = () => {
@@ -771,6 +825,10 @@ const Minesweeper = () => {
     setFlags(0);
     setPaused(false);
     setAriaMessage('');
+    setFacePressed(false);
+    setFaceBtnDown(false);
+    setCursor({ x: 0, y: 0 });
+    setCursorVisible(false);
   };
 
   const copyCode = () => {
@@ -870,6 +928,15 @@ const Minesweeper = () => {
 
   const toggleSound = () => setSound((s) => !s);
 
+  const face =
+    status === 'won'
+      ? '😎'
+      : status === 'lost'
+      ? '😵'
+      : facePressed
+      ? '😮'
+      : '🙂';
+
   return (
     <div className="relative h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
       <div className="mb-2 flex items-center space-x-2">
@@ -900,14 +967,38 @@ const Minesweeper = () => {
       </div>
       <div className="mb-2">Mines: {MINES_COUNT - flags}</div>
       <div className="mb-2">3BV: {bv} | Best: {bestTime ? bestTime.toFixed(2) : '--'}s{status === 'won' ? ` | Time: ${elapsed.toFixed(2)}s` : ''}</div>
+      <div className="mb-2">
+        <button
+          className={`w-8 h-8 text-xl bg-gray-700 rounded border-2 ${faceBtnDown ? 'border-gray-400 translate-y-[1px]' : 'border-gray-600'}`}
+          onMouseDown={() => {
+            setFaceBtnDown(true);
+            setFacePressed(true);
+          }}
+          onMouseUp={() => {
+            setFaceBtnDown(false);
+            setFacePressed(false);
+            reset();
+          }}
+          onMouseLeave={() => {
+            setFaceBtnDown(false);
+            setFacePressed(false);
+          }}
+          aria-label="Reset game"
+        >
+          {face}
+        </button>
+      </div>
       <canvas
         ref={canvasRef}
         width={CANVAS_SIZE}
         height={CANVAS_SIZE}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
+        onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
-        onContextMenu={(e) => e.preventDefault()}
+        onContextMenu={handleContextMenu}
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
         className="bg-gray-700 mb-4"
         style={{ imageRendering: 'pixelated' }}
       />
@@ -923,12 +1014,6 @@ const Minesweeper = () => {
           : `Boom! Game over (3BV: ${bv})`}
       </div>
       <div className="flex space-x-2">
-        <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={reset}
-        >
-          Reset
-        </button>
         {hasSave && (
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
