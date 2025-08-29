@@ -36,6 +36,11 @@ export default function Todoist() {
   const [view, setView] = useState('all');
   const [activeProject, setActiveProject] = useState('all');
   const [editingTask, setEditingTask] = useState({ id: null, group: '', title: '' });
+  const [calendarDate, setCalendarDate] = useState(() => {
+    const d = new Date();
+    d.setDate(1);
+    return d;
+  });
   const dragged = useRef({ group: '', id: null, title: '' });
   const liveRef = useRef(null);
   const workerRef = useRef(null);
@@ -156,6 +161,27 @@ export default function Todoist() {
         // ignore
       }
     }
+  };
+
+  const handleDayDrop = (date) => (e) => {
+    e.preventDefault();
+    const { group, id, title } = dragged.current;
+    if (!id) return;
+    const newGroups = {
+      ...groups,
+      [group]: groups[group].map((t) =>
+        t.id === id ? { ...t, due: date } : t,
+      ),
+    };
+    setGroups(newGroups);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
+      } catch {
+        // ignore
+      }
+    }
+    announce(title, date);
   };
 
   const saveEditing = () => {
@@ -529,6 +555,99 @@ export default function Todoist() {
 
   const projectNames = Object.keys(groups);
 
+  const renderCalendar = () => {
+    const start = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1);
+    const end = new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 0);
+    const tasksByDate = {};
+    flatTasks
+      .filter((t) => t.due && matchesTask(t))
+      .forEach((t) => {
+        (tasksByDate[t.due] ||= []).push(t);
+      });
+    const days = [];
+    for (let i = 0; i < start.getDay(); i++) days.push(null);
+    for (let d = 1; d <= end.getDate(); d++) {
+      const dateStr = new Date(
+        calendarDate.getFullYear(),
+        calendarDate.getMonth(),
+        d,
+      )
+        .toISOString()
+        .split('T')[0];
+      days.push({ dateStr, tasks: tasksByDate[dateStr] || [] });
+    }
+    while (days.length % 7 !== 0) days.push(null);
+    const monthLabel = start.toLocaleString('default', { month: 'long', year: 'numeric' });
+    return (
+      <div className="flex-1 p-2 overflow-y-auto">
+        <div className="flex items-center justify-between mb-2">
+          <button
+            onClick={() => {
+              setCalendarDate(
+                new Date(
+                  calendarDate.getFullYear(),
+                  calendarDate.getMonth() - 1,
+                  1,
+                ),
+              );
+            }}
+            aria-label="Previous month"
+          >
+            &lt;
+          </button>
+          <h2 className="font-bold text-lg">{monthLabel}</h2>
+          <button
+            onClick={() => {
+              setCalendarDate(
+                new Date(
+                  calendarDate.getFullYear(),
+                  calendarDate.getMonth() + 1,
+                  1,
+                ),
+              );
+            }}
+            aria-label="Next month"
+          >
+            &gt;
+          </button>
+        </div>
+        <div className="grid grid-cols-7 gap-1 text-sm">
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+            <div key={d} className="text-center font-semibold">
+              {d}
+            </div>
+          ))}
+          {days.map((day, idx) => (
+            <div
+              key={idx}
+              className="border min-h-[80px] p-1"
+              onDragOver={handleDragOver}
+              onDrop={day ? handleDayDrop(day.dateStr) : undefined}
+            >
+              {day && (
+                <React.Fragment>
+                  <div className="text-xs">
+                    {parseInt(day.dateStr.split('-')[2], 10)}
+                  </div>
+                  {day.tasks.map((t) => (
+                    <div
+                      key={t.id}
+                      draggable
+                      onDragStart={handleDragStart(t.group, t)}
+                      className="mt-1 p-1 bg-white text-black rounded text-xs"
+                    >
+                      {t.title}
+                    </div>
+                  ))}
+                </React.Fragment>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="flex h-full w-full" role="application">
       <aside className="w-40 border-r p-1 space-y-1">
@@ -660,6 +779,7 @@ export default function Todoist() {
           <button className="px-2 py-1 border rounded" onClick={() => setView('all')}>All</button>
           <button className="px-2 py-1 border rounded" onClick={() => setView('today')}>Today</button>
           <button className="px-2 py-1 border rounded" onClick={() => setView('upcoming')}>Upcoming</button>
+          <button className="px-2 py-1 border rounded" onClick={() => setView('calendar')}>Calendar</button>
           <button className="px-2 py-1 border rounded" onClick={handleExport}>Export</button>
           <label className="px-2 py-1 border rounded cursor-pointer">
             Import
@@ -671,20 +791,22 @@ export default function Todoist() {
             ? (activeProject === 'all'
                 ? projectNames.map((name) => renderGroup(name))
                 : renderGroup(activeProject))
-            : (
-              <div
-                className="flex-1 p-2 overflow-y-auto"
-                role="list"
-                aria-label={view === 'today' ? 'Today' : 'Upcoming'}
-              >
-                <h2 className="mb-2 font-bold text-lg text-gray-800">
-                  {view === 'today' ? 'Today' : 'Upcoming'}
-                </h2>
-                {(view === 'today' ? todayTasks : upcomingTasks).map((task) =>
-                  renderTask(task.group, task)
-                )}
-              </div>
-            )}
+            : view === 'calendar'
+              ? renderCalendar()
+              : (
+                <div
+                  className="flex-1 p-2 overflow-y-auto"
+                  role="list"
+                  aria-label={view === 'today' ? 'Today' : 'Upcoming'}
+                >
+                  <h2 className="mb-2 font-bold text-lg text-gray-800">
+                    {view === 'today' ? 'Today' : 'Upcoming'}
+                  </h2>
+                  {(view === 'today' ? todayTasks : upcomingTasks).map((task) =>
+                    renderTask(task.group, task)
+                  )}
+                </div>
+              )}
         </div>
       </div>
     </div>
