@@ -1,5 +1,6 @@
 const { JSDOM } = require('jsdom');
-const math = require('mathjs');
+const { create, all } = require('mathjs');
+const math = create(all);
 
 describe('calculator parser', () => {
   let calc: any;
@@ -11,6 +12,10 @@ describe('calculator parser', () => {
     global.math = math;
     calc = require('../../apps/calculator/main.js');
     calc.setPreciseMode(false);
+  });
+
+  beforeEach(() => {
+    localStorage.clear();
   });
 
   const basicCases = [
@@ -56,6 +61,11 @@ describe('calculator parser', () => {
 
   test.each(cases)('%s -> %s', (expr, expected) => {
     expect(calc.evaluate(expr)).toBe(expected);
+  });
+
+  test('handles variables', () => {
+    localStorage.setItem('calc-vars', JSON.stringify({ x: '5', y: '2' }));
+    expect(calc.evaluate('x+y')).toBe('7');
   });
 });
 

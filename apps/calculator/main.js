@@ -21,6 +21,7 @@ let history = [];
 let memory = 0;
 const HISTORY_KEY = 'calc-history';
 const MODE_KEY = 'calc-mode';
+const VARS_KEY = 'calc-vars';
 
 function setPreciseMode(on) {
   preciseMode = on;
@@ -326,7 +327,7 @@ function tokenize(expr) {
     return output;
   }
 
-  function evalRPN(rpn) {
+  function evalRPN(rpn, vars = {}) {
     const stack = [];
     for (const token of rpn) {
       if (token.type === 'number') {
@@ -337,6 +338,10 @@ function tokenize(expr) {
           stack.push(lastResult);
         } else if (math[token.value] !== undefined) {
           stack.push(math[token.value]);
+        } else if (vars[token.value] !== undefined) {
+          const v = vars[token.value];
+          const num = preciseMode ? math.bignumber(v) : Number(v);
+          stack.push(num);
         } else {
           stack.push(0);
         }
@@ -376,6 +381,7 @@ function tokenize(expr) {
 
   function evaluate(expression) {
     try {
+      const vars = loadVars();
       if (programmerMode) {
         if (!validateBaseInput(expression)) {
           display.reportValidity?.();
@@ -384,13 +390,17 @@ function tokenize(expr) {
         const decimalExpr = expression.replace(/\b[0-9A-F]+\b/gi, (m) =>
           parseInt(m, currentBase)
         );
-        const result = math.evaluate(decimalExpr, { Ans: lastResult });
+        const ctx = { Ans: lastResult };
+        for (const [k, v] of Object.entries(vars)) {
+          ctx[k] = preciseMode ? math.bignumber(v) : Number(v);
+        }
+        const result = math.evaluate(decimalExpr, ctx);
         lastResult = result;
         return formatBase(result);
       }
       const tokens = tokenize(expression);
       const rpn = toRPN(tokens);
-      const result = evalRPN(rpn);
+      const result = evalRPN(rpn, vars);
       lastResult = result;
       document.dispatchEvent(new CustomEvent('clear-error'));
       return result.toString();
@@ -522,6 +532,14 @@ function loadHistory() {
   renderHistory();
 }
 
+function loadVars() {
+  try {
+    return JSON.parse(localStorage.getItem(VARS_KEY) || '{}');
+  } catch {
+    return {};
+  }
+}
+
 function loadMode() {
   const saved = JSON.parse(localStorage.getItem(MODE_KEY) || '{}');
   setPreciseMode(!!saved.preciseMode);
@@ -648,6 +666,7 @@ if (typeof module !== 'undefined') {
     addHistory,
     loadHistory,
     HISTORY_KEY,
+    VARS_KEY,
     setPreciseMode,
     setProgrammerMode,
     convertBase,

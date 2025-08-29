@@ -1,6 +1,7 @@
 'use client';
 import { useEffect } from 'react';
 import './styles.css';
+import MemorySlots from './components/MemorySlots';
 
 export default function Calculator() {
   useEffect(() => {
@@ -48,6 +49,7 @@ export default function Calculator() {
         <button className="btn" data-action="mminus">M&minus;</button>
         <button className="btn" data-action="mr">MR</button>
       </div>
+      <MemorySlots />
       <div className="button-grid">
         <button className="btn" data-value="7">7</button>
         <button className="btn" data-value="8">8</button>
