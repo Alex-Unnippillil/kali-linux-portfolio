@@ -41,6 +41,7 @@ export interface ScriptController {
 export function runScript(
   source: string,
   exec: (command: string) => Promise<any> | any,
+  args: string[] = [],
 ): ScriptController {
   const steps = parseScript(source);
   let aborted = false;
@@ -53,7 +54,11 @@ export function runScript(
       for (const step of steps) {
         if (aborted) break;
         if (step.type === 'command') {
-          await exec(step.command);
+          const command = step.command.replace(/\$(\d+)/g, (_, n) => {
+            const idx = parseInt(n, 10) - 1;
+            return args[idx] ?? '';
+          });
+          await exec(command);
         } else {
           await new Promise<void>((res) => {
             timeout = setTimeout(res, step.ms);
