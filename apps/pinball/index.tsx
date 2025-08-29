@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Engine, Render, World, Bodies, Body, Runner } from 'matter-js';
+import { useTiltSensor } from './tilt';
 
 const themes: Record<string, { bg: string; flipper: string }> = {
   classic: { bg: '#0b3d91', flipper: '#ffd700' },
@@ -20,6 +21,16 @@ export default function Pinball() {
   const [bounce, setBounce] = useState(0.5);
   const [tilt, setTilt] = useState(false);
   const nudgesRef = useRef<number[]>([]);
+
+  const handleTilt = useCallback(() => {
+    setTilt(true);
+    setTimeout(() => {
+      setTilt(false);
+      nudgesRef.current = [];
+    }, 3000);
+  }, []);
+
+  useTiltSensor(25, handleTilt);
 
   useEffect(() => {
     if (!canvasRef.current) return;
