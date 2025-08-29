@@ -6,6 +6,7 @@ const progToggle = document.getElementById('toggle-programmer');
 const historyToggle = document.getElementById('toggle-history');
 const scientific = document.getElementById('scientific');
 const programmer = document.getElementById('programmer');
+const standard = document.getElementById('standard');
 const baseSelect = document.getElementById('base-select');
 const historyEl = document.getElementById('history');
 const parenIndicator = document.getElementById('paren-indicator');
@@ -19,6 +20,8 @@ let lastResult = 0;
 let undoStack = [];
 let history = [];
 let memory = 0;
+let tapeFS;
+const TAPE_FILE = 'calculator-tape.txt';
 const HISTORY_KEY = 'calc-history';
 const MODE_KEY = 'calc-mode';
 
@@ -56,6 +59,7 @@ sciToggle?.addEventListener('click', () => {
 function setProgrammerMode(on) {
   programmerMode = on;
   programmer?.classList.toggle('hidden', !programmerMode);
+  standard?.classList.toggle('hidden', programmerMode);
   progToggle?.setAttribute('aria-pressed', programmerMode.toString());
   saveMode();
 }
@@ -195,6 +199,30 @@ function convertBase(val, from, to) {
 
 function formatBase(value, base = currentBase) {
   return convertBase(String(value), 10, base).toUpperCase();
+}
+
+function bitwiseAnd(a, b) {
+  return (a | 0) & (b | 0);
+}
+
+function bitwiseOr(a, b) {
+  return (a | 0) | (b | 0);
+}
+
+function bitwiseXor(a, b) {
+  return (a | 0) ^ (b | 0);
+}
+
+function bitwiseNot(a) {
+  return ~ (a | 0);
+}
+
+function shiftLeft(a, b) {
+  return (a | 0) << (b | 0);
+}
+
+function shiftRight(a, b) {
+  return (a | 0) >> (b | 0);
 }
 
 // --- Shunting-yard based parser ---
@@ -415,10 +443,20 @@ function renderHistory() {
   historyEl.innerHTML = '';
   const header = document.createElement('div');
   header.className = 'history-header';
+  const search = document.createElement('input');
+  search.type = 'search';
+  search.placeholder = 'Search';
+  header.appendChild(search);
+
   const copyBtn = document.createElement('button');
   copyBtn.textContent = 'Copy';
   copyBtn.addEventListener('click', copyHistory);
   header.appendChild(copyBtn);
+
+  const downloadBtn = document.createElement('button');
+  downloadBtn.textContent = 'Download';
+  downloadBtn.addEventListener('click', () => tapeFS?.download(TAPE_FILE));
+  header.appendChild(downloadBtn);
 
   const undoBtn = document.createElement('button');
   undoBtn.textContent = 'Undo';
@@ -436,32 +474,49 @@ function renderHistory() {
   historyEl.appendChild(header);
   const list = document.createElement('div');
   list.id = 'history-list';
-  history.forEach(({ expr, result }) => {
-    const entry = document.createElement('div');
-    entry.className = 'history-entry';
-    entry.addEventListener('click', () => {
-      display.value = expr;
-      updateParenBalance();
-      validateBaseInput();
-      display.focus();
-    });
-    const text = document.createElement('span');
-    text.textContent = `${expr} = ${result}`;
-    entry.appendChild(text);
-    const copyBtn = document.createElement('button');
-    copyBtn.textContent = 'Copy';
-    copyBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      navigator.clipboard?.writeText(`${expr} = ${result}`);
-    });
-    entry.appendChild(copyBtn);
-    list.appendChild(entry);
-  });
   historyEl.appendChild(list);
+
+  function renderList(filter = '') {
+    list.innerHTML = '';
+    const term = filter.toLowerCase();
+    history
+      .filter(({ expr, result }) =>
+        `${expr} = ${result}`.toLowerCase().includes(term)
+      )
+      .forEach(({ expr, result }) => {
+        const entry = document.createElement('div');
+        entry.className = 'history-entry';
+        entry.addEventListener('click', () => {
+          display.value = expr;
+          updateParenBalance();
+          validateBaseInput();
+          display.focus();
+        });
+        const text = document.createElement('span');
+        text.textContent = `${expr} = ${result}`;
+        entry.appendChild(text);
+        const copyBtn = document.createElement('button');
+        copyBtn.textContent = 'Copy';
+        copyBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          navigator.clipboard?.writeText(`${expr} = ${result}`);
+        });
+        entry.appendChild(copyBtn);
+        list.appendChild(entry);
+      });
+  }
+
+  renderList();
+  search.addEventListener('input', () => renderList(search.value));
 }
 
-function saveHistory() {
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+async function saveHistory() {
+  const text = history.map((h) => `${h.expr} = ${h.result}`).join('\n');
+  if (tapeFS) {
+    await tapeFS.write(text);
+  } else {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  }
 }
 
 function saveMode() {
@@ -478,9 +533,22 @@ function addHistory(expr, result) {
   renderHistory();
 }
 
-function loadHistory() {
+async function loadHistory() {
   if (!historyEl) return;
-  history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+  if (tapeFS) {
+    const text = await tapeFS.read();
+    history = text
+      ? text
+          .split('\n')
+          .filter(Boolean)
+          .map((line) => {
+            const [expr, result] = line.split(' = ');
+            return { expr, result };
+          })
+      : [];
+  } else {
+    history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+  }
   history = history.slice(0, 10);
   renderHistory();
 }
@@ -603,7 +671,12 @@ document.addEventListener('keydown', (e) => {
 
 display?.focus();
 loadMode();
-loadHistory();
+
+(async () => {
+  const { useOPFS } = await import('../../hooks/useOPFS');
+  tapeFS = await useOPFS(TAPE_FILE);
+  await loadHistory();
+})();
 
 if (typeof module !== 'undefined') {
   module.exports = {
@@ -614,6 +687,12 @@ if (typeof module !== 'undefined') {
     setPreciseMode,
     setProgrammerMode,
     convertBase,
+    bitwiseAnd,
+    bitwiseOr,
+    bitwiseXor,
+    bitwiseNot,
+    shiftLeft,
+    shiftRight,
   };
 }
 
