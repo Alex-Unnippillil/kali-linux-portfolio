@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
+import defaultTemplates from '../../../../templates/export/report-templates.json';
 
 interface Finding {
   title: string;
@@ -25,35 +26,33 @@ const mockFindings: Finding[] = [
   },
 ];
 
-const templates = {
-  executive: {
-    name: 'Executive Summary',
-    render: (findings: Finding[]) =>
-      `Executive Summary\n\nFindings:\n${findings
-        .map((f) => `- ${f.title} (${f.severity})`)
-        .join('\n')}`,
-  },
-  detailed: {
-    name: 'Detailed Report',
-    render: (findings: Finding[]) =>
-      `Detailed Report\n\n${findings
-        .map(
-          (f, i) =>
-            `${i + 1}. ${f.title}\nSeverity: ${f.severity}\n${f.description}`,
-        )
-        .join('\n\n')}`,
-  },
-};
+interface TemplateDef {
+  name: string;
+  template: string;
+}
 
-type TemplateKey = keyof typeof templates;
+const renderTemplate = (tpl: string, findings: Finding[]) =>
+  tpl.replace(/{{#findings}}([\s\S]*?){{\/findings}}/, (_, segment) =>
+    findings
+      .map((f, i) =>
+        segment
+          .replace(/{{index}}/g, String(i + 1))
+          .replace(/{{title}}/g, f.title)
+          .replace(/{{severity}}/g, f.severity)
+          .replace(/{{description}}/g, f.description),
+      )
+      .join(''),
+  );
 
 export default function ReportTemplates() {
-  const [template, setTemplate] = usePersistentState('reconng-report-template', 'executive');
+  const [templateData, setTemplateData] = useState<Record<string, TemplateDef>>(defaultTemplates);
+  const keys = Object.keys(templateData);
+  const [template, setTemplate] = usePersistentState('reconng-report-template', keys[0]);
 
-  const templateKey = template as TemplateKey;
+  const templateKey = keys.includes(template) ? template : keys[0];
   const report = useMemo(
-    () => templates[templateKey].render(mockFindings),
-    [templateKey],
+    () => renderTemplate(templateData[templateKey].template, mockFindings),
+    [templateKey, templateData],
   );
 
   const exportReport = () => {
@@ -66,6 +65,34 @@ export default function ReportTemplates() {
     URL.revokeObjectURL(url);
   };
 
+  const [showDialog, setShowDialog] = useState(false);
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result as string) as Record<string, TemplateDef>;
+        setTemplateData(parsed);
+        const first = Object.keys(parsed)[0];
+        if (first) setTemplate(first);
+      } catch {
+        // ignore parse errors
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const shareJson = JSON.stringify(templateData, null, 2);
+  const copyShare = () => {
+    try {
+      navigator.clipboard.writeText(shareJson);
+    } catch {
+      // ignore
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-2 mb-2">
@@ -76,7 +103,7 @@ export default function ReportTemplates() {
           onChange={(e) => setTemplate(e.target.value)}
           className="bg-gray-800 px-2 py-1"
         >
-          {Object.entries(templates).map(([key, t]) => (
+          {Object.entries(templateData).map(([key, t]) => (
             <option key={key} value={key}>
               {t.name}
             </option>
@@ -89,10 +116,45 @@ export default function ReportTemplates() {
         >
           Export
         </button>
+        <button
+          type="button"
+          onClick={() => setShowDialog(true)}
+          className="bg-gray-600 hover:bg-gray-500 px-2 py-1 rounded"
+        >
+          Import/Share
+        </button>
       </div>
       <pre className="flex-1 bg-black p-2 overflow-auto whitespace-pre-wrap text-sm">
         {report}
       </pre>
+      {showDialog && (
+        <dialog open className="p-4 bg-gray-800 text-white rounded max-w-md">
+          <p className="mb-2">Import templates (JSON)</p>
+          <input type="file" accept="application/json" onChange={handleImport} />
+          <p className="mt-4 mb-2">Share templates</p>
+          <textarea
+            readOnly
+            value={shareJson}
+            className="w-full h-40 p-1 text-black"
+          />
+          <div className="flex gap-2 mt-2">
+            <button
+              type="button"
+              onClick={copyShare}
+              className="bg-blue-600 hover:bg-blue-500 px-2 py-1 rounded"
+            >
+              Copy
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowDialog(false)}
+              className="bg-gray-600 hover:bg-gray-500 px-2 py-1 rounded"
+            >
+              Close
+            </button>
+          </div>
+        </dialog>
+      )}
     </div>
   );
 }
