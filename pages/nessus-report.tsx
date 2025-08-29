@@ -133,13 +133,23 @@ const NessusReport: React.FC = () => {
 
   return (
     <div className="p-4 bg-gray-900 text-white min-h-screen">
-      <div className="flex items-center mb-4">
-        <img
-          src="/themes/Yaru/apps/nessus.svg"
-          alt="Nessus badge"
-          className="w-12 h-12 mr-2"
-        />
-        <h1 className="text-2xl">Sample Nessus Report</h1>
+      <h1 className="text-2xl mb-4">Sample Nessus Report</h1>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+        {['Critical', 'High', 'Medium', 'Low'].map((sev) => (
+          <div
+            key={sev}
+            className="bg-gray-800 p-2 rounded flex items-center justify-between"
+          >
+            <span
+              className="px-2 py-0.5 rounded-full text-xs text-white"
+              style={{ backgroundColor: severityColors[sev] }}
+            >
+              {sev}
+            </span>
+            <span className="font-mono">{counts[sev] || 0}</span>
+          </div>
+        ))}
+
       </div>
       <div className="flex items-center space-x-2 mb-4 flex-wrap">
         <label htmlFor="report-file" className="text-sm">
@@ -200,9 +210,22 @@ const NessusReport: React.FC = () => {
         <button
           type="button"
           onClick={exportCSV}
-          className="px-2 py-1 bg-blue-600 rounded text-sm"
+          className="p-2 bg-blue-600 rounded"
+          aria-label="Export CSV"
         >
-          Export CSV
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            width={24}
+            height={24}
+          >
+            <path d="M12 3v12m0 0l4-4m-4 4-4-4" />
+            <path d="M4.5 15.75v3.75A2.25 2.25 0 006.75 21h10.5A2.25 2.25 0 0019.5 19.5v-3.75" />
+          </svg>
         </button>
       </div>
       <p className="text-xs text-gray-400 mb-2">
@@ -231,8 +254,9 @@ const NessusReport: React.FC = () => {
           {filtered.map((f) => (
             <tr
               key={f.id}
-              className="border-b border-gray-800 cursor-pointer hover:bg-gray-800 h-9"
-              style={{ borderLeft: `4px solid ${severityColors[f.severity]}` }}
+              className="border-b border-gray-800 cursor-pointer hover:bg-gray-800 border-l-4"
+              style={{ borderLeftColor: severityColors[f.severity] }}
+
               onClick={() => setSelected(f)}
             >
               <td className="px-2">{f.id}</td>

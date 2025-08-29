@@ -8,6 +8,13 @@ interface NiktoFinding {
   details: string;
 }
 
+const severityColors: Record<string, string> = {
+  High: '#b45309',
+  Medium: '#a16207',
+  Low: '#1e40af',
+  Info: '#4b5563',
+};
+
 const NiktoReport: React.FC = () => {
   const [findings, setFindings] = useState<NiktoFinding[]>([]);
   const [severity, setSeverity] = useState('All');
@@ -26,6 +33,14 @@ const NiktoReport: React.FC = () => {
     };
     load();
   }, []);
+
+  const counts = useMemo(() => {
+    return findings.reduce<Record<string, number>>((acc, f) => {
+      const sev = f.severity || 'Info';
+      acc[sev] = (acc[sev] || 0) + 1;
+      return acc;
+    }, {});
+  }, [findings]);
 
   const filtered = useMemo(
     () =>
@@ -81,6 +96,22 @@ const NiktoReport: React.FC = () => {
   return (
     <div className="p-4 bg-gray-900 text-white min-h-screen">
       <h1 className="text-xl mb-4">Nikto Report</h1>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+        {['High', 'Medium', 'Low', 'Info'].map((sev) => (
+          <div
+            key={sev}
+            className="bg-gray-800 p-2 rounded flex items-center justify-between"
+          >
+            <span
+              className="px-2 py-0.5 rounded-full text-xs text-white"
+              style={{ backgroundColor: severityColors[sev] }}
+            >
+              {sev}
+            </span>
+            <span className="font-mono">{counts[sev] || 0}</span>
+          </div>
+        ))}
+      </div>
       <div className="flex space-x-2 mb-4">
         <input
           placeholder="Filter by path"
@@ -102,16 +133,42 @@ const NiktoReport: React.FC = () => {
         <button
           type="button"
           onClick={exportJSON}
-          className="px-2 py-1 bg-blue-600 rounded text-sm"
+          className="p-2 bg-blue-600 rounded"
+          aria-label="Export JSON"
         >
-          Export JSON
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            width={24}
+            height={24}
+          >
+            <path d="M12 3v12m0 0l4-4m-4 4-4-4" />
+            <path d="M4.5 15.75v3.75A2.25 2.25 0 006.75 21h10.5A2.25 2.25 0 0019.5 19.5v-3.75" />
+          </svg>
         </button>
         <button
           type="button"
           onClick={exportCSV}
-          className="px-2 py-1 bg-blue-600 rounded text-sm"
+          className="p-2 bg-blue-600 rounded"
+          aria-label="Export CSV"
         >
-          Export CSV
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            width={24}
+            height={24}
+          >
+            <path d="M12 3v12m0 0l4-4m-4 4-4-4" />
+            <path d="M4.5 15.75v3.75A2.25 2.25 0 006.75 21h10.5A2.25 2.25 0 0019.5 19.5v-3.75" />
+          </svg>
         </button>
       </div>
       <table className="w-full text-left text-sm">
@@ -126,7 +183,8 @@ const NiktoReport: React.FC = () => {
           {filtered.map((f) => (
             <tr
               key={f.path}
-              className="odd:bg-gray-800 cursor-pointer hover:bg-gray-700"
+              className="odd:bg-gray-800 cursor-pointer hover:bg-gray-700 border-l-4"
+              style={{ borderLeftColor: severityColors[f.severity] || '#4b5563' }}
               onClick={() => setSelected(f)}
             >
               <td className="p-2">{f.path}</td>
