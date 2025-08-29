@@ -9,6 +9,7 @@ const OBSTACLE_HEIGHT = 40;
 let ctx;
 let state = {
   car: { lane: 1, y: HEIGHT - CAR_HEIGHT - 10 },
+  carColor: '#ef4444',
   obstacles: [],
   roadside: { near: [], far: [] },
   background: { near: [], far: [] },
@@ -75,7 +76,7 @@ function draw() {
   }
 
   const carX = state.car.lane * LANE_WIDTH + (LANE_WIDTH - CAR_WIDTH) / 2;
-  ctx.fillStyle = 'red';
+  ctx.fillStyle = state.carColor || 'red';
   ctx.fillRect(carX, state.car.y, CAR_WIDTH, CAR_HEIGHT);
 
   ctx.fillStyle = 'blue';
