@@ -38,10 +38,10 @@ const minimax = (
     let maxEval = -Infinity;
     for (const move of moves) {
       game.move(move);
-      const eval = minimax(game, depth - 1, alpha, beta, false);
+      const score = minimax(game, depth - 1, alpha, beta, false);
       game.undo();
-      maxEval = Math.max(maxEval, eval);
-      alpha = Math.max(alpha, eval);
+      maxEval = Math.max(maxEval, score);
+      alpha = Math.max(alpha, score);
       if (beta <= alpha) break;
     }
     return maxEval;
@@ -50,10 +50,10 @@ const minimax = (
   let minEval = Infinity;
   for (const move of moves) {
     game.move(move);
-    const eval = minimax(game, depth - 1, alpha, beta, true);
+    const score = minimax(game, depth - 1, alpha, beta, true);
     game.undo();
-    minEval = Math.min(minEval, eval);
-    beta = Math.min(beta, eval);
+    minEval = Math.min(minEval, score);
+    beta = Math.min(beta, score);
     if (beta <= alpha) break;
   }
   return minEval;
@@ -78,7 +78,7 @@ export const suggestMoves = (
 
   for (const move of moves) {
     game.move(move);
-    const eval = minimax(
+    const score = minimax(
       game,
       depth - 1,
       -Infinity,
@@ -86,8 +86,8 @@ export const suggestMoves = (
       game.turn() === 'w'
     );
     game.undo();
-    const score = maximizing ? eval : -eval;
-    suggestions.push({ from: move.from, to: move.to, san: move.san, evaluation: score });
+    const evaluation = maximizing ? score : -score;
+    suggestions.push({ from: move.from, to: move.to, san: move.san, evaluation });
   }
 
   suggestions.sort((a, b) => b.evaluation - a.evaluation);
