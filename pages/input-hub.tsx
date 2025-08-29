@@ -31,9 +31,29 @@ const InputHub = () => {
   const [emailjsReady, setEmailjsReady] = useState(false);
 
   useEffect(() => {
-    const { preset } = router.query;
+    const { preset, title, text, url, files } = router.query;
     if (preset === 'contact') {
       setSubject('General Inquiry');
+    }
+    const parts: string[] = [];
+    if (title) parts.push(String(title));
+    if (text) parts.push(String(text));
+    if (url) parts.push(String(url));
+    if (files) {
+      try {
+        const list = JSON.parse(
+          decodeURIComponent(String(files))
+        ) as { name: string; type: string }[];
+        parts.push(
+          ...list.map((f) => `File: ${f.name} (${f.type})`)
+        );
+      } catch {
+        // ignore parse errors
+      }
+    }
+    if (parts.length) {
+      const incoming = parts.join('\n');
+      setMessage((m) => (m ? `${m}\n${incoming}` : incoming));
     }
   }, [router.query]);
 
