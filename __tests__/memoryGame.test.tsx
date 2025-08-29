@@ -21,6 +21,7 @@ jest.mock('../components/apps/memory_utils', () => ({
     { id: 14, value: 'H' },
     { id: 15, value: 'H' },
   ],
+  PATTERN_THEMES: { vibrant: [], pastel: [] },
 }));
 
 beforeEach(() => {
@@ -75,6 +76,9 @@ afterEach(() => {
 
 test('combo meter increments and resets', () => {
   const { getAllByTestId, getByTestId } = render(<Memory />);
+  act(() => {
+    jest.runOnlyPendingTimers();
+  });
   const cards = getAllByTestId('card-inner').map((el) => el.parentElement as HTMLElement);
   const combo = getByTestId('combo-meter');
 
@@ -104,6 +108,9 @@ test('combo meter increments and resets', () => {
 
 test('card flip applies transform style', () => {
   const { getAllByTestId } = render(<Memory />);
+  act(() => {
+    jest.runOnlyPendingTimers();
+  });
   const inner = getAllByTestId('card-inner')[0] as HTMLElement;
   const card = inner.parentElement as HTMLElement;
   expect(inner.style.transform).toBe('rotateY(0deg)');
