@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import ReactGA from 'react-ga4';
 import { Analytics } from '@vercel/analytics/next';
 import 'tailwindcss/tailwind.css';
@@ -14,6 +14,7 @@ import ShortcutOverlay from '../components/common/ShortcutOverlay';
  * @param {import('next/app').AppProps} props
  */
 function MyApp({ Component, pageProps }) {
+  const [lastSync, setLastSync] = useState(null);
   useEffect(() => {
     const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
     if (trackingId) {
@@ -32,14 +33,64 @@ function MyApp({ Component, pageProps }) {
         };
 
         wb.addEventListener('waiting', promptRefresh);
-        wb.register().catch((err) => {
-          console.error('Service worker registration failed', err);
-        });
+        wb
+          .register()
+          .then(() => {
+            const setupPeriodicSync = async () => {
+              try {
+                const registration = await navigator.serviceWorker.ready;
+                if ('periodicSync' in registration) {
+                  const tags = await registration.periodicSync.getTags();
+                  if (!tags.includes('task-prefetch')) {
+                    await registration.periodicSync.register('task-prefetch', {
+                      minInterval: 24 * 60 * 60 * 1000,
+                    });
+                  }
+                } else {
+                  navigator.serviceWorker.controller?.postMessage({
+                    type: 'manual-sync',
+                  });
+                }
+              } catch (err) {
+                console.error('Periodic sync registration failed', err);
+              }
+            };
+
+            if (navigator.onLine) {
+              setupPeriodicSync();
+            } else {
+              window.addEventListener('online', setupPeriodicSync, { once: true });
+            }
+          })
+          .catch((err) => {
+            console.error('Service worker registration failed', err);
+          });
       };
       register().catch((err) => {
         console.error('Service worker setup failed', err);
       });
     }
+  }, []);
+
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const handler = (event) => {
+      if (event.data?.type === 'last-sync') {
+        const ts = event.data.timestamp;
+        setLastSync(new Date(ts));
+        try {
+          localStorage.setItem('last-sync', String(ts));
+        } catch {}
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', handler);
+    try {
+      const stored = localStorage.getItem('last-sync');
+      if (stored) setLastSync(new Date(Number(stored)));
+    } catch {}
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', handler);
+    };
   }, []);
 
   useEffect(() => {
@@ -113,6 +164,11 @@ function MyApp({ Component, pageProps }) {
       <Component {...pageProps} />
       <ShortcutOverlay />
       <Analytics />
+      {lastSync && (
+        <p className="text-center text-xs" id="last-sync">
+          Last sync: {lastSync.toLocaleString()}
+        </p>
+      )}
     </SettingsProvider>
   );
 }

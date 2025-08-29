@@ -9,6 +9,7 @@ async function buildServiceWorker() {
       skipWaiting: true,
       clientsClaim: true,
       inlineWorkboxRuntime: true,
+      importScripts: ['sw-periodic-sync.js'],
       navigateFallback: '/offline.html',
       runtimeCaching: [
         {

@@ -2,3 +2,6 @@ try{self["workbox:core:7.2.0"]&&_()}catch(e){}const e=(e,...s)=>{let a=e;return 
 //# sourceMappingURL=service-worker.js.map
 self.addEventListener("install",e=>{e.waitUntil(caches.open("offline-v1").then(c=>c.addAll(["/offline.html","/manifest.webmanifest","/images/logos/fevicon.png","/images/logos/logo_1024.png"])))});
 self.addEventListener("fetch",e=>{if("navigate"===e.request.mode){e.respondWith(fetch(e.request).catch(()=>caches.match("/offline.html")));return}const t=new URL(e.request.url);if(t.pathname.startsWith("/fixtures/")||t.pathname.startsWith("/images/")){e.respondWith(caches.open("offline-v1").then(c=>c.match(e.request).then(r=>r||fetch(e.request).then(n=>(c.put(e.request,n.clone()),n)))))}});
+
+importScripts("sw-periodic-sync.js");
+
