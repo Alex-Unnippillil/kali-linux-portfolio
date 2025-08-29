@@ -1,23 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import commonWords from './wordle_words.json';
-import altWords from './wordle_words_alt.json';
-import { getDailySeed } from '../../utils/dailyChallenge';
+import {
+  getWordOfTheDay,
+  buildResultMosaic,
+  dictionaries as wordleDictionaries,
+} from '../../utils/wordle';
 
-// Determine today's puzzle key and pick a word from the dictionary
-// deterministically so everyone sees the same puzzle each day.
+// Determine today's puzzle key for local storage
 const todayKey = new Date().toISOString().split('T')[0];
-function hash(str) {
-  let h = 0;
-  for (let i = 0; i < str.length; i += 1) {
-    h = Math.imul(31, h) + str.charCodeAt(i);
-  }
-  return Math.abs(h);
-}
 
-const dictionaries = {
-  common: commonWords,
-  alt: altWords,
-};
+const dictionaries = wordleDictionaries;
 
 // Persist state to localStorage so that refreshes keep progress/history
 // and games reset each day.
@@ -73,10 +64,7 @@ const evaluateGuess = (guess, answer) => {
 const Wordle = () => {
   const [dictName, setDictName] = usePersistentState('wordle-dictionary', 'common');
   const wordList = dictionaries[dictName];
-  const solution = useMemo(() => {
-    const seed = getDailySeed(`wordle-${dictName}`);
-    return wordList[hash(seed) % wordList.length];
-  }, [dictName, wordList]);
+  const solution = useMemo(() => getWordOfTheDay(dictName), [dictName]);
 
   // guesses for today are stored under a daily key so a new game starts each day
   const [guesses, setGuesses] = usePersistentState(
@@ -156,9 +144,6 @@ const Wordle = () => {
     return map;
   }, [guesses]);
 
-  const emojiMap = colorBlind
-    ? { correct: '🟦', present: '🟧', absent: '⬛' }
-    : { correct: '🟩', present: '🟨', absent: '⬛' };
 
   const getPossibleWords = () =>
     wordList.filter((word) =>
@@ -313,10 +298,11 @@ const Wordle = () => {
   };
 
   const share = () => {
-    let text = `Wordle ${isSolved ? guesses.length : 'X'}/6\n`;
-    text += guesses
-      .map((g) => g.result.map((r) => emojiMap[r]).join(''))
-      .join('\n');
+    const mosaic = buildResultMosaic(
+      guesses.map((g) => g.result),
+      colorBlind
+    );
+    const text = `Wordle ${isSolved ? guesses.length : 'X'}/6\n${mosaic}`;
     navigator.clipboard.writeText(text);
     setMessage('Copied results to clipboard!');
   };
@@ -499,9 +485,14 @@ const Wordle = () => {
             aria-label="Emoji result grid"
             className="font-mono leading-5"
           >
-            {guesses.map((g, i) => (
-              <div key={i}>{g.result.map((r) => emojiMap[r]).join('')}</div>
-            ))}
+            {buildResultMosaic(
+              guesses.map((g) => g.result),
+              colorBlind
+            )
+              .split('\n')
+              .map((line, i) => (
+                <div key={i}>{line}</div>
+              ))}
           </div>
         </div>
       )}
