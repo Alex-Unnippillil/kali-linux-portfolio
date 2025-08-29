@@ -16,7 +16,11 @@ const HydraPreview: React.FC = () => {
 
   const createTab = (): TabDefinition => {
     const id = Date.now().toString();
-    return { id, title: `Run ${countRef.current++}`, content: <HydraApp /> };
+    return {
+      id,
+      title: `Run ${countRef.current++}`,
+      content: <HydraApp key={id} />,
+    };
   };
 
   return (
