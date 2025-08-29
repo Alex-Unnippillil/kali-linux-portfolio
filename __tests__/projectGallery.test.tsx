@@ -55,10 +55,24 @@ describe('ProjectGallery', () => {
   it('loads persisted filters from localStorage', async () => {
     localStorage.setItem(
       'project-gallery-filters',
-      JSON.stringify({ search: '', stack: 'TS', year: '', type: '' })
+      JSON.stringify({ search: '', stack: 'TS', tag: '', year: '', type: '' })
     );
     render(<ProjectGallery />);
     await screen.findByText('Beta');
     expect(screen.queryByText('Alpha')).not.toBeInTheDocument();
+  });
+
+  it('filters projects by tag', async () => {
+    render(<ProjectGallery />);
+    await screen.findByText('Alpha');
+    fireEvent.change(screen.getByLabelText('Tag'), {
+      target: { value: 'beta' },
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Alpha')).not.toBeInTheDocument()
+    );
+    expect(screen.getByText(/Showing/)).toHaveTextContent(
+      'tagged with beta'
+    );
   });
 });
