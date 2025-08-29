@@ -79,25 +79,39 @@ export const initializeGame = (
   };
 };
 
+// Draw cards from the stock pile. When the stock is empty the waste can be
+// recycled back into the stock a limited number of times.  This function also
+// respects the current draw mode (draw-1 or draw-3).
 export const drawFromStock = (state: GameState): GameState => {
+  // No cards left in the stock – try to recycle the waste pile.
   if (state.stock.length === 0) {
+    // If the waste is empty or we have no redeals remaining nothing happens.
     if (state.waste.length === 0 || state.redeals === 0) return state;
-    const newStock = state.waste
+
+    // Rebuild the stock by flipping the waste pile face down in reverse order.
+    const recycled = state.waste
       .slice()
       .reverse()
       .map((c) => ({ ...c, faceUp: false }));
+
     return {
       ...state,
-      stock: newStock,
+      stock: recycled,
       waste: [],
       redeals: state.redeals - 1,
+      // Vegas scoring penalises redeals by 100 points.
       score: state.score - 100,
     };
   }
-  const drawCount = Math.min(state.draw, state.stock.length);
-  const newStock = state.stock.slice(0, state.stock.length - drawCount);
-  const drawn = state.stock.slice(-drawCount).map((c) => ({ ...c, faceUp: true }));
-  return { ...state, stock: newStock, waste: [...state.waste, ...drawn] };
+
+  // Determine how many cards to draw based on the selected mode.
+  const count = Math.min(state.draw, state.stock.length);
+  const remaining = state.stock.slice(0, state.stock.length - count);
+  const drawn = state.stock
+    .slice(-count)
+    .map((c) => ({ ...c, faceUp: true }));
+
+  return { ...state, stock: remaining, waste: [...state.waste, ...drawn] };
 };
 
 const canPlaceOnTableau = (card: Card, dest: Card[]): boolean => {
@@ -200,24 +214,32 @@ export const autoMove = (
   return moveToFoundation(state, 'tableau', index);
 };
 
+// Automatically move any available cards to the foundations.  This repeats
+// until no further moves are possible, effectively "finishing" a solved game.
 export const autoComplete = (state: GameState): GameState => {
   let current = state;
-  let moved = true;
-  while (moved) {
-    moved = false;
-    const fromWaste = moveToFoundation(current, 'waste', null);
-    if (fromWaste !== current) {
-      current = fromWaste;
-      moved = true;
+  let previous: GameState;
+
+  do {
+    previous = current;
+
+    // Waste cards take priority – try to move the top waste card first.
+    const wasteFirst = moveToFoundation(previous, 'waste', null);
+    if (wasteFirst !== previous) {
+      current = wasteFirst;
+      continue; // Skip tableau check to re-evaluate from new state
     }
-    for (let i = 0; i < current.tableau.length; i += 1) {
-      const next = moveToFoundation(current, 'tableau', i);
-      if (next !== current) {
+
+    // Try each tableau pile in turn.
+    for (let i = 0; i < previous.tableau.length; i += 1) {
+      const next = moveToFoundation(previous, 'tableau', i);
+      if (next !== previous) {
         current = next;
-        moved = true;
+        break;
       }
     }
-  }
+  } while (current !== previous);
+
   return current;
 };
 
