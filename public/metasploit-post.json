@@ -1,0 +1,47 @@
+[
+  {
+    "path": "post/multi/recon/local_exploit_suggester",
+    "os": "multi",
+    "capability": "privilege escalation",
+    "description": "Examines the target system to suggest potential local privilege escalation exploits.",
+    "tags": ["recon", "escalation"],
+    "options": [{ "name": "SESSION", "label": "Session ID", "value": "1" }],
+    "sampleOutput": "# Running local_exploit_suggester\n[*] Checking target...\n[+] Found 0-day privilege escalation path"
+  },
+  {
+    "path": "post/windows/manage/enable_rdp",
+    "os": "windows",
+    "capability": "persistence",
+    "description": "Enables Remote Desktop Protocol on the target Windows system.",
+    "tags": ["rdp", "persistence"],
+    "options": [{ "name": "SESSION", "label": "Session ID", "value": "1" }],
+    "sampleOutput": "# Running enable_rdp\n[*] RDP is already enabled\n[+] Operation completed successfully"
+  },
+  {
+    "path": "post/linux/gather/enum_network",
+    "os": "linux",
+    "capability": "recon",
+    "description": "Collects network interface and routing information from a Linux host.",
+    "tags": ["network", "recon"],
+    "options": [{ "name": "SESSION", "label": "Session ID", "value": "1" }],
+    "sampleOutput": "# Running enum_network\n[*] Gathering network info\n[+] Interface eth0 192.168.0.5"
+  },
+  {
+    "path": "post/windows/gather/enum_logged_on_users",
+    "os": "windows",
+    "capability": "recon",
+    "description": "Enumerates users currently logged on to a Windows system.",
+    "tags": ["users", "recon"],
+    "options": [{ "name": "SESSION", "label": "Session ID", "value": "1" }],
+    "sampleOutput": "# Running enum_logged_on_users\n[*] Users logged in:\n    Administrator\n    Bob"
+  },
+  {
+    "path": "post/linux/manage/sshkey_persistence",
+    "os": "linux",
+    "capability": "persistence",
+    "description": "Installs an SSH key for persistent access on a Linux system.",
+    "tags": ["ssh", "persistence"],
+    "options": [{ "name": "SESSION", "label": "Session ID", "value": "1" }],
+    "sampleOutput": "# Running sshkey_persistence\n[*] Adding key to authorized_keys\n[+] Key installed"
+  }
+]
