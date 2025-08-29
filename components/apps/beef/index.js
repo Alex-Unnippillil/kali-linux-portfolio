@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import DefensePanel from '../../../apps/beef/components/DefensePanel';
 
 export default function Beef() {
   const targetPage = `\n<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="utf-8"/>\n  <title>Sandboxed Target</title>\n</head>\n<body>\n  <h1>Sandboxed Target Page</h1>\n  <p>This page is isolated and cannot make network requests.</p>\n  <script>document.body.append(' - loaded');<\/script>\n</body>\n</html>`;
@@ -45,6 +46,7 @@ export default function Beef() {
   ];
 
   const [step, setStep] = useState(0);
+  const [showDefense, setShowDefense] = useState(false);
 
   const next = () => {
     if (step < steps.length - 1) {
@@ -65,7 +67,17 @@ export default function Beef() {
 
   return (
     <div className="p-4 text-white bg-ub-cool-grey h-full w-full flex flex-col">
-      <h2 className="text-xl mb-4">{current.title}</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl">{current.title}</h2>
+        <button
+          type="button"
+          onClick={() => setShowDefense(!showDefense)}
+          className="text-xs underline"
+        >
+          {showDefense ? 'Hide Info' : 'Show Info'}
+        </button>
+      </div>
+      {showDefense && <DefensePanel />}
       <p className="mb-4 text-sm">{current.body}</p>
       {current.render && <div className="mb-4">{current.render}</div>}
       <button
