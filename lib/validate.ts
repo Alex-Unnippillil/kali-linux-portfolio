@@ -16,7 +16,7 @@ const publicEnvSchema = z.object({
 });
 
 const serverEnvSchema = publicEnvSchema.extend({
-  RECAPTCHA_SECRET_KEY: z.string(),
+  RECAPTCHA_SECRET: z.string(),
 });
 
 export function validatePublicEnv(env: NodeJS.ProcessEnv) {
