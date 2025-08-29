@@ -36,7 +36,7 @@ type AnimatedCard = Card & {
 };
 
 const renderCard = (card: Card) => (
-  <div className="w-16 h-24 min-w-[24px] min-h-[24px] rounded border border-black bg-white flex items-center justify-center transition-transform duration-300">
+  <div className="w-16 h-24 min-w-[24px] min-h-[24px] rounded border border-black bg-white flex items-center justify-center transition-transform duration-300 shadow-[0_1px_0_rgba(0,0,0,0.5)]">
     <span className={card.color === 'red' ? 'text-red-600' : ''}>
       {valueToString(card.value)}{card.suit}
     </span>
@@ -44,7 +44,7 @@ const renderCard = (card: Card) => (
 );
 
 const renderFaceDown = () => (
-  <div className="w-16 h-24 min-w-[24px] min-h-[24px] rounded border border-black bg-blue-800" />
+  <div className="w-16 h-24 min-w-[24px] min-h-[24px] rounded border border-black bg-blue-800 shadow-[0_1px_0_rgba(0,0,0,0.5)]" />
 );
 
 const Solitaire = () => {
@@ -54,6 +54,7 @@ const Solitaire = () => {
   const [drag, setDrag] = useState<{ source: 'tableau' | 'waste'; pile: number; index: number } | null>(null);
   const [won, setWon] = useState(false);
   const [time, setTime] = useState(0);
+  const [moves, setMoves] = useState(0);
   const [isDaily, setIsDaily] = useState(false);
   const [stats, setStats] = useState<Stats>({
     gamesPlayed: 0,
@@ -73,6 +74,8 @@ const Solitaire = () => {
   const tableauRefs = useRef<(HTMLDivElement | null)[]>([]);
   const wasteRef = useRef<HTMLDivElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const dragImageRef = useRef<HTMLDivElement | null>(null);
+  const dragCardRef = useRef<HTMLDivElement | null>(null);
   const [flying, setFlying] = useState<AnimatedCard[]>([]);
   const [autoCompleting, setAutoCompleting] = useState(false);
   const [winnableOnly, setWinnableOnly] = useState(false);
@@ -160,6 +163,7 @@ const Solitaire = () => {
       setWon(false);
       setCascade([]);
       setTime(0);
+      setMoves(0);
       setIsDaily(daily);
       setBankroll((b) => {
         const nb = b - 52;
@@ -305,7 +309,10 @@ const Solitaire = () => {
   const draw = () =>
     setGame((g) => {
       const n = drawFromStock(g);
-      if (n !== g) ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
+      if (n !== g) {
+        ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
+        setMoves((m) => m + 1);
+      }
       return n;
     });
 
@@ -315,7 +322,12 @@ const Solitaire = () => {
   };
 
 
-  const handleDragStart = (source: 'tableau' | 'waste', pile: number, index: number) => {
+  const handleDragStart = (
+    source: 'tableau' | 'waste',
+    pile: number,
+    index: number,
+    e: React.DragEvent<HTMLDivElement>,
+  ) => {
     if (source === 'tableau') {
       const card = game.tableau[pile][index];
       if (!card.faceUp) return;
@@ -323,6 +335,17 @@ const Solitaire = () => {
     } else if (source === 'waste' && game.waste.length) {
       setDrag({ source, pile: -1, index: game.waste.length - 1 });
     }
+    const ghost = e.currentTarget.cloneNode(true) as HTMLDivElement;
+    ghost.style.position = 'absolute';
+    ghost.style.top = '-1000px';
+    ghost.style.left = '-1000px';
+    ghost.style.pointerEvents = 'none';
+    ghost.style.boxShadow = '0 8px 16px rgba(0,0,0,0.3)';
+    document.body.appendChild(ghost);
+    e.dataTransfer.setDragImage(ghost, 32, 48);
+    dragImageRef.current = ghost;
+    dragCardRef.current = e.currentTarget as HTMLDivElement;
+    dragCardRef.current.style.opacity = '0';
   };
 
   const finishDrag = () => setDrag(null);
@@ -331,6 +354,14 @@ const Solitaire = () => {
     x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
 
   const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
+    if (dragImageRef.current) {
+      document.body.removeChild(dragImageRef.current);
+      dragImageRef.current = null;
+    }
+    if (dragCardRef.current) {
+      dragCardRef.current.style.opacity = '';
+      dragCardRef.current = null;
+    }
     if (!drag) return;
     const { clientX, clientY } = e;
 
@@ -470,13 +501,19 @@ const Solitaire = () => {
     if (drag.source === 'tableau') {
       setGame((g) => {
         const n = moveTableauToTableau(g, drag.pile, drag.index, pileIndex);
-        if (n !== g) ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
+        if (n !== g) {
+          ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
+          setMoves((m) => m + 1);
+        }
         return n;
       });
     } else {
       setGame((g) => {
         const n = moveWasteToTableau(g, pileIndex);
-        if (n !== g) ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
+        if (n !== g) {
+          ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
+          setMoves((m) => m + 1);
+        }
         return n;
       });
     }
@@ -488,13 +525,19 @@ const Solitaire = () => {
     if (drag.source === 'tableau') {
       setGame((g) => {
         const n = moveToFoundation(g, 'tableau', drag.pile);
-        if (n !== g) ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
+        if (n !== g) {
+          ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
+          setMoves((m) => m + 1);
+        }
         return n;
       });
     } else {
       setGame((g) => {
         const n = moveToFoundation(g, 'waste', null);
-        if (n !== g) ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
+        if (n !== g) {
+          ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
+          setMoves((m) => m + 1);
+        }
         return n;
       });
     }
@@ -510,6 +553,7 @@ const Solitaire = () => {
     );
     if (next !== current) {
       ReactGA.event({ category: 'Solitaire', action: 'move', label: 'auto' });
+      setMoves((m) => m + 1);
       flyMove(
         current,
         next,
@@ -524,6 +568,7 @@ const Solitaire = () => {
       let next = moveToFoundation(g, 'waste', null);
       if (next !== g) {
         ReactGA.event({ category: 'Solitaire', action: 'move', label: 'auto' });
+        setMoves((m) => m + 1);
         flyMove(g, next, 'waste', null, () => autoCompleteNext(next));
         return;
       }
@@ -531,6 +576,7 @@ const Solitaire = () => {
         next = moveToFoundation(g, 'tableau', i);
         if (next !== g) {
           ReactGA.event({ category: 'Solitaire', action: 'move', label: 'auto' });
+          setMoves((m) => m + 1);
           flyMove(g, next, 'tableau', i, () => autoCompleteNext(next));
           return;
         }
@@ -577,9 +623,13 @@ const Solitaire = () => {
   return (
     <div
       ref={rootRef}
-      className="h-full w-full bg-green-700 text-white select-none p-2 relative overflow-hidden"
+      className="h-full w-full bg-green-700 text-white select-none p-2 pt-8 relative overflow-hidden"
       style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}
     >
+      <div className="absolute top-0 left-0 right-0 flex justify-between px-2 text-sm pointer-events-none">
+        <span>Moves: {moves}</span>
+        <span>Time: {time}s</span>
+      </div>
       <div aria-live="polite" className="sr-only">
         {ariaMessage}
       </div>
@@ -623,7 +673,9 @@ const Solitaire = () => {
         ))}
       {won && (
         <div
-          className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-80 text-2xl"
+          className={`absolute inset-0 flex items-center justify-center bg-black bg-opacity-80 text-2xl ${
+            !prefersReducedMotion ? 'animate-pulse' : ''
+          }`}
           role="alert"
         >
           You win!
@@ -632,7 +684,6 @@ const Solitaire = () => {
       <div className="flex justify-between mb-2 flex-wrap gap-2">
         <div>Score: {vegasScore}</div>
         <div>Bankroll: {bankroll}</div>
-        <div>Time: {time}s</div>
         <div>Redeals: {game.redeals}</div>
         <div>Mode: {winnableOnly ? 'Winnable' : 'Random'}</div>
         <div>
@@ -706,11 +757,11 @@ const Solitaire = () => {
               ref={wasteRef}
               draggable
               onDoubleClick={() => handleDoubleClick('waste', 0)}
-              onDragStart={() => handleDragStart('waste', -1, game.waste.length - 1)}
+              onDragStart={(e) => handleDragStart('waste', -1, game.waste.length - 1, e)}
               onDragEnd={handleDragEnd}
               className={`${
                 drag && drag.source === 'waste'
-                  ? 'transform -translate-y-2 scale-105 shadow-lg z-50'
+                  ? 'opacity-0'
                   : ''
               } ${hint && hint.source === 'waste' ? 'ring-4 ring-yellow-400' : ''} ${
                 !prefersReducedMotion ? 'transition-transform' : ''
@@ -759,7 +810,7 @@ const Solitaire = () => {
                   drag.source === 'tableau' &&
                   drag.pile === i &&
                   idx >= drag.index
-                    ? 'transform -translate-y-2 scale-105 shadow-lg z-50'
+                    ? 'opacity-0'
                     : ''
                 } ${
                   hint &&
@@ -769,10 +820,10 @@ const Solitaire = () => {
                     ? 'ring-4 ring-yellow-400'
                     : ''
                 }`}
-                style={{ top: idx * 24 }}
+                style={{ top: idx * 24, filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.3))' }}
                 draggable={card.faceUp}
                 onDoubleClick={() => handleDoubleClick('tableau', i)}
-                onDragStart={() => handleDragStart('tableau', i, idx)}
+                onDragStart={(e) => handleDragStart('tableau', i, idx, e)}
                 onDragEnd={handleDragEnd}
               >
                 {card.faceUp ? renderCard(card) : renderFaceDown()}
