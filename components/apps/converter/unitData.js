@@ -20,6 +20,18 @@ export const unitMap = {
     fahrenheit: 'degF',
     kelvin: 'K',
   },
+  time: {
+    second: 's',
+    minute: 'min',
+    hour: 'hour',
+    day: 'day',
+  },
+  digital: {
+    byte: 'B',
+    kilobyte: 'kB',
+    megabyte: 'MB',
+    gigabyte: 'GB',
+  },
   currency: {
     USD: 'USD',
     EUR: 'EUR',
@@ -45,6 +57,18 @@ export const unitDetails = {
     celsius: { min: -273.15, max: 1e6, precision: 1 },
     fahrenheit: { min: -459.67, max: 1e6, precision: 1 },
     kelvin: { min: 0, max: 1e6, precision: 1 },
+  },
+  time: {
+    second: { min: 0, max: 1e9, precision: 2 },
+    minute: { min: 0, max: 1e7, precision: 2 },
+    hour: { min: 0, max: 1e6, precision: 2 },
+    day: { min: 0, max: 1e5, precision: 2 },
+  },
+  digital: {
+    byte: { min: 0, max: 1e15, precision: 0 },
+    kilobyte: { min: 0, max: 1e12, precision: 2 },
+    megabyte: { min: 0, max: 1e9, precision: 2 },
+    gigabyte: { min: 0, max: 1e6, precision: 2 },
   },
   currency: {
     USD: { min: 0, max: 1e9, precision: 2 },
