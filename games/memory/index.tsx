@@ -10,10 +10,12 @@ import {
   type LeaderboardEntry,
 } from '../../components/apps/Games/common/leaderboard';
 
+const ATTACK_LIMIT = 60_000; // 60 seconds
+
 /**
  * Simplified memory game used in the demos directory. The game focuses on
- * demonstrating grid size selection and dynamic board generation rather than
- * providing a full featured experience.
+ * demonstrating grid size selection, dynamic board generation and an optional
+ * timed attack mode rather than providing a full featured experience.
  */
 const MemoryGame: React.FC = () => {
   const [size, setSize] = useState(4);
@@ -24,25 +26,40 @@ const MemoryGame: React.FC = () => {
   const [startTime, setStartTime] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [completed, setCompleted] = useState(false);
+  const [attackMode, setAttackMode] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(ATTACK_LIMIT);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() =>
     getLeaderboard('memory'),
   );
 
-  // reset board when size changes
+  // reset board when size or mode changes
   useEffect(() => {
     setFlipped([]);
     setMatched(new Set());
     setStartTime(null);
     setElapsed(0);
     setCompleted(false);
-  }, [size]);
+    setTimeLeft(ATTACK_LIMIT);
+  }, [size, attackMode]);
 
   // timer effect
   useEffect(() => {
     if (startTime === null) return;
-    const id = setInterval(() => setElapsed(Date.now() - startTime), 100);
+    const id = setInterval(() => {
+      const now = Date.now();
+      const diff = now - startTime;
+      setElapsed(diff);
+      if (attackMode) {
+        const remaining = ATTACK_LIMIT - diff;
+        setTimeLeft(remaining);
+        if (remaining <= 0) {
+          setCompleted(true);
+          setStartTime(null);
+        }
+      }
+    }, 100);
     return () => clearInterval(id);
-  }, [startTime]);
+  }, [startTime, attackMode]);
 
   const handleClick = (idx: number) => {
     if (matched.has(idx) || flipped.includes(idx) || completed) return;
@@ -77,8 +94,26 @@ const MemoryGame: React.FC = () => {
   }, [matched, cards.length, completed, elapsed]);
 
   return (
-    <GameShell settings={<SizeSelector value={size} onChange={setSize} />}>
-      <div className="text-center mb-2">Time: {(elapsed / 1000).toFixed(1)}s</div>
+    <GameShell
+      settings={
+        <div className="flex items-center space-x-4">
+          <SizeSelector value={size} onChange={setSize} />
+          <label className="flex items-center space-x-1">
+            <input
+              type="checkbox"
+              checked={attackMode}
+              onChange={(e) => setAttackMode(e.target.checked)}
+            />
+            <span className="text-sm">Timed Attack</span>
+          </label>
+        </div>
+      }
+    >
+      <div className="text-center mb-2">
+        {attackMode
+          ? `Time Left: ${(Math.max(timeLeft, 0) / 1000).toFixed(1)}s`
+          : `Time: ${(elapsed / 1000).toFixed(1)}s`}
+      </div>
       <div
         className="grid gap-2 mx-auto"
         style={{
@@ -104,16 +139,20 @@ const MemoryGame: React.FC = () => {
         })}
       </div>
       {completed && (
-        <div className="mt-4">
-          <h3 className="text-lg font-bold mb-2 text-center">Leaderboard</h3>
-          <ol className="list-decimal list-inside">
-            {leaderboard.map((entry, i) => (
-              <li key={i}>
-                {entry.name}: {(Math.abs(entry.score) / 1000).toFixed(1)}s
-              </li>
-            ))}
-          </ol>
-        </div>
+        matched.size === cards.length ? (
+          <div className="mt-4">
+            <h3 className="text-lg font-bold mb-2 text-center">Leaderboard</h3>
+            <ol className="list-decimal list-inside">
+              {leaderboard.map((entry, i) => (
+                <li key={i}>
+                  {entry.name}: {(Math.abs(entry.score) / 1000).toFixed(1)}s
+                </li>
+              ))}
+            </ol>
+          </div>
+        ) : (
+          <div className="mt-4 text-center text-lg font-bold">Time's up!</div>
+        )
       )}
     </GameShell>
   );

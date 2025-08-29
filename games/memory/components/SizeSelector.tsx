@@ -7,7 +7,7 @@ interface SizeSelectorProps {
 
 /**
  * Dropdown for selecting the memory board size.
- * Supports 2x2, 4x4 and 6x6 grids. The parent component
+ * Supports 2x2 through 8x8 grids. The parent component
  * owns the state and passes the current value plus a handler.
  */
 const SizeSelector: React.FC<SizeSelectorProps> = ({ value, onChange }) => {
@@ -23,6 +23,7 @@ const SizeSelector: React.FC<SizeSelectorProps> = ({ value, onChange }) => {
         <option value={2}>2x2</option>
         <option value={4}>4x4</option>
         <option value={6}>6x6</option>
+        <option value={8}>8x8</option>
       </select>
     </label>
   );
