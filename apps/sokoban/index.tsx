@@ -5,6 +5,7 @@ import {
   loadLevel,
   move,
   undo as undoMove,
+  redo as redoMove,
   reset as resetLevel,
   reachable,
   isSolved,
@@ -71,6 +72,18 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
       setStatus('');
       setGhost(new Set());
       logEvent({ category: 'sokoban', action: 'undo' });
+    }
+  }, [state]);
+
+  const handleRedo = useCallback(() => {
+    const st = redoMove(state);
+    if (st !== state) {
+      setState(st);
+      setReach(reachable(st));
+      setHint('');
+      setStatus('');
+      setGhost(new Set());
+      logEvent({ category: 'sokoban', action: 'redo' });
     }
   }, [state]);
 
@@ -156,6 +169,11 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
         handleUndo();
         return;
       }
+      if (['y', 'Y'].includes(e.key)) {
+        e.preventDefault();
+        handleRedo();
+        return;
+      }
       if (!directionKeys.includes(e.key as DirectionKey)) return;
       e.preventDefault();
       const dir = e.key as DirectionKey;
@@ -237,7 +255,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [state, index, packIndex, warnDir, handleReset, handleUndo]);
+  }, [state, index, packIndex, warnDir, handleReset, handleUndo, handleRedo]);
 
   const handleHint = useCallback(() => {
     setHint('...');
@@ -332,6 +350,9 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
         </button>
         <button type="button" onClick={handleUndo} className="px-2 py-1 bg-gray-300 rounded">
           Undo
+        </button>
+        <button type="button" onClick={handleRedo} className="px-2 py-1 bg-gray-300 rounded">
+          Redo
         </button>
         <button type="button" onClick={handleReset} className="px-2 py-1 bg-gray-300 rounded">
           Reset

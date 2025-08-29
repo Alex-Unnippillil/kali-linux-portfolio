@@ -1,5 +1,5 @@
 import { defaultLevels } from '../apps/sokoban/levels';
-import { loadLevel, move, undo, isSolved, findHint, wouldDeadlock } from '../apps/sokoban/engine';
+import { loadLevel, move, undo, redo, isSolved, findHint, wouldDeadlock } from '../apps/sokoban/engine';
 
 describe('sokoban engine', () => {
   test('simple level solvable', () => {
@@ -15,6 +15,25 @@ describe('sokoban engine', () => {
     expect(undone.player).toEqual(state.player);
     expect(Array.from(undone.boxes)).toEqual(Array.from(state.boxes));
     expect(undone.pushes).toBe(state.pushes);
+  });
+
+  test('redo reapplies undone move', () => {
+    const state = loadLevel(defaultLevels[0]);
+    const moved = move(state, 'ArrowRight');
+    const undone = undo(moved);
+    const redone = redo(undone);
+    expect(isSolved(redone)).toBe(true);
+    expect(redone.moves).toBe(1);
+  });
+
+  test('move counter updates with undo and redo', () => {
+    const state = loadLevel(defaultLevels[0]);
+    const moved = move(state, 'ArrowRight');
+    expect(moved.moves).toBe(1);
+    const undone = undo(moved);
+    expect(undone.moves).toBe(0);
+    const redone = redo(undone);
+    expect(redone.moves).toBe(1);
   });
 
   test('detects corner deadlock', () => {
