@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import useOPFS from '../../hooks/useOPFS';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -96,37 +97,6 @@ async function addRecentDir(handle) {
   } catch {}
 }
 
-async function saveBuffer(name, content) {
-  try {
-    const root = await navigator.storage.getDirectory();
-    const dir = await root.getDirectoryHandle('unsaved', { create: true });
-    const file = await dir.getFileHandle(name, { create: true });
-    const writable = await file.createWritable();
-    await writable.write(content);
-    await writable.close();
-  } catch {}
-}
-
-async function loadBuffer(name) {
-  try {
-    const root = await navigator.storage.getDirectory();
-    const dir = await root.getDirectoryHandle('unsaved');
-    const file = await dir.getFileHandle(name);
-    const data = await file.getFile();
-    return await data.text();
-  } catch {
-    return null;
-  }
-}
-
-async function removeBuffer(name) {
-  try {
-    const root = await navigator.storage.getDirectory();
-    const dir = await root.getDirectoryHandle('unsaved');
-    await dir.removeEntry(name);
-  } catch {}
-}
-
 export default function FileExplorer() {
   const [supported, setSupported] = useState(true);
   const [dirHandle, setDirHandle] = useState(null);
@@ -140,13 +110,47 @@ export default function FileExplorer() {
   const fallbackInputRef = useRef(null);
 
   const hasWorker = typeof Worker !== 'undefined';
-  const hasOPFS = !!navigator.storage?.getDirectory;
+  const {
+    supported: opfsSupported,
+    root,
+    getDir,
+    readFile: opfsRead,
+    writeFile: opfsWrite,
+    deleteFile: opfsDelete,
+  } = useOPFS();
+  const [unsavedDir, setUnsavedDir] = useState(null);
 
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
     setSupported(ok);
     if (ok) getRecentDirs().then(setRecent);
   }, []);
+
+  useEffect(() => {
+    if (!opfsSupported || !root) return;
+    (async () => {
+      setUnsavedDir(await getDir('unsaved'));
+      setDirHandle(root);
+      const fs = [];
+      for await (const [name, h] of root.entries()) {
+        if (h.kind === 'file') fs.push({ name, handle: h });
+      }
+      setFiles(fs);
+    })();
+  }, [opfsSupported, root, getDir]);
+
+  const saveBuffer = async (name, data) => {
+    if (unsavedDir) await opfsWrite(name, data, unsavedDir);
+  };
+
+  const loadBuffer = async (name) => {
+    if (!unsavedDir) return null;
+    return await opfsRead(name, unsavedDir);
+  };
+
+  const removeBuffer = async (name) => {
+    if (unsavedDir) await opfsDelete(name, unsavedDir);
+  };
 
   const openFallback = async (e) => {
     const file = e.target.files[0];
@@ -186,7 +190,7 @@ export default function FileExplorer() {
   const openFile = async (file) => {
     setCurrentFile(file);
     let text = '';
-    if (hasOPFS) {
+    if (opfsSupported) {
       const unsaved = await loadBuffer(file.name);
       if (unsaved !== null) text = unsaved;
     }
@@ -203,14 +207,14 @@ export default function FileExplorer() {
       const writable = await currentFile.handle.createWritable();
       await writable.write(content);
       await writable.close();
-      if (hasOPFS) await removeBuffer(currentFile.name);
+      if (opfsSupported) await removeBuffer(currentFile.name);
     } catch {}
   };
 
   const onChange = (e) => {
     const text = e.target.value;
     setContent(text);
-    if (hasOPFS && currentFile) saveBuffer(currentFile.name, text);
+    if (opfsSupported && currentFile) saveBuffer(currentFile.name, text);
   };
 
   const runSearch = () => {
