@@ -12,6 +12,7 @@ import {
   State,
   directionKeys,
   findHint,
+  findMinPushes,
   wouldDeadlock,
   Position,
   DirectionKey,
@@ -39,6 +40,12 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
   const [puffs, setPuffs] = useState<{ id: number; x: number; y: number }[]>([]);
   const puffId = React.useRef(0);
   const [showLevels, setShowLevels] = useState(false);
+  const [minPushes, setMinPushes] = useState<number | null>(null);
+  const [showStats, setShowStats] = useState(false);
+  const [stats, setStats] = useState<{ moves: number; pushes: number }>({
+    moves: 0,
+    pushes: 0,
+  });
 
   const selectLevel = useCallback(
     (i: number, pIdx: number = packIndex, pData: LevelPack[] = packs) => {
@@ -50,6 +57,9 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
       setReach(reachable(st));
       setHint('');
       setStatus('');
+      setShowStats(false);
+      setMinPushes(null);
+      setTimeout(() => setMinPushes(findMinPushes(st)), 0);
       logGameStart('sokoban');
       logEvent({ category: 'sokoban', action: 'level_select', value: i });
     },
@@ -71,6 +81,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
       setHint('');
       setStatus('');
       setGhost(new Set());
+      setShowStats(false);
       logEvent({ category: 'sokoban', action: 'undo' });
     }
   }, [state]);
@@ -83,6 +94,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
       setHint('');
       setStatus('');
       setGhost(new Set());
+      setShowStats(false);
       logEvent({ category: 'sokoban', action: 'redo' });
     }
   }, [state]);
@@ -94,6 +106,9 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
     setHint('');
     setStatus('');
     setGhost(new Set());
+    setShowStats(false);
+    setMinPushes(null);
+    setTimeout(() => setMinPushes(findMinPushes(st)), 0);
   }, [currentPack, index]);
 
   const handleFile = useCallback(
@@ -144,7 +159,13 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
           setIndex(0);
           setState(st);
           setReach(reachable(st));
+          setMinPushes(null);
+          setTimeout(() => setMinPushes(findMinPushes(st)), 0);
         }
+      }
+      if (!code) {
+        setMinPushes(null);
+        setTimeout(() => setMinPushes(findMinPushes(state)), 0);
       }
     } catch (err: unknown) {
       logGameError('sokoban', err instanceof Error ? err.message : String(err));
@@ -209,6 +230,8 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
                 localStorage.setItem(bestKey, String(newState.pushes));
                 setBest(newState.pushes);
               }
+              setStats({ moves: newState.moves, pushes: newState.pushes });
+              setShowStats(true);
             }
           }
           setWarnDir(null);
@@ -251,6 +274,8 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
           localStorage.setItem(bestKey, String(newState.pushes));
           setBest(newState.pushes);
         }
+        setStats({ moves: newState.moves, pushes: newState.pushes });
+        setShowStats(true);
       }
     };
     window.addEventListener('keydown', handler);
@@ -363,6 +388,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
         <div className="ml-4">Moves: {state.moves}</div>
         <div>Pushes: {state.pushes}</div>
         <div>Best: {best ?? '-'}</div>
+        <div>Min: {minPushes ?? '-'}</div>
         {hint && <div className="ml-4">Hint: {hint}</div>}
         {status && <div className="ml-4 text-red-500">{status}</div>}
       </div>
@@ -434,6 +460,29 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
           }}
         />
       </div>
+      {showStats && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex"
+          onClick={() => setShowStats(false)}
+        >
+          <div
+            className="bg-white p-4 space-y-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="font-bold">Level Complete!</div>
+            <div>Moves: {stats.moves}</div>
+            <div>Pushes: {stats.pushes}</div>
+            {minPushes !== null && <div>Minimal pushes: {minPushes}</div>}
+            <button
+              type="button"
+              onClick={() => setShowStats(false)}
+              className="px-2 py-1 bg-gray-300 rounded"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
       {showLevels && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex"
