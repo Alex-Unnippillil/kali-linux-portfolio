@@ -181,11 +181,22 @@ const MetasploitApp = ({
     setTimeline([]);
     setProgress(0);
     setReplaying(true);
+    const steps = [
+      'Initializing exploit...',
+      'Checking target...',
+      'Sending payload...',
+      'Gaining access...',
+      'Session established.'
+    ];
+    const lootItem = { host: '10.0.0.3', data: 'ssh-creds.txt' };
     if (typeof Worker === 'function') {
       const worker = new Worker(new URL('./exploit.worker.js', import.meta.url));
       worker.onmessage = (e) => {
         if (e.data.step) {
           setTimeline((t) => [...t, e.data.step]);
+        } else if (e.data.loot) {
+          setLoot((l) => [...l, e.data.loot]);
+          setShowLoot(true);
         } else if (e.data.done) {
           setReplaying(false);
           worker.terminate();
@@ -193,6 +204,23 @@ const MetasploitApp = ({
       };
       worker.postMessage('start');
       workerRef.current = worker;
+    } else {
+      let i = 0;
+      const sendStep = () => {
+        if (i < steps.length) {
+          const step = steps[i];
+          setTimeline((t) => [...t, step]);
+          if (i === 2) {
+            setLoot((l) => [...l, lootItem]);
+            setShowLoot(true);
+          }
+          i += 1;
+          setTimeout(sendStep, 1000);
+        } else {
+          setReplaying(false);
+        }
+      };
+      sendStep();
     }
   };
 
