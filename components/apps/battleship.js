@@ -100,15 +100,34 @@ const Battleship = () => {
   const tryPlace = (shipId, x, y, dir) => {
     const ship = ships.find((s) => s.id === shipId);
     const cells = [];
+    // collect all proposed cells and ensure they are inside the board
     for (let k = 0; k < ship.len; k++) {
       const cx = x + (dir === 0 ? k : 0);
       const cy = y + (dir === 1 ? k : 0);
       if (cx < 0 || cy < 0 || cx >= BOARD_SIZE || cy >= BOARD_SIZE) return null;
       const idx = cy * BOARD_SIZE + cx;
+      // disallow overlap with existing ships
       for (const s of ships) {
         if (s.id !== shipId && s.cells && s.cells.includes(idx)) return null;
       }
       cells.push(idx);
+    }
+    // ensure no ship is adjacent (including diagonals) to existing ships
+    for (const idx of cells) {
+      const cx = idx % BOARD_SIZE;
+      const cy = Math.floor(idx / BOARD_SIZE);
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = cx + dx;
+          const ny = cy + dy;
+          if (nx < 0 || ny < 0 || nx >= BOARD_SIZE || ny >= BOARD_SIZE) continue;
+          const nIdx = ny * BOARD_SIZE + nx;
+          for (const s of ships) {
+            if (s.id !== shipId && s.cells && s.cells.includes(nIdx)) return null;
+          }
+        }
+      }
     }
     return cells;
   };
@@ -138,9 +157,9 @@ const Battleship = () => {
 
   const restart = useCallback(
     (diff = difficulty) => {
-      const layout = randomizePlacement();
+      const layout = randomizePlacement(true);
       const newShips = layout.map((s, i) => ({ ...s, id: i }));
-      const enemyLayout = randomizePlacement();
+      const enemyLayout = randomizePlacement(true);
       setShips(newShips);
       setEnemyShips(enemyLayout);
       setPlayerBoard(placeShips(createBoard(), newShips));
@@ -216,7 +235,7 @@ const Battleship = () => {
   };
 
   const randomize = () => {
-    const layout = randomizePlacement();
+    const layout = randomizePlacement(true);
     const newShips = layout.map((s, i) => ({ ...s, id: i }));
     setShips(newShips);
     setPlayerBoard(placeShips(createBoard(), newShips));
