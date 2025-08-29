@@ -5,12 +5,18 @@ import { City } from '../state';
 
 interface Props {
   city: City;
+  unit: 'C' | 'F';
+  onUnitChange: (unit: 'C' | 'F') => void;
   onClose: () => void;
 }
 
-export default function CityDetail({ city, onClose }: Props) {
-  const [unit, setUnit] = useState<'C' | 'F'>('C');
+export default function CityDetail({ city, unit: initialUnit, onUnitChange, onClose }: Props) {
+  const [unit, setUnit] = useState<'C' | 'F'>(initialUnit);
   const [hourly, setHourly] = useState<number[]>([]);
+
+  useEffect(() => {
+    setUnit(initialUnit);
+  }, [initialUnit]);
 
   useEffect(() => {
     fetch(
@@ -37,13 +43,19 @@ export default function CityDetail({ city, onClose }: Props) {
         <div className="flex gap-1.5 mb-4">
           <button
             className={`px-1.5 rounded ${unit === 'C' ? 'bg-blue-600' : 'bg-white/20'}`}
-            onClick={() => setUnit('C')}
+            onClick={() => {
+              setUnit('C');
+              onUnitChange('C');
+            }}
           >
             °C
           </button>
           <button
             className={`px-1.5 rounded ${unit === 'F' ? 'bg-blue-600' : 'bg-white/20'}`}
-            onClick={() => setUnit('F')}
+            onClick={() => {
+              setUnit('F');
+              onUnitChange('F');
+            }}
           >
             °F
           </button>
