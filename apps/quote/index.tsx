@@ -67,9 +67,11 @@ export default function QuoteApp() {
   const [posterize, setPosterize] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const [playlist, setPlaylist] = useState<number[]>([]);
+  const [playOrder, setPlayOrder] = useState<number[]>([]);
   const [playIndex, setPlayIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [loop, setLoop] = useState(false);
+  const [shuffle, setShuffle] = useState(false);
 
   useEffect(() => {
     const fav = localStorage.getItem('quote-favorites');
@@ -185,11 +187,11 @@ export default function QuoteApp() {
   }, [nextQuote, prevQuote]);
 
   useEffect(() => {
-    if (!playing || !playlist.length) return;
+    if (!playing || !playOrder.length) return;
     const id = setInterval(() => {
       setPlayIndex((i) => {
         const next = i + 1;
-        if (next >= playlist.length) {
+        if (next >= playOrder.length) {
           if (loop) {
             return 0;
           }
@@ -200,15 +202,15 @@ export default function QuoteApp() {
       });
     }, 5000);
     return () => clearInterval(id);
-  }, [playing, playlist, loop]);
+  }, [playing, playOrder, loop]);
 
   useEffect(() => {
-    if (!playlist.length) return;
-    const idx = playlist[playIndex];
+    if (!playOrder.length) return;
+    const idx = playOrder[playIndex];
     if (idx >= 0 && idx < quotes.length) {
       setCurrent(quotes[idx]);
     }
-  }, [playIndex, playlist, quotes]);
+  }, [playIndex, playOrder, quotes]);
 
   const toggleFavorite = () => {
     if (!current) return;
@@ -275,8 +277,12 @@ export default function QuoteApp() {
 
   const startPlaylist = () => {
     if (!playlist.length) return;
+    const order = shuffle
+      ? [...playlist].sort(() => Math.random() - 0.5)
+      : [...playlist];
+    setPlayOrder(order);
     setPlayIndex(0);
-    const idx = playlist[0];
+    const idx = order[0];
     if (idx >= 0 && idx < quotes.length) setCurrent(quotes[idx]);
     setPlaying(true);
   };
@@ -431,6 +437,14 @@ export default function QuoteApp() {
               onChange={(e) => setLoop(e.target.checked)}
             />
             <span>Loop</span>
+          </label>
+          <label className="flex items-center space-x-1">
+            <input
+              type="checkbox"
+              checked={shuffle}
+              onChange={(e) => setShuffle(e.target.checked)}
+            />
+            <span>Shuffle</span>
           </label>
         </div>
       </div>
