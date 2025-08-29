@@ -2,11 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { BrowserQRCodeReader, NotFoundException } from '@zxing/library';
 import FormError from '../components/ui/FormError';
+import { clearScans, loadScans, saveScans } from '../utils/qrStorage';
 
 const QRPage: React.FC = () => {
   const [text, setText] = useState('');
   const [qrUrl, setQrUrl] = useState('');
   const [scanResult, setScanResult] = useState('');
+  const [batch, setBatch] = useState<string[]>([]);
   const [error, setError] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
@@ -24,6 +26,7 @@ const QRPage: React.FC = () => {
 
   useEffect(() => {
     const videoEl = videoRef.current;
+    loadScans().then(setBatch);
     const startScanner = async () => {
       if (!navigator.mediaDevices) {
         setError('Camera API not supported');
@@ -45,7 +48,9 @@ const QRPage: React.FC = () => {
             videoEl,
             (result, err) => {
               if (result) {
-                setScanResult(result.getText());
+                const text = result.getText();
+                setScanResult(text);
+                setBatch((prev) => [...prev, text]);
               }
               if (err && !(err instanceof NotFoundException)) {
                 setError('Failed to read QR code');
@@ -74,6 +79,29 @@ const QRPage: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    saveScans(batch);
+  }, [batch]);
+
+  const exportCsv = () => {
+    if (!batch.length) return;
+    const header = 'data\n';
+    const csv =
+      header + batch.map((s) => `"${s.replace(/"/g, '""')}"`).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'qr-scans.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const clearBatch = async () => {
+    setBatch([]);
+    await clearScans();
+  };
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-8 p-4">
       <form onSubmit={generateQr} className="w-full max-w-md">
@@ -99,6 +127,29 @@ const QRPage: React.FC = () => {
         <video ref={videoRef} className="h-48 w-full rounded border" />
         {scanResult && (
           <p className="mt-2 text-center text-sm">Decoded: {scanResult}</p>
+        )}
+        {batch.length > 0 && (
+          <>
+            <ul className="mt-2 max-h-40 overflow-y-auto rounded border p-2 text-sm">
+              {batch.map((code, i) => (
+                <li key={i}>{code}</li>
+              ))}
+            </ul>
+            <div className="mt-2 flex gap-2">
+              <button
+                onClick={exportCsv}
+                className="flex-1 rounded bg-green-600 p-2 text-white"
+              >
+                Export CSV
+              </button>
+              <button
+                onClick={clearBatch}
+                className="flex-1 rounded bg-red-600 p-2 text-white"
+              >
+                Clear
+              </button>
+            </div>
+          </>
         )}
       </div>
     </div>
