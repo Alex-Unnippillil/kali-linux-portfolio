@@ -2,8 +2,10 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as chrono from 'chrono-node';
 import { RRule } from 'rrule';
 import { parseRecurring } from '../../apps/todoist/utils/recurringParser';
+import Toast from '../ui/Toast';
 
 const STORAGE_KEY = 'portfolio-tasks';
+const QUEUE_KEY = 'todoist-queue';
 
 const initialGroups = {
   Today: [],
@@ -34,6 +36,8 @@ export default function Todoist() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [view, setView] = useState('all');
+  const [toast, setToast] = useState('');
+  const [offlineQueue, setOfflineQueue] = useState([]);
   const dragged = useRef({ group: '', id: null, title: '' });
   const liveRef = useRef(null);
   const workerRef = useRef(null);
@@ -53,8 +57,44 @@ export default function Todoist() {
           // ignore bad data
         }
       }
+      const queued = localStorage.getItem(QUEUE_KEY);
+      if (queued) {
+        try {
+          setOfflineQueue(JSON.parse(queued));
+        } catch {
+          // ignore bad data
+        }
+      }
     }
   }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(QUEUE_KEY, JSON.stringify(offlineQueue));
+      } catch {
+        // ignore
+      }
+    }
+  }, [offlineQueue]);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      if (offlineQueue.length) {
+        setToast('Back online. Queued tasks synced.');
+        setOfflineQueue([]);
+      }
+    };
+    const handleOffline = () => {
+      setToast('You are offline. Tasks will be queued.');
+    };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [offlineQueue.length]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -274,6 +314,10 @@ export default function Todoist() {
       Today: [...groups.Today, newTask],
     };
     finalizeMove(newGroups, form.title, 'Today');
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setOfflineQueue([...offlineQueue, newTask]);
+      setToast('You are offline. Task queued for sync.');
+    }
     setForm({ title: '', due: '', priority: 'medium', section: '', recurring: '' });
     setRecurringRule('');
     setRecurringPreview([]);
@@ -340,6 +384,10 @@ export default function Todoist() {
       Today: [...groups.Today, newTask],
     };
     finalizeMove(newGroups, newTask.title, 'Today');
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setOfflineQueue([...offlineQueue, newTask]);
+      setToast('You are offline. Task queued for sync.');
+    }
     setQuick('');
   };
 
@@ -586,6 +634,7 @@ export default function Todoist() {
             </div>
           )}
       </div>
+      {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
   );
 }
