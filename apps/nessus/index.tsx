@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { toPng } from 'html-to-image';
 import TrendChart from './components/TrendChart';
 
@@ -44,6 +44,9 @@ const Nessus: React.FC = () => {
     Info: 0,
   });
   const chartRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+  const PAGE_SIZE = 50;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   useEffect(() => {
     const load = async () => {
@@ -111,7 +114,22 @@ const Nessus: React.FC = () => {
   const toggle = (sev: Severity) =>
     setFilters((f) => ({ ...f, [sev]: !f[sev] }));
 
-  const filtered = plugins.filter((p) => filters[p.severity]);
+  const filtered = useMemo(
+    () => plugins.filter((p) => filters[p.severity]),
+    [plugins, filters]
+  );
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [filtered]);
+
+  const handleScroll = () => {
+    const el = listRef.current;
+    if (!el) return;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 16) {
+      setVisibleCount((c) => Math.min(c + PAGE_SIZE, filtered.length));
+    }
+  };
 
   const exportChart = async () => {
     if (!chartRef.current) return;
@@ -144,13 +162,22 @@ const Nessus: React.FC = () => {
             </label>
           ))}
         </div>
-        <ul className="space-y-1">
-          {filtered.map((p) => (
+        <ul
+          ref={listRef}
+          onScroll={handleScroll}
+          className="space-y-1 max-h-96 overflow-auto"
+        >
+          {filtered.slice(0, visibleCount).map((p) => (
             <li key={p.id} className="border-b border-gray-700 pb-1">
               <span className="font-mono">{p.id}</span>: {p.name} - {p.severity}
             </li>
           ))}
         </ul>
+        {visibleCount < filtered.length && (
+          <div className="mt-2 text-center text-sm text-gray-400">
+            Scroll to load more...
+          </div>
+        )}
       </section>
 
       <section>
