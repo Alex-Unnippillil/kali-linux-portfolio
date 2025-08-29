@@ -7,5 +7,3 @@ const WeatherApp = dynamic(() => import('../../apps/weather'), {
 
 export default WeatherApp;
 
-export const displayWeather = () => <WeatherApp />;
-
