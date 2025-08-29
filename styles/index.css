@@ -502,7 +502,8 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 
 /* Highlight currently selected cells in word search */
 .selection {
-    background-color: #fde68a;
+    /* amber tone for colorblind-safe contrast */
+    background-color: #fbbf24;
 }
 
 /* Ensure monospace layout for app outputs */
