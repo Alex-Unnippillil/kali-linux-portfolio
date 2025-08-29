@@ -1,0 +1,22 @@
+[
+  {
+    "check": "Apache mod_status Information Disclosure",
+    "category": "Information Disclosure",
+    "example": "/server-status"
+  },
+  {
+    "check": "PHP info() page found",
+    "category": "Misconfiguration",
+    "example": "/phpinfo.php"
+  },
+  {
+    "check": "Directory listing enabled",
+    "category": "Server",
+    "example": "/"
+  },
+  {
+    "check": "XSS in search parameter",
+    "category": "Cross Site Scripting",
+    "example": "/search.php?q=<script>alert(1)</script>"
+  }
+]
