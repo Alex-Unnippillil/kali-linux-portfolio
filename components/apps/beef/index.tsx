@@ -1,7 +1,9 @@
+"use client";
+
 import React, { useState } from 'react';
+import HookLab from './HookLab';
 
 export default function Beef() {
-  const targetPage = `\n<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="utf-8"/>\n  <title>Sandboxed Target</title>\n</head>\n<body>\n  <h1>Sandboxed Target Page</h1>\n  <p>This page is isolated and cannot make network requests.</p>\n  <script>document.body.append(' - loaded');<\/script>\n</body>\n</html>`;
 
   const steps = [
     {
@@ -11,16 +13,9 @@ export default function Beef() {
       action: 'Begin',
     },
     {
-      title: 'Sandboxed Target',
-      body: 'The iframe below hosts an isolated page for demonstration. It runs entirely locally.',
-      render: (
-        <iframe
-          title="sandbox"
-          className="w-full h-48 border"
-          sandbox=""
-          srcDoc={targetPage}
-        />
-      ),
+      title: 'Victim Page',
+      body: 'The iframe below shows a static page. If NEXT_PUBLIC_BEEF_URL is set, it loads from that server; otherwise a local demo is used.',
+      render: <HookLab />,
       action: 'Next',
     },
     {
@@ -76,7 +71,7 @@ export default function Beef() {
         {current.action}
       </button>
       <p className="mt-4 text-xs">
-        For educational use only. No network calls occur during this demo.
+        For educational use only. Local demo avoids network requests.
       </p>
     </div>
   );

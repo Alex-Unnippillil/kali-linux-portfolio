@@ -208,6 +208,7 @@ These external domains are whitelisted in the default CSP. Update this list when
 | `stackblitz.com` | StackBlitz IDE embeds |
 | `www.youtube.com` | YouTube IFrame API |
 | `www.youtube-nocookie.com` | YouTube video embeds (privacy-enhanced) |
+| `value of NEXT_PUBLIC_BEEF_URL` | Optional BeEF demo server |
 | `open.spotify.com` | Spotify embeds |
 | `https://*` / `http://*` / `ws://*` / `wss://*` | Wide dev allowance for external resources; tighten for production |
 
