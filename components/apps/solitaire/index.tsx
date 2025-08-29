@@ -76,6 +76,19 @@ const Solitaire = () => {
   const [autoCompleting, setAutoCompleting] = useState(false);
   const [winnableOnly, setWinnableOnly] = useState(false);
   const [hint, setHint] = useState<{ source: 'tableau' | 'waste'; pile: number; index: number } | null>(null);
+  const [bankroll, setBankroll] = useState(0);
+  const [bankrollReady, setBankrollReady] = useState(false);
+  const foundationCountRef = useRef(0);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      setBankrollReady(true);
+      return;
+    }
+    const savedBankroll = Number(localStorage.getItem('solitaireBankroll') || '0');
+    setBankroll(savedBankroll);
+    setBankrollReady(true);
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -147,6 +160,14 @@ const Solitaire = () => {
       setCascade([]);
       setTime(0);
       setIsDaily(daily);
+      setBankroll((b) => {
+        const nb = b - 52;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('solitaireBankroll', String(nb));
+        }
+        return nb;
+      });
+      foundationCountRef.current = 0;
       setStats((s) => {
         const ns = { ...s, gamesPlayed: s.gamesPlayed + 1 };
         if (typeof window !== 'undefined') {
@@ -159,14 +180,17 @@ const Solitaire = () => {
   );
 
   useEffect(() => {
-    if (variant === 'klondike') start(drawMode, variant);
-  }, [drawMode, variant, start]);
+    if (bankrollReady && variant === 'klondike') start(drawMode, variant);
+  }, [drawMode, variant, start, bankrollReady]);
+
+  const vegasScore =
+    game.foundations.reduce((sum, p) => sum + p.length, 0) * 5 - 52;
 
   useEffect(() => {
     if (won) {
       if (timer.current) clearInterval(timer.current);
       setStats((s) => {
-        const bestScore = game.score > s.bestScore ? game.score : s.bestScore;
+        const bestScore = vegasScore > s.bestScore ? vegasScore : s.bestScore;
         const bestTime = s.bestTime === 0 || time < s.bestTime ? time : s.bestTime;
         let { dailyStreak, lastDaily } = s;
         if (isDaily) {
@@ -206,7 +230,7 @@ const Solitaire = () => {
     return () => {
       if (timer.current) clearInterval(timer.current);
     };
-  }, [won, paused, game, time, isDaily, variant, setStats]);
+  }, [won, paused, game, time, isDaily, variant, setStats, vegasScore]);
 
   useEffect(() => {
     if (game.foundations.every((p) => p.length === 13)) {
@@ -214,6 +238,21 @@ const Solitaire = () => {
       ReactGA.event({ category: 'Solitaire', action: 'win' });
     }
   }, [game]);
+
+  useEffect(() => {
+    const count = game.foundations.reduce((sum, p) => sum + p.length, 0);
+    if (count > foundationCountRef.current) {
+      const diff = count - foundationCountRef.current;
+      setBankroll((b) => {
+        const nb = b + diff * 5;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('solitaireBankroll', String(nb));
+        }
+        return nb;
+      });
+    }
+    foundationCountRef.current = count;
+  }, [game.foundations]);
 
   useEffect(() => {
     if (won && !prefersReducedMotion) {
@@ -255,8 +294,8 @@ const Solitaire = () => {
   }, [hint]);
 
   useEffect(() => {
-    setAriaMessage(`Score ${game.score}, time ${time} seconds, redeals ${game.redeals}`);
-  }, [game.score, time, game.redeals]);
+    setAriaMessage(`Score ${vegasScore}, time ${time} seconds, redeals ${game.redeals}`);
+  }, [vegasScore, time, game.redeals]);
 
   useEffect(() => {
     if (won) setAriaMessage('You win!');
@@ -552,7 +591,8 @@ const Solitaire = () => {
         </div>
       )}
       <div className="flex justify-between mb-2 flex-wrap gap-2">
-        <div>Score: {game.score}</div>
+        <div>Score: {vegasScore}</div>
+        <div>Bankroll: {bankroll}</div>
         <div>Time: {time}s</div>
         <div>Redeals: {game.redeals}</div>
         <div>Mode: {winnableOnly ? 'Winnable' : 'Random'}</div>
