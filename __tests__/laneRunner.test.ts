@@ -5,6 +5,8 @@ describe('lane runner', () => {
     const playerLane = 1;
     const obstacles = [{ lane: 1, y: 460 }];
     expect(detectCollision(playerLane, obstacles, 460, 20)).toBe(true);
+    const nearMiss = [{ lane: 1, y: 477 }];
+    expect(detectCollision(playerLane, nearMiss, 460, 20)).toBe(false);
   });
 
   test('score increments with distance', () => {
