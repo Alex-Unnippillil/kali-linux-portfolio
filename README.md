@@ -209,10 +209,14 @@ These external domains are whitelisted in the default CSP. Update this list when
 | `www.youtube.com` | YouTube IFrame API |
 | `www.youtube-nocookie.com` | YouTube video embeds (privacy-enhanced) |
 | `open.spotify.com` | Spotify embeds |
-| `https://*` / `http://*` / `ws://*` / `wss://*` | Wide dev allowance for external resources; tighten for production |
+| `example.com` | Sample iframe content |
+| `developer.mozilla.org` | MDN iframe demos |
+| `en.wikipedia.org` | Wikipedia iframe demos |
+
+In development (`NODE_ENV !== 'production'`), `connect-src` and `frame-src` also allow `https://*`, `http://*`, `ws://*`, and `wss://*` for testing and hot module reloading. These wildcards are stripped from production builds.
 
 **Notes for prod hardening**
-- The sample CSP currently **permits wide `connect-src` and `frame-src`** to enable sandboxed iframes (Chrome app) and demos. In production, **tighten** these to the exact domains you embed. Remove `http:` origins; prefer `https:` only.
+- The sample CSP uses wide `connect-src` and `frame-src` during development for sandboxed iframes and demos. Production builds restrict these to the domains above; further tighten if you embed additional hosts.
 - Consider removing `'unsafe-inline'` from `style-src` once all inline styles are eliminated.
 - If deploying on a domain that serves a PDF resume via `<object>`, keep `X-Frame-Options: SAMEORIGIN`. Otherwise you can rely on CSP `frame-ancestors` instead.
 
