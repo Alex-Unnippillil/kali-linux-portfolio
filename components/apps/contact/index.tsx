@@ -63,7 +63,7 @@ export const processContactForm = async (
   }
 };
 
-const DRAFT_KEY = 'contact-draft';
+const DRAFT_FILE = 'contact-draft.json';
 const EMAIL = 'alex.unnippillil@hotmail.com';
 
 const getRecaptchaToken = (siteKey: string): Promise<string> =>
@@ -78,6 +78,46 @@ const getRecaptchaToken = (siteKey: string): Promise<string> =>
     });
   });
 
+const writeDraft = async (draft: {
+  name: string;
+  email: string;
+  message: string;
+}) => {
+  try {
+    const dir = await (navigator as any).storage?.getDirectory?.();
+    if (!dir) return;
+    const handle = await dir.getFileHandle(DRAFT_FILE, { create: true });
+    const writable = await handle.createWritable();
+    await writable.write(JSON.stringify(draft));
+    await writable.close();
+  } catch {
+    /* ignore */
+  }
+};
+
+const readDraft = async () => {
+  try {
+    const dir = await (navigator as any).storage?.getDirectory?.();
+    if (!dir) return null;
+    const handle = await dir.getFileHandle(DRAFT_FILE);
+    const file = await handle.getFile();
+    const text = await file.text();
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+};
+
+const deleteDraft = async () => {
+  try {
+    const dir = await (navigator as any).storage?.getDirectory?.();
+    if (!dir) return;
+    await dir.removeEntry(DRAFT_FILE);
+  } catch {
+    /* ignore */
+  }
+};
+
 const ContactApp: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -86,33 +126,47 @@ const ContactApp: React.FC = () => {
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
   const [csrfToken, setCsrfToken] = useState('');
+  const [fallback, setFallback] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem(DRAFT_KEY);
-    if (saved) {
-      try {
-        const draft = JSON.parse(saved);
+    (async () => {
+      const draft = await readDraft();
+      if (draft) {
         setName(draft.name || '');
         setEmail(draft.email || '');
         setMessage(draft.message || '');
-      } catch {
-        /* ignore */
       }
-    }
+    })();
     const meta = document.querySelector('meta[name="csrf-token"]');
     setCsrfToken(meta?.getAttribute('content') || '');
+    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
+    if (!siteKey || !(window as any).grecaptcha) {
+      setFallback(true);
+    }
   }, []);
 
   useEffect(() => {
-    const draft = { name, email, message };
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    void writeDraft({ name, email, message });
   }, [name, email, message]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    let recaptchaToken = '';
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
-    const recaptchaToken = await getRecaptchaToken(siteKey);
+    let shouldFallback = fallback;
+    if (!shouldFallback && siteKey && (window as any).grecaptcha) {
+      recaptchaToken = await getRecaptchaToken(siteKey);
+      if (!recaptchaToken) shouldFallback = true;
+    } else {
+      shouldFallback = true;
+    }
+    if (shouldFallback) {
+      setFallback(true);
+      setError('Email service unavailable. Use the options above.');
+      setToast('Failed to send');
+      return;
+    }
     const result = await processContactForm({
       name,
       email,
@@ -127,40 +181,48 @@ const ContactApp: React.FC = () => {
       setEmail('');
       setMessage('');
       setHoneypot('');
-      localStorage.removeItem(DRAFT_KEY);
+      void deleteDraft();
     } else {
       setError(result.error || 'Submission failed');
       setToast('Failed to send');
+      if (
+        result.error?.toLowerCase().includes('captcha') ||
+        result.error === 'Submission failed'
+      ) {
+        setFallback(true);
+      }
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4">
       <h1 className="mb-4 text-2xl">Contact</h1>
-      <p className="mb-4 text-sm">
-        Prefer email?{' '}
-        <button
-          type="button"
-          onClick={() => copyToClipboard(EMAIL)}
-          className="underline mr-2"
-        >
-          Copy address
-        </button>
-        <button
-          type="button"
-          onClick={() => copyToClipboard(message)}
-          className="underline mr-2"
-        >
-          Copy message
-        </button>
-        <button
-          type="button"
-          onClick={() => openMailto(EMAIL, '', message)}
-          className="underline"
-        >
-          Open email app
-        </button>
-      </p>
+      {fallback && (
+        <p className="mb-4 text-sm">
+          Service unavailable. You can{' '}
+          <button
+            type="button"
+            onClick={() => copyToClipboard(EMAIL)}
+            className="underline mr-2"
+          >
+            Copy address
+          </button>
+          <button
+            type="button"
+            onClick={() => copyToClipboard(message)}
+            className="underline mr-2"
+          >
+            Copy message
+          </button>
+          <button
+            type="button"
+            onClick={() => openMailto(EMAIL, '', message)}
+            className="underline"
+          >
+            Open email app
+          </button>
+        </p>
+      )}
       <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
         <div>
           <label htmlFor="contact-name" className="mb-1 block text-sm">Name</label>
