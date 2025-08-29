@@ -54,6 +54,7 @@ const Nessus = () => {
   const [falsePositives, setFalsePositives] = useState([]);
   const [findings, setFindings] = useState([]);
   const [parseError, setParseError] = useState('');
+  const [selected, setSelected] = useState(null);
   const parserWorkerRef = useRef(null);
 
   const hostData = useMemo(
@@ -74,7 +75,7 @@ const Nessus = () => {
     parserWorkerRef.current = new Worker(
       new URL('../../../workers/nessus-parser.ts', import.meta.url)
     );
-    parserWorkerRef.current.onmessage = (e) => {
+      parserWorkerRef.current.onmessage = (e) => {
       const { findings: parsed = [], error: err } = e.data || {};
       if (err) {
         setParseError(err);
@@ -265,7 +266,11 @@ const Nessus = () => {
                 </thead>
                 <tbody>
                   {findings.map((f, i) => (
-                    <tr key={i} className="border-t border-gray-700">
+                    <tr
+                      key={i}
+                      className="border-t border-gray-700 cursor-pointer"
+                      onClick={() => setSelected(f)}
+                    >
                       <td className="p-1">{f.host}</td>
                       <td className="p-1">{f.name}</td>
                       <td className="p-1">{f.cvss}</td>
@@ -354,6 +359,28 @@ const Nessus = () => {
           </li>
         ))}
       </ul>
+      {selected && (
+        <div className="fixed top-0 right-0 w-80 h-full bg-gray-800 p-4 overflow-auto shadow-lg">
+          <button
+            type="button"
+            onClick={() => setSelected(null)}
+            className="mb-2 bg-red-600 px-2 py-1 rounded text-sm"
+          >
+            Close
+          </button>
+          <h3 className="text-xl mb-2">{selected.name}</h3>
+          <p className="text-sm mb-2">
+            <span className="font-bold">Host:</span> {selected.host}
+          </p>
+          <p className="text-sm mb-2">
+            <span className="font-bold">CVSS:</span> {selected.cvss} ({selected.severity})
+          </p>
+          <p className="mb-2 text-sm whitespace-pre-wrap">{selected.description}</p>
+          <p className="text-sm text-green-300">
+            {selected.solution || 'No solution provided.'}
+          </p>
+        </div>
+      )}
     </div>
   );
 };
