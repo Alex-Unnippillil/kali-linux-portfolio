@@ -3,6 +3,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import LegalInterstitial from '../../components/ui/LegalInterstitial';
 import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
+import RouterProfiles, {
+  ROUTER_PROFILES,
+  RouterProfile,
+} from './components/RouterProfiles';
 
 interface RouterMeta {
   model: string;
@@ -47,9 +51,13 @@ const ReaverPanel: React.FC = () => {
   const [routers, setRouters] = useState<RouterMeta[]>([]);
   const [routerIdx, setRouterIdx] = useState(0);
   const [rate, setRate] = useState(1);
+  const [profile, setProfile] = useState<RouterProfile>(ROUTER_PROFILES[0]);
   const [attempts, setAttempts] = useState(0);
   const [running, setRunning] = useState(false);
+  const [lockRemaining, setLockRemaining] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout>();
+  const burstRef = useRef(0); // attempts since last lock
+  const lockRef = useRef(0); // lockout seconds remaining
 
   useEffect(() => {
     fetch('/demo-data/reaver/routers.json')
@@ -62,7 +70,24 @@ const ReaverPanel: React.FC = () => {
     if (!running) return;
     intervalRef.current = setInterval(() => {
       setAttempts((prev) => {
+        // handle lockout countdown
+        if (lockRef.current > 0) {
+          lockRef.current -= 1;
+          setLockRemaining(lockRef.current);
+          return prev;
+        }
+
         const next = prev + rate;
+        burstRef.current += rate;
+
+        if (burstRef.current >= profile.lockAttempts) {
+          burstRef.current = 0;
+          if (profile.lockDuration > 0) {
+            lockRef.current = profile.lockDuration;
+            setLockRemaining(lockRef.current);
+          }
+        }
+
         if (next >= TOTAL_PINS) {
           clearInterval(intervalRef.current!);
           return TOTAL_PINS;
@@ -71,10 +96,20 @@ const ReaverPanel: React.FC = () => {
       });
     }, 1000);
     return () => clearInterval(intervalRef.current!);
-  }, [running, rate]);
+  }, [running, rate, profile]);
+
+  // reset counters when profile changes
+  useEffect(() => {
+    burstRef.current = 0;
+    lockRef.current = 0;
+    setLockRemaining(0);
+  }, [profile]);
 
   const start = () => {
     setAttempts(0);
+    burstRef.current = 0;
+    lockRef.current = 0;
+    setLockRemaining(0);
     setRunning(true);
   };
 
@@ -83,7 +118,7 @@ const ReaverPanel: React.FC = () => {
     clearInterval(intervalRef.current!);
   };
 
-  const timeRemaining = (TOTAL_PINS - attempts) / rate;
+  const timeRemaining = (TOTAL_PINS - attempts) / rate + lockRemaining;
 
   return (
     <div className="p-4 bg-gray-900 text-white h-full overflow-y-auto">
@@ -105,6 +140,7 @@ const ReaverPanel: React.FC = () => {
 
       <div className="mb-6">
         <h2 className="text-lg mb-2">PIN Brute-force Simulator</h2>
+        <RouterProfiles onChange={setProfile} />
         <div className="flex items-center gap-2 mb-2">
           <label htmlFor="rate" className="text-sm">
             Attempts/sec
@@ -134,6 +170,11 @@ const ReaverPanel: React.FC = () => {
             style={{ width: `${(attempts / TOTAL_PINS) * 100}%` }}
           />
         </div>
+        {lockRemaining > 0 && (
+          <div className="text-sm text-red-400 mb-1">
+            WPS locked. Resuming in {lockRemaining}s
+          </div>
+        )}
         <div className="text-sm">
           Est. time remaining: {formatTime(timeRemaining)}
         </div>
