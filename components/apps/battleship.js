@@ -29,13 +29,13 @@ const Splash = ({ color }) => {
   );
 };
 
-const HitMarker = () => (
+const HitMarker = ({ colorblind }) => (
   <div className="absolute inset-0">
-    <Splash color="bg-red-500" />
+    <Splash color={colorblind ? 'bg-blue-500' : 'bg-red-500'} />
     <svg
       className="w-full h-full"
       viewBox="0 0 32 32"
-      stroke="red"
+      stroke={colorblind ? 'blue' : 'red'}
       strokeWidth="4"
       aria-hidden="true"
     >
@@ -49,13 +49,13 @@ const HitMarker = () => (
   </div>
 );
 
-const MissMarker = () => (
+const MissMarker = ({ colorblind }) => (
   <div className="absolute inset-0">
-    <Splash color="bg-blue-300" />
+    <Splash color={colorblind ? 'bg-orange-400' : 'bg-blue-300'} />
     <svg
       className="w-full h-full"
       viewBox="0 0 32 32"
-      stroke="white"
+      stroke={colorblind ? 'orange' : 'white'}
       strokeWidth="3"
       fill="none"
       aria-hidden="true"
@@ -91,6 +91,11 @@ const Battleship = () => {
     losses: 0,
   });
   const [cursor, setCursor] = useState(0);
+  const [colorblind, setColorblind] = usePersistentState(
+    'battleship-colorblind',
+    false,
+  );
+  const [dragHint, setDragHint] = useState(null);
 
   const tryPlace = (shipId, x, y, dir) => {
     const ship = ships.find((s) => s.id === shipId);
@@ -104,6 +109,17 @@ const Battleship = () => {
         if (s.id !== shipId && s.cells && s.cells.includes(idx)) return null;
       }
       cells.push(idx);
+    }
+    return cells;
+  };
+
+  const getDragCells = (ship, x, y) => {
+    const cells = [];
+    for (let k = 0; k < ship.len; k++) {
+      const cx = x + (ship.dir === 0 ? k : 0);
+      const cy = y + (ship.dir === 1 ? k : 0);
+      if (cx < 0 || cy < 0 || cx >= BOARD_SIZE || cy >= BOARD_SIZE) continue;
+      cells.push(cy * BOARD_SIZE + cx);
     }
     return cells;
   };
@@ -148,6 +164,7 @@ const Battleship = () => {
       setGuessHeat(playerAiInstance.getHeatmap().slice());
       setCursor(0);
       setSelected([]);
+      setDragHint(null);
       const pShots = salvo ? newShips.length : 1;
       const aShots = salvo ? enemyLayout.length : 1;
       setPlayerShots(pShots);
@@ -160,17 +177,28 @@ const Battleship = () => {
     restart();
   }, [restart]);
 
+  const handleDrag = (i, e, data) => {
+    const x = Math.round(data.x / CELL);
+    const y = Math.round(data.y / CELL);
+    const ship = ships[i];
+    const cells = tryPlace(ship.id, x, y, ship.dir);
+    if (cells) setDragHint({ cells, valid: true });
+    else setDragHint({ cells: getDragCells(ship, x, y), valid: false });
+  };
+
   const handleDragStop = (i, e, data) => {
     const x = Math.round(data.x / CELL);
     const y = Math.round(data.y / CELL);
     const ship = ships[i];
     const cells = tryPlace(ship.id, x, y, ship.dir);
-    if (!cells) return;
-    const updated = ships.map((s) =>
-      s.id === ship.id ? { ...s, x, y, cells } : s
-    );
-    setShips(updated);
-    setPlayerBoard(placeShips(createBoard(), updated));
+    if (cells) {
+      const updated = ships.map((s) =>
+        s.id === ship.id ? { ...s, x, y, cells } : s
+      );
+      setShips(updated);
+      setPlayerBoard(placeShips(createBoard(), updated));
+    }
+    setDragHint(null);
   };
 
   const rotateShip = (id) => {
@@ -314,7 +342,14 @@ const Battleship = () => {
     const heatArr = isEnemy ? guessHeat : aiHeat;
     const maxHeat = Math.max(...heatArr);
     return (
-      <div className="grid" style={{ gridTemplateColumns: `repeat(${BOARD_SIZE}, ${CELL}px)` }}>
+      <div
+        className="grid relative"
+        style={{
+          gridTemplateColumns: `repeat(${BOARD_SIZE}, ${CELL}px)`,
+          gridTemplateRows: `repeat(${BOARD_SIZE}, ${CELL}px)`,
+          background: 'linear-gradient(to bottom, #0e7490, #022c5a)',
+        }}
+      >
         {board.map((cell, idx) => {
           const heatVal = heatArr[idx];
           const norm = maxHeat ? heatVal / maxHeat : 0;
@@ -324,8 +359,14 @@ const Battleship = () => {
               : `rgba(255,0,0,${norm * 0.7})`
             : 'transparent';
           const selectedMark = isEnemy && phase === 'battle' && selected.includes(idx);
+          const hint =
+            !isEnemy && phase === 'placement' && dragHint && dragHint.cells.includes(idx);
           return (
-            <div key={idx} className="border border-ub-dark-grey relative" style={{ width: CELL, height: CELL }}>
+            <div
+              key={idx}
+              className="border border-ub-dark-grey relative"
+              style={{ width: CELL, height: CELL }}
+            >
               {isEnemy && phase === 'battle' && !['hit', 'miss'].includes(cell) ? (
                 <button
                   className="w-full h-full"
@@ -333,9 +374,16 @@ const Battleship = () => {
                   aria-label={`select target at ${Math.floor(idx / BOARD_SIZE) + 1},${(idx % BOARD_SIZE) + 1}`}
                 />
               ) : null}
-              {cell === 'hit' && !hideInfo && <HitMarker />}
-              {cell === 'miss' && !hideInfo && <MissMarker />}
+              {cell === 'hit' && !hideInfo && <HitMarker colorblind={colorblind} />}
+              {cell === 'miss' && !hideInfo && <MissMarker colorblind={colorblind} />}
               <div className="absolute inset-0" style={{ background: color }} aria-hidden="true" />
+              {hint && (
+                <div
+                  className={`absolute inset-0 pointer-events-none ${
+                    dragHint.valid ? 'bg-green-400' : 'bg-red-500'
+                  } opacity-40`}
+                />
+              )}
               {selectedMark && (
                 <div className="absolute inset-0 bg-yellow-300 opacity-50 pointer-events-none" />
               )}
@@ -371,6 +419,8 @@ const Battleship = () => {
           }}
           fog={fog}
           onFogChange={(v) => setFog(v)}
+          colorblind={colorblind}
+          onColorblindChange={(v) => setColorblind(v)}
         >
         <div className="mb-2" aria-live="polite" role="status">{message}</div>
         {phase==='done' && (
@@ -387,6 +437,8 @@ const Battleship = () => {
                     key={ship.id}
                     grid={[CELL,CELL]}
                     position={{x:(ship.x||0)*CELL,y:(ship.y||0)*CELL}}
+                    onStart={(e,data)=>handleDrag(i,e,data)}
+                    onDrag={(e,data)=>handleDrag(i,e,data)}
                     onStop={(e,data)=>handleDragStop(i,e,data)}
                     disabled={phase!=='placement'}
                   >
