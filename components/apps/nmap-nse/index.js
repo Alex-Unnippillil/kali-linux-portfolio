@@ -36,6 +36,31 @@ const scripts = [
   }
 ];
 
+const scriptPhases = {
+  'http-title': ['portrule'],
+  'ssl-cert': ['portrule'],
+  'smb-os-discovery': ['hostrule'],
+  'ftp-anon': ['portrule'],
+  'http-enum': ['portrule'],
+  'dns-brute': ['hostrule']
+};
+
+const phaseInfo = {
+  prerule: {
+    description:
+      'Runs before any hosts are scanned. Often used for broadcast discovery.',
+    example: 'broadcast-dhcp-discover'
+  },
+  hostrule: {
+    description: 'Runs once for each target host.',
+    example: 'smb-os-discovery'
+  },
+  portrule: {
+    description: 'Runs once for each target port.',
+    example: 'http-title'
+  }
+};
+
 const portPresets = [
   { label: 'Default', flag: '' },
   { label: 'Common', flag: '-F' },
@@ -57,8 +82,11 @@ const NmapNSEApp = () => {
   const [examples, setExamples] = useState({});
   const [results, setResults] = useState({ hosts: [] });
   const [scriptOptions, setScriptOptions] = useState({});
+  const [activeScript, setActiveScript] = useState(scripts[0].name);
+  const [phaseStep, setPhaseStep] = useState(0);
   const [toast, setToast] = useState('');
   const outputRef = useRef(null);
+  const phases = ['prerule', 'hostrule', 'portrule'];
 
   useEffect(() => {
     fetch('/demo/nmap-nse.json')
@@ -72,12 +100,21 @@ const NmapNSEApp = () => {
   }, []);
 
   const toggleScript = (name) => {
-    setSelectedScripts((prev) =>
-      prev.includes(name)
-        ? prev.filter((n) => n !== name)
-        : [...prev, name]
-    );
+    setSelectedScripts((prev) => {
+      const exists = prev.includes(name);
+      const next = exists ? prev.filter((n) => n !== name) : [...prev, name];
+      return next;
+    });
+    setActiveScript(name);
+    setPhaseStep(0);
   };
+
+  useEffect(() => {
+    if (!selectedScripts.includes(activeScript)) {
+      setActiveScript(selectedScripts[0] || '');
+      setPhaseStep(0);
+    }
+  }, [selectedScripts, activeScript]);
 
   const filteredScripts = scripts.filter((s) =>
     s.name.toLowerCase().includes(scriptQuery.toLowerCase())
@@ -251,6 +288,63 @@ const NmapNSEApp = () => {
         </div>
       </div>
       <div className="md:w-1/2 p-4 bg-black overflow-y-auto">
+        <h2 className="text-lg mb-2">Script phases</h2>
+        {activeScript ? (
+          <>
+            <p className="text-sm mb-1">
+              Phases for <span className="font-mono">{activeScript}</span>
+            </p>
+            <div className="flex space-x-2 mb-2">
+              {phases.map((p) => (
+                <div
+                  key={p}
+                  className={`flex-1 p-2 text-center rounded ${
+                    scriptPhases[activeScript]?.includes(p)
+                      ? phaseStep >= scriptPhases[activeScript].indexOf(p)
+                        ? 'bg-blue-600'
+                        : 'bg-gray-700'
+                      : 'bg-gray-800'
+                  }`}
+                >
+                  {p}
+                </div>
+              ))}
+            </div>
+            {scriptPhases[activeScript] && (
+              <p className="text-sm mb-2">
+                {phaseInfo[scriptPhases[activeScript][phaseStep]]?.description}{' '}
+                <span className="text-gray-400">
+                  Example: {phaseInfo[scriptPhases[activeScript][phaseStep]]?.example}
+                </span>
+              </p>
+            )}
+            <div className="flex gap-2 mb-4">
+              <button
+                type="button"
+                onClick={() =>
+                  setPhaseStep((s) =>
+                    Math.min(
+                      s + 1,
+                      (scriptPhases[activeScript]?.length || 1) - 1
+                    )
+                  )
+                }
+                className="px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
+              >
+                Step
+              </button>
+              <button
+                type="button"
+                onClick={() => setPhaseStep(0)}
+                className="px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
+              >
+                Reset
+              </button>
+            </div>
+          </>
+        ) : (
+          <p className="text-sm mb-4">Select a script to view phases.</p>
+        )}
         <h2 className="text-lg mb-2">Topology</h2>
         <DiscoveryMap hosts={results.hosts} />
         <h2 className="text-lg mb-2">Parsed output</h2>
