@@ -4768,6 +4768,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"cron-parser@npm:^5.3.0":
+  version: 5.3.0
+  resolution: "cron-parser@npm:5.3.0"
+  dependencies:
+    luxon: "npm:^3.6.1"
+  checksum: 10c0/770d88db93af031ecc0fa7e7fc4f587af32df66eaff985137f86a02fee9af038533788dd36d5bc6ac283392e9db82b55fd4841e7e02098617fc7b73a813c5b7a
+  languageName: node
+  linkType: hard
+
 "cross-spawn@npm:^7.0.3, cross-spawn@npm:^7.0.6":
   version: 7.0.6
   resolution: "cross-spawn@npm:7.0.6"
@@ -8357,6 +8366,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"luxon@npm:^3.6.1":
+  version: 3.7.1
+  resolution: "luxon@npm:3.7.1"
+  checksum: 10c0/f83bc23a4c09da9111bc2510d2f5346e1ced4938379ebff13e308fece2ea852eb6e8b9ed8053b8d82e0fce05d5dd46e4cd64d8831ca04cfe32c0954b6f087258
+  languageName: node
+  linkType: hard
+
 "lz-string@npm:^1.5.0":
   version: 1.5.0
   resolution: "lz-string@npm:1.5.0"
@@ -11683,6 +11699,7 @@ __metadata:
     chart.js: "npm:^4.5.0"
     chess.js: "npm:^1.0.0"
     chrono-node: "npm:^2.8.4"
+    cron-parser: "npm:^5.3.0"
     cytoscape: "npm:^3.33.1"
     cytoscape-cose-bilkent: "npm:^4.1.0"
     diff: "npm:^5.1.0"
