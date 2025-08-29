@@ -158,21 +158,27 @@ export class BlackjackGame {
     this.insuranceResolved = false;
   }
 
-  startRound(bet, presetDeck) {
-    if (bet > this.bankroll) throw new Error('Bet exceeds bankroll');
+  startRound(bet, presetDeck, hands = 1) {
+    if (bet * hands > this.bankroll) throw new Error('Bet exceeds bankroll');
     this.resetRound();
     this.bet = bet;
-    this.bankroll -= bet;
+    this.bankroll -= bet * hands;
     if (presetDeck) {
       // ensure deterministic order for tests by appending cards to be drawn
       this.shoe.cards = this.shoe.cards.concat(presetDeck.slice().reverse());
     }
-    const player = { cards: [this.shoe.draw(), this.shoe.draw()], bet, finished: false, doubled: false, surrendered: false };
+    const players = Array.from({ length: hands }, () => ({
+      cards: [this.shoe.draw(), this.shoe.draw()],
+      bet,
+      finished: false,
+      doubled: false,
+      surrendered: false,
+    }));
     const dealer = [this.shoe.draw(), this.shoe.draw()];
-    this.playerHands = [player];
+    this.playerHands = players;
     this.dealerHand = dealer;
     this.dealerBlackjack = handValue(dealer) === 21;
-    return { player, dealer };
+    return { player: players[0], dealer };
   }
 
   currentHand() {
@@ -231,7 +237,7 @@ export class BlackjackGame {
   takeInsurance() {
     if (this.dealerHand[0].value !== 'A') throw new Error('Insurance not offered');
     if (this.insuranceResolved) return;
-    const bet = Math.floor(this.bet / 2);
+    const bet = Math.floor((this.bet * this.playerHands.length) / 2);
     if (bet > this.bankroll) throw new Error('Not enough bankroll');
     this.bankroll -= bet;
     this.insuranceBet = bet;
