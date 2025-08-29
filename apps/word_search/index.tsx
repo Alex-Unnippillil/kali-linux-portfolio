@@ -8,6 +8,7 @@ import { logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
 import GameLayout from '../../components/apps/GameLayout';
 import { SettingsProvider, useSettings } from '../../components/apps/GameSettingsContext';
 import { PUZZLE_PACKS, PackName } from '../../games/word-search/packs';
+import ListImport from '../../games/word-search/components/ListImport';
 
 const WORD_COUNT = 5;
 const GRID_SIZE = 12;
@@ -56,7 +57,7 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
   const startRef = useRef<number>(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const { quality, setQuality, highContrast, setHighContrast } = useSettings();
-  const [pack, setPack] = useState<PackName | 'random'>('random');
+  const [pack, setPack] = useState<PackName | 'random' | 'custom'>('random');
   const [allowBackwards, setAllowBackwards] = useState(true);
   const [allowDiagonal, setAllowDiagonal] = useState(true);
   const [elapsed, setElapsed] = useState(0);
@@ -131,7 +132,7 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
   }, [seedQuery, wordsQuery, seed, words.length, getDailySeed, pack]);
 
   useEffect(() => {
-    if (!seed) return;
+    if (!seed || pack === 'custom') return;
     setWords(pickWords(seed, pack));
   }, [pack, seed]);
 
@@ -236,6 +237,19 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
       setStart(null);
       setSelection([]);
     };
+
+  const handleImport = (list: string[]) => {
+    if (!list.length) return;
+    const newSeed = Math.random().toString(36).slice(2);
+    setSeed(newSeed);
+    setWords(list);
+    setPack('custom');
+    router.replace(
+      { pathname: router.pathname, query: { seed: newSeed, words: list.join(',') } },
+      undefined,
+      { shallow: true }
+    );
+  };
 
   const copyLink = async () => {
     const params = new URLSearchParams({ seed, words: words.join(',') });
@@ -379,10 +393,11 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
         <span className="text-sm">Time: {elapsed}s</span>
         <select
           value={pack}
-          onChange={(e) => setPack(e.target.value as PackName | 'random')}
+          onChange={(e) => setPack(e.target.value as PackName | 'random' | 'custom')}
           className="px-2 py-1 border rounded"
         >
           <option value="random">Random</option>
+          <option value="custom">Custom</option>
           {Object.keys(PUZZLE_PACKS).map((p) => (
             <option key={p} value={p}>
               {p}
@@ -411,6 +426,7 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
         <button type="button" onClick={copyLink} className="px-2 py-1 bg-green-700 text-white rounded">
           Copy Link
         </button>
+        <ListImport onImport={handleImport} />
         <button type="button" onClick={() => window.print()} className="px-2 py-1 bg-gray-700 text-white rounded">
           Print
         </button>

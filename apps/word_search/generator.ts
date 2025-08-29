@@ -78,10 +78,12 @@ export function generateGrid(
     const word = w.toUpperCase();
     for (let attempt = 0; attempt < 200; attempt += 1) {
       const dir = directions[Math.floor(rng() * directions.length)];
-      const maxRow = dir.dy > 0 ? size - word.length : dir.dy < 0 ? word.length - 1 : size - 1;
-      const maxCol = dir.dx > 0 ? size - word.length : dir.dx < 0 ? word.length - 1 : size - 1;
-      const startRow = Math.floor(rng() * (maxRow + 1));
-      const startCol = Math.floor(rng() * (maxCol + 1));
+      const minRow = dir.dy < 0 ? word.length - 1 : 0;
+      const maxRow = dir.dy > 0 ? size - word.length : size - 1;
+      const minCol = dir.dx < 0 ? word.length - 1 : 0;
+      const maxCol = dir.dx > 0 ? size - word.length : size - 1;
+      const startRow = Math.floor(rng() * (maxRow - minRow + 1)) + minRow;
+      const startCol = Math.floor(rng() * (maxCol - minCol + 1)) + minCol;
       let ok = true;
       const positions: Position[] = [];
       for (let i = 0; i < word.length; i += 1) {
