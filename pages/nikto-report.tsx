@@ -37,6 +37,47 @@ const NiktoReport: React.FC = () => {
     [findings, severity, pathFilter]
   );
 
+  const exportJSON = () => {
+    const blob = new Blob([JSON.stringify(filtered, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'nikto-findings.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportCSV = () => {
+    const rows = [
+      ['Path', 'Finding', 'Severity', 'References', 'Details'],
+      ...filtered.map((f) => [
+        f.path,
+        f.finding,
+        f.severity,
+        f.references.join('; '),
+        f.details,
+      ]),
+    ];
+    const csv = rows
+      .map((r) =>
+        r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')
+      )
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'nikto-findings.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="p-4 bg-gray-900 text-white min-h-screen">
       <h1 className="text-xl mb-4">Nikto Report</h1>
@@ -58,6 +99,20 @@ const NiktoReport: React.FC = () => {
             </option>
           ))}
         </select>
+        <button
+          type="button"
+          onClick={exportJSON}
+          className="px-2 py-1 bg-blue-600 rounded text-sm"
+        >
+          Export JSON
+        </button>
+        <button
+          type="button"
+          onClick={exportCSV}
+          className="px-2 py-1 bg-blue-600 rounded text-sm"
+        >
+          Export CSV
+        </button>
       </div>
       <table className="w-full text-left text-sm">
         <thead>
