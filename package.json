@@ -26,6 +26,7 @@
     "@monaco-editor/react": "^4.7.0",
     "@mozilla/readability": "^0.6.0",
     "@supabase/supabase-js": "^2",
+
     "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",
     "@vercel/toolbar": "^0.1.38",
@@ -120,6 +121,7 @@
     "fake-indexeddb": "^6.1.0",
     "jest": "30.0.5",
     "jest-environment-jsdom": "30.0.5",
+    "node-mocks-http": "1.17.2",
     "pa11y": "^9.0.0",
     "playwright-core": "^1.55.0",
     "typescript": "^5.9.2",
