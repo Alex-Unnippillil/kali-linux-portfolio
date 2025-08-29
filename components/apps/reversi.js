@@ -36,6 +36,7 @@ const Reversi = () => {
   const [tip, setTip] = useState('Tip: Control the corners to gain an advantage.');
   const [depth, setDepth] = useState(3);
   const [useBook, setUseBook] = useState(true);
+  const [history, setHistory] = useState([]);
   const bookEnabled = React.useMemo(() => useBook, [useBook]);
 
   // keep refs in sync
@@ -64,6 +65,7 @@ const Reversi = () => {
           const prev = boardRef.current.map((row) => row.slice());
           const next = applyMove(prev, r, c, 'W', flips);
           queueFlips(r, c, 'W', prev);
+          setHistory((h) => [...h, { board: prev, player: 'W' }]);
           setBoard(next);
           playSound();
           setPlayer('B');
@@ -289,18 +291,19 @@ const Reversi = () => {
     }
     if (player === 'W' && !paused && !aiThinkingRef.current) {
       const bookMove = bookEnabled ? getBookMove(board, 'W') : null;
-      if (bookMove) {
-        const [r, c] = bookMove;
-        const flips = moves[`${r}-${c}`];
-        if (flips) {
-          const prev = boardRef.current.map((row) => row.slice());
-          const next = applyMove(prev, r, c, 'W', flips);
-          queueFlips(r, c, 'W', prev);
-          setBoard(next);
-          playSound();
-          setPlayer('B');
-        }
-      } else {
+        if (bookMove) {
+          const [r, c] = bookMove;
+          const flips = moves[`${r}-${c}`];
+          if (flips) {
+            const prev = boardRef.current.map((row) => row.slice());
+            const next = applyMove(prev, r, c, 'W', flips);
+            queueFlips(r, c, 'W', prev);
+            setHistory((h) => [...h, { board: prev, player: 'W' }]);
+            setBoard(next);
+            playSound();
+            setPlayer('B');
+          }
+        } else {
         aiThinkingRef.current = true;
         if (workerRef.current) {
           workerRef.current.postMessage({ board, player: 'W', depth });
@@ -325,6 +328,7 @@ const Reversi = () => {
     const prev = boardRef.current.map((row) => row.slice());
     const next = applyMove(prev, r, c, 'B', flips);
     queueFlips(r, c, 'B', prev);
+    setHistory((h) => [...h, { board: prev, player: 'B' }]);
     setBoard(next);
     playSound();
     setPlayer('W');
@@ -356,7 +360,31 @@ const Reversi = () => {
     setPlayer('B');
     setMessage('Your turn');
     setPaused(false);
+    setHistory([]);
   };
+
+  const undo = () => {
+    if (!history.length) return;
+    const last = history[history.length - 1];
+    setBoard(last.board.map((row) => row.slice()));
+    setPlayer(last.player);
+    setHistory((h) => h.slice(0, -1));
+    setMessage(last.player === 'B' ? 'Your turn' : "AI's turn");
+    previewRef.current = null;
+    flippingRef.current = [];
+    aiThinkingRef.current = false;
+  };
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === 'u' || e.key === 'U' || e.key === 'Backspace') {
+        e.preventDefault();
+        undo();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [undo]);
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
@@ -379,6 +407,13 @@ const Reversi = () => {
           onClick={reset}
         >
           Reset
+        </button>
+        <button
+          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded disabled:opacity-50"
+          onClick={undo}
+          disabled={!history.length}
+        >
+          Undo
         </button>
         <button
           className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
