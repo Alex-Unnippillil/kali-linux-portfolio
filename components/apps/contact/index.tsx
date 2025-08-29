@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import FormError from '../../ui/FormError';
-import Toast from '../../ui/Toast';
 import { copyToClipboard } from '../../../utils/clipboard';
 import { openMailto } from '../../../utils/mailto';
 import { contactSchema } from '../../../utils/contactSchema';
@@ -143,7 +142,10 @@ const ContactApp: React.FC = () => {
   const [honeypot, setHoneypot] = useState('');
   const [attachments, setAttachments] = useState<File[]>([]);
   const [error, setError] = useState('');
-  const [toast, setToast] = useState('');
+  const [banner, setBanner] = useState<
+    { type: 'success' | 'error'; message: string } | null
+  >(null);
+  const [submitting, setSubmitting] = useState(false);
   const [csrfToken, setCsrfToken] = useState('');
   const [fallback, setFallback] = useState(false);
   const [emailError, setEmailError] = useState('');
@@ -172,7 +174,10 @@ const ContactApp: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
     setError('');
+    setBanner(null);
     setEmailError('');
     setMessageError('');
 
@@ -180,15 +185,16 @@ const ContactApp: React.FC = () => {
     const messageResult = contactSchema.shape.message.safeParse(message);
     let hasValidationError = false;
     if (!emailResult.success) {
-      setEmailError('Please enter a valid email address.');
+      setEmailError('Invalid email');
       hasValidationError = true;
     }
     if (!messageResult.success) {
-      setMessageError('Message must be between 1 and 1000 characters.');
+      setMessageError('1-1000 chars');
       hasValidationError = true;
     }
     if (hasValidationError) {
-      setToast('Failed to send');
+      setBanner({ type: 'error', message: 'Failed to send' });
+      setSubmitting(false);
       return;
     }
     const totalSize = attachments.reduce((s, f) => s + f.size, 0);
@@ -198,7 +204,8 @@ const ContactApp: React.FC = () => {
           MAX_TOTAL_ATTACHMENT_SIZE / (1024 * 1024)
         }MB total limit.`
       );
-      setToast('Failed to send');
+      setBanner({ type: 'error', message: 'Failed to send' });
+      setSubmitting(false);
       return;
     }
     let recaptchaToken = '';
@@ -213,7 +220,8 @@ const ContactApp: React.FC = () => {
     if (shouldFallback) {
       setFallback(true);
       setError('Email service unavailable. Use the options above.');
-      setToast('Failed to send');
+      setBanner({ type: 'error', message: 'Failed to send' });
+      setSubmitting(false);
       return;
     }
     const result = await processContactForm({
@@ -225,7 +233,7 @@ const ContactApp: React.FC = () => {
       recaptchaToken,
     });
     if (result.success) {
-      setToast('Message sent');
+      setBanner({ type: 'success', message: 'Message sent' });
       setName('');
       setEmail('');
       setMessage('');
@@ -234,8 +242,9 @@ const ContactApp: React.FC = () => {
       setAttachments([]);
       void deleteDraft();
     } else {
-      setError(result.error || 'Submission failed');
-      setToast('Failed to send');
+      const msg = result.error || 'Submission failed';
+      setError(msg);
+      setBanner({ type: 'error', message: msg });
       if (
         result.error?.toLowerCase().includes('captcha') ||
         result.error === 'Submission failed'
@@ -243,13 +252,23 @@ const ContactApp: React.FC = () => {
         setFallback(true);
       }
     }
+    setSubmitting(false);
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4">
-      <h1 className="mb-4 text-2xl">Contact</h1>
+    <div className="min-h-screen bg-gray-900 text-white p-6">
+      <h1 className="mb-6 text-2xl">Contact</h1>
+      {banner && (
+        <div
+          className={`mb-6 rounded p-3 text-sm ${
+            banner.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+          }`}
+        >
+          {banner.message}
+        </div>
+      )}
       {fallback && (
-        <p className="mb-4 text-sm">
+        <p className="mb-6 text-sm">
           Service unavailable. You can{' '}
           <button
             type="button"
@@ -274,45 +293,69 @@ const ContactApp: React.FC = () => {
           </button>
         </p>
       )}
-      <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
-        <div>
-          <label htmlFor="contact-name" className="mb-1 block text-sm">Name</label>
+      <form onSubmit={handleSubmit} className="space-y-6 max-w-md">
+        <div className="relative">
           <input
             id="contact-name"
-            className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
+            className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
+            placeholder=" "
           />
+          <label
+            htmlFor="contact-name"
+            className="absolute left-3 -top-2 bg-gray-800 px-1 text-xs text-gray-400 transition-all peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs peer-focus:text-blue-400"
+          >
+            Name
+          </label>
         </div>
-        <div>
-          <label htmlFor="contact-email" className="mb-1 block text-sm">Email</label>
+        <div className="relative">
           <input
             id="contact-email"
             type="email"
-            className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
+            className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            aria-invalid={!!emailError}
             aria-describedby={emailError ? 'contact-email-error' : undefined}
+            placeholder=" "
           />
+          <label
+            htmlFor="contact-email"
+            className="absolute left-3 -top-2 bg-gray-800 px-1 text-xs text-gray-400 transition-all peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs peer-focus:text-blue-400"
+          >
+            Email
+          </label>
           {emailError && (
-            <FormError id="contact-email-error">{emailError}</FormError>
+            <FormError id="contact-email-error" className="mt-3">
+              {emailError}
+            </FormError>
           )}
         </div>
-        <div>
-          <label htmlFor="contact-message" className="mb-1 block text-sm">Message</label>
+        <div className="relative">
           <textarea
             id="contact-message"
-            className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
+            className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
             rows={4}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             required
+            aria-invalid={!!messageError}
             aria-describedby={messageError ? 'contact-message-error' : undefined}
+            placeholder=" "
           />
+          <label
+            htmlFor="contact-message"
+            className="absolute left-3 -top-2 bg-gray-800 px-1 text-xs text-gray-400 transition-all peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs peer-focus:text-blue-400"
+          >
+            Message
+          </label>
           {messageError && (
-            <FormError id="contact-message-error">{messageError}</FormError>
+            <FormError id="contact-message-error" className="mt-3">
+              {messageError}
+            </FormError>
           )}
         </div>
         <AttachmentUploader
@@ -334,15 +377,19 @@ const ContactApp: React.FC = () => {
           tabIndex={-1}
           autoComplete="off"
         />
-        {error && <FormError>{error}</FormError>}
+        {error && <FormError className="mt-3">{error}</FormError>}
         <button
           type="submit"
-          className="rounded bg-blue-600 px-4 py-2"
+          disabled={submitting}
+          className="flex items-center justify-center rounded bg-blue-600 px-4 py-2 disabled:opacity-50"
         >
-          Send
+          {submitting ? (
+            <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : (
+            'Send'
+          )}
         </button>
       </form>
-      {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
   );
 };
