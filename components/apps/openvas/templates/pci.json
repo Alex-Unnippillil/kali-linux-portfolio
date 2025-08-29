@@ -1,0 +1,6 @@
+{
+  "name": "PCI DSS",
+  "portList": "OpenVAS Default",
+  "maxHosts": "10 concurrent hosts",
+  "qod": "70% minimum"
+}

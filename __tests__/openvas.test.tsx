@@ -24,7 +24,7 @@ describe('OpenVASApp', () => {
     jest.resetAllMocks();
   });
 
-  it('includes group in scan request', async () => {
+  it('includes group and profile in scan request', async () => {
     render(<OpenVASApp />);
     fireEvent.change(
       screen.getByPlaceholderText('Target (e.g. 192.168.1.1)'),
@@ -34,10 +34,14 @@ describe('OpenVASApp', () => {
       screen.getByPlaceholderText('Group (e.g. Servers)'),
       { target: { value: 'servers' } }
     );
+    fireEvent.change(
+      screen.getByLabelText('Scan profile'),
+      { target: { value: 'HIPAA' } }
+    );
     fireEvent.click(screen.getByText('Scan'));
     await waitFor(() => expect(fetch).toHaveBeenCalled());
     expect(fetch).toHaveBeenCalledWith(
-      '/api/openvas?target=1.2.3.4&group=servers'
+      '/api/openvas?target=1.2.3.4&group=servers&profile=HIPAA'
     );
   });
 
@@ -75,7 +79,7 @@ describe('OpenVASApp', () => {
   it('displays sample policy settings', () => {
     render(<OpenVASApp />);
     expect(screen.getByText('Policy Settings')).toBeInTheDocument();
-    expect(screen.getByText('Full and Fast')).toBeInTheDocument();
+    expect(screen.getByText('PCI DSS')).toBeInTheDocument();
   });
 
   it('opens issue detail panel with remediation info', () => {
