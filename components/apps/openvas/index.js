@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import chartData from './chart-data.json';
 import TaskOverview from './task-overview';
 import PolicySettings from './policy-settings';
 import pciProfile from './templates/pci.json';
@@ -27,7 +26,7 @@ const escapeHtml = (str = '') =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
-const SeverityChart = ({ data }) => {
+const SeverityChart = ({ data, selected, onSelect }) => {
   const levels = ['low', 'medium', 'high', 'critical'];
   const max = Math.max(...levels.map((l) => data[l] || 0), 1);
   return (
@@ -42,6 +41,14 @@ const SeverityChart = ({ data }) => {
         const height = (value / max) * 50;
         const x = i * 24 + 5;
         const y = 55 - height;
+        const isSelected = selected === level;
+        const handle = () => onSelect && onSelect(level);
+        const handleKeyDown = (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handle();
+          }
+        };
         return (
           <g key={level}>
             <rect
@@ -49,7 +56,14 @@ const SeverityChart = ({ data }) => {
               y={y}
               width="20"
               height={height}
-              className={severityColors[level]}
+              className={`${severityColors[level]} ${onSelect ? 'cursor-pointer' : ''} ${
+                isSelected ? 'stroke-white stroke-2' : ''
+              }`}
+              role={onSelect ? 'button' : undefined}
+              tabIndex={onSelect ? 0 : undefined}
+              aria-label={`${value} ${level} findings`}
+              onClick={handle}
+              onKeyDown={handleKeyDown}
             />
             <text
               x={x + 10}
@@ -241,6 +255,11 @@ const OpenVASApp = () => {
       ? filteredFindings
       : filteredFindings.filter((f) => f.severity === severity.toLowerCase());
 
+  const severityCounts = findings.reduce((acc, f) => {
+    acc[f.severity] = (acc[f.severity] || 0) + 1;
+    return acc;
+  }, {});
+
   const matrix = ['low', 'medium', 'high', 'critical'].map((likelihood) =>
     ['low', 'medium', 'high', 'critical'].map((impact) =>
       findings.filter(
@@ -329,7 +348,17 @@ const OpenVASApp = () => {
           />
         </div>
       )}
-      <SeverityChart data={chartData} />
+      <SeverityChart
+        data={severityCounts}
+        selected={severity === 'All' ? null : severity.toLowerCase()}
+        onSelect={(level) =>
+          handleSeverityChange(
+            severity.toLowerCase() === level
+              ? 'All'
+              : level.charAt(0).toUpperCase() + level.slice(1)
+          )
+        }
+      />
       {findings.length > 0 && (
         <div className="mb-4">
           <div className="grid grid-cols-5 gap-1 text-center">
