@@ -139,6 +139,8 @@ const ReconNG = () => {
   const [useLiveData, setUseLiveData] = useState(false);
   const [view, setView] = useState('run');
   const [marketplace, setMarketplace] = useState([]);
+  const [scriptTags, setScriptTags] = usePersistentState('reconng-script-tags', {});
+  const [tagInputs, setTagInputs] = useState({});
   const [apiKeys, setApiKeys] = usePersistentState('reconng-api-keys', {});
   const [workspaces, setWorkspaces] = useState([createWorkspace(0)]);
   const [activeWs, setActiveWs] = useState(0);
@@ -553,7 +555,42 @@ const ReconNG = () => {
       {view === 'marketplace' && (
         <ul className="list-disc pl-5">
           {marketplace.map((m) => (
-            <li key={m}>{m}</li>
+            <li key={m} className="mb-2">
+              <div className="flex items-center gap-2">
+                <span>{m}</span>
+                <input
+                  type="text"
+                  value={tagInputs[m] || ''}
+                  onChange={(e) =>
+                    setTagInputs({ ...tagInputs, [m]: e.target.value })
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && tagInputs[m]) {
+                      const tag = tagInputs[m].trim();
+                      if (tag) {
+                        setScriptTags({
+                          ...scriptTags,
+                          [m]: [...(scriptTags[m] || []), tag],
+                        });
+                      }
+                      setTagInputs({ ...tagInputs, [m]: '' });
+                    }
+                  }}
+                  placeholder={`Tag ${m}`}
+                  className="bg-gray-800 px-1 py-0.5 text-xs"
+                  aria-label={`Tag ${m}`}
+                />
+              </div>
+              {(scriptTags[m] || []).length > 0 && (
+                <div className="mt-1 flex gap-1 flex-wrap">
+                  {scriptTags[m].map((t) => (
+                    <span key={t} className="bg-gray-700 px-1 text-xs">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </li>
           ))}
         </ul>
       )}
