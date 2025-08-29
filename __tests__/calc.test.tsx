@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react';
+import { render, fireEvent, waitFor } from '@testing-library/react';
 import Calc from '../components/apps/calc';
 
 describe('Calc component', () => {
@@ -63,6 +63,18 @@ describe('Calc component', () => {
     fireEvent.click(getByText('5'));
     fireEvent.click(getByLabelText('toggle sign'));
     expect(getByTestId('calc-display').textContent).toBe('-5');
+  });
+
+  it('stores results in history and can clear them', async () => {
+    window.localStorage.clear();
+    const { getByText, getByLabelText, queryByText } = render(<Calc />);
+    fireEvent.click(getByText('1'));
+    fireEvent.click(getByText('+'));
+    fireEvent.click(getByText('1'));
+    fireEvent.click(getByText('='));
+    expect(getByText('1+1 = 2')).toBeInTheDocument();
+    fireEvent.click(getByLabelText('clear history'));
+    await waitFor(() => expect(queryByText('1+1 = 2')).toBeNull());
   });
 });
 
