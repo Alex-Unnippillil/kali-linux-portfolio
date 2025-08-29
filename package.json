@@ -15,7 +15,9 @@
     "lint": "eslint --max-warnings=0 .",
     "a11y": "node scripts/a11y.mjs",
     "smoke": "node scripts/smoke-all-apps.mjs",
-    "build:sw": "node scripts/generate-sw.mjs"
+    "build:sw": "node scripts/generate-sw.mjs",
+    "prisma:generate": "prisma generate",
+    "ingest:once": "tsx scripts/ingest.ts"
   },
   "engines": {
     "node": "20.x"
@@ -23,6 +25,7 @@
   "dependencies": {
     "@emailjs/browser": "^3.10.0",
     "@mozilla/readability": "^0.6.0",
+    "@prisma/client": "^6.15.0",
     "@vercel/analytics": "^1.5.0",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-search": "^0.15.0",
@@ -48,6 +51,7 @@
     "pdfjs-dist": "^5.4.54",
     "phaser": "3.70.0",
     "postcss": "^8.4.21",
+    "prisma": "^6.15.0",
     "prop-types": "^15.8.1",
     "qrcode": "^1.5.4",
     "react": "18.3.1",
@@ -94,6 +98,7 @@
     "jest-environment-jsdom": "30.0.5",
     "pa11y": "^9.0.0",
     "playwright-core": "^1.55.0",
+    "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "wait-on": "^8.0.4",
     "workbox-build": "^7.3.0"
