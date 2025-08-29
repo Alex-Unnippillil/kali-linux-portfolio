@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Doc PiP Media Controller",
+  "version": "1.0",
+  "description": "Omnibox with play/pause to control media across tabs using Document PiP.",
+  "permissions": ["tabs", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_title": "Media Controller"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ]
+}
