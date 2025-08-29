@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import capture from './sampleCapture.json';
+import clients from './sampleClients.json';
+import vendors from './oui.json';
 
 const SignalTimeline = ({ history }) => {
   const canvasRef = useRef(null);
@@ -75,6 +77,101 @@ const ChannelOccupancy = ({ networks }) => {
   );
 };
 
+const SSIDHeatmap = ({ data }) => {
+  const ssids = Object.keys(data);
+  const max = Math.max(0, ...ssids.flatMap((s) => data[s]));
+  return (
+    <div className="mt-4" aria-live="polite">
+      <h3 className="text-sm font-semibold mb-2">SSID/Channel Heatmap</h3>
+      <table className="text-xs border-collapse">
+        <thead>
+          <tr>
+            <th className="px-1 text-left">SSID</th>
+            {Array.from({ length: 11 }, (_, i) => (
+              <th key={i} className="px-1">
+                {i + 1}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {ssids.map((ssid) => (
+            <tr key={ssid}>
+              <td className="pr-1 truncate max-w-[5rem]" title={ssid}>
+                {ssid}
+              </td>
+              {data[ssid].map((count, i) => (
+                <td
+                  key={i}
+                  style={{
+                    backgroundColor: `rgba(59,130,246,${
+                      max ? count / max : 0
+                    })`,
+                  }}
+                  className="w-4 h-4 text-center"
+                >
+                  {count || ''}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+const ClientTable = ({ clients }) => (
+  <div className="mt-4" aria-live="polite">
+    <h3 className="text-sm font-semibold mb-2">Client Associations</h3>
+    <table className="w-full text-xs">
+      <thead>
+        <tr>
+          <th className="text-left">MAC</th>
+          <th className="text-left">SSID</th>
+          <th className="text-left">Vendor</th>
+        </tr>
+      </thead>
+      <tbody>
+        {clients.map((c, idx) => (
+          <tr key={idx} className="odd:bg-gray-800">
+            <td className="pr-2">{c.mac}</td>
+            <td className="pr-2">{c.ssid}</td>
+            <td>{c.vendor}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+);
+
+const WardriveMap = () => {
+  const canvasRef = useRef(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#111827';
+    ctx.fillRect(0, 0, 200, 200);
+    for (let i = 0; i < 20; i++) {
+      const x = Math.random() * 200;
+      const y = Math.random() * 200;
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(x, y, 3, 3);
+    }
+  }, []);
+  return (
+    <canvas
+      ref={canvasRef}
+      width={200}
+      height={200}
+      className="mt-4 border border-gray-700"
+      role="img"
+      aria-label="Random wardriving map"
+    />
+  );
+};
+
 // Generic virtualized list to efficiently render large datasets
 const VirtualizedList = ({
   items,
@@ -134,6 +231,24 @@ const KismetApp = () => {
   const [networks, setNetworks] = useState([]);
   const [playing, setPlaying] = useState(false);
   const [frameIndex, setFrameIndex] = useState(0);
+
+  const clientsWithVendor = useMemo(
+    () =>
+      clients.map((c) => ({
+        ...c,
+        vendor: vendors[c.mac.slice(0, 8).toUpperCase()] || 'Unknown',
+      })),
+    []
+  );
+
+  const heatmapData = useMemo(() => {
+    const data = {};
+    capture.slice(0, frameIndex).forEach(({ ssid, channel }) => {
+      if (!data[ssid]) data[ssid] = Array(11).fill(0);
+      if (channel > 0 && channel <= 11) data[ssid][channel - 1]++;
+    });
+    return data;
+  }, [frameIndex]);
 
   const stepFrame = useCallback(() => {
     setFrameIndex((idx) => {
@@ -231,6 +346,9 @@ const KismetApp = () => {
             <p className="text-gray-400 text-sm">No networks detected.</p>
           )}
           <ChannelOccupancy networks={networks} />
+          <SSIDHeatmap data={heatmapData} />
+          <ClientTable clients={clientsWithVendor} />
+          <WardriveMap />
           <p className="text-gray-400 text-xs mt-2">
             Real capture requires hardware with monitor mode.{' '}
             <a
