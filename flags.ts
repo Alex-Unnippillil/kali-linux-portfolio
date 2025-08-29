@@ -1,11 +1,8 @@
-import { flag } from "flags/next";
+export async function beta(): Promise<boolean> {
+  return false;
+}
 
-export const beta = flag<boolean>({
-  key: "beta",
-  description: "Enable Beta UI elements and flows",
-  origin: "https://vercel.com/dashboard",
-  defaultValue: false,
-  async decide() {
-    return false;
-  },
-});
+export function reportValue(_name: string, _value: unknown): void {
+  // no-op
+}
+
