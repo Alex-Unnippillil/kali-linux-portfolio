@@ -437,22 +437,22 @@ const HydraApp = () => {
 
   return (
     <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
-      <div className="space-y-2">
-        <div className="flex space-x-2 mb-2">
+      <div className="grid grid-cols-2 gap-1.5">
+        <div className="col-span-2 flex gap-1.5">
           {[
-            { label: 'HTTP', value: 'http-get' },
-            { label: 'SSH', value: 'ssh' },
-            { label: 'FTP', value: 'ftp' },
+            { label: 'SSH', value: 'ssh', icon: '/themes/Yaru/apps/ssh.svg' },
+            { label: 'FTP', value: 'ftp', icon: '/themes/Yaru/apps/ftp.svg' },
           ].map((m) => (
-            <button
+            <div
               key={m.value}
               onClick={() => setService(m.value)}
-              className={`px-3 py-1 rounded-full text-sm ${
+              className={`flex items-center p-2 rounded border cursor-pointer text-sm ${
                 service === m.value ? 'bg-blue-600' : 'bg-gray-700'
               }`}
             >
-              {m.label}
-            </button>
+              <img src={m.icon} alt={m.label} className="w-6 h-6 mr-2" />
+              <span>{m.label}</span>
+            </div>
           ))}
         </div>
         <div>
@@ -561,7 +561,7 @@ const HydraApp = () => {
             placeholder="abc123"
           />
         </div>
-        <div>
+        <div className="col-span-2">
           <label className="block mb-1">Rule (min:max length)</label>
           <input
             type="text"
@@ -580,59 +580,61 @@ const HydraApp = () => {
             className="bg-gray-800 mt-2 w-full"
           ></canvas>
         </div>
-        <button
-          onClick={runHydra}
-          disabled={running || !isTargetValid}
-          className="px-4 py-2 bg-green-600 rounded disabled:opacity-50"
-        >
-          {running ? 'Running...' : 'Run Hydra'}
-        </button>
-        <button
-          onClick={dryRunHydra}
-          disabled={running}
-          className="ml-2 px-4 py-2 bg-purple-600 rounded disabled:opacity-50"
-        >
-          Dry Run
-        </button>
-        <button
-          onClick={handleSaveConfig}
-          className="ml-2 px-4 py-2 bg-gray-700 rounded"
-        >
-          Save Config
-        </button>
-        <button
-          onClick={handleCopyConfig}
-          className="ml-2 px-4 py-2 bg-gray-700 rounded"
-        >
-          Copy Config
-        </button>
-        {running && !paused && (
+        <div className="col-span-2 flex flex-wrap gap-1.5 mt-2">
           <button
-            data-testid="pause-button"
-            onClick={pauseHydra}
-            className="ml-2 px-4 py-2 bg-yellow-600 rounded"
+            onClick={runHydra}
+            disabled={running || !isTargetValid}
+            className="px-4 py-2 bg-green-600 rounded disabled:opacity-50"
           >
-            Pause
+            {running ? 'Running...' : 'Run Hydra'}
           </button>
-        )}
-        {running && paused && (
           <button
-            data-testid="resume-button"
-            onClick={resumeHydra}
-            className="ml-2 px-4 py-2 bg-blue-600 rounded"
+            onClick={dryRunHydra}
+            disabled={running}
+            className="px-4 py-2 bg-purple-600 rounded disabled:opacity-50"
           >
-            Resume
+            Dry Run
           </button>
-        )}
-        {running && (
           <button
-            data-testid="cancel-button"
-            onClick={cancelHydra}
-            className="ml-2 px-4 py-2 bg-red-600 rounded"
+            onClick={handleSaveConfig}
+            className="px-4 py-2 bg-gray-700 rounded"
           >
-            Cancel
+            Save Config
           </button>
-        )}
+          <button
+            onClick={handleCopyConfig}
+            className="px-4 py-2 bg-gray-700 rounded"
+          >
+            Copy Config
+          </button>
+          {running && !paused && (
+            <button
+              data-testid="pause-button"
+              onClick={pauseHydra}
+              className="px-4 py-2 bg-yellow-600 rounded"
+            >
+              Pause
+            </button>
+          )}
+          {running && paused && (
+            <button
+              data-testid="resume-button"
+              onClick={resumeHydra}
+              className="px-4 py-2 bg-blue-600 rounded"
+            >
+              Resume
+            </button>
+          )}
+          {running && (
+            <button
+              data-testid="cancel-button"
+              onClick={cancelHydra}
+              className="px-4 py-2 bg-red-600 rounded"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
       </div>
 
       <Stepper
@@ -644,11 +646,18 @@ const HydraApp = () => {
         initialAttempt={initialAttempt}
         onAttemptChange={handleAttempt}
       />
-      <div className="mt-4 w-full bg-gray-700 h-2 rounded">
-        <div
-          className="bg-green-500 h-2 rounded"
-          style={{ width: `${progress}%` }}
-        ></div>
+      <div className="mt-4 flex items-center gap-2">
+        <img
+          src="/themes/Yaru/status/changes-prevent-symbolic.svg"
+          alt="credentials"
+          className="w-5 h-5"
+        />
+        <div className="flex-1 bg-gray-700 h-2 rounded">
+          <div
+            className="bg-green-500 h-2 rounded"
+            style={{ width: `${progress}%` }}
+          ></div>
+        </div>
       </div>
       <p className="mt-2 text-sm text-yellow-300">
         This demo slows after {BACKOFF_THRESHOLD} tries to mimic password spray
@@ -689,7 +698,7 @@ const HydraApp = () => {
       </div>
 
       {output && (
-        <pre className="mt-4 bg-black p-2 overflow-auto h-64 whitespace-pre-wrap">{output}</pre>
+        <pre className="mt-4 bg-black p-2 overflow-auto h-64 whitespace-pre-wrap font-mono">{output}</pre>
       )}
       {showSaved && (
         <div className="fixed bottom-4 right-4 bg-green-600 text-white px-3 py-1 rounded text-sm">
