@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import usePersistentState from '../../hooks/usePersistentState';
 import RulesSandbox from './components/RulesSandbox';
 
 interface Preset {
@@ -20,7 +21,7 @@ const attackModes: Preset[] = [
   { value: '7', label: 'Mask + Wordlist', icon: '🔀' },
 ];
 
-const ruleSets: RuleSets = {
+const defaultRuleSets: RuleSets = {
   none: [],
   best64: ['c', 'u', 'l', 'r', 'd', 'p', 't', 's'],
   quick: ['l', 'u', 'c', 'd'],
@@ -57,8 +58,19 @@ const Hashcat: React.FC = () => {
     }
   }, [hashInput]);
 
+  const [customRuleSets, setCustomRuleSets] = usePersistentState<RuleSets>(
+    'hashcatRuleSets',
+    {},
+  );
   const [ruleSet, setRuleSet] = useState('none');
-  const rulePreview = (ruleSets[ruleSet] || []).slice(0, 10).join('\n');
+  const ruleOptions = [
+    ...Object.keys(defaultRuleSets),
+    ...Object.keys(customRuleSets),
+  ];
+  const combinedRuleSets = { ...defaultRuleSets, ...customRuleSets };
+  const rulePreview = (combinedRuleSets[ruleSet] || [])
+    .slice(0, 10)
+    .join('\n');
 
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -281,16 +293,22 @@ const Hashcat: React.FC = () => {
           onChange={(e) => setRuleSet(e.target.value)}
           className="text-black p-1 rounded"
         >
-          <option value="none">None</option>
-          <option value="best64">best64</option>
-          <option value="quick">quick</option>
+          {ruleOptions.map((r) => (
+            <option key={r} value={r}>
+              {r === 'none' ? 'None' : r}
+            </option>
+          ))}
         </select>
         <pre className="bg-black text-green-400 p-2 mt-2 rounded overflow-auto h-32 font-mono leading-[1.2]">
           {rulePreview || '(no rules)'}
         </pre>
       </div>
 
-      <RulesSandbox />
+      <RulesSandbox
+        savedSets={customRuleSets}
+        onChange={setCustomRuleSets}
+        setRuleSet={setRuleSet}
+      />
 
       <div>
         <button
