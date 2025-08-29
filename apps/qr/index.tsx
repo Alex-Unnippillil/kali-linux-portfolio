@@ -1,4 +1,4 @@
 'use client';
-import QRTool from '../../components/apps/qr_tool';
+import QRScanner from '../../components/apps/qr';
 
-export default QRTool;
+export default QRScanner;
