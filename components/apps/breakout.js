@@ -1,657 +1,116 @@
 "use client";
 
-import React, { useRef, useEffect, useState } from "react";
-import seedrandom from "seedrandom";
-import levelsData from "./breakout-levels.json";
-import GameLayout from "./GameLayout";
+import React, { useRef, useEffect } from 'react';
+import seedrandom from 'seedrandom';
+import GameLayout from './GameLayout';
+import useCanvasResize from '../../hooks/useCanvasResize';
 
-// Base logical canvas size (used if container size is unavailable)
-const WIDTH = 640;
-const HEIGHT = 480;
+// Basic canvas dimensions
+const WIDTH = 400;
+const HEIGHT = 300;
+const PADDLE_WIDTH = 60;
+const PADDLE_HEIGHT = 10;
+const BALL_RADIUS = 5;
 
-const BASE_PADDLE_WIDTH = 80;
-
-const BRICK_THEMES = {
-  classic: ["#f87171", "#fb923c", "#facc15", "#34d399", "#60a5fa"],
-  neon: ["#ff47ab", "#7c3aed", "#10b981", "#fbbf24", "#f472b6"],
-  grayscale: ["#6b7280", "#9ca3af", "#d1d5db", "#374151", "#4b5563"],
-};
-
-// Build bricks from a 0/1 layout grid
-const buildBricks = (layout, width, colors = ["#fff"]) => {
-  const rows = layout.length;
-  const cols = layout[0].length;
-  const brickWidth = width / cols;
-  const brickHeight = 20;
-  const bricks = [];
-  for (let r = 0; r < rows; r += 1) {
-    for (let c = 0; c < cols; c += 1) {
-      if (layout[r][c]) {
-        bricks.push({
-          x: c * brickWidth,
-          y: r * brickHeight + 40,
-          w: brickWidth,
-          h: brickHeight,
-          alive: true,
-          color: colors[r % colors.length],
-        });
-      }
-    }
-  }
-  return bricks;
-};
-
-const LevelEditor = ({ onSave, cols = 8, rows = 5 }) => {
-  const [grid, setGrid] = useState(
-    Array.from({ length: rows }, () => Array(cols).fill(0))
-  );
-
-  useEffect(() => {
-    if (typeof localStorage === "undefined") return;
-    const saved = localStorage.getItem("breakout-custom-level");
-    if (saved) {
-      try {
-        const g = JSON.parse(saved);
-        if (Array.isArray(g)) setGrid(g);
-      } catch {
-        /* ignore invalid JSON */
-      }
-    }
-  }, [cols, rows]);
-
-  const toggle = (r, c) => {
-    setGrid((g) => {
-      const next = g.map((row) => row.slice());
-      next[r][c] = next[r][c] ? 0 : 1;
-      return next;
-    });
-  };
-
-  const save = () => {
-    onSave(grid);
-    if (typeof localStorage !== "undefined") {
-      localStorage.setItem("breakout-custom-level", JSON.stringify(grid));
-    }
-  };
-
-  return (
-    <div className="flex flex-col items-center gap-2">
-      <div
-        className="grid gap-1"
-        style={{ gridTemplateColumns: `repeat(${cols}, 20px)` }}
-      >
-        {grid.map((row, r) =>
-          row.map((cell, c) => (
-            <div
-              key={`${r}-${c}`}
-              className={`w-5 h-5 cursor-pointer ${
-                cell ? "bg-white" : "bg-gray-700"
-              }`}
-              onClick={() => toggle(r, c)}
-            />
-          ))
-        )}
-      </div>
-      <button className="px-2 py-1 bg-gray-700 hover:bg-gray-600" onClick={save}>
-        Save Level
-      </button>
-    </div>
-  );
-};
-
-export const createRng = (seed) => (seed ? seedrandom(seed) : Math.random);
-
-const BreakoutGame = ({ levels, seed, paddleSpeed = 300, theme = "classic" }) => {
-  const canvasRef = useRef(null);
-  const [level, setLevel] = useState(0);
-  const scoreRef = useRef(0);
-  const highScoresRef = useRef({});
-  const [paused, setPaused] = useState(false);
-  const pausedRef = useRef(false);
-  const [soundOn, setSoundOn] = useState(true);
-  const soundRef = useRef(true);
-  const [resetKey, setResetKey] = useState(0);
-  const audioCtxRef = useRef(null);
-  const [prefersReduced, setPrefersReduced] = useState(false);
-  const [announce, setAnnounce] = useState("");
-  const paddleSpeedRef = useRef(paddleSpeed);
-
-  useEffect(() => {
-    paddleSpeedRef.current = paddleSpeed;
-  }, [paddleSpeed]);
-
-  useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const handler = () => setPrefersReduced(media.matches);
-    handler();
-    media.addEventListener("change", handler);
-    return () => media.removeEventListener("change", handler);
-  }, []);
-
-  // Load saved level and highscores
-  useEffect(() => {
-    if (typeof localStorage === "undefined") return;
-    const savedLevel = parseInt(localStorage.getItem("breakout-level") || "0", 10);
-    const savedHigh = JSON.parse(localStorage.getItem("breakout-highscores") || "{}");
-    setLevel(Number.isFinite(savedLevel) ? savedLevel : 0);
-    highScoresRef.current = savedHigh && typeof savedHigh === "object" ? savedHigh : {};
-  }, []);
-
-  const reset = () => {
-    scoreRef.current = 0;
-    setLevel(0);
-    setResetKey((k) => k + 1);
-  };
-
-  const togglePause = () => {
-    pausedRef.current = !pausedRef.current;
-    setPaused(pausedRef.current);
-  };
-
-  const toggleSound = () => {
-    soundRef.current = !soundRef.current;
-    setSoundOn(soundRef.current);
-  };
-
-  const rngRef = useRef(createRng(seed));
-  useEffect(() => {
-    rngRef.current = createRng(seed);
-  }, [seed]);
-
-  const rand = () => rngRef.current();
+// Simple Breakout placeholder with a single paddle and ball
+const Breakout = () => {
+  const canvasRef = useCanvasResize(WIDTH, HEIGHT);
+  const paddleX = useRef(WIDTH / 2 - PADDLE_WIDTH / 2);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-    const audioCtx =
-      audioCtxRef.current ||
-      (typeof window !== "undefined"
-        ? new (window.AudioContext || window.webkitAudioContext)()
-        : null);
-    audioCtxRef.current = audioCtx;
-
-    const playSound = (freq) => {
-      if (!soundRef.current || !audioCtx) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.frequency.value = freq;
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.1);
-    };
-
-    // Fit canvas to its container and device pixel ratio
-    const fit = () => {
-      const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
-      const cssW = canvas.clientWidth || WIDTH;
-      const cssH = canvas.clientHeight || HEIGHT;
-      canvas.width = Math.floor(cssW * dpr);
-      canvas.height = Math.floor(cssH * dpr);
-      // Draw in CSS pixels; map them to device pixels
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    };
-
-    fit();
-    window.addEventListener("resize", fit);
-
-    // Use CSS pixel dimensions for game logic
-    const width = canvas.clientWidth || WIDTH;
-    const height = canvas.clientHeight || HEIGHT;
-
-    let bricks = buildBricks(
-      levels[level % levels.length],
-      width,
-      BRICK_THEMES[theme]
-    );
-    const paddle = {
-      x: width / 2 - BASE_PADDLE_WIDTH / 2,
-      y: height - 20,
-      w: BASE_PADDLE_WIDTH,
-      h: 10,
-    };
-    const balls = [{ x: width / 2, y: height / 2, vx: 150, vy: -150, r: 5 }];
-    const powerUps = [];
-    const shards = [];
-    const fades = [];
-    let paddleTimer = 0;
-    let hitPause = 0;
-    let pulse = 0;
-    let aimTime = 0;
-    const ADVANCED_LEVEL = 3;
-
-    const keys = { left: false, right: false };
-    const keyDown = (e) => {
-      if (e.key === "ArrowLeft") keys.left = true;
-      if (e.key === "ArrowRight") keys.right = true;
-      if (e.key === "p") togglePause();
-      if (e.key === "r") reset();
-      if (e.key === "m") toggleSound();
-    };
-    const keyUp = (e) => {
-      if (e.key === "ArrowLeft") keys.left = false;
-      if (e.key === "ArrowRight") keys.right = false;
-    };
-    window.addEventListener("keydown", keyDown);
-    window.addEventListener("keyup", keyUp);
-
+    const ball = { x: WIDTH / 2, y: HEIGHT / 2, vx: 2, vy: -2 };
     let animationId;
-    let lastTime = performance.now();
 
-    const loop = (time) => {
-      const delta = (time - lastTime) / 1000;
-      lastTime = time;
-      if (hitPause > 0) {
-        hitPause -= delta;
-        animationId = requestAnimationFrame(loop);
-        return;
+    const draw = () => {
+      ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+      // Draw paddle
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(paddleX.current, HEIGHT - 20, PADDLE_WIDTH, PADDLE_HEIGHT);
+
+      // Draw ball
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, BALL_RADIUS, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Move ball
+      ball.x += ball.vx;
+      ball.y += ball.vy;
+
+      // Wall collisions
+      if (ball.x < BALL_RADIUS || ball.x > WIDTH - BALL_RADIUS) {
+        ball.vx *= -1;
       }
-      const dt = Math.min(0.05, delta); // clamp big frame gaps
-
-      if (pausedRef.current) {
-        animationId = requestAnimationFrame(loop);
-        return;
-      }
-
-      // Update paddle
-      paddle.x += (Number(keys.right) - Number(keys.left)) *
-        paddleSpeedRef.current * dt;
-      if (paddle.x < 0) paddle.x = 0;
-      if (paddle.x > width - paddle.w) paddle.x = width - paddle.w;
-      if (paddleTimer > 0) {
-        paddleTimer -= dt;
-        if (paddleTimer <= 0) paddle.w = BASE_PADDLE_WIDTH;
+      if (ball.y < BALL_RADIUS) {
+        ball.vy *= -1;
       }
 
-      if (aimTime > 0) aimTime -= dt;
-
-      // Update balls
-      for (let i = balls.length - 1; i >= 0; i -= 1) {
-        const ball = balls[i];
-        ball.x += ball.vx * dt;
-        ball.y += ball.vy * dt;
-
-        if (ball.x < ball.r || ball.x > width - ball.r) {
-          ball.vx *= -1;
-          playSound(100);
-        }
-        if (ball.y < ball.r) {
-          ball.vy *= -1;
-          playSound(100);
-        }
-
-        // Paddle collision
-        if (
-          ball.y + ball.r > paddle.y &&
-          ball.x > paddle.x &&
-          ball.x < paddle.x + paddle.w &&
-          ball.vy > 0
-        ) {
-          const hit = (ball.x - (paddle.x + paddle.w / 2)) / (paddle.w / 2);
-          const angle = hit * (Math.PI / 3);
-          const speed = Math.hypot(ball.vx, ball.vy);
-          ball.vx = speed * Math.sin(angle);
-          ball.vy = -speed * Math.cos(angle);
-          ball.y = paddle.y - ball.r;
-          aimTime = 0.3;
-          playSound(300);
-        }
-
-        // Brick collisions
-        for (let b = 0; b < bricks.length; b += 1) {
-          const brick = bricks[b];
-          if (
-            brick.alive &&
-            ball.x > brick.x &&
-            ball.x < brick.x + brick.w &&
-            ball.y > brick.y &&
-            ball.y < brick.y + brick.h
-          ) {
-            brick.alive = false;
-            ball.vy *= -1;
-            scoreRef.current += 10;
-            playSound(200);
-            setAnnounce(`Score ${scoreRef.current}`);
-
-            hitPause = 0.075;
-            pulse = 1;
-
-            if (prefersReduced) {
-              fades.push({
-                x: brick.x,
-                y: brick.y,
-                w: brick.w,
-                h: brick.h,
-                alpha: 1,
-              });
-            } else {
-              const impactAngle = Math.atan2(ball.vy, ball.vx);
-              for (let s = 0; s < 8; s += 1) {
-                const spread = (rand() - 0.5) * (Math.PI / 3);
-                const speed = 100 + rand() * 100;
-                shards.push({
-                  x: ball.x,
-                  y: ball.y,
-                  vx: Math.cos(impactAngle + spread) * speed,
-                  vy: Math.sin(impactAngle + spread) * speed,
-                  life: 1,
-                });
-              }
-            }
-
-            // 20% chance to spawn a power-up
-            if (rand() < 0.2) {
-              const type = rand() < 0.5 ? "multi" : "expand";
-              const color = type === "multi" ? "#e11d48" : "#3b82f6"; // red vs blue
-              powerUps.push({
-                x: brick.x + brick.w / 2,
-                y: brick.y + brick.h / 2,
-                type,
-                color,
-                vy: 100,
-              });
-            }
-            break;
-          }
-        }
-
-        // Ball lost
-        if (ball.y > height + ball.r) {
-          balls.splice(i, 1);
-        }
+      // Paddle collision
+      if (
+        ball.y >= HEIGHT - 20 - BALL_RADIUS &&
+        ball.x >= paddleX.current &&
+        ball.x <= paddleX.current + PADDLE_WIDTH
+      ) {
+        ball.vy *= -1;
+        ball.y = HEIGHT - 20 - BALL_RADIUS;
       }
 
-      // Update power-ups
-      for (let i = powerUps.length - 1; i >= 0; i -= 1) {
-        const p = powerUps[i];
-        p.y += p.vy * dt;
-        if (p.y + 8 > paddle.y && p.x > paddle.x && p.x < paddle.x + paddle.w) {
-          if (p.type === "multi") {
-            const additions = [];
-            for (const b of balls) {
-              additions.push({ x: b.x, y: b.y, vx: -b.vx, vy: b.vy, r: b.r });
-              additions.push({ x: b.x, y: b.y, vx: b.vx, vy: -b.vy, r: b.r });
-            }
-            balls.push(...additions);
-          } else if (p.type === "expand") {
-            paddle.w = BASE_PADDLE_WIDTH * 1.5;
-            paddleTimer = 10;
-          }
-          playSound(250);
-          powerUps.splice(i, 1);
-        } else if (p.y > height) {
-          powerUps.splice(i, 1);
-        }
+      // Reset if ball falls below
+      if (ball.y > HEIGHT + BALL_RADIUS) {
+        ball.x = WIDTH / 2;
+        ball.y = HEIGHT / 2;
+        ball.vx = 2;
+        ball.vy = -2;
       }
 
-      // Update shards (respect reduced motion)
-      if (!prefersReduced) {
-        for (let i = shards.length - 1; i >= 0; i -= 1) {
-          const s = shards[i];
-          s.x += s.vx * dt;
-          s.y += s.vy * dt;
-          s.life -= dt * 2;
-          if (s.life <= 0) shards.splice(i, 1);
-        }
-      }
-
-      // Update fades for reduced motion users
-      if (prefersReduced) {
-        for (let i = fades.length - 1; i >= 0; i -= 1) {
-          const f = fades[i];
-          f.alpha -= dt * 2;
-          if (f.alpha <= 0) fades.splice(i, 1);
-        }
-      }
-
-      if (pulse > 0) pulse = Math.max(0, pulse - dt * 5);
-
-      // Ensure at least one ball remains
-      if (balls.length === 0) {
-        balls.push({ x: width / 2, y: height / 2, vx: 150, vy: -150, r: 5 });
-        aimTime = 0.3;
-      }
-
-      // Render
-      ctx.fillStyle = "black";
-      ctx.fillRect(0, 0, width, height);
-
-      // Paddle
-      ctx.fillStyle = "white";
-      ctx.fillRect(paddle.x, paddle.y, paddle.w, paddle.h);
-
-      // Aim line
-      if (aimTime > 0 && balls[0]) {
-        const advanced = level >= ADVANCED_LEVEL;
-        const alpha = advanced ? aimTime / 0.3 : 1;
-        ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
-        const px = paddle.x + paddle.w / 2;
-        const py = paddle.y;
-        const guide = balls[0];
-        const speed = Math.hypot(guide.vx, guide.vy) || 1;
-        ctx.beginPath();
-        ctx.moveTo(px, py);
-        ctx.lineTo(
-          px + (guide.vx / speed) * 100,
-          py + (guide.vy / speed) * 100
-        );
-        ctx.stroke();
-      }
-
-      // Balls
-      for (const ball of balls) {
-        ctx.beginPath();
-        ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      // Bricks
-      for (const brick of bricks) {
-        if (brick.alive) {
-          ctx.fillStyle = brick.color;
-          ctx.fillRect(brick.x, brick.y, brick.w - 2, brick.h - 2);
-        }
-      }
-      ctx.fillStyle = "white";
-
-      // Fades (reduced motion)
-      if (prefersReduced) {
-        for (const f of fades) {
-          ctx.fillStyle = `rgba(255,255,255,${f.alpha})`;
-          ctx.fillRect(f.x, f.y, f.w - 2, f.h - 2);
-        }
-      }
-
-      // Shards
-      if (!prefersReduced) {
-        ctx.fillStyle = "#fff";
-        for (const s of shards) {
-          ctx.globalAlpha = s.life;
-          ctx.fillRect(s.x, s.y, 2, 2);
-        }
-        ctx.globalAlpha = 1;
-      }
-
-      // Pulse overlay
-      if (pulse > 0) {
-        ctx.fillStyle = `rgba(255,255,255,${pulse})`;
-        ctx.fillRect(0, 0, width, height);
-      }
-
-      // Power-ups
-      for (const p of powerUps) {
-        ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      // HUD
-      ctx.fillStyle = "white";
-      ctx.font = "14px monospace";
-      ctx.textBaseline = "top";
-      ctx.textAlign = "left";
-      ctx.fillText(`Level: ${level + 1}`, 10, 10);
-      ctx.fillText(`Score: ${scoreRef.current}`, 10, 26);
-      ctx.fillText(`High: ${highScoresRef.current[level] || 0}`, 10, 42);
-
-      if (pausedRef.current) {
-        ctx.fillStyle = "rgba(0,0,0,0.5)";
-        ctx.fillRect(0, 0, width, height);
-        ctx.fillStyle = "white";
-        ctx.textAlign = "center";
-        ctx.font = "20px monospace";
-        ctx.fillText("Paused", width / 2, height / 2);
-        ctx.textAlign = "left";
-      }
-
-      // Level complete
-      if (bricks.every((b) => !b.alive)) {
-        highScoresRef.current[level] = Math.max(
-          highScoresRef.current[level] || 0,
-          scoreRef.current
-        );
-        if (typeof localStorage !== "undefined") {
-          localStorage.setItem(
-            "breakout-highscores",
-            JSON.stringify(highScoresRef.current)
-          );
-          const nextLevel = level + 1;
-          localStorage.setItem("breakout-level", String(nextLevel));
-        }
-        setLevel((v) => v + 1);
-        scoreRef.current = 0;
-        return; // stop this loop; next render will re-init with new level
-      }
-
-      animationId = requestAnimationFrame(loop);
+      animationId = requestAnimationFrame(draw);
     };
 
-    animationId = requestAnimationFrame(loop);
+    const handleMove = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      paddleX.current = Math.max(
+        0,
+        Math.min(WIDTH - PADDLE_WIDTH, x - PADDLE_WIDTH / 2),
+      );
+    };
+
+    const handleKey = (e) => {
+      if (e.key === 'ArrowLeft') {
+        paddleX.current = Math.max(0, paddleX.current - 20);
+      } else if (e.key === 'ArrowRight') {
+        paddleX.current = Math.min(
+          WIDTH - PADDLE_WIDTH,
+          paddleX.current + 20,
+        );
+      }
+    };
+
+    canvas.addEventListener('mousemove', handleMove);
+    window.addEventListener('keydown', handleKey);
+    draw();
 
     return () => {
       cancelAnimationFrame(animationId);
-      window.removeEventListener("keydown", keyDown);
-      window.removeEventListener("keyup", keyUp);
-      window.removeEventListener("resize", fit);
+      canvas.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('keydown', handleKey);
     };
-  }, [level, levels, resetKey, prefersReduced, theme]);
+  }, [canvasRef]);
 
   return (
-    <div className="relative h-full w-full">
-      <canvas ref={canvasRef} className="h-full w-full bg-black" />
-      <div className="sr-only" aria-live="polite" role="status">
-        {announce}
-      </div>
-      <div className="absolute top-2 right-2 flex gap-2 z-10 text-xs">
-        <button
-          type="button"
-          className="bg-gray-700 px-2 py-1"
-          onClick={reset}
-        >
-          Reset
-        </button>
-        <button
-          type="button"
-          className="bg-gray-700 px-2 py-1"
-          onClick={togglePause}
-        >
-          {paused ? "Play" : "Pause"}
-        </button>
-        <button
-          type="button"
-          className="bg-gray-700 px-2 py-1"
-          onClick={toggleSound}
-        >
-          {soundOn ? "Mute" : "Sound"}
-        </button>
-      </div>
-    </div>
-  );
-};
-
-const Breakout = ({ seed }) => {
-  const [levels, setLevels] = useState(levelsData || []);
-  const [speed, setSpeed] = useState(300);
-  const [theme, setTheme] = useState("classic");
-
-  useEffect(() => {
-    if (typeof localStorage === "undefined") return;
-    const savedSpeed = parseInt(
-      localStorage.getItem("breakout-speed") || "300",
-      10
-    );
-    if (Number.isFinite(savedSpeed)) setSpeed(savedSpeed);
-    const custom = localStorage.getItem("breakout-custom-level");
-    if (custom) {
-      try {
-        const grid = JSON.parse(custom);
-        if (Array.isArray(grid)) setLevels((lvls) => [...lvls, grid]);
-      } catch {
-        // ignore invalid JSON
-      }
-    }
-    const savedTheme = localStorage.getItem("breakout-theme");
-    if (savedTheme && BRICK_THEMES[savedTheme]) setTheme(savedTheme);
-  }, []);
-
-  const addLevel = (grid) => {
-    setLevels((lvls) => [...lvls, grid]);
-  };
-
-  const changeSpeed = (e) => {
-    const val = Number(e.target.value);
-    setSpeed(val);
-    if (typeof localStorage !== "undefined") {
-      localStorage.setItem("breakout-speed", String(val));
-    }
-  };
-
-  const changeTheme = (e) => {
-    const val = e.target.value;
-    setTheme(val);
-    if (typeof localStorage !== "undefined") {
-      localStorage.setItem("breakout-theme", val);
-    }
-  };
-
-  return (
-    <GameLayout editor={<LevelEditor onSave={addLevel} />}>
-      <BreakoutGame
-        levels={levels}
-        seed={seed}
-        paddleSpeed={speed}
-        theme={theme}
-      />
-      <div className="absolute bottom-2 right-2 z-20 flex flex-col items-end text-xs text-white">
-        <label htmlFor="paddle-speed">Sensitivity</label>
-        <input
-          id="paddle-speed"
-          type="range"
-          min="100"
-          max="600"
-          value={speed}
-          onChange={changeSpeed}
-          className="w-32"
-        />
-        <label htmlFor="brick-theme" className="mt-1">Theme</label>
-        <select
-          id="brick-theme"
-          value={theme}
-          onChange={changeTheme}
-          className="bg-gray-700"
-        >
-          {Object.keys(BRICK_THEMES).map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-      </div>
+    <GameLayout gameId="breakout">
+      <canvas ref={canvasRef} className="w-full h-full bg-black" />
     </GameLayout>
   );
 };
 
 export default Breakout;
+
+// Exported for tests
+export const createRng = (seed) => (seed ? seedrandom(seed) : Math.random);
+
