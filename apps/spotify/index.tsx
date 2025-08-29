@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
+import CrossfadePlayer from './utils/crossfade';
+import Visualizer from './Visualizer';
 
 interface Track {
   title: string;
@@ -10,16 +12,16 @@ interface Track {
 
 const DEFAULT_PLAYLIST = [
   {
-    title: 'Chill',
-    url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4WYpdgoIcn6',
+    title: 'Song 1',
+    url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
   },
   {
-    title: 'Focus',
-    url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX8Uebhn9wzrS',
+    title: 'Song 2',
+    url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
   },
   {
-    title: 'Energize',
-    url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX1g0iEXLFycr',
+    title: 'Song 3',
+    url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
   },
 ];
 
@@ -51,7 +53,8 @@ const SpotifyApp = () => {
   const [mini, setMini] = usePersistentState('spotify-mini', false, (v): v is boolean => typeof v === 'boolean');
   const [crossfade, setCrossfade] = usePersistentState<number>('spotify-crossfade', 0, (v): v is number => typeof v === 'number');
   const [gapless, setGapless] = usePersistentState('spotify-gapless', false, (v): v is boolean => typeof v === 'boolean');
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const playerRef = useRef<CrossfadePlayer | null>(null);
+  const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
 
   const loadPlaylist = () => {
     try {
@@ -68,6 +71,10 @@ const SpotifyApp = () => {
 
   useEffect(() => {
     if (!queue.length) loadPlaylist();
+    const player = new CrossfadePlayer();
+    playerRef.current = player;
+    setAnalyser(player.getAnalyser());
+    return () => player.dispose();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -75,11 +82,8 @@ const SpotifyApp = () => {
     const track = queue[current];
     if (!track) return;
     setRecent((r) => [track, ...r.filter((t) => t.url !== track.url)].slice(0, 10));
-  }, [current, queue, setRecent]);
-
-  const post = (cmd: string) => {
-    iframeRef.current?.contentWindow?.postMessage({ command: cmd }, '*');
-  };
+    playerRef.current?.play(track.url, crossfade);
+  }, [current, queue, setRecent, crossfade]);
 
   const next = () => {
     if (!queue.length) return;
@@ -91,7 +95,7 @@ const SpotifyApp = () => {
     setCurrent((i) => (i - 1 + queue.length) % queue.length);
   };
 
-  const togglePlay = () => post('toggle');
+  const togglePlay = () => playerRef.current?.toggle();
 
   const handleKey = (e: React.KeyboardEvent) => {
     if (e.code === 'MediaTrackNext') {
@@ -153,15 +157,10 @@ const SpotifyApp = () => {
         </div>
       </div>
       {currentTrack && (
-        <iframe
-          ref={iframeRef}
-          src={`${currentTrack.url}?utm_source=generator&theme=0`}
-          width="100%"
-          height={mini ? 80 : 152}
-          frameBorder="0"
-          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-          loading="lazy"
-        />
+        <div className="mt-2">
+          <p className="mb-2">{currentTrack.title}</p>
+          {analyser && <Visualizer analyser={analyser} />}
+        </div>
       )}
       {!mini && (
         <div className="flex-1 overflow-auto mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
