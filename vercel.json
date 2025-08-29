@@ -1,7 +1,7 @@
 {
   "functions": {
     "api/**/*": {
-      "runtime": { "name": "nodejs", "version": "22.x" }
+      "runtime": "nodejs22.x"
     }
   }
 }
