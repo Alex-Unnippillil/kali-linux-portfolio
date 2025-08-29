@@ -80,6 +80,17 @@ To send text or links directly into the Sticky Notes app:
 
 ---
 
+## Speed Insights
+
+- Enable Speed Insights in the Vercel project dashboard.
+- `<SpeedInsights />` is rendered in [`pages/_app.jsx`](./pages/_app.jsx) alongside `<Analytics />`.
+- Validate collection by requesting `/_vercel/speed-insights/script.js` from a deployed build.
+- No metrics are collected in development mode; ad blockers or network filters can block the script.
+
+See Vercel's [Speed Insights Quickstart](https://vercel.com/docs/speed-insights/quickstart) and [troubleshooting guide](https://vercel.com/docs/speed-insights/troubleshooting) for more information.
+
+---
+
 ## Tech Stack
 
 - **Next.js 15** (app uses `/pages` routing) + **TypeScript** in parts
