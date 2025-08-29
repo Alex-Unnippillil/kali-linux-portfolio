@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import FormError from "../../ui/FormError";
 
 interface DeviceInfo {
@@ -17,6 +17,20 @@ const BluetoothApp: React.FC = () => {
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [pairingDevice, setPairingDevice] = useState<DeviceInfo | null>(null);
   const [pairedDevice, setPairedDevice] = useState("");
+  const [knownDevices, setKnownDevices] = useState<string[]>([]);
+
+  useEffect(() => {
+    const loadKnown = async () => {
+      try {
+        const res = await fetch("/bluetooth/known_devices.json");
+        const data: string[] = await res.json();
+        setKnownDevices(data);
+      } catch {
+        // ignore failures loading known devices
+      }
+    };
+    loadKnown();
+  }, []);
 
   const loadData = async () => {
     try {
@@ -24,6 +38,8 @@ const BluetoothApp: React.FC = () => {
       const data: DeviceInfo[] = await res.json();
       setDevices(data);
       setError("");
+      const nearbyKnown = data.find((d) => knownDevices.includes(d.address));
+      if (nearbyKnown) setPairingDevice(nearbyKnown);
     } catch {
       setError("Failed to load scan data.");
     }
