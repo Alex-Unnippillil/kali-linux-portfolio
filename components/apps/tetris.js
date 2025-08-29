@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import confetti from 'canvas-confetti';
 import usePersistentState from '../usePersistentState';
+import { PieceGenerator } from '../../games/tetris/logic';
 
 const WIDTH = 10;
 const HEIGHT = 20;
@@ -15,7 +16,6 @@ const TETROMINOS = {
   T: { shape: [[0, 1, 0], [1, 1, 1]], color: '#a855f7' },
   Z: { shape: [[1, 1, 0], [0, 1, 1]], color: '#ef4444' },
 };
-const PIECES = Object.keys(TETROMINOS);
 
 const createBoard = () => Array.from({ length: HEIGHT }, () => Array(WIDTH).fill(0));
 
@@ -190,14 +190,6 @@ const merge = (board, shape, x, y, type) => {
   return newBoard;
 };
 
-const shuffle = (array) => {
-  for (let i = array.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-  return array;
-};
-
 const defaultKeys = {
   left: 'ArrowLeft',
   right: 'ArrowRight',
@@ -213,18 +205,15 @@ const defaultKeys = {
 
 const Tetris = () => {
   const canvasRef = useRef(null);
-  const bagRef = useRef([]);
-  const randomPiece = useCallback(() => {
-    const type = PIECES[Math.floor(Math.random() * PIECES.length)];
-    return createPiece(type);
-  }, []);
-  const bagPiece = useCallback(() => {
-    if (bagRef.current.length === 0) bagRef.current = shuffle([...PIECES]);
-    const type = bagRef.current.pop();
-    return createPiece(type);
-  }, []);
+  const generatorRef = useRef(new PieceGenerator());
   const [useBag, setUseBag] = usePersistentState('tetris-use-bag', true);
-  const getPiece = useCallback(() => (useBag ? bagPiece() : randomPiece()), [useBag, bagPiece, randomPiece]);
+  useEffect(() => {
+    generatorRef.current.setMode(useBag ? 'seven-bag' : 'true-random');
+  }, [useBag]);
+  const getPiece = useCallback(
+    () => createPiece(generatorRef.current.next()),
+    []
+  );
   const [board, setBoard] = useState(createBoard);
   const [piece, setPiece] = useState(getPiece);
   const [pos, setPos] = useState({ x: Math.floor(WIDTH/2) - 2, y: 0 });
@@ -341,7 +330,7 @@ const Tetris = () => {
   const resetGame = useCallback(
     (m = mode) => {
       setBoard(createBoard());
-      bagRef.current = [];
+      generatorRef.current.setMode(useBag ? 'seven-bag' : 'true-random');
       setPiece(getPiece());
       setNext([getPiece(), getPiece(), getPiece()]);
       setPos({ x: Math.floor(WIDTH / 2) - 2, y: 0 });
@@ -365,7 +354,7 @@ const Tetris = () => {
       setFinishTime(null);
       setMode(m);
     },
-    [getPiece, mode],
+    [getPiece, mode, useBag],
   );
 
   const isTSpin = useCallback((b, p, position) => {
