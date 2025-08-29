@@ -8,41 +8,74 @@ import {
   applyMove,
   hasMoves,
   evaluateBoard,
+  cloneBoard,
 } from './checkers/engine';
 
 const TILE = 50;
 const BOARD_PIXELS = TILE * 8;
 
-// simple minimax returning best move for given color
-const minimax = (board, color, depth, enforceCapture) => {
+// transposition table for caching board evaluations
+const tt = new Map();
+
+const boardKey = (board, color, depth) =>
+  board
+    .map((row) =>
+      row
+        .map((p) =>
+          p ? `${p.color[0]}${p.king ? 'k' : 'm'}` : '.'
+        )
+        .join(''),
+    )
+    .join('') + `${color}${depth}`;
+
+// minimax with alpha-beta pruning and transposition table
+const minimax = (
+  board,
+  color,
+  depth,
+  enforceCapture,
+  alpha = -Infinity,
+  beta = Infinity,
+) => {
+  const key = boardKey(board, color, depth);
+  if (tt.has(key)) return tt.get(key);
   if (depth === 0 || !hasMoves(board, color, enforceCapture)) {
-    return { score: evaluateBoard(board) };
+    const res = { score: evaluateBoard(board) };
+    tt.set(key, res);
+    return res;
   }
   const moves = getAllMoves(board, color, enforceCapture);
+  let best = null;
   if (color === 'red') {
     let max = -Infinity;
-    let best = null;
     for (const m of moves) {
       const { board: nb } = applyMove(board, m);
-      const { score } = minimax(nb, 'black', depth - 1, enforceCapture);
+      const { score } = minimax(nb, 'black', depth - 1, enforceCapture, alpha, beta);
       if (score > max) {
         max = score;
         best = m;
       }
+      alpha = Math.max(alpha, max);
+      if (beta <= alpha) break;
     }
-    return { score: max, move: best };
+    const res = { score: max, move: best };
+    tt.set(key, res);
+    return res;
   }
   let min = Infinity;
-  let best = null;
   for (const m of moves) {
     const { board: nb } = applyMove(board, m);
-    const { score } = minimax(nb, 'red', depth - 1, enforceCapture);
+    const { score } = minimax(nb, 'red', depth - 1, enforceCapture, alpha, beta);
     if (score < min) {
       min = score;
       best = m;
     }
+    beta = Math.min(beta, min);
+    if (beta <= alpha) break;
   }
-  return { score: min, move: best };
+  const res = { score: min, move: best };
+  tt.set(key, res);
+  return res;
 };
 
 const Checkers = () => {
@@ -71,6 +104,18 @@ const Checkers = () => {
   useEffect(() => {
     movesRef.current = moves;
   }, [moves]);
+
+  const [history, setHistory] = useState([]);
+  const historyRef = useRef(history);
+  useEffect(() => {
+    historyRef.current = history;
+  }, [history]);
+
+  const [hintMoves, setHintMoves] = useState([]);
+  const hintMovesRef = useRef(hintMoves);
+  useEffect(() => {
+    hintMovesRef.current = hintMoves;
+  }, [hintMoves]);
 
   const [paused, setPaused] = useState(false);
   const [sound, setSound] = useState(true);
@@ -129,6 +174,13 @@ const Checkers = () => {
           ctx.strokeRect(m.to[1] * TILE + 6, m.to[0] * TILE + 6, TILE - 12, TILE - 12);
         }
       }
+      if (hintMovesRef.current.length) {
+        ctx.strokeStyle = 'cyan';
+        for (const m of hintMovesRef.current) {
+          ctx.strokeRect(m.from[1] * TILE + 10, m.from[0] * TILE + 10, TILE - 20, TILE - 20);
+          ctx.strokeRect(m.to[1] * TILE + 10, m.to[0] * TILE + 10, TILE - 20, TILE - 20);
+        }
+      }
       boardRef.current.forEach((row, r) => {
         row.forEach((piece, c) => {
           if (piece) {
@@ -185,9 +237,14 @@ const Checkers = () => {
 
   const makeMove = useCallback(
     (move) => {
+      setHistory((h) => [
+        ...h,
+        { board: cloneBoard(boardRef.current), turn: turnRef.current },
+      ]);
       const { board: nb, capture } = applyMove(boardRef.current, move);
       setBoard(nb);
       boardRef.current = nb;
+      setHintMoves([]);
       playBeep();
       const next = turnRef.current === 'red' ? 'black' : 'red';
       if (capture) {
@@ -217,8 +274,10 @@ const Checkers = () => {
       const moves = getAllMoves(boardRef.current, 'black', requireCapture);
       move = moves[Math.floor(Math.random() * moves.length)];
     } else if (difficulty === 'medium') {
+      tt.clear();
       ({ move } = minimax(boardRef.current, 'black', 2, requireCapture));
     } else {
+      tt.clear();
       ({ move } = minimax(boardRef.current, 'black', 3, requireCapture));
     }
     if (move) makeMove(move);
@@ -242,6 +301,7 @@ const Checkers = () => {
     const y = e.clientY - rect.top;
     const r = Math.floor(y / TILE);
     const c = Math.floor(x / TILE);
+    setHintMoves([]);
     const sel = selectedRef.current;
     const piece = boardRef.current[r][c];
     if (sel) {
@@ -266,6 +326,27 @@ const Checkers = () => {
     }
   };
 
+  const showHint = () => {
+    if (turnRef.current !== 'red' || winner) return;
+    const moves = getAllMoves(boardRef.current, 'red', requireCapture);
+    setHintMoves(moves);
+  };
+
+  const undo = () => {
+    if (!historyRef.current.length) return;
+    const { board: prevBoard, turn: prevTurn } =
+      historyRef.current[historyRef.current.length - 1];
+    const newHist = historyRef.current.slice(0, -1);
+    setHistory(newHist);
+    boardRef.current = prevBoard;
+    setBoard(prevBoard);
+    setTurn(prevTurn);
+    setSelected(null);
+    setMoves([]);
+    setWinner(null);
+    setHintMoves([]);
+  };
+
   const reset = () => {
     const b = createBoard();
     setBoard(b);
@@ -274,6 +355,9 @@ const Checkers = () => {
     setSelected(null);
     setMoves([]);
     setWinner(null);
+    setHistory([]);
+    historyRef.current = [];
+    setHintMoves([]);
   };
 
   return (
@@ -320,6 +404,12 @@ const Checkers = () => {
         </button>
         <button
           className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={undo}
+        >
+          Undo
+        </button>
+        <button
+          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
           onClick={() => setPaused((p) => !p)}
         >
           {paused ? 'Resume' : 'Pause'}
@@ -329,6 +419,12 @@ const Checkers = () => {
           onClick={() => setSound((s) => !s)}
         >
           {sound ? 'Sound On' : 'Sound Off'}
+        </button>
+        <button
+          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={showHint}
+        >
+          Hint
         </button>
       </div>
       <div className="text-sm">Wins: You {wins.player} - AI {wins.ai}</div>
