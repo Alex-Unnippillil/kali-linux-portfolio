@@ -9357,6 +9357,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"pngjs@npm:^7.0.0":
+  version: 7.0.0
+  resolution: "pngjs@npm:7.0.0"
+  checksum: 10c0/0d4c7a0fd476a9c33df7d0a2a73e1d56537628a668841f6995c2bca070cf30819f9254a64363266bc14ef2fee47659dd3b4f2b18eec7ab65143015139f497b38
+  languageName: node
+  linkType: hard
+
 "polished@npm:4":
   version: 4.3.1
   resolution: "polished@npm:4.3.1"
@@ -11586,6 +11593,7 @@ __metadata:
     pdfjs-dist: "npm:^5.4.54"
     phaser: "npm:3.70.0"
     playwright-core: "npm:^1.55.0"
+    pngjs: "npm:^7.0.0"
     postcss: "npm:^8.4.21"
     prettier: "npm:^3.6.2"
     prop-types: "npm:^15.8.1"

@@ -57,6 +57,7 @@
     "pcap-parser": "^0.2.1",
     "pdfjs-dist": "^5.4.54",
     "phaser": "3.70.0",
+    "pngjs": "^7.0.0",
     "postcss": "^8.4.21",
     "prettier": "^3.6.2",
     "prop-types": "^15.8.1",
