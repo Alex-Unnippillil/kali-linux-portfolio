@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
+import ResultDiff from './components/ResultDiff';
 
 interface Vulnerability {
   id: string;
@@ -130,6 +131,8 @@ const OpenVASReport: React.FC = () => {
           </span>
         ))}
       </div>
+      <h2 className="text-xl mt-6 mb-2">Compare Reports</h2>
+      <ResultDiff />
       <p className="mt-4 text-xs text-gray-400">
         All data is static and for demonstration only. Use OpenVAS responsibly
         and only on systems you are authorized to test.
