@@ -50,6 +50,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
+  const [overflow, setOverflow] = useState({ top: false, bottom: false });
+
+  function updateOverflow() {
+    const term = termRef.current;
+    if (!term || !term.buffer) return;
+    const { viewportY, baseY } = term.buffer.active;
+    setOverflow({ top: viewportY > 0, bottom: viewportY < baseY });
+  }
 
   function writeLine(text: string) {
     if (termRef.current) termRef.current.writeln(text);
@@ -57,6 +65,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     if (opfsSupported && dirRef.current) {
       writeFile('history.txt', contentRef.current, dirRef.current);
     }
+    updateOverflow();
   }
 
   contextRef.current.writeLine = writeLine;
@@ -105,6 +114,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         if (opfsSupported && dirRef.current) {
           deleteFile('history.txt', dirRef.current);
         }
+        setOverflow({ top: false, bottom: false });
       },
       open: (arg) => {
         if (!arg) {
@@ -228,9 +238,28 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           domEvent.preventDefault();
           const q = window.prompt('Search');
           if (q) searchRef.current?.findNext(q);
+        } else if (domEvent.ctrlKey && domEvent.key === 'r') {
+          domEvent.preventDefault();
+          const q = window.prompt('Search history');
+          if (q) {
+            const match = [...historyRef.current]
+              .reverse()
+              .find((c) => c.includes(q));
+            if (match && termRef.current) {
+              termRef.current.write('\u001b[2K\r');
+              prompt();
+              termRef.current.write(match);
+              commandRef.current = match;
+            } else {
+              writeLine(`No match: ${q}`);
+              prompt();
+            }
+          }
         }
       });
       term.onPaste((d: string) => handleInput(d));
+      updateOverflow();
+      term.onScroll?.(updateOverflow);
     })();
     return () => {
       disposed = true;
@@ -307,6 +336,12 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         ref={containerRef}
         className="h-full w-full bg-black text-white"
       />
+      {overflow.top && (
+        <div className="pointer-events-none absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-black" />
+      )}
+      {overflow.bottom && (
+        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-black" />
+      )}
     </div>
   );
 });
