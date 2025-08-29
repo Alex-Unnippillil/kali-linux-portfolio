@@ -1,13 +1,21 @@
-export const trackEvent = async (
-  name: string,
-  properties?: Record<string, string | number | boolean | null>,
-): Promise<void> => {
+import { track } from '@vercel/analytics';
+
+export type EventName =
+  | 'cta_click'
+  | 'signup_submit'
+  | 'contact_submit'
+  | 'outbound_link_click'
+  | 'download_click';
+
+export function trackEvent(
+  name: EventName,
+  props?: Record<string, string | number | boolean>,
+) {
   try {
-    const { track } = await import("@vercel/analytics");
-    track(name, properties);
+    track(name, props);
   } catch {
     // ignore analytics errors
   }
-};
+}
 
-export default trackEvent;
+

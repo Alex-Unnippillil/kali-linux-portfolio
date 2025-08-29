@@ -1,13 +1,13 @@
-import { track } from '@vercel/analytics/server';
-
-export async function trackServerEvent(
-  name: string,
-  props?: Record<string, string | number | boolean>,
-  opts?: { flags?: string[] },
-) {
+export default async function trackServerEvent(
+  event: string,
+  properties?: Record<string, any>,
+  options?: Record<string, any>
+): Promise<void> {
   try {
-    await track(name, props, opts);
-  } catch (err) {
-    console.error(err);
+    const mod = await import('@vercel/analytics/server');
+    await mod.track(event, properties, options);
+  } catch {
+    // ignore analytics errors
+
   }
 }
