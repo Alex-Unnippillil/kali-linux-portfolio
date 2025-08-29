@@ -41,7 +41,7 @@ const parseOutput = (text, redact) => {
     let severity = 'info';
     if (/password|ntlm|credential/i.test(line)) {
       severity = 'high';
-    } else if (/lsa|secret/i.test(line)) {
+    } else if (/lsa|secret|user\s+name|domain/i.test(line)) {
       severity = 'medium';
     }
     const redactedLine = redact
