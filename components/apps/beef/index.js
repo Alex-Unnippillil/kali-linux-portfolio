@@ -18,6 +18,7 @@ export default function Beef() {
   const [liveMessage, setLiveMessage] = useState('');
   const prevHooks = useRef(0);
   const prevSteps = useRef(0);
+  const [activeTab, setActiveTab] = useState('modules');
 
   const hooksUrl = '/demo-data/beef/hooks.json';
   const modulesUrl = '/demo-data/beef/modules.json';
@@ -153,8 +154,13 @@ export default function Beef() {
 
   if (!authorized) {
     return (
-      <div className="w-full h-full bg-ub-dark text-white p-4 flex flex-col items-center justify-center text-center">
-        <p className="mb-4 text-sm">
+      <div
+        className="w-full h-full bg-ub-dark text-white p-4 flex flex-col items-center justify-center text-center"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="beef-lab-modal-title"
+      >
+        <p id="beef-lab-modal-title" className="mb-4 text-sm">
           Security tools are for lab use only. Review{' '}
           <a
             href="https://csrc.nist.gov/publications/detail/sp/800-115/final"
@@ -239,22 +245,72 @@ export default function Beef() {
         </div>
         {selected ? (
           <>
-            <div className="mb-2 flex">
-              <div className="flex-1 overflow-auto max-h-40 border border-gray-700 p-1 mr-2">
-                {modules.length > 0 ? renderTree(modules) : <p className="text-sm">No modules</p>}
-              </div>
+            <div role="tablist" aria-label="BeEF tools" className="flex space-x-2 mb-2">
               <button
-                type="button"
-                onClick={runModule}
-                className="px-3 py-1 bg-ub-primary text-white rounded h-max"
+                id="tab-modules"
+                role="tab"
+                aria-selected={activeTab === 'modules'}
+                aria-controls="panel-modules"
+                className={`px-3 py-1 rounded ${
+                  activeTab === 'modules'
+                    ? 'bg-ub-primary text-white'
+                    : 'bg-ub-gray-50 text-black'
+                }`}
+                onClick={() => setActiveTab('modules')}
               >
-                Run Module
+                Modules
+              </button>
+              <button
+                id="tab-payload"
+                role="tab"
+                aria-selected={activeTab === 'payload'}
+                aria-controls="panel-payload"
+                className={`px-3 py-1 rounded ${
+                  activeTab === 'payload'
+                    ? 'bg-ub-primary text-white'
+                    : 'bg-ub-gray-50 text-black'
+                }`}
+                onClick={() => setActiveTab('payload')}
+              >
+                Payload Builder
               </button>
             </div>
-            {output && (
-              <pre className="whitespace-pre-wrap text-xs bg-black p-2 rounded mb-4">{output}</pre>
-            )}
-            <PayloadBuilder />
+            <div
+              id="panel-modules"
+              role="tabpanel"
+              aria-labelledby="tab-modules"
+              hidden={activeTab !== 'modules'}
+            >
+              <div className="mb-2 flex">
+                <div className="flex-1 overflow-auto max-h-40 border border-gray-700 p-1 mr-2">
+                  {modules.length > 0 ? (
+                    renderTree(modules)
+                  ) : (
+                    <p className="text-sm">No modules</p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={runModule}
+                  className="px-3 py-1 bg-ub-primary text-white rounded h-max"
+                >
+                  Run Module
+                </button>
+              </div>
+              {output && (
+                <pre className="whitespace-pre-wrap text-xs bg-black p-2 rounded mb-4">
+                  {output}
+                </pre>
+              )}
+            </div>
+            <div
+              id="panel-payload"
+              role="tabpanel"
+              aria-labelledby="tab-payload"
+              hidden={activeTab !== 'payload'}
+            >
+              <PayloadBuilder />
+            </div>
           </>
         ) : (
           <p>Select a hooked browser to run modules.</p>

@@ -5,7 +5,9 @@ export default function PayloadBuilder() {
   const [message, setMessage] = useState('');
 
   const buildPayload = () => {
-    setMessage('Execution blocked by same-origin policy or Content Security Policy.');
+    setMessage(
+      'Execution blocked. The browser\'s Same-Origin Policy and Content Security Policy prevent running arbitrary scripts in this demo.'
+    );
   };
 
   return (
