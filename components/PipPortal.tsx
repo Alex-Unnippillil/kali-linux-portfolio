@@ -17,11 +17,15 @@ declare global {
 interface PipPortalContextValue {
   open: (content: React.ReactNode) => Promise<void>;
   close: () => void;
+  isOpen: boolean;
+  isSupported: boolean;
 }
 
 const PipPortalContext = createContext<PipPortalContextValue>({
   open: async () => {},
   close: () => {},
+  isOpen: false,
+  isSupported: false,
 });
 
 export const usePipPortal = () => useContext(PipPortalContext);
@@ -30,6 +34,14 @@ const PipPortalProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const pipWindowRef = useRef<Window | null>(null);
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const [content, setContent] = useState<React.ReactNode>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isSupported, setIsSupported] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.documentPictureInPicture) {
+      setIsSupported(true);
+    }
+  }, []);
 
   const close = useCallback(() => {
     const win = pipWindowRef.current;
@@ -39,6 +51,7 @@ const PipPortalProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     pipWindowRef.current = null;
     setContainer(null);
     setContent(null);
+    setIsOpen(false);
   }, []);
 
   const open = useCallback(
@@ -57,8 +70,16 @@ const PipPortalProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         const handlePageHide = () => close();
         window.addEventListener('pagehide', handlePageHide, { once: true });
         win.addEventListener('pagehide', handlePageHide, { once: true });
+
+        const handleVisibility = () => {
+          if (document.visibilityState === 'hidden') close();
+        };
+        document.addEventListener('visibilitychange', handleVisibility, {
+          once: true,
+        });
       }
       setContent(node);
+      setIsOpen(true);
     },
     [close],
   );
@@ -71,6 +92,7 @@ const PipPortalProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       pipWindowRef.current = null;
       setContainer(null);
       setContent(null);
+      setIsOpen(false);
     };
 
     win.addEventListener('unload', handleUnload);
@@ -80,7 +102,7 @@ const PipPortalProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   }, [container]);
 
   return (
-    <PipPortalContext.Provider value={{ open, close }}>
+    <PipPortalContext.Provider value={{ open, close, isOpen, isSupported }}>
       {children}
       {container && content ? createPortal(content, container) : null}
     </PipPortalContext.Provider>

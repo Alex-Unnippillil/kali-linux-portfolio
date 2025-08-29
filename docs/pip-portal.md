@@ -12,7 +12,7 @@ hook to open or close the PiP window.
 import PipPortalProvider, { usePipPortal } from '../components/common/PipPortal';
 
 function HudButton() {
-  const { open, close } = usePipPortal();
+  const { open, close, isOpen, isSupported } = usePipPortal();
 
   return (
     <div>
@@ -23,7 +23,9 @@ function HudButton() {
       >
         Show Timer
       </button>
-      <button onClick={close}>Close</button>
+      {isSupported && (
+        <button onClick={close}>{isOpen ? 'Unpin' : 'Close'}</button>
+      )}
     </div>
   );
 }
