@@ -6,48 +6,177 @@ import './styles.css';
 import MemorySlots from './components/MemorySlots';
 
 export default function Calculator() {
-  const [tape, setTape] = usePersistentState<{expr: string; result: string}[]>('calc-tape', () => [], (v): v is {expr: string; result: string}[] => Array.isArray(v) && v.every(item => typeof item?.expr === 'string' && typeof item?.result === 'string'));
+  const HISTORY_LIMIT = 10;
+  const [history, setHistory] = usePersistentState<
+    { expr: string; result: string }[]
+  >(
+    'calc-history',
+    () => [],
+    (v): v is { expr: string; result: string }[] =>
+      Array.isArray(v) &&
+      v.every(
+        (item) =>
+          typeof item?.expr === 'string' &&
+          typeof item?.result === 'string',
+      ),
+  );
 
   useEffect(() => {
-    const handler = (e: any) => {
-      setTape(prev => [e.detail, ...prev].slice(0,10));
-    };
-    document.addEventListener('tape-add', handler);
-    return () => document.removeEventListener('tape-add', handler);
-  }, [setTape]);
+    let evaluate: any;
+    let memoryAdd: any;
+    let memorySubtract: any;
+    let memoryRecall: any;
+    let formatBase: any;
+    let getLastResult: any;
+    let setBase: any;
 
-  useEffect(() => {
     const load = async () => {
       if (typeof window !== 'undefined' && !(window as any).math) {
         await new Promise((resolve) => {
           const script = document.createElement('script');
-          script.src = 'https://cdn.jsdelivr.net/npm/mathjs@13.2.3/lib/browser/math.js';
-          script.onload = resolve;
+          script.src =
+            'https://cdn.jsdelivr.net/npm/mathjs@13.2.3/lib/browser/math.js';
+          script.onload = resolve as any;
           document.body.appendChild(script);
         });
       }
-      await import('./main');
-    };
-    load();
+      const mod = await import('./main');
+      evaluate = mod.evaluate;
+      memoryAdd = mod.memoryAdd;
+      memorySubtract = mod.memorySubtract;
+      memoryRecall = mod.memoryRecall;
+      formatBase = mod.formatBase;
+      getLastResult = mod.getLastResult;
+      setBase = mod.setBase;
 
-    const display = document.getElementById('display') as HTMLInputElement | null;
-    const handleError = (e: any) => {
-      if (!display) return;
-      const idx = e.detail.index || 0;
-      display.classList.add('error');
-      display.focus();
-      display.setSelectionRange(idx, idx + 1);
+      const display = document.getElementById('display') as HTMLInputElement;
+      const buttons = document.querySelectorAll<HTMLButtonElement>('.btn');
+      const historyToggle = document.getElementById('toggle-history');
+      const historyEl = document.getElementById('history');
+      const baseSelect = document.getElementById('base-select') as HTMLSelectElement | null;
+
+      const insertAtCursor = (text: string) => {
+        const start = display.selectionStart ?? display.value.length;
+        const end = display.selectionEnd ?? display.value.length;
+        const before = display.value.slice(0, start);
+        const after = display.value.slice(end);
+        display.value = before + text + after;
+        const pos = start + text.length;
+        display.selectionStart = display.selectionEnd = pos;
+      };
+
+      const handlers: Array<{ btn: HTMLButtonElement; handler: () => void }> = [];
+      buttons.forEach((btn) => {
+        const handler = () => {
+          const action = btn.dataset.action;
+          const value = btn.dataset.value || btn.textContent || '';
+
+          if (action === 'clear') {
+            display.value = '';
+            return;
+          }
+
+          if (action === 'backspace') {
+            display.value = display.value.slice(0, -1);
+            return;
+          }
+
+          if (action === 'equals') {
+            const expr = display.value;
+            try {
+              const result = evaluate(expr);
+              setHistory((prev) =>
+                [{ expr, result }, ...prev].slice(0, HISTORY_LIMIT),
+              );
+              display.value = result;
+            } catch (e: any) {
+              const idx = e.index || 0;
+              display.classList.add('error');
+              display.focus();
+              display.setSelectionRange(idx, idx + 1);
+            }
+            return;
+          }
+
+          if (action === 'ans') {
+            insertAtCursor(formatBase(getLastResult()));
+            return;
+          }
+
+          if (action === 'mplus') {
+            memoryAdd(display.value);
+            return;
+          }
+
+          if (action === 'mminus') {
+            memorySubtract(display.value);
+            return;
+          }
+
+          if (action === 'mr') {
+            display.value = formatBase(memoryRecall());
+            return;
+          }
+
+          insertAtCursor(value);
+          display.focus();
+        };
+        btn.addEventListener('click', handler);
+        handlers.push({ btn, handler });
+      });
+
+      const keyHandler = (e: KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === '=') {
+          e.preventDefault();
+          (document.querySelector('.btn[data-action="equals"]') as HTMLButtonElement)?.click();
+          return;
+        }
+        if (e.key === 'Backspace') {
+          e.preventDefault();
+          display.value = display.value.slice(0, -1);
+          return;
+        }
+        if (e.key === 'Escape' || e.key.toLowerCase() === 'c') {
+          e.preventDefault();
+          display.value = '';
+          return;
+        }
+        const btn = document.querySelector<HTMLButtonElement>(
+          `.btn[data-key~="${e.key}"]`,
+        );
+        if (btn) {
+          e.preventDefault();
+          btn.click();
+          return;
+        }
+        if (
+          e.target !== display &&
+          /^[-+*/0-9A-F().]$/i.test(e.key)
+        ) {
+          e.preventDefault();
+          insertAtCursor(e.key);
+        }
+      };
+      document.addEventListener('keydown', keyHandler);
+
+      historyToggle?.addEventListener('click', () => {
+        historyEl?.classList.toggle('hidden');
+      });
+
+      baseSelect?.addEventListener('change', () => {
+        setBase(parseInt(baseSelect.value, 10));
+      });
+
+      return () => {
+        handlers.forEach(({ btn, handler }) =>
+          btn.removeEventListener('click', handler),
+        );
+        document.removeEventListener('keydown', keyHandler);
+      };
     };
-    const clearError = () => display?.classList.remove('error');
-    document.addEventListener('parse-error', handleError);
-    document.addEventListener('clear-error', clearError);
-    display?.addEventListener('input', clearError);
-    return () => {
-      document.removeEventListener('parse-error', handleError);
-      document.removeEventListener('clear-error', clearError);
-      display?.removeEventListener('input', clearError);
-    };
-  }, []);
+
+    load();
+  }, [setHistory]);
 
   return (
     <div className="calculator">
@@ -108,7 +237,13 @@ export default function Calculator() {
       <button id="print-tape" className="btn" data-action="print" aria-label="print tape">Print</button>
         <div id="paren-indicator" />
       </div>
-      <div id="history" className="history hidden" aria-live="polite" />
+      <div id="history" className="history hidden" aria-live="polite">
+        {history.map(({ expr, result }, i) => (
+          <div key={i} className="history-entry">
+            {expr} = {result}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
