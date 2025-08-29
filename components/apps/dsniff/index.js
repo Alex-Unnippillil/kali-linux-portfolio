@@ -33,6 +33,28 @@ const protocolInfo = {
   SSH: 'Secure Shell',
 };
 
+const protocolIcons = {
+  HTTP: '🌐',
+  HTTPS: '🔒',
+  ARP: '🔁',
+  FTP: '📁',
+  SSH: '🔐',
+};
+
+const protocolRisks = {
+  HTTP: 'High',
+  HTTPS: 'Low',
+  ARP: 'Medium',
+  FTP: 'High',
+  SSH: 'Medium',
+};
+
+const riskColors = {
+  High: 'text-red-400',
+  Medium: 'text-yellow-300',
+  Low: 'text-green-400',
+};
+
 const suiteTools = [
   {
     tool: 'arpspoof',
@@ -110,6 +132,29 @@ const TimelineItem = ({ log, prefersReduced }) => {
   );
 };
 
+const Credential = ({ cred }) => {
+  const [show, setShow] = useState(false);
+  const hidden = cred.password && !show;
+  return (
+    <span className="mr-2 inline-flex items-center">
+      <span className="mr-1">{protocolIcons[cred.protocol] || '❓'}</span>
+      <span>{cred.username}</span>
+      {cred.password && (
+        <>
+          <span>:</span>
+          <span className="ml-1">{hidden ? '***' : cred.password}</span>
+          <button
+            className="ml-1 text-ubt-blue text-xs"
+            onClick={() => setShow(!show)}
+          >
+            {hidden ? 'Show' : 'Hide'}
+          </button>
+        </>
+      )}
+    </span>
+  );
+};
+
 const Dsniff = () => {
   const [urlsnarfLogs, setUrlsnarfLogs] = useState([]);
   const [arpspoofLogs, setArpspoofLogs] = useState([]);
@@ -122,7 +167,7 @@ const Dsniff = () => {
   const [selectedPacket, setSelectedPacket] = useState(null);
   const [domainSummary, setDomainSummary] = useState([]);
   const [timeline, setTimeline] = useState([]);
-  const [redact, setRedact] = useState(false);
+  const [protocolFilter, setProtocolFilter] = useState([]);
 
   const { summary: pcapSummary, remediation } = pcapFixture;
 
@@ -180,6 +225,7 @@ const Dsniff = () => {
       const pMatch = pkt.info.match(/password=([^\s]+)/);
       if (uMatch || pMatch) {
         domainMap[domain].credentials.push({
+          protocol: pkt.protocol,
           username: uMatch ? uMatch[1] : '',
           password: pMatch ? pMatch[1] : '',
         });
@@ -223,8 +269,9 @@ const Dsniff = () => {
       domain: d.domain,
       urls: d.urls,
       credentials: d.credentials.map((c) => ({
+        protocol: c.protocol,
         username: c.username,
-        password: redact && c.password ? '***' : c.password,
+        password: c.password,
       })),
       risk: d.risk,
     }));
@@ -241,12 +288,22 @@ const Dsniff = () => {
     const filterMatch = filters.every((f) =>
       log[f.field].toLowerCase().includes(f.value.toLowerCase())
     );
-    return searchMatch && filterMatch;
+    const protocolMatch =
+      protocolFilter.length === 0 || protocolFilter.includes(log.protocol);
+    return searchMatch && filterMatch && protocolMatch;
   });
 
   return (
     <div className="h-full w-full bg-ub-cool-grey text-white p-2 overflow-auto">
-      <h1 className="text-lg mb-2">dsniff</h1>
+      <div className="mb-2 flex items-center justify-between">
+        <h1 className="text-lg">dsniff</h1>
+        <button
+          onClick={exportSummary}
+          className="px-2 py-1 bg-ub-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400"
+        >
+          Export summary
+        </button>
+      </div>
       <div className="mb-2 text-yellow-300 text-sm">
         For lab use only – simulated traffic
       </div>
@@ -404,40 +461,21 @@ const Dsniff = () => {
                 <td className="pr-2 text-white">{d.domain}</td>
                 <td className="pr-2 text-green-400">{d.urls.join(', ')}</td>
                 <td className="pr-2 text-white">
-                  {d.credentials.length
-                    ? d.credentials
-                        .map((c) =>
-                          `${c.username || ''}${
-                            c.password ? ':' + (redact ? '***' : c.password) : ''
-                          }`
-                        )
-                        .join(' | ')
-                    : '—'}
+                  {d.credentials.length ? (
+                    <div className="flex flex-col">
+                      {d.credentials.map((c, i) => (
+                        <Credential cred={c} key={i} />
+                      ))}
+                    </div>
+                  ) : (
+                    '—'
+                  )}
                 </td>
-                <td className={d.risk === 'High' ? 'text-red-400' : 'text-yellow-300'}>
-                  {d.risk}
-                </td>
+                <td className={riskColors[d.risk]}>{d.risk}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <div className="flex items-center gap-2">
-          <label className="text-xs flex items-center">
-            <input
-              type="checkbox"
-              checked={redact}
-              onChange={(e) => setRedact(e.target.checked)}
-              className="mr-1"
-            />
-            Redact passwords
-          </label>
-          <button
-            onClick={exportSummary}
-            className="px-2 py-1 bg-ub-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400"
-          >
-            Quick export
-          </button>
-        </div>
       </div>
       <div className="mb-4" data-testid="capture-timeline">
         <h2 className="font-bold mb-2 text-sm">Capture timeline</h2>
@@ -464,6 +502,25 @@ const Dsniff = () => {
         >
           arpspoof
         </button>
+      </div>
+      <div className="mb-2 flex flex-wrap gap-2">
+        {Object.entries(protocolRisks).map(([proto, risk]) => (
+          <button
+            key={proto}
+            className={`px-2 ${
+              protocolFilter.includes(proto) ? 'bg-black' : 'bg-ub-grey'
+            } ${riskColors[risk]}`}
+            onClick={() =>
+              setProtocolFilter((prev) =>
+                prev.includes(proto)
+                  ? prev.filter((p) => p !== proto)
+                  : [...prev, proto]
+              )
+            }
+          >
+            {proto}
+          </button>
+        ))}
       </div>
       <div className="mb-2">
         <input

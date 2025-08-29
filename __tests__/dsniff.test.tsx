@@ -31,12 +31,12 @@ describe('Dsniff component', () => {
       screen.getByText(/HTTPS\/TLS to encrypt credentials/i)
     ).toBeInTheDocument();
   });
-
-  it('redacts credentials when enabled', async () => {
+  it('obfuscates credentials by default and reveals on click', async () => {
     render(<Dsniff />);
-    expect(await screen.findByText('demo:demo123')).toBeInTheDocument();
-    fireEvent.click(screen.getByLabelText('Redact passwords'));
-    expect(await screen.findByText('demo:***')).toBeInTheDocument();
+    expect(await screen.findByText('***')).toBeInTheDocument();
+    const showBtn = screen.getByText('Show');
+    fireEvent.click(showBtn);
+    expect(await screen.findByText('demo123')).toBeInTheDocument();
   });
 });
 
