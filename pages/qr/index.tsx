@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { BrowserQRCodeReader, NotFoundException } from '@zxing/library';
-import FormError from '../components/ui/FormError';
-import { clearScans, loadScans, saveScans } from '../utils/qrStorage';
+import FormError from '../../components/ui/FormError';
+import { clearScans, loadScans, saveScans } from '../../utils/qrStorage';
 
 const QRPage: React.FC = () => {
   const [text, setText] = useState('');
@@ -43,20 +43,16 @@ const QRPage: React.FC = () => {
         const codeReader = new BrowserQRCodeReader();
         codeReaderRef.current = codeReader;
         if (videoEl) {
-          codeReader.decodeFromVideoDevice(
-            null,
-            videoEl,
-            (result, err) => {
-              if (result) {
-                const text = result.getText();
-                setScanResult(text);
-                setBatch((prev) => [...prev, text]);
-              }
-              if (err && !(err instanceof NotFoundException)) {
-                setError('Failed to read QR code');
-              }
-            },
-          );
+          codeReader.decodeFromVideoDevice(null, videoEl, (result, err) => {
+            if (result) {
+              const text = result.getText();
+              setScanResult(text);
+              setBatch((prev) => [...prev, text]);
+            }
+            if (err && !(err instanceof NotFoundException)) {
+              setError('Failed to read QR code');
+            }
+          });
         }
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === 'NotAllowedError') {
@@ -115,7 +111,10 @@ const QRPage: React.FC = () => {
           onChange={(e) => setText(e.target.value)}
           className="mb-4 w-full rounded border p-2"
         />
-        <button type="submit" className="w-full rounded bg-blue-600 p-2 text-white">
+        <button
+          type="submit"
+          className="w-full rounded bg-blue-600 p-2 text-white"
+        >
           Generate QR
         </button>
       </form>
@@ -157,4 +156,3 @@ const QRPage: React.FC = () => {
 };
 
 export default QRPage;
-
