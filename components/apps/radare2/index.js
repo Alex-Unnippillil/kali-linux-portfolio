@@ -1,109 +1,200 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-
-// Pre-baked data for the tour
-const demoSections = [
-  { name: '.text', addr: '0x1000', size: '0x200' },
-  { name: '.data', addr: '0x2000', size: '0x80' },
-  { name: '.bss', addr: '0x2080', size: '0x40' },
-];
-
-const demoSymbols = [
-  { name: 'sym.main', addr: '0x1000' },
-  { name: 'sym.helper', addr: '0x1050' },
-  { name: 'sym.exit', addr: '0x1100' },
-];
-
-// Sample call graph input for the worker
-const demoAnalysis = `
-main -> sym.helper
-sym.helper -> sym.exit
-`;
+import HexEditor from './HexEditor';
+import {
+  loadNotes,
+  saveNotes,
+  loadBookmarks,
+  saveBookmarks,
+} from './utils';
 
 const ForceGraph2D = dynamic(
   () => import('react-force-graph').then((mod) => mod.ForceGraph2D),
   { ssr: false }
 );
 
-const Radare2 = () => {
-  const workerRef = useRef(null);
-  const [graphData, setGraphData] = useState({ nodes: [], links: [] });
+const Radare2 = ({ initialData = {} }) => {
+  const { file = 'demo', hex = '', disasm = [], xrefs = {}, blocks = [] } =
+    initialData;
+  const [mode, setMode] = useState('code');
+  const [seekAddr, setSeekAddr] = useState('');
+  const [findTerm, setFindTerm] = useState('');
+  const [currentAddr, setCurrentAddr] = useState(null);
+  const [notes, setNotes] = useState([]);
+  const [noteText, setNoteText] = useState('');
+  const [bookmarks, setBookmarks] = useState([]);
+  const disasmRef = useRef(null);
 
-  // Kick off the worker with the pre-baked analysis so no real
-  // analysis runs in the browser.
   useEffect(() => {
-    if (typeof window !== 'undefined' && typeof Worker === 'function') {
-      workerRef.current = new Worker(
-        new URL('./analysisWorker.js', import.meta.url)
-      );
-      workerRef.current.onmessage = (e) => {
-        if (e.data.type === 'graph') {
-          setGraphData(e.data.graphData);
-        }
-      };
-      workerRef.current.postMessage({ type: 'graph', analysis: demoAnalysis });
-      return () => workerRef.current?.terminate();
+    if (typeof window !== 'undefined') {
+      setNotes(loadNotes(file));
+      setBookmarks(loadBookmarks(file));
+
     }
-    return undefined;
-  }, []);
+  }, [file]);
+
+  const graphData = useMemo(() => {
+    const nodes = blocks.map((b) => ({ id: b.addr }));
+    const links = [];
+    blocks.forEach((b) =>
+      (b.edges || []).forEach((e) => links.push({ source: b.addr, target: e }))
+    );
+    return { nodes, links };
+  }, [blocks]);
+
+  const scrollToAddr = (addr) => {
+    const idx = disasm.findIndex(
+      (l) => l.addr.toLowerCase() === addr.toLowerCase()
+    );
+    if (idx >= 0) {
+      setCurrentAddr(disasm[idx].addr);
+      const el = document.getElementById(`asm-${idx}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
+  const handleSeek = () => {
+    if (seekAddr) scrollToAddr(seekAddr);
+  };
+
+  const handleFind = () => {
+    if (!findTerm) return;
+    const idx = disasm.findIndex(
+      (l) =>
+        l.text.toLowerCase().includes(findTerm.toLowerCase()) ||
+        l.addr.toLowerCase() === findTerm.toLowerCase()
+    );
+    if (idx >= 0) {
+      setCurrentAddr(disasm[idx].addr);
+      const el = document.getElementById(`asm-${idx}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
+  const handleAddNote = () => {
+    if (!currentAddr || !noteText.trim()) return;
+    const next = [...notes, { addr: currentAddr, text: noteText.trim() }];
+    setNotes(next);
+    saveNotes(file, next);
+    setNoteText('');
+  };
+
+  const toggleBookmark = (addr) => {
+    const next = bookmarks.includes(addr)
+      ? bookmarks.filter((a) => a !== addr)
+      : [...bookmarks, addr];
+    setBookmarks(next);
+    saveBookmarks(file, next);
+  };
 
   return (
     <div className="h-full w-full bg-ub-cool-grey text-white p-4 overflow-auto">
-      <h1 className="text-xl mb-4">Radare2 Tour</h1>
+      <div className="flex gap-2 mb-2 flex-wrap">
+        <input
+          value={seekAddr}
+          onChange={(e) => setSeekAddr(e.target.value)}
+          placeholder="seek 0x..."
+          className="px-2 py-1 bg-gray-800 rounded text-white"
+        />
+        <button
+          onClick={handleSeek}
+          className="px-3 py-1 bg-gray-700 rounded"
+        >
+          Seek
+        </button>
+        <input
+          value={findTerm}
+          onChange={(e) => setFindTerm(e.target.value)}
+          placeholder="find"
+          className="px-2 py-1 bg-gray-800 rounded text-white"
+        />
+        <button
+          onClick={handleFind}
+          className="px-3 py-1 bg-gray-700 rounded"
+        >
+          Find
+        </button>
+        <button
+          onClick={() => setMode((m) => (m === 'code' ? 'graph' : 'code'))}
+          className="px-3 py-1 bg-gray-700 rounded"
+        >
+          {mode === 'code' ? 'Graph' : 'Code'}
+        </button>
+      </div>
 
-      <section className="mb-6">
-        <h2 className="text-lg mb-2">Sections</h2>
-        <ul className="bg-black rounded p-2">
-          {demoSections.map((s) => (
-            <li key={s.name}>
-              {s.name} - {s.addr} - {s.size}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="mb-6">
-        <h2 className="text-lg mb-2">Symbols</h2>
-        <ul className="bg-black rounded p-2">
-          {demoSymbols.map((sym) => (
-            <li key={sym.name}>
-              {sym.name} - {sym.addr}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="mb-6">
-        <h2 className="text-lg mb-2">Call Graph</h2>
+      {mode === 'graph' ? (
         <div className="h-64 bg-black rounded">
           <ForceGraph2D graphData={graphData} />
         </div>
-      </section>
+      ) : (
+        <div className="grid md:grid-cols-2 gap-4">
+          <HexEditor hex={hex} />
+          <div
+            ref={disasmRef}
+            className="overflow-auto border border-gray-600 rounded p-2 max-h-64"
+          >
+            <ul className="font-mono text-sm">
+              {disasm.map((line, idx) => (
+                <li
+                  key={line.addr}
+                  id={`asm-${idx}`}
+                  className={`cursor-pointer ${
+                    currentAddr === line.addr ? 'bg-gray-700' : ''
+                  }`}
+                  onClick={() => setCurrentAddr(line.addr)}
+                >
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleBookmark(line.addr);
+                    }}
+                    className="mr-1"
+                  >
+                    {bookmarks.includes(line.addr) ? '★' : '☆'}
+                  </button>
+                  {line.addr}: {line.text}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
 
-      <p>
-        Learn more from the{' '}
-        <a
-          href="https://book.rada.re"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline text-blue-400"
-        >
-          official radare2 book
-        </a>{' '}
-        and the{' '}
-        <a
-          href="https://rada.re"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline text-blue-400"
-        >
-          project site
-        </a>
-        .
-      </p>
+      {currentAddr && (
+        <div className="mt-4">
+          <h2 className="text-lg">Xrefs for {currentAddr}</h2>
+          <p className="mb-2">
+            {(xrefs[currentAddr] || []).join(', ') || 'None'}
+          </p>
+          <textarea
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+            placeholder="Add note"
+            className="w-full bg-gray-800 text-white p-2 rounded"
+          />
+          <button
+            onClick={handleAddNote}
+            className="mt-2 px-3 py-1 bg-gray-700 rounded"
+          >
+            Save Note
+          </button>
+        </div>
+      )}
+
+      {notes.length > 0 && (
+        <div className="mt-4">
+          <h2 className="text-lg">Notes</h2>
+          <ul className="bg-black rounded p-2">
+            {notes.map((n, i) => (
+              <li key={i}>
+                {n.addr}: {n.text}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 };
 
 export default Radare2;
-

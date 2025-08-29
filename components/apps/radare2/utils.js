@@ -46,3 +46,32 @@ export const parseGraph = (analysis) => {
   });
   return { nodes, links };
 };
+
+const NOTES_PREFIX = 'r2-notes-';
+const BOOKMARK_PREFIX = 'r2-bookmarks-';
+
+export const loadNotes = (file) => {
+  try {
+    const raw = localStorage.getItem(NOTES_PREFIX + file);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+export const saveNotes = (file, notes) => {
+  localStorage.setItem(NOTES_PREFIX + file, JSON.stringify(notes));
+};
+
+export const loadBookmarks = (file) => {
+  try {
+    const raw = localStorage.getItem(BOOKMARK_PREFIX + file);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+export const saveBookmarks = (file, bookmarks) => {
+  localStorage.setItem(BOOKMARK_PREFIX + file, JSON.stringify(bookmarks));
+};
