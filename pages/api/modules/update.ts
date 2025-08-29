@@ -1,6 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import versionData from '../../../data/module-version.json';
 
+const REMOTE_VERSION_URL =
+  'https://raw.githubusercontent.com/unnipillil/kali-linux-portfolio/main/data/module-version.json';
+
 function compareSemver(a: string, b: string): number {
   const pa = a.split('.').map(Number);
   const pb = b.split('.').map(Number);
@@ -11,12 +14,30 @@ function compareSemver(a: string, b: string): number {
   return 0;
 }
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+) {
   const currentParam = req.query.version;
   const current = Array.isArray(currentParam)
     ? currentParam[0]
     : currentParam || '0.0.0';
-  const latest = versionData.version;
+
+  let latest = versionData.version;
+  try {
+    const response = await fetch(REMOTE_VERSION_URL, {
+      headers: { 'User-Agent': 'kali-linux-portfolio' },
+    });
+    if (response.ok) {
+      const json = (await response.json()) as { version?: string };
+      if (json.version) {
+        latest = json.version;
+      }
+    }
+  } catch {
+    // ignore network errors and fall back to bundled version
+  }
+
   const needsUpdate = compareSemver(current, latest) < 0;
   res.status(200).json({ current, latest, needsUpdate });
 }
