@@ -1,0 +1,11 @@
+[
+  { "ssid": "CoffeeShopWiFi", "bssid": "66:77:88:00:00:01", "channel": 1, "signal": -45 },
+  { "ssid": "FreeAirport", "bssid": "AA:BB:CC:00:00:01", "channel": 6, "signal": -70 },
+  { "ssid": "HomeWiFi", "bssid": "00:11:22:00:00:01", "channel": 11, "signal": -30 },
+  { "ssid": "CoffeeShopWiFi", "bssid": "66:77:88:00:00:01", "channel": 1, "signal": -47 },
+  { "ssid": "FreeAirport", "bssid": "AA:BB:CC:00:00:01", "channel": 6, "signal": -72 },
+  { "ssid": "NewCafe", "bssid": "DD:EE:FF:00:00:01", "channel": 3, "signal": -80 },
+  { "ssid": "Airport5G", "bssid": "AA:BB:CC:00:00:02", "channel": 36, "signal": -60 },
+  { "ssid": "Office5G", "bssid": "00:11:22:00:00:02", "channel": 149, "signal": -55 },
+  { "ssid": "Airport5G", "bssid": "AA:BB:CC:00:00:02", "channel": 36, "signal": -62 }
+]
