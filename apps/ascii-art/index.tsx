@@ -6,6 +6,7 @@ import Standard from 'figlet/importable-fonts/Standard.js';
 import Slant from 'figlet/importable-fonts/Slant.js';
 import Big from 'figlet/importable-fonts/Big.js';
 import { useRouter } from 'next/router';
+import { useAsciiArtState } from './state';
 
 // preload a small set of fonts
 const fontData: Record<string, any> = {
@@ -34,11 +35,14 @@ const AsciiArtApp = () => {
   const [text, setText] = useState('');
   const [font, setFont] = useState('Standard');
   const [output, setOutput] = useState('');
+  const { presets, savePreset, loadPreset, activePreset } = useAsciiArtState();
+  const [presetName, setPresetName] = useState('');
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [imgOutput, setImgOutput] = useState('');
   const [brightness, setBrightness] = useState(0); // -1 to 1
   const [contrast, setContrast] = useState(1); // 0 to 2
+  const loadedPreset = useRef(false);
 
   // load from query string on first render
   useEffect(() => {
@@ -55,6 +59,23 @@ const AsciiArtApp = () => {
       if (!Number.isNaN(ct) && ct >= 0 && ct <= 2) setContrast(ct);
     }
   }, [router.isReady]);
+
+  // apply last used preset once on load
+  useEffect(() => {
+    if (!router.isReady || loadedPreset.current) return;
+    if (
+      Object.keys(router.query).length === 0 &&
+      activePreset &&
+      presets[activePreset]
+    ) {
+      const p = presets[activePreset];
+      setText(p.text);
+      setFont(p.font);
+      setBrightness(p.brightness);
+      setContrast(p.contrast);
+    }
+    loadedPreset.current = true;
+  }, [router.isReady, router.query, activePreset, presets]);
 
   // update query string permalink
   useEffect(() => {
@@ -136,6 +157,49 @@ const AsciiArtApp = () => {
 
   return (
     <div className="p-4 bg-gray-900 text-white h-full overflow-auto font-mono">
+      <div className="mb-4 flex gap-2 items-center">
+        <input
+          type="text"
+          className="px-2 py-1 text-black rounded"
+          placeholder="Preset name"
+          value={presetName}
+          onChange={(e) => setPresetName(e.target.value)}
+        />
+        <button
+          className="px-2 py-1 bg-blue-700 rounded"
+          onClick={() => {
+            const name = presetName.trim();
+            if (name) {
+              savePreset(name, { text, font, brightness, contrast });
+              setPresetName('');
+            }
+          }}
+        >
+          Save
+        </button>
+        {Object.keys(presets).length > 0 && (
+          <select
+            className="px-2 py-1 text-black rounded"
+            value={activePreset || ''}
+            onChange={(e) => {
+              const p = loadPreset(e.target.value);
+              if (p) {
+                setText(p.text);
+                setFont(p.font);
+                setBrightness(p.brightness);
+                setContrast(p.contrast);
+              }
+            }}
+          >
+            <option value="">Load preset</option>
+            {Object.keys(presets).map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
       <div className="mb-4 flex gap-2">
         <button
           className={`px-2 py-1 rounded ${tab === 'text' ? 'bg-blue-700' : 'bg-gray-700'}`}
