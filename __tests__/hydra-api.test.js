@@ -20,7 +20,9 @@ jest.mock('child_process', () => ({
 }));
 
 const handler = require('../pages/api/hydra').default;
+const path = require('path');
 const fs = require('fs').promises;
+const sessionDir = path.join(process.cwd(), 'hydra');
 
 test('removes temp files after hydra execution', async () => {
   const req = {
@@ -40,8 +42,8 @@ test('removes temp files after hydra execution', async () => {
   await expect(fs.access(userPath)).rejects.toBeTruthy();
   await expect(fs.access(passPath)).rejects.toBeTruthy();
 });
-
-afterAll(() => {
+afterAll(async () => {
+  await fs.rm(sessionDir, { recursive: true, force: true });
   delete process.env.FEATURE_TOOL_APIS;
   delete process.env.FEATURE_HYDRA;
 });
