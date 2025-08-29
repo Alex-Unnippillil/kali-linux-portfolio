@@ -1,4 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import LabMode from '../../LabMode';
+import CommandBuilder from '../../CommandBuilder';
+import FixturesLoader from '../../FixturesLoader';
+import ResultViewer from '../../ResultViewer';
+import ExplainerPane from '../../ExplainerPane';
 
 const tabs = [
   { id: 'repeater', label: 'Repeater' },
@@ -7,19 +12,14 @@ const tabs = [
   { id: 'sigma', label: 'Sigma Explorer' },
   { id: 'yara', label: 'YARA Tester' },
   { id: 'mitre', label: 'MITRE ATT&CK' },
+  { id: 'fixtures', label: 'Fixtures' },
 ];
 
 export default function SecurityTools() {
   const [active, setActive] = useState('repeater');
   const [query, setQuery] = useState('');
   const [authorized, setAuthorized] = useState(false);
-
-  // Repeater state
-  const [req, setReq] = useState('GET / HTTP/1.1\nHost: example.com\n\n');
-  const [res, setRes] = useState('');
-  const sendRepeater = () => {
-    setRes('HTTP/1.1 200 OK\nContent-Type: text/plain\n\nDemo response from fixture');
-  };
+  const [fixtureData, setFixtureData] = useState([]);
 
   // Logs, rules and fixtures
   const [suricata, setSuricata] = useState([]);
@@ -127,37 +127,17 @@ export default function SecurityTools() {
   }
 
   return (
-    <div className="w-full h-full bg-ub-dark text-white p-2 overflow-auto">
-      <div className="bg-yellow-400 text-black text-xs p-2 text-center mb-2">
-        Test ethically –{' '}
-        <a
-          href="https://csrc.nist.gov/publications/detail/sp/800-115/final"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline"
-        >
-          NIST SP 800-115
-        </a>{' '}
-        |
-        {' '}
-        <a
-          href="https://owasp.org/www-project-web-security-testing-guide/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline"
-        >
-          OWASP Testing Guide
-        </a>{' '}
-        – lab use only.
-      </div>
-      <input
-        value={query}
-        onChange={e => setQuery(e.target.value)}
-        placeholder="Search all tools"
-        className="w-full mb-2 p-1 text-black text-xs"
-      />
-      {query ? (
-        <div className="text-xs">
+    <LabMode>
+      <div className="w-full h-full bg-ub-dark text-white p-2 overflow-auto flex">
+        <div className="flex-1 pr-2">
+          <input
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Search all tools"
+            className="w-full mb-2 p-1 text-black text-xs"
+          />
+          {query ? (
+            <div className="text-xs">
           {suricataResults.length > 0 && (
             <div className="mb-2">
               <h3 className="text-sm font-bold">Suricata</h3>
@@ -209,23 +189,23 @@ export default function SecurityTools() {
               <div>Sample text contains &quot;{query}&quot;</div>
             </div>
           )}
-          {!hasResults && <div>No results found.</div>}
-        </div>
-      ) : (
-        <>
-          <p className="text-xs mb-2">All tools are static demos using local fixtures. No external network activity occurs.</p>
-          <div className="mb-2 flex flex-wrap">{tabs.map(tabButton)}</div>
+            {!hasResults && <div>No results found.</div>}
+          </div>
+        ) : (
+          <>
+            <p className="text-xs mb-2">All tools are static demos using local fixtures. No external network activity occurs.</p>
+            <div className="mb-2 flex flex-wrap">{tabs.map(tabButton)}</div>
 
-          {active === 'repeater' && (
-            <div>
-              <p className="text-xs mb-2">Static Burp-style repeater. Request is not actually sent.</p>
-              <textarea value={req} onChange={e=>setReq(e.target.value)} className="w-full h-32 text-black p-1" />
-              <button onClick={sendRepeater} className="mt-2 px-2 py-1 bg-ub-green text-black text-xs">Send</button>
-              <textarea value={res} readOnly className="w-full h-32 mt-2 text-black p-1" />
-            </div>
-          )}
+            {active === 'repeater' && (
+              <div>
+                <CommandBuilder
+                  doc="Build a curl command. Output is copy-only and not executed."
+                  build={({ target = '', opts = '' }) => `curl ${opts} ${target}`.trim()}
+                />
+              </div>
+            )}
 
-          {active === 'suricata' && (
+            {active === 'suricata' && (
             <div>
               <p className="text-xs mb-2">Sample Suricata alerts from local JSON fixture.</p>
               {suricata.map((log, i) => (
@@ -234,7 +214,7 @@ export default function SecurityTools() {
             </div>
           )}
 
-          {active === 'zeek' && (
+            {active === 'zeek' && (
             <div>
               <p className="text-xs mb-2">Sample Zeek logs from local JSON fixture.</p>
               {zeek.map((log, i) => (
@@ -243,7 +223,7 @@ export default function SecurityTools() {
             </div>
           )}
 
-          {active === 'sigma' && (
+            {active === 'sigma' && (
             <div>
               <p className="text-xs mb-2">Static Sigma rules loaded from fixture.</p>
               {sigma.map((rule) => (
@@ -255,7 +235,7 @@ export default function SecurityTools() {
             </div>
           )}
 
-          {active === 'yara' && (
+            {active === 'yara' && (
             <div>
               <p className="text-xs mb-2">Simplified YARA tester using sample text. Pattern matching is simulated.</p>
               <textarea value={yaraRule} onChange={e=>setYaraRule(e.target.value)} className="w-full h-24 text-black p-1" />
@@ -266,7 +246,7 @@ export default function SecurityTools() {
             </div>
           )}
 
-          {active === 'mitre' && (
+            {active === 'mitre' && (
             <div>
               <p className="text-xs mb-2">Mini MITRE ATT&CK navigator from static data.</p>
               {mitre.tactics.map((tac) => (
@@ -281,8 +261,28 @@ export default function SecurityTools() {
               ))}
             </div>
           )}
-        </>
-      )}
-    </div>
+
+            {active === 'fixtures' && (
+              <div className="flex">
+                <div className="w-1/2 pr-2">
+                  <FixturesLoader onData={setFixtureData} />
+                </div>
+                <div className="w-1/2">
+                  <ResultViewer data={fixtureData} />
+                </div>
+              </div>
+            )}
+          </>
+        )}
+        </div>
+        <ExplainerPane
+          lines={["Use this lab to explore static security data."]}
+          resources={[
+            { label: 'NIST SP 800-115', url: 'https://csrc.nist.gov/publications/detail/sp/800-115/final' },
+            { label: 'OWASP Testing Guide', url: 'https://owasp.org/www-project-web-security-testing-guide/' },
+          ]}
+        />
+      </div>
+    </LabMode>
   );
 }
