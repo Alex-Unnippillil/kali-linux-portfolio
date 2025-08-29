@@ -4,6 +4,11 @@ import { useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import runScript, { ScriptController } from '../utils/scriptRunner';
 
+const examplesHref = new URL(
+  '../../../scripts/examples/terminal.ts',
+  import.meta.url,
+).href;
+
 interface ScriptsProps {
   runCommand: (cmd: string) => Promise<any> | any;
 }
@@ -43,6 +48,18 @@ const Scripts = ({ runCommand }: ScriptsProps) => {
 
   return (
     <div className="p-2 space-y-2 text-sm">
+      <p className="text-xs">
+        Need sample scripts?{' '}
+        <a
+          href={examplesHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline text-blue-400"
+        >
+          View examples
+        </a>
+        .
+      </p>
       <div className="space-y-1">
         <input
           value={name}
