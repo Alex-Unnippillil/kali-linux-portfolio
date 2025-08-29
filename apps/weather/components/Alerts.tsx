@@ -39,18 +39,23 @@ const Alerts = ({ latitude, longitude }: AlertsProps) => {
     const poll = async () => {
       try {
         const res = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`,
+          `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&hourly=temperature_2m&forecast_days=1`,
         );
         const json = await res.json();
-        const temp: number | undefined = json?.current_weather?.temperature;
-        if (typeof temp !== 'number') return;
-        if (temp >= high) {
+        const temps: unknown = json?.hourly?.temperature_2m;
+        if (!Array.isArray(temps)) return;
+        const numbers = temps.filter((t): t is number => typeof t === 'number');
+        if (numbers.length === 0) return;
+        const max = Math.max(...numbers);
+        const min = Math.min(...numbers);
+        if (max >= high) {
           new Notification('High temperature alert', {
-            body: `${temp}\u00B0`,
+            body: `${max}\u00B0`,
           });
-        } else if (temp <= low) {
+        }
+        if (min <= low) {
           new Notification('Low temperature alert', {
-            body: `${temp}\u00B0`,
+            body: `${min}\u00B0`,
           });
         }
       } catch {
