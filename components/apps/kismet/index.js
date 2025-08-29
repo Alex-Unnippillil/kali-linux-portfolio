@@ -4,6 +4,21 @@ import capture from './sampleCapture.json';
 import clients from './sampleClients.json';
 import vendors from './oui.json';
 
+const encryptionTypes = ['WEP', 'WPA', 'WPA2', 'WPA3', 'OPEN'];
+const encryptionColors = {
+  WEP: '#ef4444',
+  WPA: '#f59e0b',
+  WPA2: '#3b82f6',
+  WPA3: '#8b5cf6',
+  OPEN: '#6b7280',
+};
+
+const signalBg = (s) => {
+  if (s >= -50) return 'bg-green-600';
+  if (s >= -70) return 'bg-yellow-600';
+  return 'bg-red-600';
+};
+
 const SignalTimeline = ({ history }) => {
   const canvasRef = useRef(null);
   const reduceMotion = useRef(false);
@@ -46,6 +61,29 @@ const SignalTimeline = ({ history }) => {
       role="img"
       aria-label="Signal quality timeline"
     />
+  );
+};
+
+const HeaderSpectrum = ({ networks }) => {
+  const channels = useMemo(() => {
+    const counts = Array(11).fill(0);
+    networks.forEach((n) => {
+      if (n.channel > 0 && n.channel <= 11) counts[n.channel - 1]++;
+    });
+    return counts;
+  }, [networks]);
+  const total = networks.length || 1;
+  return (
+    <div className="flex h-2 mt-1">
+      {channels.map((c, idx) => (
+        <div key={idx} className="flex-1 relative group">
+          <div className="h-full bg-blue-600" style={{ opacity: c / total }} />
+          <div className="absolute left-1/2 -translate-x-1/2 -top-6 bg-gray-800 text-xs px-1 rounded opacity-0 pointer-events-none group-hover:opacity-100">
+            {`Ch ${idx + 1}: ${c}`}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 };
 
@@ -235,10 +273,51 @@ const VirtualizedList = ({
   );
 };
 
+const DeviceDrawer = ({ network, onClose }) => (
+  <div
+    className={`fixed bottom-0 left-0 w-full bg-gray-900 text-white transform transition-transform duration-300 ${network ? 'translate-y-0' : 'translate-y-full'}`}
+  >
+    {network && (
+      <>
+        <div className="flex justify-between items-center p-2 border-t border-gray-700">
+          <span className="font-semibold">
+            {network.ssid || network.bssid}
+          </span>
+          <button onClick={onClose} aria-label="Close" className="text-gray-400">
+            ×
+          </button>
+        </div>
+        <div className="p-2 text-sm space-y-2">
+          <div className="flex items-center space-x-2">
+            <span className="px-2 py-0.5 rounded bg-gray-700 text-xs">
+              Ch {network.channel}
+            </span>
+            <span className={`px-2 py-0.5 rounded text-xs ${signalBg(network.strength)}`}>
+              {network.strength} dBm
+            </span>
+            <div className="flex space-x-1">
+              {network.encryption.map((enc) => (
+                <span
+                  key={enc}
+                  title={enc}
+                  style={{ width: 6, height: 6, backgroundColor: encryptionColors[enc] }}
+                  className="inline-block rounded-sm"
+                />
+              ))}
+            </div>
+          </div>
+          <SignalTimeline history={network.history} />
+        </div>
+      </>
+    )}
+  </div>
+);
+
 const KismetApp = ({ onNetworkDiscovered = () => {} }) => {
   const [networks, setNetworks] = useState([]);
   const [playing, setPlaying] = useState(false);
   const [frameIndex, setFrameIndex] = useState(0);
+  const [selected, setSelected] = useState(null);
 
   const clientsWithVendor = useMemo(
     () =>
@@ -283,6 +362,10 @@ const KismetApp = ({ onNetworkDiscovered = () => {} }) => {
           );
         }
         const discoveredAt = Date.now();
+        const rng = seedrandom(frame.bssid);
+        const encryption = [
+          encryptionTypes[Math.floor(rng() * encryptionTypes.length)],
+        ];
         const newNetwork = {
           ssid: frame.ssid,
           bssid: frame.bssid,
@@ -291,6 +374,7 @@ const KismetApp = ({ onNetworkDiscovered = () => {} }) => {
           strength: frame.signal,
           channel: frame.channel,
           history: [frame.signal],
+          encryption,
           discoveredAt,
           highlight: true,
         };
@@ -324,6 +408,7 @@ const KismetApp = ({ onNetworkDiscovered = () => {} }) => {
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white select-none">
       <div className="px-3 py-1 border-b border-gray-700">
         <span className="font-bold">Kismet</span>
+        <HeaderSpectrum networks={networks} />
       </div>
       <div className="p-2 flex space-x-2 bg-gray-900">
         <button
@@ -356,26 +441,53 @@ const KismetApp = ({ onNetworkDiscovered = () => {} }) => {
               rowHeight={40}
               keyExtractor={(n) => n.bssid}
               className="flex-grow"
-                renderRow={(net) => (
-                  <div
-                    className={`flex items-center justify-between p-1 transition-colors duration-500 ${net.highlight ? 'bg-yellow-700' : ''}`}
-                  >
-                  <span
-                    className="truncate w-24"
-                    title={`${net.ssid} (${net.bssid})`}
-                  >
-                    {net.ssid}
-                  </span>
-                  <span
-                    className="text-gray-400 text-xs w-24 truncate"
-                    title={net.vendor}
-                  >
-                    {net.vendor}
-                  </span>
-                  <SignalTimeline history={net.history} />
-                  <span className="text-gray-400 text-xs w-16 text-right">
-                    {net.strength} dBm
-                  </span>
+              renderRow={(net) => (
+                <div
+                  onClick={() => setSelected(net)}
+                  className={`flex items-center justify-between p-1 transition-colors duration-500 cursor-pointer ${
+                    net.highlight ? 'bg-yellow-700' : ''
+                  }`}
+                >
+                  <div className="flex flex-col w-32">
+                    <span
+                      className="truncate"
+                      title={`${net.ssid} (${net.bssid})`}
+                    >
+                      {net.ssid}
+                    </span>
+                    <span
+                      className="text-gray-400 text-xs truncate"
+                      title={net.vendor}
+                    >
+                      {net.vendor}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="px-1 text-xs rounded bg-gray-700">
+                      Ch {net.channel}
+                    </span>
+                    <span
+                      className={`px-1 text-xs rounded text-white ${signalBg(
+                        net.strength,
+                      )}`}
+                    >
+                      {net.strength} dBm
+                    </span>
+                    <div className="flex space-x-1">
+                      {net.encryption.map((enc) => (
+                        <span
+                          key={enc}
+                          title={enc}
+                          style={{
+                            width: 6,
+                            height: 6,
+                            backgroundColor: encryptionColors[enc],
+                          }}
+                          className="inline-block rounded-sm"
+                        />
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
             />
@@ -399,6 +511,7 @@ const KismetApp = ({ onNetworkDiscovered = () => {} }) => {
           </p>
         </div>
       </div>
+      <DeviceDrawer network={selected} onClose={() => setSelected(null)} />
     </div>
   );
 };
