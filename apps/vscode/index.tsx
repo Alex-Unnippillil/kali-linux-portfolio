@@ -1,107 +1,97 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
+import { useState } from 'react';
+import usePersistentState from '../../hooks/usePersistentState';
+import { openWorkspaceFile, saveWorkspaceFile, WorkspaceFile } from './utils/workspaceFs';
 
-const PROJECT = 'demo';
+const Monaco = dynamic(() => import('@monaco-editor/react'), { ssr: false });
 
-async function saveProject(code: string) {
-  try {
-    const root = await navigator.storage.getDirectory();
-    const dir = await root.getDirectoryHandle('vscode', { create: true });
-    const proj = await dir.getDirectoryHandle(PROJECT, { create: true });
-    const file = await proj.getFileHandle('settings.json', { create: true });
-    const writable = await file.createWritable();
-    await writable.write(JSON.stringify({ code }));
-    await writable.close();
-  } catch {}
-}
-
-async function loadProject(): Promise<string | null> {
-  try {
-    const root = await navigator.storage.getDirectory();
-    const dir = await root.getDirectoryHandle('vscode');
-    const proj = await dir.getDirectoryHandle(PROJECT);
-    const file = await proj.getFileHandle('settings.json');
-    const data = await file.getFile();
-    const text = await data.text();
-    return (JSON.parse(text) as { code: string }).code;
-  } catch {
-    return null;
-  }
+interface OpenFile extends WorkspaceFile {
+  dirty: boolean;
 }
 
 export default function VsCode() {
-  const [code, setCode] = useState('');
-  const [lint, setLint] = useState<{ line: number; message: string }[]>([]);
-  const [consoleOutput, setConsoleOutput] = useState<string[]>([]);
-  const lintWorker = useRef<Worker>();
-  const runWorker = useRef<Worker>();
+  const [files, setFiles] = useState<OpenFile[]>([]);
+  const [active, setActive] = useState(0);
+  const [mru, setMru] = usePersistentState<string[]>('vscode-mru', []);
 
-  useEffect(() => {
-    loadProject().then(async (saved) => {
-      if (saved) setCode(saved);
-      else {
-        const res = await fetch('/data/vscode-example/main.js');
-        const sample = await res.text();
-        setCode(sample);
-        saveProject(sample);
+  const updateMru = (name: string) => {
+    setMru((prev) => [name, ...prev.filter((n) => n !== name)].slice(0, 10));
+  };
+
+  const open = async () => {
+    const file = await openWorkspaceFile();
+    if (!file) return;
+    setFiles((fs) => {
+      const idx = fs.findIndex((f) => f.name === file.name);
+      if (idx !== -1) {
+        setActive(idx);
+        return fs;
       }
+      const newFiles = [...fs, { ...file, dirty: false }];
+      setActive(newFiles.length - 1);
+      return newFiles;
     });
-
-    lintWorker.current = new Worker(new URL('../../workers/webLints.worker.ts', import.meta.url), { type: 'module' });
-    runWorker.current = new Worker(new URL('../../workers/jsRunner.ts', import.meta.url), { type: 'module' });
-
-    lintWorker.current.onmessage = (e) => {
-      if (e.data.type === 'format') setCode(e.data.formatted);
-      if (e.data.type === 'lint') setLint(e.data.messages);
-    };
-
-    runWorker.current.onmessage = (e) => {
-      const { type, message } = e.data;
-      setConsoleOutput((prev) => [...prev, `${type}: ${message}`]);
-    };
-
-    return () => {
-      lintWorker.current?.terminate();
-      runWorker.current?.terminate();
-    };
-  }, []);
-
-  const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const val = e.target.value;
-    setCode(val);
-    saveProject(val);
+    updateMru(file.name);
   };
 
-  const format = () => lintWorker.current?.postMessage({ type: 'format', code });
-  const lintCodeFn = () => lintWorker.current?.postMessage({ type: 'lint', code });
-  const run = () => {
-    setConsoleOutput([]);
-    runWorker.current?.postMessage(code);
+  const save = async () => {
+    const file = files[active];
+    if (!file) return;
+    await saveWorkspaceFile(file.handle, file.content);
+    setFiles((fs) => fs.map((f, i) => (i === active ? { ...f, dirty: false } : f)));
+    updateMru(file.name);
   };
+
+  const onChange = (value: string | undefined) => {
+    const val = value ?? '';
+    setFiles((fs) => fs.map((f, i) => (i === active ? { ...f, content: val, dirty: true } : f)));
+  };
+
+  const activeFile = files[active];
 
   return (
     <div className="h-full w-full flex flex-col">
-      <div className="flex space-x-2 p-2 bg-gray-200">
-        <button className="px-2 py-1 bg-white rounded" onClick={format}>
-          Format
+      <div className="flex items-center space-x-2 p-2 bg-gray-200">
+        <button className="px-2 py-1 bg-white rounded" onClick={open}>
+          Open
         </button>
-        <button className="px-2 py-1 bg-white rounded" onClick={lintCodeFn}>
-          Lint
-        </button>
-        <button className="px-2 py-1 bg-white rounded" onClick={run}>
-          Run JS
+        <button
+          className="px-2 py-1 bg-white rounded"
+          onClick={save}
+          disabled={!activeFile || !activeFile.dirty}
+        >
+          Save
         </button>
       </div>
-      <textarea value={code} onChange={onChange} className="flex-1 font-mono p-2" />
-      <div className="h-40 overflow-auto border-t text-sm p-2 bg-black text-green-400 font-mono">
-        {lint.map((m, i) => (
-          <div key={i}>{`Line ${m.line}: ${m.message}`}</div>
-        ))}
-        {consoleOutput.map((m, i) => (
-          <div key={`c${i}`}>{m}</div>
+      <div className="flex space-x-1 bg-gray-100 px-2">
+        {files.map((f, i) => (
+          <div
+            key={i}
+            className={`px-2 py-1 cursor-pointer ${i === active ? 'bg-white' : 'bg-gray-300'}`}
+            onClick={() => setActive(i)}
+          >
+            {f.name}{f.dirty ? '*' : ''}
+          </div>
         ))}
       </div>
+      <div className="flex-1">
+        {activeFile && (
+          <Monaco
+            language="javascript"
+            value={activeFile.content}
+            onChange={onChange}
+            theme="vs-dark"
+            height="100%"
+          />
+        )}
+      </div>
+      {mru.length > 0 && (
+        <div className="p-2 bg-gray-200 text-xs">
+          Recent: {mru.join(', ')}
+        </div>
+      )}
     </div>
   );
 }
