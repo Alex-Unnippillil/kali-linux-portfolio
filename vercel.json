@@ -6,5 +6,6 @@
   },
   "env": {
     "FLAGS_SECRET": "@flags_secret"
+
   }
 }
