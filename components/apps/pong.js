@@ -11,9 +11,9 @@ const WIN_POINTS = 5; // points to win a game
 const MAX_BALL_SPEED = 600; // maximum ball speed in px/s
 const HIT_SPEEDUP = 1.05; // speed multiplier when the ball hits a paddle
 
-// Dynamic trail length based on ball speed
-const MIN_TRAIL = 2;
-const MAX_TRAIL = 8;
+// Dynamic trail length based on ball speed (1-2 frame trail)
+const MIN_TRAIL = 1;
+const MAX_TRAIL = 2;
 
 // Pong component with spin, adjustable AI and experimental WebRTC multiplayer
 const WIDTH = 600;
@@ -95,6 +95,37 @@ const Pong = () => {
     );
 
   const controls = useRef(useGameControls(canvasRef));
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+    const handleTouch = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      controls.current.touchY = null;
+      controls.current.touchY2 = null;
+      for (let i = 0; i < e.touches.length; i += 1) {
+        const t = e.touches[i];
+        const x = t.clientX - rect.left;
+        const y = t.clientY - rect.top;
+        if (x < rect.width / 2) controls.current.touchY = y;
+        else controls.current.touchY2 = y;
+      }
+    };
+    const endTouch = () => {
+      controls.current.touchY = null;
+      controls.current.touchY2 = null;
+    };
+    canvas.addEventListener('touchstart', handleTouch);
+    canvas.addEventListener('touchmove', handleTouch);
+    canvas.addEventListener('touchend', endTouch);
+    canvas.addEventListener('touchcancel', endTouch);
+    return () => {
+      canvas.removeEventListener('touchstart', handleTouch);
+      canvas.removeEventListener('touchmove', handleTouch);
+      canvas.removeEventListener('touchend', endTouch);
+      canvas.removeEventListener('touchcancel', endTouch);
+    };
+  }, []);
 
   useEffect(() => {
     if (mode !== 'online' || !channelRef.current) return undefined;
@@ -343,7 +374,7 @@ const Pong = () => {
       const p1 = {
         up: controls.current.keys['ArrowUp'],
         down: controls.current.keys['ArrowDown'],
-        touchY: null,
+        touchY: controls.current.touchY ?? null,
       };
       applyInputs(player, p1, dt);
 
@@ -364,7 +395,7 @@ const Pong = () => {
         const p2 = {
           up: controls.current.keys['w'] || controls.current.keys['W'],
           down: controls.current.keys['s'] || controls.current.keys['S'],
-          touchY: null,
+          touchY: controls.current.touchY2 ?? null,
         };
         applyInputs(opponent, p2, dt);
       } else if (mode === 'online') {
@@ -635,12 +666,12 @@ const Pong = () => {
         className="bg-black w-full h-full touch-none"
       />
       {mode === 'practice' ? (
-        <div className="mt-2" aria-live="polite" role="status">
+        <div className="mt-2 font-mono text-center" aria-live="polite" role="status">
           Rally: {rally} (Best: {highScore})
         </div>
       ) : (
         <>
-          <div className="mt-2" aria-live="polite" role="status">
+          <div className="mt-2 font-mono text-center" aria-live="polite" role="status">
             {mode === 'local'
               ? `P1: ${scores.player} | P2: ${scores.opponent}`
               : `Player: ${scores.player} | Opponent: ${scores.opponent}`}
