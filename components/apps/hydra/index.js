@@ -24,6 +24,22 @@ const saveWordlists = (key, lists) => {
   localStorage.setItem(key, JSON.stringify(lists));
 };
 
+const loadSession = () => {
+  try {
+    return JSON.parse(localStorage.getItem('hydra/session') || 'null');
+  } catch {
+    return null;
+  }
+};
+
+const saveSession = (session) => {
+  localStorage.setItem('hydra/session', JSON.stringify(session));
+};
+
+const clearSession = () => {
+  localStorage.removeItem('hydra/session');
+};
+
 const HydraApp = () => {
   const [target, setTarget] = useState('');
   const [service, setService] = useState('ssh');
@@ -43,6 +59,7 @@ const HydraApp = () => {
   const [announce, setAnnounce] = useState('');
   const announceRef = useRef(0);
   const [timeline, setTimeline] = useState([]);
+  const [initialAttempt, setInitialAttempt] = useState(0);
   const startRef = useRef(null);
   const [charset, setCharset] = useState('abc123');
   const [rule, setRule] = useState('1:3');
@@ -64,6 +81,62 @@ const HydraApp = () => {
   useEffect(() => {
     saveWordlists('hydraPassLists', passLists);
   }, [passLists]);
+
+  const resumeAttack = async (session) => {
+    const user = userLists.find((l) => l.name === session.selectedUser);
+    const pass = passLists.find((l) => l.name === session.selectedPass);
+    if (!user || !pass) return;
+
+    setRunning(true);
+    setPaused(false);
+    setRunId((id) => id + 1);
+    setAnnounce('Hydra resumed');
+    announceRef.current = Date.now();
+    try {
+      if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+        const res = await fetch('/api/hydra', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            target: session.target,
+            service: session.service,
+            userList: user.content,
+            passList: pass.content,
+            resume: true,
+          }),
+        });
+        const data = await res.json();
+        setOutput(data.output || data.error || 'No output');
+        setAnnounce('Hydra finished');
+      } else {
+        setOutput('Hydra demo output: feature disabled in static export');
+        setAnnounce('Hydra finished (demo)');
+      }
+    } catch (err) {
+      setOutput(err.message);
+      setAnnounce('Hydra failed');
+    } finally {
+      setRunning(false);
+      clearSession();
+    }
+  };
+
+  useEffect(() => {
+    const session = loadSession();
+    if (session && userLists.length && passLists.length) {
+      setTarget(session.target || '');
+      setService(session.service || 'ssh');
+      setSelectedUser(session.selectedUser || '');
+      setSelectedPass(session.selectedPass || '');
+      setTimeline(session.timeline || []);
+      setInitialAttempt(session.attempt || 0);
+      const lastTime = session.timeline?.slice(-1)[0]?.time || 0;
+      startRef.current = Date.now() - lastTime * 1000;
+      resumeAttack(session);
+    }
+    // resumeAttack is stable
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userLists, passLists]);
 
   useEffect(() => {
     if (userLists.length && !selectedUser) {
@@ -170,10 +243,21 @@ const HydraApp = () => {
           : attempt >= BACKOFF_THRESHOLD
           ? 'throttled'
           : 'attempt';
-      setTimeline((t) => [
-        ...t,
-        { time: parseFloat(elapsed), user, password, result },
-      ]);
+      setTimeline((t) => {
+        const newTimeline = [
+          ...t,
+          { time: parseFloat(elapsed), user, password, result },
+        ];
+        saveSession({
+          target,
+          service,
+          selectedUser,
+          selectedPass,
+          attempt,
+          timeline: newTimeline,
+        });
+        return newTimeline;
+      });
     }
     if (now - announceRef.current > 1000) {
       const limit = Math.min(LOCKOUT_THRESHOLD, totalAttempts);
@@ -196,6 +280,15 @@ const HydraApp = () => {
     setOutput('');
     setTimeline([]);
     startRef.current = Date.now();
+    setInitialAttempt(0);
+    saveSession({
+      target,
+      service,
+      selectedUser,
+      selectedPass,
+      attempt: 0,
+      timeline: [],
+    });
     setAnnounce('Hydra started');
     announceRef.current = Date.now();
     try {
@@ -222,6 +315,7 @@ const HydraApp = () => {
       setAnnounce('Hydra failed');
     } finally {
       setRunning(false);
+      clearSession();
     }
   };
 
@@ -283,6 +377,7 @@ const HydraApp = () => {
       });
     }
     setAnnounce('Hydra cancelled');
+    clearSession();
   };
 
   return (
@@ -462,6 +557,7 @@ const HydraApp = () => {
         backoffThreshold={BACKOFF_THRESHOLD}
         lockoutThreshold={LOCKOUT_THRESHOLD}
         runId={runId}
+        initialAttempt={initialAttempt}
         onAttemptChange={handleAttempt}
       />
       <p className="mt-2 text-sm text-yellow-300">

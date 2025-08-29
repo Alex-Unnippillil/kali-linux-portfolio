@@ -79,3 +79,52 @@ describe('Hydra pause and resume', () => {
     });
   });
 });
+
+describe('Hydra session restore', () => {
+  beforeEach(() => {
+    localStorage.setItem(
+      'hydraUserLists',
+      JSON.stringify([{ name: 'u', content: 'a' }])
+    );
+    localStorage.setItem(
+      'hydraPassLists',
+      JSON.stringify([{ name: 'p', content: 'b' }])
+    );
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it('resumes attack from saved session', async () => {
+    let runResolve: Function = () => {};
+    // @ts-ignore
+    global.fetch = jest.fn((url, options) => {
+      if (options && options.body && options.body.includes('resume')) {
+        return Promise.resolve({ json: async () => ({ output: '' }) });
+      }
+      return new Promise((resolve) => {
+        runResolve = () => resolve({ json: async () => ({ output: '' }) });
+      });
+    });
+
+    const { unmount } = render(<HydraApp />);
+    fireEvent.change(screen.getByPlaceholderText('192.168.0.1'), {
+      target: { value: '1.1.1.1' },
+    });
+    fireEvent.click(screen.getByText('Run Hydra'));
+    expect(localStorage.getItem('hydra/session')).toBeTruthy();
+
+    unmount();
+    render(<HydraApp />);
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/hydra',
+      expect.objectContaining({ body: expect.stringContaining('resume') })
+    );
+
+    await act(async () => {
+      runResolve();
+    });
+  });
+});
