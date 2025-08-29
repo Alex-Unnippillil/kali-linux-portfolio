@@ -328,7 +328,7 @@ keyboard hotkeys.
 | Blackjack | /apps/blackjack | Game |
 | Breakout | /apps/breakout | Game |
 | Candy Crush | /apps/candy-crush | Game |
-| Car Racer | /apps/car-racer | Game |
+| Car Racer | /apps/car-racer | Game - ghost replays, lane assist, drift scoring |
 | Checkers | /apps/checkers | Game |
 | Chess | /apps/chess | Game |
 | Connect Four | /apps/connect-four | Game |
