@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import PseudoDisasmViewer from './PseudoDisasmViewer';
 import FunctionTree from './FunctionTree';
 import CallGraph from './CallGraph';
+import ImportAnnotate from './ImportAnnotate';
 
 // Applies S1–S8 guidelines for responsive and accessible binary analysis UI
 const DEFAULT_WASM = '/wasm/ghidra.wasm';
@@ -294,6 +295,9 @@ export default function GhidraApp() {
         >
           Use Capstone
         </button>
+      </div>
+      <div className="p-2 border-t border-gray-700">
+        <ImportAnnotate />
       </div>
       <div className="flex flex-1">
         <div className="w-1/4 border-r border-gray-700 overflow-auto">
