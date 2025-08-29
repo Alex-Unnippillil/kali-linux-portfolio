@@ -146,6 +146,8 @@ const ContactApp: React.FC = () => {
   const [toast, setToast] = useState('');
   const [csrfToken, setCsrfToken] = useState('');
   const [fallback, setFallback] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [messageError, setMessageError] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -171,6 +173,24 @@ const ContactApp: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setEmailError('');
+    setMessageError('');
+
+    const emailResult = contactSchema.shape.email.safeParse(email);
+    const messageResult = contactSchema.shape.message.safeParse(message);
+    let hasValidationError = false;
+    if (!emailResult.success) {
+      setEmailError('Please enter a valid email address.');
+      hasValidationError = true;
+    }
+    if (!messageResult.success) {
+      setMessageError('Message must be between 1 and 1000 characters.');
+      hasValidationError = true;
+    }
+    if (hasValidationError) {
+      setToast('Failed to send');
+      return;
+    }
     const totalSize = attachments.reduce((s, f) => s + f.size, 0);
     if (totalSize > MAX_TOTAL_ATTACHMENT_SIZE) {
       setError(
@@ -274,7 +294,11 @@ const ContactApp: React.FC = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            aria-describedby={emailError ? 'contact-email-error' : undefined}
           />
+          {emailError && (
+            <FormError id="contact-email-error">{emailError}</FormError>
+          )}
         </div>
         <div>
           <label htmlFor="contact-message" className="mb-1 block text-sm">Message</label>
@@ -285,7 +309,11 @@ const ContactApp: React.FC = () => {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             required
+            aria-describedby={messageError ? 'contact-message-error' : undefined}
           />
+          {messageError && (
+            <FormError id="contact-message-error">{messageError}</FormError>
+          )}
         </div>
         <AttachmentUploader
           attachments={attachments}
