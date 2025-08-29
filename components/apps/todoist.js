@@ -1,7 +1,10 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as chrono from 'chrono-node';
-
-const STORAGE_KEY = 'portfolio-tasks';
+import {
+  loadTasks,
+  saveGroups,
+  syncWithServer,
+} from '../../apps/todoist/utils/db';
 
 const initialGroups = {
   Today: [],
@@ -30,6 +33,7 @@ export default function Todoist() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [view, setView] = useState('all');
+  const [conflicts, setConflicts] = useState([]);
   const dragged = useRef({ group: '', id: null, title: '' });
   const liveRef = useRef(null);
   const workerRef = useRef(null);
@@ -40,16 +44,22 @@ export default function Todoist() {
   );
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const data = localStorage.getItem(STORAGE_KEY);
+    loadTasks().then((data) => {
       if (data) {
-        try {
-          setGroups({ ...initialGroups, ...JSON.parse(data) });
-        } catch {
-          // ignore bad data
-        }
+        setGroups({ ...initialGroups, ...data });
       }
-    }
+    });
+  }, []);
+
+  useEffect(() => {
+    const handler = async () => {
+      const { groups: synced, conflicts: c } = await syncWithServer();
+      setGroups(synced);
+      setConflicts(c);
+    };
+    handler();
+    window.addEventListener('online', handler);
+    return () => window.removeEventListener('online', handler);
   }, []);
 
   useEffect(() => {
@@ -89,13 +99,7 @@ export default function Todoist() {
   const finalizeMove = useCallback(
     (newGroups, taskTitle, to) => {
       setGroups(newGroups);
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
-        } catch {
-          // ignore
-        }
-      }
+      saveGroups(newGroups);
       announce(taskTitle, to);
       if (!prefersReducedMotion.current) {
         requestAnimationFrame(() => {
@@ -136,6 +140,7 @@ export default function Todoist() {
     const index = newGroups[from].findIndex((t) => t.id === id);
     if (index > -1) {
       const [task] = newGroups[from].splice(index, 1);
+      task.updatedAt = Date.now();
       newGroups[to].push(task);
     }
     return newGroups;
@@ -204,19 +209,26 @@ export default function Todoist() {
       [group]: groups[group].map((t) => {
         if (t.id !== id) return t;
         if (t.recurring) {
-          return { ...t, due: getNextDue(t) };
+          return { ...t, due: getNextDue(t), updatedAt: Date.now() };
         }
-        return { ...t, completed: !t.completed };
+        return { ...t, completed: !t.completed, updatedAt: Date.now() };
       }),
     };
     setGroups(newGroups);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
-      } catch {
-        // ignore
-      }
-    }
+    saveGroups(newGroups);
+  };
+
+  const editTask = (group, id) => {
+    const title = typeof window !== 'undefined' ? window.prompt('Edit task') : null;
+    if (!title) return;
+    const newGroups = {
+      ...groups,
+      [group]: groups[group].map((t) =>
+        t.id === id ? { ...t, title, updatedAt: Date.now() } : t
+      ),
+    };
+    setGroups(newGroups);
+    saveGroups(newGroups);
   };
 
   const handleAdd = (e) => {
@@ -231,6 +243,7 @@ export default function Todoist() {
       section: form.section || undefined,
       recurring: form.recurring || undefined,
       completed: false,
+      updatedAt: Date.now(),
     };
     const newGroups = {
       ...groups,
@@ -293,6 +306,7 @@ export default function Todoist() {
       section,
       recurring,
       completed: false,
+      updatedAt: Date.now(),
     };
     const newGroups = {
       ...groups,
@@ -325,11 +339,14 @@ export default function Todoist() {
     reader.onload = () => {
       try {
         const parsed = JSON.parse(reader.result);
+        Object.values(parsed).forEach((arr) =>
+          arr.forEach((t) => {
+            if (!t.updatedAt) t.updatedAt = Date.now();
+          })
+        );
         const newGroups = { ...initialGroups, ...parsed };
         setGroups(newGroups);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
-        }
+        saveGroups(newGroups);
       } catch {
         // ignore
       }
@@ -356,6 +373,7 @@ export default function Todoist() {
       onKeyDown={handleKeyDown(group, task)}
       className="mb-2 p-2 rounded shadow bg-white text-black flex items-center min-h-[44px] focus:outline-none focus:ring-2 focus:ring-blue-500"
       role="listitem"
+      onDoubleClick={() => editTask(group, task.id)}
     >
       <input
         type="checkbox"
@@ -417,6 +435,12 @@ export default function Todoist() {
 
   return (
     <div className="flex h-full w-full flex-col" role="application">
+      {conflicts.length > 0 && (
+        <div className="bg-yellow-200 text-black p-2 text-sm">
+          {`Conflicts detected for ${conflicts.length} task${
+            conflicts.length > 1 ? 's' : ''}.`}
+        </div>
+      )}
       <div aria-live="polite" className="sr-only" ref={liveRef} />
       <div className="p-2 border-b flex flex-col gap-2">
         <form onSubmit={handleQuickAdd} className="flex gap-2">
