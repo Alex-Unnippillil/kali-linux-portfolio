@@ -13,8 +13,15 @@
   <div id="hud" style="position:fixed;top:10px;left:10px;font-family:monospace;">
     <div id="score">Score: 0</div>
     <div id="level">Level: 1</div>
+    <div style="margin-top:4px;width:100px;height:6px;border:1px solid #fff;">
+      <div id="shield" style="background:cyan;height:100%;width:0;"></div>
+    </div>
+    <label style="display:block;margin-top:4px;font-size:12px;">
+      <input type="checkbox" id="particlesToggle" checked /> particles
+    </label>
     <div id="controls" style="margin-top:4px;">
       Move: arrows or left stick. Shoot: space or buttons. Pause: P or Start.
+      Hyperspace: H or B. Shield: S or X.
     </div>
   </div>
   <div id="paused" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-family:monospace;">
