@@ -141,6 +141,7 @@ const Blackjack = () => {
   const [penetration, setPenetration] = useState(0.75);
   const gameRef = useRef(new BlackjackGame({ bankroll: 1000, penetration }));
   const [bet, setBet] = useState(0);
+  const [handCount, setHandCount] = useState(1);
   const [message, setMessage] = useState('Place your bet');
   const [dealerHand, setDealerHand] = useState([]);
   const [playerHands, setPlayerHands] = useState([]);
@@ -165,7 +166,7 @@ const Blackjack = () => {
   });
 
   const bankroll = gameRef.current.bankroll;
-  const availableBankroll = bankroll - bet;
+  const availableBankroll = bankroll - (playerHands.length === 0 ? bet * handCount : 0);
 
   const update = () => {
     setDealerHand([...gameRef.current.dealerHand]);
@@ -184,8 +185,8 @@ const Blackjack = () => {
     try {
       setShuffling(true);
       setTimeout(() => setShuffling(false), 500);
-      gameRef.current.startRound(bet);
-      ReactGA.event({ category: 'Blackjack', action: 'hand_start', value: bet });
+      gameRef.current.startRound(bet, undefined, handCount);
+      ReactGA.event({ category: 'Blackjack', action: 'hand_start', value: bet * handCount });
       setMessage('Hit, Stand, Double, Split or Surrender');
       setShowInsurance(gameRef.current.dealerHand[0].value === 'A');
       update();
@@ -265,7 +266,7 @@ const Blackjack = () => {
       if (practice) return;
       if (['1', '2', '3', '4'].includes(e.key) && bet >= 0 && playerHands.length === 0) {
         const val = CHIP_VALUES[parseInt(e.key, 10) - 1];
-        if (bet + val <= bankroll) setBet(bet + val);
+        if (bet + val <= bankroll / handCount) setBet(bet + val);
       }
       if (e.key === 'Enter' && playerHands.length === 0 && bet > 0) start();
       if (playerHands.length > 0) {
@@ -351,23 +352,24 @@ const Blackjack = () => {
           <label className="flex items-center space-x-1">
             <span className="text-sm">Pen</span>
             <input
-              type="number"
+              type="range"
               step="0.05"
-            min="0.5"
-            max="0.95"
-            value={penetration}
-            onChange={(e) => {
-              const val = parseFloat(e.target.value);
-              if (!Number.isNaN(val)) setPenetration(val);
-            }}
-            className="w-16 text-black px-1"
-          />
-        </label>
-      </div>
+              min="0.5"
+              max="0.95"
+              value={penetration}
+              onChange={(e) => {
+                const val = parseFloat(e.target.value);
+                if (!Number.isNaN(val)) setPenetration(val);
+              }}
+              className="w-24"
+            />
+            <span className="text-sm">{(penetration * 100).toFixed(0)}%</span>
+          </label>
+        </div>
       {playerHands.length === 0 ? (
         <div className="mb-4">
           <div className="mb-2 flex items-center space-x-2" aria-live="polite" role="status">
-            <span>Bet: {bet}</span>
+            <span>Bet: {bet} x {handCount}</span>
             <BetChips amount={bet} />
           </div>
           <div className="flex space-x-2 mb-2">
@@ -375,9 +377,9 @@ const Blackjack = () => {
               <button
                 key={v}
                 className={`chip ${CHIP_COLORS[v]} ${
-                  bet + v > bankroll ? 'opacity-50 cursor-not-allowed' : ''
+                  bet + v > bankroll / handCount ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
-                onClick={() => bet + v <= bankroll && setBet(bet + v)}
+                onClick={() => bet + v <= bankroll / handCount && setBet(bet + v)}
                 aria-label={`Add ${v} chip`}
               >
                 {v}
@@ -386,6 +388,20 @@ const Blackjack = () => {
             <button className="px-2 py-1 bg-gray-700" onClick={() => setBet(0)}>
               Clear
             </button>
+            <label className="flex items-center space-x-1">
+              <span className="text-sm">Hands</span>
+              <input
+                type="number"
+                min="1"
+                max="4"
+                value={handCount}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  if (!Number.isNaN(val)) setHandCount(val);
+                }}
+                className="w-12 text-black px-1"
+              />
+            </label>
             <button className="px-2 py-1 bg-gray-700" onClick={start} disabled={bet === 0}>
               Deal
             </button>

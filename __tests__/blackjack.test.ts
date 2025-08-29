@@ -78,6 +78,13 @@ describe('Game actions', () => {
     expect(game.stats.losses).toBe(1);
   });
 
+  test('startRound supports multiple hands', () => {
+    const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
+    game.startRound(100, undefined, 2);
+    expect(game.playerHands.length).toBe(2);
+    expect(game.bankroll).toBe(800);
+  });
+
   test('insurance pays 2:1 on dealer blackjack', () => {
     const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
     const deck = [card('10'), card('10'), card('A'), card('10')];
