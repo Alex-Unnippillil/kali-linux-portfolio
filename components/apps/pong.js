@@ -2,7 +2,8 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import useGameControls from './useGameControls';
 import usePersistentState from '../../hooks/usePersistentState';
-import { computeBallSpin } from '../../utils/physics';
+import { useSettings } from '../../hooks/useSettings';
+import { getBallSpin } from '../../games/pong/physics';
 
 // Basic timing constants so the simulation is consistent across refresh rates
 const FRAME_TIME = 1000 / 60; // ideal frame time in ms
@@ -38,6 +39,7 @@ const Pong = () => {
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   const [rally, setRally] = useState(0);
+  const { pongSpin } = useSettings();
   const [highScore, setHighScore] = usePersistentState(
     'pong_highscore',
     0,
@@ -112,7 +114,7 @@ const Pong = () => {
       window.removeEventListener('keydown', send);
       window.removeEventListener('keyup', send);
     };
-  }, [mode]);
+  }, [mode, pongSpin]);
 
   // Main game effect
   useEffect(() => {
@@ -405,18 +407,19 @@ const Pong = () => {
 
       const paddleCollision = (pad, dir) => {
         setRally((r) => r + 1);
-        const { spin, relative } = computeBallSpin(
+        const { spin, relative } = getBallSpin(
           ball.y,
           pad.y,
           paddleHeight,
-          pad.vy
+          pad.vy,
+          pongSpin,
         );
         ball.vx = Math.abs(ball.vx) * dir;
         ball.vy += spin;
         if (!prefersReducedMotion) {
           pad.scale = 1.2;
           pad.widthScale = 0.8;
-          pad.rot = relative * 0.3;
+          pad.rot = pongSpin ? relative * 0.3 : 0;
           ball.scale = 1.2;
         }
         const impact = Math.hypot(ball.vx, ball.vy);
