@@ -6,6 +6,7 @@ import Standard from 'figlet/importable-fonts/Standard.js';
 import Slant from 'figlet/importable-fonts/Slant.js';
 import Big from 'figlet/importable-fonts/Big.js';
 import { useRouter } from 'next/router';
+import ColorMaps from './components/ColorMaps';
 
 // preload a small set of fonts
 const fontData: Record<string, any> = {
@@ -17,6 +18,15 @@ Object.entries(fontData).forEach(([name, data]) => figlet.parseFont(name, data))
 const fontList = Object.keys(fontData);
 
 const ramp = '@%#*+=-:. ';
+
+// pick readable text color for a given background
+const getTextColor = (hex: string) => {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+  return luminance > 128 ? '#000' : '#fff';
+};
 
 function download(text: string, filename: string) {
   const blob = new Blob([text], { type: 'text/plain' });
@@ -37,8 +47,11 @@ const AsciiArtApp = () => {
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [imgOutput, setImgOutput] = useState('');
+  const [imgHtml, setImgHtml] = useState('');
   const [brightness, setBrightness] = useState(0); // -1 to 1
   const [contrast, setContrast] = useState(1); // 0 to 2
+  const [palette, setPalette] = useState<string[]>(['#000000', '#ffffff']);
+  const [colorMode, setColorMode] = useState<'text' | 'background'>('text');
 
   // load from query string on first render
   useEffect(() => {
@@ -115,7 +128,9 @@ const AsciiArtApp = () => {
     const { width, height } = canvas;
     const data = ctx.getImageData(0, 0, width, height).data;
     let result = '';
+    const htmlLines: string[] = [];
     for (let y = 0; y < height; y += 1) {
+      let htmlLine = '';
       for (let x = 0; x < width; x += 1) {
         const idx = (y * width + x) * 4;
         let val = (data[idx] + data[idx + 1] + data[idx + 2]) / 3 / 255; // 0-1
@@ -123,16 +138,28 @@ const AsciiArtApp = () => {
         val = (val - 0.5) * contrast + 0.5; // apply contrast
         val = Math.min(1, Math.max(0, val));
         const charIdx = Math.floor((1 - val) * (ramp.length - 1));
-        result += ramp[charIdx];
+        const ch = ramp[charIdx];
+        result += ch;
+        const colorIdx = Math.floor(val * (palette.length - 1));
+        const color = palette[colorIdx];
+        const safeChar = ch === ' ' ? '&nbsp;' : ch;
+        if (colorMode === 'text') {
+          htmlLine += `<span style="color:${color}">${safeChar}</span>`;
+        } else {
+          const fg = getTextColor(color);
+          htmlLine += `<span style="background-color:${color};color:${fg}">${safeChar}</span>`;
+        }
       }
       result += '\n';
+      htmlLines.push(htmlLine);
     }
     setImgOutput(result);
+    setImgHtml(htmlLines.join('<br/>'));
   };
 
   useEffect(() => {
     renderImageAscii();
-  }, [brightness, contrast]);
+  }, [brightness, contrast, palette, colorMode]);
 
   return (
     <div className="p-4 bg-gray-900 text-white h-full overflow-auto font-mono">
@@ -212,6 +239,12 @@ const AsciiArtApp = () => {
               onChange={(e) => setContrast(Number(e.target.value))}
             />
           </div>
+          <ColorMaps
+            onChange={setPalette}
+            mode={colorMode}
+            setMode={setColorMode}
+            html={imgHtml}
+          />
           <div className="flex gap-2">
             <button
               className="px-2 py-1 bg-blue-700 rounded"
@@ -227,9 +260,10 @@ const AsciiArtApp = () => {
             </button>
           </div>
           <canvas ref={canvasRef} className="hidden" />
-          <pre className="bg-black text-green-400 p-2 whitespace-pre overflow-auto">
-            {imgOutput}
-          </pre>
+          <pre
+            className="bg-black p-2 whitespace-pre overflow-auto"
+            dangerouslySetInnerHTML={{ __html: imgHtml }}
+          />
         </div>
       )}
     </div>
