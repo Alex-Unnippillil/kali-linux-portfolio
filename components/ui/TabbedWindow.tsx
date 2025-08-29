@@ -121,6 +121,25 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
       closeTab(activeId);
       return;
     }
+    if (e.ctrlKey && e.key.toLowerCase() === 't') {
+      e.preventDefault();
+      addTab();
+      return;
+    }
+    if (e.ctrlKey && e.key === 'Tab') {
+      e.preventDefault();
+      setTabs((prev) => {
+        if (prev.length === 0) return prev;
+        const idx = prev.findIndex((t) => t.id === activeId);
+        const nextIdx = e.shiftKey
+          ? (idx - 1 + prev.length) % prev.length
+          : (idx + 1) % prev.length;
+        const nextTab = prev[nextIdx];
+        setActiveId(nextTab.id);
+        return prev;
+      });
+      return;
+    }
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault();
       setTabs((prev) => {
