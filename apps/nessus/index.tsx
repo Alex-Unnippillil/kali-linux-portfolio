@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { toPng } from 'html-to-image';
+import ReportImporter from './components/ReportImporter';
 
 interface Plugin {
   id: number;
@@ -128,6 +129,11 @@ const Nessus: React.FC = () => {
   return (
     <div className="p-4 bg-gray-900 text-white min-h-screen space-y-6">
       <h1 className="text-2xl">Nessus Demo</h1>
+
+      <section>
+        <h2 className="text-xl mb-2">Report Importer</h2>
+        <ReportImporter />
+      </section>
 
       <section>
         <h2 className="text-xl mb-2">Plugin Feed</h2>
