@@ -1,10 +1,12 @@
-export interface LeaderboardEntry {
-  name: string;
-  score: number;
-}
+import {
+  LeaderboardEntry,
+  getLeaderboard,
+  recordScore as baseRecordScore,
+} from '../components/apps/Games/common/leaderboard';
+import { broadcastLeaderboard } from './sync';
 
 const SEED_PREFIX = 'dailySeed:';
-const LEADERBOARD_PREFIX = 'leaderboard:';
+const COMPLETE_PREFIX = 'dailyComplete:';
 
 // Simple deterministic hash for string
 const hash = (str: string): string => {
@@ -30,34 +32,44 @@ export const getDailySeed = (gameId: string, date: Date = new Date()): string =>
   return seed;
 };
 
-export const getLeaderboard = (gameId: string): LeaderboardEntry[] => {
-  if (typeof window === 'undefined') return [];
+export { getLeaderboard };
+
+export const hasCompleted = (
+  gameId: string,
+  date: Date = new Date(),
+): boolean => {
+  if (typeof window === 'undefined') return false;
+  const day = date.toISOString().split('T')[0];
   try {
-    const raw = window.localStorage.getItem(`${LEADERBOARD_PREFIX}${gameId}`);
-    if (!raw) return [];
-    return JSON.parse(raw) as LeaderboardEntry[];
+    return window.localStorage.getItem(
+      `${COMPLETE_PREFIX}${gameId}:${day}`
+    ) === '1';
   } catch {
-    return [];
+    return false;
   }
 };
 
-export const recordScore = (
+export const recordCompletion = (
   gameId: string,
   name: string,
   score: number,
-  limit = 10
+  date: Date = new Date(),
+  limit = 10,
 ): LeaderboardEntry[] => {
-  const board = getLeaderboard(gameId);
-  board.push({ name, score });
-  board.sort((a, b) => b.score - a.score);
-  const trimmed = board.slice(0, limit);
-  try {
-    window.localStorage.setItem(
-      `${LEADERBOARD_PREFIX}${gameId}`,
-      JSON.stringify(trimmed)
-    );
-  } catch {
-    /* ignore storage errors */
+  const board = baseRecordScore(gameId, name, score, limit);
+  if (typeof window !== 'undefined') {
+    try {
+      const day = date.toISOString().split('T')[0];
+      window.localStorage.setItem(
+        `${COMPLETE_PREFIX}${gameId}:${day}`,
+        '1',
+      );
+    } catch {
+      /* ignore storage errors */
+    }
   }
-  return trimmed;
+  broadcastLeaderboard(board);
+  return board;
 };
+
+export { LeaderboardEntry };
