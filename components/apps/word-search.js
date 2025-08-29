@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import seedrandom from 'seedrandom';
-import useOPFS from '../../hooks/useOPFS.js';
+import React, { useState, useEffect, useRef } from "react";
+import seedrandom from "seedrandom";
+import useOPFS from "../../hooks/useOPFS.js";
 
 // Approximate pixel size of each grid cell for SVG overlay calculations
 const CELL_SIZE = 32;
@@ -8,64 +8,55 @@ const GAP_SIZE = 4; // grid gap-1 in pixels
 
 const DEFAULT_LISTS = {
   tech: {
-    language: 'en',
+    language: "en",
     words: [
-      'REACT',
-      'CODE',
-      'TAILWIND',
-      'NODE',
-      'JAVASCRIPT',
-      'HTML',
-      'CSS',
-      'PYTHON',
+      "REACT",
+      "CODE",
+      "TAILWIND",
+      "NODE",
+      "JAVASCRIPT",
+      "HTML",
+      "CSS",
+      "PYTHON",
     ],
   },
   animals: {
-    language: 'en',
-    words: [
-      'DOG',
-      'CAT',
-      'EAGLE',
-      'TIGER',
-      'HORSE',
-      'SHARK',
-      'SNAKE',
-      'LION',
-    ],
+    language: "en",
+    words: ["DOG", "CAT", "EAGLE", "TIGER", "HORSE", "SHARK", "SNAKE", "LION"],
   },
   fruits: {
-    language: 'en',
+    language: "en",
     words: [
-      'APPLE',
-      'BANANA',
-      'ORANGE',
-      'GRAPE',
-      'MANGO',
-      'LEMON',
-      'PEACH',
-      'CHERRY',
+      "APPLE",
+      "BANANA",
+      "ORANGE",
+      "GRAPE",
+      "MANGO",
+      "LEMON",
+      "PEACH",
+      "CHERRY",
     ],
   },
   colors: {
-    language: 'en',
+    language: "en",
     words: [
-      'RED',
-      'BLUE',
-      'GREEN',
-      'YELLOW',
-      'PURPLE',
-      'ORANGE',
-      'BLACK',
-      'WHITE',
+      "RED",
+      "BLUE",
+      "GREEN",
+      "YELLOW",
+      "PURPLE",
+      "ORANGE",
+      "BLACK",
+      "WHITE",
     ],
   },
 };
 
 const ALPHABETS = {
-  en: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-  es: 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ',
-  fr: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-  de: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+  en: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  es: "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ",
+  fr: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  de: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
 };
 
 const DIFFICULTIES = {
@@ -76,7 +67,7 @@ const DIFFICULTIES = {
 
 const usePersistentState = (key, initial) => {
   const [state, setState] = useState(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       const stored = window.localStorage.getItem(key);
       if (stored) {
         try {
@@ -86,11 +77,11 @@ const usePersistentState = (key, initial) => {
         }
       }
     }
-    return typeof initial === 'function' ? initial() : initial;
+    return typeof initial === "function" ? initial() : initial;
   });
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       window.localStorage.setItem(key, JSON.stringify(state));
     }
   }, [key, state]);
@@ -106,40 +97,57 @@ const pickWords = (count, list, rng, lists, language) => {
     const available = Object.values(lists).filter(
       (l) => !language || l.language === language,
     );
-    const chosen =
-      available[Math.floor(rng() * available.length)]?.words || [];
+    const chosen = available[Math.floor(rng() * available.length)]?.words || [];
     pool = chosen;
   }
-  return [...pool]
-    .sort(() => rng() - 0.5)
-    .slice(0, count);
+  return [...pool].sort(() => rng() - 0.5).slice(0, count);
 };
 const randomLetter = (rng, alphabet) =>
   alphabet[Math.floor(rng() * alphabet.length)];
 
-const DIRECTIONS = [
+const ORTHO_DIRECTIONS = [
   { dx: 1, dy: 0 },
   { dx: -1, dy: 0 },
   { dx: 0, dy: 1 },
   { dx: 0, dy: -1 },
+];
+
+const DIAG_DIRECTIONS = [
   { dx: 1, dy: 1 },
   { dx: -1, dy: -1 },
   { dx: 1, dy: -1 },
   { dx: -1, dy: 1 },
 ];
 
-const generatePuzzle = (size, words, rng, alphabet) => {
-  const grid = Array.from({ length: size }, () => Array(size).fill(''));
+const ALL_DIRECTIONS = [...ORTHO_DIRECTIONS, ...DIAG_DIRECTIONS];
+
+export const generatePuzzle = (
+  size,
+  words,
+  rng,
+  alphabet,
+  diagonals = true,
+) => {
+  const grid = Array.from({ length: size }, () => Array(size).fill(""));
   const placements = {};
 
   words.forEach((word) => {
     let placed = false;
     for (let attempt = 0; attempt < 100 && !placed; attempt++) {
-      const dir = DIRECTIONS[Math.floor(rng() * DIRECTIONS.length)];
+      const dirs = diagonals ? ALL_DIRECTIONS : ORTHO_DIRECTIONS;
+      const dir = dirs[Math.floor(rng() * dirs.length)];
       const maxRow =
-        dir.dy > 0 ? size - word.length : dir.dy < 0 ? word.length - 1 : size - 1;
+        dir.dy > 0
+          ? size - word.length
+          : dir.dy < 0
+            ? word.length - 1
+            : size - 1;
       const maxCol =
-        dir.dx > 0 ? size - word.length : dir.dx < 0 ? word.length - 1 : size - 1;
+        dir.dx > 0
+          ? size - word.length
+          : dir.dx < 0
+            ? word.length - 1
+            : size - 1;
       const row = Math.floor(rng() * (maxRow + 1));
       const col = Math.floor(rng() * (maxCol + 1));
 
@@ -181,7 +189,8 @@ const getPath = (start, end) => {
   const dx = Math.sign(ec - sc);
   const dy = Math.sign(er - sr);
   const len = Math.max(Math.abs(ec - sc), Math.abs(er - sr));
-  if (dx !== 0 && dy !== 0 && Math.abs(ec - sc) !== Math.abs(er - sr)) return [];
+  if (dx !== 0 && dy !== 0 && Math.abs(ec - sc) !== Math.abs(er - sr))
+    return [];
   const path = [];
   for (let i = 0; i <= len; i++) {
     path.push([sr + dy * i, sc + dx * i]);
@@ -191,44 +200,48 @@ const getPath = (start, end) => {
 
 const WordSearch = () => {
   const [difficulty, setDifficulty] = usePersistentState(
-    'wordsearch-difficulty',
-    'easy',
+    "wordsearch-difficulty",
+    "easy",
   );
   const [listName, setListName] = usePersistentState(
-    'wordsearch-list',
-    'random',
+    "wordsearch-list",
+    "random",
   );
   const [language, setLanguage] = usePersistentState(
-    'wordsearch-language',
-    'en',
+    "wordsearch-language",
+    "en",
   );
-  const [seed, setSeed] = usePersistentState('wordsearch-seed', () =>
+  const [seed, setSeed] = usePersistentState("wordsearch-seed", () =>
     Math.random().toString(36).slice(2, 10),
   );
   const [customLists, setCustomLists, listsReady] = useOPFS(
-    'wordsearch-lists.json',
+    "wordsearch-lists.json",
     {},
   );
   const allLists = { ...DEFAULT_LISTS, ...customLists };
   const alphabet = ALPHABETS[language] || ALPHABETS.en;
   const { size: SIZE, count: WORD_COUNT } = DIFFICULTIES[difficulty];
   const [bestTimes, setBestTimes] = usePersistentState(
-    'wordsearch-best-times',
+    "wordsearch-best-times",
     {},
   );
-  const [sound, setSound] = usePersistentState('wordsearch-sound', true);
+  const [sound, setSound] = usePersistentState("wordsearch-sound", true);
+  const [diagonals, setDiagonals] = usePersistentState(
+    "wordsearch-diagonals",
+    true,
+  );
   const [challenge, setChallenge] = usePersistentState(
-    'wordsearch-challenge',
+    "wordsearch-challenge",
     false,
   );
   const [timeLimit, setTimeLimit] = usePersistentState(
-    'wordsearch-time-limit',
+    "wordsearch-time-limit",
     120,
   );
-  const [streak, setStreak] = usePersistentState('wordsearch-streak', 0);
-  const [newListName, setNewListName] = useState('');
-  const [newListWords, setNewListWords] = useState('');
-  const [newListLang, setNewListLang] = useState('en');
+  const [streak, setStreak] = usePersistentState("wordsearch-streak", 0);
+  const [newListName, setNewListName] = useState("");
+  const [newListWords, setNewListWords] = useState("");
+  const [newListLang, setNewListLang] = useState("en");
 
   const [puzzle, setPuzzle] = useState({ grid: [], placements: {}, words: [] });
   const { grid, placements, words } = puzzle;
@@ -245,22 +258,23 @@ const WordSearch = () => {
   const [lassos, setLassos] = useState([]);
   const polyRefs = useRef([]);
   const prefersReducedMotion = useRef(false);
-  const [announcement, setAnnouncement] = useState('');
+  const [announcement, setAnnouncement] = useState("");
   const timerRef = useRef(null);
   const gridRef = useRef(null);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      prefersReducedMotion.current =
-        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (typeof window !== "undefined") {
+      prefersReducedMotion.current = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
     }
   }, []);
 
   useEffect(() => {
     if (!listsReady) return;
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      const urlSeed = params.get('seed');
+      const urlSeed = params.get("seed");
       if (urlSeed) {
         setSeed(urlSeed);
         reset(true, urlSeed);
@@ -369,8 +383,8 @@ const WordSearch = () => {
 
   const handleMouseUp = () => {
     if (selection.length && !paused) {
-      const letters = selection.map(([r, c]) => grid[r][c]).join('');
-      const reverse = letters.split('').reverse().join('');
+      const letters = selection.map(([r, c]) => grid[r][c]).join("");
+      const reverse = letters.split("").reverse().join("");
       const match = words.find((w) => w === letters || w === reverse);
       if (match && !foundWords.includes(match)) {
         setFoundWords([...foundWords, match]);
@@ -391,12 +405,8 @@ const WordSearch = () => {
     if (paused) return;
     const touch = e.touches[0];
     const rect = gridRef.current.getBoundingClientRect();
-    const c = Math.floor(
-      (touch.clientX - rect.left) / (CELL_SIZE + GAP_SIZE),
-    );
-    const r = Math.floor(
-      (touch.clientY - rect.top) / (CELL_SIZE + GAP_SIZE),
-    );
+    const c = Math.floor((touch.clientX - rect.left) / (CELL_SIZE + GAP_SIZE));
+    const r = Math.floor((touch.clientY - rect.top) / (CELL_SIZE + GAP_SIZE));
     if (r >= 0 && r < SIZE && c >= 0 && c < SIZE) {
       handleMouseDown(r, c);
     }
@@ -407,12 +417,8 @@ const WordSearch = () => {
     if (paused || !selecting) return;
     const touch = e.touches[0];
     const rect = gridRef.current.getBoundingClientRect();
-    const c = Math.floor(
-      (touch.clientX - rect.left) / (CELL_SIZE + GAP_SIZE),
-    );
-    const r = Math.floor(
-      (touch.clientY - rect.top) / (CELL_SIZE + GAP_SIZE),
-    );
+    const c = Math.floor((touch.clientX - rect.left) / (CELL_SIZE + GAP_SIZE));
+    const r = Math.floor((touch.clientY - rect.top) / (CELL_SIZE + GAP_SIZE));
     if (r >= 0 && r < SIZE && c >= 0 && c < SIZE) {
       handleMouseEnter(r, c);
     }
@@ -441,7 +447,7 @@ const WordSearch = () => {
   const addList = () => {
     if (!newListName.trim() || !newListWords.trim()) return;
     const wordsArr = newListWords
-      .split(',')
+      .split(",")
       .map((w) => w.trim().toUpperCase())
       .filter(Boolean);
     if (!wordsArr.length) return;
@@ -449,20 +455,20 @@ const WordSearch = () => {
       ...customLists,
       [newListName]: { language: newListLang, words: wordsArr },
     });
-    setNewListName('');
-    setNewListWords('');
+    setNewListName("");
+    setNewListWords("");
   };
 
   const share = () => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
-    url.searchParams.set('seed', seed);
-    url.searchParams.set('list', listName);
-    url.searchParams.set('lang', language);
+    url.searchParams.set("seed", seed);
+    url.searchParams.set("list", listName);
+    url.searchParams.set("lang", language);
     navigator.clipboard?.writeText(url.toString());
   };
 
-  function reset(failed = true, newSeed) {
+  function reset(failed = true, newSeed, diag = diagonals) {
     const s = newSeed || Math.random().toString(36).slice(2, 10);
     setSeed(s);
     const rng = seedrandom(s);
@@ -471,13 +477,14 @@ const WordSearch = () => {
         SIZE,
         pickWords(
           WORD_COUNT,
-          listName === 'random' ? undefined : listName,
+          listName === "random" ? undefined : listName,
           rng,
           allLists,
           language,
         ),
         rng,
         alphabet,
+        diag,
       ),
     );
     setFoundWords([]);
@@ -489,7 +496,7 @@ const WordSearch = () => {
     setSelection([]);
     setLassos([]);
     polyRefs.current = [];
-    setAnnouncement('');
+    setAnnouncement("");
     setPaused(false);
     if (failed) setStreak(0);
   }
@@ -507,7 +514,7 @@ const WordSearch = () => {
             className="grid gap-1"
             style={{
               gridTemplateColumns: `repeat(${SIZE}, 2rem)`,
-              touchAction: 'none',
+              touchAction: "none",
             }}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
@@ -516,9 +523,15 @@ const WordSearch = () => {
           >
             {grid.map((row, r) =>
               row.map((letter, c) => {
-                const isSelected = selection.some(([sr, sc]) => sr === r && sc === c);
-                const isFound = foundCells.some(([sr, sc]) => sr === r && sc === c);
-                const isHint = hintCells.some(([sr, sc]) => sr === r && sc === c);
+                const isSelected = selection.some(
+                  ([sr, sc]) => sr === r && sc === c,
+                );
+                const isFound = foundCells.some(
+                  ([sr, sc]) => sr === r && sc === c,
+                );
+                const isHint = hintCells.some(
+                  ([sr, sc]) => sr === r && sc === c,
+                );
                 return (
                   <div
                     key={`${r}-${c}`}
@@ -527,12 +540,12 @@ const WordSearch = () => {
                     onMouseUp={handleMouseUp}
                     className={`h-8 w-8 flex items-center justify-center border border-gray-600 cursor-pointer ${
                       isFound
-                        ? 'bg-green-600'
+                        ? "bg-green-600"
                         : isHint
-                        ? 'bg-yellow-600'
-                        : isSelected
-                        ? 'bg-blue-600'
-                        : 'bg-gray-700'
+                          ? "bg-yellow-600"
+                          : isSelected
+                            ? "bg-blue-600"
+                            : "bg-gray-700"
                     }`}
                   >
                     {letter}
@@ -557,7 +570,7 @@ const WordSearch = () => {
                         r * (CELL_SIZE + GAP_SIZE) + CELL_SIZE / 2
                       }`,
                   )
-                  .join(' ')}
+                  .join(" ")}
                 stroke="rgb(250 204 21)"
                 strokeWidth="4"
                 fill="none"
@@ -569,8 +582,9 @@ const WordSearch = () => {
         <div className="flex flex-col w-48">
           <div className="mb-2">
             <div>
-              Time: {time}s{' '}
-              {bestTimes[difficulty] !== undefined && `| Best: ${bestTimes[difficulty]}s`}
+              Time: {time}s{" "}
+              {bestTimes[difficulty] !== undefined &&
+                `| Best: ${bestTimes[difficulty]}s`}
             </div>
             <div>
               Found: {foundWords.length}/{words.length}
@@ -581,7 +595,9 @@ const WordSearch = () => {
             {words.map((w) => (
               <div
                 key={w}
-                className={foundWords.includes(w) ? 'line-through text-green-400' : ''}
+                className={
+                  foundWords.includes(w) ? "line-through text-green-400" : ""
+                }
               >
                 {w}
               </div>
@@ -604,14 +620,26 @@ const WordSearch = () => {
               className="px-4 py-1 bg-gray-700 hover:bg-gray-600"
               onClick={() => setPaused((p) => !p)}
             >
-              {paused ? 'Resume' : 'Pause'}
+              {paused ? "Resume" : "Pause"}
             </button>
             <button
               className="px-4 py-1 bg-gray-700 hover:bg-gray-600"
               onClick={() => setSound((s) => !s)}
             >
-              {sound ? 'Sound Off' : 'Sound On'}
+              {sound ? "Sound Off" : "Sound On"}
             </button>
+            <label className="flex items-center gap-1">
+              <input
+                type="checkbox"
+                checked={diagonals}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setDiagonals(checked);
+                  reset(true, undefined, checked);
+                }}
+              />
+              <span>Allow Diagonals</span>
+            </label>
             <label className="flex items-center gap-1">
               <input
                 type="checkbox"
@@ -728,10 +756,11 @@ const WordSearch = () => {
           </div>
         </div>
       </div>
-      <div aria-live="polite" className="sr-only">{announcement}</div>
+      <div aria-live="polite" className="sr-only">
+        {announcement}
+      </div>
     </div>
   );
 };
 
 export default WordSearch;
-
