@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     validateServerEnv(process.env);
   } catch {
-    res.status(500).json({ ok: false });
+    res.status(500).json({ ok: false, code: 'server_not_configured' });
     return;
   }
   if (req.method === 'GET') {
