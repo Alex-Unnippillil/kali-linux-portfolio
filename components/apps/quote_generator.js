@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import Filter from 'bad-words';
 import { toPng } from 'html-to-image';
 
@@ -72,6 +72,8 @@ const shuffleArray = (arr) => {
 
 const QuoteGenerator = () => {
   const [pack, setPack] = useState(() => localStorage.getItem('quotePack') || 'default');
+  const [category, setCategory] = useState('');
+  const [base, setBase] = useState([]);
   const [order, setOrder] = useState([]);
   const [index, setIndex] = useState(0);
   const [current, setCurrent] = useState(null);
@@ -88,38 +90,53 @@ const QuoteGenerator = () => {
     return () => media.removeEventListener('change', handler);
   }, []);
   useEffect(() => {
-    const base = PACKS[pack] || [];
+    const all = PACKS[pack] || [];
+    const filtered = category
+      ? all.filter((q) => q.tags.includes(category))
+      : all;
+    setBase(filtered);
     let storedOrder;
     try {
-      storedOrder = JSON.parse(localStorage.getItem('quoteOrder_' + pack));
+      storedOrder = JSON.parse(
+        localStorage.getItem(`quoteOrder_${pack}_${category}`)
+      );
     } catch {
       // ignore parse error
     }
-    if (!Array.isArray(storedOrder) || storedOrder.length !== base.length) {
-      storedOrder = shuffleArray(base.map((_, i) => i));
+    if (!Array.isArray(storedOrder) || storedOrder.length !== filtered.length) {
+      storedOrder = shuffleArray(filtered.map((_, i) => i));
     }
     setOrder(storedOrder);
     const savedIndex = parseInt(
-      localStorage.getItem('quoteIndex_' + pack) || '0',
+      localStorage.getItem(`quoteIndex_${pack}_${category}`) || '0',
       10
     );
-    setIndex(Math.min(savedIndex, storedOrder.length - 1));
-  }, [pack]);
+    setIndex(
+      storedOrder.length
+        ? Math.min(savedIndex, storedOrder.length - 1)
+        : 0
+    );
+  }, [pack, category]);
 
   useEffect(() => {
-    const base = PACKS[pack] || [];
     if (!order.length) {
       setCurrent(null);
       return;
     }
     setCurrent(base[order[index]]);
-  }, [pack, order, index]);
+  }, [base, order, index]);
 
   useEffect(() => {
     localStorage.setItem('quotePack', pack);
-    localStorage.setItem('quoteIndex_' + pack, index.toString());
-    localStorage.setItem('quoteOrder_' + pack, JSON.stringify(order));
-  }, [pack, index, order]);
+    localStorage.setItem(
+      `quoteIndex_${pack}_${category}`,
+      index.toString()
+    );
+    localStorage.setItem(
+      `quoteOrder_${pack}_${category}`,
+      JSON.stringify(order)
+    );
+  }, [pack, category, index, order]);
 
   useEffect(() => {
     if (!current || !liveRef.current) return;
@@ -133,7 +150,6 @@ const QuoteGenerator = () => {
   const nextQuote = () => {
     if (!order.length) return;
     if (index + 1 >= order.length) {
-      const base = PACKS[pack] || [];
       const newOrder = shuffleArray(base.map((_, i) => i));
       setOrder(newOrder);
       setIndex(0);
@@ -235,6 +251,17 @@ const QuoteGenerator = () => {
     }
   };
 
+  const categories = useMemo(() => {
+    const all = PACKS[pack] || [];
+    const set = new Set();
+    all.forEach((q) => {
+      q.tags.forEach((t) => {
+        if (SAFE_CATEGORIES.includes(t)) set.add(t);
+      });
+    });
+    return Array.from(set);
+  }, [pack]);
+
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 overflow-auto">
       <div className="w-full max-w-md flex flex-col items-center">
@@ -294,6 +321,18 @@ const QuoteGenerator = () => {
           {Object.keys(PACKS).map((p) => (
             <option key={p} value={p}>
               {p}
+            </option>
+          ))}
+        </select>
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="px-2 py-1 rounded text-black mt-2"
+        >
+          <option value="">All Categories</option>
+          {categories.map((c) => (
+            <option key={c} value={c}>
+              {c}
             </option>
           ))}
         </select>
