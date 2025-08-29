@@ -48,6 +48,8 @@
   /* Fonts */
   --font-family-base: 'Ubuntu', sans-serif;
   --font-multiplier: 1;
+  /* Minimum interactive target size */
+  --hit-area: 32px;
 }
 
 /* High contrast theme */
@@ -66,6 +68,11 @@
 /* Dyslexia-friendly fonts */
 .dyslexia {
   --font-family-base: 'OpenDyslexic', 'Comic Sans MS', Arial, sans-serif;
+}
+
+/* Larger hit areas */
+.large-hit-area {
+  --hit-area: 48px;
 }
 
 /* Reduced motion */
