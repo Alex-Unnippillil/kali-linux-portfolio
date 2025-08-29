@@ -51,10 +51,12 @@ export function updatePhysics(player, input, dt, opts = {}) {
   else player.jumpBufferTimer -= dt;
 
   // jump
+  let jumped = false;
   if (player.jumpBufferTimer > 0 && (player.onGround || player.coyoteTimer > 0)) {
     player.vy = -physics.JUMP_SPEED;
     player.onGround = false;
     player.jumpBufferTimer = 0;
+    jumped = true;
   }
 
   // variable jump height
@@ -66,6 +68,7 @@ export function updatePhysics(player, input, dt, opts = {}) {
   // clamp vertical speed
   if (player.vy > 1000) player.vy = 1000;
   if (player.vy < -1000) player.vy = -1000;
+  return jumped;
 }
 
 export function movePlayer(player, tiles, tileSize, dt) {

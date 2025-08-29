@@ -40,7 +40,9 @@ let tiles = [];
 let spawn = { x: 0, y: 0 };
 let coinTotal = 0;
 let score = 0;
-let levelStart = 0;
+let balance = 0;
+let simTime = 0;
+let speed = 1;
 
 const player = new Player();
 const camera = { x: 0, y: 0, deadZone: { w: 100, h: 60 } };
@@ -73,6 +75,12 @@ const speedSlider = document.getElementById('speedSlider');
 const speedLabel = document.getElementById('speedLabel');
 const jumpSlider = document.getElementById('jumpSlider');
 const jumpLabel = document.getElementById('jumpLabel');
+const coinSlider = document.getElementById('coinSlider');
+const coinLabel = document.getElementById('coinLabel');
+const jumpCostSlider = document.getElementById('jumpCostSlider');
+const jumpCostLabel = document.getElementById('jumpCostLabel');
+const fastBtn = document.getElementById('fastBtn');
+const balanceLabel = document.getElementById('balanceLabel');
 
 const storedPhysics = JSON.parse(
   localStorage.getItem('pf-physics') || '{}'
@@ -108,6 +116,31 @@ function updatePhysicsSetting() {
 
 [gravSlider, accelSlider, frictionSlider, speedSlider, jumpSlider].forEach((el) => {
   el.addEventListener('input', updatePhysicsSetting);
+});
+
+let coinValue = Number(localStorage.getItem('pf-coinValue') || '1');
+let jumpCost = Number(localStorage.getItem('pf-jumpCost') || '0');
+coinSlider.value = String(coinValue);
+coinLabel.textContent = String(coinValue);
+jumpCostSlider.value = String(jumpCost);
+jumpCostLabel.textContent = String(jumpCost);
+
+function updateEconomySetting() {
+  coinValue = Number(coinSlider.value);
+  jumpCost = Number(jumpCostSlider.value);
+  coinLabel.textContent = String(coinValue);
+  jumpCostLabel.textContent = String(jumpCost);
+  localStorage.setItem('pf-coinValue', String(coinValue));
+  localStorage.setItem('pf-jumpCost', String(jumpCost));
+}
+
+[coinSlider, jumpCostSlider].forEach((el) => {
+  el.addEventListener('input', updateEconomySetting);
+});
+
+fastBtn.addEventListener('click', () => {
+  speed = speed === 1 ? 3 : 1;
+  fastBtn.textContent = speed + 'x';
 });
 
 const padButtons = {
@@ -214,7 +247,9 @@ function loadLevel(name) {
       for (let y = 0; y < mapHeight; y++) {
         for (let x = 0; x < mapWidth; x++) if (tiles[y][x] === 5) coinTotal++;
       }
-      levelStart = performance.now();
+      balance = 0;
+      balanceLabel.textContent = String(balance);
+      simTime = 0;
       initBackground();
     });
 }
@@ -224,13 +259,14 @@ let last = 0;
 function loop(ts) {
   const dt = Math.min((ts - last) / 1000, 0.1);
   last = ts;
-  update(dt);
+  update(dt * speed);
   draw();
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
 
 function update(dt) {
+  simTime += dt;
   const input = {
     left: keys['ArrowLeft'],
     right: keys['ArrowRight'],
@@ -243,8 +279,12 @@ function update(dt) {
     input.jump = input.jump || gp.buttons[padMap.jump]?.pressed;
   }
   const wasOnGround = player.onGround;
-  updatePhysics(player, input, dt, { jumpBuffer: jumpBufferMs / 1000 });
+  const jumped = updatePhysics(player, input, dt, { jumpBuffer: jumpBufferMs / 1000 });
   movePlayer(player, tiles, tileSize, dt);
+  if (jumped) {
+    balance -= jumpCost;
+    balanceLabel.textContent = String(balance);
+  }
   if (!reduceMotion && !wasOnGround && player.onGround) {
     spawnDust(player.x + player.w / 2, player.y + player.h);
   }
@@ -257,6 +297,8 @@ function update(dt) {
   if (collectCoin(tiles, cx, cy)) {
     score++;
     coinTotal--;
+    balance += coinValue;
+    balanceLabel.textContent = String(balance);
     if (!reduceMotion)
       effects.push({ type: 'coin', x: cx * tileSize + tileSize / 2, y: cy * tileSize + tileSize / 2, life: 0 });
     playCoinSound();
@@ -283,7 +325,7 @@ function update(dt) {
   camera.x = Math.max(0, Math.min(camera.x, mapWidth * tileSize - canvas.width));
   camera.y = Math.max(0, Math.min(camera.y, mapHeight * tileSize - canvas.height));
 
-  const elapsed = ((performance.now() - levelStart) / 1000).toFixed(2);
+  const elapsed = simTime.toFixed(2);
   timerEl.textContent = `Time: ${elapsed}s`;
 
   if (coinTotal === 0 && score > 0) {

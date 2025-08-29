@@ -90,3 +90,34 @@ document.getElementById('exportBtn').addEventListener('click', () => {
   document.getElementById('output').value = JSON.stringify(data);
 });
 
+async function saveToOpfs() {
+  const name = document.getElementById('mapName').value || 'level.json';
+  const root = await navigator.storage.getDirectory();
+  const handle = await root.getFileHandle(name, { create: true });
+  const writable = await handle.createWritable();
+  await writable.write(JSON.stringify({ width, height, tiles, spawn }));
+  await writable.close();
+}
+
+async function loadFromOpfs() {
+  try {
+    const name = document.getElementById('mapName').value || 'level.json';
+    const root = await navigator.storage.getDirectory();
+    const handle = await root.getFileHandle(name);
+    const file = await handle.getFile();
+    const data = JSON.parse(await file.text());
+    if (data.tiles && data.spawn) {
+      for (let y = 0; y < height; y++)
+        for (let x = 0; x < width; x++)
+          tiles[y][x] = data.tiles[y]?.[x] || 0;
+      spawn = data.spawn;
+      draw();
+    }
+  } catch (e) {
+    console.error('Failed to load map', e);
+  }
+}
+
+document.getElementById('saveBtn').addEventListener('click', saveToOpfs);
+document.getElementById('loadBtn').addEventListener('click', loadFromOpfs);
+
