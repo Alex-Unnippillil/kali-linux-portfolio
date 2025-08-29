@@ -44,8 +44,8 @@ describe('Terminal component', () => {
     render(<Terminal ref={ref} openApp={openApp} />);
     await act(async () => {});
     expect(ref.current).toBeTruthy();
-    act(() => {
-      ref.current.runCommand('help');
+    await act(async () => {
+      await ref.current.runCommand('help');
     });
     expect(ref.current.getContent()).toContain('help');
   });
@@ -54,8 +54,8 @@ describe('Terminal component', () => {
     const ref = createRef<any>();
     render(<Terminal ref={ref} openApp={openApp} />);
     await act(async () => {});
-    act(() => {
-      ref.current.runCommand('open calculator');
+    await act(async () => {
+      await ref.current.runCommand('open calculator');
     });
     expect(openApp).toHaveBeenCalledWith('calculator');
   });

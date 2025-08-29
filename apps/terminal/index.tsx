@@ -1,19 +1,22 @@
 'use client';
 
-import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import React, {
+  useEffect,
+  useRef,
+  forwardRef,
+  useImperativeHandle,
+  useState,
+} from 'react';
+import useOPFS from '../../hooks/useOPFS';
 
 export interface TerminalProps {
   openApp?: (id: string) => void;
 }
 
 export interface TerminalHandle {
-  runCommand: (cmd: string) => void;
+  runCommand: (cmd: string) => Promise<void>;
   getContent: () => string;
 }
-
-const files: Record<string, string> = {
-  'README.md': 'Welcome to the web terminal.\nThis is a fake file used for demos.',
-};
 
 const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -22,7 +25,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const searchRef = useRef<any>(null);
   const commandRef = useRef('');
   const contentRef = useRef('');
-  const registryRef = useRef<Record<string, (args: string) => void>>({});
+  const registryRef = useRef<Record<string, (args: string) => Promise<void> | void>>({});
+  const { hasAccess, list, readFile, writeFile, mkdir, rm } = useOPFS();
+  const [cwd, setCwd] = useState('/');
 
   function writeLine(text: string) {
     if (termRef.current) termRef.current.writeln(text);
@@ -33,17 +38,89 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     if (termRef.current) termRef.current.write('$ ');
   }
 
+  function resolvePath(p: string) {
+    const parts = (p.startsWith('/') ? p : `${cwd}/${p}`)
+      .split('/')
+      .filter(Boolean);
+    const stack: string[] = [];
+    for (const part of parts) {
+      if (part === '.' || part === '') continue;
+      if (part === '..') stack.pop();
+      else stack.push(part);
+    }
+    return `/${stack.join('/')}`;
+  }
+
   useEffect(() => {
     registryRef.current = {
       help: () =>
-        writeLine(
-          `Available commands: ${Object.keys(registryRef.current).join(', ')}`,
-        ),
-      ls: () => writeLine(Object.keys(files).join('  ')),
-      cat: (arg) => {
-        const content = files[arg.trim()];
-        if (content) writeLine(content);
-        else writeLine(`cat: ${arg}: No such file`);
+        writeLine(`Available commands: ${Object.keys(registryRef.current).join(', ')}`),
+      ls: async (arg = '') => {
+        if (!hasAccess) return writeLine('Permission denied');
+        try {
+          const path = resolvePath(arg || '.');
+          const items = await list(path);
+          writeLine(
+            items
+              .map((i) => (i.kind === 'directory' ? `${i.name}/` : i.name))
+              .join('  '),
+          );
+        } catch {
+          writeLine(`ls: cannot access '${arg}': No such file or directory`);
+        }
+      },
+      cd: async (arg = '') => {
+        if (!hasAccess) return writeLine('Permission denied');
+        try {
+          const path = resolvePath(arg || '/');
+          await list(path);
+          setCwd(path);
+        } catch {
+          writeLine(`cd: ${arg}: No such directory`);
+        }
+      },
+      cat: async (arg) => {
+        if (!hasAccess) return writeLine('Permission denied');
+        try {
+          const content = await readFile(resolvePath(arg.trim()));
+          writeLine(content);
+        } catch {
+          writeLine(`cat: ${arg}: No such file`);
+        }
+      },
+      echo: async (args) => {
+        const m = args.match(/^(.*)>(.*)$/);
+        if (m) {
+          const text = m[1].trim();
+          const file = resolvePath(m[2].trim());
+          await writeFile(file, text);
+        } else {
+          writeLine(args);
+        }
+      },
+      touch: async (arg) => {
+        if (!hasAccess) return writeLine('Permission denied');
+        try {
+          await writeFile(resolvePath(arg.trim()), '');
+        } catch {
+          writeLine(`touch: cannot create '${arg}'`);
+        }
+      },
+      mkdir: async (arg) => {
+        if (!hasAccess) return writeLine('Permission denied');
+        try {
+          await mkdir(resolvePath(arg.trim()));
+        } catch {
+          writeLine(`mkdir: cannot create directory '${arg}'`);
+        }
+      },
+      rm: async (arg) => {
+        if (!hasAccess) return writeLine('Permission denied');
+        try {
+          await rm(resolvePath(arg.trim()));
+        } catch {
+          writeLine(`rm: cannot remove '${arg}'`);
+        }
       },
       clear: () => {
         termRef.current?.clear();
@@ -58,15 +135,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         }
       },
       date: () => writeLine(new Date().toString()),
-      about: () =>
-        writeLine('This terminal is powered by xterm.js'),
+      about: () => writeLine('This terminal is powered by xterm.js'),
     };
-  }, [openApp]);
+  }, [openApp, hasAccess, cwd, list, readFile, writeFile, mkdir, rm]);
 
-  function runCommand(cmd: string) {
+  async function runCommand(cmd: string) {
     const [name, ...rest] = cmd.trim().split(/\s+/);
     const handler = registryRef.current[name];
-    if (handler) handler(rest.join(' '));
+    if (handler) await handler(rest.join(' '));
     else if (name) writeLine(`Command not found: ${name}`);
   }
 
@@ -89,9 +165,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     for (const ch of data) {
       if (ch === '\r') {
         termRef.current?.writeln('');
-        runCommand(commandRef.current.trim());
+        const cmd = commandRef.current.trim();
         commandRef.current = '';
-        prompt();
+        runCommand(cmd).finally(() => {
+          prompt();
+        });
       } else if (ch === '\u007F') {
         if (commandRef.current.length > 0) {
           termRef.current?.write('\b \b');
@@ -178,3 +256,4 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 TerminalApp.displayName = 'TerminalApp';
 
 export default TerminalApp;
+
