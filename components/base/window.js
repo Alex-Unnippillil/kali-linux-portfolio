@@ -1,3 +1,5 @@
+"use client";
+
 import React, { Component } from 'react';
 import NextImage from 'next/image';
 import Draggable from 'react-draggable';
