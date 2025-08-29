@@ -1,14 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import HexEditor from './HexEditor';
-import {
-  loadNotes,
-  saveNotes,
-  loadBookmarks,
-  saveBookmarks,
-} from './utils';
+import { loadBookmarks, saveBookmarks } from './utils';
 import GraphView from '../../../apps/radare2/components/GraphView';
 import GuideOverlay from './GuideOverlay';
 import { useTheme } from '../../../hooks/useTheme';
+import useOPFS from '../../../hooks/useOPFS';
 import './theme.css';
 
 const Radare2 = ({ initialData = {} }) => {
@@ -18,8 +14,13 @@ const Radare2 = ({ initialData = {} }) => {
   const [seekAddr, setSeekAddr] = useState('');
   const [findTerm, setFindTerm] = useState('');
   const [currentAddr, setCurrentAddr] = useState(null);
-  const [notes, setNotes] = useState([]);
-  const [noteText, setNoteText] = useState('');
+  const [meta, setMeta] = useOPFS(`r2-${file}-meta.json`, {
+    symbols: {},
+    comments: {},
+  });
+  const symbols = meta.symbols || {};
+  const comments = meta.comments || {};
+  const [commentText, setCommentText] = useState('');
   const [bookmarks, setBookmarks] = useState([]);
   const [showGuide, setShowGuide] = useState(false);
   const disasmRef = useRef(null);
@@ -27,9 +28,7 @@ const Radare2 = ({ initialData = {} }) => {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setNotes(loadNotes(file));
       setBookmarks(loadBookmarks(file));
-
     }
   }, [file]);
 
@@ -72,12 +71,28 @@ const Radare2 = ({ initialData = {} }) => {
     }
   };
 
-  const handleAddNote = () => {
-    if (!currentAddr || !noteText.trim()) return;
-    const next = [...notes, { addr: currentAddr, text: noteText.trim() }];
-    setNotes(next);
-    saveNotes(file, next);
-    setNoteText('');
+  useEffect(() => {
+    if (currentAddr) setCommentText(comments[currentAddr] || '');
+  }, [currentAddr, comments]);
+
+  const handleSaveComment = () => {
+    if (!currentAddr) return;
+    const trimmed = commentText.trim();
+    const next = {
+      ...meta,
+      comments: { ...comments, [currentAddr]: trimmed },
+    };
+    setMeta(next);
+  };
+
+  const handleRename = (addr) => {
+    const name = prompt('New symbol name', symbols[addr] || '');
+    if (name) {
+      setMeta({
+      ...meta,
+      symbols: { ...symbols, [addr]: name },
+      });
+    }
   };
 
   const toggleBookmark = (addr) => {
@@ -207,7 +222,18 @@ const Radare2 = ({ initialData = {} }) => {
                   >
                     {bookmarks.includes(line.addr) ? '★' : '☆'}
                   </button>
-                  {line.addr}: {line.text}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRename(line.addr);
+                    }}
+                    className="mr-1"
+                  >
+                    ✎
+                  </button>
+                  {line.addr}
+                  {symbols[line.addr] ? ` (${symbols[line.addr]})` : ''}: {line.text}
+                  {comments[line.addr] ? ` // ${comments[line.addr]}` : ''}
                 </li>
               ))}
             </ul>
@@ -222,9 +248,9 @@ const Radare2 = ({ initialData = {} }) => {
             {(xrefs[currentAddr] || []).join(', ') || 'None'}
           </p>
           <textarea
-            value={noteText}
-            onChange={(e) => setNoteText(e.target.value)}
-            placeholder="Add note"
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
+            placeholder="Add comment"
             className="w-full p-2 rounded"
             style={{
               backgroundColor: 'var(--r2-surface)',
@@ -233,21 +259,21 @@ const Radare2 = ({ initialData = {} }) => {
             }}
           />
           <button
-            onClick={handleAddNote}
+            onClick={handleSaveComment}
             className="mt-2 px-3 py-1 rounded"
             style={{
               backgroundColor: 'var(--r2-surface)',
               border: '1px solid var(--r2-border)',
             }}
           >
-            Save Note
+            Save Comment
           </button>
         </div>
       )}
 
-      {notes.length > 0 && (
+      {Object.keys(comments).length > 0 && (
         <div className="mt-4">
-          <h2 className="text-lg">Notes</h2>
+          <h2 className="text-lg">Comments</h2>
           <ul
             className="rounded p-2"
             style={{
@@ -255,9 +281,9 @@ const Radare2 = ({ initialData = {} }) => {
               border: '1px solid var(--r2-border)',
             }}
           >
-            {notes.map((n, i) => (
-              <li key={i}>
-                {n.addr}: {n.text}
+            {Object.entries(comments).map(([addr, text]) => (
+              <li key={addr}>
+                {addr}: {text}
               </li>
             ))}
           </ul>
