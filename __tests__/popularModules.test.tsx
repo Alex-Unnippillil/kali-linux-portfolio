@@ -34,5 +34,19 @@ describe('PopularModules', () => {
     );
     expect(screen.getByRole('log')).toHaveTextContent('Starting port scan');
   });
+
+  it('filters log output and copies filtered logs', () => {
+    render(<PopularModules />);
+    fireEvent.click(screen.getByRole('button', { name: /Port Scanner/i }));
+    const filterInput = screen.getByPlaceholderText(/filter logs/i);
+    fireEvent.change(filterInput, { target: { value: 'open' } });
+    expect(screen.getByRole('log')).toHaveTextContent('Found open port 22');
+    expect(screen.getByRole('log')).not.toHaveTextContent('Starting port scan');
+    (navigator as any).clipboard = { writeText: jest.fn() };
+    fireEvent.click(screen.getByRole('button', { name: /Copy Logs/i }));
+    expect((navigator as any).clipboard.writeText).toHaveBeenCalledWith(
+      expect.stringContaining('Found open port 22')
+    );
+  });
 });
 

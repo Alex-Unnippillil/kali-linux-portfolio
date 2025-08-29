@@ -1,0 +1,67 @@
+[
+  {
+    "id": "port-scan",
+    "name": "Port Scanner",
+    "description": "Scans for open network ports",
+    "tags": ["network", "scanner"],
+    "log": [
+      {"level": "info", "message": "Starting port scan..."},
+      {"level": "success", "message": "Found open port 22 on 192.168.0.1"},
+      {"level": "info", "message": "Scan complete."}
+    ],
+    "results": [
+      {"target": "192.168.0.1", "status": "Ports 22,80 open"},
+      {"target": "192.168.0.2", "status": "No open ports"}
+    ],
+    "data": "Open ports discovered on the target host",
+    "inputs": ["Target IP or range"],
+    "lab": "https://tryhackme.com/room/rpnmap",
+    "options": [
+      {"name": "target", "label": "Target"},
+      {"name": "ports", "label": "Ports"}
+    ]
+  },
+  {
+    "id": "bruteforce",
+    "name": "Brute Force",
+    "description": "Attempts common passwords",
+    "tags": ["attack", "password"],
+    "log": [
+      {"level": "info", "message": "Starting brute force..."},
+      {"level": "warning", "message": "Tried 100 passwords"},
+      {"level": "error", "message": "No valid credentials found."}
+    ],
+    "results": [
+      {"target": "admin@example.com", "status": "Login failed"},
+      {"target": "root@example.com", "status": "Login failed"}
+    ],
+    "data": "Accounts that accept guessed credentials",
+    "inputs": ["Target service or account", "Password list"],
+    "lab": "https://tryhackme.com/room/hydra",
+    "options": [
+      {"name": "user", "label": "User"},
+      {"name": "wordlist", "label": "Wordlist"}
+    ]
+  },
+  {
+    "id": "vuln-check",
+    "name": "Vuln Check",
+    "description": "Checks for known CVEs",
+    "tags": ["vulnerability", "scanner"],
+    "log": [
+      {"level": "info", "message": "Checking for vulnerabilities..."},
+      {"level": "success", "message": "CVE-2024-1234 found on host1"},
+      {"level": "info", "message": "Check complete."}
+    ],
+    "results": [
+      {"target": "host1", "status": "CVE-2024-1234"},
+      {"target": "host2", "status": "No issues"}
+    ],
+    "data": "Known vulnerabilities present on a host",
+    "inputs": ["Target host"],
+    "lab": "https://tryhackme.com/room/vulnversity",
+    "options": [
+      {"name": "target", "label": "Target"}
+    ]
+  }
+]
