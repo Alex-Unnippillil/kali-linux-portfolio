@@ -1,0 +1,6 @@
+[
+  {
+    "title": "LSASS Memory",
+    "diagram": "LSASS\n├── logon sessions\n│   ├── user1\n│   └── user2\n└── credentials\n    ├── NTLM hash\n    └── Kerberos tickets"
+  }
+]
