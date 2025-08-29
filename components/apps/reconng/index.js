@@ -17,24 +17,34 @@ const CytoscapeComponent = dynamic(
   { ssr: false },
 );
 
-const modules = [
-  'DNS Enumeration',
-  'WHOIS Lookup',
-  'Reverse IP Lookup',
-];
+const modules = ['DNS Enumeration', 'WHOIS Lookup', 'Reverse IP Lookup'];
+
+const createWorkspace = (index) => ({
+  name: `Workspace ${index + 1}`,
+  graph: [],
+  entities: {
+    domain: new Set(),
+    person: new Set(),
+    asset: new Set(),
+  },
+});
 
 const ReconNG = () => {
   const [selectedModule, setSelectedModule] = useState(modules[0]);
   const [target, setTarget] = useState('');
   const [output, setOutput] = useState('');
-  const [graphElements, setGraphElements] = useState([]);
-  const [ariaMessage, setAriaMessage] = useState('');
-  const cyRef = useRef(null);
-  const [focusedNodeIndex, setFocusedNodeIndex] = useState(0);
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [view, setView] = useState('run');
   const [marketplace, setMarketplace] = useState([]);
   const [apiKeys, setApiKeys] = usePersistentState('reconng-api-keys', {});
+  const [workspaces, setWorkspaces] = useState([createWorkspace(0)]);
+  const [activeWs, setActiveWs] = useState(0);
+  const [ariaMessage, setAriaMessage] = useState('');
+  const [focusedNodeIndex, setFocusedNodeIndex] = useState(0);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [chainData, setChainData] = useState(null);
+  const cyRef = useRef(null);
+
+  const currentWorkspace = workspaces[activeWs];
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -61,6 +71,15 @@ const ReconNG = () => {
   }, []);
 
   useEffect(() => {
+    if (view === 'builder' && !chainData) {
+      fetch('/reconng-chain.json')
+        .then((r) => r.json())
+        .then((d) => setChainData(d))
+        .catch(() => {});
+    }
+  }, [view, chainData]);
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
       setPrefersReducedMotion(mediaQuery.matches);
@@ -84,23 +103,29 @@ const ReconNG = () => {
         nodes[0]?.select();
       });
     }
-    const nodeCount = graphElements.filter((el) => !el.data?.source).length;
-    const edgeCount = graphElements.filter((el) => el.data?.source).length;
+    const nodeCount = currentWorkspace.graph.filter((el) => !el.data?.source).length;
+    const edgeCount = currentWorkspace.graph.filter((el) => el.data?.source).length;
     setAriaMessage(`Graph updated with ${nodeCount} nodes and ${edgeCount} edges.`);
     setFocusedNodeIndex(0);
-  }, [graphElements, prefersReducedMotion]);
+  }, [currentWorkspace.graph, prefersReducedMotion]);
 
   const allModules = [...modules, ...marketplace];
 
   const stylesheet = useMemo(
     () => [
       {
+        selector: 'node',
+        style: {
+          'background-color': '#888',
+          color: '#fff',
+          label: 'data(label)',
+        },
+      },
+      {
         selector: 'node[type="domain"]',
         style: {
           'background-color': '#1f77b4',
           shape: 'round-rectangle',
-          color: '#fff',
-          label: 'data(label)',
         },
       },
       {
@@ -108,8 +133,6 @@ const ReconNG = () => {
         style: {
           'background-color': '#d62728',
           shape: 'ellipse',
-          color: '#fff',
-          label: 'data(label)',
         },
       },
       {
@@ -117,8 +140,6 @@ const ReconNG = () => {
         style: {
           'background-color': '#006400',
           shape: 'diamond',
-          color: '#fff',
-          label: 'data(label)',
         },
       },
       {
@@ -134,16 +155,38 @@ const ReconNG = () => {
       {
         selector: '$node > node',
         style: {
-          'padding': '10px',
+          padding: '10px',
           'background-opacity': 0.1,
           'border-color': '#555',
-          label: 'data(label)',
-          color: '#fff',
         },
       },
     ],
     [],
   );
+
+  const updateWorkspace = (updater) => {
+    setWorkspaces((ws) => {
+      const copy = [...ws];
+      copy[activeWs] = updater(copy[activeWs]);
+      return copy;
+    });
+  };
+
+  const addEntities = (nodes) => {
+    updateWorkspace((ws) => {
+      const entities = {
+        domain: new Set(ws.entities.domain),
+        person: new Set(ws.entities.person),
+        asset: new Set(ws.entities.asset),
+      };
+      nodes.forEach((n) => {
+        if (n.data.type && n.data.label) {
+          entities[n.data.type].add(n.data.label);
+        }
+      });
+      return { ...ws, entities };
+    });
+  };
 
   const runModule = () => {
     if (!target) return;
@@ -181,7 +224,17 @@ const ReconNG = () => {
       { data: { id: 'e1', source: target, target: 'John Doe' } },
       { data: { id: 'e2', source: 'John Doe', target: 'Server1' } },
     ];
-    requestAnimationFrame(() => setGraphElements([...nodes, ...edges]));
+    addEntities(nodes);
+    updateWorkspace((ws) => ({ ...ws, graph: [...nodes, ...edges] }));
+  };
+
+  const runChain = () => {
+    if (!chainData) return;
+    setOutput('Running module chain...');
+    const { nodes, edges } = chainData.entities;
+    addEntities(nodes);
+    updateWorkspace((ws) => ({ ...ws, graph: [...nodes, ...edges] }));
+    setView('run');
   };
 
   const handleKeyDown = (e) => {
@@ -205,8 +258,58 @@ const ReconNG = () => {
     setAriaMessage(`Selected node ${node.data('label')}`);
   };
 
+  const addWorkspace = () => {
+    setWorkspaces((ws) => [...ws, createWorkspace(ws.length)]);
+    setActiveWs(workspaces.length);
+  };
+
+  const exportJSON = () => {
+    const data = {};
+    Object.entries(currentWorkspace.entities).forEach(([type, set]) => {
+      data[type] = Array.from(set);
+    });
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'reconng-entities.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportCSV = () => {
+    let csv = 'type,label\n';
+    Object.entries(currentWorkspace.entities).forEach(([type, set]) => {
+      Array.from(set).forEach((label) => {
+        csv += `${type},${label}\n`;
+      });
+    });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'reconng-entities.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="flex flex-col h-full w-full bg-gray-900 text-white p-4">
+      <div className="flex gap-2 mb-2">
+        {workspaces.map((ws, i) => (
+          <button
+            key={ws.name}
+            type="button"
+            onClick={() => setActiveWs(i)}
+            className={`px-2 py-1 ${i === activeWs ? 'bg-blue-600' : 'bg-gray-800'}`}
+          >
+            {ws.name}
+          </button>
+        ))}
+        <button type="button" onClick={addWorkspace} className="px-2 py-1 bg-green-700">
+          +
+        </button>
+      </div>
       <div className="flex gap-2 mb-4">
         <button
           type="button"
@@ -214,6 +317,13 @@ const ReconNG = () => {
           className={`px-2 py-1 ${view === 'run' ? 'bg-blue-600' : 'bg-gray-800'}`}
         >
           Run
+        </button>
+        <button
+          type="button"
+          onClick={() => setView('builder')}
+          className={`px-2 py-1 ${view === 'builder' ? 'bg-blue-600' : 'bg-gray-800'}`}
+        >
+          Builder
         </button>
         <button
           type="button"
@@ -260,9 +370,9 @@ const ReconNG = () => {
             </button>
           </div>
           <pre className="flex-1 bg-black p-2 overflow-auto whitespace-pre-wrap mb-2">{output}</pre>
-          {graphElements.length > 0 && (
+          {currentWorkspace.graph.length > 0 && (
             <div
-              className="bg-black p-2"
+              className="bg-black p-2 mb-2"
               style={{ height: '300px' }}
               tabIndex={0}
               onKeyDown={handleKeyDown}
@@ -270,7 +380,7 @@ const ReconNG = () => {
               aria-label="Graph visualization"
             >
               <CytoscapeComponent
-                elements={graphElements}
+                elements={currentWorkspace.graph}
                 stylesheet={stylesheet}
                 style={{ width: '100%', height: '100%' }}
                 cy={(cy) => {
@@ -279,8 +389,50 @@ const ReconNG = () => {
               />
             </div>
           )}
+          {Object.entries(currentWorkspace.entities).map(([type, set]) => (
+            <div key={type} className="mb-2">
+              <h3 className="font-bold capitalize">{type}</h3>
+              <table className="w-full text-sm">
+                <tbody>
+                  {Array.from(set).map((label) => (
+                    <tr key={label}>
+                      <td>{label}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+          {currentWorkspace.graph.length > 0 && (
+            <div className="flex gap-2 mt-2">
+              <button type="button" onClick={exportCSV} className="bg-gray-800 px-2 py-1">
+                Export CSV
+              </button>
+              <button type="button" onClick={exportJSON} className="bg-gray-800 px-2 py-1">
+                Export JSON
+              </button>
+            </div>
+          )}
           <div role="status" aria-live="polite" className="sr-only">
             {ariaMessage}
+          </div>
+        </>
+      )}
+      {view === 'builder' && chainData && (
+        <>
+          <button
+            type="button"
+            onClick={runChain}
+            className="mb-2 bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded"
+          >
+            Run Chain
+          </button>
+          <div className="bg-black p-2" style={{ height: '300px' }}>
+            <CytoscapeComponent
+              elements={[...chainData.chain.nodes, ...chainData.chain.edges]}
+              stylesheet={stylesheet}
+              style={{ width: '100%', height: '100%' }}
+            />
           </div>
         </>
       )}

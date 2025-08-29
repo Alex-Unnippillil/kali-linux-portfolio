@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import ReconNG from '../components/apps/reconng';
 
 describe('ReconNG app', () => {
+  const realFetch = global.fetch;
   beforeEach(() => {
     localStorage.clear();
     global.fetch = jest.fn(() =>
@@ -11,6 +12,10 @@ describe('ReconNG app', () => {
         json: () => Promise.resolve({ modules: ['Port Scan'] }),
       })
     ) as jest.Mock;
+  });
+
+  afterEach(() => {
+    global.fetch = realFetch;
   });
 
   it('stores API keys in localStorage', async () => {
@@ -28,5 +33,16 @@ describe('ReconNG app', () => {
     render(<ReconNG />);
     await userEvent.click(screen.getByText('Marketplace'));
     expect(await screen.findByText('Port Scan')).toBeInTheDocument();
+  });
+
+  it('dedupes entities in table', async () => {
+    render(<ReconNG />);
+    const input = screen.getByPlaceholderText('Target');
+    await userEvent.type(input, 'example.com');
+    await userEvent.click(screen.getAllByText('Run')[1]);
+    await screen.findByText('John Doe');
+    await userEvent.click(screen.getAllByText('Run')[1]);
+    const rows = screen.getAllByText('example.com');
+    expect(rows.length).toBe(1);
   });
 });
