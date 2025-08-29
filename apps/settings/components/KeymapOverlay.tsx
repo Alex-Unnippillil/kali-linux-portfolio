@@ -1,7 +1,12 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
-import useKeymap from '../../apps/settings/keymapRegistry';
+import { useEffect, useState } from 'react';
+import useKeymap from '../keymapRegistry';
+
+interface KeymapOverlayProps {
+  open: boolean;
+  onClose: () => void;
+}
 
 const formatEvent = (e: KeyboardEvent) => {
   const parts = [
@@ -14,45 +19,21 @@ const formatEvent = (e: KeyboardEvent) => {
   return parts.filter(Boolean).join('+');
 };
 
-const ShortcutOverlay: React.FC = () => {
-  const [open, setOpen] = useState(false);
-  const { shortcuts } = useKeymap();
-
-  const toggle = useCallback(() => setOpen((o) => !o), []);
+export default function KeymapOverlay({ open, onClose }: KeymapOverlayProps) {
+  const { shortcuts, updateShortcut } = useKeymap();
+  const [rebinding, setRebinding] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!rebinding) return;
     const handler = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      const isInput =
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        (target as HTMLElement).isContentEditable;
-      if (isInput) return;
-      const show =
-        shortcuts.find((s) => s.description === 'Show keyboard shortcuts')?.keys ||
-        '?';
-      if (formatEvent(e) === show) {
-        e.preventDefault();
-        toggle();
-      } else if (e.key === 'Escape' && open) {
-        e.preventDefault();
-        setOpen(false);
-      }
+      e.preventDefault();
+      const combo = formatEvent(e);
+      updateShortcut(rebinding, combo);
+      setRebinding(null);
     };
-    window.addEventListener('keydown', handler);
+    window.addEventListener('keydown', handler, { once: true });
     return () => window.removeEventListener('keydown', handler);
-  }, [open, toggle, shortcuts]);
-
-  const handleExport = () => {
-    const data = JSON.stringify(shortcuts, null, 2);
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'shortcuts.json';
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  }, [rebinding, updateShortcut]);
 
   if (!open) return null;
 
@@ -77,23 +58,19 @@ const ShortcutOverlay: React.FC = () => {
           <h2 className="text-xl font-bold">Keyboard Shortcuts</h2>
           <button
             type="button"
-            onClick={() => setOpen(false)}
+            onClick={() => {
+              setRebinding(null);
+              onClose();
+            }}
             className="text-sm underline"
           >
             Close
           </button>
         </div>
-        <button
-          type="button"
-          onClick={handleExport}
-          className="px-2 py-1 bg-gray-700 rounded text-sm"
-        >
-          Export JSON
-        </button>
         <ul className="space-y-1">
-          {shortcuts.map((s, i) => (
+          {shortcuts.map((s) => (
             <li
-              key={i}
+              key={s.description}
               data-conflict={conflicts.has(s.keys) ? 'true' : 'false'}
               className={
                 conflicts.has(s.keys)
@@ -101,14 +78,19 @@ const ShortcutOverlay: React.FC = () => {
                   : 'flex justify-between px-2 py-1'
               }
             >
-              <span className="font-mono mr-4">{s.keys}</span>
               <span className="flex-1">{s.description}</span>
+              <span className="font-mono mr-2">{s.keys}</span>
+              <button
+                type="button"
+                onClick={() => setRebinding(s.description)}
+                className="px-2 py-1 bg-ub-orange text-white rounded text-sm"
+              >
+                {rebinding === s.description ? 'Press keys...' : 'Rebind'}
+              </button>
             </li>
           ))}
         </ul>
       </div>
     </div>
   );
-};
-
-export default ShortcutOverlay;
+}
