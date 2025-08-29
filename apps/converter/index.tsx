@@ -3,16 +3,17 @@
 import { useEffect, useState } from 'react';
 
 type Rates = Record<string, number>;
-const categories = ['currency', 'length', 'weight'] as const;
-type Category = typeof categories[number];
+const initialRates = {
+  currency: {} as Rates,
+  length: {} as Rates,
+  weight: {} as Rates,
+};
+type Domain = keyof typeof initialRates;
+const categories = Object.keys(initialRates) as Domain[];
 
 export default function Converter() {
-  const [active, setActive] = useState<Category>('currency');
-  const [rates, setRates] = useState<Record<Category, Rates>>({
-    currency: {} as Rates,
-    length: {} as Rates,
-    weight: {} as Rates,
-  });
+  const [active, setActive] = useState<Domain>('currency');
+  const [rates, setRates] = useState<Record<Domain, Rates>>(initialRates);
   const [fromUnit, setFromUnit] = useState('');
   const [toUnit, setToUnit] = useState('');
   const [input, setInput] = useState('');
@@ -35,7 +36,7 @@ export default function Converter() {
   }, []);
 
   useEffect(() => {
-    const data = rates[active];
+    const data = rates[active as Domain];
     const units = Object.keys(data);
     if (units.length) {
       setFromUnit(units[0]);
@@ -52,12 +53,12 @@ export default function Converter() {
       setOutput('');
       return;
     }
-    const data = rates[active];
+    const data = rates[active as Domain];
     const result = (n * data[toUnit]) / data[fromUnit];
     setOutput(result.toString());
   };
 
-  const units = Object.keys(rates[active] || {});
+  const units = Object.keys(rates[active as Domain] || {});
 
   return (
     <div className="p-4 bg-ub-cool-grey text-white h-full overflow-y-auto">
