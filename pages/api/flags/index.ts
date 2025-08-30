@@ -1,7 +1,7 @@
 import { getProviderData } from 'flags/next';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { verifyAccess, version, ProviderData } from 'flags';
-import * as appFlags from '../../flags';
+import * as appFlags from '../../app-flags';
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const authorized = await verifyAccess(req.headers.authorization);

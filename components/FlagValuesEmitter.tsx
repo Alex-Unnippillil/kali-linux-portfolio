@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { FlagValues } from 'flags/react';
-import { beta } from '../flags';
+import { beta } from '../app-flags';
 
 async function FlagValuesLoader() {
   const values = { beta: await beta() };
