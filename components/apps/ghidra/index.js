@@ -3,16 +3,15 @@ import PseudoDisasmViewer from './PseudoDisasmViewer';
 import FunctionTree from './FunctionTree';
 import CallGraph from './CallGraph';
 import ImportAnnotate from './ImportAnnotate';
-import capstone from 'capstone-wasm';
 
 // Applies S1–S8 guidelines for responsive and accessible binary analysis UI
 const DEFAULT_WASM = '/wasm/ghidra.wasm';
 
 async function loadCapstone() {
   if (typeof window === 'undefined') return null;
+  const capstone = await import('capstone-wasm');
   await capstone.loadCapstone();
   return capstone;
-
 }
 
 // Disassembly data is now loaded from pre-generated JSON
