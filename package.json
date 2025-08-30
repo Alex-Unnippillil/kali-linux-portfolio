@@ -80,7 +80,6 @@
     "react-github-calendar": "^4.5.9",
     "react-leaflet": "^5.0.0",
     "react-onclickoutside": "^6.12.2",
-
     "rrule": "2.7.2",
     "seedrandom": "^3.0.5",
     "sharp": "^0.34.3",
@@ -124,7 +123,7 @@
     "playwright-core": "^1.55.0",
     "typescript": "^5.9.2",
     "wait-on": "^8.0.4",
-    "workbox-build": "^7.3.0",
+    "workbox-build": "^7",
     "ws": "^8.18.0"
   },
   "resolutions": {
