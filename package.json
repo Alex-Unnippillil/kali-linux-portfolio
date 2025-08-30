@@ -79,7 +79,7 @@
     "react-force-graph": "^1.45.0",
     "react-ga4": "^2.1.0",
     "react-github-calendar": "^4.5.9",
-    "react-leaflet": "^4.2.1",
+    "react-leaflet": "^5.0.0",
     "react-onclickoutside": "^6.12.2",
     "react-twitter-embed": "^4.0.4",
     "rrule": "2.7.2",
