@@ -234,12 +234,21 @@ function evalRPN(rpn, vars = {}) {
 }
 
 function evaluate(expression, vars = {}) {
+  let scope = { ...vars };
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('calc-vars');
+      if (raw) scope = { ...JSON.parse(raw), ...scope };
+    } catch {
+      // ignore
+    }
+  }
   if (programmerMode) {
     const decimalExpr = expression.replace(/\b[0-9A-F]+\b/gi, (m) =>
       parseInt(m, currentBase)
     );
     const ctx = { Ans: lastResult };
-    for (const [k, v] of Object.entries(vars)) {
+    for (const [k, v] of Object.entries(scope)) {
       ctx[k] = preciseMode ? math.bignumber(v) : Number(v);
     }
     const result = math.evaluate(decimalExpr, ctx);
@@ -248,7 +257,7 @@ function evaluate(expression, vars = {}) {
   }
   const tokens = tokenize(expression);
   const rpn = toRPN(tokens);
-  const result = evalRPN(rpn, vars);
+  const result = evalRPN(rpn, scope);
   lastResult = result;
   return result.toString();
 }

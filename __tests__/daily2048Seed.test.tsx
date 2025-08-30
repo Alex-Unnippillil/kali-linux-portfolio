@@ -9,13 +9,15 @@ test('daily seed produces identical starting boards', async () => {
   (getDailySeed as jest.Mock).mockResolvedValue('abcd');
   const { container: c1 } = render(<Page2048 />);
   await waitFor(() => {
-    expect(c1.querySelectorAll('.grid > div > div').length).toBe(16);
+    const cells = Array.from(c1.querySelectorAll('.grid > div > div'));
+    expect(cells.filter((el) => el.textContent).length).toBe(2);
   });
   const board1 = Array.from(c1.querySelectorAll('.grid > div > div')).map((el) => el.textContent);
 
   const { container: c2 } = render(<Page2048 />);
   await waitFor(() => {
-    expect(c2.querySelectorAll('.grid > div > div').length).toBe(16);
+    const cells = Array.from(c2.querySelectorAll('.grid > div > div'));
+    expect(cells.filter((el) => el.textContent).length).toBe(2);
   });
   const board2 = Array.from(c2.querySelectorAll('.grid > div > div')).map((el) => el.textContent);
 
