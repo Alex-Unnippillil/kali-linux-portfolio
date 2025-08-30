@@ -12,6 +12,6 @@ export default async function handler(request: NextRequest) {
     return NextResponse.json(null, { status: 401 });
   }
 
-  const data = (await getProviderData(appFlags)) as ApiData;
+  const data = (await getProviderData(appFlags as any)) as ApiData;
   return NextResponse.json(data);
 }

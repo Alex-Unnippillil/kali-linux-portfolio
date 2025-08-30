@@ -3,6 +3,7 @@ import type { AppProps } from 'next/app';
 import ReactGA from 'react-ga4';
 import { Analytics, type BeforeSendEvent } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import 'fake-indexeddb/auto';
 import 'tailwindcss/tailwind.css';
 import '../styles/globals.css';
 import '../styles/index.css';
@@ -13,6 +14,7 @@ import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
+import { FlagValues } from '@vercel/flags/react';
 
 declare global {
   interface Window {
@@ -129,7 +131,7 @@ function MyApp(props: AppProps) {
   }, []);
   return (
     <SettingsProvider>
-      <FlagValuesEmitter />
+      <FlagValues values={{}} />
       <PipPortalProvider>
         <div aria-live="polite" id="live-region" />
         <Component {...pageProps} />
