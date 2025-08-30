@@ -373,108 +373,104 @@ const TerminalPaneInner = (
           }
           if (domEvent.ctrlKey && domEvent.shiftKey && domEvent.key === 'V') {
             domEvent.preventDefault();
+            if (navigator.clipboard) {
+              navigator.clipboard.readText().then((text) => {
+                term.write(text);
+                commandRef.current += text;
+                renderHint();
+              });
+            }
+            return;
+          }
+          if (domEvent.ctrlKey && (domEvent.key === '+' || domEvent.key === '=')) {
+            domEvent.preventDefault();
+            fontSizeRef.current += 1;
+            term.options.fontSize = fontSizeRef.current;
+            fitAddon.fit();
+            return;
+          }
+          if (domEvent.ctrlKey && domEvent.key === '-') {
+            domEvent.preventDefault();
+            fontSizeRef.current = Math.max(8, fontSizeRef.current - 1);
+            term.options.fontSize = fontSizeRef.current;
+            fitAddon.fit();
+            return;
+          }
+          if (domEvent.ctrlKey && domEvent.key === 'r') {
+            domEvent.preventDefault();
+            if (!revSearchRef.current.active) {
+              searchIdxRef.current = historyRef.current.length;
+              setRevSearch({ active: true, query: '', match: '' });
+            } else {
+              updateSearch(revSearchRef.current.query, true);
+            }
+            return;
+          }
+          if (domEvent.key === 'Tab') {
+            domEvent.preventDefault();
+            handleTab();
+          } else if (domEvent.key === 'ArrowLeft') {
+            domEvent.preventDefault();
+            handleSuggestionNav('left');
+          } else if (domEvent.key === 'ArrowRight') {
+            domEvent.preventDefault();
+            handleSuggestionNav('right');
+          } else if (domEvent.key === 'ArrowUp') {
+            domEvent.preventDefault();
+            handleHistoryNav('up');
+          } else if (domEvent.key === 'ArrowDown') {
+            domEvent.preventDefault();
+            handleHistoryNav('down');
           }
         });
-      })();
-    }, []);
-          if (navigator.clipboard) {
-            navigator.clipboard.readText().then((text) => {
-              term.write(text);
-              commandRef.current += text;
-              renderHint();
-            });
-          }
-          return;
-        }
-        if (domEvent.ctrlKey && (domEvent.key === '+' || domEvent.key === '=')) {
-          domEvent.preventDefault();
-          fontSizeRef.current += 1;
-          term.options.fontSize = fontSizeRef.current;
-          fitAddon.fit();
-          return;
-        }
-        if (domEvent.ctrlKey && domEvent.key === '-') {
-          domEvent.preventDefault();
-          fontSizeRef.current = Math.max(8, fontSizeRef.current - 1);
-          term.options.fontSize = fontSizeRef.current;
-          fitAddon.fit();
-          return;
-        }
-        if (domEvent.ctrlKey && domEvent.key === 'r') {
-          domEvent.preventDefault();
-          if (!revSearchRef.current.active) {
-            searchIdxRef.current = historyRef.current.length;
-            setRevSearch({ active: true, query: '', match: '' });
-          } else {
-            updateSearch(revSearchRef.current.query, true);
-          }
-          return;
-        }
-        if (domEvent.key === 'Tab') {
-          domEvent.preventDefault();
-          handleTab();
-        } else if (domEvent.key === 'ArrowLeft') {
-          domEvent.preventDefault();
-          handleSuggestionNav('left');
-        } else if (domEvent.key === 'ArrowRight') {
-          domEvent.preventDefault();
-          handleSuggestionNav('right');
-        } else if (domEvent.key === 'ArrowUp') {
-          domEvent.preventDefault();
-          handleHistoryNav('up');
-        } else if (domEvent.key === 'ArrowDown') {
-          domEvent.preventDefault();
-          handleHistoryNav('down');
-        }
-      });
 
-      term.onData((data: string) => {
-        if (revSearchRef.current.active) {
+        term.onData((data: string) => {
+          if (revSearchRef.current.active) {
+            if (data === '\r') {
+              term.write('\x1b[2K\r');
+              term.write(promptText);
+              term.write(revSearchRef.current.match);
+              commandRef.current = revSearchRef.current.match;
+              setRevSearch({ active: false, query: '', match: '' });
+              renderHint();
+            } else if (data === '\u0003' || data === '\u001b') {
+              setRevSearch({ active: false, query: '', match: '' });
+              term.write('\x1b[2K\r');
+              term.write(promptText);
+              term.write(commandRef.current);
+              renderHint();
+            } else if (data === '\u007F') {
+              const next = revSearchRef.current.query.slice(0, -1);
+              updateSearch(next);
+            } else {
+              updateSearch(revSearchRef.current.query + data);
+            }
+            return;
+          }
           if (data === '\r') {
-            term.write('\x1b[2K\r');
-            term.write(promptText);
-            term.write(revSearchRef.current.match);
-            commandRef.current = revSearchRef.current.match;
-            setRevSearch({ active: false, query: '', match: '' });
-            renderHint();
-          } else if (data === '\u0003' || data === '\u001b') {
-            setRevSearch({ active: false, query: '', match: '' });
-            term.write('\x1b[2K\r');
-            term.write(promptText);
-            term.write(commandRef.current);
-            renderHint();
+            runCommand(commandRef.current);
+            commandRef.current = '';
+            clearSuggestions();
+          } else if (data === '\u0003') {
+            term.write('^C');
+            prompt();
+            commandRef.current = '';
+            clearSuggestions();
           } else if (data === '\u007F') {
-            const next = revSearchRef.current.query.slice(0, -1);
-            updateSearch(next);
+            if (commandRef.current.length > 0) {
+              commandRef.current = commandRef.current.slice(0, -1);
+              term.write('\b \b');
+            }
+            clearSuggestions();
+          } else if (data === '\t') {
+            // handled in onKey
           } else {
-            updateSearch(revSearchRef.current.query + data);
+            commandRef.current += data;
+            term.write(data);
+            clearSuggestions();
           }
-          return;
-        }
-        if (data === '\r') {
-          runCommand(commandRef.current);
-          commandRef.current = '';
-          clearSuggestions();
-        } else if (data === '\u0003') {
-          term.write('^C');
-          prompt();
-          commandRef.current = '';
-          clearSuggestions();
-        } else if (data === '\u007F') {
-          if (commandRef.current.length > 0) {
-            commandRef.current = commandRef.current.slice(0, -1);
-            term.write('\b \b');
-          }
-          clearSuggestions();
-        } else if (data === '\t') {
-          // handled in onKey
-        } else {
-          commandRef.current += data;
-          term.write(data);
-          clearSuggestions();
-        }
-        renderHint();
-      });
+          renderHint();
+        });
 
       if (typeof window !== 'undefined' && typeof Worker === 'function') {
         workerRef.current = new Worker(
@@ -508,6 +504,7 @@ const TerminalPaneInner = (
         if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
         term.dispose();
       };
+      })();
     }, [
       prompt,
       runCommand,
