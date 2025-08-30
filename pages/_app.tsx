@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import type { AppProps } from 'next/app';
 import ReactGA from 'react-ga4';
 import { Analytics, type BeforeSendEvent } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
@@ -14,10 +15,7 @@ import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
 import FlagValuesEmitter from '../components/FlagValuesEmitter';
 
-/**
- * @param {import('next/app').AppProps} props
- */
-function MyApp({ Component, pageProps }) {
+function MyApp({ Component, pageProps }: AppProps) {
   useEffect(() => {
     const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
     if (trackingId) {
@@ -28,20 +26,20 @@ function MyApp({ Component, pageProps }) {
         try {
           const registration = await navigator.serviceWorker.register('/sw.js');
 
-          window.manualRefresh = () => registration.update();
+          (window as any).manualRefresh = () => registration.update();
 
           if ('periodicSync' in registration) {
             try {
               const status = await navigator.permissions.query({
-                name: 'periodic-background-sync',
+                name: 'periodic-background-sync' as PermissionName,
               });
-              if (status.state === 'granted') {
-                await registration.periodicSync.register('content-sync', {
-                  minInterval: 24 * 60 * 60 * 1000,
-                });
-              } else {
-                registration.update();
-              }
+                if (status.state === 'granted') {
+                  await (registration as any).periodicSync.register('content-sync', {
+                    minInterval: 24 * 60 * 60 * 1000,
+                  });
+                } else {
+                  registration.update();
+                }
             } catch {
               registration.update();
             }
@@ -62,7 +60,7 @@ function MyApp({ Component, pageProps }) {
     const liveRegion = document.getElementById('live-region');
     if (!liveRegion) return;
 
-    const update = (message) => {
+    const update = (message: string) => {
       liveRegion.textContent = '';
       setTimeout(() => {
         liveRegion.textContent = message;
@@ -96,7 +94,7 @@ function MyApp({ Component, pageProps }) {
 
     const OriginalNotification = window.Notification;
     if (OriginalNotification) {
-      const WrappedNotification = function (title, options) {
+      const WrappedNotification = function (title: string, options?: NotificationOptions) {
         update(`${title}${options?.body ? ' ' + options.body : ''}`);
         return new OriginalNotification(title, options);
       };
@@ -107,7 +105,7 @@ function MyApp({ Component, pageProps }) {
         get: () => OriginalNotification.permission,
       });
       WrappedNotification.prototype = OriginalNotification.prototype;
-      window.Notification = WrappedNotification;
+      window.Notification = WrappedNotification as unknown as typeof Notification;
     }
 
     return () => {
@@ -132,8 +130,9 @@ function MyApp({ Component, pageProps }) {
         <Analytics
           beforeSend={(e: BeforeSendEvent) => {
             if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-            if (e.metadata?.email) delete e.metadata.email;
-            return e;
+            const event = e as any;
+            if (event.metadata?.email) delete event.metadata.email;
+            return event;
           }}
         />
 
