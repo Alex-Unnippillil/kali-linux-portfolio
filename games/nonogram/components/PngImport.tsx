@@ -56,15 +56,16 @@ const dataToPuzzle = (
   width: number,
   height: number
 ) => {
+
   const grid: Grid = [];
   for (let y = 0; y < height; y++) {
     const row: number[] = [];
     for (let x = 0; x < width; x++) {
       const idx = (y * width + x) * 4;
-      const r = data[idx];
-      const g = data[idx + 1];
-      const b = data[idx + 2];
-      const a = data[idx + 3];
+      const r = bytes[idx];
+      const g = bytes[idx + 1];
+      const b = bytes[idx + 2];
+      const a = bytes[idx + 3];
       // treat non-transparent dark pixels as filled
       const val = a > 127 && (r + g + b) / 3 < 128 ? 1 : 0;
       row.push(val);
