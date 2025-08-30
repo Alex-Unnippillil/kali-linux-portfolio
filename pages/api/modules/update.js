@@ -1,10 +1,15 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
 import versionData from '../../../data/module-version.json';
 
 const REMOTE_VERSION_URL =
   'https://raw.githubusercontent.com/unnipillil/kali-linux-portfolio/main/data/module-version.json';
 
-function compareSemver(a: string, b: string): number {
+/**
+ * Compare two semantic version strings.
+ * @param {string} a
+ * @param {string} b
+ * @returns {number} positive if a>b, negative if a<b, 0 if equal
+ */
+function compareSemver(a, b) {
   const pa = a.split('.').map(Number);
   const pb = b.split('.').map(Number);
   for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
@@ -14,10 +19,12 @@ function compareSemver(a: string, b: string): number {
   return 0;
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-) {
+/**
+ * Check if the client needs a module version update.
+ * @param {import('next').NextApiRequest} req
+ * @param {import('next').NextApiResponse} res
+ */
+export default async function handler(req, res) {
   const currentParam = req.query.version;
   const current = Array.isArray(currentParam)
     ? currentParam[0]
@@ -29,7 +36,7 @@ export default async function handler(
       headers: { 'User-Agent': 'kali-linux-portfolio' },
     });
     if (response.ok) {
-      const json = (await response.json()) as { version?: string };
+      const json = await response.json();
       if (json.version) {
         latest = json.version;
       }

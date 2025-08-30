@@ -1,8 +1,12 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs';
 import path from 'path';
 
-export default function handler(_req: NextApiRequest, res: NextApiResponse) {
+/**
+ * List available plugin catalog entries.
+ * @param {import('next').NextApiRequest} _req
+ * @param {import('next').NextApiResponse} res
+ */
+export default function handler(_req, res) {
   const catalogDir = path.join(process.cwd(), 'plugins', 'catalog');
   try {
     const files = fs.readdirSync(catalogDir);

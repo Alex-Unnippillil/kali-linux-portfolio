@@ -1,7 +1,4 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
 import { randomBytes } from 'crypto';
-import trackServerEvent from '@/lib/analytics-server';
-import { beta } from '@/app-flags';
 import { contactSchema } from '../../utils/contactSchema';
 import { validateServerEnv } from '../../lib/validate';
 import { getServiceSupabase } from '../../lib/supabase';
@@ -10,9 +7,17 @@ import { getServiceSupabase } from '../../lib/supabase';
 export const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 5;
 
-export const rateLimit = new Map<string, { count: number; start: number }>();
+/** In-memory counter for rate limiting.
+ * Not suitable for distributed environments.
+ */
+export const rateLimit = new Map();
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+/**
+ * Handle contact form submissions with CSRF and reCAPTCHA validation.
+ * @param {import('next').NextApiRequest} req
+ * @param {import('next').NextApiResponse} res
+ */
+export default async function handler(req, res) {
   try {
     validateServerEnv(process.env);
   } catch {
@@ -39,8 +44,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return;
   }
 
+  const ipHeader = req.headers['x-forwarded-for'];
   const ip =
-    (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '';
+    (Array.isArray(ipHeader) ? ipHeader[0] : ipHeader) ||
+    req.socket.remoteAddress ||
+    '';
   const now = Date.now();
   const entry = rateLimit.get(ip) || { count: 0, start: now };
   if (now - entry.start > RATE_LIMIT_WINDOW_MS) {
@@ -106,7 +114,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return;
   }
 
-  let sanitized: { name: string; email: string; message: string };
+  let sanitized;
   try {
     const parsed = contactSchema.parse({ ...rest, csrfToken: csrfHeader, recaptchaToken });
     if (parsed.honeypot) {

@@ -1,26 +1,25 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-) {
+/**
+ * Submit a leaderboard entry.
+ * @param {import('next').NextApiRequest} req
+ * @param {import('next').NextApiResponse} res
+ */
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     res.status(405).end('Method Not Allowed');
     return;
   }
 
-  const { game, username, score } = req.body as {
-    game?: string;
-    username?: string;
-    score?: number;
-  };
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    res.status(500).json({ error: 'Missing Supabase env' });
+    return;
+  }
+
+  const { game, username, score } = req.body || {};
 
   if (
     typeof game !== 'string' ||
@@ -31,6 +30,7 @@ export default async function handler(
     return;
   }
 
+  const supabase = createClient(url, key);
   const { error } = await supabase
     .from('leaderboard')
     .insert({ game, username: username.slice(0, 50), score });

@@ -1,10 +1,11 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
 import { serviceClient } from '../../../lib/service-client';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+/**
+ * Retrieve recent contact messages (admin only).
+ * @param {import('next').NextApiRequest} req
+ * @param {import('next').NextApiResponse} res
+ */
+export default async function handler(req, res) {
   if (req.method !== 'GET') {
     res.status(405).json({ error: 'Method not allowed' });
     return;
@@ -26,7 +27,7 @@ export default async function handler(
       throw error;
     }
     res.status(200).json({ messages: data });
-  } catch (err: any) {
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 }
