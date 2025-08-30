@@ -1,8 +1,8 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { verifyAccess, type ApiData } from '@vercel/flags';
-import { getProviderData } from '@vercel/flags/next';
-import * as appFlags from '../../../app-flags';
+import { verifyAccess, type ApiData, version } from 'flags';
+import { getProviderData } from 'flags/next';
+import { beta } from '../../../app-flags';
 
 export const config = { runtime: 'edge' };
 
@@ -12,6 +12,10 @@ export default async function handler(request: NextRequest) {
     return NextResponse.json(null, { status: 401 });
   }
 
-  const data = (await getProviderData(appFlags)) as ApiData;
-  return NextResponse.json(data);
+  const data = (await getProviderData({ beta })) as ApiData;
+  return NextResponse.json(data, {
+    headers: {
+      'x-flags-sdk-version': version,
+    },
+  });
 }
