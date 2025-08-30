@@ -33,6 +33,7 @@ dist
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+yarn-install.log
 
 # local env files
 .env

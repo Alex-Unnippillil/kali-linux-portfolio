@@ -12,6 +12,7 @@ jobs:
         with:
           node-version: 20
           cache: yarn
-      - run: yarn install --frozen-lockfile
+      - run: yarn install --frozen-lockfile | tee yarn-install.log
+      - run: node scripts/validate-deps.mjs yarn-install.log
       - run: yarn lint
       - run: yarn build
