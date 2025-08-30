@@ -23,9 +23,10 @@ function MyApp({ Component, pageProps }) {
       ReactGA.initialize(trackingId);
     }
     if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
+      const swVersion = process.env.NEXT_PUBLIC_SW_VERSION;
       const register = async () => {
         try {
-          const registration = await navigator.serviceWorker.register('/sw.js');
+          const registration = await navigator.serviceWorker.register(`/sw.js?v=${swVersion}`);
 
           window.manualRefresh = () => registration.update();
 

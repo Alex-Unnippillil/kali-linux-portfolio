@@ -6,7 +6,8 @@ async function buildServiceWorker() {
     const { count, size } = await generateSW({
       globDirectory: 'public',
       globPatterns: ['**/*.{js,css,html,png,svg,ico,json}'],
-      swDest: 'public/service-worker.js',
+      // Output the service worker with a stable name that we'll version via a query string
+      swDest: 'public/sw.js',
       skipWaiting: true,
       clientsClaim: true,
       inlineWorkboxRuntime: true,
