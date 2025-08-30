@@ -800,7 +800,7 @@ const Asteroids = () => {
 
     requestRef.current = requestAnimationFrame(update);
     return cleanup;
-  }, [controlsRef, dpr, restartKey, saveReady, selectingLevel, startLevelNum]);
+  }, [controlsRef, dpr, restartKey, saveReady, selectingLevel, startLevelNum, setSaveData]);
   const togglePause = () => {
     pausedRef.current = !pausedRef.current;
     setPaused(pausedRef.current);
