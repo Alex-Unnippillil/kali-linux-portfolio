@@ -1387,7 +1387,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@napi-rs/canvas@npm:^0.1.77":
+"@napi-rs/canvas@npm:^0.1.74":
   version: 0.1.78
   resolution: "@napi-rs/canvas@npm:0.1.78"
   dependencies:
@@ -1423,45 +1423,6 @@ __metadata:
     "@napi-rs/canvas-win32-x64-msvc":
       optional: true
   checksum: 10c0/7a98cc5b962b723c02c1e0220d2f937fd108188ecc575a32552915a8ae57c29f00f210adb28144ec110352931146cc71389601128807279b6a621cc0e5f4d0a5
-  languageName: node
-  linkType: hard
-
-"@napi-rs/canvas@patch:@napi-rs/canvas@npm:^0.1.77#./.yarn/patches/@napi-rs-canvas-npm-0.1.77-27723c2ab5.patch::locator=unnippillil%40workspace%3A.":
-  version: 0.1.78
-  resolution: "@napi-rs/canvas@patch:@napi-rs/canvas@npm%3A0.1.78#./.yarn/patches/@napi-rs-canvas-npm-0.1.77-27723c2ab5.patch::version=0.1.78&hash=93d5cb&locator=unnippillil%40workspace%3A."
-  dependencies:
-    "@napi-rs/canvas-android-arm64": "npm:0.1.78"
-    "@napi-rs/canvas-darwin-arm64": "npm:0.1.78"
-    "@napi-rs/canvas-darwin-x64": "npm:0.1.78"
-    "@napi-rs/canvas-linux-arm-gnueabihf": "npm:0.1.78"
-    "@napi-rs/canvas-linux-arm64-gnu": "npm:0.1.78"
-    "@napi-rs/canvas-linux-arm64-musl": "npm:0.1.78"
-    "@napi-rs/canvas-linux-riscv64-gnu": "npm:0.1.78"
-    "@napi-rs/canvas-linux-x64-gnu": "npm:0.1.78"
-    "@napi-rs/canvas-linux-x64-musl": "npm:0.1.78"
-    "@napi-rs/canvas-win32-x64-msvc": "npm:0.1.78"
-  dependenciesMeta:
-    "@napi-rs/canvas-android-arm64":
-      optional: true
-    "@napi-rs/canvas-darwin-arm64":
-      optional: true
-    "@napi-rs/canvas-darwin-x64":
-      optional: true
-    "@napi-rs/canvas-linux-arm-gnueabihf":
-      optional: true
-    "@napi-rs/canvas-linux-arm64-gnu":
-      optional: true
-    "@napi-rs/canvas-linux-arm64-musl":
-      optional: true
-    "@napi-rs/canvas-linux-riscv64-gnu":
-      optional: true
-    "@napi-rs/canvas-linux-x64-gnu":
-      optional: true
-    "@napi-rs/canvas-linux-x64-musl":
-      optional: true
-    "@napi-rs/canvas-win32-x64-msvc":
-      optional: true
-  checksum: 10c0/47c54eab09d66e133e1faf9a230048606ad636d86bd0b238104eb9dbd6f628891656218c65a74d920de801c94cd4fe32ff416207926468fe39551b0d23ffe47b
   languageName: node
   linkType: hard
 
