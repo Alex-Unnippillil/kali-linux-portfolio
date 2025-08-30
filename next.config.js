@@ -13,9 +13,9 @@ const ContentSecurityPolicy = [
   // Allow external images and data URIs for badges/icons
   "img-src 'self' https: data:",
   // Permit Google Fonts
-  "style-src 'self' https://fonts.googleapis.com",
-  // Explicitly allow external stylesheets
-  "style-src-elem 'self' https://fonts.googleapis.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  // Explicitly allow external stylesheets and inline styles
+  "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com",
   // Allow loading fonts from Google
   "font-src 'self' https://fonts.gstatic.com",
   // External scripts required for embedded timelines

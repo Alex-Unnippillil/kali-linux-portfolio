@@ -13,7 +13,6 @@ import {
   isDraw,
 } from '../../components/apps/checkers/engine';
 import { getSelectableMoves } from '../../games/checkers/logic';
-import './checkers.css';
 
 // Helper to get all moves without enforcing capture
 const getAllMovesNoForce = (board: Board, color: 'red' | 'black'): Move[] => {

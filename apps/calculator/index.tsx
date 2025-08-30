@@ -2,7 +2,6 @@
 import { useEffect } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import ModeSwitcher from './components/ModeSwitcher';
-import './styles.css';
 import MemorySlots from './components/MemorySlots';
 import FormulaEditor from './components/FormulaEditor';
 import Tape from './components/Tape';
