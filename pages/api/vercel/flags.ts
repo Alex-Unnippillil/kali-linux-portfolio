@@ -11,11 +11,7 @@ export default async function handler(request: NextRequest) {
   if (!authorized) {
     return NextResponse.json(null, { status: 401 });
   }
+  const data = (await getProviderData(appFlags as any)) as ApiData;
+  return NextResponse.json(data);
 
-  const data = (await getProviderData({ beta })) as ApiData;
-  return NextResponse.json(data, {
-    headers: {
-      'x-flags-sdk-version': version,
-    },
-  });
 }
