@@ -22,3 +22,30 @@ export function getServiceSupabase() {
     },
   };
 }
+
+export function getAnonSupabaseServer() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_ANON_KEY;
+  if (!url || !key) {
+    throw new Error('Supabase environment variables are not set');
+  }
+  return {
+    from(table: string) {
+      return {
+        async select() {
+          const response = await fetch(`${url}/rest/v1/${table}?select=*`, {
+            headers: {
+              apikey: key,
+              Authorization: `Bearer ${key}`,
+            },
+          });
+          if (!response.ok) {
+            return { data: null, error: new Error(await response.text()) };
+          }
+          const data = await response.json();
+          return { data, error: null };
+        },
+      };
+    },
+  };
+}

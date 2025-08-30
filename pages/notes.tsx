@@ -1,5 +1,5 @@
 import type { GetServerSideProps } from 'next';
-import { getAnonSupabaseServer } from '../lib/supabase.server';
+import { getAnonSupabaseServer } from '../lib/supabase';
 
 interface NotesPageProps {
   notes: unknown[] | null;
