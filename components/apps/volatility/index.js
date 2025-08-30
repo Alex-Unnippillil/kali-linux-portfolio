@@ -5,13 +5,20 @@ import PluginWalkthrough from '../../../apps/volatility/components/PluginWalkthr
 import memoryFixture from '../../../public/demo-data/volatility/memory.json';
 
 // pull demo data for various volatility plugins from the memory fixture
-const {
-  pstree = [],
-  dlllist = {},
-  netscan = [],
-  malfind = [],
-  yarascan = [],
-} = memoryFixture;
+const pstree = Array.isArray(memoryFixture.pstree)
+  ? memoryFixture.pstree
+  : [];
+const dlllist = memoryFixture.dlllist ?? {};
+const netscan = Array.isArray(memoryFixture.netscan)
+  ? memoryFixture.netscan
+  : [];
+const malfind = Array.isArray(memoryFixture.malfind)
+  ? memoryFixture.malfind
+  : [];
+const yarascan = Array.isArray(memoryFixture.yarascan)
+  ? memoryFixture.yarascan
+  : [];
+const memoryDemo = memoryFixture;
 
 const heuristicColors = {
   informational: 'bg-blue-600',
