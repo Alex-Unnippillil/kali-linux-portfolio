@@ -46,7 +46,7 @@ export default function useInputMapping(gameId, defaults = {}) {
     return () => {
       active = false;
     };
-  }, [gameId]);
+  }, [gameId, defaults]);
 
   const setKey = (action, key) => {
     let conflict = null;
