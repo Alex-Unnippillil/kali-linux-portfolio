@@ -41,6 +41,7 @@ export function getAnonSupabaseServer() {
             return { data: null, error };
           }
           const data = await res.json();
+
           return { data, error: null };
         },
       };
