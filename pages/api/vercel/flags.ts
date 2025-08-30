@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { verifyAccess, type ApiData } from '@vercel/flags';
-import { getProviderData } from '@vercel/flags/next';
+import { verifyAccess, type ApiData } from 'flags';
+import { getProviderData } from 'flags/next';
 import * as appFlags from '../../../app-flags';
 
 export const config = { runtime: 'edge' };
