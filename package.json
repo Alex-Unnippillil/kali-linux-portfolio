@@ -134,5 +134,5 @@
     "test-exclude": "^7.0.1",
     "@napi-rs/canvas@npm:^0.1.74": "patch:@napi-rs/canvas@npm%3A0.1.77#./.yarn/patches/@napi-rs-canvas-npm-0.1.77-27723c2ab5.patch"
   },
-  "packageManager": "yarn@4.9.2"
+  "packageManager": "yarn@4.4.0"
 }
