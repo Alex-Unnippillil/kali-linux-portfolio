@@ -92,7 +92,7 @@ export default function WeatherApp() {
           // ignore fetch errors
         });
     });
-  }, [offline, cities.length, setCities]);
+    }, [offline, cities, setCities]);
 
   const addCity = () => {
     const latNum = parseFloat(lat);

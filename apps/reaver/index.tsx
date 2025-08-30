@@ -173,8 +173,7 @@ const ReaverPanel: React.FC = () => {
     if (stageIdx === stages.length) {
       setLogs((l) => [...l, { level: 'success', text: 'Attack complete' }]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stageIdx]);
+    }, [stageIdx]);
 
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight });

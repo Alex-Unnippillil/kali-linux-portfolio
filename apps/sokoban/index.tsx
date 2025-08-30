@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { logEvent, logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
 import { LEVEL_PACKS, LevelPack, parseLevels } from './levels';
 import {
@@ -104,6 +104,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
     moves: 0,
     pushes: 0,
   });
+  const initRef = useRef(false);
 
   const selectLevel = useCallback(
     (i: number, pIdx: number = packIndex, pData: LevelPack[] = packs) => {
@@ -198,6 +199,8 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
   );
 
   useEffect(() => {
+    if (initRef.current) return;
+    initRef.current = true;
     logGameStart('sokoban');
     try {
       const params = new URLSearchParams(window.location.search);
@@ -232,7 +235,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
     } catch (err: unknown) {
       logGameError('sokoban', err instanceof Error ? err.message : String(err));
     }
-  }, []);
+  }, [state]);
 
   useEffect(() => {
     const k = `sokoban-best-${packIndex}-${index}`;

@@ -169,7 +169,7 @@ const Game2048 = () => {
     setScore(last.score);
     setWon(false);
     setLost(false);
-  }, [history, undosLeft]);
+    }, [history, undosLeft, paused]);
 
   // keyboard controls
   useEffect(() => {
