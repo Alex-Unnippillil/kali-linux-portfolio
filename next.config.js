@@ -99,14 +99,6 @@ module.exports = withBundleAnalyzer({
     config.experiments.asyncWebAssembly = true;
     return config;
   },
-  async rewrites() {
-    return [
-      {
-        source: '/.well-known/vercel/flags',
-        destination: '/api/flags',
-      },
-    ];
-  },
   ...(isStaticExport
     ? {}
     : {
