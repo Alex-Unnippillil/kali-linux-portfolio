@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import GameLayout from './GameLayout';
 import { checkWinner, minimax, createBoard } from '../../apps/games/tictactoe/logic';
 
@@ -31,23 +31,26 @@ const TicTacToe = () => {
   const lineRef = useRef(null);
 
   const variantKey = `${mode}-${size}`;
-  const recordResult = (res) => {
-    setStats((prev) => {
-      const cur = prev[variantKey] || { wins: 0, losses: 0, draws: 0 };
-      const updated = {
-        ...prev,
-        [variantKey]: {
-          wins: res === 'win' ? cur.wins + 1 : cur.wins,
-          losses: res === 'loss' ? cur.losses + 1 : cur.losses,
-          draws: res === 'draw' ? cur.draws + 1 : cur.draws,
-        },
-      };
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('tictactoeStats', JSON.stringify(updated));
-      }
-      return updated;
-    });
-  };
+  const recordResult = useCallback(
+    (res) => {
+      setStats((prev) => {
+        const cur = prev[variantKey] || { wins: 0, losses: 0, draws: 0 };
+        const updated = {
+          ...prev,
+          [variantKey]: {
+            wins: res === 'win' ? cur.wins + 1 : cur.wins,
+            losses: res === 'loss' ? cur.losses + 1 : cur.losses,
+            draws: res === 'draw' ? cur.draws + 1 : cur.draws,
+          },
+        };
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('tictactoeStats', JSON.stringify(updated));
+        }
+        return updated;
+      });
+    },
+    [variantKey]
+  );
 
   useEffect(() => {
     setBoard(createBoard(size));
@@ -113,7 +116,7 @@ const TicTacToe = () => {
     } else {
       setStatus(`${SKINS[skin][player]}'s turn`);
     }
-  }, [board, player, ai, size, skin, mode]);
+  }, [board, player, ai, size, skin, mode, level, recordResult]);
 
   useEffect(() => {
     if (winLine && lineRef.current) {
