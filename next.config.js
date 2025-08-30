@@ -63,9 +63,18 @@ const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 
 module.exports = withBundleAnalyzer({
   output: 'export',
-  // Enable WebAssembly loading
-  webpack: (config) => {
-    config.experiments = { ...config.experiments, asyncWebAssembly: true };
+  // Enable WebAssembly loading and avoid JSON destructuring bug
+  webpack: (config, { isServer }) => {
+    config.experiments = {
+      ...(config.experiments || {}),
+      asyncWebAssembly: true,
+    };
+    if (process.env.NODE_ENV === 'production') {
+      config.optimization = {
+        ...(config.optimization || {}),
+        mangleExports: false,
+      };
+    }
     return config;
   },
   // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
@@ -85,11 +94,16 @@ module.exports = withBundleAnalyzer({
     deviceSizes: [640, 750, 828, 1080, 1200, 1280, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
   },
+  webpack: (config) => {
+    config.experiments = config.experiments || {};
+    config.experiments.asyncWebAssembly = true;
+    return config;
+  },
   async rewrites() {
     return [
       {
         source: '/.well-known/vercel/flags',
-        destination: '/api/flags',
+        destination: '/api/vercel/flags',
       },
     ];
   },
