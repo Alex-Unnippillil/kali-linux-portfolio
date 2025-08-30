@@ -236,9 +236,9 @@ These external domains are whitelisted in the default CSP. Update this list when
 ## Deployment
 
 ### Static export (GitHub Pages)
-Workflow: `.github/workflows/gh-deploy.yml`:
-- Installs Node, runs `yarn build && yarn export`, adds `.nojekyll`, and deploys `./out` → `gh-pages` branch.
-- **Action item:** update matrix to **Node 20.x** to match `package.json`.
+ Workflow: `.github/workflows/gh-deploy.yml`:
+ - Installs Node, runs `yarn build && yarn export`, adds `.nojekyll`, and deploys `./out` → `gh-pages` branch.
+ - Uses **Node 20.x** to match `package.json`.
 - Required env variables (GitHub Secrets):
   - `NEXT_PUBLIC_TRACKING_ID`
   - `NEXT_PUBLIC_SERVICE_ID`
@@ -451,7 +451,7 @@ play/pause and track controls include keyboard hotkeys.
 
 ## Production Hardening Checklist
 
-- [ ] **Pin Node to 20.x** across runtime and CI.
+- [x] **Pin Node to 20.x** across runtime and CI.
 - [ ] **Tighten CSP** (`connect-src`, `frame-src`, remove `http:` and `'unsafe-inline'`).
 - [ ] **Set env vars** in the hosting platform; rotate EmailJS keys regularly.
 - [ ] **Disable/flag API demo routes** for production or protect behind feature flags.

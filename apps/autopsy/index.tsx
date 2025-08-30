@@ -6,45 +6,34 @@ import events from './events.json';
 import KeywordTester from './components/KeywordTester';
 import type { Artifact } from './types';
 
+// The upstream Autopsy component accepts only an optional list of initial artifacts.
+// Casting it to a narrower prop type avoids TypeScript errors from unsupported props.
 const AutopsyApp = AutopsyAppComponent as React.ComponentType<{
-  initialArtifacts: Artifact[];
-  expandedNodes: string[];
-  onExpandedNodesChange: (nodes: string[]) => void;
+  initialArtifacts?: Artifact[];
 }>;
 
 const AutopsyPage: React.FC = () => {
   // Track which view is active so we can restore UI state when toggling
   const [view, setView] = useState<'autopsy' | 'keywords'>('autopsy');
-  // Store a list of expanded file tree nodes and sync with the URL hash
-  const [expandedNodes, setExpandedNodes] = useState<string[]>([]);
 
-  // Restore view and expanded nodes from the URL hash on first load
+  // Restore view from the URL hash on first load
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
     const viewParam = params.get('view');
-    const expandedParam = params.get('expanded');
     if (viewParam === 'keywords' || viewParam === 'autopsy') {
       setView(viewParam);
     }
-    if (expandedParam) {
-      setExpandedNodes(expandedParam.split(',').filter(Boolean));
-    }
   }, []);
 
-  // Persist current view/expanded nodes to the URL hash
+  // Persist current view to the URL hash
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
     params.set('view', view);
-    if (expandedNodes.length > 0) {
-      params.set('expanded', expandedNodes.join(','));
-    } else {
-      params.delete('expanded');
-    }
     const newHash = params.toString();
     window.location.hash = newHash ? `#${newHash}` : '';
-  }, [view, expandedNodes]);
+  }, [view]);
 
   return (
     <div className="space-y-4">
@@ -67,11 +56,7 @@ const AutopsyPage: React.FC = () => {
         </button>
       </div>
       {view === 'autopsy' && (
-        <AutopsyApp
-          initialArtifacts={events.artifacts as Artifact[]}
-          expandedNodes={expandedNodes}
-          onExpandedNodesChange={setExpandedNodes}
-        />
+        <AutopsyApp initialArtifacts={events.artifacts as Artifact[]} />
       )}
       {view === 'keywords' && <KeywordTester />}
     </div>
