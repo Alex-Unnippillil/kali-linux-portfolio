@@ -432,7 +432,7 @@ const Game2048 = () => {
     return () => window.removeEventListener('keydown', esc);
   }, []);
 
-  const reset = () => {
+  const reset = useCallback(() => {
     resetRng(seed || today);
     setBoard(initBoard(hardMode));
     setHistory([]);
@@ -443,13 +443,26 @@ const Game2048 = () => {
     setMergeCells(new Set());
     setScore(0);
     setUndosLeft(UNDO_LIMIT);
-  };
+  }, [
+    hardMode,
+    seed,
+    today,
+    setBoard,
+    setHistory,
+    setMoves,
+    setWon,
+    setLost,
+    setAnimCells,
+    setMergeCells,
+    setScore,
+    setUndosLeft,
+  ]);
 
   const close = () => {
     document.getElementById('close-2048')?.click();
   };
 
-  const undo = () => {
+  const undo = useCallback(() => {
     if (!history.length || undosLeft === 0) return;
     const prev = history[history.length - 1];
     deserializeRng(prev.rng);
@@ -462,7 +475,19 @@ const Game2048 = () => {
     setMergeCells(new Set());
     setHistory((h) => h.slice(0, -1));
     setUndosLeft((u) => u - 1);
-  };
+  }, [
+    history,
+    undosLeft,
+    setBoard,
+    setScore,
+    setMoves,
+    setWon,
+    setLost,
+    setAnimCells,
+    setMergeCells,
+    setHistory,
+    setUndosLeft,
+  ]);
 
   useEffect(() => {
     const handler = (e) => {
