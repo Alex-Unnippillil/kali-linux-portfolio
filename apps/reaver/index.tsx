@@ -75,7 +75,7 @@ const ReaverPanel: React.FC = () => {
   const [running, setRunning] = useState(false);
   const [lockRemaining, setLockRemaining] = useState(0);
   const [stageIdx, setStageIdx] = useState(-1);
-  const intervalRef = useRef<NodeJS.Timeout>();
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const burstRef = useRef(0); // attempts since last lock
   const lockRef = useRef(0); // lockout seconds remaining
   const [logs, setLogs] = useState<LogEntry[]>([]);
