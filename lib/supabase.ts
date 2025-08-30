@@ -33,16 +33,15 @@ export function getAnonSupabaseServer() {
     from(table: string) {
       return {
         async select() {
-          const response = await fetch(`${url}/rest/v1/${table}?select=*`, {
-            headers: {
-              apikey: key,
-              Authorization: `Bearer ${key}`,
-            },
+          const res = await fetch(`${url}/rest/v1/${table}?select=*`, {
+            headers: { apikey: key, Authorization: `Bearer ${key}` },
           });
-          if (!response.ok) {
-            return { data: null, error: new Error(await response.text()) };
+          if (!res.ok) {
+            const error = await res.text();
+            return { data: null, error };
           }
-          const data = await response.json();
+          const data = await res.json();
+
           return { data, error: null };
         },
       };
