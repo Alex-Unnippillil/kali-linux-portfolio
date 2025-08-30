@@ -12337,7 +12337,7 @@ __metadata:
     turndown: "npm:^7.2.1"
     typescript: "npm:^5.9.2"
     wait-on: "npm:^8.0.4"
-    workbox-build: "npm:^7.3.0"
+    workbox-build: "npm:^7"
     workbox-window: "npm:^7.3.0"
     ws: "npm:^8.18.0"
     zod: "npm:^3.23.8"
@@ -12710,7 +12710,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"workbox-build@npm:^7.3.0":
+"workbox-build@npm:^7":
   version: 7.3.0
   resolution: "workbox-build@npm:7.3.0"
   dependencies:
