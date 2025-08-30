@@ -8,6 +8,7 @@ import {
   dictionaries,
   buildResultMosaic,
   type DictName,
+
 } from "../../utils/wordle";
 import type { GuessEntry, LetterResult } from "./logic";
 import { evaluateGuess, hardModeViolation } from "./logic";
@@ -163,7 +164,7 @@ const WordleGame = () => {
           value={dictName}
           onChange={(e) => setDictName(e.target.value as DictName)}
         >
-          {Object.keys(dictionaries).map((name) => (
+          {(Object.keys(dictionaries) as DictName[]).map((name) => (
             <option key={name} value={name}>
               {name.charAt(0).toUpperCase() + name.slice(1)}
             </option>
