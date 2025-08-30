@@ -961,7 +961,5 @@ export default function Todoist() {
   );
 }
 
-export const displayTodoist = () => {
-  return <Todoist />;
-};
+export const displayTodoist = () => React.createElement(Todoist);
 
