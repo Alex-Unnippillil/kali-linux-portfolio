@@ -4,6 +4,7 @@
   "private": true,
   "homepage": "https://unnippillil.com/",
   "scripts": {
+    "preinstall": "corepack enable",
     "build:gamepad": "tsc -p tsconfig.gamepad.json",
     "prebuild": "tsc -p tsconfig.gamepad.json",
     "dev": "next dev",
