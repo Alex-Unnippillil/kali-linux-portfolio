@@ -134,6 +134,14 @@ module.exports = withBundleAnalyzer({
             },
           ];
         },
+        async rewrites() {
+          return [
+            {
+              source: '/.well-known/vercel/flags',
+              destination: '/api/vercel/flags',
+            },
+          ];
+        },
       }),
 });
 

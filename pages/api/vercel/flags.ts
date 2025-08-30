@@ -1,6 +1,6 @@
 import { createFlagsDiscoveryEndpoint, getProviderData } from 'flags/next';
-import * as appFlags from '@/app-flags';
+import { exampleFlag } from '../../flags';
 
-const { reportValue: _reportValue, ...flags } = appFlags;
+export const config = { runtime: 'edge' };
 
-export default createFlagsDiscoveryEndpoint(async () => getProviderData(flags));
+export default createFlagsDiscoveryEndpoint(() => getProviderData({ exampleFlag }));
