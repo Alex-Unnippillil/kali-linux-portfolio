@@ -5,11 +5,14 @@ import PluginWalkthrough from '../../../apps/volatility/components/PluginWalkthr
 import memoryFixture from '../../../public/demo-data/volatility/memory.json';
 
 // pull demo data for various volatility plugins from the memory fixture
-const pstree = memoryDemo.pstree ?? [];
-const dlllist = memoryDemo.dlllist ?? {};
-const netscan = memoryDemo.netscan ?? [];
-const malfind = memoryDemo.malfind ?? [];
-const yarascan = memoryDemo.yarascan ?? [];
+const pstree = Array.isArray(memoryFixture.pstree) ? memoryFixture.pstree : [];
+const dlllist =
+  memoryFixture.dlllist && typeof memoryFixture.dlllist === 'object'
+    ? memoryFixture.dlllist
+    : {};
+const netscan = Array.isArray(memoryFixture.netscan) ? memoryFixture.netscan : [];
+const malfind = Array.isArray(memoryFixture.malfind) ? memoryFixture.malfind : [];
+const yarascan = Array.isArray(memoryFixture.yarascan) ? memoryFixture.yarascan : [];
 
 
 const heuristicColors = {
@@ -113,7 +116,7 @@ const VolatilityApp = () => {
     if (typeof window !== 'undefined' && typeof Worker === 'function') {
       workerRef.current = new Worker(new URL('./heatmap.worker.js', import.meta.url));
       workerRef.current.onmessage = (e) => setHeatmapData(e.data);
-      workerRef.current.postMessage({ segments: memoryDemo.segments });
+      workerRef.current.postMessage({ segments: memoryFixture.segments });
     }
     return () => workerRef.current?.terminate();
   }, []);
@@ -122,7 +125,7 @@ const VolatilityApp = () => {
     setLoading(true);
     setOutput('');
     try {
-      workerRef.current?.postMessage({ segments: memoryDemo.segments });
+      workerRef.current?.postMessage({ segments: memoryFixture.segments });
       setOutput('Analysis simulated with demo memory plugin output.');
     } catch (err) {
       setOutput('Analysis failed');
