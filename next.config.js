@@ -71,11 +71,18 @@ module.exports = withBundleAnalyzer({
     };
     // Prevent bundling of server-only modules in the browser
     config.resolve = config.resolve || {};
-    config.resolve.fallback = {
-      ...(config.resolve.fallback || {}),
-      module: false,
-      async_hooks: false,
-    };
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...(config.resolve.fallback || {}),
+        module: false,
+        async_hooks: false,
+        fs: false,
+        path: false,
+        net: false,
+        tls: false,
+        child_process: false,
+      };
+    }
     if (process.env.NODE_ENV === 'production') {
       config.optimization = {
         ...(config.optimization || {}),
