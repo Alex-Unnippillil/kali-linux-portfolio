@@ -4,6 +4,7 @@
   "private": true,
   "homepage": "https://unnippillil.com/",
   "scripts": {
+    "preinstall": "corepack enable",
     "build:gamepad": "tsc -p tsconfig.gamepad.json",
     "prebuild": "tsc -p tsconfig.gamepad.json",
     "dev": "next dev",
@@ -20,7 +21,7 @@
     "build:sw": "node scripts/generate-sw.mjs"
   },
   "engines": {
-    "node": "20.x"
+    "node": "22.x"
   },
   "dependencies": {
     "@emailjs/browser": "^3.10.0",
