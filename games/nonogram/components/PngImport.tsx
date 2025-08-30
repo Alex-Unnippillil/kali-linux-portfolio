@@ -51,7 +51,11 @@ export async function parseMonochromePng(
 }
 
 // Convert raw RGBA data into grid/clues
-const dataToPuzzle = (data: Uint8Array, width: number, height: number) => {
+const dataToPuzzle = (
+  data: Uint8Array | Uint8ClampedArray,
+  width: number,
+  height: number
+) => {
   const grid: Grid = [];
   for (let y = 0; y < height; y++) {
     const row: number[] = [];
