@@ -84,7 +84,7 @@ module.exports = withBundleAnalyzer({
     return [
       {
         source: '/.well-known/vercel/flags',
-        destination: '/api/flags',
+        destination: '/api/vercel/flags',
       },
     ];
   },
