@@ -11,7 +11,8 @@ const themes: Record<string, { bg: string; flipper: string }> = {
 };
 
 export default function Pinball() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  // Start refs as null and reflect that in the type
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const engineRef = useRef<Engine | null>(null);
   const leftFlipperRef = useRef<Body | null>(null);
   const rightFlipperRef = useRef<Body | null>(null);
@@ -118,7 +119,8 @@ export default function Pinball() {
 
     Events.on(render, 'afterRender', () => {
       const ctx = render.context;
-      const ball = ballRef.current!;
+      if (!ballRef.current) return;
+      const ball = ballRef.current;
       const { x, y } = ball.position;
       const radius = 12;
       const gradient = ctx.createRadialGradient(x - 4, y - 4, radius / 4, x, y, radius);
@@ -170,7 +172,9 @@ export default function Pinball() {
         const now = Date.now();
         nudgesRef.current = nudgesRef.current.filter((t) => now - t < 5000);
         nudgesRef.current.push(now);
-        Body.applyForce(ballRef.current!, ballRef.current!.position, { x: 0.02, y: 0 });
+        if (ballRef.current) {
+          Body.applyForce(ballRef.current, ballRef.current.position, { x: 0.02, y: 0 });
+        }
         if (nudgesRef.current.length >= 3) {
           setTilt(true);
           setTimeout(() => {
