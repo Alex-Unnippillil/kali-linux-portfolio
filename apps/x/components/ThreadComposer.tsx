@@ -37,7 +37,7 @@ export default function ThreadComposer() {
     [],
   );
   const previewRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const workerRef = useRef<Worker>();
+  const workerRef = useRef<Worker | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
