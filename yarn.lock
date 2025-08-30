@@ -5656,17 +5656,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"diff@npm:*":
+"diff@npm:*, diff@npm:^8":
   version: 8.0.2
   resolution: "diff@npm:8.0.2"
   checksum: 10c0/abfb387f033e089df3ec3be960205d17b54df8abf0924d982a7ced3a94c557a4e6cbff2e78b121f216b85f466b3d8d041673a386177c311aaea41459286cc9bc
-  languageName: node
-  linkType: hard
-
-"diff@npm:^5.1.0":
-  version: 5.2.0
-  resolution: "diff@npm:5.2.0"
-  checksum: 10c0/aed0941f206fe261ecb258dc8d0ceea8abbde3ace5827518ff8d302f0fc9cc81ce116c4d8f379151171336caf0516b79e01abdc1ed1201b6440d895a66689eb4
   languageName: node
   linkType: hard
 
@@ -12291,7 +12284,7 @@ __metadata:
     cron-parser: "npm:^5.3.0"
     cytoscape: "npm:^3.33.1"
     cytoscape-cose-bilkent: "npm:^4.1.0"
-    diff: "npm:^5.1.0"
+    diff: "npm:^8"
     dompurify: "npm:^3.2.6"
     eslint: "npm:^9.13.0"
     eslint-config-next: "npm:^15.0.0"
