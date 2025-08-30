@@ -21,7 +21,7 @@
     "analyze": "ANALYZE=true yarn build"
   },
   "engines": {
-    "node": "22.x"
+    "node": "20.x"
   },
   "dependencies": {
     "@emailjs/browser": "^3.10.0",
@@ -51,7 +51,6 @@
     "dompurify": "^3.2.6",
     "fast-xml-parser": "^4.3.5",
     "figlet": "^1.8.2",
-    "flags": "^4.0.1",
     "hash-wasm": "^4.12.0",
     "howler": "^2.2.4",
     "html-to-image": "^1.11.13",
