@@ -21,7 +21,8 @@ declare global {
   }
 }
 
-function MyApp({ Component, pageProps }: AppProps) {
+function MyApp(props: AppProps) {
+  const { Component, pageProps } = props;
   useEffect(() => {
     const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
     if (trackingId) {
