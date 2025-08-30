@@ -55,9 +55,11 @@ const securityHeaders = [
   },
 ];
 
-const isExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+});
 
-module.exports = {
+module.exports = withBundleAnalyzer({
   // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
   eslint: {
     ignoreDuringBuilds: true,
@@ -80,7 +82,25 @@ module.exports = {
         source: '/(.*)',
         headers: securityHeaders,
       },
+      {
+        source: '/fonts/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: '/images/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400',
+          },
+        ],
+      },
     ];
   },
-};
+});
 

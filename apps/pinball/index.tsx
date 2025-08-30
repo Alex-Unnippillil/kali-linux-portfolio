@@ -12,10 +12,10 @@ const themes: Record<string, { bg: string; flipper: string }> = {
 
 export default function Pinball() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const engineRef = useRef<Engine>();
-  const leftFlipperRef = useRef<Body>();
-  const rightFlipperRef = useRef<Body>();
-  const ballRef = useRef<Body>();
+  const engineRef = useRef<Engine | null>(null);
+  const leftFlipperRef = useRef<Body | null>(null);
+  const rightFlipperRef = useRef<Body | null>(null);
+  const ballRef = useRef<Body | null>(null);
   const sparksRef = useRef<{ x: number; y: number; life: number }[]>([]);
   const laneGlowRef = useRef<{ left: boolean; right: boolean }>({
     left: false,

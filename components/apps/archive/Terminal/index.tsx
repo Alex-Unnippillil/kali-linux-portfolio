@@ -6,10 +6,6 @@ import React, {
   useState,
   forwardRef,
 } from 'react';
-import { Terminal as XTerm } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
-import { SearchAddon } from '@xterm/addon-search';
-import '@xterm/xterm/css/xterm.css';
 
 const promptText = 'alex@kali:~$ ';
 
@@ -329,49 +325,59 @@ const TerminalPane = forwardRef<
     }, []);
 
     useEffect(() => {
-      const term = new XTerm({
-        cursorBlink: true,
-        convertEol: true,
-        fontSize: fontSizeRef.current,
-        theme: {
-          background: '#000000',
-          foreground: '#00ff00',
-          cursor: '#00ff00',
-        },
-      });
-      const fitAddon = new FitAddon();
-      const searchAddon = new SearchAddon();
-      term.loadAddon(fitAddon);
-      term.loadAddon(searchAddon);
-      term.open(containerRef.current!);
-      termRef.current = term;
-      fitAddonRef.current = fitAddon;
-      fitAddon.fit();
-      containerRef.current!.classList.add('crt-terminal');
-      term.write('Welcome to the portfolio terminal');
-      updateLive('Welcome to the portfolio terminal');
-      prompt();
+      (async () => {
+        const [{ Terminal }, { FitAddon }, { SearchAddon }] = await Promise.all([
+          import('@xterm/xterm'),
+          import('@xterm/addon-fit'),
+          import('@xterm/addon-search'),
+        ]);
+        const term = new Terminal({
+          cursorBlink: true,
+          convertEol: true,
+          fontSize: fontSizeRef.current,
+          theme: {
+            background: '#000000',
+            foreground: '#00ff00',
+            cursor: '#00ff00',
+          },
+        });
+        const fitAddon = new FitAddon();
+        const searchAddon = new SearchAddon();
+        term.loadAddon(fitAddon);
+        term.loadAddon(searchAddon);
+        term.open(containerRef.current!);
+        termRef.current = term;
+        fitAddonRef.current = fitAddon;
+        fitAddon.fit();
+        containerRef.current!.classList.add('crt-terminal');
+        term.write('Welcome to the portfolio terminal');
+        updateLive('Welcome to the portfolio terminal');
+        prompt();
 
-      term.onKey(({ key, domEvent }: any) => {
-        onFocus();
-        if (domEvent.ctrlKey && domEvent.shiftKey && domEvent.key === 'D') {
-          domEvent.preventDefault();
-          runCommand('split');
-          return;
-        }
-        if (domEvent.ctrlKey && domEvent.key.toLowerCase() === 'c') {
-          const sel = term.getSelection();
-          if (sel) {
+        term.onKey(({ key, domEvent }: any) => {
+          onFocus();
+          if (domEvent.ctrlKey && domEvent.shiftKey && domEvent.key === 'D') {
             domEvent.preventDefault();
-            if (navigator.clipboard) {
-              navigator.clipboard.writeText(sel);
-            }
-            term.clearSelection();
+            runCommand('split');
             return;
           }
-        }
-        if (domEvent.ctrlKey && domEvent.shiftKey && domEvent.key === 'V') {
-          domEvent.preventDefault();
+          if (domEvent.ctrlKey && domEvent.key.toLowerCase() === 'c') {
+            const sel = term.getSelection();
+            if (sel) {
+              domEvent.preventDefault();
+              if (navigator.clipboard) {
+                navigator.clipboard.writeText(sel);
+              }
+              term.clearSelection();
+              return;
+            }
+          }
+          if (domEvent.ctrlKey && domEvent.shiftKey && domEvent.key === 'V') {
+            domEvent.preventDefault();
+          }
+        });
+      })();
+    }, []);
           if (navigator.clipboard) {
             navigator.clipboard.readText().then((text) => {
               term.write(text);
