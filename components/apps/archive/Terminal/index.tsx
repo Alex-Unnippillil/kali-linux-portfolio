@@ -373,60 +373,56 @@ const TerminalPaneInner = (
           }
           if (domEvent.ctrlKey && domEvent.shiftKey && domEvent.key === 'V') {
             domEvent.preventDefault();
+            if (navigator.clipboard) {
+              navigator.clipboard.readText().then((text) => {
+                term.write(text);
+                commandRef.current += text;
+                renderHint();
+              });
+            }
+            return;
+          }
+          if (domEvent.ctrlKey && (domEvent.key === '+' || domEvent.key === '=')) {
+            domEvent.preventDefault();
+            fontSizeRef.current += 1;
+            term.options.fontSize = fontSizeRef.current;
+            fitAddon.fit();
+            return;
+          }
+          if (domEvent.ctrlKey && domEvent.key === '-') {
+            domEvent.preventDefault();
+            fontSizeRef.current = Math.max(8, fontSizeRef.current - 1);
+            term.options.fontSize = fontSizeRef.current;
+            fitAddon.fit();
+            return;
+          }
+          if (domEvent.ctrlKey && domEvent.key === 'r') {
+            domEvent.preventDefault();
+            if (!revSearchRef.current.active) {
+              searchIdxRef.current = historyRef.current.length;
+              setRevSearch({ active: true, query: '', match: '' });
+            } else {
+              updateSearch(revSearchRef.current.query, true);
+            }
+            return;
+          }
+          if (domEvent.key === 'Tab') {
+            domEvent.preventDefault();
+            handleTab();
+          } else if (domEvent.key === 'ArrowLeft') {
+            domEvent.preventDefault();
+            handleSuggestionNav('left');
+          } else if (domEvent.key === 'ArrowRight') {
+            domEvent.preventDefault();
+            handleSuggestionNav('right');
+          } else if (domEvent.key === 'ArrowUp') {
+            domEvent.preventDefault();
+            handleHistoryNav('up');
+          } else if (domEvent.key === 'ArrowDown') {
+            domEvent.preventDefault();
+            handleHistoryNav('down');
           }
         });
-      })();
-    }, []);
-          if (navigator.clipboard) {
-            navigator.clipboard.readText().then((text) => {
-              term.write(text);
-              commandRef.current += text;
-              renderHint();
-            });
-          }
-          return;
-        }
-        if (domEvent.ctrlKey && (domEvent.key === '+' || domEvent.key === '=')) {
-          domEvent.preventDefault();
-          fontSizeRef.current += 1;
-          term.options.fontSize = fontSizeRef.current;
-          fitAddon.fit();
-          return;
-        }
-        if (domEvent.ctrlKey && domEvent.key === '-') {
-          domEvent.preventDefault();
-          fontSizeRef.current = Math.max(8, fontSizeRef.current - 1);
-          term.options.fontSize = fontSizeRef.current;
-          fitAddon.fit();
-          return;
-        }
-        if (domEvent.ctrlKey && domEvent.key === 'r') {
-          domEvent.preventDefault();
-          if (!revSearchRef.current.active) {
-            searchIdxRef.current = historyRef.current.length;
-            setRevSearch({ active: true, query: '', match: '' });
-          } else {
-            updateSearch(revSearchRef.current.query, true);
-          }
-          return;
-        }
-        if (domEvent.key === 'Tab') {
-          domEvent.preventDefault();
-          handleTab();
-        } else if (domEvent.key === 'ArrowLeft') {
-          domEvent.preventDefault();
-          handleSuggestionNav('left');
-        } else if (domEvent.key === 'ArrowRight') {
-          domEvent.preventDefault();
-          handleSuggestionNav('right');
-        } else if (domEvent.key === 'ArrowUp') {
-          domEvent.preventDefault();
-          handleHistoryNav('up');
-        } else if (domEvent.key === 'ArrowDown') {
-          domEvent.preventDefault();
-          handleHistoryNav('down');
-        }
-      });
 
       term.onData((data: string) => {
         if (revSearchRef.current.active) {
@@ -508,6 +504,7 @@ const TerminalPaneInner = (
         if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
         term.dispose();
       };
+      })();
     }, [
       prompt,
       runCommand,
