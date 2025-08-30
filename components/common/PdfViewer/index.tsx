@@ -1,10 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import useRovingTabIndex from '../../../hooks/useRovingTabIndex';
-import * as pdfjsLib from 'pdfjs-dist';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import type { TextItem } from 'pdfjs-dist/types/src/display/api';
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 interface PdfViewerProps {
   url: string;
@@ -26,15 +23,21 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
   );
 
   useEffect(() => {
+    let mounted = true;
     const loadPdf = async () => {
       try {
+        const pdfjsLib = await import('pdfjs-dist');
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
         const loadedPdf = await pdfjsLib.getDocument(url).promise;
-        setPdf(loadedPdf);
+        if (mounted) setPdf(loadedPdf);
       } catch (error) {
         console.error('Error loading PDF:', error);
       }
     };
     loadPdf();
+    return () => {
+      mounted = false;
+    };
   }, [url]);
 
   useEffect(() => {
