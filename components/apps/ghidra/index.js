@@ -12,6 +12,7 @@ async function loadCapstone() {
   if (typeof window === 'undefined') return null;
   await capstone.loadCapstone();
   return capstone;
+
 }
 
 // Disassembly data is now loaded from pre-generated JSON
