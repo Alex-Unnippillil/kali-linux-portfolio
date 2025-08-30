@@ -12,6 +12,13 @@ jobs:
         with:
           node-version: 20
           cache: yarn
-      - run: yarn install --frozen-lockfile
+      - name: Install deps
+        run: yarn install --json | tee install.log
+      - name: Fail on peer warnings
+        run: |
+          if grep -q "warning .* peer dependency" install.log; then
+            echo "Peer-dependency warnings found"
+            exit 1
+          fi
       - run: yarn lint
       - run: yarn build
