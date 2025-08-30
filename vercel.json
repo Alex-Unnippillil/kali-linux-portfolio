@@ -3,5 +3,6 @@
   "nodeVersion": "20.x",
   "functions": {
     "pages/api/**/*.js": { "memory": 1024, "maxDuration": 30 }
+
   }
 }
