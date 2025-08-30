@@ -53,14 +53,6 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
     setRecent((prev) => [expression, ...prev.filter((f) => f !== expression)].slice(0, 5));
   };
 
-  const handlePresetSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const expression = e.target.value;
-    if (expression) {
-      handlePresetClick(expression);
-    }
-
-  };
-
   const handleSavePreset = () => {
     const expression = value.trim();
     if (!expression) return;
