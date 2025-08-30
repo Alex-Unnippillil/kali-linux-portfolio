@@ -9,6 +9,21 @@ describe('KismetApp', () => {
     render(<KismetApp />);
     await user.click(screen.getByRole('button', { name: /load sample/i }));
     await user.click(screen.getByRole('button', { name: /step/i }));
-    expect(screen.getByText('CoffeeShopWiFi')).toBeInTheDocument();
+    expect(screen.getAllByText('CoffeeShopWiFi')[0]).toBeInTheDocument();
+  });
+
+  it('invokes onNetworkDiscovered with network info', async () => {
+    const user = userEvent.setup();
+    const onNetworkDiscovered = jest.fn();
+    render(<KismetApp onNetworkDiscovered={onNetworkDiscovered} />);
+    await user.click(screen.getByRole('button', { name: /load sample/i }));
+    await user.click(screen.getByRole('button', { name: /step/i }));
+    expect(onNetworkDiscovered).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ssid: 'CoffeeShopWiFi',
+        bssid: '66:77:88:00:00:01',
+        discoveredAt: expect.any(Number),
+      })
+    );
   });
 });
