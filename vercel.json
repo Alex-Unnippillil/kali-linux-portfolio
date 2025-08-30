@@ -4,7 +4,6 @@
     "api/**/*.ts": { "runtime": "nodejs20.x" }
   },
   "env": {
-    "FLAGS_SECRET": "@flags_secret",
     "ADMIN_READ_KEY": "@admin-read-key"
   }
 }
