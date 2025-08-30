@@ -12,6 +12,7 @@ const themes: Record<string, { bg: string; flipper: string }> = {
 
 export default function Pinball() {
   // Start refs as null and reflect that in the type
+
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const engineRef = useRef<Engine | null>(null);
   const leftFlipperRef = useRef<Body | null>(null);

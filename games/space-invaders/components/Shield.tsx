@@ -19,7 +19,7 @@ interface ShieldProps {
 const Shield: React.FC<ShieldProps> = ({ regenDuration = 3000, maxHp = 6 }) => {
   const [hp, setHp] = useState(maxHp);
   const [progress, setProgress] = useState(0); // 0..1
-  const animRef = useRef<number>();
+  const animRef = useRef<number | null>(null);
 
   // Start a regeneration timer when the shield is destroyed
   useEffect(() => {

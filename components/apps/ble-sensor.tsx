@@ -25,7 +25,7 @@ const BleSensor: React.FC = () => {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [profiles, setProfiles] = useState<SavedProfile[]>([]);
-  const bcRef = useRef<BroadcastChannel>();
+  const bcRef = useRef<BroadcastChannel | null>(null);
 
   const refreshProfiles = async () => setProfiles(await loadProfiles());
 
