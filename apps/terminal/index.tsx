@@ -297,7 +297,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         import('@xterm/addon-fit'),
         import('@xterm/addon-search'),
       ]);
-      await import('@xterm/xterm/css/xterm.css');
       if (disposed) return;
       const term = new XTerm({
         cursorBlink: true,

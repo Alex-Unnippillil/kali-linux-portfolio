@@ -6,10 +6,6 @@ import React, {
   useState,
   forwardRef,
 } from 'react';
-import { Terminal as XTerm } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
-import { SearchAddon } from '@xterm/addon-search';
-import '@xterm/xterm/css/xterm.css';
 
 const promptText = 'alex@kali:~$ ';
 
@@ -329,35 +325,44 @@ const TerminalPane = forwardRef<
     }, []);
 
     useEffect(() => {
-      const term = new XTerm({
-        cursorBlink: true,
-        convertEol: true,
-        fontSize: fontSizeRef.current,
-        theme: {
-          background: '#000000',
-          foreground: '#00ff00',
-          cursor: '#00ff00',
-        },
-      });
-      const fitAddon = new FitAddon();
-      const searchAddon = new SearchAddon();
-      term.loadAddon(fitAddon);
-      term.loadAddon(searchAddon);
-      term.open(containerRef.current!);
-      termRef.current = term;
-      fitAddonRef.current = fitAddon;
-      fitAddon.fit();
-      containerRef.current!.classList.add('crt-terminal');
-      term.write('Welcome to the portfolio terminal');
-      updateLive('Welcome to the portfolio terminal');
-      prompt();
+      let disposed = false;
+      let cleanup = () => {};
+      (async () => {
+        const [{ Terminal }, { FitAddon }, { SearchAddon }] = await Promise.all([
+          import('@xterm/xterm'),
+          import('@xterm/addon-fit'),
+          import('@xterm/addon-search'),
+        ]);
+        if (disposed) return;
+        const term = new Terminal({
+          cursorBlink: true,
+          convertEol: true,
+          fontSize: fontSizeRef.current,
+          theme: {
+            background: '#000000',
+            foreground: '#00ff00',
+            cursor: '#00ff00',
+          },
+        });
+        const fitAddon = new FitAddon();
+        const searchAddon = new SearchAddon();
+        term.loadAddon(fitAddon);
+        term.loadAddon(searchAddon);
+        term.open(containerRef.current!);
+        termRef.current = term;
+        fitAddonRef.current = fitAddon;
+        fitAddon.fit();
+        containerRef.current!.classList.add('crt-terminal');
+        term.write('Welcome to the portfolio terminal');
+        updateLive('Welcome to the portfolio terminal');
+        prompt();
 
-      term.onKey(({ key, domEvent }: any) => {
-        onFocus();
-        if (domEvent.ctrlKey && domEvent.shiftKey && domEvent.key === 'D') {
-          domEvent.preventDefault();
-          runCommand('split');
-          return;
+        term.onKey(({ key, domEvent }: any) => {
+          onFocus();
+          if (domEvent.ctrlKey && domEvent.shiftKey && domEvent.key === 'D') {
+            domEvent.preventDefault();
+            runCommand('split');
+            return;
         }
         if (domEvent.ctrlKey && domEvent.key.toLowerCase() === 'c') {
           const sel = term.getSelection();
@@ -421,14 +426,14 @@ const TerminalPane = forwardRef<
           domEvent.preventDefault();
           handleHistoryNav('down');
         }
-      });
+        });
 
-      term.onData((data: string) => {
-        if (revSearchRef.current.active) {
-          if (data === '\r') {
-            term.write('\x1b[2K\r');
-            term.write(promptText);
-            term.write(revSearchRef.current.match);
+        term.onData((data: string) => {
+          if (revSearchRef.current.active) {
+            if (data === '\r') {
+              term.write('\x1b[2K\r');
+              term.write(promptText);
+              term.write(revSearchRef.current.match);
             commandRef.current = revSearchRef.current.match;
             setRevSearch({ active: false, query: '', match: '' });
             renderHint();
@@ -468,40 +473,46 @@ const TerminalPane = forwardRef<
           term.write(data);
           clearSuggestions();
         }
-        renderHint();
-      });
-
-      if (typeof window !== 'undefined' && typeof Worker === 'function') {
-        workerRef.current = new Worker(
-          new URL('./terminal.worker.js', import.meta.url),
-        );
-        workerRef.current.onmessage = (e: any) => {
-          term.writeln('');
-          const msg = String(e.data);
-          term.writeln(msg);
-          logRef.current += `${msg}\n`;
-          updateLive(msg);
-          prompt();
           renderHint();
-        };
-      } else {
-        workerRef.current = null;
-      }
+        });
 
-      const handleResize = () => fitAddon.fit();
-      window.addEventListener('resize', handleResize);
-      let resizeObserver: ResizeObserver | null = null;
-      if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
-        resizeObserver = new ResizeObserver(handleResize);
-        resizeObserver.observe(containerRef.current);
-      }
+        if (typeof window !== 'undefined' && typeof Worker === 'function') {
+          workerRef.current = new Worker(
+            new URL('./terminal.worker.js', import.meta.url),
+          );
+          workerRef.current.onmessage = (e: any) => {
+            term.writeln('');
+            const msg = String(e.data);
+            term.writeln(msg);
+            logRef.current += `${msg}\n`;
+            updateLive(msg);
+            prompt();
+            renderHint();
+          };
+        } else {
+          workerRef.current = null;
+        }
+
+        const handleResize = () => fitAddon.fit();
+        window.addEventListener('resize', handleResize);
+        let resizeObserver: ResizeObserver | null = null;
+        if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
+          resizeObserver = new ResizeObserver(handleResize);
+          resizeObserver.observe(containerRef.current);
+        }
+
+        cleanup = () => {
+          window.removeEventListener('resize', handleResize);
+          resizeObserver?.disconnect();
+          workerRef.current?.terminate();
+          if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
+          term.dispose();
+        };
+      })();
 
       return () => {
-        window.removeEventListener('resize', handleResize);
-        resizeObserver?.disconnect();
-        workerRef.current?.terminate();
-        if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
-        term.dispose();
+        disposed = true;
+        cleanup();
       };
     }, [
       prompt,
