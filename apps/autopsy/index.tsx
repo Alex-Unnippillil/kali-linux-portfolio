@@ -10,7 +10,7 @@ interface AutopsyProps {
   initialArtifacts?: Artifact[];
 }
 
-const AutopsyApp: React.FC<AutopsyProps> = AutopsyAppComponent;
+const AutopsyApp = AutopsyAppComponent as React.FC<AutopsyProps>;
 
 const AutopsyPage: React.FC = () => {
   // Track which view is active so we can restore UI state when toggling
