@@ -1,6 +1,12 @@
 import { flag } from 'flags/next';
 
-export const exampleFlag = flag({ key: 'example', defaultValue: false });
+// The flags SDK now requires a decide function for each flag
+export const exampleFlag = flag<boolean>({
+  key: 'example',
+  decide() {
+    return false;
+  },
+});
 
 export default function Flags() {
   return null;
