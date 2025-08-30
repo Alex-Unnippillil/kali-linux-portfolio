@@ -113,9 +113,11 @@ const Simulator: React.FC = () => {
   };
 
 
+
   // Previously a chart visualization tab used Chart.js here.
   // The dependency caused build failures, so the chart feature was removed
   // to keep the simulator lightweight and avoid installation errors.
+
 
   const tabs: TabDefinition[] = [
     { id: 'raw', title: 'Raw', content: <pre className="p-2 overflow-auto" aria-label="Raw output">{fixtureText}</pre> },
