@@ -39,7 +39,7 @@ Serverful deployments run the built Next.js server so all API routes are availab
 ```bash
 yarn build && yarn start
 ```
-> **Note:** Workbox's build tooling uses `glob@7`, which pulls the deprecated [`inflight`](https://www.npmjs.com/package/inflight) module. Security scanners may surface advisories such as [GHSA-ww39-953v-wcq6](https://github.com/advisories/GHSA-ww39-953v-wcq6) and [GHSA-cj88-88mr-972w](https://github.com/advisories/GHSA-cj88-88mr-972w); these warnings stem from transient build-time dependencies and are considered safe here.
+> **Note:** The service worker is generated with a custom precache script (`scripts/generate-sw.mjs`) built on [`fast-glob`](https://github.com/mrmlnc/fast-glob). This avoids the deprecated `glob@7`/`inflight` chain previously pulled in via Workbox.
 After the server starts, exercise an API route to confirm server-side functionality:
 ```bash
 curl -X POST http://localhost:3000/api/dummy
