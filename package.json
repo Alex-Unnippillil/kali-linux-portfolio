@@ -9,6 +9,7 @@
     "dev": "next dev",
     "build": "next build && yarn build:sw",
     "postbuild": "node -e \"const fs=require('fs');fs.mkdirSync('public/vendor',{recursive:true});fs.copyFileSync('dist/utils/gamepad.js','public/vendor/gamepad.js')\"",
+    "preinstall": "corepack enable",
     "start": "next start",
     "export": "NEXT_PUBLIC_STATIC_EXPORT=true next build && yarn build:sw",
     "test": "jest",
@@ -20,7 +21,7 @@
     "build:sw": "node scripts/generate-sw.mjs"
   },
   "engines": {
-    "node": "20.x"
+    "node": "22.x"
   },
   "dependencies": {
     "@emailjs/browser": "^3.10.0",
@@ -79,9 +80,8 @@
     "react-force-graph": "^1.45.0",
     "react-ga4": "^2.1.0",
     "react-github-calendar": "^4.5.9",
-    "react-leaflet": "^4.2.1",
-    "react-onclickoutside": "^6.12.2",
-    "react-twitter-embed": "^4.0.4",
+    "react-leaflet": "^5.0.0",
+    "react-tweet": "^3.2.2",
     "rrule": "2.7.2",
     "seedrandom": "^3.0.5",
     "sharp": "^0.34.3",
@@ -132,8 +132,7 @@
   "resolutions": {
     "magic-string": "^0.30.10",
     "postcss": "^8.5.6",
-    "test-exclude": "^7.0.1",
-    "@napi-rs/canvas@npm:^0.1.74": "patch:@napi-rs/canvas@npm%3A0.1.77#./.yarn/patches/@napi-rs-canvas-npm-0.1.77-27723c2ab5.patch"
+    "test-exclude": "^7.0.1"
   },
   "packageManager": "yarn@4.9.2"
 }

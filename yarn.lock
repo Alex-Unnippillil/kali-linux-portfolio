@@ -2238,90 +2238,90 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@napi-rs/canvas-android-arm64@npm:0.1.77":
-  version: 0.1.77
-  resolution: "@napi-rs/canvas-android-arm64@npm:0.1.77"
+"@napi-rs/canvas-android-arm64@npm:0.1.78":
+  version: 0.1.78
+  resolution: "@napi-rs/canvas-android-arm64@npm:0.1.78"
   conditions: os=android & cpu=arm64
   languageName: node
   linkType: hard
 
-"@napi-rs/canvas-darwin-arm64@npm:0.1.77":
-  version: 0.1.77
-  resolution: "@napi-rs/canvas-darwin-arm64@npm:0.1.77"
+"@napi-rs/canvas-darwin-arm64@npm:0.1.78":
+  version: 0.1.78
+  resolution: "@napi-rs/canvas-darwin-arm64@npm:0.1.78"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
 
-"@napi-rs/canvas-darwin-x64@npm:0.1.77":
-  version: 0.1.77
-  resolution: "@napi-rs/canvas-darwin-x64@npm:0.1.77"
+"@napi-rs/canvas-darwin-x64@npm:0.1.78":
+  version: 0.1.78
+  resolution: "@napi-rs/canvas-darwin-x64@npm:0.1.78"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
-"@napi-rs/canvas-linux-arm-gnueabihf@npm:0.1.77":
-  version: 0.1.77
-  resolution: "@napi-rs/canvas-linux-arm-gnueabihf@npm:0.1.77"
+"@napi-rs/canvas-linux-arm-gnueabihf@npm:0.1.78":
+  version: 0.1.78
+  resolution: "@napi-rs/canvas-linux-arm-gnueabihf@npm:0.1.78"
   conditions: os=linux & cpu=arm
   languageName: node
   linkType: hard
 
-"@napi-rs/canvas-linux-arm64-gnu@npm:0.1.77":
-  version: 0.1.77
-  resolution: "@napi-rs/canvas-linux-arm64-gnu@npm:0.1.77"
+"@napi-rs/canvas-linux-arm64-gnu@npm:0.1.78":
+  version: 0.1.78
+  resolution: "@napi-rs/canvas-linux-arm64-gnu@npm:0.1.78"
   conditions: os=linux & cpu=arm64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@napi-rs/canvas-linux-arm64-musl@npm:0.1.77":
-  version: 0.1.77
-  resolution: "@napi-rs/canvas-linux-arm64-musl@npm:0.1.77"
+"@napi-rs/canvas-linux-arm64-musl@npm:0.1.78":
+  version: 0.1.78
+  resolution: "@napi-rs/canvas-linux-arm64-musl@npm:0.1.78"
   conditions: os=linux & cpu=arm64 & libc=musl
   languageName: node
   linkType: hard
 
-"@napi-rs/canvas-linux-riscv64-gnu@npm:0.1.77":
-  version: 0.1.77
-  resolution: "@napi-rs/canvas-linux-riscv64-gnu@npm:0.1.77"
+"@napi-rs/canvas-linux-riscv64-gnu@npm:0.1.78":
+  version: 0.1.78
+  resolution: "@napi-rs/canvas-linux-riscv64-gnu@npm:0.1.78"
   conditions: os=linux & cpu=riscv64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@napi-rs/canvas-linux-x64-gnu@npm:0.1.77":
-  version: 0.1.77
-  resolution: "@napi-rs/canvas-linux-x64-gnu@npm:0.1.77"
+"@napi-rs/canvas-linux-x64-gnu@npm:0.1.78":
+  version: 0.1.78
+  resolution: "@napi-rs/canvas-linux-x64-gnu@npm:0.1.78"
   conditions: os=linux & cpu=x64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@napi-rs/canvas-linux-x64-musl@npm:0.1.77":
-  version: 0.1.77
-  resolution: "@napi-rs/canvas-linux-x64-musl@npm:0.1.77"
+"@napi-rs/canvas-linux-x64-musl@npm:0.1.78":
+  version: 0.1.78
+  resolution: "@napi-rs/canvas-linux-x64-musl@npm:0.1.78"
   conditions: os=linux & cpu=x64 & libc=musl
   languageName: node
   linkType: hard
 
-"@napi-rs/canvas-win32-x64-msvc@npm:0.1.77":
-  version: 0.1.77
-  resolution: "@napi-rs/canvas-win32-x64-msvc@npm:0.1.77"
+"@napi-rs/canvas-win32-x64-msvc@npm:0.1.78":
+  version: 0.1.78
+  resolution: "@napi-rs/canvas-win32-x64-msvc@npm:0.1.78"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
 
-"@napi-rs/canvas@npm:0.1.77":
-  version: 0.1.77
-  resolution: "@napi-rs/canvas@npm:0.1.77"
+"@napi-rs/canvas@npm:^0.1.74":
+  version: 0.1.78
+  resolution: "@napi-rs/canvas@npm:0.1.78"
   dependencies:
-    "@napi-rs/canvas-android-arm64": "npm:0.1.77"
-    "@napi-rs/canvas-darwin-arm64": "npm:0.1.77"
-    "@napi-rs/canvas-darwin-x64": "npm:0.1.77"
-    "@napi-rs/canvas-linux-arm-gnueabihf": "npm:0.1.77"
-    "@napi-rs/canvas-linux-arm64-gnu": "npm:0.1.77"
-    "@napi-rs/canvas-linux-arm64-musl": "npm:0.1.77"
-    "@napi-rs/canvas-linux-riscv64-gnu": "npm:0.1.77"
-    "@napi-rs/canvas-linux-x64-gnu": "npm:0.1.77"
-    "@napi-rs/canvas-linux-x64-musl": "npm:0.1.77"
-    "@napi-rs/canvas-win32-x64-msvc": "npm:0.1.77"
+    "@napi-rs/canvas-android-arm64": "npm:0.1.78"
+    "@napi-rs/canvas-darwin-arm64": "npm:0.1.78"
+    "@napi-rs/canvas-darwin-x64": "npm:0.1.78"
+    "@napi-rs/canvas-linux-arm-gnueabihf": "npm:0.1.78"
+    "@napi-rs/canvas-linux-arm64-gnu": "npm:0.1.78"
+    "@napi-rs/canvas-linux-arm64-musl": "npm:0.1.78"
+    "@napi-rs/canvas-linux-riscv64-gnu": "npm:0.1.78"
+    "@napi-rs/canvas-linux-x64-gnu": "npm:0.1.78"
+    "@napi-rs/canvas-linux-x64-musl": "npm:0.1.78"
+    "@napi-rs/canvas-win32-x64-msvc": "npm:0.1.78"
   dependenciesMeta:
     "@napi-rs/canvas-android-arm64":
       optional: true
@@ -2343,46 +2343,7 @@ __metadata:
       optional: true
     "@napi-rs/canvas-win32-x64-msvc":
       optional: true
-  checksum: 10c0/f7a1b33e86e53c210db873a6b5b9be9961d9a57b4e1c4e61c2667ed3cb166dec334b4f14d548c8790d9ffc79cf49b9762340f3b3d3f7fc991e9c8cc0a5f8654d
-  languageName: node
-  linkType: hard
-
-"@napi-rs/canvas@patch:@napi-rs/canvas@npm%3A0.1.77#./.yarn/patches/@napi-rs-canvas-npm-0.1.77-27723c2ab5.patch::locator=unnippillil%40workspace%3A.":
-  version: 0.1.77
-  resolution: "@napi-rs/canvas@patch:@napi-rs/canvas@npm%3A0.1.77#./.yarn/patches/@napi-rs-canvas-npm-0.1.77-27723c2ab5.patch::version=0.1.77&hash=93d5cb&locator=unnippillil%40workspace%3A."
-  dependencies:
-    "@napi-rs/canvas-android-arm64": "npm:0.1.77"
-    "@napi-rs/canvas-darwin-arm64": "npm:0.1.77"
-    "@napi-rs/canvas-darwin-x64": "npm:0.1.77"
-    "@napi-rs/canvas-linux-arm-gnueabihf": "npm:0.1.77"
-    "@napi-rs/canvas-linux-arm64-gnu": "npm:0.1.77"
-    "@napi-rs/canvas-linux-arm64-musl": "npm:0.1.77"
-    "@napi-rs/canvas-linux-riscv64-gnu": "npm:0.1.77"
-    "@napi-rs/canvas-linux-x64-gnu": "npm:0.1.77"
-    "@napi-rs/canvas-linux-x64-musl": "npm:0.1.77"
-    "@napi-rs/canvas-win32-x64-msvc": "npm:0.1.77"
-  dependenciesMeta:
-    "@napi-rs/canvas-android-arm64":
-      optional: true
-    "@napi-rs/canvas-darwin-arm64":
-      optional: true
-    "@napi-rs/canvas-darwin-x64":
-      optional: true
-    "@napi-rs/canvas-linux-arm-gnueabihf":
-      optional: true
-    "@napi-rs/canvas-linux-arm64-gnu":
-      optional: true
-    "@napi-rs/canvas-linux-arm64-musl":
-      optional: true
-    "@napi-rs/canvas-linux-riscv64-gnu":
-      optional: true
-    "@napi-rs/canvas-linux-x64-gnu":
-      optional: true
-    "@napi-rs/canvas-linux-x64-musl":
-      optional: true
-    "@napi-rs/canvas-win32-x64-msvc":
-      optional: true
-  checksum: 10c0/32cd0d4b772e341a6f8fa61e4f8bae29e47d978584cab41800aa304863d4555924fe525508d47be8d96300c713327056bab3e48c0f743850775f43c08667cd28
+  checksum: 10c0/7a98cc5b962b723c02c1e0220d2f937fd108188ecc575a32552915a8ae57c29f00f210adb28144ec110352931146cc71389601128807279b6a621cc0e5f4d0a5
   languageName: node
   linkType: hard
 
@@ -2574,14 +2535,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@react-leaflet/core@npm:^2.1.0":
-  version: 2.1.0
-  resolution: "@react-leaflet/core@npm:2.1.0"
+"@react-leaflet/core@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "@react-leaflet/core@npm:3.0.0"
   peerDependencies:
     leaflet: ^1.9.0
-    react: ^18.0.0
-    react-dom: ^18.0.0
-  checksum: 10c0/d5218c79ab9decd458e1fa8a0ec3757542e3ea4e569afa151a32ef0e9ceb63a13174f3fbc740fe0d514df8b0b3e30d913bfb0b8b661dac13924934d7e430bfc9
+    react: ^19.0.0
+    react-dom: ^19.0.0
+  checksum: 10c0/1e20f92ea99d378121d7ba57b9571ca3a67a86247729d8cd5726ded26105fcbffbbdf727da34b2ad5976438979819a38c93b94389313abb3ff80ca81632609a6
   languageName: node
   linkType: hard
 
@@ -2846,6 +2807,15 @@ __metadata:
   dependencies:
     tslib: "npm:^2.8.0"
   checksum: 10c0/33002f74f6f885f04c132960835fdfc474186983ea567606db62e86acd0680ca82f34647e8e610f4e1e422d1c16fce729dde22cd3b797ab1fd9061a825dabca4
+  languageName: node
+  linkType: hard
+
+"@swc/helpers@npm:^0.5.3":
+  version: 0.5.17
+  resolution: "@swc/helpers@npm:0.5.17"
+  dependencies:
+    tslib: "npm:^2.8.0"
+  checksum: 10c0/fe1f33ebb968558c5a0c595e54f2e479e4609bff844f9ca9a2d1ffd8dd8504c26f862a11b031f48f75c95b0381c2966c3dd156e25942f90089badd24341e7dbb
   languageName: node
   linkType: hard
 
@@ -4968,7 +4938,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"clsx@npm:^2.1.1":
+"clsx@npm:^2.0.0, clsx@npm:^2.1.1":
   version: 2.1.1
   resolution: "clsx@npm:2.1.1"
   checksum: 10c0/c4c8eb865f8c82baab07e71bfa8897c73454881c4f99d6bc81585aecd7c441746c1399d08363dc096c550cceaf97bd4ce1e8854e1771e9998d9f94c4fe075839
@@ -10516,38 +10486,30 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-leaflet@npm:^4.2.1":
-  version: 4.2.1
-  resolution: "react-leaflet@npm:4.2.1"
+"react-leaflet@npm:^5.0.0":
+  version: 5.0.0
+  resolution: "react-leaflet@npm:5.0.0"
   dependencies:
-    "@react-leaflet/core": "npm:^2.1.0"
+    "@react-leaflet/core": "npm:^3.0.0"
   peerDependencies:
     leaflet: ^1.9.0
-    react: ^18.0.0
-    react-dom: ^18.0.0
-  checksum: 10c0/2e9d1687e883fd7d2e9798e51a04600e1b14784dc98b981a44507e65eb39a24f08c7f237c7522ae5667e999eb53b8d565ebd0f5baa25ef73a0278d6bfcc369e1
+    react: ^19.0.0
+    react-dom: ^19.0.0
+  checksum: 10c0/f0b6fb797cc2d81bc8cbb54e0cb32aefa689d35ca5f52d203ce3c5a1d14668e51244f10844bd2c88d5cb4aca5eb05bc280794e6d1652727ff9da2358e89d1b86
   languageName: node
   linkType: hard
 
-"react-onclickoutside@npm:^6.12.2":
-  version: 6.13.2
-  resolution: "react-onclickoutside@npm:6.13.2"
-  peerDependencies:
-    react: ^15.5.x || ^16.x || ^17.x || ^18.x
-    react-dom: ^15.5.x || ^16.x || ^17.x || ^18.x
-  checksum: 10c0/fafe6fd036729d7e8f6b5d59046aa0dbc7b547269e167f3c7ab3fa30508ce768133ad46654014449bc1a697d1473bad78a1b869071bd81256c89f225c7c4f2ed
-  languageName: node
-  linkType: hard
-
-"react-twitter-embed@npm:^4.0.4":
-  version: 4.0.4
-  resolution: "react-twitter-embed@npm:4.0.4"
+"react-tweet@npm:^3.2.2":
+  version: 3.2.2
+  resolution: "react-tweet@npm:3.2.2"
   dependencies:
-    scriptjs: "npm:^2.5.9"
+    "@swc/helpers": "npm:^0.5.3"
+    clsx: "npm:^2.0.0"
+    swr: "npm:^2.2.4"
   peerDependencies:
-    react: ^16.0.0 || ^17.0.0 || ^18.0.0
-    react-dom: ^16.0.0 || ^17.0.0 || ^18.0.0
-  checksum: 10c0/5c5395a8421fd67752f4eae993b682175a3757e73c338f1d0ec56cf413206ae01c9197d39dfee41d0726f4740703a9a9fdce4ac66d1529dbecf0967f7953be39
+    react: ^18.0.0 || ^19.0.0
+    react-dom: ^18.0.0 || ^19.0.0
+  checksum: 10c0/bec5ad7139e0f1eb768dfb583250dfa515e930dae030d0dbc9fce186788e01c2e841903d46c46eb8de065999adf764894c9453d3196bb83159b3ff92621e2639
   languageName: node
   linkType: hard
 
@@ -10934,13 +10896,6 @@ __metadata:
   version: 0.26.0
   resolution: "scheduler@npm:0.26.0"
   checksum: 10c0/5b8d5bfddaae3513410eda54f2268e98a376a429931921a81b5c3a2873aab7ca4d775a8caac5498f8cbc7d0daeab947cf923dbd8e215d61671f9f4e392d34356
-  languageName: node
-  linkType: hard
-
-"scriptjs@npm:^2.5.9":
-  version: 2.5.9
-  resolution: "scriptjs@npm:2.5.9"
-  checksum: 10c0/7b81adefb3ce7761a9b13f4cc22c6c77418a3f6a828bf400c9184ea3801c3fc2c352c4966382cece4a60cc843e0d1a1087bcf96b9a81a1bb6de7ddc60fd80811
   languageName: node
   linkType: hard
 
@@ -11625,7 +11580,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"swr@npm:^2.2.5":
+"swr@npm:^2.2.4, swr@npm:^2.2.5":
   version: 2.3.6
   resolution: "swr@npm:2.3.6"
   dependencies:
@@ -12359,9 +12314,8 @@ __metadata:
     react-force-graph: "npm:^1.45.0"
     react-ga4: "npm:^2.1.0"
     react-github-calendar: "npm:^4.5.9"
-    react-leaflet: "npm:^4.2.1"
-    react-onclickoutside: "npm:^6.12.2"
-    react-twitter-embed: "npm:^4.0.4"
+    react-leaflet: "npm:^5.0.0"
+    react-tweet: "npm:^3.2.2"
     rrule: "npm:2.7.2"
     seedrandom: "npm:^3.0.5"
     sharp: "npm:^0.34.3"
