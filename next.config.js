@@ -55,9 +55,10 @@ const securityHeaders = [
   },
 ];
 
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
-  enabled: process.env.ANALYZE === 'true',
-});
+const withBundleAnalyzer =
+  process.env.ANALYZE === 'true'
+    ? require('@next/bundle-analyzer')({ enabled: true })
+    : (config) => config;
 
 module.exports = withBundleAnalyzer({
   // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
