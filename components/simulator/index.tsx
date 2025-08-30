@@ -112,26 +112,9 @@ const Simulator: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  useEffect(() => {
-    if (activeTab === 'chart') {
-      import('chart.js/auto').then((Chart) => {
-        const ctx = document.getElementById('sim-chart') as HTMLCanvasElement | null;
-        if (!ctx) return;
-        new Chart.default(ctx, {
-          type: 'bar',
-          data: {
-            labels: parsed.map(p => p.key),
-            datasets: [{
-              label: 'Line',
-              backgroundColor: '#0072B2',
-              data: parsed.map(p => p.line),
-            }],
-          },
-          options: { responsive: true, maintainAspectRatio: false },
-        });
-      });
-    }
-  }, [activeTab, parsed]);
+  // Previously a chart visualization tab used Chart.js here.
+  // The dependency caused build failures, so the chart feature was removed
+  // to keep the simulator lightweight and avoid installation errors.
 
   const tabs: TabDefinition[] = [
     { id: 'raw', title: 'Raw', content: <pre className="p-2 overflow-auto" aria-label="Raw output">{fixtureText}</pre> },
@@ -167,11 +150,6 @@ const Simulator: React.FC = () => {
         </div>
       )
     },
-    {
-      id: 'chart',
-      title: 'Chart',
-      content: <canvas id="sim-chart" aria-label="Chart" role="img" className="w-full h-48" />
-    }
   ];
 
   return (

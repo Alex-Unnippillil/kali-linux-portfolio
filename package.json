@@ -40,7 +40,6 @@
     "autoprefixer": "^10.4.13",
     "bad-words": "^3.0.4",
     "canvas-confetti": "1.9.3",
-    "chart.js": "patch:chart.js@npm%3A4.5.0#./.yarn/patches/chart.js-npm-4.5.0-e95c375db8.patch",
     "chess.js": "^1.0.0",
     "chrono-node": "^2.8.4",
     "cron-parser": "^5.3.0",
@@ -135,7 +134,6 @@
     "postcss": "^8.5.6",
     "test-exclude": "^7.0.1",
     "@napi-rs/canvas@npm:^0.1.74": "patch:@napi-rs/canvas@npm%3A0.1.77#./.yarn/patches/@napi-rs-canvas-npm-0.1.77-27723c2ab5.patch"
-
   },
   "packageManager": "yarn@4.9.2"
 }
