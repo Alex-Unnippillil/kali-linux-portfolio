@@ -6,7 +6,7 @@ import Toast from "../../components/ui/Toast";
 import { processContactForm } from "../../components/apps/contact";
 import { copyToClipboard } from "../../utils/clipboard";
 import { openMailto } from "../../utils/mailto";
-import trackEvent from "@/lib/analytics-client";
+import { trackEvent } from "@/lib/analytics-client";
 
 const DRAFT_KEY = "contact-draft";
 const EMAIL = "alex.unnippillil@hotmail.com";

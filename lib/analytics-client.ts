@@ -4,6 +4,7 @@ export type EventName =
   | 'cta_click'
   | 'signup_submit'
   | 'contact_submit'
+  | 'contact_submit_error'
   | 'outbound_link_click'
   | 'download_click';
 
