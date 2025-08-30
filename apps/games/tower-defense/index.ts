@@ -121,7 +121,7 @@ export const clearSpriteCache = () => {
 };
 
 // ---- tower stats and upgrades ----
-export const TOWER_TYPES: Record<string, { range: number; damage: number }[]> = {
+export const TOWER_TYPES = {
   single: [
     { range: 1, damage: 1 },
     { range: 2, damage: 2 },
