@@ -55,13 +55,10 @@ const securityHeaders = [
   },
 ];
 
-const isExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
+const isStatic = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 
 module.exports = {
-  // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  ...(isStatic ? { output: 'export' } : {}),
   images: {
     domains: [
       'opengraph.githubassets.com',
