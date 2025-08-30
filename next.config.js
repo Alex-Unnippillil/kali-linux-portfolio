@@ -82,6 +82,12 @@ module.exports = withBundleAnalyzer({
         mangleExports: false,
       };
     }
+    config.resolve = config.resolve || {};
+    config.resolve.fallback = {
+      ...(config.resolve.fallback || {}),
+      module: false,
+      async_hooks: false,
+    };
     return config;
   },
   // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
