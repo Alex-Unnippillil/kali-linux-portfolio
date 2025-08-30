@@ -6,7 +6,8 @@ import DeauthWalkthrough from './components/DeauthWalkthrough';
 
 const KismetPage: React.FC = () => {
   const handleNetworkDiscovered = useCallback(
-    (net: { ssid: string; bssid: string; discoveredAt: number }) => {
+    (net?: { ssid: string; bssid: string; discoveredAt: number }) => {
+      if (!net) return;
       console.log(
         `Network ${net.ssid || net.bssid} discovered at ${new Date(
           net.discoveredAt,
