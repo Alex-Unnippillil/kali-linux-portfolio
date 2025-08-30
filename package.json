@@ -25,13 +25,8 @@
     "@emailjs/browser": "^3.10.0",
     "@monaco-editor/react": "^4.7.0",
     "@mozilla/readability": "^0.6.0",
-
-    "@supabase/supabase-js": "^2",
-
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.56.1",
-
-
     "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",
     "@vercel/toolbar": "^0.1.38",
@@ -55,7 +50,6 @@
     "fast-xml-parser": "^4.3.5",
     "figlet": "^1.8.2",
     "flags": "3",
-
     "hash-wasm": "^4.12.0",
     "howler": "^2.2.4",
     "html-to-image": "^1.11.13",
@@ -77,10 +71,10 @@
     "prettier": "^3.6.2",
     "prop-types": "^15.8.1",
     "qrcode": "^1.5.4",
-    "react": "18.3.1",
+    "react": "^19.1.1",
     "react-activity-calendar": "^2.7.13",
     "react-cytoscapejs": "^2.0.0",
-    "react-dom": "18.3.1",
+    "react-dom": "^19.1.1",
     "react-draggable": "^4.4.5",
     "react-force-graph": "^1.45.0",
     "react-ga4": "^2.1.0",
@@ -114,9 +108,9 @@
     "@types/matter-js": "0.20.0",
     "@types/node": "^24.2.1",
     "@types/qrcode": "^1.5.5",
-    "@types/react": "18.3.7",
+    "@types/react": "^19.1.12",
     "@types/react-cytoscapejs": "^1.2.5",
-    "@types/react-dom": "18.3.0",
+    "@types/react-dom": "^19.1.9",
     "@types/seedrandom": "^3",
     "@types/three": "^0.179.0",
     "@types/web-bluetooth": "^0.0.21",
