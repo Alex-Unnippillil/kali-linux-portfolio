@@ -44,7 +44,7 @@ const VCard: React.FC = () => {
       return;
     }
     QRCode.toDataURL(payload, { margin: 1 })
-      .then((data) => setQr(data))
+      .then((data: string) => setQr(data))
       .catch(() => setQr(''));
   }, [payload]);
 

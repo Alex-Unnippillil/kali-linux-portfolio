@@ -4,9 +4,17 @@ const positions = {
   Victim: { x: 60, y: 120 },
   Attacker: { x: 150, y: 50 },
   Gateway: { x: 240, y: 120 },
-};
+} as const;
 
-const steps = [
+type PositionKey = keyof typeof positions;
+
+interface Step {
+  title: string;
+  description: string;
+  flows: { from: PositionKey; to: PositionKey; color: string }[];
+}
+
+const steps: Step[] = [
   {
     title: 'Normal Operation',
     description: 'Victim communicates with the gateway directly.',

@@ -10,7 +10,7 @@ interface WifiData {
 }
 
 interface Props {
-  canvasRef: React.RefObject<HTMLCanvasElement>;
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
   onPayloadChange?: (payload: string) => void;
   size: number;
 }

@@ -367,6 +367,8 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
     }, 0);
   }, [state]);
 
+  const keyPos = useCallback((p: Position) => `${p.x},${p.y}`, []);
+
   const handlePreview = useCallback(() => {
     setSolutionPath(new Set());
     setStatus('...');
@@ -391,8 +393,6 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
     () => ({ width: CELL, height: CELL } as React.CSSProperties),
     []
   );
-
-  const keyPos = useCallback((p: Position) => `${p.x},${p.y}`, []);
 
   const findPath = useCallback((target: Position): string[] => {
     const start = state.player;

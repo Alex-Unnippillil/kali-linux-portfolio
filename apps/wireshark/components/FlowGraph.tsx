@@ -3,19 +3,18 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { toPng } from 'html-to-image';
 import type cytoscape from 'cytoscape';
-type Cytoscape = cytoscape;
+import type { ElementDefinition, Core } from 'cytoscape';
 
 interface CytoscapeComponentProps {
-  elements: Cytoscape.ElementDefinition[];
+  elements: ElementDefinition[];
   style: React.CSSProperties;
-  cy: (cy: cytoscape.Core) => void;
+  cy: (cy: Core) => void;
 }
 
-const CytoscapeComponent = dynamic<
-  React.ComponentType<CytoscapeComponentProps>
->(
+const CytoscapeComponent = dynamic<CytoscapeComponentProps>(
   async () => {
-    const cytoscape = (await import('cytoscape')).default;
+    const cytoscapeModule = await import('cytoscape');
+    const cytoscape = cytoscapeModule.default;
     const coseBilkent = (await import('cytoscape-cose-bilkent')).default;
     cytoscape.use(coseBilkent);
     return (await import('react-cytoscapejs'))
@@ -91,9 +90,9 @@ const FlowGraph: React.FC<FlowGraphProps> = ({ packets }) => {
     <div className="flex flex-col space-y-2">
       <div ref={containerRef} className="w-full h-64 bg-black">
         <CytoscapeComponent
-          elements={elements as Cytoscape.ElementDefinition[]}
+          elements={elements as ElementDefinition[]}
           style={{ width: '100%', height: '100%' }}
-          cy={(cy: cytoscape.Core) => {
+          cy={(cy: Core) => {
             cyRef.current = cy;
           }}
         />
