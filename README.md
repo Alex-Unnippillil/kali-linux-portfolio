@@ -22,13 +22,13 @@ Always test inside controlled labs and obtain written permission before performi
 ## Quick Start
 
 ### Requirements
-- **Node.js 22.x** (repo includes `.nvmrc`; run `nvm use`)
+- **Node.js 20.x** (repo includes `.nvmrc`; run `nvm use`)
 - **Yarn** or **npm**
 - Recommended: **pnpm** if you prefer stricter hoisting; update lock/config accordingly.
 
 ### Install & Run (Dev)
 ```bash
-nvm install  # installs Node 22 from .nvmrc if needed
+nvm install  # installs Node 20 from .nvmrc if needed
 nvm use
 yarn install
 yarn dev
@@ -172,7 +172,7 @@ keyboard focus so bundles are warmed before launch. When adding a new app, expor
 
 ## Environment Variables
 
-Copy `.env.local.example` to `.env.local` and fill in required values. Generate a long random string for `FLAGS_SECRET` and mirror it in your hosting provider settings.
+Copy `.env.local.example` to `.env.local` and fill in required values.
 
 | Name | Purpose |
 | --- | --- |
@@ -187,9 +187,9 @@ Copy `.env.local.example` to `.env.local` and fill in required values. Generate 
 | `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | ReCAPTCHA site key used on the client. |
 | `RECAPTCHA_SECRET` | ReCAPTCHA secret key for server-side verification. |
 | `ADMIN_READ_KEY` | Secret key required by admin message APIs. Configure this directly as an environment variable (e.g., in the Vercel dashboard). |
-| `FLAGS_SECRET` | Long random secret used by flag-related APIs. Set in `.env.local` and Vercel project settings. |
 | `NEXT_PUBLIC_UI_EXPERIMENTS` | Enable experimental UI heuristics. |
 | `NEXT_PUBLIC_STATIC_EXPORT` | Set to `'true'` during `yarn export` to disable server APIs. |
+| `NEXT_PUBLIC_SHOW_BETA` | Set to `1` to display a small beta badge in the UI. |
 | `FEATURE_TOOL_APIS` | Enable server-side tool API routes like Hydra and John; set to `enabled` to allow. |
 | `FEATURE_HYDRA` | Allow the Hydra API (`/api/hydra`); requires `FEATURE_TOOL_APIS`. |
 
@@ -241,7 +241,7 @@ These external domains are whitelisted in the default CSP. Update this list when
 ### Static export (GitHub Pages)
 Workflow: `.github/workflows/gh-deploy.yml`:
  - Installs Node, runs `yarn export`, adds `.nojekyll`, and deploys `./out` → `gh-pages` branch.
- - Uses **Node 22.x** to match `package.json`.
+ - Uses **Node 20.x** to match `package.json`.
 - Required env variables (GitHub Secrets):
   - `NEXT_PUBLIC_TRACKING_ID`
   - `NEXT_PUBLIC_SERVICE_ID`
@@ -267,7 +267,6 @@ Workflow: `.github/workflows/gh-deploy.yml`:
   - `NEXT_PUBLIC_UI_EXPERIMENTS`
   - `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`
   - `RECAPTCHA_SECRET`
-  - `FLAGS_SECRET`
   - `ADMIN_READ_KEY` (set manually in Vercel or your host)
 - Build command: `yarn build`
 - Output: Next.js (serverless by default on Vercel).
@@ -455,7 +454,7 @@ play/pause and track controls include keyboard hotkeys.
 
 ## Production Hardening Checklist
 
-- [x] **Pin Node to 22.x** across runtime and CI.
+- [x] **Pin Node to 20.x** across runtime and CI.
 - [ ] **Tighten CSP** (`connect-src`, `frame-src`, remove `http:` and `'unsafe-inline'`).
 - [ ] **Set env vars** in the hosting platform; rotate EmailJS keys regularly.
 - [ ] **Disable/flag API demo routes** for production or protect behind feature flags.
