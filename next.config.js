@@ -61,29 +61,32 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 
 const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 
+// Merge experiment settings and production optimizations into a single function.
+function configureWebpack(config, { isServer }) {
+  // Enable WebAssembly loading and avoid JSON destructuring bug
+  config.experiments = {
+    ...(config.experiments || {}),
+    asyncWebAssembly: true,
+  };
+  // Prevent bundling of server-only modules in the browser
+  config.resolve = config.resolve || {};
+  config.resolve.fallback = {
+    ...(config.resolve.fallback || {}),
+    module: false,
+    async_hooks: false,
+  };
+  if (process.env.NODE_ENV === 'production') {
+    config.optimization = {
+      ...(config.optimization || {}),
+      mangleExports: false,
+    };
+  }
+  return config;
+}
+
 module.exports = withBundleAnalyzer({
   output: 'export',
-  // Enable WebAssembly loading and avoid JSON destructuring bug
-  webpack: (config, { isServer }) => {
-    config.experiments = {
-      ...(config.experiments || {}),
-      asyncWebAssembly: true,
-    };
-    // Prevent bundling of server-only modules in the browser
-    config.resolve = config.resolve || {};
-    config.resolve.fallback = {
-      ...(config.resolve.fallback || {}),
-      module: false,
-      async_hooks: false,
-    };
-    if (process.env.NODE_ENV === 'production') {
-      config.optimization = {
-        ...(config.optimization || {}),
-        mangleExports: false,
-      };
-    }
-    return config;
-  },
+  webpack: configureWebpack,
   // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
   eslint: {
     ignoreDuringBuilds: true,
