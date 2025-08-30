@@ -12,6 +12,7 @@ const themes: Record<string, { bg: string; flipper: string }> = {
 
 export default function Pinball() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // References for core Matter.js entities
   const engineRef = useRef<Engine | null>(null);
   const leftFlipperRef = useRef<Body | null>(null);
   const rightFlipperRef = useRef<Body | null>(null);
