@@ -20,7 +20,7 @@
     "build:sw": "node scripts/generate-sw.mjs"
   },
   "engines": {
-    "node": "20.x"
+    "node": ">=20"
   },
   "dependencies": {
     "@emailjs/browser": "^3.10.0",
@@ -81,7 +81,6 @@
     "react-leaflet": "^5.0.0",
     "react-onclickoutside": "^6.12.2",
     "react-twitter-embed": "^4.0.4",
-
     "rrule": "2.7.2",
     "seedrandom": "^3.0.5",
     "sharp": "^0.34.3",
