@@ -1,9 +1,8 @@
 import QRCode from 'qrcode';
-import type { QRCodeToStringOptions } from 'qrcode';
 
 interface EncodeRequest {
   text: string;
-  opts: QRCodeToStringOptions;
+  opts: Parameters<typeof QRCode.toString>[1];
 }
 
 self.onmessage = async ({ data }: MessageEvent<EncodeRequest>) => {
@@ -11,7 +10,7 @@ self.onmessage = async ({ data }: MessageEvent<EncodeRequest>) => {
   try {
     const value = text || ' ';
     const png = await QRCode.toDataURL(value, opts);
-    const svg = await QRCode.toString(value, { ...opts, type: 'svg' });
+    const svg = await QRCode.toString(value, { ...(opts as any), type: 'svg' });
     (self as any).postMessage({ png, svg });
   } catch {
     (self as any).postMessage({ png: '', svg: '' });
