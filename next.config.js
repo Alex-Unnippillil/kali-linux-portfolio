@@ -56,8 +56,12 @@ const securityHeaders = [
 ];
 
 const isExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+  openAnalyzer: false,
+});
 
-module.exports = {
+module.exports = withBundleAnalyzer({
   // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
   eslint: {
     ignoreDuringBuilds: true,
@@ -74,6 +78,13 @@ module.exports = {
     deviceSizes: [640, 750, 828, 1080, 1200, 1280, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
   },
+  experimental: {
+    optimizePackageImports: [
+      '@xterm/xterm',
+      '@zxing/browser',
+      '@zxing/library',
+    ],
+  },
   async headers() {
     return [
       {
@@ -82,5 +93,5 @@ module.exports = {
       },
     ];
   },
-};
+});
 
