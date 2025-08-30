@@ -1,0 +1,21 @@
+➤ YN0000: · Yarn 4.9.2
+➤ YN0000: ┌ Resolution step
+➤ YN0085: │ + @axe-core/playwright@npm:4.10.2, @emailjs/browser@npm:3.12.1, @eslint/eslintrc@npm:3.3.1, @monaco-editor/react@npm:4.7.0, and 1565 more.
+➤ YN0000: └ Completed in 28s 608ms
+➤ YN0000: ┌ Post-resolution validation
+➤ YN0060: │ react is listed by your project with version 19.1.1 (p7af8d), which doesn't satisfy what react-onclickoutside and other dependencies request (but they have non-overlapping ranges!).
+➤ YN0060: │ react-dom is listed by your project with version 19.1.1 (p8cf72), which doesn't satisfy what react-onclickoutside and other dependencies request (but they have non-overlapping ranges!).
+➤ YN0002: │ unnippillil@workspace:. doesn't provide leaflet (p7a563), requested by react-leaflet.
+➤ YN0086: │ Some peer dependencies are incorrectly met by your project; run yarn explain peer-requirements <hash> for details, where <hash> is the six-letter p-prefixed code.
+➤ YN0086: │ Some peer dependencies are incorrectly met by dependencies; run yarn explain peer-requirements for details.
+➤ YN0000: └ Completed
+➤ YN0000: ┌ Fetch step
+➤ YN0013: │ 310 packages were added to the project (+ 321.46 MiB).
+➤ YN0000: └ Completed in 12s 997ms
+➤ YN0000: ┌ Link step
+➤ YN0008: │ sharp@npm:0.34.3 must be rebuilt because its dependency tree changed
+➤ YN0007: │ puppeteer@npm:24.17.1 must be built because it never has been before or the last one failed
+➤ YN0008: │ unrs-resolver@npm:1.11.1 must be rebuilt because its dependency tree changed
+➤ YN0008: │ @vercel/speed-insights@npm:1.2.0 [40cad] must be rebuilt because its dependency tree changed
+➤ YN0000: └ Completed in 26s 906ms
+➤ YN0000: · Done with warnings in 1m 9s
