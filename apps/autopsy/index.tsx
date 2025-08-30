@@ -2,15 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import AutopsyAppComponent from '../../components/apps/autopsy';
-import events from './events.json';
 import KeywordTester from './components/KeywordTester';
-import type { Artifact } from './types';
-
-interface AutopsyProps {
-  initialArtifacts?: Artifact[];
-}
-
-const AutopsyApp = AutopsyAppComponent as React.FC<AutopsyProps>;
 
 const AutopsyPage: React.FC = () => {
   // Track which view is active so we can restore UI state when toggling
@@ -55,9 +47,7 @@ const AutopsyPage: React.FC = () => {
           Keyword Tester
         </button>
       </div>
-      {view === 'autopsy' && (
-        <AutopsyApp initialArtifacts={events.artifacts as Artifact[]} />
-      )}
+      {view === 'autopsy' && <AutopsyAppComponent />}
       {view === 'keywords' && <KeywordTester />}
     </div>
   );
