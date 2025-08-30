@@ -4,7 +4,7 @@ import animalWords from '../components/apps/wordle_words_animals.json';
 import fruitWords from '../components/apps/wordle_words_fruits.json';
 import { getDailySeed } from './dailyChallenge';
 
-type DictName = 'common' | 'alt' | 'animals' | 'fruits';
+export type DictName = 'common' | 'alt' | 'animals' | 'fruits';
 
 const dictionaries: Record<DictName, string[]> = {
   common: commonWords as string[],
