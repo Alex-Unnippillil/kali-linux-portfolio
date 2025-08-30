@@ -88,9 +88,9 @@ module.exports = withBundleAnalyzer({
   ...(isStaticExport && { output: 'export' }),
   webpack: configureWebpack,
 
-  // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
+  // Run ESLint during builds so linting errors surface
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   images: {
     unoptimized: true,
