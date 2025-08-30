@@ -1,5 +1,6 @@
 import { flag } from '@vercel/flags/next';
 
+
 // Example feature flag used by pages/api/vercel/flags.ts
 export const exampleFlag = flag<boolean>({
   key: 'example-flag',
