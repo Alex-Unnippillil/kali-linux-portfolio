@@ -25,13 +25,8 @@
     "@emailjs/browser": "^3.10.0",
     "@monaco-editor/react": "^4.7.0",
     "@mozilla/readability": "^0.6.0",
-
-    "@supabase/supabase-js": "^2",
-
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.56.1",
-
-
     "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",
     "@vercel/toolbar": "^0.1.38",
@@ -44,7 +39,7 @@
     "autoprefixer": "^10.4.13",
     "bad-words": "^3.0.4",
     "canvas-confetti": "1.9.3",
-    "chart.js": "^4.5.0",
+    "chart.js": "4.5.0",
     "chess.js": "^1.0.0",
     "chrono-node": "^2.8.4",
     "cron-parser": "^5.3.0",
@@ -55,7 +50,6 @@
     "fast-xml-parser": "^4.3.5",
     "figlet": "^1.8.2",
     "flags": "3",
-
     "hash-wasm": "^4.12.0",
     "howler": "^2.2.4",
     "html-to-image": "^1.11.13",
@@ -137,7 +131,9 @@
   "resolutions": {
     "magic-string": "^0.30.10",
     "postcss": "^8.5.6",
-    "test-exclude": "^7.0.1"
+    "test-exclude": "^7.0.1",
+    "bare-fs": "4.2.1",
+    "bare-os": "3.6.2"
   },
   "packageManager": "yarn@4.9.2"
 }
