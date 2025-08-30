@@ -1,3 +1,7 @@
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+});
+
 // Security headers configuration for Next.js.
 // Allows external badges and same-origin PDF embedding.
 // Update README (section "CSP External Domains") when editing domains below.
@@ -57,7 +61,7 @@ const securityHeaders = [
 
 const isExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 
-module.exports = {
+module.exports = withBundleAnalyzer({
   // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
   eslint: {
     ignoreDuringBuilds: true,
@@ -82,5 +86,5 @@ module.exports = {
       },
     ];
   },
-};
+});
 
