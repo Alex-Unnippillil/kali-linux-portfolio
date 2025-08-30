@@ -20,6 +20,7 @@ const yarascan = Array.isArray(memoryFixture.yarascan)
   : [];
 const memoryDemo = memoryFixture;
 
+
 const heuristicColors = {
   informational: 'bg-blue-600',
   suspicious: 'bg-yellow-600',

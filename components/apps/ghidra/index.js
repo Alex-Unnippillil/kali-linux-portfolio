@@ -92,8 +92,8 @@ export default function GhidraApp() {
   // S1: Detect GHIDRA web support and fall back to Capstone
   const ensureCapstone = useCallback(async () => {
     if (capstoneRef.current) return capstoneRef.current;
-    const mod = await loadCapstone();
-    if (!mod) return null;
+    const mod = await import('capstone-wasm');
+
     await mod.loadCapstone();
     capstoneRef.current = mod;
     return mod;
