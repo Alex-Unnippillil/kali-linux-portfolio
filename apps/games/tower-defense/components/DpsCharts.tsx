@@ -3,9 +3,10 @@
 import { useEffect, useRef } from 'react';
 import { Tower, getTowerDPS, TowerType } from '..';
 
+
 interface DpsChartsProps {
-  towers: (Tower & { type?: string })[];
-}
+  towers: (Tower & { type?: TowerType })[];
+
 
 const DpsCharts = ({ towers }: DpsChartsProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -19,10 +20,11 @@ const DpsCharts = ({ towers }: DpsChartsProps) => {
     const dpsMap: Partial<Record<TowerType, number>> = {};
     towers.forEach((t) => {
       const type = ((t as any).type || 'single') as TowerType;
+
       dpsMap[type] = (dpsMap[type] || 0) + getTowerDPS(type, t.level);
     });
 
-    const entries = Object.entries(dpsMap);
+    const entries = Object.entries(dpsMap) as [TowerType, number][];
     const w = canvas.width;
     const h = canvas.height;
     ctx.clearRect(0, 0, w, h);

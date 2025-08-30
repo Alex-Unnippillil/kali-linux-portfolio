@@ -121,7 +121,7 @@ export const clearSpriteCache = () => {
 };
 
 // ---- tower stats and upgrades ----
-export const TOWER_TYPES = {
+export const TOWER_TYPES: Record<string, { range: number; damage: number }[]> = {
   single: [
     { range: 1, damage: 1 },
     { range: 2, damage: 2 },
@@ -132,6 +132,7 @@ export const TOWER_TYPES = {
 export type TowerType = keyof typeof TOWER_TYPES;
 
 export const getTowerDPS = (type: TowerType, level: number) => {
+
   const stats = TOWER_TYPES[type]?.[level - 1];
   if (!stats) return 0;
   return stats.damage; // 1 shot per second
@@ -148,6 +149,7 @@ export type Tower = {
   range: number;
   damage: number;
   level: number;
+  type?: TowerType;
 };
 
 export const upgradeTower = (tower: Tower, path: 'range' | 'damage') => {
