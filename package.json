@@ -21,7 +21,7 @@
     "analyze": "ANALYZE=true yarn build"
   },
   "engines": {
-    "node": "22.x"
+    "node": "20.x"
   },
   "dependencies": {
     "@emailjs/browser": "^3.10.0",
@@ -41,7 +41,8 @@
     "autoprefixer": "^10.4.13",
     "bad-words": "^3.0.4",
     "canvas-confetti": "1.9.3",
-    "capstone-wasm": "1.0.3",
+    "capstone-wasm": "^1.0.3",
+
     "chess.js": "^1.0.0",
     "chrono-node": "^2.8.4",
     "cron-parser": "^5.3.0",
@@ -51,7 +52,7 @@
     "dompurify": "^3.2.6",
     "fast-xml-parser": "^4.3.5",
     "figlet": "^1.8.2",
-    "flags": "^4.0.1",
+    "flags": "4.0.1",
     "hash-wasm": "^4.12.0",
     "howler": "^2.2.4",
     "html-to-image": "^1.11.13",
@@ -135,6 +136,7 @@
     "test-exclude": "^7.0.1",
     "webpack": "^5.92.0",
     "@napi-rs/canvas": "patch:@napi-rs/canvas@npm:0.1.77#./.yarn/patches/@napi-rs-canvas-npm-0.1.77-27723c2ab5.patch"
+
   },
   "packageManager": "yarn@4.9.2"
 }
