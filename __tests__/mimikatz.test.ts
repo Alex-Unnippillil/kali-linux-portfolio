@@ -12,6 +12,9 @@ function mockRes() {
 }
 
 describe('mimikatz api', () => {
+  beforeAll(() => {
+    process.env.FEATURE_TOOL_APIS = 'enabled';
+  });
   test('retrieves module list', async () => {
     const req: any = { method: 'GET', query: {} };
     const res: Res = mockRes();

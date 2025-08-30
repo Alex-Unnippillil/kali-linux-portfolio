@@ -67,13 +67,13 @@ describe('Terminal component', () => {
     const root = container.firstChild as HTMLElement;
     root.focus();
     fireEvent.keyDown(root, { ctrlKey: true, key: 't' });
-    expect(container.querySelectorAll('.flex.items-center.px-2.py-1.cursor-pointer').length).toBe(2);
+    expect(container.querySelectorAll('.flex.items-center.cursor-pointer').length).toBe(2);
 
     fireEvent.keyDown(root, { ctrlKey: true, key: 'Tab' });
-    const headers = container.querySelectorAll('.flex.items-center.px-2.py-1.cursor-pointer');
-    expect(headers[0].className).toContain('bg-gray-700');
+    const headers = container.querySelectorAll('.flex.items-center.cursor-pointer');
+    expect((headers[0] as HTMLElement).className).toContain('bg-gray-700');
 
     fireEvent.keyDown(root, { ctrlKey: true, key: 'w' });
-    expect(container.querySelectorAll('.flex.items-center.px-2.py-1.cursor-pointer').length).toBe(1);
+    expect(container.querySelectorAll('.flex.items-center.cursor-pointer').length).toBe(1);
   });
 });

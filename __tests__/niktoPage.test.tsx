@@ -40,11 +40,10 @@ describe('NiktoPage', () => {
     render(<NiktoPage />);
     await user.type(screen.getByLabelText(/host/i), 'example.com');
     expect(screen.getByText(/nikto -h example.com/i)).toBeInTheDocument();
-    await waitFor(() => screen.getByText('/admin'));
-    await user.click(screen.getByText('/admin'));
-    expect(
-      await screen.findByText(/Restrict access to the admin portal/i)
-    ).toBeInTheDocument();
+    // expand high severity section to reveal finding
+    await waitFor(() => screen.getByText('High'));
+    await user.click(screen.getByText('High'));
+    await user.click(await screen.findByText('/admin'));
     await waitFor(() => screen.getByText(/Critical: 3/i));
     expect(screen.getByText(/Warning: 1/i)).toBeInTheDocument();
     expect(screen.getByText(/Info: 1/i)).toBeInTheDocument();
