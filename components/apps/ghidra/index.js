@@ -7,13 +7,9 @@ import ImportAnnotate from './ImportAnnotate';
 // Applies S1–S8 guidelines for responsive and accessible binary analysis UI
 const DEFAULT_WASM = '/wasm/ghidra.wasm';
 
-const CAPSTONE_URL =
-  process.env.NEXT_PUBLIC_GHIDRA_WASM ??
-  'https://unpkg.com/capstone-wasm@1.0.3/dist/index.mjs';
-
 async function loadCapstone() {
   if (typeof window === 'undefined') return null;
-  const mod = await import(/* webpackIgnore: true */ CAPSTONE_URL);
+  const mod = await import('capstone-wasm');
   return mod.default ?? mod;
 }
 
