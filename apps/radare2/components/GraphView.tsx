@@ -19,7 +19,7 @@ const ForceGraph2D = dynamic(
 );
 
 const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
-  const fgRef = useRef<any>();
+  const fgRef = useRef<any | null>(null);
   const [center, setCenter] = useState({ x: 0, y: 0 });
   const [selected, setSelected] = useState<Block | null>(null);
   const [colors, setColors] = useState({

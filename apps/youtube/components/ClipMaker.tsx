@@ -15,7 +15,7 @@ function extractVideoId(input: string): string {
 }
 
 export default function ClipMaker() {
-  const playerRef = useRef<any>();
+  const playerRef = useRef<any | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [videoId, setVideoId] = useState('');
   const [start, setStart] = useState<number | null>(null);

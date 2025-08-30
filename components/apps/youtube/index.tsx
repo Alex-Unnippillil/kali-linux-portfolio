@@ -35,7 +35,7 @@ async function trimVideoCache() {
 function ChannelHovercard({ id, name }: { id: string; name: string }) {
   const [show, setShow] = useState(false);
   const [info, setInfo] = useState<any>(null);
-  const timer = useRef<NodeJS.Timeout>();
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchInfo = useCallback(async () => {
     if (info) return;
