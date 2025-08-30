@@ -1,4 +1,4 @@
-import { CronExpressionParser, ParserOptions } from 'cron-parser';
+import { CronExpressionParser } from 'cron-parser';
 
 /**
  * Calculate the next run times for a cron expression.
@@ -9,9 +9,9 @@ import { CronExpressionParser, ParserOptions } from 'cron-parser';
 export function getNextRunTimes(
   expression: string,
   count = 5,
-  options: ParserOptions = {},
+  options: any = {},
 ): Date[] {
-  const interval = CronExpressionParser.parse(expression, options);
+  const interval = (CronExpressionParser as any).parse(expression, options);
   const result: Date[] = [];
   for (let i = 0; i < count; i++) {
     result.push(interval.next().toDate());
