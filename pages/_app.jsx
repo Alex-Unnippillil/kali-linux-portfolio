@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
-import type { AppProps } from 'next/app';
 import ReactGA from 'react-ga4';
-import { Analytics, type BeforeSendEvent } from '@vercel/analytics/next';
+import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import 'fake-indexeddb/auto';
 import 'tailwindcss/tailwind.css';
@@ -14,16 +13,13 @@ import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
-import { FlagValues } from 'flags/react';
 
-declare global {
-  interface Window {
-    manualRefresh?: () => void;
-  }
-}
-
-function MyApp(props: AppProps) {
+/**
+ * @param {import('next/app').AppProps} props
+ */
+function MyApp(props) {
   const { Component, pageProps } = props;
+
   useEffect(() => {
     const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
     if (trackingId) {
@@ -39,10 +35,10 @@ function MyApp(props: AppProps) {
           if ('periodicSync' in registration) {
             try {
               const status = await navigator.permissions.query({
-                name: 'periodic-background-sync' as PermissionName,
+                name: 'periodic-background-sync',
               });
               if (status.state === 'granted') {
-                await (registration as any).periodicSync.register('content-sync', {
+                await registration.periodicSync.register('content-sync', {
                   minInterval: 24 * 60 * 60 * 1000,
                 });
               } else {
@@ -68,7 +64,7 @@ function MyApp(props: AppProps) {
     const liveRegion = document.getElementById('live-region');
     if (!liveRegion) return;
 
-    const update = (message: string) => {
+    const update = (message) => {
       liveRegion.textContent = '';
       setTimeout(() => {
         liveRegion.textContent = message;
@@ -102,7 +98,7 @@ function MyApp(props: AppProps) {
 
     const OriginalNotification = window.Notification;
     if (OriginalNotification) {
-      const WrappedNotification = function (title: string, options?: NotificationOptions) {
+      const WrappedNotification = function (title, options) {
         update(`${title}${options?.body ? ' ' + options.body : ''}`);
         return new OriginalNotification(title, options);
       };
@@ -113,7 +109,7 @@ function MyApp(props: AppProps) {
         get: () => OriginalNotification.permission,
       });
       WrappedNotification.prototype = OriginalNotification.prototype;
-      window.Notification = WrappedNotification as any;
+      window.Notification = WrappedNotification;
     }
 
     return () => {
@@ -129,18 +125,17 @@ function MyApp(props: AppProps) {
       }
     };
   }, []);
+
   return (
     <SettingsProvider>
-      <FlagValues values={{}} />
-
       <PipPortalProvider>
         <div aria-live="polite" id="live-region" />
         <Component {...pageProps} />
         <ShortcutOverlay />
         <Analytics
-          beforeSend={(e: BeforeSendEvent) => {
+          beforeSend={(e) => {
             if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-            const evt = e as any;
+            const evt = e;
             if (evt.metadata?.email) delete evt.metadata.email;
             return e;
           }}
@@ -153,3 +148,4 @@ function MyApp(props: AppProps) {
 }
 
 export default MyApp;
+
