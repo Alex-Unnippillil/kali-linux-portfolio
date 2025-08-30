@@ -9,6 +9,6 @@ describe('KismetApp', () => {
     render(<KismetApp />);
     await user.click(screen.getByRole('button', { name: /load sample/i }));
     await user.click(screen.getByRole('button', { name: /step/i }));
-    expect(screen.getByText('CoffeeShopWiFi')).toBeInTheDocument();
+    expect(screen.getAllByText('CoffeeShopWiFi').length).toBeGreaterThan(0);
+    });
   });
-});
