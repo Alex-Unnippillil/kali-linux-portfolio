@@ -1,8 +1,11 @@
-import { getProviderData, createFlagsDiscoveryEndpoint } from 'flags/next';
-import { type ProviderData } from 'flags';
+import { NextResponse } from 'next/server';
 import * as appFlags from '../../../../app-flags';
 
-export const GET = createFlagsDiscoveryEndpoint(async () => {
-  const providerData: ProviderData = getProviderData(appFlags);
-  return providerData;
-});
+export const dynamic = 'force-static';
+
+export async function GET() {
+  const data = {
+    beta: await appFlags.beta(),
+  };
+  return NextResponse.json(data);
+}
