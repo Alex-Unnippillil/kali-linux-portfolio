@@ -1,5 +1,4 @@
 import React, { useEffect, useRef } from 'react';
-import * as THREE from 'three';
 import GameLayout from './GameLayout';
 
 const FPSGame = () => {
@@ -9,49 +8,58 @@ const FPSGame = () => {
   const isLockedRef = useRef(false);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    const renderer = new THREE.WebGLRenderer({ canvas });
-    renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-    rendererRef.current = renderer;
+    let cleanup = () => {};
 
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(
-      75,
-      canvas.clientWidth / canvas.clientHeight,
-      0.1,
-      1000,
-    );
-    camera.position.set(0, 1.6, 3);
-    cameraRef.current = camera;
+    (async () => {
+      const THREE = await import('three');
+      const canvas = canvasRef.current;
+      const renderer = new THREE.WebGLRenderer({ canvas });
+      renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+      rendererRef.current = renderer;
 
-    const box = new THREE.Mesh(
-      new THREE.BoxGeometry(),
-      new THREE.MeshNormalMaterial(),
-    );
-    scene.add(box);
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(
+        75,
+        canvas.clientWidth / canvas.clientHeight,
+        0.1,
+        1000,
+      );
+      camera.position.set(0, 1.6, 3);
+      cameraRef.current = camera;
 
-    const animate = () => {
-      renderer.render(scene, camera);
-      requestAnimationFrame(animate);
-    };
-    animate();
+      const box = new THREE.Mesh(
+        new THREE.BoxGeometry(),
+        new THREE.MeshNormalMaterial(),
+      );
+      scene.add(box);
 
-    const handlePointerLockChange = () => {
-      isLockedRef.current = document.pointerLockElement === canvas;
-    };
+      const animate = () => {
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+      };
+      animate();
 
-    const handleMouseMove = (event) => {
-      if (!isLockedRef.current) return;
-      camera.rotation.y -= event.movementX * 0.002;
-      camera.rotation.x -= event.movementY * 0.002;
-    };
+      const handlePointerLockChange = () => {
+        isLockedRef.current = document.pointerLockElement === canvas;
+      };
 
-    document.addEventListener('pointerlockchange', handlePointerLockChange);
-    canvas.addEventListener('mousemove', handleMouseMove);
+      const handleMouseMove = (event) => {
+        if (!isLockedRef.current) return;
+        camera.rotation.y -= event.movementX * 0.002;
+        camera.rotation.x -= event.movementY * 0.002;
+      };
+
+      document.addEventListener('pointerlockchange', handlePointerLockChange);
+      canvas.addEventListener('mousemove', handleMouseMove);
+
+      cleanup = () => {
+        document.removeEventListener('pointerlockchange', handlePointerLockChange);
+        canvas.removeEventListener('mousemove', handleMouseMove);
+      };
+    })();
 
     return () => {
-      document.removeEventListener('pointerlockchange', handlePointerLockChange);
-      canvas.removeEventListener('mousemove', handleMouseMove);
+      cleanup();
     };
   }, []);
 
