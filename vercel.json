@@ -1,9 +1,5 @@
 {
-  "functions": {
-    "pages/api/**/*.js": { "runtime": "@vercel/node@5.3.17" },
-    "pages/api/**/*.ts": { "runtime": "@vercel/node@5.3.17" }
-  },
-  "env": {
-    "ADMIN_READ_KEY": "@admin-read-key"
-  }
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2
+
 }
