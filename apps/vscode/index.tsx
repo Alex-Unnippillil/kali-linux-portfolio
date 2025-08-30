@@ -50,7 +50,7 @@ export default function VsCode() {
         </div>
         <div className="relative flex-1" style={{ backgroundColor: kaliTheme.background }}>
           <ExternalFrame
-            src="https://vscode.dev/"
+            src="https://stackblitz.com/github/Alex-Unnippillil/kali-linux-portfolio?embed=1&file=README.md"
             title="VsCode"
             className="w-full h-full"
           />
