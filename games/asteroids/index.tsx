@@ -58,40 +58,6 @@ const AsteroidsGame: React.FC = () => {
       window.removeEventListener("keyup", up);
     };
   }, []);
-
-  // Initialise canvas and start loop
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    function resize() {
-      const { clientWidth, clientHeight } = canvas;
-      canvas.width = clientWidth * DPR;
-      canvas.height = clientHeight * DPR;
-      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    }
-    resize();
-    window.addEventListener("resize", resize);
-
-    initGame();
-
-    let id: number;
-    const loop = () => {
-      if (!paused) {
-        update(canvas);
-        draw(ctx, canvas);
-      }
-      id = requestAnimationFrame(loop);
-    };
-    id = requestAnimationFrame(loop);
-    return () => {
-      cancelAnimationFrame(id);
-      window.removeEventListener("resize", resize);
-    };
-    }, [paused, initGame, update, draw]);
-
   const initGame = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -256,6 +222,40 @@ const AsteroidsGame: React.FC = () => {
     },
     [],
   );
+
+  // Initialise canvas and start loop
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    function resize() {
+      if (!canvas || !ctx) return;
+      const { clientWidth, clientHeight } = canvas;
+      canvas.width = clientWidth * DPR;
+      canvas.height = clientHeight * DPR;
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+    resize();
+    window.addEventListener("resize", resize);
+
+    initGame();
+
+    let id: number;
+    const loop = () => {
+      if (!paused) {
+        update(canvas);
+        draw(ctx, canvas);
+      }
+      id = requestAnimationFrame(loop);
+    };
+    id = requestAnimationFrame(loop);
+    return () => {
+      cancelAnimationFrame(id);
+      window.removeEventListener("resize", resize);
+    };
+  }, [paused, initGame, update, draw]);
 
   const resetGame = () => {
     initGame();
