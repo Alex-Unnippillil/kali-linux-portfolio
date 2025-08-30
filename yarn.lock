@@ -534,6 +534,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@edge-runtime/cookies@npm:^5.0.2":
+  version: 5.0.2
+  resolution: "@edge-runtime/cookies@npm:5.0.2"
+  checksum: 10c0/4db80e80403c7086f1d269afdf8956c035d88b173c70ca9e912d58683b58c300a1df922dee74bb44f964f1fab7e446f8ed8d32fc9715a7c322671e03405a682a
+  languageName: node
+  linkType: hard
+
 "@emailjs/browser@npm:^3.10.0":
   version: 3.12.1
   resolution: "@emailjs/browser@npm:3.12.1"
@@ -2750,6 +2757,33 @@ __metadata:
     vue-router:
       optional: true
   checksum: 10c0/43d33ea83b32f5203fec21b7f43c399e398f0c37d2dd341d522969e0e6ee23fd652a2766a4203a3ce573f711beee5ee1ab7d36316f767a4901160e3e96ee31e5
+  languageName: node
+  linkType: hard
+
+"@vercel/flags@npm:^3.1.1":
+  version: 3.1.1
+  resolution: "@vercel/flags@npm:3.1.1"
+  dependencies:
+    "@edge-runtime/cookies": "npm:^5.0.2"
+    jose: "npm:^5.2.1"
+  peerDependencies:
+    "@opentelemetry/api": ^1.7.0
+    "@sveltejs/kit": "*"
+    next: "*"
+    react: "*"
+    react-dom: "*"
+  peerDependenciesMeta:
+    "@opentelemetry/api":
+      optional: true
+    "@sveltejs/kit":
+      optional: true
+    next:
+      optional: true
+    react:
+      optional: true
+    react-dom:
+      optional: true
+  checksum: 10c0/220a695fd3f2bdfe7250e5879e32f93ec791afe30a385260f81535d4c4af25c40601a1e40acdcd54ee3a1cbf19cfcf20fccd9c543ace41e2efb6a05fc417d7a7
   languageName: node
   linkType: hard
 
@@ -7268,6 +7302,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"jose@npm:^5.2.1":
+  version: 5.10.0
+  resolution: "jose@npm:5.10.0"
+  checksum: 10c0/e20d9fc58d7e402f2e5f04e824b8897d5579aae60e64cb88ebdea1395311c24537bf4892f7de413fab1acf11e922797fb1b42269bc8fc65089a3749265ccb7b0
+  languageName: node
+  linkType: hard
+
 "js-tokens@npm:^3.0.0 || ^4.0.0, js-tokens@npm:^4.0.0":
   version: 4.0.0
   resolution: "js-tokens@npm:4.0.0"
@@ -10867,6 +10908,7 @@ __metadata:
     "@types/web-bluetooth": "npm:^0.0.21"
     "@types/wicg-file-system-access": "npm:^2023.10.6"
     "@vercel/analytics": "npm:^1.5.0"
+    "@vercel/flags": "npm:^3.1.1"
     "@vercel/speed-insights": "npm:^1.2.0"
     "@vercel/toolbar": "npm:^0.1.38"
     "@xterm/addon-fit": "npm:^0.10.0"
