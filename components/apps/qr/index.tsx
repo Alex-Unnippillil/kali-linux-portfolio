@@ -16,6 +16,7 @@ const QRScanner: React.FC = () => {
 
   useEffect(() => {
     let active = true;
+    const video = videoRef.current;
     const start = async () => {
       if (!navigator.mediaDevices?.getUserMedia) {
         setError('Camera API not supported');
@@ -77,7 +78,7 @@ const QRScanner: React.FC = () => {
       active = false;
       controlsRef.current?.stop?.();
       streamRef.current?.getTracks().forEach((t) => t.stop());
-      if (videoRef.current) videoRef.current.srcObject = null;
+      if (video) video.srcObject = null;
       trackRef.current = null;
     };
   }, [facing]);
