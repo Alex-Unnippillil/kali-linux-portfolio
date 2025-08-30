@@ -12,10 +12,12 @@ const themes: Record<string, { bg: string; flipper: string }> = {
 
 export default function Pinball() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const engineRef = useRef<Engine>();
-  const leftFlipperRef = useRef<Body>();
-  const rightFlipperRef = useRef<Body>();
-  const ballRef = useRef<Body>();
+  // References for core Matter.js entities
+
+  const engineRef = useRef<Engine | null>(null);
+  const leftFlipperRef = useRef<Body | null>(null);
+  const rightFlipperRef = useRef<Body | null>(null);
+  const ballRef = useRef<Body | null>(null);
   const sparksRef = useRef<{ x: number; y: number; life: number }[]>([]);
   const laneGlowRef = useRef<{ left: boolean; right: boolean }>({
     left: false,
@@ -118,7 +120,8 @@ export default function Pinball() {
 
     Events.on(render, 'afterRender', () => {
       const ctx = render.context;
-      const ball = ballRef.current!;
+      if (!ballRef.current) return;
+      const ball = ballRef.current;
       const { x, y } = ball.position;
       const radius = 12;
       const gradient = ctx.createRadialGradient(x - 4, y - 4, radius / 4, x, y, radius);
@@ -170,7 +173,9 @@ export default function Pinball() {
         const now = Date.now();
         nudgesRef.current = nudgesRef.current.filter((t) => now - t < 5000);
         nudgesRef.current.push(now);
-        Body.applyForce(ballRef.current!, ballRef.current!.position, { x: 0.02, y: 0 });
+        if (ballRef.current) {
+          Body.applyForce(ballRef.current, ballRef.current.position, { x: 0.02, y: 0 });
+        }
         if (nudgesRef.current.length >= 3) {
           setTilt(true);
           setTimeout(() => {

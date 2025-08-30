@@ -19,7 +19,7 @@ const ForceGraph2D = dynamic(
 );
 
 const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
-  const fgRef = useRef<any>();
+  const fgRef = useRef<any | null>(null);
   const [center, setCenter] = useState({ x: 0, y: 0 });
   const [selected, setSelected] = useState<Block | null>(null);
   const [colors, setColors] = useState({
@@ -52,9 +52,10 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
   }, [theme]);
 
   useEffect(() => {
-    if (fgRef.current) {
-      fgRef.current.zoomToFit(400, 20);
-      const bbox = fgRef.current.getGraphBbox();
+    const fg = fgRef.current;
+    if (fg) {
+      fg.zoomToFit(400, 20);
+      const bbox = fg.getGraphBbox();
       const cx = bbox.x + bbox.width / 2;
       const cy = bbox.y + bbox.height / 2;
       setCenter({ x: cx, y: cy });
@@ -62,23 +63,26 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
   }, [graphData]);
 
   const zoomIn = () => {
-    if (!fgRef.current) return;
-    const current = fgRef.current.zoom();
-    fgRef.current.zoom(current * 1.2, 200);
+    const fg = fgRef.current;
+    if (!fg) return;
+    const current = fg.zoom();
+    fg.zoom(current * 1.2, 200);
   };
 
   const zoomOut = () => {
-    if (!fgRef.current) return;
-    const current = fgRef.current.zoom();
-    fgRef.current.zoom(current / 1.2, 200);
+    const fg = fgRef.current;
+    if (!fg) return;
+    const current = fg.zoom();
+    fg.zoom(current / 1.2, 200);
   };
 
   const pan = (dx: number, dy: number) => {
-    if (!fgRef.current) return;
+    const fg = fgRef.current;
+    if (!fg) return;
     setCenter((c) => {
       const nx = c.x + dx;
       const ny = c.y + dy;
-      fgRef.current.centerAt(nx, ny, 200);
+      fg.centerAt(nx, ny, 200);
       return { x: nx, y: ny };
     });
   };
