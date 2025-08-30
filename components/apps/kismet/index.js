@@ -321,7 +321,7 @@ const DeviceDrawer = ({ network, onClose }) => (
   </div>
 );
 
-
+const KismetApp = ({ onNetworkDiscovered = () => {} }) => {
   const [networks, setNetworks] = useState([]);
   const [playing, setPlaying] = useState(false);
   const [frameIndex, setFrameIndex] = useState(0);
@@ -526,8 +526,4 @@ const DeviceDrawer = ({ network, onClose }) => (
 };
 
 export default KismetApp;
-
-export const displayKismet = (addFolder, openApp) => {
-  return <KismetApp addFolder={addFolder} openApp={openApp} />;
-};
 

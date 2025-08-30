@@ -26,7 +26,19 @@ function preprocess(expr: string, base: number) {
 export function evaluate(expression: string, opts: EvalOptions = {}) {
   const base = opts.base ?? 10;
   const prepared = preprocess(expression, base);
-  const result = math.evaluate(prepared);
+  let scope: Record<string, any> = {};
+  try {
+    const raw = typeof window === 'undefined' ? null : localStorage.getItem('calc-vars');
+    scope = raw ? JSON.parse(raw) : {};
+    Object.keys(scope).forEach((k) => {
+      const v = scope[k];
+      const num = Number(v);
+      scope[k] = Number.isNaN(num) ? v : num;
+    });
+  } catch {
+    scope = {};
+  }
+  const result = math.evaluate(prepared, scope);
   if (math.isUnit(result)) {
     return result.toString();
   }

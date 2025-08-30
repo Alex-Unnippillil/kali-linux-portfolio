@@ -1,5 +1,3 @@
-import { track } from '@vercel/analytics';
-
 export type EventName =
   | 'cta_click'
   | 'signup_submit'
@@ -13,6 +11,9 @@ export function trackEvent(
   props?: Record<string, string | number | boolean>,
 ) {
   try {
+    // Dynamically require to avoid ESM issues in test environment
+    // eslint-disable-next-line global-require, @typescript-eslint/no-var-requires
+    const { track } = require('@vercel/analytics');
     track(name, props);
   } catch {
     // ignore analytics errors
