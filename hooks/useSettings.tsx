@@ -180,7 +180,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     if (!fetchRef.current) fetchRef.current = window.fetch.bind(window);
     if (!allowNetwork) {
       window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = typeof input === 'string' ? input : input.url;
+        const url =
+          typeof input === 'string'
+            ? input
+            : 'url' in input
+              ? input.url
+              : input.href;
         if (
           /^https?:/i.test(url) &&
           !url.startsWith(window.location.origin) &&
