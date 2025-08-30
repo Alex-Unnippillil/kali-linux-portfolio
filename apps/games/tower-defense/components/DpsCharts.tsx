@@ -5,7 +5,7 @@ import { Tower, TowerType, getTowerDPS } from '..';
 
 interface DpsChartsProps {
   towers: (Tower & { type?: TowerType })[];
-}
+
 
 const DpsCharts = ({ towers }: DpsChartsProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
