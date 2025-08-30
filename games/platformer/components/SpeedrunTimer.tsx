@@ -31,6 +31,7 @@ export default function SpeedrunTimer() {
   const [bestSplits, setBestSplits] = useState<number[]>([]);
   const raf = useRef<ReturnType<typeof requestAnimationFrame> | null>(null);
 
+
   // load best times
   useEffect(() => {
     try {
