@@ -5,10 +5,9 @@
   "homepage": "https://unnippillil.com/",
   "scripts": {
     "build:gamepad": "tsc -p tsconfig.gamepad.json",
-    "prebuild": "tsc -p tsconfig.gamepad.json",
+    "copy:gamepad": "node -e \"const fs=require('fs');fs.mkdirSync('public/vendor',{recursive:true});fs.copyFileSync('dist/utils/gamepad.js','public/vendor/gamepad.js')\"",
     "dev": "next dev",
-    "build": "next build && yarn build:sw",
-    "postbuild": "node -e \"const fs=require('fs');fs.mkdirSync('public/vendor',{recursive:true});fs.copyFileSync('dist/utils/gamepad.js','public/vendor/gamepad.js')\"",
+    "build": "yarn build:gamepad && next build && yarn build:sw && yarn copy:gamepad",
     "start": "next start",
     "export": "NEXT_PUBLIC_STATIC_EXPORT=true next build && yarn build:sw",
     "test": "jest",
