@@ -196,7 +196,7 @@ const Hangman = () => {
     return () => mq.removeEventListener('change', update);
   }, []);
 
-  const handleHint = useCallback(() => {
+  const hint = useCallback(() => {
     if (paused || hintCoins <= 0) return;
     const remaining = word
       .split('')
@@ -319,11 +319,11 @@ const Hangman = () => {
       const k = e.key.toLowerCase();
       if (k === 'r') reset();
       else if (k === 'p') togglePause();
-      else if (k === 'h') handleHint();
+      else if (k === 'h') hint();
       else if (k === 's') toggleSound();
       else if (/^[a-z]$/.test(k) && letters.includes(k)) handleGuess(k);
     },
-    [reset, togglePause, handleHint, toggleSound, handleGuess, letters],
+    [reset, togglePause, hint, toggleSound, handleGuess, letters],
   );
 
   useEffect(() => {
@@ -498,7 +498,7 @@ const Hangman = () => {
           ))}
         </select>
         <button
-          onClick={handleHint}
+          onClick={hint}
           disabled={hintCoins <= 0 || paused}
           className="px-2 py-0.5 bg-ub-orange text-black rounded-full text-xs shadow" 
         >
