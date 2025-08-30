@@ -90,7 +90,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
-  const fetchRef = useRef<typeof fetch>();
+  const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
     (async () => {
