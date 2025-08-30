@@ -63,6 +63,11 @@ const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 
 module.exports = withBundleAnalyzer({
   output: 'export',
+  // Enable WebAssembly loading
+  webpack: (config) => {
+    config.experiments = { ...config.experiments, asyncWebAssembly: true };
+    return config;
+  },
   // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
   eslint: {
     ignoreDuringBuilds: true,
@@ -84,7 +89,7 @@ module.exports = withBundleAnalyzer({
     return [
       {
         source: '/.well-known/vercel/flags',
-        destination: '/api/flags',
+        destination: '/api/vercel/flags',
       },
     ];
   },

@@ -172,6 +172,8 @@ keyboard focus so bundles are warmed before launch. When adding a new app, expor
 
 ## Environment Variables
 
+Copy `.env.local.example` to `.env.local` and fill in required values. Generate a long random string for `FLAGS_SECRET` and mirror it in your hosting provider settings.
+
 | Name | Purpose |
 | --- | --- |
 | `NEXT_PUBLIC_TRACKING_ID` | GA4 measurement ID (e.g., `G-XXXXXXX`). |
@@ -185,6 +187,7 @@ keyboard focus so bundles are warmed before launch. When adding a new app, expor
 | `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | ReCAPTCHA site key used on the client. |
 | `RECAPTCHA_SECRET` | ReCAPTCHA secret key for server-side verification. |
 | `ADMIN_READ_KEY` | Secret key required by admin message APIs. Configure this directly as an environment variable (e.g., in the Vercel dashboard). |
+| `FLAGS_SECRET` | Long random secret used by flag-related APIs. Set in `.env.local` and Vercel project settings. |
 | `NEXT_PUBLIC_UI_EXPERIMENTS` | Enable experimental UI heuristics. |
 | `NEXT_PUBLIC_STATIC_EXPORT` | Set to `'true'` during `yarn export` to disable server APIs. |
 | `FEATURE_TOOL_APIS` | Enable server-side tool API routes like Hydra and John; set to `enabled` to allow. |
@@ -264,6 +267,7 @@ Workflow: `.github/workflows/gh-deploy.yml`:
   - `NEXT_PUBLIC_UI_EXPERIMENTS`
   - `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`
   - `RECAPTCHA_SECRET`
+  - `FLAGS_SECRET`
   - `ADMIN_READ_KEY` (set manually in Vercel or your host)
 - Build command: `yarn build`
 - Output: Next.js (serverless by default on Vercel).

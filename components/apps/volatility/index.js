@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import MemoryHeatmap from './MemoryHeatmap';
 import PluginBrowser from './PluginBrowser';
 import PluginWalkthrough from '../../../apps/volatility/components/PluginWalkthrough';
-import memoryDemo from '../../../public/demo-data/volatility/memory.json';
+import memoryFixture from '../../../public/demo-data/volatility/memory.json';
 
 // pull demo data for various volatility plugins from the memory fixture
 const pstree = memoryDemo.pstree ?? [];
@@ -10,6 +10,7 @@ const dlllist = memoryDemo.dlllist ?? {};
 const netscan = memoryDemo.netscan ?? [];
 const malfind = memoryDemo.malfind ?? [];
 const yarascan = memoryDemo.yarascan ?? [];
+
 
 const heuristicColors = {
   informational: 'bg-blue-600',
