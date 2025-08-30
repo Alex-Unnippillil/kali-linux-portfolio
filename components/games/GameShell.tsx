@@ -1,9 +1,17 @@
 "use client";
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, ReactNode } from 'react';
 import useOrientationGuard from '../../hooks/useOrientationGuard';
 import useGameInput from '../../hooks/useGameInput';
 import usePersistentState from '../usePersistentState';
+
+interface GameShellProps {
+  children: ReactNode;
+  controls?: ReactNode;
+  settings?: ReactNode;
+  onPause?: () => void;
+  onResume?: () => void;
+}
 
 /**
  * Generic shell for browser games. Exposes slots for the game content,
@@ -16,7 +24,7 @@ export default function GameShell({
   settings = null,
   onPause = () => {},
   onResume = () => {},
-}) {
+}: GameShellProps) {
   useOrientationGuard();
 
   const [paused, setPaused] = useState(false);
@@ -34,10 +42,10 @@ export default function GameShell({
     onResume();
   }, [onResume]);
 
-  const toggleSettings = () => setShowSettings((s) => !s);
-  const toggleMute = () => setMuted((m) => !m);
+  const toggleSettings = () => setShowSettings((s: boolean) => !s);
+  const toggleMute = () => setMuted((m: boolean) => !m);
 
-  const handleInput = ({ action, type }) => {
+  const handleInput = ({ action, type }: { action: string; type: string }) => {
     if (action === 'pause' && type === 'keydown') {
       paused ? resume() : pause();
     }
