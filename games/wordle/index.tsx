@@ -7,7 +7,8 @@ import {
   getWordOfTheDay,
   dictionaries,
   buildResultMosaic,
-  DictName,
+  type DictName,
+
 } from "../../utils/wordle";
 import type { GuessEntry, LetterResult } from "./logic";
 import { evaluateGuess, hardModeViolation } from "./logic";

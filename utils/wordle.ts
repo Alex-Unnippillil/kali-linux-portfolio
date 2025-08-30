@@ -4,6 +4,10 @@ import animalWords from '../components/apps/wordle_words_animals.json';
 import fruitWords from '../components/apps/wordle_words_fruits.json';
 import { getDailySeed } from './dailyChallenge';
 
+
+// Names of the supported word lists. Exported so callers can use the specific
+// union type instead of falling back to plain strings.
+
 export type DictName = 'common' | 'alt' | 'animals' | 'fruits';
 
 const dictionaries: Record<DictName, string[]> = {
