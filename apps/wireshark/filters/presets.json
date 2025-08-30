@@ -1,0 +1,6 @@
+[
+  { "label": "HTTP(S)", "expression": "tcp.port == 80 || tcp.port == 443" },
+  { "label": "DNS", "expression": "udp.port == 53" },
+  { "label": "TCP", "expression": "tcp" },
+  { "label": "UDP", "expression": "udp" }
+]
