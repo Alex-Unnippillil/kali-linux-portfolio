@@ -44,12 +44,15 @@ const UnitConverter = () => {
     return val >= min && val <= max;
   };
 
-  const applyPrecision = (num) => {
-    if (sigFig) {
-      return Number(Number(num).toPrecision(Math.max(1, precision)));
-    }
-    return Number(Number(num).toFixed(precision));
-  };
+    const applyPrecision = useCallback(
+      (num) => {
+        if (sigFig) {
+          return Number(Number(num).toPrecision(Math.max(1, precision)));
+        }
+        return Number(Number(num).toFixed(precision));
+      },
+      [precision, sigFig],
+    );
 
   const convertLeftToRight = useCallback(
     (val) => {
@@ -69,7 +72,7 @@ const UnitConverter = () => {
       setRightVal(rounded.toString());
       setError('');
     },
-    [category, fromUnit, toUnit, precision, sigFig, applyPrecision],
+    [category, fromUnit, toUnit, applyPrecision],
   );
 
   const convertRightToLeft = useCallback(
@@ -90,7 +93,7 @@ const UnitConverter = () => {
       setLeftVal(rounded.toString());
       setError('');
     },
-    [category, fromUnit, toUnit, precision, sigFig, applyPrecision],
+    [category, fromUnit, toUnit, applyPrecision],
   );
 
   const handleLeftChange = (e) => {

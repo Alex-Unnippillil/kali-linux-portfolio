@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 
 // Basic entity types
 interface Bullet {
@@ -90,9 +90,9 @@ const AsteroidsGame: React.FC = () => {
       cancelAnimationFrame(id);
       window.removeEventListener("resize", resize);
     };
-  }, [paused]);
+    }, [paused, initGame, update, draw]);
 
-  const initGame = () => {
+  const initGame = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     shipRef.current = {
@@ -108,7 +108,7 @@ const AsteroidsGame: React.FC = () => {
     for (let i = 0; i < 4; i++) spawnAsteroid(canvas);
     setLives(3);
     setScore(0);
-  };
+  }, []);
 
   function spawnAsteroid(canvas: HTMLCanvasElement) {
     const r = 20 + Math.random() * 30;
@@ -141,7 +141,7 @@ const AsteroidsGame: React.FC = () => {
     if (obj.y > height + 20) obj.y = -20;
   }
 
-  function update(canvas: HTMLCanvasElement) {
+  const update = useCallback((canvas: HTMLCanvasElement) => {
     const ship = shipRef.current;
     const keys = keysRef.current;
     if (keys["ArrowLeft"]) ship.angle -= 0.05;
@@ -207,9 +207,10 @@ const AsteroidsGame: React.FC = () => {
         ship.angle = 0;
       }
     });
-  }
+  }, []);
 
-  function draw(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) {
+  const draw = useCallback(
+    (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.lineJoin = "round";
     ctx.lineWidth = 2;
@@ -252,7 +253,9 @@ const AsteroidsGame: React.FC = () => {
       ctx.arc(b.x, b.y, 2, 0, Math.PI * 2);
       ctx.fill();
     });
-  }
+    },
+    [],
+  );
 
   const resetGame = () => {
     initGame();

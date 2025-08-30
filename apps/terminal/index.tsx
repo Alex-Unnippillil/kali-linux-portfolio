@@ -6,6 +6,7 @@ import React, {
   useState,
   forwardRef,
   useImperativeHandle,
+  useCallback,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
@@ -123,27 +124,30 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     '#FFFFFF',
   ];
 
-  function updateOverflow() {
+  const updateOverflow = useCallback(() => {
     const term = termRef.current;
     if (!term || !term.buffer) return;
     const { viewportY, baseY } = term.buffer.active;
     setOverflow({ top: viewportY > 0, bottom: viewportY < baseY });
-  }
+  }, []);
 
-  function writeLine(text: string) {
-    if (termRef.current) termRef.current.writeln(text);
-    contentRef.current += `${text}\n`;
-    if (opfsSupported && dirRef.current) {
-      writeFile('history.txt', contentRef.current, dirRef.current);
-    }
-    updateOverflow();
-  }
+  const writeLine = useCallback(
+    (text: string) => {
+      if (termRef.current) termRef.current.writeln(text);
+      contentRef.current += `${text}\n`;
+      if (opfsSupported && dirRef.current) {
+        writeFile('history.txt', contentRef.current, dirRef.current);
+      }
+      updateOverflow();
+    },
+    [opfsSupported, updateOverflow, writeFile],
+  );
 
   contextRef.current.writeLine = writeLine;
 
-  function prompt() {
+  const prompt = useCallback(() => {
     if (termRef.current) termRef.current.write('$ ');
-  }
+  }, []);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(contentRef.current).catch(() => {});
@@ -156,29 +160,32 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     } catch {}
   };
 
-  async function runWorker(command: string) {
-    const worker = workerRef.current;
-    if (!worker) {
-      writeLine('Worker not available');
-      return;
-    }
-    await new Promise<void>((resolve) => {
-      worker.onmessage = ({ data }: MessageEvent<any>) => {
-        if (data.type === 'data') {
-          for (const line of String(data.chunk).split('\n')) {
-            if (line) writeLine(line);
+  const runWorker = useCallback(
+    async (command: string) => {
+      const worker = workerRef.current;
+      if (!worker) {
+        writeLine('Worker not available');
+        return;
+      }
+      await new Promise<void>((resolve) => {
+        worker.onmessage = ({ data }: MessageEvent<any>) => {
+          if (data.type === 'data') {
+            for (const line of String(data.chunk).split('\n')) {
+              if (line) writeLine(line);
+            }
+          } else if (data.type === 'end') {
+            resolve();
           }
-        } else if (data.type === 'end') {
-          resolve();
-        }
-      };
-      worker.postMessage({
-        action: 'run',
-        command,
-        files: filesRef.current,
+        };
+        worker.postMessage({
+          action: 'run',
+          command,
+          files: filesRef.current,
+        });
       });
-    });
-  }
+    },
+    [writeLine],
+  );
 
   contextRef.current.runWorker = runWorker;
 
@@ -213,7 +220,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       date: () => writeLine(new Date().toString()),
       about: () => writeLine('This terminal is powered by xterm.js'),
     };
-  }, [openApp, opfsSupported, deleteFile]);
+    }, [openApp, opfsSupported, deleteFile, writeLine]);
 
   useEffect(() => {
     if (typeof Worker === 'function') {
@@ -224,52 +231,58 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     return () => workerRef.current?.terminate();
   }, []);
 
-  async function runCommand(cmd: string) {
-    const [name, ...rest] = cmd.trim().split(/\s+/);
-    const expanded =
-      aliasesRef.current[name]
-        ? `${aliasesRef.current[name]} ${rest.join(' ')}`.trim()
-        : cmd;
-    const [cmdName, ...cmdRest] = expanded.split(/\s+/);
-    const handler = registryRef.current[cmdName];
-    historyRef.current.push(cmd);
-    if (handler) await handler(cmdRest.join(' '), contextRef.current);
-    else if (cmdName) await runWorker(expanded);
-  }
+    const runCommand = useCallback(
+      async (cmd: string) => {
+        const [name, ...rest] = cmd.trim().split(/\s+/);
+        const expanded =
+          aliasesRef.current[name]
+            ? `${aliasesRef.current[name]} ${rest.join(' ')}`.trim()
+            : cmd;
+        const [cmdName, ...cmdRest] = expanded.split(/\s+/);
+        const handler = registryRef.current[cmdName];
+        historyRef.current.push(cmd);
+        if (handler) await handler(cmdRest.join(' '), contextRef.current);
+        else if (cmdName) await runWorker(expanded);
+      },
+      [runWorker],
+    );
 
-  function autocomplete() {
-    const current = commandRef.current;
-    const registry = registryRef.current;
-    const matches = Object.keys(registry).filter((c) => c.startsWith(current));
-    if (matches.length === 1) {
-      const completion = matches[0].slice(current.length);
-      termRef.current?.write(completion);
-      commandRef.current = matches[0];
-    } else if (matches.length > 1) {
-      writeLine(matches.join('  '));
-      prompt();
-      termRef.current?.write(commandRef.current);
-    }
-  }
-
-  function handleInput(data: string) {
-    for (const ch of data) {
-      if (ch === '\r') {
-        termRef.current?.writeln('');
-        runCommand(commandRef.current.trim());
-        commandRef.current = '';
+    const autocomplete = useCallback(() => {
+      const current = commandRef.current;
+      const registry = registryRef.current;
+      const matches = Object.keys(registry).filter((c) => c.startsWith(current));
+      if (matches.length === 1) {
+        const completion = matches[0].slice(current.length);
+        termRef.current?.write(completion);
+        commandRef.current = matches[0];
+      } else if (matches.length > 1) {
+        writeLine(matches.join('  '));
         prompt();
-      } else if (ch === '\u007F') {
-        if (commandRef.current.length > 0) {
-          termRef.current?.write('\b \b');
-          commandRef.current = commandRef.current.slice(0, -1);
-        }
-      } else {
-        commandRef.current += ch;
-        termRef.current?.write(ch);
+        termRef.current?.write(commandRef.current);
       }
-    }
-  }
+    }, [prompt, writeLine]);
+
+    const handleInput = useCallback(
+      (data: string) => {
+        for (const ch of data) {
+          if (ch === '\r') {
+            termRef.current?.writeln('');
+            runCommand(commandRef.current.trim());
+            commandRef.current = '';
+            prompt();
+          } else if (ch === '\u007F') {
+            if (commandRef.current.length > 0) {
+              termRef.current?.write('\b \b');
+              commandRef.current = commandRef.current.slice(0, -1);
+            }
+          } else {
+            commandRef.current += ch;
+            termRef.current?.write(ch);
+          }
+        }
+      },
+      [runCommand, prompt],
+    );
 
   useImperativeHandle(ref, () => ({
     runCommand: (c: string) => runCommand(c),
@@ -356,7 +369,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       disposed = true;
       termRef.current?.dispose();
     };
-  }, [opfsSupported, getDir, readFile]);
+    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow]);
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();

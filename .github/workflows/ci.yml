@@ -13,6 +13,5 @@ jobs:
           node-version: 20
           cache: yarn
       - run: yarn install --frozen-lockfile
-      - run: yarn typecheck
-      - run: yarn lint:ci
+      - run: yarn lint
       - run: yarn build

@@ -361,7 +361,7 @@ const Minesweeper = () => {
     };
     draw();
     return () => cancelAnimationFrame(frame);
-  }, [board, status, paused, flags, showRisk]);
+    }, [board, status, paused, flags, showRisk, cursor, cursorVisible]);
 
   useEffect(() => {
     if (!useQuestionMarks && board) {

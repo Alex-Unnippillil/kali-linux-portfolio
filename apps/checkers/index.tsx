@@ -126,7 +126,7 @@ export default function CheckersPage() {
 
   useEffect(() => {
     positionCounts.current.set(JSON.stringify(board), 1);
-  }, []);
+  }, [board]);
 
   const selectPiece = (r: number, c: number) => {
     const piece = board[r][c];

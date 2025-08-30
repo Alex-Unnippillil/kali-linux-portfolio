@@ -59,7 +59,18 @@ const FigletApp: React.FC = () => {
     if (!Number.isNaN(k)) setKerning(k);
     const pd = Number(params.get("pad"));
     if (!Number.isNaN(pd)) setPadding(pd);
-  }, [setFont]);
+  }, [
+    setText,
+    setFont,
+    setFontSize,
+    setLineHeight,
+    setWidth,
+    setLayout,
+    setAlign,
+    setGradient,
+    setKerning,
+    setPadding,
+  ]);
 
   useEffect(() => {
     if (typeof window !== "undefined" && typeof Worker === "function") {
@@ -126,7 +137,7 @@ const FigletApp: React.FC = () => {
       };
     }
     return undefined;
-  }, []);
+    }, [setFont]);
 
   const updateFiglet = useCallback(() => {
     if (workerRef.current && font) {
