@@ -411,7 +411,7 @@ const CarRacer = () => {
       cancelAnimationFrame(req);
       if (worker) worker.terminate();
     };
-  }, [canvasRef, highScore, playBeep]);
+  }, [canvasRef, highScore, playBeep, currentSkin.color]);
 
   const saveGhostRun = (score) => {
     if (ghostRunRef.current.length > 1 && score >= ghostBestScoreRef.current) {
