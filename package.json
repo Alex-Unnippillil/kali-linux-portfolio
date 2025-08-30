@@ -20,7 +20,7 @@
     "build:sw": "node scripts/generate-sw.mjs"
   },
   "engines": {
-    "node": "20.x"
+    "node": "22.x"
   },
   "dependencies": {
     "@emailjs/browser": "^3.10.0",
