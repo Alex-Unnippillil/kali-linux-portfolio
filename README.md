@@ -397,7 +397,6 @@ play/pause and track controls include keyboard hotkeys.
 ### Security Tools (Simulated)
 | Tool | Route | Category |
 | --- | --- | --- |
-| Autopsy | /apps/autopsy | Security Tool (simulated) |
 | BeEF | /apps/beef | Security Tool (simulated) |
 | Bluetooth Tools | /apps/bluetooth | Security Tool (simulated) |
 | dsniff | /apps/dsniff | Security Tool (simulated) |

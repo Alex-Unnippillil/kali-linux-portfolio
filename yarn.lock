@@ -8630,13 +8630,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"kaitai-struct@npm:^0.10.0":
-  version: 0.10.0
-  resolution: "kaitai-struct@npm:0.10.0"
-  checksum: 10c0/f07fb1af46916be3f039f7c09e3b57655222c7461d83399bed8a1cae7fcf3f06d1de5ac34257704acbc3dbdd2f286ea203c0a47f034ebdd04b837b92daca9a69
-  languageName: node
-  linkType: hard
-
 "kapsule@npm:^1.16":
   version: 1.16.3
   resolution: "kapsule@npm:1.16.3"
@@ -9929,13 +9922,6 @@ __metadata:
   version: 6.2.1
   resolution: "path-to-regexp@npm:6.2.1"
   checksum: 10c0/7a73811ca703e5c199e5b50b9649ab8f6f7b458a37f7dff9ea338815203f5b1f95fe8cb24d4fdfe2eab5d67ce43562d92534330babca35cdf3231f966adb9360
-  languageName: node
-  linkType: hard
-
-"pcap-parser@npm:^0.2.1":
-  version: 0.2.1
-  resolution: "pcap-parser@npm:0.2.1"
-  checksum: 10c0/7db254292ede58ae3378bac2adf000ff960d8ab02203e1dda999c39ec403f4aed36539c6e3cd1511ed2e9ceba3b1b5fe859a2e8612520f3eb4b73e0a34744ab0
   languageName: node
   linkType: hard
 
@@ -12334,7 +12320,6 @@ __metadata:
     jest: "npm:30.0.5"
     jest-environment-jsdom: "npm:30.0.5"
     jspdf: "npm:^3.0.2"
-    kaitai-struct: "npm:^0.10.0"
     leaflet: "npm:^1.9.4"
     mathjs: "npm:^14.6.0"
     matter-js: "npm:0.20.0"
@@ -12342,7 +12327,6 @@ __metadata:
     next: "npm:^15.0.0"
     node-mocks-http: "npm:1.17.2"
     pa11y: "npm:^9.0.0"
-    pcap-parser: "npm:^0.2.1"
     pdfjs-dist: "npm:^5.4.54"
     phaser: "npm:3.70.0"
     playwright-core: "npm:^1.55.0"
