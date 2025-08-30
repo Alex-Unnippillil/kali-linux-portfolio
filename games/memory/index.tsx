@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from 'react';
-import GameShell from '../../components/games/GameShell.jsx';
+import GameShell from '../../components/games/GameShell';
 import SizeSelector from './components/SizeSelector';
 import { generateBoard } from './utils';
 import {
