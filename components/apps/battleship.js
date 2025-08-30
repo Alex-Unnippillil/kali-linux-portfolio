@@ -329,7 +329,7 @@ const Battleship = () => {
     }
     const aiCount = salvo ? aiShots : 1;
     setTimeout(() => aiTurn(aiCount, hit), 100);
-  }, [phase, selected, enemyBoard, fireShots, playerAi, setGuessHeat, salvo, aiShots, aiTurn, setEnemyBoard, setPlayerShots, setMessage, setPhase, setStats]);
+  }, [phase, selected, enemyBoard, playerAi, setGuessHeat, salvo, aiShots, aiTurn, setEnemyBoard, setPlayerShots, setMessage, setPhase, setStats]);
 
   useGameControls(({ x, y }) => {
     if (phase !== 'battle') return;
