@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState, useRef, RefObject } from 'react';
 import useIntersection from '../../hooks/useIntersection';
-import './styles.css';
 
 export default function TimerStopwatch() {
   const [mode, setMode] = useState<'timer' | 'stopwatch'>('timer');
