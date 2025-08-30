@@ -1,4 +1,4 @@
-import { flag } from '@vercel/flags/next';
+import { flag } from 'flags/next';
 
 
 // Example feature flag used by pages/api/vercel/flags.ts
