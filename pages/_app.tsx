@@ -14,7 +14,7 @@ import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
-import { FlagValues } from '@vercel/flags/react';
+import { FlagValues } from 'flags/react';
 
 declare global {
   interface Window {
