@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { Tower, TowerType, getTowerDPS } from '..';
+import { Tower, getTowerDPS, TowerType } from '..';
+
 
 interface DpsChartsProps {
   towers: (Tower & { type?: TowerType })[];
@@ -16,9 +17,10 @@ const DpsCharts = ({ towers }: DpsChartsProps) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const dpsMap: Record<TowerType, number> = {} as Record<TowerType, number>;
+    const dpsMap: Partial<Record<TowerType, number>> = {};
     towers.forEach((t) => {
-      const type: TowerType = t.type || 'single';
+      const type = ((t as any).type || 'single') as TowerType;
+
       dpsMap[type] = (dpsMap[type] || 0) + getTowerDPS(type, t.level);
     });
 
