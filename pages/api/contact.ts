@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { randomBytes } from 'crypto';
 import trackServerEvent from '@/lib/analytics-server';
-import { reportValue, beta } from '@/app-flags';
+import { beta } from '@/app-flags';
 import { contactSchema } from '../../utils/contactSchema';
 import { validateServerEnv } from '../../lib/validate';
 import { getServiceSupabase } from '../../lib/supabase';

@@ -1,8 +1,18 @@
-export async function beta(): Promise<boolean> {
-  return false;
-}
+import { flag } from '@vercel/flags/next';
 
-export function reportValue(_name: string, _value: unknown): void {
-  // no-op
-}
+
+// Example feature flag used by pages/api/vercel/flags.ts
+export const exampleFlag = flag<boolean>({
+  key: 'example-flag',
+  decide() {
+    return false;
+  },
+});
+
+export const beta = flag<boolean>({
+  key: 'beta',
+  decide() {
+    return false;
+  },
+});
 
