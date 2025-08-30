@@ -34,7 +34,9 @@ function isMonospace(name: string) {
   const chars = 'ABCDE';
   let width: number | undefined;
   for (const ch of chars) {
-    const glyph = strip(figlet.textSync(ch, { font: name }).split('\n'));
+    const glyph = strip(
+      figlet.textSync(ch, { font: name as figlet.Fonts }).split('\n'),
+    );
     const w = glyph.reduce((m, line) => Math.max(m, line.length), 0);
     if (width === undefined) width = w;
     else if (w !== width) return false;
@@ -44,7 +46,7 @@ function isMonospace(name: string) {
 
 function init() {
   for (const { name } of fonts) {
-    const preview = figlet.textSync('Figlet', { font: name });
+    const preview = figlet.textSync('Figlet', { font: name as figlet.Fonts });
     const mono = isMonospace(name);
     // eslint-disable-next-line no-restricted-globals
     self.postMessage({ type: 'font', font: name, preview, mono });
@@ -59,7 +61,7 @@ self.onmessage = (e: MessageEvent<any>) => {
     const { name, data } = e.data as { name: string; data: string };
     try {
       figlet.parseFont(name, data);
-      const preview = figlet.textSync('Figlet', { font: name });
+      const preview = figlet.textSync('Figlet', { font: name as figlet.Fonts });
       const mono = isMonospace(name);
       // eslint-disable-next-line no-restricted-globals
       self.postMessage({ type: 'font', font: name, preview, mono });
@@ -81,9 +83,9 @@ self.onmessage = (e: MessageEvent<any>) => {
     .map((line) => line.trim())
     .join('\n');
   const rendered = figlet.textSync(normalized, {
-    font,
+    font: font as figlet.Fonts,
     width,
-    horizontalLayout: layout,
+    horizontalLayout: layout as figlet.KerningMethods,
   });
   // eslint-disable-next-line no-restricted-globals
   self.postMessage({ type: 'render', output: rendered });
