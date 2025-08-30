@@ -58,7 +58,6 @@
     "idb-keyval": "^6.2.1",
     "jspdf": "^3.0.2",
     "kaitai-struct": "^0.10.0",
-    "leaflet": "^1.9.4",
     "mathjs": "^14.6.0",
     "matter-js": "0.20.0",
     "monaco-editor": "^0.52.2",
@@ -82,6 +81,7 @@
     "react-leaflet": "^5.0.0",
     "react-onclickoutside": "^6.12.2",
     "react-twitter-embed": "^4.0.4",
+
     "rrule": "2.7.2",
     "seedrandom": "^3.0.5",
     "sharp": "^0.34.3",
@@ -105,7 +105,6 @@
     "@types/figlet": "^1",
     "@types/howler": "^2",
     "@types/jest": "30.0.0",
-    "@types/leaflet": "^1",
     "@types/matter-js": "0.20.0",
     "@types/node": "^24.2.1",
     "@types/qrcode": "^1.5.5",

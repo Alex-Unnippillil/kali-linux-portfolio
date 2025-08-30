@@ -6,11 +6,11 @@ import events from './events.json';
 import KeywordTester from './components/KeywordTester';
 import type { Artifact } from './types';
 
-// The upstream Autopsy component accepts only an optional list of initial artifacts.
-// Casting it to a narrower prop type avoids TypeScript errors from unsupported props.
-const AutopsyApp = AutopsyAppComponent as React.ComponentType<{
+interface AutopsyProps {
   initialArtifacts?: Artifact[];
-}>;
+}
+
+const AutopsyApp: React.FC<AutopsyProps> = AutopsyAppComponent;
 
 const AutopsyPage: React.FC = () => {
   // Track which view is active so we can restore UI state when toggling
