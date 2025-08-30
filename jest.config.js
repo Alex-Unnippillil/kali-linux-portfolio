@@ -9,7 +9,7 @@ const customJestConfig = {
     '^@/(.*)$': '<rootDir>/$1',
     '^@xterm/xterm/css/xterm.css$': '<rootDir>/__mocks__/styleMock.js',
     '^@/(.*)$': '<rootDir>/$1',
-    '^flags$': '<rootDir>/flags',
+    '^app-flags$': '<rootDir>/app-flags',
   },
   testPathIgnorePatterns: ['<rootDir>/playwright/', '<rootDir>/__tests__/playwright/'],
 };
