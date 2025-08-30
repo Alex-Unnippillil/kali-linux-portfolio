@@ -7,6 +7,7 @@ import {
   getWordOfTheDay,
   dictionaries,
   buildResultMosaic,
+  type DictName,
 } from "../../utils/wordle";
 import type { GuessEntry, LetterResult } from "./logic";
 import { evaluateGuess, hardModeViolation } from "./logic";
@@ -18,7 +19,7 @@ const WordleGame = () => {
     "wordle:hard",
     false
   );
-  const [dictName, setDictName] = usePersistentState<string>(
+  const [dictName, setDictName] = usePersistentState<DictName>(
     "wordle:dict",
     "common"
   );
@@ -157,11 +158,11 @@ const WordleGame = () => {
       </label>
       <label className="flex items-center space-x-2">
         <span>Word Pack</span>
-        <select
-          className="text-black"
-          value={dictName}
-          onChange={(e) => setDictName(e.target.value)}
-        >
+          <select
+            className="text-black"
+            value={dictName}
+            onChange={(e) => setDictName(e.target.value as DictName)}
+          >
           {Object.keys(dictionaries).map((name) => (
             <option key={name} value={name}>
               {name.charAt(0).toUpperCase() + name.slice(1)}
@@ -188,7 +189,7 @@ const WordleGame = () => {
   };
 
   return (
-    <GameShell settings={settings}>
+    <GameShell settings={settings as any}>
       <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 space-y-4 overflow-y-auto">
         <div className="w-full bg-gray-800 text-center py-1 text-sm">
           Daily Mode
