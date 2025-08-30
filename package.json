@@ -79,8 +79,6 @@
     "react-ga4": "^2.1.0",
     "react-github-calendar": "^4.5.9",
     "react-leaflet": "^5.0.0",
-    "react-onclickoutside": "^6.12.2",
-
     "rrule": "2.7.2",
     "seedrandom": "^3.0.5",
     "sharp": "^0.34.3",
