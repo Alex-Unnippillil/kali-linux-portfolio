@@ -236,8 +236,8 @@ These external domains are whitelisted in the default CSP. Update this list when
 ## Deployment
 
 ### Static export (GitHub Pages)
- Workflow: `.github/workflows/gh-deploy.yml`:
- - Installs Node, runs `yarn build && yarn export`, adds `.nojekyll`, and deploys `./out` → `gh-pages` branch.
+Workflow: `.github/workflows/gh-deploy.yml`:
+ - Installs Node, runs `yarn export`, adds `.nojekyll`, and deploys `./out` → `gh-pages` branch.
  - Uses **Node 22.x** to match `package.json`.
 - Required env variables (GitHub Secrets):
   - `NEXT_PUBLIC_TRACKING_ID`
@@ -487,7 +487,7 @@ See [`LICENSE`](./LICENSE).
 - `dev` → `next dev`
 - `build` → `next build`
 - `start` → `next start`
-- `export` → `next export`
+- `export` → `NEXT_PUBLIC_STATIC_EXPORT=true next build && yarn build:sw`
 - `test` → `jest`
 - `test:watch` → `jest --watch`
 - `lint` → `eslint --max-warnings=0 .`
