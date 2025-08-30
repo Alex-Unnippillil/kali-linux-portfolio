@@ -51,8 +51,14 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
     if (!expression) return;
     onChange(expression);
     setRecent((prev) => [expression, ...prev.filter((f) => f !== expression)].slice(0, 5));
-    // reset dropdown to placeholder
-    e.target.value = '';
+  };
+
+  const handlePresetSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const expression = e.target.value;
+    if (expression) {
+      handlePresetClick(expression);
+    }
+
   };
 
   const handleSavePreset = () => {
@@ -62,7 +68,7 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
     if (!label) return;
     setCustomPresets((prev) => [
       ...prev.filter((p) => p.label !== label),
-      { label, expression },
+      { label, expression, docUrl: '' },
     ]);
   };
 

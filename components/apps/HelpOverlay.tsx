@@ -232,7 +232,7 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
             <div className="mt-2">
               <InputRemap
                 mapping={mapping}
-                setKey={setKey ?? noop}
+                setKey={setKey as (action: string, key: string) => string | null}
                 actions={info.actions}
               />
             </div>

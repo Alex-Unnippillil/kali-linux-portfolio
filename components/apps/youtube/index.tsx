@@ -56,7 +56,7 @@ function ChannelHovercard({ id, name }: { id: string; name: string }) {
   };
 
   const handleLeave = () => {
-    clearTimeout(timer.current);
+    if (timer.current) clearTimeout(timer.current);
     setShow(false);
   };
 

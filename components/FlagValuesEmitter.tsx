@@ -1,10 +1,10 @@
 import { Suspense } from 'react';
-import { encryptFlagValues, FlagValues } from 'flags/react';
+import { FlagValues } from 'flags/react';
 import { beta } from '../flags';
 
 async function FlagValuesLoader() {
   const values = { beta: await beta() };
-  return <FlagValues values={await encryptFlagValues(values)} />;
+  return <FlagValues values={values} />;
 }
 
 export default function FlagValuesEmitter() {

@@ -32,7 +32,7 @@ export default function ClipMaker() {
     document.body.appendChild(tag);
     window.onYouTubeIframeAPIReady = () => setReady(true);
     return () => {
-      delete window.onYouTubeIframeAPIReady;
+      delete (window as any).onYouTubeIframeAPIReady;
     };
   }, []);
 

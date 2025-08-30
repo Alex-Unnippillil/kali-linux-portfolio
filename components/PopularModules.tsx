@@ -100,7 +100,7 @@ const PopularModules: React.FC = () => {
     warning: 'text-yellow-300',
   };
 
-  const levelIcon: Record<string, JSX.Element> = {
+  const levelIcon: Record<string, React.ReactElement> = {
     info: (
       <svg
         className="w-6 h-6 text-blue-300"
