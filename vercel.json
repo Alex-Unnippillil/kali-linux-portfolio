@@ -1,7 +1,10 @@
 {
   "functions": {
-    "pages/api/**/*.js": { "runtime": "@vercel/node@5.3.17" },
-    "pages/api/**/*.ts": { "runtime": "@vercel/node@5.3.17" }
+    "pages/api/**/*.js": {
+      "runtime": "nodejs20.x"
+    },
+    "pages/api/**/*.ts": {
+      "runtime": "nodejs20.x"
+    }
   }
-
 }
