@@ -127,9 +127,11 @@ export const TOWER_TYPES = {
     { range: 2, damage: 2 },
     { range: 3, damage: 3 },
   ],
-};
+} as const;
 
-export const getTowerDPS = (type: string, level: number) => {
+export type TowerType = keyof typeof TOWER_TYPES;
+
+export const getTowerDPS = (type: TowerType, level: number) => {
   const stats = TOWER_TYPES[type]?.[level - 1];
   if (!stats) return 0;
   return stats.damage; // 1 shot per second
@@ -146,6 +148,7 @@ export type Tower = {
   range: number;
   damage: number;
   level: number;
+  type?: TowerType;
 };
 
 export const upgradeTower = (tower: Tower, path: 'range' | 'damage') => {
