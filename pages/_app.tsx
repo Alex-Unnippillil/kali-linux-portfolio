@@ -130,6 +130,7 @@ function MyApp(props: AppProps) {
   }, []);
   return (
     <SettingsProvider>
+      <FlagValuesEmitter />
       <PipPortalProvider>
         <div aria-live="polite" id="live-region" />
         <Component {...pageProps} />
