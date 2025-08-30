@@ -2574,17 +2574,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@react-leaflet/core@npm:^2.1.0":
-  version: 2.1.0
-  resolution: "@react-leaflet/core@npm:2.1.0"
-  peerDependencies:
-    leaflet: ^1.9.0
-    react: ^18.0.0
-    react-dom: ^18.0.0
-  checksum: 10c0/d5218c79ab9decd458e1fa8a0ec3757542e3ea4e569afa151a32ef0e9ceb63a13174f3fbc740fe0d514df8b0b3e30d913bfb0b8b661dac13924934d7e430bfc9
-  languageName: node
-  linkType: hard
-
 "@rollup/plugin-babel@npm:^5.2.0":
   version: 5.3.1
   resolution: "@rollup/plugin-babel@npm:5.3.1"
@@ -3171,13 +3160,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/geojson@npm:*":
-  version: 7946.0.16
-  resolution: "@types/geojson@npm:7946.0.16"
-  checksum: 10c0/1ff24a288bd5860b766b073ead337d31d73bdc715e5b50a2cee5cb0af57a1ed02cc04ef295f5fa68dc40fe3e4f104dd31282b2b818a5ba3231bc1001ba084e3c
-  languageName: node
-  linkType: hard
-
 "@types/howler@npm:^2":
   version: 2.2.12
   resolution: "@types/howler@npm:2.2.12"
@@ -3251,15 +3233,6 @@ __metadata:
   dependencies:
     "@types/node": "npm:*"
   checksum: 10c0/ff8f54fc49621210291f815fe5b15d809fd7d032941b3180743440bd507ecdf08b9e844625fa346af568c84bf34114eb378dcdc3e921a08ba1e2a08d7e3c809c
-  languageName: node
-  linkType: hard
-
-"@types/leaflet@npm:^1":
-  version: 1.9.20
-  resolution: "@types/leaflet@npm:1.9.20"
-  dependencies:
-    "@types/geojson": "npm:*"
-  checksum: 10c0/14a32df400c6a371bc7e65ee4467118dc1b977cae002c45f7315ed032fade30bac3b97feac60a08809dd767bd68b17900ae6f947258cc0745412562ad12f2e82
   languageName: node
   linkType: hard
 
@@ -8705,13 +8678,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"leaflet@npm:^1.9.4":
-  version: 1.9.4
-  resolution: "leaflet@npm:1.9.4"
-  checksum: 10c0/f639441dbb7eb9ae3fcd29ffd7d3508f6c6106892441634b0232fafb9ffb1588b05a8244ec7085de2c98b5ed703894df246898477836cfd0ce5b96d4717b5ca1
-  languageName: node
-  linkType: hard
-
 "leven@npm:^3.1.0":
   version: 3.1.0
   resolution: "leven@npm:3.1.0"
@@ -10516,41 +10482,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-leaflet@npm:^4.2.1":
-  version: 4.2.1
-  resolution: "react-leaflet@npm:4.2.1"
-  dependencies:
-    "@react-leaflet/core": "npm:^2.1.0"
-  peerDependencies:
-    leaflet: ^1.9.0
-    react: ^18.0.0
-    react-dom: ^18.0.0
-  checksum: 10c0/2e9d1687e883fd7d2e9798e51a04600e1b14784dc98b981a44507e65eb39a24f08c7f237c7522ae5667e999eb53b8d565ebd0f5baa25ef73a0278d6bfcc369e1
-  languageName: node
-  linkType: hard
-
-"react-onclickoutside@npm:^6.12.2":
-  version: 6.13.2
-  resolution: "react-onclickoutside@npm:6.13.2"
-  peerDependencies:
-    react: ^15.5.x || ^16.x || ^17.x || ^18.x
-    react-dom: ^15.5.x || ^16.x || ^17.x || ^18.x
-  checksum: 10c0/fafe6fd036729d7e8f6b5d59046aa0dbc7b547269e167f3c7ab3fa30508ce768133ad46654014449bc1a697d1473bad78a1b869071bd81256c89f225c7c4f2ed
-  languageName: node
-  linkType: hard
-
-"react-twitter-embed@npm:^4.0.4":
-  version: 4.0.4
-  resolution: "react-twitter-embed@npm:4.0.4"
-  dependencies:
-    scriptjs: "npm:^2.5.9"
-  peerDependencies:
-    react: ^16.0.0 || ^17.0.0 || ^18.0.0
-    react-dom: ^16.0.0 || ^17.0.0 || ^18.0.0
-  checksum: 10c0/5c5395a8421fd67752f4eae993b682175a3757e73c338f1d0ec56cf413206ae01c9197d39dfee41d0726f4740703a9a9fdce4ac66d1529dbecf0967f7953be39
-  languageName: node
-  linkType: hard
-
 "react@npm:^19.1.1":
   version: 19.1.1
   resolution: "react@npm:19.1.1"
@@ -10934,13 +10865,6 @@ __metadata:
   version: 0.26.0
   resolution: "scheduler@npm:0.26.0"
   checksum: 10c0/5b8d5bfddaae3513410eda54f2268e98a376a429931921a81b5c3a2873aab7ca4d775a8caac5498f8cbc7d0daeab947cf923dbd8e215d61671f9f4e392d34356
-  languageName: node
-  linkType: hard
-
-"scriptjs@npm:^2.5.9":
-  version: 2.5.9
-  resolution: "scriptjs@npm:2.5.9"
-  checksum: 10c0/7b81adefb3ce7761a9b13f4cc22c6c77418a3f6a828bf400c9184ea3801c3fc2c352c4966382cece4a60cc843e0d1a1087bcf96b9a81a1bb6de7ddc60fd80811
   languageName: node
   linkType: hard
 
@@ -12289,7 +12213,6 @@ __metadata:
     "@types/figlet": "npm:^1"
     "@types/howler": "npm:^2"
     "@types/jest": "npm:30.0.0"
-    "@types/leaflet": "npm:^1"
     "@types/matter-js": "npm:0.20.0"
     "@types/node": "npm:^24.2.1"
     "@types/qrcode": "npm:^1.5.5"
@@ -12335,7 +12258,6 @@ __metadata:
     jest-environment-jsdom: "npm:30.0.5"
     jspdf: "npm:^3.0.2"
     kaitai-struct: "npm:^0.10.0"
-    leaflet: "npm:^1.9.4"
     mathjs: "npm:^14.6.0"
     matter-js: "npm:0.20.0"
     monaco-editor: "npm:^0.52.2"
@@ -12359,9 +12281,6 @@ __metadata:
     react-force-graph: "npm:^1.45.0"
     react-ga4: "npm:^2.1.0"
     react-github-calendar: "npm:^4.5.9"
-    react-leaflet: "npm:^4.2.1"
-    react-onclickoutside: "npm:^6.12.2"
-    react-twitter-embed: "npm:^4.0.4"
     rrule: "npm:2.7.2"
     seedrandom: "npm:^3.0.5"
     sharp: "npm:^0.34.3"
