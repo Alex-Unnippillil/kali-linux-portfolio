@@ -69,7 +69,7 @@ const UnitConverter = () => {
       setRightVal(rounded.toString());
       setError('');
     },
-    [category, fromUnit, toUnit, precision, sigFig],
+    [category, fromUnit, toUnit, precision, sigFig, applyPrecision],
   );
 
   const convertRightToLeft = useCallback(
@@ -90,7 +90,7 @@ const UnitConverter = () => {
       setLeftVal(rounded.toString());
       setError('');
     },
-    [category, fromUnit, toUnit, precision, sigFig],
+    [category, fromUnit, toUnit, precision, sigFig, applyPrecision],
   );
 
   const handleLeftChange = (e) => {
