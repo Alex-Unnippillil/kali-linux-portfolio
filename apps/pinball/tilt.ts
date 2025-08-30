@@ -7,8 +7,12 @@ export const shouldTilt = (
   threshold: number,
 ): boolean => {
   if (!acc) return false;
-  const { x = 0, y = 0, z = 0 } = acc;
-  const magnitude = Math.sqrt(x * x + y * y + z * z);
+  const { x, y, z } = acc;
+  const magnitude = Math.sqrt(
+    (x ?? 0) * (x ?? 0) +
+    (y ?? 0) * (y ?? 0) +
+    (z ?? 0) * (z ?? 0),
+  );
   return magnitude > threshold;
 };
 

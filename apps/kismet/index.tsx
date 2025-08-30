@@ -18,7 +18,7 @@ const KismetPage: React.FC = () => {
 
   return (
     <>
-      <KismetApp onNetworkDiscovered={handleNetworkDiscovered} />
+      <KismetApp onNetworkDiscovered={handleNetworkDiscovered as any} />
       <DeauthWalkthrough />
     </>
   );
