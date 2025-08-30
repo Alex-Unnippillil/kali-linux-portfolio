@@ -129,4 +129,5 @@ For each game below, build a canvas-based component with `requestAnimationFrame`
 ## Housekeeping
 - Keep `apps.config.js` organized with utilities and games grouped and exported consistently.
 - Track `workbox-build` release notes for a move off `source-map@0.8.0-beta.0`; remove once Workbox uses a stable `source-map` release.
+- Resolve `chart.js` patch resolution failure causing `yarn install` to exit with "Couldn't find any versions" errors.
 
