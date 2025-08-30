@@ -138,7 +138,7 @@ const Checkers = () => {
         );
       }
     }
-  }, []);
+  }, [rule]);
 
   useEffect(() => {
     const state = {
