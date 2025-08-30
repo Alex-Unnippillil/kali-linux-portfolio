@@ -119,7 +119,7 @@ export default function useOPFS(): OPFSHook {
       if (!dir) return [];
       const files: FileSystemFileHandle[] = [];
       try {
-        for await (const entry of dir.values()) {
+        for await (const entry of (dir as any).values()) {
           if (entry.kind === 'file') files.push(entry as FileSystemFileHandle);
         }
       } catch {}
