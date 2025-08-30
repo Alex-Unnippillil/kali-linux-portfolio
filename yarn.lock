@@ -4510,7 +4510,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"bare-fs@npm:^4.0.1":
+"bare-fs@npm:4.2.1":
   version: 4.2.1
   resolution: "bare-fs@npm:4.2.1"
   dependencies:
@@ -4526,10 +4526,33 @@ __metadata:
   languageName: node
   linkType: hard
 
-"bare-os@npm:^3.0.1":
+"bare-fs@patch:bare-fs@npm%3A4.2.1#./.yarn/patches/bare-fs-npm-4.2.1-033b0791f0.patch::locator=unnippillil%40workspace%3A.":
+  version: 4.2.1
+  resolution: "bare-fs@patch:bare-fs@npm%3A4.2.1#./.yarn/patches/bare-fs-npm-4.2.1-033b0791f0.patch::version=4.2.1&hash=9f34e9&locator=unnippillil%40workspace%3A."
+  dependencies:
+    bare-events: "npm:^2.5.4"
+    bare-path: "npm:^3.0.0"
+    bare-stream: "npm:^2.6.4"
+  peerDependencies:
+    bare-buffer: "*"
+  peerDependenciesMeta:
+    bare-buffer:
+      optional: true
+  checksum: 10c0/c074ec6ba133c383797ef41deb45430cff58f51c233dfa0ad52d2f0bec4a008e333e6b3642b1aa17e2cdab31f64f5f43d626c92d90f6a5a82364cb4ab4fe450c
+  languageName: node
+  linkType: hard
+
+"bare-os@npm:3.6.2":
   version: 3.6.2
   resolution: "bare-os@npm:3.6.2"
   checksum: 10c0/7d917bc202b7efbb6b78658403fac04ae4e91db98d38cbd24037f896a2b1b4f4571d8cd408d12bed6a4c406d6abaf8d03836eacbcc4c75a0b6974e268574fc5a
+  languageName: node
+  linkType: hard
+
+"bare-os@patch:bare-os@npm%3A3.6.2#./.yarn/patches/bare-os-npm-3.6.2-fb7820f69d.patch::locator=unnippillil%40workspace%3A.":
+  version: 3.6.2
+  resolution: "bare-os@patch:bare-os@npm%3A3.6.2#./.yarn/patches/bare-os-npm-3.6.2-fb7820f69d.patch::version=3.6.2&hash=cb8f2e&locator=unnippillil%40workspace%3A."
+  checksum: 10c0/db3c924fdb5ad6d73dd2ae6062837ee2ac933240e184ae943208322bca8cf43ddac9138d53b3c20289737747b656229afe7d61c06d41a25a310d2c3e34efbeb4
   languageName: node
   linkType: hard
 
