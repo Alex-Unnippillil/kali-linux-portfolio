@@ -6,6 +6,6 @@ const Checkers = dynamic(() => import('../../apps/checkers'), {
   loading: () => <p>Loading...</p>,
 });
 
-export default function CheckersPage(): React.ReactElement {
+export default function CheckersPage() {
   return <Checkers />;
 }

@@ -1,27 +1,21 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs';
 import path from 'path';
-
-interface Entry {
-  name: string;
-  score: number;
-}
 
 const filePath = path.join(process.cwd(), 'data', 'pacman-leaderboard.json');
 const MAX_ENTRIES = 10;
 
-function readBoard(): Entry[] {
+function readBoard() {
   try {
     const raw = fs.readFileSync(filePath, 'utf-8');
     const data = JSON.parse(raw);
-    if (Array.isArray(data)) return data as Entry[];
+    if (Array.isArray(data)) return data;
     return [];
   } catch {
     return [];
   }
 }
 
-function writeBoard(board: Entry[]): void {
+function writeBoard(board) {
   try {
     fs.writeFileSync(filePath, JSON.stringify(board, null, 2));
   } catch {
@@ -30,8 +24,8 @@ function writeBoard(board: Entry[]): void {
 }
 
 export default function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<Entry[]>,
+  req,
+  res,
 ) {
   if (req.method === 'GET') {
     res.status(200).json(readBoard());
@@ -39,7 +33,7 @@ export default function handler(
   }
 
   if (req.method === 'POST') {
-    const { name, score } = req.body as Partial<Entry>;
+    const { name, score } = req.body || {};
     if (typeof name !== 'string' || typeof score !== 'number') {
       res.status(400).json(readBoard());
       return;

@@ -1,8 +1,7 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs';
 import path from 'path';
 
-export default function handler(req: NextApiRequest, res: NextApiResponse<string[]>) {
+export default function handler(req, res) {
   const dir = path.join(process.cwd(), 'public', 'images', 'wallpapers');
   try {
     const files = fs

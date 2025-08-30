@@ -1,6 +1,4 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
-
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default function handler(req, res) {
   if (req.method === 'POST') {
     res.status(200).json({ message: 'Received' });
   } else {

@@ -14,11 +14,9 @@ import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
 
-/**
- * @param {import('next/app').AppProps} props
- */
 function MyApp(props) {
   const { Component, pageProps } = props;
+
 
   useEffect(() => {
     const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;

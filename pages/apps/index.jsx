@@ -1,15 +1,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
-interface AppConfig {
-  id: string;
-  title: string;
-  icon: string;
-  disabled?: boolean;
-}
-
 const AppsPage = () => {
-  const [apps, setApps] = useState<AppConfig[]>([]);
+  const [apps, setApps] = useState([]);
   const [query, setQuery] = useState('');
 
   useEffect(() => {

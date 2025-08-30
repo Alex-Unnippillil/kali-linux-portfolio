@@ -1,8 +1,7 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs';
 import path from 'path';
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default function handler(req, res) {
   const { name } = req.query;
   const filename = Array.isArray(name) ? name.join('/') : name;
   const catalogDir = path.join(process.cwd(), 'plugins', 'catalog');

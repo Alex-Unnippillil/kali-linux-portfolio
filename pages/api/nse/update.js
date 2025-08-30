@@ -1,16 +1,11 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
 import { readFile } from 'fs/promises';
 import path from 'path';
 
-interface VersionInfo {
-  sha: string;
-}
-
-export default async function handler(_req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(_req, res) {
   try {
     const versionPath = path.join(process.cwd(), 'public', 'demo-data', 'nmap', 'script-db-version.json');
     const raw = await readFile(versionPath, 'utf8');
-    const { sha: current } = JSON.parse(raw) as VersionInfo;
+    const { sha: current } = JSON.parse(raw);
 
     const apiUrl = 'https://api.github.com/repos/nmap/nmap/commits?path=scripts/script.db&per_page=1';
     const response = await fetch(apiUrl, {

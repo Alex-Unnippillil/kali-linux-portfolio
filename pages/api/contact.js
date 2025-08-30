@@ -1,7 +1,4 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
 import { randomBytes } from 'crypto';
-import trackServerEvent from '@/lib/analytics-server';
-import { beta } from '@/app-flags';
 import { contactSchema } from '../../utils/contactSchema';
 import { validateServerEnv } from '../../lib/validate';
 import { getServiceSupabase } from '../../lib/supabase';
@@ -10,9 +7,9 @@ import { getServiceSupabase } from '../../lib/supabase';
 export const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 5;
 
-export const rateLimit = new Map<string, { count: number; start: number }>();
+export const rateLimit = new Map();
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req, res) {
   try {
     validateServerEnv(process.env);
   } catch {
@@ -40,7 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const ip =
-    (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '';
+    req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
   const now = Date.now();
   const entry = rateLimit.get(ip) || { count: 0, start: now };
   if (now - entry.start > RATE_LIMIT_WINDOW_MS) {
@@ -106,7 +103,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return;
   }
 
-  let sanitized: { name: string; email: string; message: string };
+  let sanitized;
   try {
     const parsed = contactSchema.parse({ ...rest, csrfToken: csrfHeader, recaptchaToken });
     if (parsed.honeypot) {

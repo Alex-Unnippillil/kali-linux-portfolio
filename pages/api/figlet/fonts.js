@@ -1,10 +1,9 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs';
 import path from 'path';
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default function handler(req, res) {
   const fontsDir = path.join(process.cwd(), 'figlet', 'fonts');
-  let fonts: { name: string; data: string }[] = [];
+  let fonts = [];
   try {
     const files = fs.readdirSync(fontsDir).filter((f) => f.toLowerCase().endsWith('.flf'));
     fonts = files.map((file) => ({
