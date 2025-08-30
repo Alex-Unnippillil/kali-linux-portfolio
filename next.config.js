@@ -75,6 +75,19 @@ module.exports = withBundleAnalyzer({
         mangleExports: false,
       };
     }
+    if (!isServer) {
+      config.resolve = config.resolve || {};
+      config.resolve.fallback = {
+        ...(config.resolve.fallback || {}),
+        module: false,
+        async_hooks: false,
+        fs: false,
+        path: false,
+        net: false,
+        tls: false,
+        child_process: false,
+      };
+    }
     return config;
   },
   // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
@@ -94,10 +107,13 @@ module.exports = withBundleAnalyzer({
     deviceSizes: [640, 750, 828, 1080, 1200, 1280, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
   },
-  webpack: (config) => {
-    config.experiments = config.experiments || {};
-    config.experiments.asyncWebAssembly = true;
-    return config;
+  async rewrites() {
+    return [
+      {
+        source: '/.well-known/vercel/flags',
+        destination: '/api/vercel/flags',
+      },
+    ];
   },
   ...(isStaticExport
     ? {}
