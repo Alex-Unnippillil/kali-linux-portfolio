@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { verifyAccess, type ApiData } from 'flags';
 import { getProviderData } from 'flags/next';
+// Feature flag definitions used by the provider
 import * as appFlags from '../../../app-flags';
 
 export const config = { runtime: 'edge' };
