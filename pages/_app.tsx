@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import ReactGA from 'react-ga4';
 import { Analytics, type BeforeSendEvent } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import type { AppProps } from 'next/app';
 import 'tailwindcss/tailwind.css';
 import '../styles/globals.css';
 import '../styles/index.css';
@@ -14,10 +15,16 @@ import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
 import FlagValuesEmitter from '../components/FlagValuesEmitter';
 
+interface PeriodicSyncRegistration extends ServiceWorkerRegistration {
+  periodicSync?: {
+    register: (tag: string, options: { minInterval: number }) => Promise<void>;
+  };
+}
+
 /**
- * @param {import('next/app').AppProps} props
+ * Custom App component for Next.js.
  */
-function MyApp({ Component, pageProps }) {
+function MyApp({ Component, pageProps }: AppProps) {
   useEffect(() => {
     const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
     if (trackingId) {
@@ -26,15 +33,15 @@ function MyApp({ Component, pageProps }) {
     if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
       const register = async () => {
         try {
-          const registration = await navigator.serviceWorker.register('/sw.js');
+          const registration = (await navigator.serviceWorker.register('/sw.js')) as PeriodicSyncRegistration;
 
-          window.manualRefresh = () => registration.update();
+          (window as any).manualRefresh = () => registration.update();
 
-          if ('periodicSync' in registration) {
+          if (registration.periodicSync) {
             try {
               const status = await navigator.permissions.query({
                 name: 'periodic-background-sync',
-              });
+              } as any);
               if (status.state === 'granted') {
                 await registration.periodicSync.register('content-sync', {
                   minInterval: 24 * 60 * 60 * 1000,
@@ -62,7 +69,7 @@ function MyApp({ Component, pageProps }) {
     const liveRegion = document.getElementById('live-region');
     if (!liveRegion) return;
 
-    const update = (message) => {
+    const update = (message: string) => {
       liveRegion.textContent = '';
       setTimeout(() => {
         liveRegion.textContent = message;
@@ -96,10 +103,12 @@ function MyApp({ Component, pageProps }) {
 
     const OriginalNotification = window.Notification;
     if (OriginalNotification) {
-      const WrappedNotification = function (title, options) {
-        update(`${title}${options?.body ? ' ' + options.body : ''}`);
-        return new OriginalNotification(title, options);
-      };
+      const WrappedNotification = (
+        function (title: string, options?: NotificationOptions) {
+          update(`${title}${options?.body ? ' ' + options.body : ''}`);
+          return new OriginalNotification(title, options);
+        } as unknown as typeof Notification
+      );
       WrappedNotification.requestPermission = OriginalNotification.requestPermission.bind(
         OriginalNotification,
       );
@@ -131,9 +140,10 @@ function MyApp({ Component, pageProps }) {
         <ShortcutOverlay />
         <Analytics
           beforeSend={(e: BeforeSendEvent) => {
-            if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-            if (e.metadata?.email) delete e.metadata.email;
-            return e;
+            const event = e as any;
+            if (event.url.includes('/admin') || event.url.includes('/private')) return null;
+            if (event.metadata?.email) delete event.metadata.email;
+            return event;
           }}
         />
 
