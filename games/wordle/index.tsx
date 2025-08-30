@@ -8,6 +8,7 @@ import {
   dictionaries,
   buildResultMosaic,
 } from "../../utils/wordle";
+import type { DictName } from "../../utils/wordle";
 import type { GuessEntry, LetterResult } from "./logic";
 import { evaluateGuess, hardModeViolation } from "./logic";
 import Keyboard from "./components/Keyboard";
@@ -18,7 +19,7 @@ const WordleGame = () => {
     "wordle:hard",
     false
   );
-  const [dictName, setDictName] = usePersistentState<string>(
+  const [dictName, setDictName] = usePersistentState<DictName>(
     "wordle:dict",
     "common"
   );
@@ -160,7 +161,7 @@ const WordleGame = () => {
         <select
           className="text-black"
           value={dictName}
-          onChange={(e) => setDictName(e.target.value)}
+          onChange={(e) => setDictName(e.target.value as DictName)}
         >
           {Object.keys(dictionaries).map((name) => (
             <option key={name} value={name}>
