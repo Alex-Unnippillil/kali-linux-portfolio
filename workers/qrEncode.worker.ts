@@ -1,9 +1,8 @@
-import QRCode from 'qrcode';
-import type { QRCodeToStringOptions } from 'qrcode';
+import * as QRCode from 'qrcode';
 
 interface EncodeRequest {
   text: string;
-  opts: QRCodeToStringOptions;
+  opts: any;
 }
 
 self.onmessage = async ({ data }: MessageEvent<EncodeRequest>) => {

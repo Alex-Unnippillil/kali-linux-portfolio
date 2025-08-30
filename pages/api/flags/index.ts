@@ -1,7 +1,7 @@
 import { getProviderData } from 'flags/next';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { verifyAccess, version, ProviderData } from 'flags';
-import * as appFlags from '../../flags';
+import * as appFlags from '@/appFlags';
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const authorized = await verifyAccess(req.headers.authorization);
@@ -10,7 +10,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     return;
   }
 
-  const data = (await getProviderData(appFlags)) as ProviderData;
+  const data = (await getProviderData(appFlags as any)) as ProviderData;
   res.setHeader('x-flags-sdk-version', version);
   res.status(200).json(data);
 };

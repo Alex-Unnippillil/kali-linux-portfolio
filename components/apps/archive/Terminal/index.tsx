@@ -324,13 +324,18 @@ const TerminalPaneInner = (
     }, []);
 
     useEffect(() => {
+      let term: any;
+      let fitAddon: any;
+      let handleResize: () => void;
+      let resizeObserver: ResizeObserver | null = null;
+
       (async () => {
         const [{ Terminal }, { FitAddon }, { SearchAddon }] = await Promise.all([
           import('@xterm/xterm'),
           import('@xterm/addon-fit'),
           import('@xterm/addon-search'),
         ]);
-        const term = new Terminal({
+        term = new Terminal({
           cursorBlink: true,
           convertEol: true,
           fontSize: fontSizeRef.current,
@@ -340,7 +345,7 @@ const TerminalPaneInner = (
             cursor: '#00ff00',
           },
         });
-        const fitAddon = new FitAddon();
+        fitAddon = new FitAddon();
         const searchAddon = new SearchAddon();
         term.loadAddon(fitAddon);
         term.loadAddon(searchAddon);
@@ -355,11 +360,15 @@ const TerminalPaneInner = (
 
         term.onKey(({ key, domEvent }: any) => {
           onFocus();
+
+          // Open a new split pane
           if (domEvent.ctrlKey && domEvent.shiftKey && domEvent.key === 'D') {
             domEvent.preventDefault();
             runCommand('split');
             return;
           }
+
+          // Copy selection
           if (domEvent.ctrlKey && domEvent.key.toLowerCase() === 'c') {
             const sel = term.getSelection();
             if (sel) {
@@ -371,64 +380,77 @@ const TerminalPaneInner = (
               return;
             }
           }
+
+          // Paste clipboard contents
           if (domEvent.ctrlKey && domEvent.shiftKey && domEvent.key === 'V') {
             domEvent.preventDefault();
+            if (navigator.clipboard) {
+              navigator.clipboard.readText().then((text) => {
+                term.write(text);
+                commandRef.current += text;
+                renderHint();
+              });
+            }
+            return;
+          }
+
+          // Increase/decrease font size
+          if (domEvent.ctrlKey && (domEvent.key === '+' || domEvent.key === '=')) {
+            domEvent.preventDefault();
+            fontSizeRef.current += 1;
+            term.options.fontSize = fontSizeRef.current;
+            fitAddon.fit();
+            return;
+          }
+          if (domEvent.ctrlKey && domEvent.key === '-') {
+            domEvent.preventDefault();
+            fontSizeRef.current = Math.max(8, fontSizeRef.current - 1);
+            term.options.fontSize = fontSizeRef.current;
+            fitAddon.fit();
+            return;
+          }
+
+          // Reverse search
+          if (domEvent.ctrlKey && domEvent.key === 'r') {
+            domEvent.preventDefault();
+            if (!revSearchRef.current.active) {
+              searchIdxRef.current = historyRef.current.length;
+              setRevSearch({ active: true, query: '', match: '' });
+            } else {
+              updateSearch(revSearchRef.current.query, true);
+            }
+            return;
+          }
+
+          // Tab completion and navigation
+          if (domEvent.key === 'Tab') {
+            domEvent.preventDefault();
+            handleTab();
+            return;
+          }
+          if (domEvent.key === 'ArrowLeft') {
+            domEvent.preventDefault();
+            handleSuggestionNav('left');
+            return;
+          }
+          if (domEvent.key === 'ArrowRight') {
+            domEvent.preventDefault();
+            handleSuggestionNav('right');
+            return;
+          }
+          if (domEvent.key === 'ArrowUp') {
+            domEvent.preventDefault();
+            handleHistoryNav('up');
+            return;
+          }
+          if (domEvent.key === 'ArrowDown') {
+            domEvent.preventDefault();
+            handleHistoryNav('down');
+            return;
           }
         });
-      })();
-    }, []);
-          if (navigator.clipboard) {
-            navigator.clipboard.readText().then((text) => {
-              term.write(text);
-              commandRef.current += text;
-              renderHint();
-            });
-          }
-          return;
-        }
-        if (domEvent.ctrlKey && (domEvent.key === '+' || domEvent.key === '=')) {
-          domEvent.preventDefault();
-          fontSizeRef.current += 1;
-          term.options.fontSize = fontSizeRef.current;
-          fitAddon.fit();
-          return;
-        }
-        if (domEvent.ctrlKey && domEvent.key === '-') {
-          domEvent.preventDefault();
-          fontSizeRef.current = Math.max(8, fontSizeRef.current - 1);
-          term.options.fontSize = fontSizeRef.current;
-          fitAddon.fit();
-          return;
-        }
-        if (domEvent.ctrlKey && domEvent.key === 'r') {
-          domEvent.preventDefault();
-          if (!revSearchRef.current.active) {
-            searchIdxRef.current = historyRef.current.length;
-            setRevSearch({ active: true, query: '', match: '' });
-          } else {
-            updateSearch(revSearchRef.current.query, true);
-          }
-          return;
-        }
-        if (domEvent.key === 'Tab') {
-          domEvent.preventDefault();
-          handleTab();
-        } else if (domEvent.key === 'ArrowLeft') {
-          domEvent.preventDefault();
-          handleSuggestionNav('left');
-        } else if (domEvent.key === 'ArrowRight') {
-          domEvent.preventDefault();
-          handleSuggestionNav('right');
-        } else if (domEvent.key === 'ArrowUp') {
-          domEvent.preventDefault();
-          handleHistoryNav('up');
-        } else if (domEvent.key === 'ArrowDown') {
-          domEvent.preventDefault();
-          handleHistoryNav('down');
-        }
-      });
 
-      term.onData((data: string) => {
+        term.onData((data: string) => {
         if (revSearchRef.current.active) {
           if (data === '\r') {
             term.write('\x1b[2K\r');
@@ -474,39 +496,39 @@ const TerminalPaneInner = (
           clearSuggestions();
         }
         renderHint();
-      });
+        });
 
-      if (typeof window !== 'undefined' && typeof Worker === 'function') {
-        workerRef.current = new Worker(
-          new URL('./terminal.worker.js', import.meta.url),
-        );
-        workerRef.current.onmessage = (e: any) => {
-          term.writeln('');
-          const msg = String(e.data);
-          term.writeln(msg);
-          logRef.current += `${msg}\n`;
-          updateLive(msg);
-          prompt();
-          renderHint();
-        };
-      } else {
-        workerRef.current = null;
-      }
+        if (typeof window !== 'undefined' && typeof Worker === 'function') {
+          workerRef.current = new Worker(
+            new URL('./terminal.worker.js', import.meta.url),
+          );
+          workerRef.current.onmessage = (e: any) => {
+            term.writeln('');
+            const msg = String(e.data);
+            term.writeln(msg);
+            logRef.current += `${msg}\n`;
+            updateLive(msg);
+            prompt();
+            renderHint();
+          };
+        } else {
+          workerRef.current = null;
+        }
 
-      const handleResize = () => fitAddon.fit();
-      window.addEventListener('resize', handleResize);
-      let resizeObserver: ResizeObserver | null = null;
-      if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
-        resizeObserver = new ResizeObserver(handleResize);
-        resizeObserver.observe(containerRef.current);
-      }
+        handleResize = () => fitAddon.fit();
+        window.addEventListener('resize', handleResize);
+        if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
+          resizeObserver = new ResizeObserver(handleResize);
+          resizeObserver.observe(containerRef.current);
+        }
+      })();
 
       return () => {
         window.removeEventListener('resize', handleResize);
         resizeObserver?.disconnect();
         workerRef.current?.terminate();
         if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
-        term.dispose();
+        term?.dispose();
       };
     }, [
       prompt,

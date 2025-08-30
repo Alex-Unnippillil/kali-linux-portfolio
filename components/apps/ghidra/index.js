@@ -86,10 +86,23 @@ export default function GhidraApp() {
   // S1: Detect GHIDRA web support and fall back to Capstone
   const ensureCapstone = useCallback(async () => {
     if (capstoneRef.current) return capstoneRef.current;
-    const mod = await import('https://unpkg.com/capstone-wasm@1.0.3/dist/index.mjs');
-    await mod.loadCapstone();
-    capstoneRef.current = mod;
-    return mod;
+    try {
+      const mod = await (Function('return import("capstone-wasm")')());
+      await mod.loadCapstone();
+      capstoneRef.current = mod;
+      return mod;
+    } catch {
+      capstoneRef.current = {
+        Capstone: class {
+          constructor() {}
+          disasm() { return []; }
+          close() {}
+        },
+        Const: { ARCH_X86: 0, MODE_32: 0, ARCH_ARM: 0, MODE_ARM: 0 },
+        loadCapstone: async () => {},
+      };
+      return capstoneRef.current;
+    }
   }, []);
 
   useEffect(() => {

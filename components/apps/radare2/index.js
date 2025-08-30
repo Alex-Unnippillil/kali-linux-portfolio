@@ -10,7 +10,7 @@ import {
 import GraphView from "../../../apps/radare2/components/GraphView";
 import GuideOverlay from "./GuideOverlay";
 import { useTheme } from "../../../hooks/useTheme";
-import "./theme.css";
+import styles from './theme.module.css';
 
 const Radare2 = ({ initialData = {} }) => {
   const {
@@ -105,7 +105,7 @@ const Radare2 = ({ initialData = {} }) => {
   return (
     <div
       className={`h-full w-full p-4 overflow-auto ${
-        theme === "dark" ? "r2-dark" : "r2-light"
+        theme === "dark" ? styles.r2Dark : styles.r2Light
       }`}
       style={{ backgroundColor: "var(--r2-bg)", color: "var(--r2-text)" }}
     >
