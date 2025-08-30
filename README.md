@@ -83,7 +83,7 @@ To send text or links directly into the Sticky Notes app:
 ## Speed Insights
 
 - Enable Speed Insights in the Vercel project dashboard.
-- `<SpeedInsights />` is rendered in [`pages/_app.jsx`](./pages/_app.jsx) alongside `<Analytics />`.
+- `<SpeedInsights />` is rendered in [`pages/_app.jsx`](./pages/_app.jsx).
 - Validate collection by requesting `/_vercel/speed-insights/script.js` from a deployed build.
 - No metrics are collected in development mode; ad blockers or network filters can block the script.
 
@@ -96,7 +96,6 @@ See Vercel's [Speed Insights Quickstart](https://vercel.com/docs/speed-insights/
 - **Next.js 15** (app uses `/pages` routing) + **TypeScript** in parts
 - **Tailwind CSS** with custom Ubuntu/Kali theme tokens (`styles/index.css`, `tailwind.config.js`)
 - **React GA4** via a thin wrapper in `utils/analytics.ts`
-- **Vercel Analytics** (`@vercel/analytics`)
 - **EmailJS** for the contact (“Gedit”) app
 - Simple in-memory rate limiter for the contact API (not distributed across instances)
 - Client-side only **simulations** of security tools (no real exploitation)
@@ -116,7 +115,7 @@ File System (OPFS) so players can store per-game profiles.
 
 ```
 pages/
-  _app.jsx               # global providers (Legal banner, GA init, Vercel Analytics)
+  _app.jsx               # global providers (Legal banner, GA init)
   _document.jsx
   index.jsx              # mounts <Ubuntu />
   api/                   # (dev/server) stub routes for demo-only features

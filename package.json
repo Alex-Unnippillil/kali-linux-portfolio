@@ -28,7 +28,6 @@
     "@mozilla/readability": "^0.6.0",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.56.1",
-    "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",
     "@vercel/toolbar": "^0.1.38",
     "@xterm/addon-fit": "^0.10.0",
@@ -80,7 +79,6 @@
     "react-github-calendar": "^4.5.9",
     "react-leaflet": "^5.0.0",
     "react-onclickoutside": "^6.12.2",
-
     "rrule": "2.7.2",
     "seedrandom": "^3.0.5",
     "sharp": "^0.34.3",

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { trackEvent } from '@/lib/analytics-client';
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -23,7 +22,6 @@ const InstallButton: React.FC = () => {
     if (!prompt) return;
     await prompt.prompt();
     await prompt.userChoice;
-    trackEvent('cta_click', { location: 'install_button' });
     setPrompt(null);
   };
 
