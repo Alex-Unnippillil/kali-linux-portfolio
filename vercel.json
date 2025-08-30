@@ -1,7 +1,7 @@
 {
   "functions": {
-    "api/**/*.js": { "runtime": "nodejs20.x" },
-    "api/**/*.ts": { "runtime": "nodejs20.x" }
+    "api/**/*.js": { "runtime": "@vercel/node@5.3.17" },
+    "api/**/*.ts": { "runtime": "@vercel/node@5.3.17" }
   },
   "env": {
     "ADMIN_READ_KEY": "@admin-read-key"
