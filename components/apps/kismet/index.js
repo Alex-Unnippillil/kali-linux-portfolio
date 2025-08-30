@@ -321,7 +321,7 @@ const DeviceDrawer = ({ network, onClose }) => (
   </div>
 );
 
-const KismetApp = ({ onNetworkDiscovered = () => {} }) => {
+const KismetApp = ({ onNetworkDiscovered = (_net) => {} }) => {
   const [networks, setNetworks] = useState([]);
   const [playing, setPlaying] = useState(false);
   const [frameIndex, setFrameIndex] = useState(0);
