@@ -11,7 +11,7 @@ const themes: Record<string, { bg: string; flipper: string }> = {
 };
 
 export default function Pinball() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const engineRef = useRef<Engine | null>(null);
   const leftFlipperRef = useRef<Body | null>(null);
   const rightFlipperRef = useRef<Body | null>(null);
