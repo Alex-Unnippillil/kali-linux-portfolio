@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import usePersistentState from './usePersistentState';
 
 const GitHubStars = ({ user, repo }) => {
@@ -7,7 +7,7 @@ const GitHubStars = ({ user, repo }) => {
   const [stars, setStars] = usePersistentState(`gh-stars-${user}/${repo}`, null);
   const [loading, setLoading] = useState(stars === null);
 
-  const fetchStars = async () => {
+  const fetchStars = useCallback(async () => {
     try {
       setLoading(true);
       const res = await fetch(`https://api.github.com/repos/${user}/${repo}`);
@@ -19,7 +19,7 @@ const GitHubStars = ({ user, repo }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, repo, setStars]);
 
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
@@ -39,7 +39,7 @@ const GitHubStars = ({ user, repo }) => {
     if (stars === null) {
       fetchStars();
     }
-  }, [visible]);
+  }, [visible, stars, fetchStars]);
 
   if (!repo) return null;
 
