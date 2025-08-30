@@ -2,6 +2,8 @@
 // Allows external badges and same-origin PDF embedding.
 // Update README (section "CSP External Domains") when editing domains below.
 
+const { version } = require('./package.json');
+
 const ContentSecurityPolicy = [
   "default-src 'self'",
   // Prevent injection of external base URIs
@@ -73,6 +75,9 @@ module.exports = {
     ],
     deviceSizes: [640, 750, 828, 1080, 1200, 1280, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
+  },
+  env: {
+    NEXT_PUBLIC_SW_VERSION: version,
   },
   async headers() {
     return [
