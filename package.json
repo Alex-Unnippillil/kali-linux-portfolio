@@ -81,7 +81,6 @@
     "react-leaflet": "^5.0.0",
     "react-onclickoutside": "^6.12.2",
     "react-twitter-embed": "^4.0.4",
-
     "rrule": "2.7.2",
     "seedrandom": "^3.0.5",
     "sharp": "^0.34.3",
@@ -131,6 +130,7 @@
   "resolutions": {
     "magic-string": "^0.30.10",
     "postcss": "^8.5.6",
+    "workbox-build/glob": "^11.0.3",
     "test-exclude": "^7.0.1",
     "@napi-rs/canvas@npm:^0.1.74": "patch:@napi-rs/canvas@npm%3A0.1.77#./.yarn/patches/@napi-rs-canvas-npm-0.1.77-27723c2ab5.patch"
   },
