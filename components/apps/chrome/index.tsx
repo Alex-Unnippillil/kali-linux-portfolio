@@ -93,7 +93,7 @@ const Chrome: React.FC = () => {
   const [tabQuery, setTabQuery] = useState('');
   const [overflowing, setOverflowing] = useState(false);
   const draggingId = useRef<number | null>(null);
-  const dragTabId = useRef<string | null>(null);
+  const dragTabId = useRef<number | null>(null);
   const [tiles, setTiles] = useState<Tile[]>([]);
   const [editingTiles, setEditingTiles] = useState(false);
   const [newTitle, setNewTitle] = useState('');

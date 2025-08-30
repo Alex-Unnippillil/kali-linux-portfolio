@@ -23,10 +23,10 @@ type Marker = {
 };
 
 const TriageFilters: React.FC = () => {
-  const [activeFilters, setActiveFilters] = usePersistentState<Severity[]>(
+  const [activeFilters, setActiveFilters] = usePersistentState(
     'volatility-triage-filters',
     [...severities]
-  );
+  ) as [Severity[], (value: React.SetStateAction<Severity[]>) => void];
 
   const toggleFilter = (sev: Severity) => {
     setActiveFilters((prev: Severity[]) =>

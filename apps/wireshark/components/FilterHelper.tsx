@@ -49,7 +49,13 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
   const handlePresetClick = (expression: string) => {
     onChange(expression);
     setRecent((prev) => [expression, ...prev.filter((f) => f !== expression)].slice(0, 5));
-    setApplied((prev) => ({ ...prev, [expression]: true }));
+  };
+
+  const handlePresetSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const expression = e.target.value;
+    if (expression) {
+      handlePresetClick(expression);
+    }
   };
 
   const handleSavePreset = () => {
@@ -59,7 +65,7 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
     if (!label) return;
     setCustomPresets((prev) => [
       ...prev.filter((p) => p.label !== label),
-      { label, expression },
+      { label, expression, docUrl: '' },
     ]);
   };
 

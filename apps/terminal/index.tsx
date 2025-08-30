@@ -361,7 +361,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           }
         }
       });
-      term.onPaste((d: string) => handleInput(d));
       updateOverflow();
       term.onScroll?.(updateOverflow);
     })();

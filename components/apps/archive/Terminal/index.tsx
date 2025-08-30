@@ -9,11 +9,10 @@ import React, {
 
 const promptText = 'alex@kali:~$ ';
 
-const TerminalPane = forwardRef<
-  any,
-  { onSplit: () => void; onClose: () => void; onFocus: () => void }
->(
-  ({ onSplit, onClose, onFocus }, ref) => {
+const TerminalPaneInner = (
+  { onSplit, onClose, onFocus }: { onSplit: () => void; onClose: () => void; onFocus: () => void },
+  ref: any,
+) => {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const termRef = useRef<any>(null);
     const fitAddonRef = useRef<any>(null);
@@ -550,8 +549,9 @@ const TerminalPane = forwardRef<
         )}
       </div>
     );
-  },
-);
+};
+
+const TerminalPane = forwardRef(TerminalPaneInner as any);
 TerminalPane.displayName = 'TerminalPane';
 
 const Terminal = forwardRef<any, any>((props, ref) => {

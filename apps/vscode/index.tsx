@@ -53,6 +53,7 @@ export default function VsCode() {
             src="https://stackblitz.com/github/Alex-Unnippillil/kali-linux-portfolio?embed=1&file=README.md"
             title="VsCode"
             className="w-full h-full"
+            onLoad={() => {}}
           />
           <div className="absolute top-4 left-4 flex items-center gap-4 bg-black/50 p-4 rounded">
             <Image

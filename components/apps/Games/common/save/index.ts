@@ -65,7 +65,7 @@ export default function useGameSaves(gameId: string) {
       if (supported) {
         if (!dir) return [];
         const names: string[] = [];
-        for await (const [name, handle] of dir.entries()) {
+        for await (const [name, handle] of (dir as any).entries()) {
           if (handle.kind === 'file' && name.endsWith('.json')) {
             names.push(name.replace(/\.json$/, ''));
           }
@@ -85,7 +85,7 @@ export default function useGameSaves(gameId: string) {
       if (supported) {
         if (!dir) return [];
         const slots: SaveSlot[] = [];
-        for await (const [name, handle] of dir.entries()) {
+        for await (const [name, handle] of (dir as any).entries()) {
           if (handle.kind === 'file' && name.endsWith('.json')) {
             const txt = await readFile(name, dir);
             if (txt) slots.push({ name: name.replace(/\.json$/, ''), data: JSON.parse(txt) });

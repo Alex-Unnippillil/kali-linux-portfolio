@@ -1,12 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-const positions = {
+type Node = 'Victim' | 'Attacker' | 'Gateway';
+
+const positions: Record<Node, { x: number; y: number }> = {
   Victim: { x: 60, y: 120 },
   Attacker: { x: 150, y: 50 },
   Gateway: { x: 240, y: 120 },
 };
 
-const steps = [
+interface Step {
+  title: string;
+  description: string;
+  flows: { from: Node; to: Node; color: string }[];
+}
+
+const steps: Step[] = [
   {
     title: 'Normal Operation',
     description: 'Victim communicates with the gateway directly.',
@@ -23,7 +31,7 @@ const steps = [
   },
   {
     title: 'Traffic Interception',
-    description: 'Victim\'s traffic is now routed through the attacker.',
+    description: "Victim's traffic is now routed through the attacker.",
     flows: [
       { from: 'Victim', to: 'Attacker', color: '#fbbf24' },
       { from: 'Attacker', to: 'Gateway', color: '#fbbf24' },
