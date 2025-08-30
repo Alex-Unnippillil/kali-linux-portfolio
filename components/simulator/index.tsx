@@ -112,6 +112,7 @@ const Simulator: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+
   // Previously a chart visualization tab used Chart.js here.
   // The dependency caused build failures, so the chart feature was removed
   // to keep the simulator lightweight and avoid installation errors.
@@ -149,7 +150,9 @@ const Simulator: React.FC = () => {
           </div>
         </div>
       )
+
     },
+
   ];
 
   return (
