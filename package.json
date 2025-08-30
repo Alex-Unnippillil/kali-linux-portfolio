@@ -21,7 +21,7 @@
     "analyze": "ANALYZE=true yarn build"
   },
   "engines": {
-    "node": "22.x"
+    "node": "20.x"
   },
   "dependencies": {
     "@emailjs/browser": "^3.10.0",
