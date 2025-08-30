@@ -3,6 +3,8 @@
   "compilerOptions": {
     "noEmit": false,
     "outDir": "./dist",
+    "rootDir": ".",
+    "declaration": false,
     "allowJs": false,
     "tsBuildInfoFile": "./dist/tsconfig.gamepad.tsbuildinfo"
 
