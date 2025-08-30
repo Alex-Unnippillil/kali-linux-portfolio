@@ -76,7 +76,7 @@ export default function GuideOverlay({ onClose }) {
             checked={dontShow}
             onChange={(e) => setDontShow(e.target.checked)}
           />
-          <span>Don't show again</span>
+          <span>Don&apos;t show again</span>
         </label>
         <div className="mt-4 flex justify-between">
           <a
