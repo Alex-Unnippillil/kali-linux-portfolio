@@ -1,17 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import {
-  Clue,
-  Grid,
-  createHintSystem,
-  findForcedCellsInLine,
-} from '../../../apps/games/nonogram/logic';
+import type { Clue, Grid } from '../../../apps/games/nonogram/logic';
+import { findForcedCellsInLine } from '../../../apps/games/nonogram/logic';
+import { createHintSystem } from '../../../apps/games/nonogram/hints';
 
 interface HintSystemProps {
   rows: Clue[];
   cols: Clue[];
   grid: Grid;
+  solution: Grid;
   maxHints?: number;
   /**
    * Optional callback when a hint is produced. Can be used by the parent
@@ -59,6 +57,7 @@ const HintSystem: React.FC<HintSystemProps> = ({
   rows,
   cols,
   grid,
+  solution,
   maxHints = 3,
   onHint,
 }) => {
@@ -67,7 +66,7 @@ const HintSystem: React.FC<HintSystemProps> = ({
   const [assist, setAssist] = useState(false);
 
   const handleHint = () => {
-    const hint = system.useHint(rows, cols, grid);
+    const hint = system.useHint(grid, solution);
     if (!hint) return;
     onHint?.(hint);
     setSteps((prev) => [
