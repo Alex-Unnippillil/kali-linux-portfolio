@@ -1,4 +1,6 @@
 import { useEffect } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { useRouter } from 'next/router';
 import ReactGA from 'react-ga4';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
@@ -16,7 +18,8 @@ import PipPortalProvider from '../components/common/PipPortal';
 
 function MyApp(props) {
   const { Component, pageProps } = props;
-
+  const router = useRouter();
+  const shouldReduceMotion = useReducedMotion();
 
   useEffect(() => {
     const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
@@ -128,7 +131,21 @@ function MyApp(props) {
     <SettingsProvider>
       <PipPortalProvider>
         <div aria-live="polite" id="live-region" />
-        <Component {...pageProps} />
+        {shouldReduceMotion ? (
+          <Component {...pageProps} />
+        ) : (
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={router.asPath}
+              initial={{ opacity: 0, x: 16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -16 }}
+              transition={{ duration: 0.15 }}
+            >
+              <Component {...pageProps} />
+            </motion.div>
+          </AnimatePresence>
+        )}
         <ShortcutOverlay />
         <Analytics
           beforeSend={(e) => {
