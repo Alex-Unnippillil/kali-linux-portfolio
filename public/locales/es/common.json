@@ -1,0 +1,11 @@
+{
+  "meta": {
+    "title": "Portafolio de Alex Unnippillil"
+  },
+  "switcher": {
+    "label": "Idioma"
+  },
+  "fallback": {
+    "missing": "Traducción no disponible"
+  }
+}

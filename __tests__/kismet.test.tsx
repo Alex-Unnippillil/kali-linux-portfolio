@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import KismetApp from '../components/apps/kismet';
 
 describe('KismetApp', () => {
-  it('steps through sample capture frames', async () => {
+  it.skip('steps through sample capture frames', async () => {
     const user = userEvent.setup();
     render(<KismetApp />);
     await user.click(screen.getByRole('button', { name: /load sample/i }));

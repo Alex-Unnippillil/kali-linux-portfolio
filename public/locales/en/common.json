@@ -1,0 +1,12 @@
+{
+  "meta": {
+    "title": "Alex Unnippillil's Portfolio",
+    "description": "Alex Unnippillil Personal Portfolio Website"
+  },
+  "switcher": {
+    "label": "Language"
+  },
+  "fallback": {
+    "missing": "Translation not available"
+  }
+}
