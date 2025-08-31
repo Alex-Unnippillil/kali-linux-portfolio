@@ -13,6 +13,7 @@ import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
+import ScrollControls from '../components/ui/ScrollControls';
 
 function MyApp(props) {
   const { Component, pageProps } = props;
@@ -130,6 +131,7 @@ function MyApp(props) {
         <div aria-live="polite" id="live-region" />
         <Component {...pageProps} />
         <ShortcutOverlay />
+        <ScrollControls />
         <Analytics
           beforeSend={(e) => {
             if (e.url.includes('/admin') || e.url.includes('/private')) return null;
