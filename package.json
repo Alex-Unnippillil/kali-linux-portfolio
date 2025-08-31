@@ -135,5 +135,5 @@
     "webpack": "^5.92.0",
     "@napi-rs/canvas": "patch:@napi-rs/canvas@npm:0.1.77#./.yarn/patches/@napi-rs-canvas-npm-0.1.77-27723c2ab5.patch"
   },
-  "packageManager": "yarn@4.9.2"
+  "packageManager": "yarn@4.4.0"
 }
