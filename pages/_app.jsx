@@ -13,6 +13,7 @@ import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
+import DownloadPdfButton from '../components/DownloadPdfButton';
 
 function MyApp(props) {
   const { Component, pageProps } = props;
@@ -127,6 +128,10 @@ function MyApp(props) {
   return (
     <SettingsProvider>
       <PipPortalProvider>
+        <header className="print-header">
+          Kali Linux Portfolio
+        </header>
+        <DownloadPdfButton />
         <div aria-live="polite" id="live-region" />
         <Component {...pageProps} />
         <ShortcutOverlay />
