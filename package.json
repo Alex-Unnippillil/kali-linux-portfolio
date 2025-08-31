@@ -5,7 +5,7 @@
   "homepage": "https://unnippillil.com/",
   "scripts": {
     "build:gamepad": "tsc -p tsconfig.gamepad.json",
-    "prebuild": "tsc -p tsconfig.gamepad.json",
+    "prebuild": "tsc -p tsconfig.gamepad.json && yarn build:search",
     "dev": "next dev",
     "build": "next build && yarn build:sw",
     "postbuild": "node -e \"const fs=require('fs');fs.mkdirSync('public/vendor',{recursive:true});fs.copyFileSync('dist/utils/gamepad.js','public/vendor/gamepad.js')\"",
@@ -18,7 +18,8 @@
     "smoke": "node scripts/smoke-all-apps.mjs",
     "module-report": "node scripts/generate-module-report.mjs",
     "build:sw": "node scripts/generate-sw.mjs",
-    "analyze": "ANALYZE=true yarn build"
+    "analyze": "ANALYZE=true yarn build",
+    "build:search": "node scripts/generate-search-index.mjs"
   },
   "engines": {
     "node": "20.x"

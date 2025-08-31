@@ -1,0 +1,512 @@
+[
+  {
+    "type": "project",
+    "title": "Alpha",
+    "url": "/apps/project-gallery",
+    "content": "Example project Alpha"
+  },
+  {
+    "type": "project",
+    "title": "Beta",
+    "url": "/apps/project-gallery",
+    "content": "Example project Beta"
+  },
+  {
+    "type": "post",
+    "title": "Architecture",
+    "url": "https://github.com/undisclosed/kali-linux-portfolio/blob/main/docs/architecture.md",
+    "content": "# Architecture\n\nThe project is a desktop-style portfolio built with Next.js.\n\n- **pages/** wraps applications using Next.js routing and dynamic imports.\n- **components/apps/** contains the individual "
+  },
+  {
+    "type": "post",
+    "title": "bare-fs dependency rationale",
+    "url": "https://github.com/undisclosed/kali-linux-portfolio/blob/main/docs/bare-fs-dependency.md",
+    "content": "# bare-fs dependency rationale\n\nThe project surfaces an installation warning for `bare-fs`. Running `yarn why bare-fs` shows the package is pulled in via the optional dependency chain `@puppeteer/brow"
+  },
+  {
+    "type": "post",
+    "title": "Deauthentication Attack Mitigation",
+    "url": "https://github.com/undisclosed/kali-linux-portfolio/blob/main/docs/deauth-mitigation.md",
+    "content": "# Deauthentication Attack Mitigation\n\nDeauthentication floods send forged management frames to disconnect wireless clients. Use the following hardening steps:\n\n- [ ] Enable **802.11w Management Frame "
+  },
+  {
+    "type": "post",
+    "title": "Getting Started",
+    "url": "https://github.com/undisclosed/kali-linux-portfolio/blob/main/docs/getting-started.md",
+    "content": "# Getting Started\n\nThis project is built with [Next.js](https://nextjs.org/).\n\n## Prerequisites\n\n- Node.js 20\n- yarn or npm\n\n## Installation\n\n```bash\nyarn install\n```\n\n## Running in Development\n\n```ba"
+  },
+  {
+    "type": "post",
+    "title": "New App Checklist",
+    "url": "https://github.com/undisclosed/kali-linux-portfolio/blob/main/docs/new-app-checklist.md",
+    "content": "# New App Checklist\n\nUse this checklist when adding a new app to the portfolio.\n\n## Icon\n\n- Place a **64x64** SVG or PNG icon in `public/themes/Yaru/apps/`.\n- Name the file after the app id (e.g. `my-"
+  },
+  {
+    "type": "post",
+    "title": "Nmap NSE Walkthrough (Simulation)",
+    "url": "https://github.com/undisclosed/kali-linux-portfolio/blob/main/docs/nmap-nse-walkthrough.md",
+    "content": "# Nmap NSE Walkthrough (Simulation)\n\n> ⚠️ For educational use in authorized lab environments only.\n\nThis guide shows how an Nmap scan using the default vulnerability scripts might appear and lists def"
+  },
+  {
+    "type": "post",
+    "title": "Phaser Event Listeners",
+    "url": "https://github.com/undisclosed/kali-linux-portfolio/blob/main/docs/phaser-listeners.md",
+    "content": "# Phaser Event Listeners\n\nThis document records active event listeners in the Phaser Matter demo after profiling and cleanup.\n\n- **Keyboard listeners** – attached to the game container to capture left"
+  },
+  {
+    "type": "post",
+    "title": "Pip Portal",
+    "url": "https://github.com/undisclosed/kali-linux-portfolio/blob/main/docs/pip-portal.md",
+    "content": "# Pip Portal\n\nThe `PipPortal` component provides a simple API for rendering React\ncontent inside a [Document Picture-in-Picture](https://developer.mozilla.org/en-US/docs/Web/API/Document_Picture-in-Pi"
+  },
+  {
+    "type": "post",
+    "title": "Recon-ng Simulation",
+    "url": "https://github.com/undisclosed/kali-linux-portfolio/blob/main/docs/reconng.md",
+    "content": "# Recon-ng Simulation\n\n> ⚠️ For educational use in authorized lab environments only.\n\n## Module Schemas\n\nModules are defined in `components/apps/reconng/index.js` as schema objects with:\n\n- `input` – "
+  },
+  {
+    "type": "post",
+    "title": "Application Task List",
+    "url": "https://github.com/undisclosed/kali-linux-portfolio/blob/main/docs/tasks.md",
+    "content": "# Application Task List\n\nThis document tracks planned improvements and new features for the desktop portfolio apps.\n\n## Foundation\n- Add dynamic app factory at `utils/createDynamicApp.js` to unify dyn"
+  },
+  {
+    "type": "post",
+    "title": "Template glossary",
+    "url": "https://github.com/undisclosed/kali-linux-portfolio/blob/main/docs/template-glossary.md",
+    "content": "# Template glossary\n\nThis glossary covers common terms used in the Nessus sample templates. For full details see the Tenable documentation.\n\n- **Severity** – Classification of a finding's risk such as"
+  },
+  {
+    "type": "page",
+    "title": "daily-quote",
+    "url": "/daily-quote",
+    "content": "import { useRef } from 'react';\nimport useDailyQuote from '../hooks/useDailyQuote';\nimport { toPng } from 'html-to-image';\nimport share, { canShare } from '../utils/share';\nimport copyToClipboard from"
+  },
+  {
+    "type": "page",
+    "title": "dummy-form",
+    "url": "/dummy-form",
+    "content": "import React, { useState, useEffect } from 'react';\nimport FormError from '../components/ui/FormError';\n\nconst STORAGE_KEY = 'dummy-form-draft';\n\nconst DummyForm: React.FC = () => {\n  const [name, set"
+  },
+  {
+    "type": "page",
+    "title": "hook-flow",
+    "url": "/hook-flow",
+    "content": "import React, { useState } from 'react';\n\nconst HookFlow: React.FC = () => {\n  const [consented, setConsented] = useState(false);\n\n  if (!consented) {\n    return (\n      <main className=\"p-4 text-cent"
+  },
+  {
+    "type": "page",
+    "title": "hydra-preview",
+    "url": "/hydra-preview",
+    "content": "import React, { useState } from 'react';\nimport FormError from '../components/ui/FormError';\n\nconst protocols = ['ssh', 'ftp', 'http', 'smtp'];\n\nconst HydraPreview: React.FC = () => {\n  const [step, s"
+  },
+  {
+    "type": "page",
+    "title": "index",
+    "url": "/",
+    "content": "import Ubuntu from '../components/ubuntu';\nimport Meta from '../components/SEO/Meta';\nimport InstallButton from '../components/InstallButton';\nimport BetaBadge from '../components/BetaBadge';\n\n/**\n * "
+  },
+  {
+    "type": "page",
+    "title": "input-hub",
+    "url": "/input-hub",
+    "content": "import React, { useEffect, useState } from 'react';\nimport emailjs from '@emailjs/browser';\nimport { useRouter } from 'next/router';\n\nconst subjectTemplates = [\n  'General Inquiry',\n  'Bug Report',\n  "
+  },
+  {
+    "type": "page",
+    "title": "keyboard-reference",
+    "url": "/keyboard-reference",
+    "content": "import React from 'react';\n\nconst KeyboardReference = () => (\n  <main className=\"min-h-screen bg-ub-cool-grey text-white p-4 space-y-4\">\n    <h1 className=\"text-2xl font-bold\">Keyboard Mapping Referen"
+  },
+  {
+    "type": "page",
+    "title": "module-workspace",
+    "url": "/module-workspace",
+    "content": "import React, { useState } from 'react';\nimport usePersistentState from '../hooks/usePersistentState';\nimport { setValue, getAll } from '../utils/moduleStore';\n\ninterface ModuleOption {\n  name: string"
+  },
+  {
+    "type": "page",
+    "title": "nessus-dashboard",
+    "url": "/nessus-dashboard",
+    "content": "import React, { useEffect, useState } from 'react';\nimport { loadFalsePositives, loadJobDefinitions } from '../components/apps/nessus/index';\n\nconst NessusDashboard: React.FC = () => {\n  const [totals"
+  },
+  {
+    "type": "page",
+    "title": "nessus-report",
+    "url": "/nessus-report",
+    "content": "import React, { useMemo, useState } from 'react';\nimport data from '../components/apps/nessus/sample-report.json';\n\nconst severityColors: Record<string, string> = {\n  Critical: '#991b1b',\n  High: '#b4"
+  },
+  {
+    "type": "page",
+    "title": "network-topology",
+    "url": "/network-topology",
+    "content": "import React, { useState } from 'react';\nimport Meta from '../components/SEO/Meta';\n\nconst NetworkTopology: React.FC = () => {\n  const [mitigated, setMitigated] = useState(false);\n\n  return (\n    <>\n "
+  },
+  {
+    "type": "page",
+    "title": "nikto-report",
+    "url": "/nikto-report",
+    "content": "import React, { useEffect, useMemo, useState } from 'react';\n\ninterface NiktoFinding {\n  path: string;\n  finding: string;\n  references: string[];\n  severity: string;\n  details: string;\n}\n\nconst severi"
+  },
+  {
+    "type": "page",
+    "title": "notes",
+    "url": "/notes",
+    "content": "'use client';\n\nimport { useEffect, useState } from 'react';\nimport { createClient } from '@supabase/supabase-js';\n\ninterface NotesPageState {\n  notes: unknown[] | null;\n  error?: string;\n}\n\nexport def"
+  },
+  {
+    "type": "page",
+    "title": "popular-modules",
+    "url": "/popular-modules",
+    "content": "import React from 'react';\nimport PopularModules from '../components/PopularModules';\n\nconst PopularModulesPage: React.FC = () => {\n  return <PopularModules />;\n};\n\nexport default PopularModulesPage;\n"
+  },
+  {
+    "type": "page",
+    "title": "post_exploitation",
+    "url": "/post_exploitation",
+    "content": "import React, { useState } from 'react';\nimport Meta from '../components/SEO/Meta';\nimport modules, { ModuleMetadata } from '../modules/metadata';\nimport ModuleCard from '../components/ModuleCard';\n\ne"
+  },
+  {
+    "type": "page",
+    "title": "profile",
+    "url": "/profile",
+    "content": "import ScrollableTimeline from '../components/ScrollableTimeline';\n\nconst ProfilePage = () => (\n  <main className=\"min-h-screen p-4 bg-gray-900 text-white\">\n    <h1 className=\"mb-4 text-2xl\">Timeline<"
+  },
+  {
+    "type": "page",
+    "title": "security-education",
+    "url": "/security-education",
+    "content": "import React from 'react';\nimport WorkflowCard from '../components/WorkflowCard';\n\ninterface FrameProps {\n  title: string;\n  link: string;\n  description: string;\n}\n\nconst InfoFrame = ({ title, link, d"
+  },
+  {
+    "type": "page",
+    "title": "sekurlsa_logonpasswords",
+    "url": "/sekurlsa_logonpasswords",
+    "content": "import React, { useMemo } from 'react';\nimport Meta from '../components/SEO/Meta';\n\nconst rawOutput = `Authentication Id : 0 ; 123 (00000000:0000007B)\nSession           : Interactive from 1\nUser Name "
+  },
+  {
+    "type": "page",
+    "title": "share-target",
+    "url": "/share-target",
+    "content": "import { useRouter } from 'next/router';\nimport { useEffect } from 'react';\n\nexport default function ShareTarget() {\n  const router = useRouter();\n\n  useEffect(() => {\n    if (!router.isReady) return;"
+  },
+  {
+    "type": "page",
+    "title": "spoofing",
+    "url": "/spoofing",
+    "content": "import React from 'react';\nimport Meta from '../components/SEO/Meta';\n\ninterface TileProps {\n  title: string;\n  link: string;\n  children: React.ReactNode;\n}\n\nconst ToolTile = ({ title, link, children "
+  },
+  {
+    "type": "page",
+    "title": "video-gallery",
+    "url": "/video-gallery",
+    "content": "import React, { useEffect, useState } from 'react';\n\ninterface Video {\n  id: string;\n  title: string;\n}\n\nconst CHANNEL_ID = 'UCVuVDVmnoVuCS27U5rRsI_g'; // Kali Linux Official channel\n\nconst VideoGalle"
+  },
+  {
+    "type": "page",
+    "title": "wps-attack",
+    "url": "/wps-attack",
+    "content": "import React, { useState } from 'react';\nimport Meta from '../components/SEO/Meta';\n\ninterface Step {\n  title: string;\n  command: string;\n  output: string;\n}\n\nconst steps: Step[] = [\n  {\n    title: 'D"
+  },
+  {
+    "type": "page",
+    "title": "messages",
+    "url": "/admin/messages",
+    "content": "import { useState } from 'react';\n\nexport default function AdminMessages() {\n  const [key, setKey] = useState('');\n  const [data, setData] = useState<any>(null);\n  const [error, setError] = useState<s"
+  },
+  {
+    "type": "page",
+    "title": "2048",
+    "url": "/apps/2048",
+    "content": "import dynamic from 'next/dynamic';\n\nconst Page2048 = dynamic(() => import('../../apps/2048'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default Page2048;\n"
+  },
+  {
+    "type": "page",
+    "title": "ascii-art",
+    "url": "/apps/ascii-art",
+    "content": "import dynamic from 'next/dynamic';\n\nconst AsciiArt = dynamic(() => import('../../apps/ascii-art'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default AsciiArt;\n"
+  },
+  {
+    "type": "page",
+    "title": "autopsy",
+    "url": "/apps/autopsy",
+    "content": "import dynamic from 'next/dynamic';\n\nconst Autopsy = dynamic(() => import('../../apps/autopsy'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default function AutopsyPage() {\n  retu"
+  },
+  {
+    "type": "page",
+    "title": "beef",
+    "url": "/apps/beef",
+    "content": "import dynamic from 'next/dynamic';\n\nconst Beef = dynamic(() => import('../../apps/beef'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default function BeefPage() {\n  return <Beef "
+  },
+  {
+    "type": "page",
+    "title": "blackjack",
+    "url": "/apps/blackjack",
+    "content": "import dynamic from 'next/dynamic';\n\nconst Blackjack = dynamic(() => import('../../apps/blackjack'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default function BlackjackPage() {\n"
+  },
+  {
+    "type": "page",
+    "title": "calculator",
+    "url": "/apps/calculator",
+    "content": "import dynamic from 'next/dynamic';\n\nconst Calculator = dynamic(() => import('../../apps/calculator'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default function CalculatorPage()"
+  },
+  {
+    "type": "page",
+    "title": "checkers",
+    "url": "/apps/checkers",
+    "content": "import React from 'react';\nimport dynamic from 'next/dynamic';\n\nconst Checkers = dynamic(() => import('../../apps/checkers'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default fu"
+  },
+  {
+    "type": "page",
+    "title": "connect-four",
+    "url": "/apps/connect-four",
+    "content": "import dynamic from 'next/dynamic';\n\nconst ConnectFour = dynamic(() => import('../../apps/connect-four'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default ConnectFour;\n"
+  },
+  {
+    "type": "page",
+    "title": "contact",
+    "url": "/apps/contact",
+    "content": "import dynamic from 'next/dynamic';\n\nconst ContactApp = dynamic(() => import('../../apps/contact'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default function ContactPage() {\n  r"
+  },
+  {
+    "type": "page",
+    "title": "converter",
+    "url": "/apps/converter",
+    "content": "import dynamic from 'next/dynamic';\n\nconst Converter = dynamic(() => import('../../apps/converter'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default function ConverterPage() {\n"
+  },
+  {
+    "type": "page",
+    "title": "figlet",
+    "url": "/apps/figlet",
+    "content": "import dynamic from 'next/dynamic';\n\nconst FigletPage = dynamic(() => import('../../apps/figlet'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default FigletPage;\n"
+  },
+  {
+    "type": "page",
+    "title": "http",
+    "url": "/apps/http",
+    "content": "import dynamic from 'next/dynamic';\n\nconst HTTPPreview = dynamic(() => import('../../apps/http'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default function HTTPPage() {\n  return"
+  },
+  {
+    "type": "page",
+    "title": "index",
+    "url": "/apps",
+    "content": "import { useEffect, useState } from 'react';\nimport Link from 'next/link';\n\nconst AppsPage = () => {\n  const [apps, setApps] = useState([]);\n  const [query, setQuery] = useState('');\n\n  useEffect(() ="
+  },
+  {
+    "type": "page",
+    "title": "input-lab",
+    "url": "/apps/input-lab",
+    "content": "import dynamic from 'next/dynamic';\n\nconst InputLab = dynamic(() => import('../../apps/input-lab'), { ssr: false });\n\nexport default function InputLabPage() {\n  return <InputLab />;\n}\n"
+  },
+  {
+    "type": "page",
+    "title": "john",
+    "url": "/apps/john",
+    "content": "import dynamic from 'next/dynamic';\n\nconst John = dynamic(() => import('../../apps/john'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default function JohnPage() {\n  return <John "
+  },
+  {
+    "type": "page",
+    "title": "kismet",
+    "url": "/apps/kismet",
+    "content": "import dynamic from 'next/dynamic';\n\nconst Kismet = dynamic(() => import('../../apps/kismet'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default function KismetPage() {\n  return "
+  },
+  {
+    "type": "page",
+    "title": "metasploit-post",
+    "url": "/apps/metasploit-post",
+    "content": "import dynamic from 'next/dynamic';\n\nconst MetasploitPost = dynamic(() => import('../../apps/metasploit-post'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default function Metaspl"
+  },
+  {
+    "type": "page",
+    "title": "metasploit",
+    "url": "/apps/metasploit",
+    "content": "import dynamic from 'next/dynamic';\n\nconst Metasploit = dynamic(() => import('../../apps/metasploit'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default function MetasploitPage()"
+  },
+  {
+    "type": "page",
+    "title": "minesweeper",
+    "url": "/apps/minesweeper",
+    "content": "import dynamic from 'next/dynamic';\n\nconst Minesweeper = dynamic(() => import('../../apps/minesweeper'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default function MinesweeperPag"
+  },
+  {
+    "type": "page",
+    "title": "nmap-nse",
+    "url": "/apps/nmap-nse",
+    "content": "import dynamic from 'next/dynamic';\n\nconst NmapNSE = dynamic(() => import('../../apps/nmap-nse'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default function NmapNSEPage() {\n  ret"
+  },
+  {
+    "type": "page",
+    "title": "password_generator",
+    "url": "/apps/password_generator",
+    "content": "import dynamic from 'next/dynamic';\nimport { getDailySeed } from '../../utils/dailySeed';\n\nconst PasswordGenerator = dynamic(() => import('../../apps/password_generator'), {\n  ssr: false,\n  loading: ("
+  },
+  {
+    "type": "page",
+    "title": "phaser_matter",
+    "url": "/apps/phaser_matter",
+    "content": "import dynamic from 'next/dynamic';\nimport { getDailySeed } from '../../utils/dailySeed';\n\nconst PhaserMatter = dynamic(() => import('../../apps/phaser_matter'), {\n  ssr: false,\n  loading: () => <p>Lo"
+  },
+  {
+    "type": "page",
+    "title": "pinball",
+    "url": "/apps/pinball",
+    "content": "import dynamic from 'next/dynamic';\n\nconst Pinball = dynamic(() => import('../../apps/pinball'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default Pinball;\n"
+  },
+  {
+    "type": "page",
+    "title": "project-gallery",
+    "url": "/apps/project-gallery",
+    "content": "import dynamic from 'next/dynamic';\n\nconst ProjectGalleryApp = dynamic(() => import('../../apps/project-gallery/pages'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default Project"
+  },
+  {
+    "type": "page",
+    "title": "qr",
+    "url": "/apps/qr",
+    "content": "import dynamic from 'next/dynamic';\n\nconst QRApp = dynamic(() => import('../../apps/qr'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default function QRPage() {\n  return <QRApp />"
+  },
+  {
+    "type": "page",
+    "title": "settings",
+    "url": "/apps/settings",
+    "content": "import dynamic from 'next/dynamic';\n\nconst SettingsApp = dynamic(() => import('../../apps/settings'), { ssr: false });\n\nexport default function SettingsPage() {\n  return <SettingsApp />;\n}\n\n"
+  },
+  {
+    "type": "page",
+    "title": "simon",
+    "url": "/apps/simon",
+    "content": "import dynamic from 'next/dynamic';\n\nconst Simon = dynamic(() => import('../../apps/simon'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default function SimonPage() {\n  return <Si"
+  },
+  {
+    "type": "page",
+    "title": "sokoban",
+    "url": "/apps/sokoban",
+    "content": "import React from 'react';\nimport dynamic from 'next/dynamic';\nimport { getDailySeed } from '../../utils/dailySeed';\n\nconst Sokoban = dynamic(() => import('../../apps/sokoban'), {\n  ssr: false,\n  load"
+  },
+  {
+    "type": "page",
+    "title": "solitaire",
+    "url": "/apps/solitaire",
+    "content": "import dynamic from 'next/dynamic';\n\nconst PageSolitaire = dynamic(() => import('../../apps/solitaire'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default PageSolitaire;\n"
+  },
+  {
+    "type": "page",
+    "title": "spotify",
+    "url": "/apps/spotify",
+    "content": "import dynamic from 'next/dynamic';\n\nconst SpotifyApp = dynamic(() => import('../../apps/spotify'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default SpotifyApp;\n\n"
+  },
+  {
+    "type": "page",
+    "title": "ssh",
+    "url": "/apps/ssh",
+    "content": "import dynamic from 'next/dynamic';\n\nconst SSHPreview = dynamic(() => import('../../apps/ssh'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default function SSHPage() {\n  return <S"
+  },
+  {
+    "type": "page",
+    "title": "sticky_notes",
+    "url": "/apps/sticky_notes",
+    "content": "import dynamic from 'next/dynamic';\n\nconst StickyNotes = dynamic(() => import('../../apps/sticky_notes'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default function StickyNotesPa"
+  },
+  {
+    "type": "page",
+    "title": "timer_stopwatch",
+    "url": "/apps/timer_stopwatch",
+    "content": "import dynamic from 'next/dynamic';\n\nconst TimerStopwatch = dynamic(() => import('../../apps/timer_stopwatch'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default function TimerSt"
+  },
+  {
+    "type": "page",
+    "title": "tower-defense",
+    "url": "/apps/tower-defense",
+    "content": "import dynamic from 'next/dynamic';\n\nconst TowerDefense = dynamic(() => import('../../apps/tower-defense'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default TowerDefense;\n"
+  },
+  {
+    "type": "page",
+    "title": "volatility",
+    "url": "/apps/volatility",
+    "content": "import dynamic from 'next/dynamic';\n\nconst Volatility = dynamic(() => import('../../apps/volatility'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default function VolatilityPage()"
+  },
+  {
+    "type": "page",
+    "title": "vscode",
+    "url": "/apps/vscode",
+    "content": "import dynamic from 'next/dynamic';\n\nconst VSCode = dynamic(() => import('../../apps/vscode'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default function VSCodePage() {\n  return "
+  },
+  {
+    "type": "page",
+    "title": "weather",
+    "url": "/apps/weather",
+    "content": "import dynamic from 'next/dynamic';\n\nconst WeatherApp = dynamic(() => import('../../apps/weather'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default WeatherApp;\n\n"
+  },
+  {
+    "type": "page",
+    "title": "weather_widget",
+    "url": "/apps/weather_widget",
+    "content": "import dynamic from 'next/dynamic';\n\nconst WeatherWidget = dynamic(() => import('../../apps/weather_widget'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default function WeatherWi"
+  },
+  {
+    "type": "page",
+    "title": "wireshark",
+    "url": "/apps/wireshark",
+    "content": "import dynamic from 'next/dynamic';\n\nconst Wireshark = dynamic(() => import('../../apps/wireshark'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default function WiresharkPage() {\n"
+  },
+  {
+    "type": "page",
+    "title": "word_search",
+    "url": "/apps/word_search",
+    "content": "import React from 'react';\nimport dynamic from 'next/dynamic';\nimport { getDailySeed } from '../../utils/dailySeed';\n\nconst WordSearch = dynamic(\n  () => import('../../apps/word_search'),\n  { ssr: fal"
+  },
+  {
+    "type": "page",
+    "title": "x",
+    "url": "/apps/x",
+    "content": "import dynamic from 'next/dynamic';\n\nconst PageX = dynamic(() => import('../../apps/x'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default PageX;\n"
+  },
+  {
+    "type": "page",
+    "title": "index",
+    "url": "/qr",
+    "content": "import React, { useEffect, useRef, useState } from 'react';\nimport QRCode from 'qrcode';\nimport { BrowserQRCodeReader, NotFoundException } from '@zxing/library';\nimport Tabs from '../../components/Tab"
+  },
+  {
+    "type": "page",
+    "title": "vcard",
+    "url": "/qr/vcard",
+    "content": "import React, { useEffect, useState } from 'react';\nimport QRCode from 'qrcode';\n\nconst VCardPage: React.FC = () => {\n  const [name, setName] = useState('');\n  const [org, setOrg] = useState('');\n  co"
+  },
+  {
+    "type": "page",
+    "title": "graph",
+    "url": "/recon/graph",
+    "content": "import React, { useEffect, useState, useMemo } from 'react';\nimport dynamic from 'next/dynamic';\n\ninterface CytoscapeNode {\n  data: { id: string; label: string };\n}\n\ninterface CytoscapeEdge {\n  data: "
+  },
+  {
+    "type": "page",
+    "title": "offline",
+    "url": "/apps/mimikatz/offline",
+    "content": "import dynamic from 'next/dynamic';\n\nconst MimikatzOffline = dynamic(() => import('../../../apps/mimikatz/offline'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default function Mi"
+  },
+  {
+    "type": "page",
+    "title": "index",
+    "url": "/games/blackjack",
+    "content": "import dynamic from 'next/dynamic';\n\nconst Blackjack = dynamic(() => import('../../../games/blackjack'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default function BlackjackGameP"
+  },
+  {
+    "type": "page",
+    "title": "trainer",
+    "url": "/games/blackjack/trainer",
+    "content": "import dynamic from 'next/dynamic';\n\nconst BlackjackTrainer = dynamic(() => import('../../../games/blackjack/trainer'), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default function"
+  },
+  {
+    "type": "page",
+    "title": "editor",
+    "url": "/games/breakout/editor",
+    "content": "import dynamic from \"next/dynamic\";\n\nconst BreakoutEditor = dynamic(() => import(\"../../../games/breakout/editor\"), {\n  ssr: false,\n  loading: () => <p>Loading...</p>,\n});\n\nexport default function Bre"
+  },
+  {
+    "type": "page",
+    "title": "theme",
+    "url": "/ui/settings/theme",
+    "content": "\"use client\";\n\nimport { useEffect, ChangeEvent } from 'react';\nimport usePersistentState from '../../../hooks/usePersistentState.js';\nimport { getTheme, setTheme } from '../../../utils/theme';\n\n/** Si"
+  }
+]
