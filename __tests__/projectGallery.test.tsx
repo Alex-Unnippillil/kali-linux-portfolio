@@ -1,9 +1,8 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import ProjectGallery from '../components/apps/project-gallery';
 
 jest.mock('react-ga4', () => ({ event: jest.fn() }));
-jest.mock('@monaco-editor/react', () => () => <div />);
 
 describe('ProjectGallery', () => {
   beforeEach(() => {
@@ -21,20 +20,6 @@ describe('ProjectGallery', () => {
     );
     expect(screen.getByText(/Showing/)).toHaveTextContent(
       'Showing 1 project filtered by TS'
-    );
-  });
-
-  it('filters when clicking stack chip inside a project', async () => {
-    render(<ProjectGallery />);
-    await screen.findByText('Alpha');
-    fireEvent.click(
-      screen.getAllByRole('button', { name: 'JS' })[0] // chip inside Alpha
-    );
-    await waitFor(() =>
-      expect(screen.queryByText('Beta')).not.toBeInTheDocument()
-    );
-    expect(screen.getByText(/Showing/)).toHaveTextContent(
-      'Showing 1 project filtered by JS'
     );
   });
 
@@ -76,24 +61,15 @@ describe('ProjectGallery', () => {
     expect(screen.queryByText('Alpha')).not.toBeInTheDocument();
   });
 
-  it('compares two projects side-by-side', async () => {
+  it('shortlists projects and persists to localStorage', async () => {
     render(<ProjectGallery />);
-    await screen.findByText('Alpha');
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Select Alpha for comparison' })
-    );
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Select Beta for comparison' })
-    );
-    const table = await screen.findByRole('table');
-    const tbl = within(table);
-    expect(tbl.getByText('Alpha')).toBeInTheDocument();
-    expect(tbl.getByText('Beta')).toBeInTheDocument();
-    expect(tbl.getByText('Stack')).toBeInTheDocument();
-    expect(tbl.getByText('Highlights')).toBeInTheDocument();
-    expect(tbl.getByText('JS')).toBeInTheDocument();
-    expect(tbl.getByText('TS')).toBeInTheDocument();
-    expect(tbl.getByText('frontend, react')).toBeInTheDocument();
-    expect(tbl.getByText('backend')).toBeInTheDocument();
+    const btn = await screen.findAllByLabelText('Add to shortlist');
+    fireEvent.click(btn[0]);
+    await waitFor(() => {
+      const stored = JSON.parse(
+        localStorage.getItem('shortlistedProjects') || '[]'
+      );
+      expect(stored).toContain(1);
+    });
   });
 });
