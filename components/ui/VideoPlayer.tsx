@@ -1,24 +1,45 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import PipPortalProvider, { usePipPortal } from "../common/PipPortal";
+
+interface VideoTrack {
+  src: string;
+  label: string;
+  srcLang: string;
+  default?: boolean;
+}
 
 interface VideoPlayerProps {
   src: string;
   poster?: string;
   className?: string;
+  tracks?: VideoTrack[];
+  transcript?: string;
 }
 
 const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
   src,
   poster,
   className = "",
+  tracks,
+  transcript,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { open, close } = usePipPortal();
   const [pipSupported, setPipSupported] = useState(false);
   const [docPipSupported, setDocPipSupported] = useState(false);
   const [isPip, setIsPip] = useState(false);
+  const [showTranscript, setShowTranscript] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filteredTranscript = useMemo(() => {
+    if (!transcript) return "";
+    return transcript
+      .split("\n")
+      .filter((line) => line.toLowerCase().includes(search.toLowerCase()))
+      .join("\n");
+  }, [transcript, search]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -26,11 +47,11 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
       typeof document !== "undefined" &&
         !!document.pictureInPictureEnabled &&
         !!video &&
-        typeof video.requestPictureInPicture === "function"
+        typeof video.requestPictureInPicture === "function",
     );
     setDocPipSupported(
       typeof window !== "undefined" &&
-        !!(window as any).documentPictureInPicture
+        !!(window as any).documentPictureInPicture,
     );
 
     const handleLeave = () => setIsPip(false);
@@ -60,6 +81,32 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLVideoElement>) => {
+    const video = e.currentTarget;
+    switch (e.key) {
+      case " ":
+      case "k":
+        e.preventDefault();
+        if (video.paused) video.play();
+        else video.pause();
+        break;
+      case "ArrowLeft":
+        e.preventDefault();
+        video.currentTime = Math.max(0, video.currentTime - 5);
+        break;
+      case "ArrowRight":
+        e.preventDefault();
+        video.currentTime = Math.min(video.duration, video.currentTime + 5);
+        break;
+      case "f":
+        e.preventDefault();
+        if (document.fullscreenElement) document.exitFullscreen();
+        else video.requestFullscreen().catch(() => {});
+        break;
+      default:
+    }
+  };
+
   // Listen for messages from the Doc-PiP window
   useEffect(() => {
     const handler = (e: MessageEvent) => {
@@ -73,7 +120,10 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
         case "seek":
           video.currentTime = Math.max(
             0,
-            Math.min(video.duration || 0, video.currentTime + Number(e.data.delta || 0))
+            Math.min(
+              video.duration || 0,
+              video.currentTime + Number(e.data.delta || 0),
+            ),
           );
           break;
         case "volume":
@@ -89,7 +139,9 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
   const openDocPip = async () => {
     if (!docPipSupported) return;
     const initialVolume = videoRef.current?.volume ?? 1;
-    const DocPipControls: React.FC<{ initialVolume: number }> = ({ initialVolume }) => {
+    const DocPipControls: React.FC<{ initialVolume: number }> = ({
+      initialVolume,
+    }) => {
       const [vol, setVol] = useState(initialVolume);
       const send = (msg: any) =>
         window.opener?.postMessage({ source: "doc-pip", ...msg }, "*");
@@ -128,27 +180,84 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
   };
 
   return (
-    <div className={`relative ${className}`.trim()}>
-      <video ref={videoRef} src={src} poster={poster} controls className="w-full h-auto" />
-      {pipSupported && (
-        <button
-          type="button"
-          onClick={togglePiP}
-          className="absolute bottom-2 right-2 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white"
+    <>
+      <div className={`relative ${className}`.trim()}>
+        <video
+          ref={videoRef}
+          src={src}
+          poster={poster}
+          controls
+          tabIndex={0}
+          onKeyDown={handleKeyDown}
+          className="w-full h-auto focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
         >
-          {isPip ? "Exit PiP" : "PiP"}
-        </button>
+          {tracks?.map((t) => (
+            <track
+              key={t.src}
+              kind="subtitles"
+              src={t.src}
+              srcLang={t.srcLang}
+              label={t.label}
+              default={t.default}
+            />
+          ))}
+        </video>
+        {pipSupported && (
+          <button
+            type="button"
+            onClick={togglePiP}
+            className="absolute bottom-2 right-2 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          >
+            {isPip ? "Exit PiP" : "PiP"}
+          </button>
+        )}
+        {docPipSupported && (
+          <button
+            type="button"
+            onClick={openDocPip}
+            className="absolute bottom-2 right-16 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          >
+            Doc-PiP
+          </button>
+        )}
+      </div>
+      {transcript && (
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={() => setShowTranscript((s) => !s)}
+            className="rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          >
+            {showTranscript ? "Hide transcript" : "Show transcript"}
+          </button>
+          {showTranscript && (
+            <div className="mt-2 rounded border p-2">
+              <div className="mb-2 flex gap-2">
+                <input
+                  type="search"
+                  placeholder="Search transcript..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="flex-1 rounded border px-2 py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigator.clipboard?.writeText(filteredTranscript)
+                  }
+                  className="rounded bg-gray-200 px-2 py-1 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+                >
+                  Copy
+                </button>
+              </div>
+              <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap text-sm">
+                {filteredTranscript}
+              </pre>
+            </div>
+          )}
+        </div>
       )}
-      {docPipSupported && (
-        <button
-          type="button"
-          onClick={openDocPip}
-          className="absolute bottom-2 right-16 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white"
-        >
-          Doc-PiP
-        </button>
-      )}
-    </div>
+    </>
   );
 };
 
@@ -159,4 +268,3 @@ const VideoPlayer: React.FC<VideoPlayerProps> = (props) => (
 );
 
 export default VideoPlayer;
-
