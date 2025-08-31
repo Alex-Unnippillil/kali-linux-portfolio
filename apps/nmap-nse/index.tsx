@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import share, { canShare } from '../../utils/share';
+import usePersistentState from '../../hooks/usePersistentState.js';
 
 interface Script {
   name: string;
@@ -92,13 +93,14 @@ const NmapNSE: React.FC = () => {
   };
 
   const CollapsibleSection: React.FC<{
+    id: string;
     title: string;
     tag?: string;
     children: React.ReactNode;
-  }> = ({ title, tag, children }) => {
-    const [open, setOpen] = useState(true);
+  }> = ({ id, title, tag, children }) => {
+    const [open, setOpen] = usePersistentState(`nmap-section:${id}`, true);
     return (
-      <div className={`mb-4 border-l-4 ${severityColor(tag || '')}`}>
+      <div id={id} className={`mb-4 border-l-4 ${severityColor(tag || '')}`}>
         <button
           className="w-full flex justify-between items-center bg-gray-800 px-2 py-1.5"
           onClick={() => setOpen((o) => !o)}
@@ -145,7 +147,7 @@ const NmapNSE: React.FC = () => {
               className="h-6 px-2 rounded text-black font-mono flex-1"
             />
             <button
-              className="ml-auto px-3 py-1 bg-green-700 rounded disabled:opacity-50"
+              className="ml-auto px-3 py-1 bg-green-700 rounded disabled:opacity-50 lg:hidden"
               onClick={run}
               disabled={!selected}
             >
@@ -170,40 +172,90 @@ const NmapNSE: React.FC = () => {
         {/* details */}
         <main className="flex-1 p-4 overflow-y-auto">
           {selected ? (
-            <div>
-              <h1 className="text-2xl mb-2 font-mono">{selected.name}</h1>
-              <p className="mb-4">{selected.description}</p>
-              <p className="mb-2 text-sm">Tag: {selected.tag}</p>
-              <CollapsibleSection title="Sample Output" tag={selected.tag}>
-                <pre className="bg-black text-green-400 rounded overflow-auto font-mono leading-[1.2]">
-                  {selected.example}
-                </pre>
-              </CollapsibleSection>
-              {result && (
-                <CollapsibleSection title="Result" tag={selected.tag}>
+            <div className="lg:flex lg:items-start lg:gap-4">
+              <div className="flex-1">
+                <h1 className="text-2xl mb-2 font-mono">{selected.name}</h1>
+                <p className="mb-4">{selected.description}</p>
+                <p className="mb-2 text-sm">Tag: {selected.tag}</p>
+                <CollapsibleSection id="sample-output" title="Sample Output" tag={selected.tag}>
                   <pre className="bg-black text-green-400 rounded overflow-auto font-mono leading-[1.2]">
-                    {JSON.stringify(result, null, 2)}
+                    {selected.example}
                   </pre>
-                  <div className="mt-2 flex gap-2">
-                    <button
-                      className="px-2 py-1 bg-blue-700 rounded"
-                      onClick={download}
-                      type="button"
-                    >
-                      Download JSON
-                    </button>
-                    {canShare() && (
+                </CollapsibleSection>
+                {result && (
+                  <CollapsibleSection id="result" title="Result" tag={selected.tag}>
+                    <pre className="bg-black text-green-400 rounded overflow-auto font-mono leading-[1.2]">
+                      {JSON.stringify(result, null, 2)}
+                    </pre>
+                    <div className="mt-2 flex gap-2">
                       <button
-                        className="px-2 py-1 bg-purple-700 rounded"
-                        onClick={shareResult}
+                        className="px-2 py-1 bg-blue-700 rounded"
+                        onClick={download}
                         type="button"
                       >
-                        Share
+                        Download JSON
                       </button>
+                      {canShare() && (
+                        <button
+                          className="px-2 py-1 bg-purple-700 rounded"
+                          onClick={shareResult}
+                          type="button"
+                        >
+                          Share
+                        </button>
+                      )}
+                    </div>
+                  </CollapsibleSection>
+                )}
+              </div>
+              <aside className="hidden lg:block w-48">
+                <nav className="sticky top-4 text-sm space-y-2">
+                  <div className="font-semibold">Sections</div>
+                  <ul className="space-y-1">
+                    <li>
+                      <a href="#sample-output" className="hover:underline">
+                        Sample Output
+                      </a>
+                    </li>
+                    {result && (
+                      <li>
+                        <a href="#result" className="hover:underline">
+                          Result
+                        </a>
+                      </li>
+                    )}
+                  </ul>
+                  <div className="mt-4 space-y-2">
+                    <button
+                      className="w-full px-2 py-1 bg-green-700 rounded"
+                      onClick={run}
+                      type="button"
+                    >
+                      Run
+                    </button>
+                    {result && (
+                      <>
+                        <button
+                          className="w-full px-2 py-1 bg-blue-700 rounded"
+                          onClick={download}
+                          type="button"
+                        >
+                          Download JSON
+                        </button>
+                        {canShare() && (
+                          <button
+                            className="w-full px-2 py-1 bg-purple-700 rounded"
+                            onClick={shareResult}
+                            type="button"
+                          >
+                            Share
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
-                </CollapsibleSection>
-              )}
+                </nav>
+              </aside>
             </div>
           ) : (
             <p>Select a script to view details.</p>
