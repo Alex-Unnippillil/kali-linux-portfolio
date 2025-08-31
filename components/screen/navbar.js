@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Clock from '../util-components/clock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
+import LanguageSwitcher from '../LanguageSwitcher';
 
 export default class Navbar extends Component {
 	constructor() {
@@ -51,7 +52,10 @@ export default class Navbar extends Component {
                                         <Status />
                                         <QuickSettings open={this.state.status_card} />
                                 </button>
-			</div>
-		);
-	}
+                                <div className="pr-3 pl-1">
+                                        <LanguageSwitcher compact />
+                                </div>
+                        </div>
+                );
+        }
 }

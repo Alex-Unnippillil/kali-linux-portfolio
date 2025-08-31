@@ -87,6 +87,11 @@ function configureWebpack(config, { isServer }) {
 module.exports = withBundleAnalyzer({
   ...(isStaticExport && { output: 'export' }),
   webpack: configureWebpack,
+  i18n: {
+    locales: ['en', 'es'],
+    defaultLocale: 'en',
+    localeDetection: false,
+  },
 
   // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
   eslint: {
