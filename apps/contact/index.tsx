@@ -9,7 +9,9 @@ import { openMailto } from "../../utils/mailto";
 import { trackEvent } from "@/lib/analytics-client";
 
 const DRAFT_KEY = "contact-draft";
+const PENDING_KEY = "contact-pending";
 const EMAIL = "alex.unnippillil@hotmail.com";
+const EMAIL_SUBJECT = "Portfolio Inquiry";
 
 const getRecaptchaToken = (siteKey: string): Promise<string> =>
   new Promise((resolve) => {
@@ -30,6 +32,7 @@ const ContactApp: React.FC = () => {
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
   const [csrfToken, setCsrfToken] = useState("");
+  const [retry, setRetry] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem(DRAFT_KEY);
@@ -45,6 +48,17 @@ const ContactApp: React.FC = () => {
     }
     const meta = document.querySelector('meta[name="csrf-token"]');
     setCsrfToken(meta?.getAttribute("content") || "");
+    if (localStorage.getItem(PENDING_KEY) && navigator.onLine) {
+      setRetry(true);
+    }
+    const handleOnline = () => {
+      if (localStorage.getItem(PENDING_KEY)) {
+        setRetry(true);
+        setToast("Connection restored");
+      }
+    };
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
   }, []);
 
   useEffect(() => {
@@ -52,8 +66,7 @@ const ContactApp: React.FC = () => {
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
   }, [name, email, message]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submit = async () => {
     setError("");
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
     const recaptchaToken = await getRecaptchaToken(siteKey);
@@ -73,17 +86,30 @@ const ContactApp: React.FC = () => {
         setMessage("");
         setHoneypot("");
         localStorage.removeItem(DRAFT_KEY);
+        localStorage.removeItem(PENDING_KEY);
+        setRetry(false);
         trackEvent("contact_submit", { method: "form" });
       } else {
         setError(result.error || "Submission failed");
         setToast("Failed to send");
+        localStorage.setItem(PENDING_KEY, "true");
         trackEvent("contact_submit_error", { method: "form" });
       }
     } catch {
       setError("Submission failed");
       setToast("Failed to send");
+      localStorage.setItem(PENDING_KEY, "true");
       trackEvent("contact_submit_error", { method: "form" });
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await submit();
+  };
+
+  const handleRetry = async () => {
+    await submit();
   };
 
   return (
@@ -100,12 +126,24 @@ const ContactApp: React.FC = () => {
         </button>
         <button
           type="button"
-          onClick={() => openMailto(EMAIL)}
+          onClick={() => openMailto(EMAIL, EMAIL_SUBJECT)}
           className="underline"
         >
           Open email app
         </button>
       </p>
+      {retry && (
+        <div className="mb-4 rounded bg-yellow-600 p-3 text-sm">
+          Message saved locally.
+          <button
+            type="button"
+            onClick={handleRetry}
+            className="ml-2 underline"
+          >
+            Retry now
+          </button>
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
         <div>
           <label htmlFor="contact-name" className="mb-[6px] block text-sm">

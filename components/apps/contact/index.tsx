@@ -72,6 +72,8 @@ export const processContactForm = async (
 
 const DRAFT_FILE = 'contact-draft.json';
 const EMAIL = 'alex.unnippillil@hotmail.com';
+const PENDING_KEY = 'contact-pending';
+const EMAIL_SUBJECT = 'Portfolio Inquiry';
 
 const getRecaptchaToken = (siteKey: string): Promise<string> =>
   new Promise((resolve) => {
@@ -154,6 +156,7 @@ const ContactApp: React.FC = () => {
   const [fallback, setFallback] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [messageError, setMessageError] = useState('');
+  const [retry, setRetry] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -170,6 +173,17 @@ const ContactApp: React.FC = () => {
     if (!siteKey || !(window as any).grecaptcha) {
       setFallback(true);
     }
+    if (localStorage.getItem(PENDING_KEY) && navigator.onLine) {
+      setRetry(true);
+    }
+    const handleOnline = () => {
+      if (localStorage.getItem(PENDING_KEY)) {
+        setRetry(true);
+        setBanner({ type: 'error', message: 'Connection restored' });
+      }
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
   }, []);
 
   useEffect(() => {
@@ -245,6 +259,8 @@ const ContactApp: React.FC = () => {
       await uploadAttachments(attachments);
       setAttachments([]);
       void deleteDraft();
+      localStorage.removeItem(PENDING_KEY);
+      setRetry(false);
     } else {
       const msg = result.error || 'Submission failed';
       setError(msg);
@@ -256,8 +272,16 @@ const ContactApp: React.FC = () => {
       ) {
         setFallback(true);
       }
+      localStorage.setItem(
+        PENDING_KEY,
+        JSON.stringify({ name, email, message })
+      );
     }
     setSubmitting(false);
+  };
+
+  const handleRetry = () => {
+    void handleSubmit(new Event('submit') as any);
   };
 
   return (
@@ -291,12 +315,24 @@ const ContactApp: React.FC = () => {
           </button>
           <button
             type="button"
-            onClick={() => openMailto(EMAIL, '', message)}
+            onClick={() => openMailto(EMAIL, EMAIL_SUBJECT, message)}
             className="underline"
           >
             Open email app
           </button>
         </p>
+      )}
+      {retry && (
+        <div className="mb-6 rounded bg-yellow-600 p-3 text-sm">
+          Message saved locally.
+          <button
+            type="button"
+            onClick={handleRetry}
+            className="ml-2 underline"
+          >
+            Retry now
+          </button>
+        </div>
       )}
       <form onSubmit={handleSubmit} className="space-y-6 max-w-md">
         <div className="relative">
