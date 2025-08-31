@@ -1,8 +1,7 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const Autopsy = dynamic(() => import('../../apps/autopsy'), {
+const Autopsy = dynamic(() => import('@/apps/autopsy'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
 });
 
 export default function AutopsyPage() {

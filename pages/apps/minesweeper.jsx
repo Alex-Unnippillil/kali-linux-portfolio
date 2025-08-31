@@ -1,8 +1,7 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const Minesweeper = dynamic(() => import('../../apps/minesweeper'), {
+const Minesweeper = dynamic(() => import('@/apps/minesweeper'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
 });
 
 export default function MinesweeperPage() {

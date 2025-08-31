@@ -1,8 +1,7 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const Volatility = dynamic(() => import('../../apps/volatility'), {
+const Volatility = dynamic(() => import('@/apps/volatility'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
 });
 
 export default function VolatilityPage() {

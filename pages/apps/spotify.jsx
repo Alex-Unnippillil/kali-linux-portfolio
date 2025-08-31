@@ -1,8 +1,7 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const SpotifyApp = dynamic(() => import('../../apps/spotify'), {
+const SpotifyApp = dynamic(() => import('@/apps/spotify'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
 });
 
 export default SpotifyApp;

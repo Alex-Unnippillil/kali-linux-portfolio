@@ -1,10 +1,10 @@
 import React from 'react';
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 import { getDailySeed } from '../../utils/dailySeed';
 
 const WordSearch = dynamic(
-  () => import('../../apps/word_search'),
-  { ssr: false, loading: () => <p>Loading...</p> },
+  () => import('@/apps/word_search'),
+   loading: () => <p>Loading...</p> },
 );
 
 export default function WordSearchPage() {

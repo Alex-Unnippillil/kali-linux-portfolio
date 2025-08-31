@@ -1,9 +1,8 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 import { getDailySeed } from '../../utils/dailySeed';
 
-const PasswordGenerator = dynamic(() => import('../../apps/password_generator'), {
+const PasswordGenerator = dynamic(() => import('@/apps/password_generator'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
 });
 
 export default function PasswordGeneratorPage() {

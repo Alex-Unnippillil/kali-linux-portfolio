@@ -1,8 +1,7 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const NmapNSE = dynamic(() => import('../../apps/nmap-nse'), {
+const NmapNSE = dynamic(() => import('@/apps/nmap-nse'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
 });
 
 export default function NmapNSEPage() {

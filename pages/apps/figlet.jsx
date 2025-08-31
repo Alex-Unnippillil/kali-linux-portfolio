@@ -1,8 +1,7 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const FigletPage = dynamic(() => import('../../apps/figlet'), {
+const FigletPage = dynamic(() => import('@/apps/figlet'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
 });
 
 export default FigletPage;

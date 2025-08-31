@@ -1,8 +1,7 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const Beef = dynamic(() => import('../../apps/beef'), {
+const Beef = dynamic(() => import('@/apps/beef'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
 });
 
 export default function BeefPage() {

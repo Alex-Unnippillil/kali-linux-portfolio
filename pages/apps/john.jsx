@@ -1,8 +1,7 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const John = dynamic(() => import('../../apps/john'), {
+const John = dynamic(() => import('@/apps/john'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
 });
 
 export default function JohnPage() {

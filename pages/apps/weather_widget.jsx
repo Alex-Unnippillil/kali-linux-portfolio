@@ -1,8 +1,7 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const WeatherWidget = dynamic(() => import('../../apps/weather_widget'), {
+const WeatherWidget = dynamic(() => import('@/apps/weather_widget'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
 });
 
 export default function WeatherWidgetPage() {
