@@ -13,6 +13,7 @@ import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
+import Breadcrumbs from '../components/Breadcrumbs';
 
 function MyApp(props) {
   const { Component, pageProps } = props;
@@ -128,6 +129,7 @@ function MyApp(props) {
     <SettingsProvider>
       <PipPortalProvider>
         <div aria-live="polite" id="live-region" />
+        <Breadcrumbs />
         <Component {...pageProps} />
         <ShortcutOverlay />
         <Analytics
