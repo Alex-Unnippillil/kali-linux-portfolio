@@ -1,8 +1,45 @@
-{
-  "2012": "Began Nuclear Engineering at Ontario Tech.",
-  "2016": "Graduated with B. Eng.",
-  "2020": "Started Networking and I.T. Security program.",
-  "2021": "Completed first capture-the-flag competition.",
-  "2023": "Built portfolio showcasing 20+ security projects.",
-  "2024": "Graduated with BIT in Networking and I.T. Security."
-}
+[
+  {
+    "date": "2012-09",
+    "title": "Began Nuclear Engineering at Ontario Tech.",
+    "image": "https://via.placeholder.com/150",
+    "link": "https://ontariotechu.ca/",
+    "tags": ["education", "nuclear"]
+  },
+  {
+    "date": "2016-06",
+    "title": "Graduated with B. Eng.",
+    "image": "https://via.placeholder.com/150",
+    "link": "https://ontariotechu.ca/",
+    "tags": ["graduation", "education"]
+  },
+  {
+    "date": "2020-01",
+    "title": "Started Networking and I.T. Security program.",
+    "image": "https://via.placeholder.com/150",
+    "link": "https://example.com/networking",
+    "tags": ["education", "security"]
+  },
+  {
+    "date": "2021-03",
+    "title": "Completed first capture-the-flag competition.",
+    "image": "https://via.placeholder.com/150",
+    "link": "https://example.com/ctf",
+    "tags": ["ctf", "competition"]
+  },
+  {
+    "date": "2023-07",
+    "title": "Built portfolio showcasing 20+ security projects.",
+    "image": "https://via.placeholder.com/150",
+    "link": "https://example.com/portfolio",
+    "tags": ["portfolio", "projects"]
+  },
+  {
+    "date": "2024-04",
+    "title": "Graduated with BIT in Networking and I.T. Security.",
+    "image": "https://via.placeholder.com/150",
+    "link": "https://example.com/bit",
+    "tags": ["graduation", "security"]
+  }
+]
+
