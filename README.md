@@ -70,6 +70,20 @@ To send text or links directly into the Sticky Notes app:
 
 ---
 
+## Development
+
+```bash
+nvm use                 # Node 20
+corepack enable
+cp .env.local.example .env.local
+yarn install --immutable --immutable-cache
+yarn dev                # start development server
+# or build and start
+yarn build && yarn start
+```
+
+---
+
 ## Core Commands
 
 - `yarn install` – install project dependencies.
