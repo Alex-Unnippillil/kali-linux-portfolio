@@ -1,8 +1,7 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const Blackjack = dynamic(() => import('../../apps/blackjack'), {
+const Blackjack = dynamic(() => import('@/apps/blackjack'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
 });
 
 export default function BlackjackPage() {

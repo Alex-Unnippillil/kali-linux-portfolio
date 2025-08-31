@@ -1,8 +1,7 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const TimerStopwatch = dynamic(() => import('../../apps/timer_stopwatch'), {
+const TimerStopwatch = dynamic(() => import('@/apps/timer_stopwatch'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
 });
 
 export default function TimerStopwatchPage() {

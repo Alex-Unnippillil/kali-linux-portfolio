@@ -1,8 +1,7 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const HTTPPreview = dynamic(() => import('../../apps/http'), {
+const HTTPPreview = dynamic(() => import('@/apps/http'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
 });
 
 export default function HTTPPage() {

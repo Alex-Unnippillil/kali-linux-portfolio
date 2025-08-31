@@ -1,8 +1,7 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const AsciiArt = dynamic(() => import('../../apps/ascii-art'), {
+const AsciiArt = dynamic(() => import('@/apps/ascii-art'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
 });
 
 export default AsciiArt;

@@ -1,8 +1,7 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const Metasploit = dynamic(() => import('../../apps/metasploit'), {
+const Metasploit = dynamic(() => import('@/apps/metasploit'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
 });
 
 export default function MetasploitPage() {

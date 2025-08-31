@@ -1,8 +1,7 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const Kismet = dynamic(() => import('../../apps/kismet'), {
+const Kismet = dynamic(() => import('@/apps/kismet'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
 });
 
 export default function KismetPage() {

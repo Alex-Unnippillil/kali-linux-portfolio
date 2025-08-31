@@ -1,8 +1,7 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const ContactApp = dynamic(() => import('../../apps/contact'), {
+const ContactApp = dynamic(() => import('@/apps/contact'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
 });
 
 export default function ContactPage() {

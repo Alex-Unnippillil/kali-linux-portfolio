@@ -1,10 +1,9 @@
 import React from 'react';
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 import { getDailySeed } from '../../utils/dailySeed';
 
-const Sokoban = dynamic(() => import('../../apps/sokoban'), {
+const Sokoban = dynamic(() => import('@/apps/sokoban'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
 });
 
 const SokobanPage = () => (

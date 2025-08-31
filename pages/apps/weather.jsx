@@ -1,8 +1,7 @@
-import dynamic from 'next/dynamic';
+import dynamic from '@/utils/dynamic';
 
-const WeatherApp = dynamic(() => import('../../apps/weather'), {
+const WeatherApp = dynamic(() => import('@/apps/weather'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
 });
 
 export default WeatherApp;
