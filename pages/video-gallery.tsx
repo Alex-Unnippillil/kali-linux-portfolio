@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import YouTubePlayer from '../components/YouTubePlayer';
 
 interface Video {
   id: string;
@@ -47,14 +48,10 @@ const VideoGallery: React.FC = () => {
       />
       {playing && (
         <div className="mb-4 w-full max-w-2xl aspect-video">
-          <iframe
-            title="Selected video"
-            className="w-full h-full"
-            src={`https://www.youtube-nocookie.com/embed/${playing}`}
-            sandbox="allow-scripts allow-popups"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            referrerPolicy="no-referrer"
-            allowFullScreen
+          <YouTubePlayer
+            videoId={playing}
+            descriptionAudioSrc="/audio/sample.mp3"
+            transcriptUrl="/transcripts/sample.txt"
           />
         </div>
       )}
