@@ -522,3 +522,26 @@ The calculator supports a subset of math.js expressions with the following featu
 
 Invalid syntax is highlighted in the calculator input, selecting the character where parsing failed.
 
+
+## CodeBlock Component
+
+The `CodeBlock` component automatically detects languages using `highlight.js` but accepts a `language` prop for manual override. Lines can be emphasized via the `highlight` prop, and multiple files can be displayed within tabs:
+
+```jsx
+<CodeBlock
+  files=[
+    {
+      name: "server.js",
+      code: "console.log('hi')\nconst x = 1",
+      language: "javascript",
+      highlight: [2]
+    },
+    {
+      name: "README.md",
+      code: "# Hello"
+    }
+  ]
+/>
+```
+
+The active tab's code is highlighted and line numbers supplied in `highlight` receive a subtle background for quick focus.

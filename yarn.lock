@@ -6083,6 +6083,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"highlight.js@npm:^11.11.1":
+  version: 11.11.1
+  resolution: "highlight.js@npm:11.11.1"
+  checksum: 10c0/40f53ac19dac079891fcefd5bd8a21cf2e8931fd47da5bd1dca73b7e4375c1defed0636fc39120c639b9c44119b7d110f7f0c15aa899557a5a1c8910f3c0144c
+  languageName: node
+  linkType: hard
+
 "hoopy@npm:^0.1.4":
   version: 0.1.4
   resolution: "hoopy@npm:0.1.4"
@@ -10893,6 +10900,7 @@ __metadata:
     fast-xml-parser: "npm:^4.3.5"
     figlet: "npm:^1.8.2"
     hash-wasm: "npm:^4.12.0"
+    highlight.js: "npm:^11.11.1"
     howler: "npm:^2.2.4"
     html-to-image: "npm:^1.11.13"
     html2canvas: "npm:^1.4.1"
