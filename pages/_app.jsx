@@ -13,6 +13,7 @@ import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
+import StickyActionBar from '../components/StickyActionBar';
 
 function MyApp(props) {
   const { Component, pageProps } = props;
@@ -129,6 +130,7 @@ function MyApp(props) {
       <PipPortalProvider>
         <div aria-live="polite" id="live-region" />
         <Component {...pageProps} />
+        <StickyActionBar />
         <ShortcutOverlay />
         <Analytics
           beforeSend={(e) => {
