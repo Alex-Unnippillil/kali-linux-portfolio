@@ -522,3 +522,7 @@ The calculator supports a subset of math.js expressions with the following featu
 
 Invalid syntax is highlighted in the calculator input, selecting the character where parsing failed.
 
+
+## Brand Guidelines
+
+See [docs/brand-guidelines.md](docs/brand-guidelines.md) for color tokens, typography, icon usage examples, downloadable assets, and do/don't guidance.

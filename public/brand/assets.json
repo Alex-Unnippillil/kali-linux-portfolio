@@ -1,0 +1,7 @@
+{
+  "version": "1.0.0",
+  "assets": [
+    { "name": "logo", "file": "logo-v1.svg", "version": "1.0.0" },
+    { "name": "logo-misuse-example", "file": "logo-dont.svg", "version": "1.0.0" }
+  ]
+}
