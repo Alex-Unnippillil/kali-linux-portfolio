@@ -2,6 +2,7 @@ import Ubuntu from '../components/ubuntu';
 import Meta from '../components/SEO/Meta';
 import InstallButton from '../components/InstallButton';
 import BetaBadge from '../components/BetaBadge';
+import Hero from '../components/Hero';
 
 /**
  * @returns {JSX.Element}
@@ -12,6 +13,7 @@ const App = () => (
       Skip to content
     </a>
     <Meta />
+    <Hero />
     <Ubuntu />
     <BetaBadge />
     <InstallButton />
