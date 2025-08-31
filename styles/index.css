@@ -16,11 +16,7 @@ button, [role="button"], input[type="button"], input[type="submit"], input[type=
     min-height: var(--hit-area);
 }
 
-a:focus-visible,
-button:focus-visible {
-    outline: 2px solid var(--color-ubt-blue) !important;
-    outline-offset: 2px;
-}
+
 
 /* Top NavBar styling */
 
@@ -526,13 +522,6 @@ pre {
     line-height: 1.2;
 }
 
-/* Visible focus rings for copy buttons and text areas */
-button:focus-visible,
-textarea:focus-visible {
-    outline: 2px solid #3B82F6;
-    outline-offset: 2px;
-}
-
 /* Enable scroll snapping for gallery containers */
 .gallery-container {
     scroll-snap-type: x mandatory;
@@ -540,4 +529,66 @@ textarea:focus-visible {
 
 .gallery-container > * {
     scroll-snap-align: start;
+}
+
+/* Consistent interaction states */
+button,
+[type='button'],
+[type='submit'],
+a,
+[role='button'],
+.interactive {
+    cursor: pointer;
+    transition: background-color var(--motion-fast) var(--motion-ease-in-out),
+                color var(--motion-fast) var(--motion-ease-in-out),
+                box-shadow var(--motion-fast) var(--motion-ease-in-out),
+                transform var(--motion-fast) var(--motion-ease-in-out);
+}
+
+button:hover,
+[type='button']:hover,
+[type='submit']:hover,
+a:hover,
+[role='button']:hover,
+.interactive:hover {
+    filter: brightness(1.1);
+}
+
+button:active,
+[type='button']:active,
+[type='submit']:active,
+a:active,
+[role='button']:active,
+.interactive:active {
+    transform: scale(0.97);
+}
+
+button:focus-visible,
+[type='button']:focus-visible,
+[type='submit']:focus-visible,
+a:focus-visible,
+[role='button']:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+.interactive:focus-visible {
+    outline: 2px solid var(--color-ub-border-orange);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation: none !important;
+        transition-duration: 0ms !important;
+    }
+
+    button,
+    [type='button'],
+    [type='submit'],
+    a,
+    [role='button'],
+    .interactive {
+        transition: none;
+    }
 }

@@ -86,9 +86,9 @@ module.exports = {
         },
       },
       animation: {
-        glow: 'glow 1s ease-in-out infinite',
-        flourish: 'flourish 0.6s ease-out',
-        mine: 'mine 0.4s ease-in-out',
+        glow: 'glow var(--motion-slow) var(--motion-ease-in-out) infinite',
+        flourish: 'flourish var(--motion-medium) var(--motion-ease-out)',
+        mine: 'mine var(--motion-fast) var(--motion-ease-in-out)',
       },
     },
   },
