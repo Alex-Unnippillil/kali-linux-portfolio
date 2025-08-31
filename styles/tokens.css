@@ -48,6 +48,11 @@
   /* Fonts */
   --font-family-base: 'Ubuntu', sans-serif;
   --font-multiplier: 1;
+  --line-height-base: 1.5;
+  --letter-spacing-base: normal;
+  --word-spacing-base: normal;
+  --text-align-base: start;
+  --hyphenation: auto;
   /* Minimum interactive target size */
   --hit-area: 32px;
 }
@@ -68,6 +73,16 @@
 /* Dyslexia-friendly fonts */
 .dyslexia {
   --font-family-base: 'OpenDyslexic', 'Comic Sans MS', Arial, sans-serif;
+}
+
+/* Comfortable reading preset */
+.reading-mode {
+  --font-family-base: 'Merriweather', Georgia, serif;
+  --line-height-base: 1.6;
+  --letter-spacing-base: 0.02em;
+  --word-spacing-base: 0.05em;
+  --text-align-base: start;
+  --hyphenation: manual;
 }
 
 /* Larger hit areas */
