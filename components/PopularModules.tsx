@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import modulesData from '../data/module-index.json';
 import versionInfo from '../data/module-version.json';
+import CTAButton from './CTAButton';
 
 interface Module {
   id: string;
@@ -352,6 +353,9 @@ const PopularModules: React.FC = () => {
       ) : (
         <p>Select a module to view logs and results.</p>
       )}
+      <div className="flex justify-center mt-8">
+        <CTAButton location="popular-modules-end" />
+      </div>
     </div>
   );
 };
