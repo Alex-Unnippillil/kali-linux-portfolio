@@ -34,11 +34,30 @@
   --space-5: 1.5rem;
   --space-6: 2rem;
 
+  /* Typography scale */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+
+  /* Icon sizes mapped to typography */
+  --icon-xs: var(--text-xs);
+  --icon-sm: var(--text-sm);
+  --icon-md: var(--text-md);
+  --icon-lg: var(--text-lg);
+  --icon-xl: var(--text-xl);
+
   /* Radius */
   --radius-sm: 2px;
   --radius-md: 4px;
   --radius-lg: 8px;
   --radius-round: 9999px;
+
+  /* Stroke weights */
+  --stroke-thin: 1px;
+  --stroke-medium: 2px;
+  --stroke-thick: 3px;
 
   /* Motion durations */
   --motion-fast: 150ms;
