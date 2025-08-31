@@ -111,7 +111,12 @@ export default async function handler(req, res) {
       res.status(400).json({ ok: false, code: 'invalid_input' });
       return;
     }
-    sanitized = { name: parsed.name, email: parsed.email, message: parsed.message };
+    sanitized = {
+      name: parsed.name,
+      email: parsed.email,
+      message: parsed.message,
+      purpose: parsed.purpose,
+    };
   } catch {
     console.warn('Contact submission rejected', { ip, reason: 'invalid_input' });
     res.status(400).json({ ok: false, code: 'invalid_input' });

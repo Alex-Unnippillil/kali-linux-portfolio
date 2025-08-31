@@ -14,6 +14,7 @@ export const contactSchema = z.object({
     .min(1)
     .max(1000)
     .transform((v) => v.replace(/\s+/g, ' ')),
+  purpose: z.enum(['hiring', 'collaboration', 'speaking']),
   honeypot: z.string().max(0),
   csrfToken: z.string().min(1),
   recaptchaToken: z.string().min(1),

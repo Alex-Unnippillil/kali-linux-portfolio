@@ -34,6 +34,7 @@ export const processContactForm = async (
     name: string;
     email: string;
     message: string;
+    purpose: 'hiring' | 'collaboration' | 'speaking';
     honeypot: string;
     csrfToken: string;
     recaptchaToken: string;
@@ -52,6 +53,7 @@ export const processContactForm = async (
         name: sanitize(parsed.name),
         email: parsed.email,
         message: sanitize(parsed.message),
+        purpose: parsed.purpose,
         honeypot: parsed.honeypot,
         recaptchaToken: parsed.recaptchaToken,
       }),
@@ -143,6 +145,7 @@ const ContactApp: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
+  const [purpose, setPurpose] = useState<'hiring' | 'collaboration' | 'speaking'>('hiring');
   const [honeypot, setHoneypot] = useState('');
   const [attachments, setAttachments] = useState<File[]>([]);
   const [error, setError] = useState('');
@@ -232,6 +235,7 @@ const ContactApp: React.FC = () => {
       name,
       email,
       message,
+      purpose,
       honeypot,
       csrfToken,
       recaptchaToken,
@@ -299,6 +303,25 @@ const ContactApp: React.FC = () => {
         </p>
       )}
       <form onSubmit={handleSubmit} className="space-y-6 max-w-md">
+        <div className="relative">
+          <select
+            id="contact-purpose"
+            className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+            value={purpose}
+            onChange={(e) => setPurpose(e.target.value as any)}
+            required
+          >
+            <option value="hiring">Hiring</option>
+            <option value="collaboration">Collaboration</option>
+            <option value="speaking">Speaking</option>
+          </select>
+          <label
+            htmlFor="contact-purpose"
+            className="absolute left-3 -top-2 bg-gray-800 px-1 text-xs text-gray-400 transition-all peer-focus:text-blue-400"
+          >
+            Purpose
+          </label>
+        </div>
         <div className="relative">
           <input
             id="contact-name"
