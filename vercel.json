@@ -4,5 +4,7 @@
   "functions": {
     "pages/api/**/*.{js,ts}": { "runtime": "nodejs20.x" },
     "app/api/**/route.{js,ts}": { "runtime": "nodejs20.x" }
-  }
+  },
+  "installCommand": "corepack enable && yarn set version 4.9.2 && yarn install --immutable",
+  "buildCommand": "yarn build"
 }
