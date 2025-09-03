@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { trackEvent } from "@/lib/analytics-client";
 
 const ROWS = 5;
 const COLS = 10;
@@ -62,6 +63,7 @@ export default function BreakoutEditor() {
 
   const save = () => {
     localStorage.setItem(`${KEY_PREFIX}${name}`, JSON.stringify(grid));
+    trackEvent("Accepted Edit", { level: name });
   };
 
   const load = () => {

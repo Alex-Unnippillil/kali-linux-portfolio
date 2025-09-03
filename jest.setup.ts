@@ -79,6 +79,16 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
   });
 }
 
+// Basic IntersectionObserver mock
+if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
+  // @ts-ignore
+  window.IntersectionObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as any;
+}
+
 // Simple localStorage mock for environments without it
 if (typeof window !== 'undefined' && !window.localStorage) {
   const store: Record<string, string> = {};

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { toPng } from 'html-to-image';
+import { trackEvent } from '@/lib/analytics-client';
 import TrendChart from './components/TrendChart';
 import SummaryDashboard from './components/SummaryDashboard';
 import FindingCard from './components/FindingCard';
@@ -92,6 +93,11 @@ const Nessus: React.FC = () => {
       }
     }
     setDiff({ added, removed, changed });
+    trackEvent('Compare Terms', {
+      added: added.length,
+      removed: removed.length,
+      changed: changed.length,
+    });
 
     const countsA: Record<Severity, number> = {
       Critical: 0,

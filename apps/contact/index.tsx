@@ -74,6 +74,7 @@ const ContactApp: React.FC = () => {
         setHoneypot("");
         localStorage.removeItem(DRAFT_KEY);
         trackEvent("contact_submit", { method: "form" });
+        trackEvent("Ask Agent", { via: "form" });
       } else {
         setError(result.error || "Submission failed");
         setToast("Failed to send");
