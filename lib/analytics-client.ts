@@ -4,7 +4,8 @@ export type EventName =
   | 'contact_submit'
   | 'contact_submit_error'
   | 'outbound_link_click'
-  | 'download_click';
+  | 'download_click'
+  | 'search_result_click';
 
 export function trackEvent(
   name: EventName,
@@ -12,7 +13,6 @@ export function trackEvent(
 ) {
   try {
     // Dynamically require to avoid ESM issues in test environment
-    // eslint-disable-next-line global-require, @typescript-eslint/no-var-requires
     const { track } = require('@vercel/analytics');
     track(name, props);
   } catch {
