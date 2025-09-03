@@ -3,5 +3,6 @@
   "functions": {
     "pages/api/**/*.{js,ts}": { "runtime": "nodejs20.x" },
     "app/api/**/route.{js,ts}": { "runtime": "nodejs20.x" }
+
   }
 }
