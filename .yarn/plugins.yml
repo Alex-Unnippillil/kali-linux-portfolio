@@ -1,3 +1,0 @@
-plugins:
-  - path: builtin:patch
-    spec: patch
