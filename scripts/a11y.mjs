@@ -1,7 +1,7 @@
-import fs from 'fs';
-import pa11y from 'pa11y';
+import fs from "fs";
+import pa11y from "pa11y";
 
-const configPath = new URL('../pa11yci.json', import.meta.url);
+const configPath = new URL("../pa11yci.json", import.meta.url);
 const { defaults = {}, urls = [] } = JSON.parse(fs.readFileSync(configPath));
 
 (async () => {
@@ -15,12 +15,13 @@ const { defaults = {}, urls = [] } = JSON.parse(fs.readFileSync(configPath));
         console.log(`  [${issue.code}] ${issue.message} (${issue.selector})`);
       }
     } else {
-      console.log('  No issues found');
+      console.log("  No issues found");
     }
   }
 
   if (hasErrors) {
-    process.exitCode = 1;
+    process.exit(1);
+  } else {
+    process.exit(0);
   }
 })();
-

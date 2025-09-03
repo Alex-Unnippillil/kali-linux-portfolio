@@ -1,22 +1,25 @@
-import { chromium, firefox, webkit } from 'playwright';
-import fs from 'fs';
-import path from 'path';
+import { chromium, firefox, webkit } from "playwright";
+import fs from "fs";
+import path from "path";
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 
 (async () => {
   const browsers = [
-    { name: 'chromium', type: chromium },
-    { name: 'firefox', type: firefox },
-    { name: 'webkit', type: webkit },
+    { name: "chromium", type: chromium },
+    { name: "firefox", type: firefox },
+    { name: "webkit", type: webkit },
   ];
 
-  const pagesDir = path.join(process.cwd(), 'pages', 'apps');
-  const files = fs.readdirSync(pagesDir, { withFileTypes: true })
+  const pagesDir = path.join(process.cwd(), "pages", "apps");
+  const files = fs
+    .readdirSync(pagesDir, { withFileTypes: true })
     .filter((d) => d.isFile() && /\.(jsx?|tsx?)$/.test(d.name))
     .map((d) => d.name);
 
-  const routes = files.map((file) => `/apps/${file.replace(/\.(jsx?|tsx?)$/, '')}`);
+  const routes = files.map(
+    (file) => `/apps/${file.replace(/\.(jsx?|tsx?)$/, "")}`,
+  );
 
   let hadError = false;
   const results = [];
@@ -28,19 +31,19 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
     for (const route of routes) {
       const page = await context.newPage();
       const consoleErrors = [];
-      page.on('console', (msg) => {
-        if (msg.type() === 'error') {
+      page.on("console", (msg) => {
+        if (msg.type() === "error") {
           consoleErrors.push(msg.text());
         }
       });
       console.log(`[${name}] Visiting ${route}`);
-      let error = '';
+      let error = "";
       try {
         const response = await page.goto(`${BASE_URL}${route}`);
         if (!response || !response.ok()) {
-          error = `HTTP ${response ? response.status() : 'no response'}`;
+          error = `HTTP ${response ? response.status() : "no response"}`;
         } else if (consoleErrors.length > 0) {
-          error = consoleErrors.join('\n');
+          error = consoleErrors.join("\n");
         }
       } catch (err) {
         error = err.message;
@@ -57,13 +60,15 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
   }
 
   if (hadError) {
-    console.error('Completed with errors');
+    console.error("Completed with errors");
   } else {
-    console.log('All app routes loaded without console errors.');
+    console.log("All app routes loaded without console errors.");
   }
 
   // Write results to log file if TEST_LOG env variable provided
   if (process.env.SMOKE_LOG) {
     fs.writeFileSync(process.env.SMOKE_LOG, JSON.stringify(results, null, 2));
   }
+
+  process.exit(hadError ? 1 : 0);
 })();
