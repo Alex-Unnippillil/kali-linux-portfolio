@@ -9,6 +9,7 @@ import AttachmentUploader, {
   MAX_TOTAL_ATTACHMENT_SIZE,
 } from '../../../apps/contact/components/AttachmentUploader';
 import AttachmentCarousel from '../../../apps/contact/components/AttachmentCarousel';
+import { getErrorMessage } from '@/src/lib/errors/taxonomy';
 
 const sanitize = (str: string) =>
   str.replace(/[&<>"']/g, (c) => ({
@@ -18,16 +19,6 @@ const sanitize = (str: string) =>
     '"': '&quot;',
     "'": '&#39;',
   }[c]!));
-
-const errorMap: Record<string, string> = {
-  rate_limit: 'Too many requests. Please try again later.',
-  invalid_input: 'Please check your input and try again.',
-  invalid_csrf: 'Security token mismatch. Refresh and retry.',
-  invalid_recaptcha: 'Captcha verification failed. Please try again.',
-  recaptcha_disabled:
-    'Captcha service is not configured. Please use the options above.',
-
-};
 
 export const processContactForm = async (
   data: {
@@ -58,10 +49,13 @@ export const processContactForm = async (
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
+      const retryAfterHeader = res.headers?.get?.('Retry-After');
+      const retryAfter = retryAfterHeader ? Number(retryAfterHeader) : undefined;
       return {
         success: false,
-        error: errorMap[body.code as string] || 'Submission failed',
+        error: getErrorMessage(body.code as string),
         code: body.code as string,
+        retryAfter,
       };
     }
     return { success: true };
