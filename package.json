@@ -18,7 +18,8 @@
     "smoke": "node scripts/smoke-all-apps.mjs",
     "module-report": "node scripts/generate-module-report.mjs",
     "build:sw": "node scripts/generate-sw.mjs",
-    "analyze": "ANALYZE=true yarn build"
+    "analyze": "ANALYZE=true yarn build",
+    "redteam:generate": "ts-node scripts/redteam-generate.ts"
   },
   "engines": {
     "node": "20.x"
@@ -124,6 +125,7 @@
     "node-mocks-http": "1.17.2",
     "pa11y": "^9.0.0",
     "playwright-core": "^1.55.0",
+    "ts-node": "^10.9.2",
     "typescript": "^5.6",
     "wait-on": "^8.0.4",
     "ws": "^8.18.0"

@@ -15,3 +15,4 @@ jobs:
       - run: yarn install --immutable --immutable-cache
       - run: yarn lint
       - run: yarn build
+      - run: yarn test
