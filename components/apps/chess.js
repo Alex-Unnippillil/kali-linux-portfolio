@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import { Chess } from "chess.js";
 import { suggestMoves } from "../../games/chess/engine/wasmEngine";
+import copyToClipboard from "../../utils/clipboard";
 
 // 0x88 board representation utilities
 const EMPTY = 0;
@@ -731,7 +732,7 @@ const ChessGame = () => {
   };
 
   const copyMoves = () => {
-    navigator.clipboard?.writeText(chessRef.current.pgn());
+    copyToClipboard(chessRef.current.pgn());
   };
 
   const loadPGNString = (pgn) => {
@@ -911,7 +912,7 @@ const ChessGame = () => {
               <li key={idx}>{line}</li>
             ))}
           </ol>
-          <button className="mt-2 px-2 py-1 bg-gray-700" onClick={copyMoves}>
+          <button className="mt-2 px-2 py-1 bg-gray-700" onClick={copyMoves} aria-label="Copy moves">
             Copy Moves
           </button>
           <div className="mt-1 text-xs break-words">

@@ -9,6 +9,7 @@ import GameLayout from '../../components/apps/GameLayout';
 import { SettingsProvider, useSettings } from '../../components/apps/GameSettingsContext';
 import { PUZZLE_PACKS, PackName } from '../../games/word-search/packs';
 import ListImport from '../../games/word-search/components/ListImport';
+import copyToClipboard from '../../utils/clipboard';
 
 const WORD_COUNT = 5;
 const GRID_SIZE = 12;
@@ -256,7 +257,7 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
     const params = new URLSearchParams({ seed, words: words.join(',') });
     const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
     try {
-      await navigator.clipboard?.writeText(url);
+      await copyToClipboard(url);
     } catch (e: any) {
       logGameError('word_search', e?.message || String(e));
     }
@@ -424,7 +425,12 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
         <button type="button" onClick={newPuzzle} className="px-2 py-1 bg-blue-700 text-white rounded">
           New
         </button>
-        <button type="button" onClick={copyLink} className="px-2 py-1 bg-green-700 text-white rounded">
+        <button
+          type="button"
+          onClick={copyLink}
+          className="px-2 py-1 bg-green-700 text-white rounded"
+          aria-label="Copy link"
+        >
           Copy Link
         </button>
         <ListImport onImport={handleImport} />

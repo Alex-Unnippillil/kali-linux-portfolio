@@ -8,7 +8,7 @@ content inside a [Document Picture-in-Picture](https://developer.mozilla.org/en-
 Wrap your application with `PipPortalProvider` and use the `usePipPortal`
 hook to open or close the PiP window.
 
-```tsx
+```tsx copy
 import PipPortalProvider, { usePipPortal } from '../components/common/PipPortal';
 
 function HudButton() {

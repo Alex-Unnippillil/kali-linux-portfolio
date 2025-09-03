@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import copyToClipboard from '../../utils/clipboard';
 
 const LOWER = 'abcdefghijklmnopqrstuvwxyz';
 const UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -37,10 +38,10 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
     setPassword(pwd);
   };
 
-  const copyToClipboard = async () => {
+  const handleCopy = async () => {
     if (!password) return;
     try {
-      await navigator.clipboard?.writeText(password);
+      await copyToClipboard(password);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (e) {
@@ -96,8 +97,9 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
         />
         <button
           type="button"
-          onClick={copyToClipboard}
+          onClick={handleCopy}
           className="px-3 py-1 bg-blue-600 rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
+          aria-label="Copy password"
         >
           Copy
         </button>

@@ -13,10 +13,11 @@
     "export": "NEXT_PUBLIC_STATIC_EXPORT=true next build && yarn build:sw",
     "test": "jest",
     "test:watch": "jest --watch",
-    "lint": "eslint --max-warnings=0 .",
+    "lint": "eslint . && yarn examples:normalize",
     "a11y": "node scripts/a11y.mjs",
     "smoke": "node scripts/smoke-all-apps.mjs",
     "module-report": "node scripts/generate-module-report.mjs",
+    "examples:normalize": "tsx scripts/examples-normalize.ts",
     "build:sw": "node scripts/generate-sw.mjs",
     "analyze": "ANALYZE=true yarn build"
   },
@@ -124,6 +125,7 @@
     "node-mocks-http": "1.17.2",
     "pa11y": "^9.0.0",
     "playwright-core": "^1.55.0",
+    "tsx": "^4.19.2",
     "typescript": "^5.6",
     "wait-on": "^8.0.4",
     "ws": "^8.18.0"

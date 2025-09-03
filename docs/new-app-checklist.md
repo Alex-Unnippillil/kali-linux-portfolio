@@ -10,7 +10,7 @@ Use this checklist when adding a new app to the portfolio.
 
 ## Dynamic import pattern
 
-```ts
+```ts copy
 import dynamic from 'next/dynamic';
 
 const MyApp = dynamic(() => import('./components/apps/my-app'), {
@@ -26,7 +26,7 @@ export const displayMyApp = () => <MyApp />;
 
 ## Playwright smoke test
 
-```ts
+```ts copy
 import { test, expect } from '@playwright/test';
 
 test('My App launches', async ({ page }) => {

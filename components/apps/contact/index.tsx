@@ -279,6 +279,7 @@ const ContactApp: React.FC = () => {
             type="button"
             onClick={() => copyToClipboard(EMAIL)}
             className="underline mr-2"
+            aria-label="Copy address"
           >
             Copy address
           </button>
@@ -286,6 +287,7 @@ const ContactApp: React.FC = () => {
             type="button"
             onClick={() => copyToClipboard(message)}
             className="underline mr-2"
+            aria-label="Copy message"
           >
             Copy message
           </button>

@@ -3,6 +3,7 @@ import { Readability } from '@mozilla/readability';
 import TurndownService from 'turndown';
 import DOMPurify from 'dompurify';
 import { useReadLater } from './ReadLaterList';
+import copyToClipboard from '../../../utils/clipboard';
 
 interface ReaderProps {
   url: string;
@@ -68,7 +69,7 @@ const Reader: React.FC<ReaderProps> = ({ url }) => {
 
   const copyMarkdown = () => {
     if (!markdown) return;
-    navigator.clipboard?.writeText(markdown);
+    copyToClipboard(markdown);
   };
 
   const saveForLater = () => {
@@ -104,7 +105,7 @@ const Reader: React.FC<ReaderProps> = ({ url }) => {
         <button onClick={() => changeView('rendered')}>Rendered</button>
         <button onClick={() => changeView('markdown')}>Markdown</button>
         <button onClick={() => changeView('split')}>Split</button>
-        <button onClick={copyMarkdown}>Copy as Markdown</button>
+        <button onClick={copyMarkdown} aria-label="Copy as Markdown">Copy as Markdown</button>
         <button onClick={saveForLater}>Read Later</button>
       </div>
     </div>
