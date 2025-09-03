@@ -5,7 +5,7 @@ import figlet from 'figlet';
 import Standard from 'figlet/importable-fonts/Standard.js';
 import Slant from 'figlet/importable-fonts/Slant.js';
 import Big from 'figlet/importable-fonts/Big.js';
-import { useRouter } from 'next/router';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
 const fontList = ['Standard', 'Slant', 'Big'];
 const fontSizes = [10, 12, 14];
@@ -124,6 +124,9 @@ const AsciiArtApp = () => {
   const [brightness, setBrightness] = useState(0); // -1 to 1
   const [contrast, setContrast] = useState(1); // 0 to 2
 
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+
     useEffect(() => {
       figlet.parseFont('Standard', Standard);
       figlet.parseFont('Slant', Slant);
@@ -132,20 +135,21 @@ const AsciiArtApp = () => {
 
     // load from query string on first render
     useEffect(() => {
-    if (!router.isReady) return;
-    const { t, f, b, c } = router.query;
-    if (typeof t === 'string') setText(t);
-      if (typeof f === 'string' && fontList.includes(f)) setFont(f as figlet.Fonts);
-    if (typeof b === 'string') {
+    const t = searchParams.get('t');
+    const f = searchParams.get('f');
+    const b = searchParams.get('b');
+    const c = searchParams.get('c');
+    if (t) setText(t);
+      if (f && fontList.includes(f)) setFont(f as figlet.Fonts);
+    if (b) {
       const br = parseFloat(b);
       if (!Number.isNaN(br) && br >= -1 && br <= 1) setBrightness(br);
     }
-    if (typeof c === 'string') {
+    if (c) {
       const ct = parseFloat(c);
       if (!Number.isNaN(ct) && ct >= 0 && ct <= 2) setContrast(ct);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router.isReady]);
+  }, [searchParams]);
 
   // update query string permalink
   useEffect(() => {
@@ -156,9 +160,9 @@ const AsciiArtApp = () => {
     if (brightness !== 0) params.set('b', String(brightness));
     if (contrast !== 1) params.set('c', String(contrast));
     const qs = params.toString();
-    const url = qs ? `${router.pathname}?${qs}` : router.pathname;
-    router.replace(url, undefined, { shallow: true });
-  }, [router, text, font, brightness, contrast]);
+    const url = qs ? `${pathname}?${qs}` : pathname;
+    router.replace(url);
+  }, [router, pathname, text, font, brightness, contrast]);
 
   // auto resize textarea based on content
   useEffect(() => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/router';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import FilterChip from '../components/FilterChip';
@@ -92,6 +92,8 @@ interface Project {
 export default function ProjectGalleryPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const [tech, setTech] = usePersistentState<string[]>('pg-tech', []);
   const [year, setYear] = usePersistentState<string>('pg-year', '');
@@ -108,23 +110,26 @@ export default function ProjectGalleryPage() {
 
   // initialize from query string
   useEffect(() => {
-    if (!router.isReady) return;
-    const { tech: qsTech, year: qsYear, type: qsType, tags: qsTags } = router.query;
-    if (typeof qsTech === 'string') setTech(qsTech.split(','));
-    if (typeof qsYear === 'string') setYear(qsYear);
-    if (typeof qsType === 'string') setType(qsType);
-    if (typeof qsTags === 'string') setTags(qsTags.split(','));
-  }, [router.isReady, router.query, setTech, setYear, setType, setTags]);
+    const qsTech = searchParams.get('tech');
+    const qsYear = searchParams.get('year');
+    const qsType = searchParams.get('type');
+    const qsTags = searchParams.get('tags');
+    if (qsTech) setTech(qsTech.split(','));
+    if (qsYear) setYear(qsYear);
+    if (qsType) setType(qsType);
+    if (qsTags) setTags(qsTags.split(','));
+  }, [searchParams, setTech, setYear, setType, setTags]);
 
   // encode selection in query string
   useEffect(() => {
-    const query: Record<string, string> = {};
-    if (tech.length) query.tech = tech.join(',');
-    if (year) query.year = year;
-    if (type) query.type = type;
-    if (tags.length) query.tags = tags.join(',');
-    router.replace({ pathname: router.pathname, query }, undefined, { shallow: true });
-  }, [router, tech, year, type, tags]);
+    const params = new URLSearchParams();
+    if (tech.length) params.set('tech', tech.join(','));
+    if (year) params.set('year', year);
+    if (type) params.set('type', type);
+    if (tags.length) params.set('tags', tags.join(','));
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname);
+  }, [router, pathname, tech, year, type, tags]);
 
   const stacks = useMemo(
     () => Array.from(new Set(projects.flatMap((p) => p.stack))),

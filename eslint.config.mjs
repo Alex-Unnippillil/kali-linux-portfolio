@@ -9,6 +9,7 @@ export default [
     rules: {
       '@next/next/no-page-custom-font': 'off',
       '@next/next/no-img-element': 'off',
+      '@typescript-eslint/no-var-requires': 'off',
     },
   }),
 ];

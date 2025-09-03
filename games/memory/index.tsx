@@ -151,7 +151,7 @@ const MemoryGame: React.FC = () => {
             </ol>
           </div>
         ) : (
-          <div className="mt-4 text-center text-lg font-bold">Time's up!</div>
+          <div className="mt-4 text-center text-lg font-bold">Time&#39;s up!</div>
         )
       )}
     </GameShell>
