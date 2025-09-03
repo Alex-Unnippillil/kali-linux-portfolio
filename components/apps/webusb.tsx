@@ -1,7 +1,40 @@
 import React, { useState } from 'react';
 import FormError from '../ui/FormError';
 
-type USBDevice = any;
+interface USBEndpoint {
+  direction: 'in' | 'out';
+  endpointNumber: number;
+}
+
+interface USBAlternateInterface {
+  endpoints: USBEndpoint[];
+}
+
+interface USBInterface {
+  alternates: USBAlternateInterface[];
+}
+
+interface USBConfiguration {
+  interfaces: USBInterface[];
+}
+
+interface USBDevice {
+  productName?: string;
+  configuration: USBConfiguration | null;
+  open(): Promise<void>;
+  close(): Promise<void>;
+  selectConfiguration(value: number): Promise<void>;
+  claimInterface(index: number): Promise<void>;
+  transferOut(endpointNumber: number, data: BufferSource): Promise<void>;
+  transferIn(endpointNumber: number, length: number): Promise<{ data?: DataView }>;
+  addEventListener(type: 'disconnect', listener: () => void): void;
+}
+
+interface USB {
+  requestDevice(options: { filters: any[] }): Promise<USBDevice>;
+}
+
+type NavigatorUSB = Navigator & { usb: USB };
 
 const WebUSBApp: React.FC = () => {
   const supported = typeof navigator !== 'undefined' && 'usb' in navigator;
@@ -21,15 +54,15 @@ const WebUSBApp: React.FC = () => {
       return;
     }
     try {
-      const d = await (navigator as any).usb.requestDevice({ filters: [] });
+      const d = await (navigator as NavigatorUSB).usb.requestDevice({ filters: [] });
       await d.open();
       if (d.configuration === null) {
         await d.selectConfiguration(1);
       }
       await d.claimInterface(0);
       const alt = d.configuration?.interfaces[0].alternates[0];
-      const epIn = alt?.endpoints.find((e: any) => e.direction === 'in');
-      const epOut = alt?.endpoints.find((e: any) => e.direction === 'out');
+      const epIn = alt?.endpoints.find((e) => e.direction === 'in');
+      const epOut = alt?.endpoints.find((e) => e.direction === 'out');
       setInEndpoint(epIn?.endpointNumber ?? null);
       setOutEndpoint(epOut?.endpointNumber ?? null);
       d.addEventListener('disconnect', () => {
