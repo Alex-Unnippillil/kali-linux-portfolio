@@ -53,6 +53,10 @@ export default async function handler(req, res) {
   }
   if (entry.count > RATE_LIMIT_MAX) {
     console.warn('Contact submission rejected', { ip, reason: 'rate_limit' });
+    const retryAfter = Math.ceil(
+      (entry.start + RATE_LIMIT_WINDOW_MS - now) / 1000,
+    );
+    res.setHeader('Retry-After', String(retryAfter));
     res.status(429).json({ ok: false, code: 'rate_limit' });
     return;
   }

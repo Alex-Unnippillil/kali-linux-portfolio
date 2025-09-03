@@ -7,6 +7,7 @@ import { processContactForm } from "../../components/apps/contact";
 import { copyToClipboard } from "../../utils/clipboard";
 import { openMailto } from "../../utils/mailto";
 import { trackEvent } from "@/lib/analytics-client";
+import { getErrorMessage } from "@/src/lib/errors/taxonomy";
 
 const DRAFT_KEY = "contact-draft";
 const EMAIL = "alex.unnippillil@hotmail.com";
@@ -22,6 +23,9 @@ const getRecaptchaToken = (siteKey: string): Promise<string> =>
     });
   });
 
+const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+const MAX_RETRIES = 3;
+
 const ContactApp: React.FC = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -30,6 +34,8 @@ const ContactApp: React.FC = () => {
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
   const [csrfToken, setCsrfToken] = useState("");
+  const [retryAfter, setRetryAfter] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem(DRAFT_KEY);
@@ -52,38 +58,54 @@ const ContactApp: React.FC = () => {
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
   }, [name, email, message]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
+  const attemptSubmit = async (attempt = 0): Promise<void> => {
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
     const recaptchaToken = await getRecaptchaToken(siteKey);
-    try {
-      const result = await processContactForm({
-        name,
-        email,
-        message,
-        honeypot,
-        csrfToken,
-        recaptchaToken,
-      });
-      if (result.success) {
-        setToast("Message sent");
-        setName("");
-        setEmail("");
-        setMessage("");
-        setHoneypot("");
-        localStorage.removeItem(DRAFT_KEY);
-        trackEvent("contact_submit", { method: "form" });
-      } else {
-        setError(result.error || "Submission failed");
-        setToast("Failed to send");
-        trackEvent("contact_submit_error", { method: "form" });
-      }
-    } catch {
-      setError("Submission failed");
-      setToast("Failed to send");
-      trackEvent("contact_submit_error", { method: "form" });
+    const result = await processContactForm({
+      name,
+      email,
+      message,
+      honeypot,
+      csrfToken,
+      recaptchaToken,
+    });
+    if (result.success) {
+      setToast("Message sent");
+      setName("");
+      setEmail("");
+      setMessage("");
+      setHoneypot("");
+      localStorage.removeItem(DRAFT_KEY);
+      trackEvent("contact_submit", { method: "form", retries: attempt });
+      setSubmitting(false);
+      return;
     }
+
+    const reason = result.code || "unknown";
+    trackEvent("contact_submit_error", { method: "form", reason, retries: attempt });
+
+    if (result.retryAfter && attempt < MAX_RETRIES) {
+      for (let i = result.retryAfter; i > 0; i--) {
+        setRetryAfter(i);
+        setError(`${getErrorMessage(reason)} Retrying in ${i}s...`);
+        await delay(1000);
+      }
+      setRetryAfter(0);
+      await attemptSubmit(attempt + 1);
+    } else {
+      setError(result.error || getErrorMessage(reason));
+      setToast("Failed to send");
+      setSubmitting(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (submitting || retryAfter > 0) return;
+    setError("");
+    setToast("");
+    setSubmitting(true);
+    await attemptSubmit(0);
   };
 
   return (
@@ -204,7 +226,8 @@ const ContactApp: React.FC = () => {
         {error && <FormError>{error}</FormError>}
         <button
           type="submit"
-          className="flex h-12 w-full items-center justify-center rounded bg-blue-600 px-4 sm:w-auto"
+          disabled={submitting || retryAfter > 0}
+          className="flex h-12 w-full items-center justify-center rounded bg-blue-600 px-4 sm:w-auto disabled:opacity-50"
         >
           Send
         </button>
