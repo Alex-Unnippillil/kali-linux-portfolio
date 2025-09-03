@@ -60,14 +60,19 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 });
 
 const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
+const isProd = process.env.NODE_ENV === 'production';
 
 // Merge experiment settings and production optimizations into a single function.
 function configureWebpack(config, { isServer }) {
-  // Enable WebAssembly loading and avoid JSON destructuring bug
-  config.experiments = {
-    ...(config.experiments || {}),
-    asyncWebAssembly: true,
-  };
+  if (isProd) {
+    // Enable WebAssembly loading and avoid JSON destructuring bug
+    config.experiments = {
+      ...(config.experiments || {}),
+      asyncWebAssembly: true,
+    };
+  } else {
+    // Experiments are disabled in development; re-enable by removing the NODE_ENV check above.
+  }
   // Prevent bundling of server-only modules in the browser
   config.resolve = config.resolve || {};
   config.resolve.fallback = {
@@ -75,7 +80,7 @@ function configureWebpack(config, { isServer }) {
     module: false,
     async_hooks: false,
   };
-  if (process.env.NODE_ENV === 'production') {
+  if (isProd) {
     config.optimization = {
       ...(config.optimization || {}),
       mangleExports: false,
@@ -105,7 +110,8 @@ module.exports = withBundleAnalyzer({
     deviceSizes: [640, 750, 828, 1080, 1200, 1280, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
   },
-  ...(isStaticExport
+  // Security headers are skipped outside production; remove !isProd check to restore them for development.
+  ...(isStaticExport || !isProd
     ? {}
     : {
         async headers() {
