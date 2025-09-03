@@ -1,7 +1,19 @@
 import React, { useEffect, useState, useRef } from 'react';
 import FormError from '../ui/FormError';
 
-type SerialPort = any;
+interface SerialPort {
+  readonly readable: ReadableStream<Uint8Array> | null;
+  open(options: { baudRate: number }): Promise<void>;
+  close(): Promise<void>;
+}
+
+interface Serial {
+  requestPort(): Promise<SerialPort>;
+  addEventListener(type: 'disconnect', listener: (ev: Event & { readonly target: SerialPort }) => void): void;
+  removeEventListener(type: 'disconnect', listener: (ev: Event & { readonly target: SerialPort }) => void): void;
+}
+
+type NavigatorSerial = Navigator & { serial: Serial };
 
 const SerialTerminalApp: React.FC = () => {
   const supported = typeof navigator !== 'undefined' && 'serial' in navigator;
@@ -12,21 +24,22 @@ const SerialTerminalApp: React.FC = () => {
 
   useEffect(() => {
     if (!supported) return;
-    const handleDisconnect = (e: unknown) => {
-      if ((e as { target?: SerialPort }).target === port) {
+    const handleDisconnect = (e: Event & { readonly target: SerialPort }) => {
+      if (e.target === port) {
         setError('Device disconnected.');
         setPort(null);
       }
     };
-    (navigator as any).serial.addEventListener('disconnect', handleDisconnect);
+    const nav = navigator as NavigatorSerial;
+    nav.serial.addEventListener('disconnect', handleDisconnect);
     return () => {
-      (navigator as any).serial.removeEventListener('disconnect', handleDisconnect);
+      nav.serial.removeEventListener('disconnect', handleDisconnect);
     };
   }, [supported, port]);
 
   const readLoop = async (p: SerialPort) => {
     const textDecoder = new TextDecoderStream();
-    const readableClosed = p.readable?.pipeTo(textDecoder.writable);
+    const readableClosed = p.readable?.pipeTo(textDecoder.writable as WritableStream<Uint8Array>);
     const reader = textDecoder.readable.getReader();
     readerRef.current = reader;
     try {
@@ -47,7 +60,7 @@ const SerialTerminalApp: React.FC = () => {
     if (!supported) return;
     setError('');
     try {
-      const p = await (navigator as any).serial.requestPort();
+      const p = await (navigator as NavigatorSerial).serial.requestPort();
       await p.open({ baudRate: 9600 });
       setPort(p);
       readLoop(p);
