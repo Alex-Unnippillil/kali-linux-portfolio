@@ -1,0 +1,26 @@
+[
+  {
+    "title": "Simple network flow",
+    "alt": "Diagram showing a three-step network flow from client to server",
+    "steps": [
+      {
+        "id": 1,
+        "caption": "Client sends request",
+        "bgColor": "#1f2937",
+        "textColor": "#ffffff"
+      },
+      {
+        "id": 2,
+        "caption": "Request processed",
+        "bgColor": "#ffffff",
+        "textColor": "#000000"
+      },
+      {
+        "id": 3,
+        "caption": "Server responds",
+        "bgColor": "#1f2937",
+        "textColor": "#ffffff"
+      }
+    ]
+  }
+]
