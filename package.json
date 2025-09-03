@@ -18,7 +18,8 @@
     "smoke": "node scripts/smoke-all-apps.mjs",
     "module-report": "node scripts/generate-module-report.mjs",
     "build:sw": "node scripts/generate-sw.mjs",
-    "analyze": "ANALYZE=true yarn build"
+    "analyze": "ANALYZE=true yarn build",
+    "check:pr-scripts": "node scripts/check-pr-scripts.mjs"
   },
   "engines": {
     "node": "20.x"
