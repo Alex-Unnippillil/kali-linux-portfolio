@@ -22,8 +22,7 @@ type Listener<T> = (event: T) => void;
 
 class GamepadManager {
   private listeners: Record<string, Set<Listener<any>>> = {};
-  private prevButtons = new Map<number, number[]>();
-  private prevAxes = new Map<number, number[]>();
+  private prevState = new Map<number, { buttons: number[]; axes: number[] }>();
   private raf: number | null = null;
   private deadzone: number;
 
@@ -52,51 +51,53 @@ class GamepadManager {
     this.listeners[type as string]?.forEach((fn) => (fn as Listener<GamepadEventMap[K]>)(event));
   }
 
-  start() {
-    if (this.raf !== null) return;
-    const poll = () => {
-      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-      for (const pad of pads) {
-        if (!pad) continue;
+  private poll = () => {
+    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    for (const pad of pads) {
+      if (!pad) continue;
 
-        const prevB = this.prevButtons.get(pad.index) || [];
-        const prevA = this.prevAxes.get(pad.index) || [];
+      const prev = this.prevState.get(pad.index) || { buttons: [], axes: [] };
 
-        pad.buttons.forEach((b, i) => {
-          const prev = prevB[i] || 0;
-          if (b.value !== prev) {
-            const pressed = b.value > 0.5;
-            const prevPressed = prev > 0.5;
-            this.emit('button', { gamepad: pad, index: i, value: b.value, pressed });
-            if (pressed && !prevPressed && pad.vibrationActuator?.playEffect) {
-              try {
-                pad.vibrationActuator.playEffect('dual-rumble', {
-                  duration: 30,
-                  strongMagnitude: 1.0,
-                  weakMagnitude: 1.0,
-                });
-              } catch {
-                // ignore
-              }
+      pad.buttons.forEach((b, i) => {
+        const prevVal = prev.buttons[i] || 0;
+        if (b.value !== prevVal) {
+          const pressed = b.value > 0.5;
+          const prevPressed = prevVal > 0.5;
+          this.emit('button', { gamepad: pad, index: i, value: b.value, pressed });
+          if (pressed && !prevPressed && pad.vibrationActuator?.playEffect) {
+            try {
+              pad.vibrationActuator.playEffect('dual-rumble', {
+                duration: 30,
+                strongMagnitude: 1.0,
+                weakMagnitude: 1.0,
+              });
+            } catch {
+              // ignore
             }
           }
-        });
+        }
+      });
 
-        pad.axes.forEach((v, i) => {
-          const prev = prevA[i] || 0;
-          const nv = Math.abs(v) < this.deadzone ? 0 : v;
-          const pv = Math.abs(prev) < this.deadzone ? 0 : prev;
-          if (nv !== pv) {
-            this.emit('axis', { gamepad: pad, index: i, value: nv });
-          }
-        });
+      pad.axes.forEach((v, i) => {
+        const prevVal = prev.axes[i] || 0;
+        const nv = Math.abs(v) < this.deadzone ? 0 : v;
+        const pv = Math.abs(prevVal) < this.deadzone ? 0 : prevVal;
+        if (nv !== pv) {
+          this.emit('axis', { gamepad: pad, index: i, value: nv });
+        }
+      });
 
-        this.prevButtons.set(pad.index, pad.buttons.map((b) => b.value));
-        this.prevAxes.set(pad.index, Array.from(pad.axes));
-      }
-      this.raf = requestAnimationFrame(poll);
-    };
-    poll();
+      this.prevState.set(pad.index, {
+        buttons: pad.buttons.map((b) => b.value),
+        axes: Array.from(pad.axes),
+      });
+    }
+    this.raf = requestAnimationFrame(this.poll);
+  };
+
+  start() {
+    if (this.raf !== null) return;
+    this.poll();
   }
 
   stop() {
