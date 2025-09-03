@@ -13,12 +13,13 @@
     "export": "NEXT_PUBLIC_STATIC_EXPORT=true next build && yarn build:sw",
     "test": "jest",
     "test:watch": "jest --watch",
-    "lint": "eslint --max-warnings=0 .",
+    "lint": "node scripts/check-locales.mjs && eslint --max-warnings=0 .",
     "a11y": "node scripts/a11y.mjs",
     "smoke": "node scripts/smoke-all-apps.mjs",
     "module-report": "node scripts/generate-module-report.mjs",
     "build:sw": "node scripts/generate-sw.mjs",
-    "analyze": "ANALYZE=true yarn build"
+    "analyze": "ANALYZE=true yarn build",
+    "lint:locales": "node scripts/check-locales.mjs"
   },
   "engines": {
     "node": "20.x"
