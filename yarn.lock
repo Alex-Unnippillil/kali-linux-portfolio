@@ -8109,7 +8109,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"next@npm:^15.0.0":
+"next@npm:15.5.2":
   version: 15.5.2
   resolution: "next@npm:15.5.2"
   dependencies:
@@ -8165,6 +8165,65 @@ __metadata:
   bin:
     next: dist/bin/next
   checksum: 10c0/3bed56bcca1f0fe07908fa075229f7f2662b4870974570f9e5a944758db9960868704ea4253f05c79507381b2e0014e8b621d7934408e26a0df8cbb3621986d8
+  languageName: node
+  linkType: hard
+
+"next@patch:next@npm:15.5.2#./.yarn/patches/next-npm-15.5.2-fix-module-issuer.patch::locator=unnippillil%40workspace%3A.":
+  version: 15.5.2
+  resolution: "next@patch:next@npm%3A15.5.2#./.yarn/patches/next-npm-15.5.2-fix-module-issuer.patch::version=15.5.2&hash=0b67c1&locator=unnippillil%40workspace%3A."
+  dependencies:
+    "@next/env": "npm:15.5.2"
+    "@next/swc-darwin-arm64": "npm:15.5.2"
+    "@next/swc-darwin-x64": "npm:15.5.2"
+    "@next/swc-linux-arm64-gnu": "npm:15.5.2"
+    "@next/swc-linux-arm64-musl": "npm:15.5.2"
+    "@next/swc-linux-x64-gnu": "npm:15.5.2"
+    "@next/swc-linux-x64-musl": "npm:15.5.2"
+    "@next/swc-win32-arm64-msvc": "npm:15.5.2"
+    "@next/swc-win32-x64-msvc": "npm:15.5.2"
+    "@swc/helpers": "npm:0.5.15"
+    caniuse-lite: "npm:^1.0.30001579"
+    postcss: "npm:8.4.31"
+    sharp: "npm:^0.34.3"
+    styled-jsx: "npm:5.1.6"
+  peerDependencies:
+    "@opentelemetry/api": ^1.1.0
+    "@playwright/test": ^1.51.1
+    babel-plugin-react-compiler: "*"
+    react: ^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0
+    react-dom: ^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0
+    sass: ^1.3.0
+  dependenciesMeta:
+    "@next/swc-darwin-arm64":
+      optional: true
+    "@next/swc-darwin-x64":
+      optional: true
+    "@next/swc-linux-arm64-gnu":
+      optional: true
+    "@next/swc-linux-arm64-musl":
+      optional: true
+    "@next/swc-linux-x64-gnu":
+      optional: true
+    "@next/swc-linux-x64-musl":
+      optional: true
+    "@next/swc-win32-arm64-msvc":
+      optional: true
+    "@next/swc-win32-x64-msvc":
+      optional: true
+    sharp:
+      optional: true
+  peerDependenciesMeta:
+    "@opentelemetry/api":
+      optional: true
+    "@playwright/test":
+      optional: true
+    babel-plugin-react-compiler:
+      optional: true
+    sass:
+      optional: true
+  bin:
+    next: dist/bin/next
+  checksum: 10c0/023215b0a2614ff2f25e7ab2dfa25267c1b742867bfc160e66a55f374b0af30891c1f93c69d340dddff766a91a3a3e763b444eaa890f1182a6813a5e834408d4
   languageName: node
   linkType: hard
 

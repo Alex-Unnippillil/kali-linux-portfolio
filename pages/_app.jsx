@@ -1,8 +1,6 @@
 import { useEffect } from 'react';
-import ReactGA from 'react-ga4';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
-import 'fake-indexeddb/auto';
 import 'tailwindcss/tailwind.css';
 import '../styles/globals.css';
 import '../styles/index.css';
@@ -19,10 +17,17 @@ function MyApp(props) {
 
 
   useEffect(() => {
-    const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
-    if (trackingId) {
-      ReactGA.initialize(trackingId);
-    }
+    const initAnalytics = async () => {
+      const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
+      if (trackingId) {
+        const { default: ReactGA } = await import('react-ga4');
+        ReactGA.initialize(trackingId);
+      }
+    };
+    initAnalytics().catch((err) => {
+      console.error('Analytics initialization failed', err);
+    });
+
     if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
       const register = async () => {
         try {

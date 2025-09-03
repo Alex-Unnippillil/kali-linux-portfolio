@@ -23,6 +23,7 @@ type Listener<T> = (event: T) => void;
 class GamepadManager {
   private listeners: Record<string, Set<Listener<any>>> = {};
   private prevState = new Map<number, { buttons: number[]; axes: number[] }>();
+
   private raf: number | null = null;
   private deadzone: number;
 
@@ -40,15 +41,15 @@ class GamepadManager {
   }
 
   on<K extends keyof GamepadEventMap>(type: K, fn: Listener<GamepadEventMap[K]>) {
-    (this.listeners[type as string] ??= new Set()).add(fn as Listener<any>);
+    this.listeners[type].add(fn);
   }
 
   off<K extends keyof GamepadEventMap>(type: K, fn: Listener<GamepadEventMap[K]>) {
-    this.listeners[type as string]?.delete(fn as Listener<any>);
+    this.listeners[type].delete(fn);
   }
 
   private emit<K extends keyof GamepadEventMap>(type: K, event: GamepadEventMap[K]) {
-    this.listeners[type as string]?.forEach((fn) => (fn as Listener<GamepadEventMap[K]>)(event));
+    this.listeners[type].forEach((fn) => fn(event));
   }
 
   private poll = () => {
