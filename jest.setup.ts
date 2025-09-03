@@ -79,6 +79,21 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
   });
 }
 
+// Minimal IntersectionObserver mock so components relying on it don't crash in tests
+if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
+  class IntersectionObserverMock {
+    constructor() {}
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords() { return []; }
+  }
+  // @ts-ignore
+  window.IntersectionObserver = IntersectionObserverMock;
+  // @ts-ignore
+  global.IntersectionObserver = IntersectionObserverMock as any;
+}
+
 // Simple localStorage mock for environments without it
 if (typeof window !== 'undefined' && !window.localStorage) {
   const store: Record<string, string> = {};
