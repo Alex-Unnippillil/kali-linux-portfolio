@@ -2,6 +2,8 @@
 // Allows external badges and same-origin PDF embedding.
 // Update README (section "CSP External Domains") when editing domains below.
 
+const { validateServerEnv: validateEnv } = require('./lib/validate.js');
+
 const ContentSecurityPolicy = [
   "default-src 'self'",
   // Prevent injection of external base URIs
@@ -82,6 +84,12 @@ function configureWebpack(config, { isServer }) {
     };
   }
   return config;
+}
+
+try {
+  validateEnv?.(process.env);
+} catch {
+  console.warn('Missing env vars; running without validation');
 }
 
 module.exports = withBundleAnalyzer({
