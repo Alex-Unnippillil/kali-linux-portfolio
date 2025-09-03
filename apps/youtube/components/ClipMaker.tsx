@@ -89,6 +89,7 @@ export default function ClipMaker() {
           onClick={copyLink}
           disabled={!link}
           className="rounded bg-gray-700 px-2 py-1 disabled:opacity-50"
+          aria-label="Copy link"
         >
           Copy Link
         </button>

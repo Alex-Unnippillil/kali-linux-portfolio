@@ -6,6 +6,7 @@ import Standard from 'figlet/importable-fonts/Standard.js';
 import Slant from 'figlet/importable-fonts/Slant.js';
 import Big from 'figlet/importable-fonts/Big.js';
 import { useRouter } from 'next/router';
+import copyToClipboard from '../../utils/clipboard';
 
 const fontList = ['Standard', 'Slant', 'Big'];
 const fontSizes = [10, 12, 14];
@@ -182,7 +183,7 @@ const AsciiArtApp = () => {
       const colored = value
         ? `${palette[fg].fgAnsi}${palette[bg].bgAnsi}${value}${ESC}[0m`
         : '';
-      await navigator.clipboard.writeText(colored);
+      await copyToClipboard(colored);
     } catch {
       // ignore
     }
@@ -311,6 +312,7 @@ const AsciiArtApp = () => {
             <button
               className="px-2 py-1 bg-blue-700 rounded flex items-center gap-1"
               onClick={() => copy(output)}
+              aria-label="Copy ASCII"
             >
               <CopyIcon />
               <span>Copy ASCII</span>
@@ -408,6 +410,7 @@ const AsciiArtApp = () => {
             <button
               className="px-2 py-1 bg-blue-700 rounded flex items-center gap-1"
               onClick={() => copy(imgOutput)}
+              aria-label="Copy ASCII"
             >
               <CopyIcon />
               <span>Copy ASCII</span>

@@ -9,13 +9,13 @@ This project is built with [Next.js](https://nextjs.org/).
 
 ## Installation
 
-```bash
+```bash copy
 yarn install
 ```
 
 ## Running in Development
 
-```bash
+```bash copy
 yarn dev
 ```
 

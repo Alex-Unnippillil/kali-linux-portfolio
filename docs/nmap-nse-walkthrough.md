@@ -6,7 +6,7 @@ This guide shows how an Nmap scan using the default vulnerability scripts might 
 
 ## Example Command
 
-```
+```bash copy
 nmap -sV --script vuln 10.0.0.5
 ```
 
@@ -15,7 +15,7 @@ nmap -sV --script vuln 10.0.0.5
 
 ## Static Example Output
 
-```
+```text copy
 PORT   STATE SERVICE VERSION
 22/tcp open  ssh     OpenSSH 8.9p1
 80/tcp open  http    Apache httpd 2.4.52

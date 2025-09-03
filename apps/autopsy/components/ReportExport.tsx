@@ -55,6 +55,7 @@ const ReportExport: React.FC<ReportExportProps> = ({ caseName = 'case', artifact
       <button
         onClick={copyReport}
         className="bg-ub-gray px-3 py-1 rounded text-sm text-black"
+        aria-label="Copy HTML report"
       >
         Copy HTML Report
       </button>

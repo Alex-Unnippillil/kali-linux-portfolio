@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import modulesData from '../data/module-index.json';
 import versionInfo from '../data/module-version.json';
+import copyToClipboard from '../utils/clipboard';
 
 interface Module {
   id: string;
@@ -56,15 +57,11 @@ const PopularModules: React.FC = () => {
     : [];
   const copyLogs = () => {
     const text = filteredLog.map((l) => l.message).join('\n');
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(text);
-    }
+    copyToClipboard(text);
   };
 
   const copyCommand = () => {
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(commandPreview);
-    }
+    copyToClipboard(commandPreview);
   };
 
   useEffect(() => {
@@ -277,6 +274,7 @@ const PopularModules: React.FC = () => {
               type="button"
               onClick={copyCommand}
               className="px-2 py-1 text-sm rounded bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              aria-label="Copy command"
             >
               Copy
             </button>
@@ -296,6 +294,7 @@ const PopularModules: React.FC = () => {
               type="button"
               onClick={copyLogs}
               className="px-2 py-1 text-sm rounded bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              aria-label="Copy logs"
             >
               Copy Logs
             </button>
