@@ -18,7 +18,10 @@
     "smoke": "node scripts/smoke-all-apps.mjs",
     "module-report": "node scripts/generate-module-report.mjs",
     "build:sw": "node scripts/generate-sw.mjs",
-    "analyze": "ANALYZE=true yarn build"
+    "analyze": "ANALYZE=true yarn build",
+    "generate:specs": "node scripts/generate-route-specs.mjs",
+    "test:generated": "yarn generate:specs && npx playwright test tests/generated",
+    "check:routes": "yarn generate:specs && git diff --exit-code tests/generated"
   },
   "engines": {
     "node": "20.x"
