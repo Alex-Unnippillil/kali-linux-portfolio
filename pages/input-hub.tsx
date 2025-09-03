@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import emailjs from '@emailjs/browser';
-import { useRouter } from 'next/router';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const subjectTemplates = [
   'General Inquiry',
@@ -24,6 +24,7 @@ const QUEUE_KEY = 'input-hub-queue';
 
 const InputHub = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [subject, setSubject] = useState(subjectTemplates[0]);
@@ -33,18 +34,22 @@ const InputHub = () => {
   const [emailjsReady, setEmailjsReady] = useState(false);
 
   useEffect(() => {
-    const { preset, title, text, url, files } = router.query;
+    const preset = searchParams.get('preset');
+    const title = searchParams.get('title');
+    const textParam = searchParams.get('text');
+    const url = searchParams.get('url');
+    const files = searchParams.get('files');
     if (preset === 'contact') {
       setSubject('General Inquiry');
     }
     const parts: string[] = [];
-    if (title) parts.push(String(title));
-    if (text) parts.push(String(text));
-    if (url) parts.push(String(url));
+    if (title) parts.push(title);
+    if (textParam) parts.push(textParam);
+    if (url) parts.push(url);
     if (files) {
       try {
         const list = JSON.parse(
-          decodeURIComponent(String(files))
+          decodeURIComponent(files)
         ) as { name: string; type: string }[];
         parts.push(
           ...list.map((f) => `File: ${f.name} (${f.type})`)
@@ -57,7 +62,7 @@ const InputHub = () => {
       const incoming = parts.join('\n');
       setMessage((m) => (m ? `${m}\n${incoming}` : incoming));
     }
-  }, [router.query]);
+  }, [searchParams]);
 
   useEffect(() => {
     const userId = process.env.NEXT_PUBLIC_USER_ID;

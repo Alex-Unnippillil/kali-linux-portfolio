@@ -13,5 +13,5 @@ jobs:
           node-version: 20
           cache: yarn
       - run: yarn install --immutable --immutable-cache
-      - run: yarn lint
+      - run: yarn codemod:next-router:check
       - run: yarn build

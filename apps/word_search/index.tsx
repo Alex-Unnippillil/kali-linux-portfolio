@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { z } from 'zod';
-import { useRouter } from 'next/router';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { generateGrid, createRNG } from './generator';
 import type { Position, WordPlacement } from './types';
 import wordList from '../../components/apps/wordle_words.json';
@@ -41,7 +41,10 @@ interface WordSearchInnerProps {
 
 const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
   const router = useRouter();
-  const { seed: seedQuery, words: wordsQuery } = router.query as { seed?: string; words?: string };
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const seedQuery = searchParams.get('seed') || undefined;
+  const wordsQuery = searchParams.get('words') || undefined;
   const [seed, setSeed] = useState('');
   const [words, setWords] = useState<string[]>([]);
   const [grid, setGrid] = useState<string[][]>([]);
@@ -245,11 +248,8 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
     setSeed(newSeed);
     setWords(list);
     setPack('custom');
-    router.replace(
-      { pathname: router.pathname, query: { seed: newSeed, words: list.join(',') } },
-      undefined,
-      { shallow: true }
-    );
+    const params = new URLSearchParams({ seed: newSeed, words: list.join(',') });
+    router.replace(`${pathname}?${params.toString()}`);
   };
 
   const copyLink = async () => {
@@ -264,11 +264,8 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
 
   const newPuzzle = () => {
     const newSeed = Math.random().toString(36).slice(2);
-    router.replace(
-      { pathname: router.pathname, query: { seed: newSeed, words: words.join(',') } },
-      undefined,
-      { shallow: true }
-    );
+    const params = new URLSearchParams({ seed: newSeed, words: words.join(',') });
+    router.replace(`${pathname}?${params.toString()}`);
   };
 
   const restart = () => {

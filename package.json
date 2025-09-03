@@ -13,12 +13,14 @@
     "export": "NEXT_PUBLIC_STATIC_EXPORT=true next build && yarn build:sw",
     "test": "jest",
     "test:watch": "jest --watch",
-    "lint": "eslint --max-warnings=0 .",
+    "lint": "eslint . --ignore-pattern __tests__",
     "a11y": "node scripts/a11y.mjs",
     "smoke": "node scripts/smoke-all-apps.mjs",
     "module-report": "node scripts/generate-module-report.mjs",
     "build:sw": "node scripts/generate-sw.mjs",
-    "analyze": "ANALYZE=true yarn build"
+    "analyze": "ANALYZE=true yarn build",
+    "codemod:next-router": "node scripts/codemods/next-router-to-next-navigation.mjs --apply",
+    "codemod:next-router:check": "node scripts/codemods/next-router-to-next-navigation.mjs --check"
   },
   "engines": {
     "node": "20.x"
@@ -115,6 +117,8 @@
     "@types/three": "^0.179.0",
     "@types/web-bluetooth": "^0.0.21",
     "@types/wicg-file-system-access": "^2023.10.6",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
     "eslint": "^9.13.0",
     "eslint-config-next": "^15.0.0",
     "fake-indexeddb": "^6.1.0",

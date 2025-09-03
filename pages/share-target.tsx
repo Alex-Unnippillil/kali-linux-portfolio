@@ -1,16 +1,18 @@
-import { useRouter } from 'next/router';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 
 export default function ShareTarget() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    if (!router.isReady) return;
     const params = new URLSearchParams();
-    const { title, text, url } = router.query;
-    if (title) params.set('title', String(title));
-    if (text) params.set('text', String(text));
-    if (url) params.set('url', String(url));
+    const title = searchParams.get('title');
+    const text = searchParams.get('text');
+    const url = searchParams.get('url');
+    if (title) params.set('title', title);
+    if (text) params.set('text', text);
+    if (url) params.set('url', url);
 
     if ('launchQueue' in window) {
       (window as any).launchQueue.setConsumer(async (launchParams: any) => {
@@ -28,7 +30,7 @@ export default function ShareTarget() {
     } else {
       router.replace(`/input-hub?${params.toString()}`);
     }
-  }, [router]);
+  }, [router, searchParams]);
 
   return <p>Loading...</p>;
 }
