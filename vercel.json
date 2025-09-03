@@ -1,15 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
-    "pages/api/**/*.{js,ts}": {
-      "runtime": "nodejs20.x",
-      "memory": 1024,
-      "maxDuration": 30
-    },
-    "app/api/**/route.{js,ts}": {
-      "runtime": "nodejs20.x",
-      "memory": 1024,
-      "maxDuration": 30
-    }
+    "pages/api/**/*.{js,ts}": { "runtime": "nodejs20.x" },
+    "app/api/**/route.{js,ts}": { "runtime": "nodejs20.x" }
+
   }
 }
