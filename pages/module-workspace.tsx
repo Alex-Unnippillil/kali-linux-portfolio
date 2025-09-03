@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import usePersistentState from '../hooks/usePersistentState';
 import { setValue, getAll } from '../utils/moduleStore';
 
@@ -60,12 +60,16 @@ const ModuleWorkspace: React.FC = () => {
   const [result, setResult] = useState('');
   const [storeData, setStoreData] = useState<Record<string, string>>({});
 
-  const tags = Array.from(new Set(modules.flatMap((m) => m.tags)));
-  const filteredModules = filter
-    ? modules.filter((m) => m.tags.includes(filter))
-    : modules;
+  const tags = useMemo(
+    () => Array.from(new Set(modules.flatMap((m) => m.tags))),
+    [],
+  );
+  const filteredModules = useMemo(
+    () => (filter ? modules.filter((m) => m.tags.includes(filter)) : modules),
+    [filter],
+  );
 
-  const addWorkspace = () => {
+  const addWorkspace = useCallback(() => {
     const name = newWorkspace.trim();
     if (!name) return;
     if (!workspaces.includes(name)) {
@@ -73,9 +77,9 @@ const ModuleWorkspace: React.FC = () => {
     }
     setCurrentWorkspace(name);
     setNewWorkspace('');
-  };
+  }, [newWorkspace, workspaces, setWorkspaces]);
 
-  const selectModule = (mod: Module) => {
+  const selectModule = useCallback((mod: Module) => {
     setSelected(mod);
     const initial: Record<string, string> = {};
     mod.options.forEach((o) => {
@@ -83,9 +87,9 @@ const ModuleWorkspace: React.FC = () => {
     });
     setOptionValues(initial);
     setResult('');
-  };
+  }, []);
 
-  const runCommand = () => {
+  const runCommand = useCallback(() => {
     if (!selected) return;
     const opts = selected.options
       .map((o) => `${o.name}=${optionValues[o.name] || ''}`)
@@ -95,7 +99,7 @@ const ModuleWorkspace: React.FC = () => {
     setResult(res);
     setValue(selected.id, res);
     setStoreData(getAll());
-  };
+  }, [selected, optionValues]);
 
   return (
     <div className="p-4 space-y-4 bg-ub-cool-grey text-white min-h-screen">
