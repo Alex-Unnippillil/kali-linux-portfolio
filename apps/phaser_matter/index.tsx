@@ -149,6 +149,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
 
       create() {
         const data = this.cache.json.get('level');
+        // eslint-disable-next-line react/no-direct-mutation-state
         this.state = new GameState(data.spawn);
 
         // Parallax background layers

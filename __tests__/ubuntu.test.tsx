@@ -2,9 +2,15 @@ import React, { act } from 'react';
 import { render, screen } from '@testing-library/react';
 import Ubuntu from '../components/ubuntu';
 
-jest.mock('../components/screen/desktop', () => () => <div data-testid="desktop" />);
-jest.mock('../components/screen/navbar', () => () => <div data-testid="navbar" />);
-jest.mock('../components/screen/lock_screen', () => () => <div data-testid="lock-screen" />);
+jest.mock('../components/screen/desktop', () => function Desktop() {
+  return <div data-testid="desktop" />;
+});
+jest.mock('../components/screen/navbar', () => function Navbar() {
+  return <div data-testid="navbar" />;
+});
+jest.mock('../components/screen/lock_screen', () => function LockScreen() {
+  return <div data-testid="lock-screen" />;
+});
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 
 describe('Ubuntu component', () => {
