@@ -18,6 +18,7 @@ import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
+import { safeLocalStorage } from '../../utils/safeStorage';
 
 export class Desktop extends Component {
     constructor() {
@@ -89,12 +90,13 @@ export class Desktop extends Component {
     }
 
     checkForNewFolders = () => {
-        var new_folders = localStorage.getItem('new_folders');
-        if (new_folders === null && new_folders !== undefined) {
-            localStorage.setItem("new_folders", JSON.stringify([]));
+        const stored = safeLocalStorage?.getItem('new_folders');
+        if (!stored) {
+            safeLocalStorage?.setItem('new_folders', JSON.stringify([]));
+            return;
         }
-        else {
-            new_folders = JSON.parse(new_folders);
+        try {
+            const new_folders = JSON.parse(stored);
             new_folders.forEach(folder => {
                 apps.push({
                     id: `new-folder-${folder.id}`,
@@ -107,6 +109,8 @@ export class Desktop extends Component {
                 });
             });
             this.updateAppsData();
+        } catch (e) {
+            safeLocalStorage?.setItem('new_folders', JSON.stringify([]));
         }
     }
 
@@ -241,13 +245,13 @@ export class Desktop extends Component {
     }
 
     fetchAppsData = (callback) => {
-        let pinnedApps = localStorage.getItem('pinnedApps')
+        let pinnedApps = safeLocalStorage?.getItem('pinnedApps');
         if (pinnedApps) {
-            pinnedApps = JSON.parse(pinnedApps)
-            apps.forEach(app => { app.favourite = pinnedApps.includes(app.id) })
+            pinnedApps = JSON.parse(pinnedApps);
+            apps.forEach(app => { app.favourite = pinnedApps.includes(app.id); });
         } else {
-            pinnedApps = apps.filter(app => app.favourite).map(app => app.id)
-            localStorage.setItem('pinnedApps', JSON.stringify(pinnedApps))
+            pinnedApps = apps.filter(app => app.favourite).map(app => app.id);
+            safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps));
         }
         let focused_windows = {}, closed_windows = {}, disabled_apps = {}, favourite_apps = {}, overlapped_windows = {}, minimized_windows = {};
         let desktop_apps = [];
@@ -504,7 +508,8 @@ export class Desktop extends Component {
         else {
             let closed_windows = this.state.closed_windows;
             let favourite_apps = this.state.favourite_apps;
-            var frequentApps = localStorage.getItem('frequentApps') ? JSON.parse(localStorage.getItem('frequentApps')) : [];
+            let frequentApps = [];
+            try { frequentApps = JSON.parse(safeLocalStorage?.getItem('frequentApps') || '[]'); } catch (e) { frequentApps = []; }
             var currentApp = frequentApps.find(app => app.id === objId);
             if (currentApp) {
                 frequentApps.forEach((app) => {
@@ -526,7 +531,7 @@ export class Desktop extends Component {
                 return 0; // sort according to decreasing frequencies
             });
 
-            localStorage.setItem("frequentApps", JSON.stringify(frequentApps));
+            safeLocalStorage?.setItem('frequentApps', JSON.stringify(frequentApps));
 
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
@@ -555,11 +560,11 @@ export class Desktop extends Component {
 
         // persist in trash with autopurge
         const appMeta = apps.find(a => a.id === objId) || {};
-        const purgeDays = parseInt(localStorage.getItem('trash-purge-days') || '30', 10);
+        const purgeDays = parseInt(safeLocalStorage?.getItem('trash-purge-days') || '30', 10);
         const ms = purgeDays * 24 * 60 * 60 * 1000;
         const now = Date.now();
         let trash = [];
-        try { trash = JSON.parse(localStorage.getItem('window-trash')) || []; } catch (e) { trash = []; }
+        try { trash = JSON.parse(safeLocalStorage?.getItem('window-trash') || '[]'); } catch (e) { trash = []; }
         trash = trash.filter(item => now - item.closedAt <= ms);
         trash.push({
             id: objId,
@@ -568,7 +573,7 @@ export class Desktop extends Component {
             image,
             closedAt: now,
         });
-        localStorage.setItem('window-trash', JSON.stringify(trash));
+        safeLocalStorage?.setItem('window-trash', JSON.stringify(trash));
         this.updateTrashIcon();
 
         // remove app from the app stack
@@ -594,9 +599,10 @@ export class Desktop extends Component {
         this.initFavourite[id] = true
         const app = apps.find(a => a.id === id)
         if (app) app.favourite = true
-        let pinnedApps = JSON.parse(localStorage.getItem('pinnedApps')) || []
+        let pinnedApps = [];
+        try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
         if (!pinnedApps.includes(id)) pinnedApps.push(id)
-        localStorage.setItem('pinnedApps', JSON.stringify(pinnedApps))
+        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
         this.setState({ favourite_apps }, () => { this.saveSession(); })
         this.hideAllContextMenu()
     }
@@ -607,9 +613,10 @@ export class Desktop extends Component {
         this.initFavourite[id] = false
         const app = apps.find(a => a.id === id)
         if (app) app.favourite = false
-        let pinnedApps = JSON.parse(localStorage.getItem('pinnedApps')) || []
+        let pinnedApps = [];
+        try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
         pinnedApps = pinnedApps.filter(appId => appId !== id)
-        localStorage.setItem('pinnedApps', JSON.stringify(pinnedApps))
+        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
         this.setState({ favourite_apps }, () => { this.saveSession(); })
         this.hideAllContextMenu()
     }
@@ -641,32 +648,37 @@ export class Desktop extends Component {
         const appIndex = apps.findIndex(app => app.id === app_id);
         if (appIndex === -1) return;
         apps[appIndex].desktop_shortcut = true;
-        let shortcuts = JSON.parse(localStorage.getItem('app_shortcuts') || '[]');
+        let shortcuts = [];
+        try { shortcuts = JSON.parse(safeLocalStorage?.getItem('app_shortcuts') || '[]'); } catch (e) { shortcuts = []; }
         if (!shortcuts.includes(app_id)) {
             shortcuts.push(app_id);
-            localStorage.setItem('app_shortcuts', JSON.stringify(shortcuts));
+            safeLocalStorage?.setItem('app_shortcuts', JSON.stringify(shortcuts));
         }
         this.setState({ showShortcutSelector: false }, this.updateAppsData);
     }
 
     checkForAppShortcuts = () => {
-        let shortcuts = localStorage.getItem('app_shortcuts');
-        if (shortcuts === null && shortcuts !== undefined) {
-            localStorage.setItem('app_shortcuts', JSON.stringify([]));
-        } else if (shortcuts) {
-            JSON.parse(shortcuts).forEach(id => {
-                const appIndex = apps.findIndex(app => app.id === id);
-                if (appIndex !== -1) {
-                    apps[appIndex].desktop_shortcut = true;
-                }
-            });
+        const shortcuts = safeLocalStorage?.getItem('app_shortcuts');
+        if (!shortcuts) {
+            safeLocalStorage?.setItem('app_shortcuts', JSON.stringify([]));
+        } else {
+            try {
+                JSON.parse(shortcuts).forEach(id => {
+                    const appIndex = apps.findIndex(app => app.id === id);
+                    if (appIndex !== -1) {
+                        apps[appIndex].desktop_shortcut = true;
+                    }
+                });
+            } catch (e) {
+                safeLocalStorage?.setItem('app_shortcuts', JSON.stringify([]));
+            }
             this.updateAppsData();
         }
     }
 
     updateTrashIcon = () => {
         let trash = [];
-        try { trash = JSON.parse(localStorage.getItem('window-trash') || '[]'); } catch (e) { trash = []; }
+        try { trash = JSON.parse(safeLocalStorage?.getItem('window-trash') || '[]'); } catch (e) { trash = []; }
         const appIndex = apps.findIndex(app => app.id === 'trash');
         if (appIndex !== -1) {
             const icon = trash.length
@@ -692,9 +704,10 @@ export class Desktop extends Component {
             screen: () => { },
         });
         // store in local storage
-        var new_folders = JSON.parse(localStorage.getItem('new_folders'));
+        let new_folders = [];
+        try { new_folders = JSON.parse(safeLocalStorage?.getItem('new_folders') || '[]'); } catch (e) { new_folders = []; }
         new_folders.push({ id: `new-folder-${folder_id}`, name: folder_name });
-        localStorage.setItem("new_folders", JSON.stringify(new_folders));
+        safeLocalStorage?.setItem('new_folders', JSON.stringify(new_folders));
 
         this.setState({ showNameBar: false }, this.updateAppsData);
     }
