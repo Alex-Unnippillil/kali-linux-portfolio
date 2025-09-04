@@ -1,7 +1,8 @@
 "use client";
 
 import usePersistentState from '../../hooks/usePersistentState.js';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import AboutDialog from './AboutDialog';
 
 interface Props {
   open: boolean;
@@ -12,6 +13,7 @@ const QuickSettings = ({ open }: Props) => {
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -52,6 +54,12 @@ const QuickSettings = ({ open }: Props) => {
           onChange={() => setReduceMotion(!reduceMotion)}
         />
       </div>
+      <div className="px-4 pt-2">
+        <button className="w-full text-left" onClick={() => setAboutOpen(true)}>
+          About
+        </button>
+      </div>
+      <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} />
     </div>
   );
 };
