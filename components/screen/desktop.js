@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import bindShortcuts from '../../utils/shortcuts';
 
 export class Desktop extends Component {
     constructor() {
@@ -30,6 +31,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.unbindShortcuts = null;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -88,12 +90,19 @@ export class Desktop extends Component {
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
+        this.unbindShortcuts = bindShortcuts({
+            switchWorkspace: this.switchWorkspace,
+            cycleWindows: this.cycleWindows,
+            close: this.closeFocusedWindow,
+            endCycle: this.closeWindowSwitcher,
+        });
     }
 
     componentWillUnmount() {
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
+        this.unbindShortcuts?.();
     }
 
     checkForNewFolders = () => {
@@ -145,18 +154,9 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcut = (e) => {
-        if (e.altKey && e.key === 'Tab') {
-            e.preventDefault();
-            if (!this.state.showWindowSwitcher) {
-                this.openWindowSwitcher();
-            }
-        } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
+        if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
             e.preventDefault();
             this.openApp('clipboard-manager');
-        }
-        else if (e.altKey && e.key === 'Tab') {
-            e.preventDefault();
-            this.cycleApps(e.shiftKey ? -1 : 1);
         }
         else if (e.altKey && (e.key === '`' || e.key === '~')) {
             e.preventDefault();
@@ -207,6 +207,23 @@ export class Desktop extends Component {
         let index = windows.indexOf(currentId);
         let next = (index + direction + windows.length) % windows.length;
         this.focus(windows[next]);
+    }
+
+    cycleWindows = (direction) => {
+        if (!this.state.showWindowSwitcher) {
+            this.openWindowSwitcher();
+        }
+        this.cycleApps(direction);
+    }
+
+    closeFocusedWindow = () => {
+        const id = this.getFocusedWindowId();
+        if (id) this.closeApp(id);
+    }
+
+    switchWorkspace = (direction) => {
+        const event = new CustomEvent('workspace-switch', { detail: direction });
+        window.dispatchEvent(event);
     }
 
     openWindowSwitcher = () => {
@@ -822,8 +839,8 @@ export class Desktop extends Component {
         return (
             <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
                 <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
-                    <span>New folder name</span>
-                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
+                    <label htmlFor="folder-name-input">New folder name</label>
+                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} aria-label="Folder name" />
                 </div>
                 <div className="flex">
                     <button
