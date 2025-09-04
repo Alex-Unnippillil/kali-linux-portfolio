@@ -6,7 +6,12 @@ import QRCode from 'qrcode';
 import { BrowserQRCodeReader, NotFoundException } from '@zxing/library';
 import Tabs from '../../components/Tabs';
 import FormError from '../../components/ui/FormError';
-import { clearScans, loadScans, saveScans } from '../../utils/qrStorage';
+import {
+  clearScans,
+  loadScans,
+  saveScans,
+  type QRScan,
+} from '../../utils/qrStorage';
 
 const tabs = [
   { id: 'text', label: 'Text' },
@@ -32,7 +37,7 @@ const QRPage: React.FC = () => {
   const [qrSvg, setQrSvg] = useState('');
   const [fileName, setFileName] = useState('qr');
   const [scanResult, setScanResult] = useState('');
-  const [batch, setBatch] = useState<string[]>([]);
+  const [batch, setBatch] = useState<QRScan[]>([]);
   const [error, setError] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
@@ -136,7 +141,7 @@ const QRPage: React.FC = () => {
             if (result) {
               const text = result.getText();
               setScanResult(text);
-              setBatch((prev) => [...prev, text]);
+              setBatch((prev) => [...prev, { data: text, annotation: '' }]);
             }
             if (err && !(err instanceof NotFoundException)) {
               setError('Failed to read QR code');
@@ -170,9 +175,13 @@ const QRPage: React.FC = () => {
 
   const exportCsv = () => {
     if (!batch.length) return;
-    const header = 'data\n';
+    const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
+    const header = 'data,annotation\n';
     const csv =
-      header + batch.map((s) => `"${s.replace(/"/g, '""')}"`).join('\n');
+      header +
+      batch
+        .map((s) => `${escape(s.data)},${escape(s.annotation)}`)
+        .join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -201,13 +210,14 @@ const QRPage: React.FC = () => {
             <label className="block text-sm" htmlFor="qr-text">
               Text
             </label>
-            <input
-              id="qr-text"
-              type="text"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              className="w-full rounded border p-2"
-            />
+              <input
+                id="qr-text"
+                type="text"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                className="w-full rounded border p-2"
+                aria-label="Text"
+              />
             <button
               type="submit"
               className="w-full rounded bg-blue-600 p-2 text-white"
@@ -221,13 +231,14 @@ const QRPage: React.FC = () => {
             <label className="block text-sm" htmlFor="qr-url">
               URL
             </label>
-            <input
-              id="qr-url"
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              className="w-full rounded border p-2"
-            />
+              <input
+                id="qr-url"
+                type="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                className="w-full rounded border p-2"
+                aria-label="URL"
+              />
             <button
               type="submit"
               className="w-full rounded bg-blue-600 p-2 text-white"
@@ -240,21 +251,23 @@ const QRPage: React.FC = () => {
           <form onSubmit={generateQr} className="space-y-2">
             <label className="block text-sm">
               SSID
-              <input
-                type="text"
-                value={ssid}
-                onChange={(e) => setSsid(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
-              />
+                <input
+                  type="text"
+                  value={ssid}
+                  onChange={(e) => setSsid(e.target.value)}
+                  className="mt-1 w-full rounded border p-2"
+                  aria-label="SSID"
+                />
             </label>
             <label className="block text-sm">
               Password
-              <input
-                type="text"
-                value={wifiPassword}
-                onChange={(e) => setWifiPassword(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
-              />
+                <input
+                  type="text"
+                  value={wifiPassword}
+                  onChange={(e) => setWifiPassword(e.target.value)}
+                  className="mt-1 w-full rounded border p-2"
+                  aria-label="Password"
+                />
             </label>
             <label className="block text-sm">
               Encryption
@@ -280,39 +293,43 @@ const QRPage: React.FC = () => {
           <form onSubmit={generateQr} className="space-y-2">
             <label className="block text-sm">
               Full Name
-              <input
-                type="text"
-                value={vName}
-                onChange={(e) => setVName(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
-              />
+                <input
+                  type="text"
+                  value={vName}
+                  onChange={(e) => setVName(e.target.value)}
+                  className="mt-1 w-full rounded border p-2"
+                  aria-label="Full Name"
+                />
             </label>
             <label className="block text-sm">
               Organization
-              <input
-                type="text"
-                value={vOrg}
-                onChange={(e) => setVOrg(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
-              />
+                <input
+                  type="text"
+                  value={vOrg}
+                  onChange={(e) => setVOrg(e.target.value)}
+                  className="mt-1 w-full rounded border p-2"
+                  aria-label="Organization"
+                />
             </label>
             <label className="block text-sm">
               Phone
-              <input
-                type="tel"
-                value={vPhone}
-                onChange={(e) => setVPhone(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
-              />
+                <input
+                  type="tel"
+                  value={vPhone}
+                  onChange={(e) => setVPhone(e.target.value)}
+                  className="mt-1 w-full rounded border p-2"
+                  aria-label="Phone"
+                />
             </label>
             <label className="block text-sm">
               Email
-              <input
-                type="email"
-                value={vEmail}
-                onChange={(e) => setVEmail(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
-              />
+                <input
+                  type="email"
+                  value={vEmail}
+                  onChange={(e) => setVEmail(e.target.value)}
+                  className="mt-1 w-full rounded border p-2"
+                  aria-label="Email"
+                />
             </label>
             <button
               type="submit"
@@ -351,15 +368,35 @@ const QRPage: React.FC = () => {
         )}
       </div>
       <div className="w-full max-w-md">
-        <video ref={videoRef} className="h-48 w-full rounded border" />
+        <video
+          ref={videoRef}
+          className="h-48 w-full rounded border"
+          aria-label="QR scanner"
+        />
         {scanResult && (
           <p className="mt-2 text-center text-sm">Decoded: {scanResult}</p>
         )}
         {batch.length > 0 && (
           <>
             <ul className="mt-2 max-h-40 overflow-y-auto rounded border p-2 text-sm">
-              {batch.map((code, i) => (
-                <li key={i}>{code}</li>
+              {batch.map((scan, i) => (
+                <li key={i} className="mb-2">
+                  <div className="break-all">{scan.data}</div>
+                  <input
+                    type="text"
+                    value={scan.annotation}
+                    onChange={(e) =>
+                      setBatch((prev) =>
+                        prev.map((s, j) =>
+                          j === i ? { ...s, annotation: e.target.value } : s,
+                        ),
+                      )
+                    }
+                    placeholder="Annotation"
+                    className="mt-1 w-full rounded border p-1"
+                    aria-label="Annotation"
+                  />
+                </li>
               ))}
             </ul>
             <div className="mt-2 flex gap-2">

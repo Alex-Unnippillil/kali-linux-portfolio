@@ -5,6 +5,11 @@ const LAST_SCAN_KEY = 'qrLastScan';
 const LAST_GEN_KEY = 'qrLastGeneration';
 const FILE_NAME = 'qr-scans.json';
 
+export interface QRScan {
+  data: string;
+  annotation: string;
+}
+
 type StorageWithDirectory = StorageManager & {
   // TODO: refine type when File System Access API types are finalized
   getDirectory: () => Promise<FileSystemDirectoryHandle>;
@@ -16,26 +21,42 @@ const getStorage = (): StorageWithDirectory =>
 const hasOpfs =
   isBrowser && 'storage' in navigator && Boolean(getStorage().getDirectory);
 
-export const loadScans = async (): Promise<string[]> => {
+const parseScans = (raw: string | null): QRScan[] => {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    if (Array.isArray(arr)) {
+      return arr.map((item: any) =>
+        typeof item === 'string'
+          ? { data: item, annotation: '' }
+          : {
+              data: String(item.data ?? ''),
+              annotation: String(item.annotation ?? ''),
+            },
+      );
+    }
+    return [];
+  } catch {
+    return [];
+  }
+};
+
+export const loadScans = async (): Promise<QRScan[]> => {
   if (!isBrowser) return [];
   if (hasOpfs) {
     try {
       const root = await getStorage().getDirectory();
       const handle = await root.getFileHandle(FILE_NAME);
       const file = await handle.getFile();
-      return JSON.parse(await file.text());
+      return parseScans(await file.text());
     } catch {
       return [];
     }
   }
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-  } catch {
-    return [];
-  }
+  return parseScans(localStorage.getItem(STORAGE_KEY));
 };
 
-export const saveScans = async (scans: string[]): Promise<void> => {
+export const saveScans = async (scans: QRScan[]): Promise<void> => {
   if (!isBrowser) return;
   if (hasOpfs) {
     const root = await getStorage().getDirectory();

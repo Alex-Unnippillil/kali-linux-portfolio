@@ -1,4 +1,9 @@
-import { clearScans, loadScans, saveScans } from '../utils/qrStorage';
+import {
+  clearScans,
+  loadScans,
+  saveScans,
+  type QRScan,
+} from '../utils/qrStorage';
 
 describe('qrStorage', () => {
   beforeEach(() => {
@@ -6,15 +11,25 @@ describe('qrStorage', () => {
   });
 
   it('saves and loads scans', async () => {
-    await saveScans(['a', 'b']);
+    const scans: QRScan[] = [
+      { data: 'a', annotation: 'note a' },
+      { data: 'b', annotation: '' },
+    ];
+    await saveScans(scans);
     const loaded = await loadScans();
-    expect(loaded).toEqual(['a', 'b']);
+    expect(loaded).toEqual(scans);
   });
 
   it('clears scans', async () => {
-    await saveScans(['c']);
+    await saveScans([{ data: 'c', annotation: '' }]);
     await clearScans();
     const loaded = await loadScans();
     expect(loaded).toEqual([]);
+  });
+
+  it('loads legacy string array format', async () => {
+    localStorage.setItem('qrScans', JSON.stringify(['x']));
+    const loaded = await loadScans();
+    expect(loaded).toEqual([{ data: 'x', annotation: '' }]);
   });
 });
