@@ -5,6 +5,7 @@ import PluginWalkthrough from '../../../apps/volatility/components/PluginWalkthr
 import memoryFixture from '../../../public/demo-data/volatility/memory.json';
 import pslistJson from '../../../public/demo-data/volatility/pslist.json';
 import netscanJson from '../../../public/demo-data/volatility/netscan.json';
+import VirtualList from 'rc-virtual-list';
 
 // pull demo data for various volatility plugins from the memory fixture
 const pstree = Array.isArray(memoryFixture.pstree)
@@ -83,37 +84,46 @@ const SortableTable = ({ columns, data, onRowClick }) => {
     }));
   };
 
+  const columnTemplate = `repeat(${columns.length}, minmax(0,1fr))`;
+
   return (
-    <table className="w-full text-xs table-auto">
-      <thead>
-        <tr>
-          {columns.map((col) => (
-            <th
-              key={col.key}
-              onClick={() => toggleSort(col.key)}
-              className="cursor-pointer px-2 py-1 text-left bg-gray-700"
-            >
-              {col.label}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {sorted.map((row, i) => (
-          <tr
-            key={i}
-            className="odd:bg-gray-800 cursor-pointer"
+    <div className="text-xs">
+      <div
+        className="grid bg-gray-700 cursor-pointer"
+        style={{ gridTemplateColumns: columnTemplate }}
+      >
+        {columns.map((col) => (
+          <div
+            key={col.key}
+            onClick={() => toggleSort(col.key)}
+            className="px-2 py-1 text-left"
+          >
+            {col.label}
+          </div>
+        ))}
+      </div>
+      <VirtualList
+        data={sorted}
+        height={240}
+        itemHeight={32}
+        itemKey={(row, index) => index}
+      >
+        {(row, index) => (
+          <div
+            key={index}
+            className="grid odd:bg-gray-800 cursor-pointer"
+            style={{ gridTemplateColumns: columnTemplate }}
             onClick={() => onRowClick && onRowClick(row)}
           >
             {columns.map((col) => (
-              <td key={col.key} className="px-2 py-1 whitespace-nowrap">
+              <div key={col.key} className="px-2 py-1 whitespace-nowrap">
                 {col.render ? col.render(row) : row[col.key]}
-              </td>
+              </div>
             ))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
+          </div>
+        )}
+      </VirtualList>
+    </div>
   );
 };
 
