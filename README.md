@@ -40,7 +40,7 @@ Serverful deployments run the built Next.js server so all API routes are availab
 ```bash
 yarn build && yarn start
 ```
-> **Note:** The service worker is generated with a custom precache script (`scripts/generate-sw.mjs`) built on [`fast-glob`](https://github.com/mrmlnc/fast-glob). This avoids the deprecated `glob@7`/`inflight` chain previously pulled in via Workbox.
+The service worker is automatically generated during `next build` via [`@ducanh2912/next-pwa`](https://github.com/DuCanhGH/next-pwa).
 After the server starts, exercise an API route to confirm server-side functionality:
 ```bash
 curl -X POST http://localhost:3000/api/dummy
@@ -65,6 +65,7 @@ To send text or links directly into the Sticky Notes app:
 
 ### Service Worker (SW)
 
+- Generated via [`@ducanh2912/next-pwa`](https://github.com/DuCanhGH/next-pwa); output is `public/sw.js`.
 - Only assets under `public/` are precached.
 - Dynamic routes or API responses are not cached.
 - Future work may use `injectManifest` for finer control.
@@ -97,7 +98,6 @@ See `.env.local.example` for the full list.
 
 - Run `yarn lint` and `yarn test` before committing changes.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
-- When iterating on service worker changes, run `yarn build:sw` to regenerate the precache manifest.
 
 ---
 

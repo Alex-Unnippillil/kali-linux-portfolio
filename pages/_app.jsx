@@ -29,6 +29,7 @@ function MyApp(props) {
     });
 
     if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
+      // Register PWA service worker generated via @ducanh2912/next-pwa
       const register = async () => {
         try {
           const registration = await navigator.serviceWorker.register('/sw.js');
