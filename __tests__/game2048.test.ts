@@ -7,6 +7,11 @@ describe('2048 logic', () => {
     expect(slide([2, 2, 2, 0]).row).toEqual([4, 2, 0, 0]);
   });
 
+  it('prevents double merges in a single move', () => {
+    expect(slide([2, 2, 2, 2]).row).toEqual([4, 4, 0, 0]);
+    expect(slide([4, 4, 4, 4]).row).toEqual([8, 8, 0, 0]);
+  });
+
   it('moves left across the board', () => {
     const board: Board = [
       [2, 0, 2, 0],

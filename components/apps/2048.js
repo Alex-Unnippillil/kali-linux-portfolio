@@ -51,16 +51,19 @@ const slide = (row) => {
   let merged = false;
   let score = 0;
   const mergedPositions = [];
-  for (let i = 0; i < arr.length - 1; i++) {
+  const newRow = [];
+  for (let i = 0; i < arr.length; i++) {
     if (arr[i] === arr[i + 1]) {
-      arr[i] *= 2;
-      score += arr[i];
-      arr[i + 1] = 0;
+      const val = arr[i] * 2;
+      newRow.push(val);
+      score += val;
       merged = true;
-      mergedPositions.push(i);
+      mergedPositions.push(newRow.length - 1);
+      i++;
+    } else {
+      newRow.push(arr[i]);
     }
   }
-  const newRow = arr.filter((n) => n !== 0);
   while (newRow.length < SIZE) newRow.push(0);
   return { row: newRow, merged, score, mergedPositions };
 };
@@ -278,6 +281,12 @@ const Game2048 = () => {
     }
   }, [scorePop]);
 
+  useEffect(() => {
+    if (moveLock.current && animCells.size === 0 && mergeCells.size === 0) {
+      moveLock.current = false;
+    }
+  }, [animCells, mergeCells]);
+
   const today = typeof window !== 'undefined' ? new Date().toISOString().slice(0, 10) : '';
 
   useEffect(() => {
@@ -380,9 +389,6 @@ const Game2048 = () => {
         }
         if (checkWin(moved)) setWon(true);
         else if (!hasMoves(moved)) setLost(true);
-        setTimeout(() => {
-          moveLock.current = false;
-        }, 200);
       }
     },
     [
