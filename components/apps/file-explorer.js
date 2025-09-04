@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
+import Breadcrumbs from '../ui/Breadcrumbs';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -94,6 +95,8 @@ export default function FileExplorer() {
   const [supported, setSupported] = useState(true);
   const [dirHandle, setDirHandle] = useState(null);
   const [files, setFiles] = useState([]);
+  const [dirs, setDirs] = useState([]);
+  const [path, setPath] = useState([]);
   const [recent, setRecent] = useState([]);
   const [currentFile, setCurrentFile] = useState(null);
   const [content, setContent] = useState('');
@@ -124,11 +127,8 @@ export default function FileExplorer() {
     (async () => {
       setUnsavedDir(await getDir('unsaved'));
       setDirHandle(root);
-      const fs = [];
-      for await (const [name, h] of root.entries()) {
-        if (h.kind === 'file') fs.push({ name, handle: h });
-      }
-      setFiles(fs);
+      setPath([{ name: root.name || '/', handle: root }]);
+      await readDir(root);
     })();
   }, [opfsSupported, root, getDir]);
 
@@ -159,11 +159,8 @@ export default function FileExplorer() {
       setDirHandle(handle);
       addRecentDir(handle);
       setRecent(await getRecentDirs());
-      const fs = [];
-      for await (const [name, h] of handle.entries()) {
-        if (h.kind === 'file') fs.push({ name, handle: h });
-      }
-      setFiles(fs);
+      setPath([{ name: handle.name || '/', handle }]);
+      await readDir(handle);
     } catch {}
   };
 
@@ -172,11 +169,8 @@ export default function FileExplorer() {
       const perm = await entry.handle.requestPermission({ mode: 'readwrite' });
       if (perm !== 'granted') return;
       setDirHandle(entry.handle);
-      const fs = [];
-      for await (const [name, h] of entry.handle.entries()) {
-        if (h.kind === 'file') fs.push({ name, handle: h });
-      }
-      setFiles(fs);
+      setPath([{ name: entry.name, handle: entry.handle }]);
+      await readDir(entry.handle);
     } catch {}
   };
 
@@ -192,6 +186,40 @@ export default function FileExplorer() {
       text = await f.text();
     }
     setContent(text);
+  };
+
+  const readDir = async (handle) => {
+    const ds = [];
+    const fs = [];
+    for await (const [name, h] of handle.entries()) {
+      if (h.kind === 'file') fs.push({ name, handle: h });
+      else if (h.kind === 'directory') ds.push({ name, handle: h });
+    }
+    setDirs(ds);
+    setFiles(fs);
+  };
+
+  const openDir = async (dir) => {
+    setDirHandle(dir.handle);
+    setPath((p) => [...p, { name: dir.name, handle: dir.handle }]);
+    await readDir(dir.handle);
+  };
+
+  const navigateTo = async (index) => {
+    const target = path[index];
+    if (!target) return;
+    setDirHandle(target.handle);
+    setPath(path.slice(0, index + 1));
+    await readDir(target.handle);
+  };
+
+  const goBack = async () => {
+    if (path.length <= 1) return;
+    const newPath = path.slice(0, -1);
+    const prev = newPath[newPath.length - 1];
+    setPath(newPath);
+    setDirHandle(prev.handle);
+    await readDir(prev.handle);
   };
 
   const saveFile = async () => {
@@ -269,23 +297,51 @@ export default function FileExplorer() {
 
   return (
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
-      <div className="flex space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
-        <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">Open Folder</button>
+      <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
+        <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
+          Open Folder
+        </button>
+        {path.length > 1 && (
+          <button onClick={goBack} className="px-2 py-1 bg-black bg-opacity-50 rounded">
+            Back
+          </button>
+        )}
+        <Breadcrumbs path={path} onNavigate={navigateTo} />
         {currentFile && (
-          <button onClick={saveFile} className="px-2 py-1 bg-black bg-opacity-50 rounded">Save</button>
+          <button onClick={saveFile} className="px-2 py-1 bg-black bg-opacity-50 rounded">
+            Save
+          </button>
         )}
       </div>
       <div className="flex flex-1 overflow-hidden">
         <div className="w-40 overflow-auto border-r border-gray-600">
           <div className="p-2 font-bold">Recent</div>
           {recent.map((r, i) => (
-            <div key={i} className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30" onClick={() => openRecent(r)}>
+            <div
+              key={i}
+              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+              onClick={() => openRecent(r)}
+            >
               {r.name}
+            </div>
+          ))}
+          <div className="p-2 font-bold">Directories</div>
+          {dirs.map((d, i) => (
+            <div
+              key={i}
+              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+              onClick={() => openDir(d)}
+            >
+              {d.name}
             </div>
           ))}
           <div className="p-2 font-bold">Files</div>
           {files.map((f, i) => (
-            <div key={i} className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30" onClick={() => openFile(f)}>
+            <div
+              key={i}
+              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+              onClick={() => openFile(f)}
+            >
               {f.name}
             </div>
           ))}
