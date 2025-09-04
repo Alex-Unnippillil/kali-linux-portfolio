@@ -11,6 +11,56 @@ export interface AxisEvent {
   value: number;
 }
 
+export interface AxisRange {
+  min: number;
+  max: number;
+}
+
+export interface CalibrationData {
+  axes: AxisRange[];
+  vendor?: string;
+}
+
+const CAL_PREFIX = 'gamepad-calibration-';
+
+export const GAMEPAD_PRESETS: Record<string, CalibrationData> = {
+  Xbox: {
+    vendor: 'Xbox',
+    axes: Array.from({ length: 4 }, () => ({ min: -1, max: 1 })),
+  },
+  PlayStation: {
+    vendor: 'PlayStation',
+    axes: Array.from({ length: 4 }, () => ({ min: -1, max: 1 })),
+  },
+};
+
+export function loadCalibration(id: string): CalibrationData | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(CAL_PREFIX + id);
+    return raw ? (JSON.parse(raw) as CalibrationData) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveCalibration(id: string, data: CalibrationData) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(CAL_PREFIX + id, JSON.stringify(data));
+  } catch {
+    // ignore
+  }
+}
+
+function applyCalibration(value: number, range?: AxisRange) {
+  if (!range) return value;
+  const span = range.max - range.min;
+  if (span === 0) return 0;
+  const clamped = Math.min(Math.max(value, range.min), range.max);
+  return ((clamped - range.min) / span) * 2 - 1;
+}
+
 export type GamepadEventMap = {
   connected: Gamepad;
   disconnected: Gamepad;
@@ -135,11 +185,17 @@ export function pollTwinStick(deadzone = 0.25): TwinStickState {
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   for (const pad of pads) {
     if (!pad) continue;
+    const calib = loadCalibration(pad.id);
+    const ranges = calib?.axes || [];
     const [lx, ly, rx, ry] = pad.axes;
-    state.moveX = Math.abs(lx) > deadzone ? lx : 0;
-    state.moveY = Math.abs(ly) > deadzone ? ly : 0;
-    state.aimX = Math.abs(rx) > deadzone ? rx : 0;
-    state.aimY = Math.abs(ry) > deadzone ? ry : 0;
+    const cx = applyCalibration(lx, ranges[0]);
+    const cy = applyCalibration(ly, ranges[1]);
+    const ax = applyCalibration(rx, ranges[2]);
+    const ay = applyCalibration(ry, ranges[3]);
+    state.moveX = Math.abs(cx) > deadzone ? cx : 0;
+    state.moveY = Math.abs(cy) > deadzone ? cy : 0;
+    state.aimX = Math.abs(ax) > deadzone ? ax : 0;
+    state.aimY = Math.abs(ay) > deadzone ? ay : 0;
     state.fire = pad.buttons.some((b) => b.pressed);
     break; // only use first gamepad
   }
