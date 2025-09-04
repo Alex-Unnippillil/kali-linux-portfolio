@@ -247,6 +247,16 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       [runWorker],
     );
 
+    useEffect(() => {
+      const handler = (e: Event) => {
+        const cmd = (e as CustomEvent<string>).detail;
+        runCommand(cmd);
+      };
+      window.addEventListener('terminal-run', handler as EventListener);
+      return () =>
+        window.removeEventListener('terminal-run', handler as EventListener);
+    }, [runCommand]);
+
     const autocomplete = useCallback(() => {
       const current = commandRef.current;
       const registry = registryRef.current;
@@ -421,6 +431,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
                   termRef.current?.focus();
                 }
               }}
+              aria-label="command palette input"
             />
             <ul className="max-h-40 overflow-y-auto">
               {Object.keys(registryRef.current)
