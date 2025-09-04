@@ -1,6 +1,9 @@
+import { isBrowser } from './isBrowser';
+
 export const hasOffscreenCanvas = (): boolean =>
-  typeof window !== 'undefined' &&
-  'OffscreenCanvas' in window &&
-  typeof HTMLCanvasElement !== 'undefined' &&
-  typeof HTMLCanvasElement.prototype.transferControlToOffscreen === 'function';
+  isBrowser &&
+  'OffscreenCanvas' in globalThis &&
+  typeof globalThis.HTMLCanvasElement !== 'undefined' &&
+  typeof globalThis.HTMLCanvasElement.prototype.transferControlToOffscreen ===
+    'function';
 

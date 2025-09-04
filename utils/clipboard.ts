@@ -1,4 +1,7 @@
+import { isBrowser } from './isBrowser';
+
 export const copyToClipboard = async (text: string): Promise<boolean> => {
+  if (!isBrowser) return false;
   try {
     if (navigator?.clipboard?.writeText) {
       await navigator.clipboard.writeText(text);

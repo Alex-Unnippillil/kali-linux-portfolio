@@ -1,9 +1,11 @@
+import { isBrowser } from './isBrowser';
+
 type StateMessage = { type: 'state'; state: unknown };
 type LeaderboardMessage = { type: 'leaderboard'; leaderboard: unknown };
 type SyncMessage = StateMessage | LeaderboardMessage;
 
 const channel =
-  typeof window !== 'undefined' && 'BroadcastChannel' in self
+  isBrowser && 'BroadcastChannel' in self
     ? new BroadcastChannel('sync')
     : null;
 
@@ -35,8 +37,10 @@ export const subscribe = (
   return () => channel.removeEventListener('message', listener);
 };
 
-export default {
+const sync = {
   broadcastState,
   broadcastLeaderboard,
   subscribe,
 };
+
+export default sync;

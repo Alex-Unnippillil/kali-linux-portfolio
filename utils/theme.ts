@@ -8,12 +8,14 @@ export const THEME_UNLOCKS: Record<string, number> = {
   matrix: 1000,
 };
 
+import { isBrowser } from './isBrowser';
+
 export const getTheme = (): string => {
-  if (typeof window === 'undefined') return 'default';
+  if (!isBrowser) return 'default';
   try {
-    const stored = window.localStorage.getItem(THEME_KEY);
+    const stored = globalThis.localStorage.getItem(THEME_KEY);
     if (stored) return stored;
-    const prefersDark = window.matchMedia?.(
+    const prefersDark = globalThis.matchMedia?.(
       '(prefers-color-scheme: dark)'
     ).matches;
     return prefersDark ? 'dark' : 'default';
@@ -23,9 +25,9 @@ export const getTheme = (): string => {
 };
 
 export const setTheme = (theme: string): void => {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser) return;
   try {
-    window.localStorage.setItem(THEME_KEY, theme);
+    globalThis.localStorage.setItem(THEME_KEY, theme);
     document.documentElement.dataset.theme = theme;
   } catch {
     /* ignore storage errors */

@@ -1,3 +1,5 @@
+import { isBrowser } from './isBrowser';
+
 export interface ButtonEvent {
   gamepad: Gamepad;
   index: number;
@@ -35,11 +37,11 @@ class GamepadManager {
   constructor(deadzone = 0.1) {
     this.deadzone = deadzone;
 
-    if (typeof window !== 'undefined') {
-      window.addEventListener('gamepadconnected', (e) =>
+    if (isBrowser) {
+      globalThis.addEventListener('gamepadconnected', (e) =>
         this.emit('connected', (e as GamepadEvent).gamepad)
       );
-      window.addEventListener('gamepaddisconnected', (e) =>
+      globalThis.addEventListener('gamepaddisconnected', (e) =>
         this.emit('disconnected', (e as GamepadEvent).gamepad)
       );
     }
@@ -58,7 +60,7 @@ class GamepadManager {
   }
 
   private poll = () => {
-    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    const pads = isBrowser && navigator.getGamepads ? navigator.getGamepads() : [];
     for (const pad of pads) {
       if (!pad) continue;
 
@@ -132,7 +134,7 @@ export interface TwinStickState {
  */
 export function pollTwinStick(deadzone = 0.25): TwinStickState {
   const state: TwinStickState = { moveX: 0, moveY: 0, aimX: 0, aimY: 0, fire: false };
-  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  const pads = isBrowser && navigator.getGamepads ? navigator.getGamepads() : [];
   for (const pad of pads) {
     if (!pad) continue;
     const [lx, ly, rx, ry] = pad.axes;

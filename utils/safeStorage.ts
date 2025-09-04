@@ -1,3 +1,5 @@
 import { hasStorage } from './env';
 
-export const safeLocalStorage: Storage | undefined = hasStorage ? window.localStorage : undefined;
+export const safeLocalStorage: Storage | undefined = hasStorage
+  ? globalThis.localStorage
+  : undefined;

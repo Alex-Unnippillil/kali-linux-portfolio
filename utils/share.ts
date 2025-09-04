@@ -1,6 +1,8 @@
+import { isBrowser } from './isBrowser';
+
 // Simple helper around the Web Share API
 export const canShare = () =>
-  typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+  isBrowser && typeof globalThis.navigator.share === 'function';
 
 // Shares the provided text along with optional title and url
 export const share = async (
@@ -10,7 +12,7 @@ export const share = async (
 ): Promise<boolean> => {
   if (!canShare()) return false;
   try {
-    await navigator.share({ text, title, url: url ?? window.location.href });
+    await globalThis.navigator.share({ text, title, url: url ?? globalThis.location.href });
     return true;
   } catch {
     return false;
