@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 export interface GamepadState {
   buttons: number[];
   axes: number[];
+  connected: boolean;
 }
 
 /**
@@ -10,7 +11,24 @@ export interface GamepadState {
  * and returns button/axis state. Only the first connected gamepad is used.
  */
 export default function useGamepad(): GamepadState {
-  const [state, setState] = useState<GamepadState>({ buttons: [], axes: [] });
+  const [state, setState] = useState<GamepadState>({
+    buttons: [],
+    axes: [],
+    connected: false,
+  });
+
+  useEffect(() => {
+    const handleConnect = () =>
+      setState((s) => ({ ...s, connected: true }));
+    const handleDisconnect = () =>
+      setState({ buttons: [], axes: [], connected: false });
+    window.addEventListener("gamepadconnected", handleConnect);
+    window.addEventListener("gamepaddisconnected", handleDisconnect);
+    return () => {
+      window.removeEventListener("gamepadconnected", handleConnect);
+      window.removeEventListener("gamepaddisconnected", handleDisconnect);
+    };
+  }, []);
 
   useEffect(() => {
     let raf: number;
@@ -21,13 +39,16 @@ export default function useGamepad(): GamepadState {
         setState({
           buttons: pad.buttons.map((b) => b.value),
           axes: Array.from(pad.axes),
+          connected: true,
         });
+      } else if (state.connected) {
+        setState({ buttons: [], axes: [], connected: false });
       }
       raf = requestAnimationFrame(read);
     };
     raf = requestAnimationFrame(read);
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [state.connected]);
 
   return state;
 }
