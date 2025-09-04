@@ -500,7 +500,7 @@ export class Window extends Component {
                         className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                         id={this.id}
                         role="dialog"
-                        aria-label={this.props.title}
+                        aria-labelledby={`${this.id}-title`}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                     >
@@ -511,6 +511,7 @@ export class Window extends Component {
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
+                            titleId={`${this.id}-title`}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -536,7 +537,7 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, titleId }) {
     return (
         <div
             className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 py-1.5 px-3 text-white w-full select-none rounded-b-none"}
@@ -546,7 +547,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
             onKeyDown={onKeyDown}
             onBlur={onBlur}
         >
-            <div className="flex justify-center text-sm font-bold">{title}</div>
+            <div id={titleId} className="flex justify-center text-sm font-bold">{title}</div>
         </div>
     )
 }
@@ -594,13 +595,13 @@ export function WindowEditButtons(props) {
             {pipSupported && props.pip && (
                 <button
                     type="button"
-                    aria-label="Window pin"
+                    aria-label="Pin"
                     className="mx-1.5 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-11 w-11"
                     onClick={togglePin}
                 >
                     <NextImage
                         src="/themes/Yaru/window/window-pin-symbolic.svg"
-                        alt="Kali window pin"
+                        alt="Pin"
                         className="h-5 w-5 inline"
                         width={20}
                         height={20}
@@ -610,13 +611,13 @@ export function WindowEditButtons(props) {
             )}
             <button
                 type="button"
-                aria-label="Window minimize"
+                aria-label="Minimize"
                 className="mx-1.5 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-11 w-11"
                 onClick={props.minimize}
             >
                 <NextImage
                     src="/themes/Yaru/window/window-minimize-symbolic.svg"
-                    alt="Kali window minimize"
+                    alt="Minimize"
                     className="h-5 w-5 inline"
                     width={20}
                     height={20}
@@ -628,13 +629,13 @@ export function WindowEditButtons(props) {
                     ? (
                         <button
                             type="button"
-                            aria-label="Window restore"
+                            aria-label="Restore"
                             className="mx-2 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-11 w-11"
                             onClick={props.maximize}
                         >
                             <NextImage
                                 src="/themes/Yaru/window/window-restore-symbolic.svg"
-                                alt="Kali window restore"
+                                alt="Restore"
                                 className="h-5 w-5 inline"
                                 width={20}
                                 height={20}
@@ -644,13 +645,13 @@ export function WindowEditButtons(props) {
                     ) : (
                         <button
                             type="button"
-                            aria-label="Window maximize"
+                            aria-label="Maximize"
                             className="mx-2 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-11 w-11"
                             onClick={props.maximize}
                         >
                             <NextImage
                                 src="/themes/Yaru/window/window-maximize-symbolic.svg"
-                                alt="Kali window maximize"
+                                alt="Maximize"
                                 className="h-5 w-5 inline"
                                 width={20}
                                 height={20}
@@ -662,13 +663,13 @@ export function WindowEditButtons(props) {
             <button
                 type="button"
                 id={`close-${props.id}`}
-                aria-label="Window close"
+                aria-label="Close"
                 className="mx-1.5 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-11 w-11"
                 onClick={props.close}
             >
                 <NextImage
                     src="/themes/Yaru/window/window-close-symbolic.svg"
-                    alt="Kali window close"
+                    alt="Close"
                     className="h-5 w-5 inline"
                     width={20}
                     height={20}

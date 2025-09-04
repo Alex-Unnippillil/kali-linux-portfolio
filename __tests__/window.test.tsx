@@ -28,7 +28,7 @@ describe('Window lifecycle', () => {
       />
     );
 
-    const closeButton = screen.getByRole('button', { name: /window close/i });
+    const closeButton = screen.getByRole('button', { name: /close/i });
     fireEvent.click(closeButton);
 
     expect(hideSideBar).toHaveBeenCalledWith('test-window', false);
