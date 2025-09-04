@@ -368,3 +368,88 @@ describe('Window overlay inert behaviour', () => {
     document.body.removeChild(opener);
   });
 });
+
+describe('Window resize constraints', () => {
+  it('enforces minimum size based on content', () => {
+    const originalWidth = window.innerWidth;
+    const originalHeight = window.innerHeight;
+    Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 1000 });
+    Object.defineProperty(window, 'innerHeight', { writable: true, configurable: true, value: 800 });
+
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const container = document.querySelector('.windowMainScreen')!;
+    const inner = container.firstElementChild as HTMLElement;
+    inner.getBoundingClientRect = () => ({
+      width: 500,
+      height: 400,
+      top: 0,
+      left: 0,
+      right: 500,
+      bottom: 400,
+      x: 0,
+      y: 0,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.setState({ width: 10, height: 10 });
+      ref.current!.handleHorizontalResize();
+      ref.current!.handleVerticleResize();
+    });
+
+    expect(ref.current!.state.width).toBeGreaterThanOrEqual(50);
+    expect(ref.current!.state.height).toBeGreaterThanOrEqual(50);
+
+    Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: originalWidth });
+    Object.defineProperty(window, 'innerHeight', { writable: true, configurable: true, value: originalHeight });
+  });
+
+  it('clamps aspect ratio for dialog windows', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="dialog-window"
+        title="Dialog"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        allowMaximize={false}
+        ref={ref}
+      />
+    );
+
+    // Avoid min size affecting ratio test
+    ref.current!.getContentMinSize = () => ({ minWidth: 0, minHeight: 0 });
+
+    act(() => {
+      ref.current!.setState({ width: 100, height: 10 });
+      ref.current!.handleHorizontalResize();
+    });
+
+    expect(ref.current!.state.width / ref.current!.state.height).toBeLessThanOrEqual(1.6);
+
+    act(() => {
+      ref.current!.setState({ width: 10, height: 100 });
+      ref.current!.handleVerticleResize();
+    });
+
+    expect(ref.current!.state.height / ref.current!.state.width).toBeLessThanOrEqual(1.6);
+  });
+});
