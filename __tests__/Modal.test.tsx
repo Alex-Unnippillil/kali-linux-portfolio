@@ -45,3 +45,28 @@ test('modal traps focus, disables background, and restores opener focus', async 
   unmount();
   document.body.removeChild(root);
 });
+
+test('modal closes when Escape pressed globally', async () => {
+  const Wrapper: React.FC = () => {
+    const [open, setOpen] = React.useState(false);
+    return (
+      <>
+        <button onClick={() => setOpen(true)}>open</button>
+        <Modal isOpen={open} onClose={() => setOpen(false)}>
+          <button>first</button>
+        </Modal>
+      </>
+    );
+  };
+
+  const { getByText } = render(<Wrapper />);
+  const openButton = getByText('open');
+  openButton.focus();
+  fireEvent.click(openButton);
+
+  const first = getByText('first');
+  expect(first).toHaveFocus();
+
+  fireEvent.keyDown(document, { key: 'Escape' });
+  await waitFor(() => expect(openButton).toHaveFocus());
+});
