@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import NmapNSEApp from '../components/apps/nmap-nse';
 
@@ -83,6 +83,53 @@ describe('NmapNSEApp', () => {
       expect.stringContaining('Sample output')
     );
     expect(await screen.findByRole('alert')).toHaveTextContent(/copied/i);
+
+    mockFetch.mockRestore();
+  });
+
+  it('renders script results with category badges', async () => {
+    const mockFetch = jest
+      .spyOn(global, 'fetch')
+      .mockImplementation((url: RequestInfo | URL) =>
+        Promise.resolve({
+          json: () =>
+            Promise.resolve(
+              typeof url === 'string' && url.includes('nmap-results')
+                ? {
+                    hosts: [
+                      {
+                        ip: '192.0.2.1',
+                        ports: [
+                          {
+                            port: 80,
+                            service: 'http',
+                            cvss: 5,
+                            scripts: [
+                              {
+                                name: 'http-title',
+                                output: 'Example Domain',
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                  }
+                : {}
+            ),
+        })
+      );
+
+    render(<NmapNSEApp />);
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+
+    const hostNode = await screen.findByText('192.0.2.1');
+    const scriptNode = within(hostNode.parentElement as HTMLElement).getByText(
+      'http-title'
+    );
+    expect(
+      within(scriptNode.parentElement as HTMLElement).getByText('discovery')
+    ).toBeInTheDocument();
 
     mockFetch.mockRestore();
   });
