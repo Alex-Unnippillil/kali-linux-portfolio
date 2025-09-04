@@ -3,15 +3,18 @@ import MemoryHeatmap from './MemoryHeatmap';
 import PluginBrowser from './PluginBrowser';
 import PluginWalkthrough from '../../../apps/volatility/components/PluginWalkthrough';
 import memoryFixture from '../../../public/demo-data/volatility/memory.json';
+import pslistJson from '../../../public/demo-data/volatility/pslist.json';
+import netscanJson from '../../../public/demo-data/volatility/netscan.json';
 
 // pull demo data for various volatility plugins from the memory fixture
 const pstree = Array.isArray(memoryFixture.pstree)
   ? memoryFixture.pstree
   : [];
 const dlllist = memoryFixture.dlllist ?? {};
-const netscan = Array.isArray(memoryFixture.netscan)
-  ? memoryFixture.netscan
-  : [];
+const pslist = Array.isArray(pslistJson.rows) ? pslistJson.rows : [];
+const pslistColumns = pslistJson.columns ?? [];
+const netscan = Array.isArray(netscanJson.rows) ? netscanJson.rows : [];
+const netscanColumns = netscanJson.columns ?? [];
 const malfind = Array.isArray(memoryFixture.malfind)
   ? memoryFixture.malfind
   : [];
@@ -32,6 +35,11 @@ const glossary = {
     title: 'Process Tree',
     description: 'Hierarchy of running processes.',
     link: '/docs/template-glossary#process-tree',
+  },
+  pslist: {
+    title: 'Process List',
+    description: 'Active processes captured from memory.',
+    link: '/docs/template-glossary#pslist',
   },
   dlllist: {
     title: 'Module List',
@@ -176,7 +184,7 @@ const VolatilityApp = () => {
       <div className="flex-1 flex">
         <div className="flex-1 flex flex-col">
           <div className="flex space-x-2 px-2 bg-gray-900">
-            {['pstree', 'netscan', 'malfind', 'yarascan', 'plugins', 'walkthrough'].map((tab) => (
+            {['pstree', 'pslist', 'netscan', 'malfind', 'yarascan', 'plugins', 'walkthrough'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -190,78 +198,95 @@ const VolatilityApp = () => {
           </div>
           <div className="flex-1 overflow-auto p-2">
             {activeTab === 'pstree' && (
-              <div className="flex space-x-4">
-                <ul className="w-1/2 text-xs">
-                  {pstree.map((node) => (
-                    <TreeNode key={node.pid} node={node} />
-                  ))}
-                </ul>
-                <div className="w-1/2">
-                  {selectedPid ? (
-                    <>
-                      <h3 className="text-sm mb-2">Modules for PID {selectedPid}</h3>
-                      <SortableTable
-                        columns={[
-                          { key: 'base', label: 'Base' },
-                          { key: 'name', label: 'Name' },
-                        ]}
-                        data={dlllist[selectedPid] || []}
-                        onRowClick={() => setFinding(glossary.dlllist)}
-                      />
-                    </>
-                  ) : (
-                    <p className="text-xs text-gray-400">Select a process to view modules.</p>
-                  )}
+              <div>
+                <p className="text-xs mb-2">{glossary.pstree.description}</p>
+                <div className="flex space-x-4">
+                  <ul className="w-1/2 text-xs">
+                    {pstree.map((node) => (
+                      <TreeNode key={node.pid} node={node} />
+                    ))}
+                  </ul>
+                  <div className="w-1/2">
+                    {selectedPid ? (
+                      <>
+                        <h3 className="text-sm mb-2">Modules for PID {selectedPid}</h3>
+                        <SortableTable
+                          columns={[
+                            { key: 'base', label: 'Base' },
+                            { key: 'name', label: 'Name' },
+                          ]}
+                          data={dlllist[selectedPid] || []}
+                          onRowClick={() => setFinding(glossary.dlllist)}
+                        />
+                      </>
+                    ) : (
+                      <p className="text-xs text-gray-400">Select a process to view modules.</p>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
+            {activeTab === 'pslist' && (
+              <div>
+                <p className="text-xs mb-2">{glossary.pslist.description}</p>
+                <SortableTable
+                  columns={pslistColumns}
+                  data={pslist}
+                  onRowClick={() => setFinding(glossary.pslist)}
+                />
+              </div>
+            )}
             {activeTab === 'netscan' && (
-              <SortableTable
-                columns={[
-                  { key: 'proto', label: 'Proto' },
-                  { key: 'local', label: 'LocalAddr' },
-                  { key: 'foreign', label: 'ForeignAddr' },
-                  { key: 'state', label: 'State' },
-                ]}
-                data={netscan}
-                onRowClick={() => setFinding(glossary.netscan)}
-              />
+              <div>
+                <p className="text-xs mb-2">{glossary.netscan.description}</p>
+                <SortableTable
+                  columns={netscanColumns}
+                  data={netscan}
+                  onRowClick={() => setFinding(glossary.netscan)}
+                />
+              </div>
             )}
             {activeTab === 'malfind' && (
-              <SortableTable
-                columns={[
-                  { key: 'pid', label: 'PID' },
-                  { key: 'address', label: 'Address' },
-                  { key: 'protection', label: 'Protection' },
-                  { key: 'description', label: 'Description' },
-                ]}
-                data={malfind}
-                onRowClick={() => setFinding(glossary.malfind)}
-              />
+              <div>
+                <p className="text-xs mb-2">{glossary.malfind.description}</p>
+                <SortableTable
+                  columns={[
+                    { key: 'pid', label: 'PID' },
+                    { key: 'address', label: 'Address' },
+                    { key: 'protection', label: 'Protection' },
+                    { key: 'description', label: 'Description' },
+                  ]}
+                  data={malfind}
+                  onRowClick={() => setFinding(glossary.malfind)}
+                />
+              </div>
             )}
             {activeTab === 'yarascan' && (
-              <SortableTable
-                columns={[
-                  { key: 'pid', label: 'PID' },
-                  { key: 'rule', label: 'Rule' },
-                  { key: 'address', label: 'Address' },
-                  {
-                    key: 'heuristic',
-                    label: 'Heuristic',
-                    render: (row) => (
-                      <span
-                        className={`px-2 py-0.5 rounded ${
-                          heuristicColors[row.heuristic] || 'bg-gray-700'
-                        }`}
-                      >
-                        {row.heuristic}
-                      </span>
-                    ),
-                  },
-                ]}
-                data={yarascan}
-                onRowClick={() => setFinding(glossary.yara)}
-              />
+              <div>
+                <p className="text-xs mb-2">{glossary.yara.description}</p>
+                <SortableTable
+                  columns={[
+                    { key: 'pid', label: 'PID' },
+                    { key: 'rule', label: 'Rule' },
+                    { key: 'address', label: 'Address' },
+                    {
+                      key: 'heuristic',
+                      label: 'Heuristic',
+                      render: (row) => (
+                        <span
+                          className={`px-2 py-0.5 rounded ${
+                            heuristicColors[row.heuristic] || 'bg-gray-700'
+                          }`}
+                        >
+                          {row.heuristic}
+                        </span>
+                      ),
+                    },
+                  ]}
+                  data={yarascan}
+                  onRowClick={() => setFinding(glossary.yara)}
+                />
+              </div>
             )}
             {activeTab === 'plugins' && <PluginBrowser />}
             {activeTab === 'walkthrough' && <PluginWalkthrough />}

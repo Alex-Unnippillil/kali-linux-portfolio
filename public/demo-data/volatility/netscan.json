@@ -1,0 +1,13 @@
+{
+  "columns": [
+    { "key": "proto", "label": "Proto" },
+    { "key": "local", "label": "LocalAddr" },
+    { "key": "foreign", "label": "ForeignAddr" },
+    { "key": "state", "label": "State" }
+  ],
+  "rows": [
+    { "proto": "TCP", "local": "0.0.0.0:80", "foreign": "0.0.0.0:0", "state": "LISTENING" },
+    { "proto": "UDP", "local": "127.0.0.1:53", "foreign": "0.0.0.0:0", "state": "NONE" },
+    { "proto": "TCP", "local": "192.168.1.5:445", "foreign": "192.168.1.10:51234", "state": "ESTABLISHED" }
+  ]
+}
