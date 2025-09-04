@@ -88,12 +88,14 @@ export class Desktop extends Component {
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
+        window.addEventListener('pinnedAppsUpdate', this.handlePinnedAppsUpdate);
     }
 
     componentWillUnmount() {
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
+        window.removeEventListener('pinnedAppsUpdate', this.handlePinnedAppsUpdate);
     }
 
     checkForNewFolders = () => {
@@ -716,8 +718,24 @@ export class Desktop extends Component {
         this.hideAllContextMenu()
     }
 
+    handlePinnedAppsUpdate = () => {
+        let pinnedApps = [];
+        try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
+        apps.forEach(app => { app.favourite = pinnedApps.includes(app.id); });
+        this.setState(prev => {
+            const favourite_apps = { ...prev.favourite_apps };
+            Object.keys(favourite_apps).forEach(id => {
+                favourite_apps[id] = pinnedApps.includes(id);
+            });
+            return { favourite_apps };
+        }, () => {
+            this.initFavourite = { ...this.state.favourite_apps };
+            this.saveSession();
+        });
+    }
+
     focus = (objId) => {
-        // removes focus from all window and 
+        // removes focus from all window and
         // gives focus to window with 'id = objId'
         var focused_windows = this.state.focused_windows;
         focused_windows[objId] = true;
