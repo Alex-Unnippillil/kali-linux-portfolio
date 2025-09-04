@@ -21,4 +21,6 @@ export const getDailyPuzzle = <T>(
   return puzzles[idx];
 };
 
-export default { getDailyPuzzle };
+const dailyPuzzle = { getDailyPuzzle };
+
+export default dailyPuzzle;

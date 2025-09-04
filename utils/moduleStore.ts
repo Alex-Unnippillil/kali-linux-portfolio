@@ -18,4 +18,6 @@ export function clearStore(): void {
   }
 }
 
-export default { setValue, getValue, getAll, clearStore };
+const moduleStore = { setValue, getValue, getAll, clearStore };
+
+export default moduleStore;

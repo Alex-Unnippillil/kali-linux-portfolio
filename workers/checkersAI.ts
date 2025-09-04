@@ -216,7 +216,6 @@ self.onmessage = (e: MessageEvent) => {
       enforceCapture,
     ).move || null;
   }
-  // eslint-disable-next-line no-restricted-globals
   (self as any).postMessage(move);
 };
 
