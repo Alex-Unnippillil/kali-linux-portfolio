@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
+import FilePreview from './file-preview';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -90,7 +91,7 @@ async function addRecentDir(handle) {
   } catch {}
 }
 
-export default function FileExplorer() {
+export default function FileExplorer({ openApp }) {
   const [supported, setSupported] = useState(true);
   const [dirHandle, setDirHandle] = useState(null);
   const [files, setFiles] = useState([]);
@@ -101,6 +102,9 @@ export default function FileExplorer() {
   const [results, setResults] = useState([]);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
+  const [previewFile, setPreviewFile] = useState(null);
+  const [contextMenu, setContextMenu] = useState(null);
+  const [showOpenWith, setShowOpenWith] = useState(false);
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -112,6 +116,12 @@ export default function FileExplorer() {
     deleteFile: opfsDelete,
   } = useOPFS();
   const [unsavedDir, setUnsavedDir] = useState(null);
+
+  useEffect(() => {
+    const closeMenu = () => setContextMenu(null);
+    window.addEventListener('click', closeMenu);
+    return () => window.removeEventListener('click', closeMenu);
+  }, []);
 
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
@@ -193,6 +203,34 @@ export default function FileExplorer() {
     }
     setContent(text);
   };
+
+  const appAssociations = {
+    txt: 'gedit',
+    md: 'gedit',
+    js: 'vscode',
+    ts: 'vscode',
+    html: 'chrome',
+  };
+
+  const openAssociatedApp = (file) => {
+    const ext = file.name.split('.').pop().toLowerCase();
+    const appId = appAssociations[ext];
+    if (appId && openApp) {
+      openApp(appId);
+    } else {
+      openFile(file);
+    }
+  };
+
+  const preview = (file) => {
+    setPreviewFile(file);
+  };
+
+  const openWithOptions = [
+    { id: 'gedit', label: 'Gedit' },
+    { id: 'vscode', label: 'VS Code' },
+    { id: 'chrome', label: 'Chrome' },
+  ];
 
   const saveFile = async () => {
     if (!currentFile) return;
@@ -285,7 +323,25 @@ export default function FileExplorer() {
           ))}
           <div className="p-2 font-bold">Files</div>
           {files.map((f, i) => (
-            <div key={i} className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30" onClick={() => openFile(f)}>
+            <div
+              key={i}
+              tabIndex={0}
+              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30 focus:bg-black focus:bg-opacity-40 outline-none"
+              onClick={() => openFile(f)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  openAssociatedApp(f);
+                } else if (e.key === ' ') {
+                  e.preventDefault();
+                  preview(f);
+                }
+              }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setContextMenu({ file: f, x: e.clientX, y: e.clientY });
+              }}
+            >
               {f.name}
             </div>
           ))}
@@ -314,6 +370,49 @@ export default function FileExplorer() {
           </div>
         </div>
       </div>
+      {contextMenu && (
+        <ul
+          className="fixed bg-black bg-opacity-80 text-white text-sm rounded z-50"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          onMouseLeave={() => setContextMenu(null)}
+        >
+          <li
+            className="px-2 py-1 hover:bg-white hover:text-black cursor-pointer"
+            onClick={() => {
+              openAssociatedApp(contextMenu.file);
+              setContextMenu(null);
+            }}
+          >
+            Open
+          </li>
+          <li
+            className="relative px-2 py-1 hover:bg-white hover:text-black cursor-pointer"
+            onMouseEnter={() => setShowOpenWith(true)}
+            onMouseLeave={() => setShowOpenWith(false)}
+          >
+            Open with...
+            {showOpenWith && (
+              <ul className="absolute left-full top-0 bg-black text-white rounded">
+                {openWithOptions.map((opt) => (
+                  <li
+                    key={opt.id}
+                    className="px-2 py-1 hover:bg-white hover:text-black cursor-pointer whitespace-nowrap"
+                    onClick={() => {
+                      openApp && openApp(opt.id);
+                      setContextMenu(null);
+                    }}
+                  >
+                    {opt.label}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+        </ul>
+      )}
+      {previewFile && (
+        <FilePreview file={previewFile} onClose={() => setPreviewFile(null)} />
+      )}
     </div>
   );
 }
