@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
+import { BLUR_DATA_URL } from '@/lib/blurDataURL';
 
 const AppsPage = () => {
   const [apps, setApps] = useState([]);
@@ -42,7 +44,20 @@ const AppsPage = () => {
             className="flex flex-col items-center rounded border p-4 text-center focus:outline-none focus:ring"
             aria-label={app.title}
           >
-            {app.icon && <img src={app.icon} alt="" className="h-16 w-16" />}
+            {app.icon && (
+              <div className="relative w-16 aspect-square">
+                <Image
+                  src={app.icon}
+                  alt={app.title}
+                  fill
+                  loading="lazy"
+                  placeholder="blur"
+                  blurDataURL={BLUR_DATA_URL}
+                  sizes="64px"
+                  className="object-contain"
+                />
+              </div>
+            )}
             <span className="mt-2">{app.title}</span>
           </Link>
         ))}
