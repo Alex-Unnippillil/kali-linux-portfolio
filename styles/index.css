@@ -16,10 +16,9 @@ button, [role="button"], input[type="button"], input[type="submit"], input[type=
     min-height: var(--hit-area);
 }
 
-a:focus-visible,
-button:focus-visible {
-    outline: 2px solid var(--color-ubt-blue) !important;
-    outline-offset: 2px;
+:where(a, button, [role="button"], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+    outline: var(--focus-width) solid var(--focus-color) !important;
+    outline-offset: var(--focus-offset);
 }
 
 /* Top NavBar styling */
@@ -532,13 +531,6 @@ textarea,
 pre {
     font-family: monospace;
     line-height: 1.2;
-}
-
-/* Visible focus rings for copy buttons and text areas */
-button:focus-visible,
-textarea:focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 2px;
 }
 
 /* Enable scroll snapping for gallery containers */

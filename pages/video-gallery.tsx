@@ -63,7 +63,7 @@ const VideoGallery: React.FC = () => {
           <button
             key={video.id}
             type="button"
-            className="text-left rounded outline outline-2 outline-offset-2 outline-transparent hover:outline-blue-500 focus-visible:outline-blue-500"
+            className="text-left rounded outline outline-2 outline-offset-2 outline-transparent hover:outline-[var(--focus-color)] focus-visible:outline-[var(--focus-color)]"
             onClick={() => setPlaying(video.id)}
           >
             <img
