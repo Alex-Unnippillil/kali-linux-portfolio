@@ -9737,6 +9737,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"marked@npm:^16.2.1":
+  version: 16.2.1
+  resolution: "marked@npm:16.2.1"
+  bin:
+    marked: bin/marked.js
+  checksum: 10c0/0f4a259c8a7884a14830f06b4b44c0e5fab27924102f2713606e0627c8473d130ab9070900a40c18b0e8d39ba2f31194ce6931999ba4c7bd3b6240f6cfe9cbb3
+  languageName: node
+  linkType: hard
+
 "math-intrinsics@npm:^1.1.0":
   version: 1.1.0
   resolution: "math-intrinsics@npm:1.1.0"
@@ -13893,6 +13902,7 @@ __metadata:
     kaitai-struct: "npm:^0.10.0"
     leaflet: "npm:^1.9.4"
     magic-string: "npm:0.30.18"
+    marked: "npm:^16.2.1"
     mathjs: "npm:^14.6.0"
     matter-js: "npm:0.20.0"
     monaco-editor: "npm:^0.52.2"
