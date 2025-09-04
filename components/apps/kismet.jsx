@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from "react";
+import vendors from "@/data/oui.json";
 
 // Helper to convert bytes to MAC address string
 const macToString = (bytes) =>
   Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join(':');
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join(":");
 
 // Parse a single 802.11 management frame (beacon/probe response)
 const parseMgmtFrame = (frame) => {
   const bssid = macToString(frame.slice(16, 22));
-  let ssid = '';
+  let ssid = "";
   let channel;
 
   // Skip header (24 bytes) + fixed params (12 bytes)
@@ -116,9 +117,9 @@ const TimeChart = ({ data }) => {
     .map((t, i) => {
       const x = (i / Math.max(1, times.length - 1)) * width;
       const y = height - (data[t] / max) * height;
-      return `${i === 0 ? 'M' : 'L'}${x} ${y}`;
+      return `${i === 0 ? "M" : "L"}${x} ${y}`;
     })
-    .join(' ');
+    .join(" ");
 
   return (
     <svg
@@ -136,6 +137,14 @@ const KismetApp = ({ onNetworkDiscovered }) => {
   const [networks, setNetworks] = useState([]);
   const [channels, setChannels] = useState({});
   const [times, setTimes] = useState({});
+
+  const ssidCounts = useMemo(() => {
+    const counts = {};
+    networks.forEach((n) => {
+      if (n.ssid) counts[n.ssid] = (counts[n.ssid] || 0) + 1;
+    });
+    return counts;
+  }, [networks]);
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
@@ -172,14 +181,27 @@ const KismetApp = ({ onNetworkDiscovered }) => {
               </tr>
             </thead>
             <tbody>
-              {networks.map((n) => (
-                <tr key={n.bssid} className="odd:bg-gray-800">
-                  <td className="pr-2">{n.ssid || '(hidden)'}</td>
-                  <td className="pr-2">{n.bssid}</td>
-                  <td className="pr-2">{n.channel ?? '-'}</td>
-                  <td>{n.frames}</td>
-                </tr>
-              ))}
+              {networks.map((n) => {
+                const vendor =
+                  vendors[n.bssid?.slice(0, 8).toUpperCase()] || "Unknown";
+                const duplicate = n.ssid && ssidCounts[n.ssid] > 1;
+                return (
+                  <tr
+                    key={n.bssid}
+                    className={`odd:bg-gray-800 ${
+                      duplicate ? "bg-red-900" : ""
+                    }`}
+                  >
+                    <td className="pr-2">{n.ssid || "(hidden)"}</td>
+                    <td className="pr-2">
+                      {n.bssid}{" "}
+                      <span className="text-gray-400">({vendor})</span>
+                    </td>
+                    <td className="pr-2">{n.channel ?? "-"}</td>
+                    <td>{n.frames}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
 
@@ -199,4 +221,3 @@ const KismetApp = ({ onNetworkDiscovered }) => {
 };
 
 export default KismetApp;
-
