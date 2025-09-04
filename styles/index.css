@@ -55,7 +55,11 @@ button:focus-visible {
 input[type=range].ubuntu-slider {
     outline: none;
     -webkit-appearance: none;
-    background: linear-gradient(to right, rgba(175, 175, 175, 0.3) 0%, rgba(175, 175, 175, 0.3) 100%);
+    background: linear-gradient(
+        to right,
+        color-mix(in srgb, var(--color-text), transparent 70%) 0%,
+        color-mix(in srgb, var(--color-text), transparent 70%) 100%
+    );
     background-position: center;
     background-size: 99% 3px;
     background-repeat: no-repeat;
@@ -65,8 +69,8 @@ input[type=range].ubuntu-slider {
 }
 
 input[type=range].ubuntu-slider::-webkit-slider-thumb {
-    -webkit-box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.2);
-    box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.2);
+    -webkit-box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-inverse), transparent 80%);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-inverse), transparent 80%);
     -webkit-box-sizing: border-box;
     box-sizing: border-box;
     -webkit-appearance: none;
@@ -131,9 +135,9 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 }
 
 .window-shadow {
-    box-shadow: 1px 4px 12px 4px rgba(0, 0, 0, 0.2);
-    -webkit-box-shadow: 1px 4px 12px 4px rgba(0, 0, 0, 0.2);
-    -moz-box-shadow: 1px 4px 12px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
+    -webkit-box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
+    -moz-box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
 }
 
 .closed-window {
@@ -159,7 +163,7 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 }
 
 .windowMainScreen::-webkit-scrollbar-track {
-    -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+    -webkit-box-shadow: inset 0 0 6px color-mix(in srgb, var(--color-inverse), transparent 70%);
     background-color: transparent;
 }
 
@@ -187,7 +191,7 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     background: var(--color-inverse);
     color: var(--color-terminal);
     text-shadow: 0 0 2px var(--color-terminal);
-    box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--color-terminal), transparent 50%);
 }
 
 .crt-terminal .xterm-screen,
@@ -201,13 +205,13 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 
 /* High contrast handling for precipitation text */
 .precip-text {
-    color: #0ea5e9;
+    color: var(--color-primary);
 }
 
 @media (prefers-contrast: more), (forced-colors: active) {
     .precip-text {
-        color: #000;
-        background-color: #fff;
+        color: var(--color-bg);
+        background-color: var(--color-text);
         padding-inline: 2px;
     }
 }
@@ -388,7 +392,7 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 /* Context Menu & Panels */
 .context-menu-bg,
 .windowMainScreen {
-    background-color: rgba(43, 43, 43, 0.85); /* Fallback for unsupported browsers */
+    background-color: color-mix(in srgb, var(--color-bg), transparent 15%); /* Fallback for unsupported browsers */
 }
 
 @supports ((-webkit-backdrop-filter: blur(0)) or (backdrop-filter: blur(0))) {
@@ -396,7 +400,7 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     .windowMainScreen {
         -webkit-backdrop-filter: blur(10px);
         backdrop-filter: blur(10px);
-        background-color: rgba(43, 43, 43, 0.4);
+        background-color: color-mix(in srgb, var(--color-bg), transparent 60%);
     }
 }
 
@@ -472,7 +476,7 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    background: rgba(255, 255, 255, 0.5);
+    background: color-mix(in srgb, var(--color-text), transparent 50%);
     animation: merge-ripple 0.4s ease-out;
     pointer-events: none;
 }
@@ -506,7 +510,11 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 }
 
 .word-found {
-    background: linear-gradient(90deg, rgba(255, 255, 0, 0.4) 0%, rgba(255, 255, 0, 0.4) 100%);
+    background: linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--color-accent), transparent 60%) 0%,
+        color-mix(in srgb, var(--color-accent), transparent 60%) 100%
+    );
     background-repeat: no-repeat;
     background-size: 0% 100%;
     animation: word-found-highlight 0.6s forwards;
@@ -516,7 +524,7 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 /* Highlight currently selected cells in word search */
 .selection {
     /* amber tone for colorblind-safe contrast */
-    background-color: #fbbf24;
+    background-color: var(--color-accent);
 }
 
 /* Ensure monospace layout for app outputs */
@@ -529,7 +537,7 @@ pre {
 /* Visible focus rings for copy buttons and text areas */
 button:focus-visible,
 textarea:focus-visible {
-    outline: 2px solid #3B82F6;
+    outline: 2px solid var(--color-primary);
     outline-offset: 2px;
 }
 
