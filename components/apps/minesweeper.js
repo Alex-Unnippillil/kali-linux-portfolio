@@ -192,6 +192,7 @@ const Minesweeper = () => {
   const [elapsed, setElapsed] = useState(0);
   const [bestTime, setBestTime] = useState(null);
   const [bv, setBV] = useState(0);
+  const [bvps, setBVPS] = useState(null);
   const [codeInput, setCodeInput] = useState('');
   const [flags, setFlags] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -247,6 +248,7 @@ const Minesweeper = () => {
           if (data.seed !== undefined) setSeed(data.seed);
           if (data.shareCode) setShareCode(data.shareCode);
           if (data.bv) setBV(data.bv);
+          if (data.bvps !== undefined) setBVPS(data.bvps);
           if (data.flags) setFlags(data.flags);
           if (data.paused) setPaused(data.paused);
           if (data.status === 'playing' && !data.paused) {
@@ -436,6 +438,7 @@ const Minesweeper = () => {
           startTime,
           elapsed,
           bv,
+          bvps,
           flags,
           paused,
         };
@@ -443,7 +446,7 @@ const Minesweeper = () => {
         setHasSave(!!board);
       } catch {}
     }
-  }, [board, status, seed, shareCode, startTime, elapsed, bv, flags, paused]);
+  }, [board, status, seed, shareCode, startTime, elapsed, bv, bvps, flags, paused]);
 
   const playSound = (type) => {
     if (!sound || typeof window === 'undefined') return;
@@ -466,6 +469,9 @@ const Minesweeper = () => {
       setStatus('won');
       const time = (Date.now() - startTime) / 1000;
       setElapsed(time);
+      const finalBV = calculate3BV(newBoard);
+      setBV(finalBV);
+      setBVPS(time > 0 ? finalBV / time : finalBV);
       if (typeof window !== 'undefined') {
         if (!bestTime || time < bestTime) {
           setBestTime(time);
@@ -562,6 +568,7 @@ const Minesweeper = () => {
     setStartTime(Date.now());
     setShareCode(`${seed.toString(36)}-${x}-${y}`);
     setBV(calculate3BV(newBoard));
+    setBVPS(null);
     setFlags(0);
     setPaused(false);
     const finalize = (count) => {
@@ -633,6 +640,11 @@ const Minesweeper = () => {
                 if (hit) {
                   setBoard(newBoard);
                   setStatus('lost');
+                  const time = (Date.now() - startTime) / 1000;
+                  setElapsed(time);
+                  const finalBV = calculate3BV(newBoard);
+                  setBV(finalBV);
+                  setBVPS(time > 0 ? finalBV / time : finalBV);
                   playSound('boom');
                   setAriaMessage('Boom! Game over');
                   return;
@@ -650,6 +662,11 @@ const Minesweeper = () => {
         });
         setBoard(newBoard);
         setStatus('lost');
+        const time = (Date.now() - startTime) / 1000;
+        setElapsed(time);
+        const finalBV = calculate3BV(newBoard);
+        setBV(finalBV);
+        setBVPS(time > 0 ? finalBV / time : finalBV);
         playSound('boom');
         setAriaMessage('Boom! Game over');
         return;
@@ -757,6 +774,11 @@ const Minesweeper = () => {
           if (hit) {
             setBoard(newBoard);
             setStatus('lost');
+            const time = (Date.now() - startTime) / 1000;
+            setElapsed(time);
+            const finalBV = calculate3BV(newBoard);
+            setBV(finalBV);
+            setBVPS(time > 0 ? finalBV / time : finalBV);
             playSound('boom');
             setAriaMessage('Boom! Game over');
             return;
@@ -867,6 +889,7 @@ const Minesweeper = () => {
     setStartTime(null);
     setElapsed(0);
     setBV(0);
+    setBVPS(null);
     setCodeInput('');
     setFlags(0);
     setPaused(false);
@@ -898,6 +921,7 @@ const Minesweeper = () => {
     setStartTime(null);
     setElapsed(0);
     setBV(0);
+    setBVPS(null);
     setFlags(0);
     setPaused(false);
     if (parts.length === 3) {
@@ -947,6 +971,7 @@ const Minesweeper = () => {
       if (data.seed !== undefined) setSeed(data.seed);
       if (data.shareCode) setShareCode(data.shareCode);
       if (data.bv) setBV(data.bv);
+      if (data.bvps !== undefined) setBVPS(data.bvps);
       if (data.flags) setFlags(data.flags);
       if (data.paused) setPaused(data.paused);
       if (data.status === 'playing' && !data.paused) {
@@ -1013,7 +1038,16 @@ const Minesweeper = () => {
         </button>
       </div>
       <div className="mb-2">Mines: {MINES_COUNT - flags}</div>
-      <div className="mb-2">3BV: {bv} | Best: {bestTime ? bestTime.toFixed(2) : '--'}s{status === 'won' ? ` | Time: ${elapsed.toFixed(2)}s` : ''}</div>
+      <div className="mb-2">
+        3BV: {bv}
+        {(status === 'won' || status === 'lost') && bvps !== null
+          ? ` | 3BV/s: ${bvps.toFixed(2)}`
+          : ''}
+        {` | Best: ${bestTime ? bestTime.toFixed(2) : '--'}s`}
+        {(status === 'won' || status === 'lost')
+          ? ` | Time: ${elapsed.toFixed(2)}s`
+          : ''}
+      </div>
       <div className="mb-2">
         <button
           className={`w-8 h-8 text-xl bg-gray-700 rounded border-2 ${faceBtnDown ? 'border-gray-400 translate-y-[1px]' : 'border-gray-600'}`}
