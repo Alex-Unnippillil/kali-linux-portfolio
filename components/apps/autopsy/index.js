@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import KeywordSearchPanel from './KeywordSearchPanel';
 import demoArtifacts from './data/sample-artifacts.json';
 import ReportExport from '../../../apps/autopsy/components/ReportExport';
+import EventDrawer from '../../../apps/autopsy/components/EventDrawer';
 import demoCase from '../../../apps/autopsy/data/case.json';
 
 const escapeFilename = (str = '') =>
@@ -586,6 +587,7 @@ function Autopsy({ initialArtifacts = null }) {
   }, [artifacts]);
 
   return (
+    <>
     <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white p-4 space-y-4">
       <div
         aria-live="polite"
@@ -710,7 +712,15 @@ function Autopsy({ initialArtifacts = null }) {
           {visibleTimeline.length > 0 && (
             <>
               <div className="text-sm font-bold">Timeline</div>
-              <Timeline events={visibleTimeline} onSelect={() => {}} />
+              <Timeline
+                events={visibleTimeline}
+                onSelect={(ev) => {
+                  const match = artifacts.find((a) =>
+                    ev.name.includes(a.name)
+                  );
+                  if (match) setSelectedArtifact(match);
+                }}
+              />
             </>
           )}
           {fileTree && (
@@ -786,29 +796,12 @@ function Autopsy({ initialArtifacts = null }) {
           <ReportExport caseName={currentCase || 'case'} artifacts={artifacts} />
         </div>
       )}
-      {selectedArtifact && (
-        <div className="fixed right-0 top-0 w-64 h-full bg-ub-grey p-4 overflow-y-auto">
-          <button
-            onClick={() => setSelectedArtifact(null)}
-            className="mb-2 text-right w-full"
-          >
-            Close
-          </button>
-          <div
-            className="font-bold"
-            dangerouslySetInnerHTML={{ __html: escapeFilename(selectedArtifact.name) }}
-          />
-          <div className="text-gray-400">{selectedArtifact.type}</div>
-          <div className="text-xs">
-            {new Date(selectedArtifact.timestamp).toLocaleString()}
-          </div>
-          <div className="text-xs">{selectedArtifact.description}</div>
-          <div className="text-xs">Plugin: {selectedArtifact.plugin}</div>
-          <div className="text-xs">User: {selectedArtifact.user || 'Unknown'}</div>
-          <div className="text-xs">Size: {selectedArtifact.size}</div>
-        </div>
-      )}
     </div>
+    <EventDrawer
+      artifact={selectedArtifact}
+      onClose={() => setSelectedArtifact(null)}
+    />
+    </>
   );
 }
 

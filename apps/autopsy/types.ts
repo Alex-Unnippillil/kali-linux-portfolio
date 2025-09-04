@@ -6,4 +6,6 @@ export interface Artifact {
   plugin: string;
   timestamp: string;
   user?: string;
+  path?: string;
+  hash?: string;
 }
