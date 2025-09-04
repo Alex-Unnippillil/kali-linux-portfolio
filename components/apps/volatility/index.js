@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import MemoryHeatmap from './MemoryHeatmap';
 import PluginBrowser from './PluginBrowser';
 import PluginWalkthrough from '../../../apps/volatility/components/PluginWalkthrough';
+import GlossaryPanel from '../../../apps/volatility/components/GlossaryPanel';
+import glossary from '../../../apps/volatility/glossary';
 import memoryFixture from '../../../public/demo-data/volatility/memory.json';
 import pslistJson from '../../../public/demo-data/volatility/pslist.json';
 import netscanJson from '../../../public/demo-data/volatility/netscan.json';
@@ -28,39 +30,6 @@ const heuristicColors = {
   informational: 'bg-blue-600',
   suspicious: 'bg-yellow-600',
   malicious: 'bg-red-600',
-};
-
-const glossary = {
-  pstree: {
-    title: 'Process Tree',
-    description: 'Hierarchy of running processes.',
-    link: '/docs/template-glossary#process-tree',
-  },
-  pslist: {
-    title: 'Process List',
-    description: 'Active processes captured from memory.',
-    link: '/docs/template-glossary#pslist',
-  },
-  dlllist: {
-    title: 'Module List',
-    description: 'DLLs and modules loaded by the selected process.',
-    link: '/docs/template-glossary#module',
-  },
-  netscan: {
-    title: 'Network Connections',
-    description: 'Sockets and network endpoints identified in memory.',
-    link: '/docs/template-glossary#netscan',
-  },
-  malfind: {
-    title: 'Malfind',
-    description: 'Heuristics to locate injected or malicious code.',
-    link: '/docs/template-glossary#malfind',
-  },
-  yara: {
-    title: 'Yara Scan',
-    description: 'Pattern-based rules that highlight suspicious memory content.',
-    link: '/docs/template-glossary#yara',
-  },
 };
 
 const SortableTable = ({ columns, data, onRowClick }) => {
@@ -124,6 +93,7 @@ const VolatilityApp = () => {
   const [activeTab, setActiveTab] = useState('pstree');
   const [selectedPid, setSelectedPid] = useState(null);
   const [finding, setFinding] = useState(null);
+  const [showGlossary, setShowGlossary] = useState(false);
   const workerRef = useRef(null);
 
   useEffect(() => {
@@ -146,6 +116,11 @@ const VolatilityApp = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleGlossary = () => {
+    setShowGlossary((prev) => !prev);
+    setFinding(null);
   };
 
   const TreeNode = ({ node }) => (
@@ -172,13 +147,21 @@ const VolatilityApp = () => {
   return (
     <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white">
       <div className="p-4 space-y-2">
-        <button
-          onClick={analyze}
-          disabled={loading}
-          className="px-4 py-2 bg-green-600 rounded disabled:opacity-50"
-        >
-          {loading ? 'Analyzing...' : 'Analyze'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={analyze}
+            disabled={loading}
+            className="px-4 py-2 bg-green-600 rounded disabled:opacity-50"
+          >
+            {loading ? 'Analyzing...' : 'Analyze'}
+          </button>
+          <button
+            onClick={toggleGlossary}
+            className="px-4 py-2 bg-gray-700 rounded"
+          >
+            {showGlossary ? 'Hide Glossary' : 'Show Glossary'}
+          </button>
+        </div>
       </div>
       <MemoryHeatmap data={heatmapData} />
       <div className="flex-1 flex">
@@ -292,7 +275,7 @@ const VolatilityApp = () => {
             {activeTab === 'walkthrough' && <PluginWalkthrough />}
           </div>
         </div>
-        {finding && (
+        {finding && !showGlossary && (
           <aside className="w-64 p-3 border-l border-gray-700 bg-gray-900">
             <h3 className="text-sm font-semibold mb-2">Explain this finding</h3>
             <p className="text-xs mb-2">{finding.description}</p>
@@ -312,6 +295,7 @@ const VolatilityApp = () => {
             </button>
           </aside>
         )}
+        {showGlossary && <GlossaryPanel onClose={toggleGlossary} />}
       </div>
       {output && (
         <div className="h-32 overflow-auto bg-black text-white text-xs font-mono rounded">
