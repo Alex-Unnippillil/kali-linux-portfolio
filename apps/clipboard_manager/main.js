@@ -1,4 +1,5 @@
 /* eslint-env browser */
+/* eslint-disable no-top-level-window/no-top-level-window-or-document */
 const historyKey = 'clipboardHistory';
 let history = JSON.parse(localStorage.getItem(historyKey)) || [];
 
