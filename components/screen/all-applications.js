@@ -1,5 +1,6 @@
 import React from 'react';
 import UbuntuApp from '../base/ubuntu_app';
+import Fuse from 'fuse.js';
 
 class AllApplications extends React.Component {
     constructor() {
@@ -9,6 +10,8 @@ class AllApplications extends React.Component {
             apps: [],
             unfilteredApps: [],
         };
+        this.searchTimeout = null;
+        this.fuse = null;
     }
 
     componentDidMount() {
@@ -17,19 +20,53 @@ class AllApplications extends React.Component {
         games.forEach((game) => {
             if (!combined.some((app) => app.id === game.id)) combined.push(game);
         });
+        this.fuse = new Fuse(combined, {
+            keys: ['title'],
+            includeScore: true,
+            threshold: 0.4,
+        });
         this.setState({ apps: combined, unfilteredApps: combined });
     }
 
+    componentWillUnmount() {
+        if (this.searchTimeout) clearTimeout(this.searchTimeout);
+    }
+
+    performSearch = (value) => {
+        const { unfilteredApps } = this.state;
+        if (!this.fuse) {
+            this.fuse = new Fuse(unfilteredApps, {
+                keys: ['title'],
+                includeScore: true,
+                threshold: 0.4,
+            });
+        } else {
+            this.fuse.setCollection(unfilteredApps);
+        }
+        if (!value) {
+            this.setState({ apps: unfilteredApps });
+            return;
+        }
+        const lower = value.toLowerCase();
+        const results = this.fuse.search(value).map((res) => {
+            const app = res.item;
+            let weight = 0;
+            if (app.favourite) weight += 3;
+            if (app.title.toLowerCase().startsWith(lower)) weight += 2;
+            return { app, score: res.score ?? 0, weight };
+        });
+        results.sort((a, b) => {
+            if (b.weight !== a.weight) return b.weight - a.weight;
+            return a.score - b.score;
+        });
+        this.setState({ apps: results.map((r) => r.app) });
+    };
+
     handleChange = (e) => {
         const value = e.target.value;
-        const { unfilteredApps } = this.state;
-        const apps =
-            value === '' || value === null
-                ? unfilteredApps
-                : unfilteredApps.filter((app) =>
-                      app.title.toLowerCase().includes(value.toLowerCase())
-                  );
-        this.setState({ query: value, apps });
+        this.setState({ query: value });
+        clearTimeout(this.searchTimeout);
+        this.searchTimeout = setTimeout(() => this.performSearch(value), 75);
     };
 
     openApp = (id) => {
