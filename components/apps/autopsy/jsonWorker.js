@@ -1,4 +1,3 @@
-/* eslint-disable no-restricted-globals */
 self.onmessage = (e) => {
   try {
     const data = JSON.parse(e.data);

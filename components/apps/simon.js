@@ -528,7 +528,6 @@ const Simon = () => {
           <div className="mb-1">Leaderboard</div>
           <ol className="list-decimal list-inside">
             {scores.map((score, i) => (
-              // eslint-disable-next-line react/no-array-index-key
               <li key={i}>{score}</li>
             ))}
           </ol>

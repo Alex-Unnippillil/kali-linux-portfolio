@@ -7,9 +7,7 @@ const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
 
 export default function Status() {
   const { allowNetwork } = useSettings();
-  const [online, setOnline] = useState(
-    typeof navigator !== "undefined" ? navigator.onLine : true
-  );
+  const [online, setOnline] = useState(true);
 
   useEffect(() => {
     const pingServer = async () => {

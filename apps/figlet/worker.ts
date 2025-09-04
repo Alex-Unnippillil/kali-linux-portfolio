@@ -48,14 +48,12 @@ function init() {
   for (const { name } of fonts) {
     const preview = figlet.textSync('Figlet', { font: name as figlet.Fonts });
     const mono = isMonospace(name);
-    // eslint-disable-next-line no-restricted-globals
     self.postMessage({ type: 'font', font: name, preview, mono });
   }
 }
 
 init();
 
-// eslint-disable-next-line no-restricted-globals
 self.onmessage = (e: MessageEvent<any>) => {
   if (e.data?.type === 'load') {
     const { name, data } = e.data as { name: string; data: string };
@@ -63,7 +61,6 @@ self.onmessage = (e: MessageEvent<any>) => {
       figlet.parseFont(name, data);
       const preview = figlet.textSync('Figlet', { font: name as figlet.Fonts });
       const mono = isMonospace(name);
-      // eslint-disable-next-line no-restricted-globals
       self.postMessage({ type: 'font', font: name, preview, mono });
     } catch {
       /* ignore bad font */
@@ -87,6 +84,5 @@ self.onmessage = (e: MessageEvent<any>) => {
     width,
     horizontalLayout: layout as figlet.KerningMethods,
   });
-  // eslint-disable-next-line no-restricted-globals
   self.postMessage({ type: 'render', output: rendered });
 };

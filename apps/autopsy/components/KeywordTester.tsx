@@ -8,7 +8,6 @@ const escapeHtml = (str: string = '') =>
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    // eslint-disable-next-line no-useless-escape
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 

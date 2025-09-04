@@ -149,7 +149,7 @@ export const autoFill = (grid: Grid, rows: Clue[], cols: Clue[]): Grid => {
   return g;
 };
 
-export default {
+const logicApi = {
   lineToClues,
   generateLinePatterns,
   getPossibleLineSolutions,
@@ -160,3 +160,5 @@ export default {
   toggleCross,
   autoFill,
 };
+
+export default logicApi;

@@ -71,15 +71,11 @@ const isProd = process.env.NODE_ENV === 'production';
 
 // Merge experiment settings and production optimizations into a single function.
 function configureWebpack(config, { isServer }) {
-  if (isProd) {
-    // Enable WebAssembly loading and avoid JSON destructuring bug
-    config.experiments = {
-      ...(config.experiments || {}),
-      asyncWebAssembly: true,
-    };
-  } else {
-    // Experiments are disabled in development; re-enable by removing the NODE_ENV check above.
-  }
+  // Enable WebAssembly loading and avoid JSON destructuring bug
+  config.experiments = {
+    ...(config.experiments || {}),
+    asyncWebAssembly: true,
+  };
   // Prevent bundling of server-only modules in the browser
   config.resolve = config.resolve || {};
   config.resolve.fallback = {

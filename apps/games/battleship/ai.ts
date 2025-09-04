@@ -222,7 +222,7 @@ export class RandomAI {
   }
 }
 
-export default {
+const battleshipAI = {
   BOARD_SIZE,
   SHIPS,
   MonteCarloAI,
@@ -230,3 +230,5 @@ export default {
   RandomAI,
   randomizePlacement,
 };
+
+export default battleshipAI;

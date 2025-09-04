@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useState } from 'react'
 import { useSettings } from '../../hooks/useSettings';
 import useDailyQuote from '../../hooks/useDailyQuote';

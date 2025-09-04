@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useRef, useState } from 'react';
 import useRovingTabIndex from '../../../hooks/useRovingTabIndex';
 import type { PDFDocumentProxy } from 'pdfjs-dist';

@@ -61,4 +61,5 @@ export const loadPackFromJSON = (raw: string): PuzzlePack => {
   return { name: data.name, puzzles };
 };
 
-export default { parsePack, loadPack, loadPackFromJSON };
+const packsApi = { parsePack, loadPack, loadPackFromJSON };
+export default packsApi;

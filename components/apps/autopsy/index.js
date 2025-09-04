@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import KeywordSearchPanel from './KeywordSearchPanel';
 import demoArtifacts from './data/sample-artifacts.json';
@@ -8,7 +10,6 @@ const escapeFilename = (str = '') =>
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    // eslint-disable-next-line no-useless-escape
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 

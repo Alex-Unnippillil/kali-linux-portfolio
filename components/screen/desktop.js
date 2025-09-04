@@ -1,5 +1,12 @@
+"use client";
+
 import React, { Component } from 'react';
-import BackgroundImage from '../util-components/background-image';
+import dynamic from 'next/dynamic';
+
+const BackgroundImage = dynamic(
+    () => import('../util-components/background-image'),
+    { ssr: false }
+);
 import SideBar from './side_bar';
 import apps, { games } from '../../apps.config';
 import Window from '../base/window';

@@ -1,4 +1,3 @@
-/* eslint-disable no-restricted-globals */
 self.onmessage = (e) => {
   const { events = [] } = e.data || {};
   const sorted = events.slice().sort(

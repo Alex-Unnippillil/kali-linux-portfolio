@@ -1,8 +1,16 @@
 import { isBrowser } from '../../utils/env';
 import { makeIdb } from '../../utils/safeIdb';
 
-const notesContainer = isBrowser ? document.getElementById('notes') : null;
-const addNoteBtn = isBrowser ? document.getElementById('add-note') : null;
+let notesContainer = null;
+let addNoteBtn = null;
+
+function initDom() {
+  if (!isBrowser) return;
+  notesContainer = document.getElementById('notes');
+  addNoteBtn = document.getElementById('add-note');
+}
+
+initDom();
 
 const DB_NAME = 'stickyNotes';
 const STORE_NAME = 'notes';

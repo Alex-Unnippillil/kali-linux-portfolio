@@ -184,7 +184,7 @@ export function Settings() {
                 {
                     wallpapers.map((name, index) => (
                         <div
-                            key={index}
+                            key={name}
                             role="button"
                             aria-label={`Select ${name.replace('wall-', 'wallpaper ')}`}
                             aria-pressed={name === wallpaper}

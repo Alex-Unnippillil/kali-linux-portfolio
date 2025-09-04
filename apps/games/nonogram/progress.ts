@@ -24,4 +24,5 @@ export const loadProgress = (name: string): PuzzleState | null => {
   }
 };
 
-export default { saveProgress, loadProgress };
+const progressApi = { saveProgress, loadProgress };
+export default progressApi;
