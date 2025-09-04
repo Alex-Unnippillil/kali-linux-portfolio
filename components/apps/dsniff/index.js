@@ -3,6 +3,7 @@ import urlsnarfFixture from '../../../public/demo-data/dsniff/urlsnarf.json';
 import arpspoofFixture from '../../../public/demo-data/dsniff/arpspoof.json';
 import pcapFixture from '../../../public/demo-data/dsniff/pcap.json';
 import TerminalOutput from '../../TerminalOutput';
+import Tooltip from '../../ui/Tooltip';
 
 // Simple parser that attempts to extract protocol, host and remaining details
 // Each parsed line is also given a synthetic timestamp for display purposes
@@ -114,14 +115,11 @@ const LogRow = ({ log, prefersReduced }) => {
     <tr ref={rowRef} className="odd:bg-black even:bg-ub-grey">
       <td className="pr-2 text-gray-400 whitespace-nowrap">{log.timestamp}</td>
       <td className="pr-2 text-green-400">
-
-        <abbr
-          title={protocolInfo[log.protocol] || log.protocol}
-          className="underline decoration-dotted cursor-help"
-          tabIndex={0}
-        >
-          {log.protocol}
-        </abbr>
+        <Tooltip label={protocolInfo[log.protocol] || log.protocol}>
+          <abbr className="underline decoration-dotted cursor-help">
+            {log.protocol}
+          </abbr>
+        </Tooltip>
       </td>
       <td className="px-2 py-[6px] text-white">{log.host}</td>
       <td className="px-2 py-[6px] text-green-400">{log.details}</td>
@@ -182,24 +180,28 @@ const SessionTile = ({ session, onView }) => (
           {protocolIcons[session.protocol] || '❓'}
         </span>
         <div className="flex space-x-1">
-          <button
-            className="w-6 h-6 flex items-center justify-center bg-gray-700 rounded"
-            title="Copy session"
-            onClick={() =>
-              navigator.clipboard?.writeText(
-                `${session.src}\t${session.dst}\t${session.protocol}\t${session.info}`,
-              )
-            }
-          >
-            📋
-          </button>
-          <button
-            className="w-6 h-6 flex items-center justify-center bg-gray-700 rounded"
-            title="View details"
-            onClick={onView}
-          >
-            🔍
-          </button>
+          <Tooltip label="Copy session">
+            <button
+              className="w-6 h-6 flex items-center justify-center bg-gray-700 rounded"
+              aria-label="Copy session"
+              onClick={() =>
+                navigator.clipboard?.writeText(
+                  `${session.src}\t${session.dst}\t${session.protocol}\t${session.info}`,
+                )
+              }
+            >
+              📋
+            </button>
+          </Tooltip>
+          <Tooltip label="View details">
+            <button
+              className="w-6 h-6 flex items-center justify-center bg-gray-700 rounded"
+              aria-label="View details"
+              onClick={onView}
+            >
+              🔍
+            </button>
+          </Tooltip>
         </div>
       </div>
       <div className="text-xs text-white">
