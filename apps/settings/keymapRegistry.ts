@@ -5,7 +5,7 @@ export interface Shortcut {
   keys: string;
 }
 
-const DEFAULT_SHORTCUTS: Shortcut[] = [
+export const DEFAULT_SHORTCUTS: Shortcut[] = [
   { description: 'Show keyboard shortcuts', keys: '?' },
   { description: 'Open settings', keys: 'Ctrl+,' },
 ];
@@ -30,7 +30,7 @@ export function useKeymap() {
     {}
   );
 
-  const [map, setMap] = usePersistentState<Record<string, string>>(
+  const [map, setMap, resetMap] = usePersistentState<Record<string, string>>(
     'keymap',
     initial,
     validator
@@ -44,7 +44,9 @@ export function useKeymap() {
   const updateShortcut = (description: string, keys: string) =>
     setMap({ ...map, [description]: keys });
 
-  return { shortcuts, updateShortcut };
+  const resetShortcuts = () => resetMap();
+
+  return { shortcuts, updateShortcut, resetShortcuts };
 }
 
 export default useKeymap;
