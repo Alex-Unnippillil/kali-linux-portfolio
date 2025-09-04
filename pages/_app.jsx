@@ -149,10 +149,25 @@ function MyApp(props) {
     <ErrorBoundary>
       <Script src="/a2hs.js" strategy="beforeInteractive" />
       <div className={ubuntu.className}>
+        <a
+          href="#main-content"
+          className="skip-link"
+          onClick={(e) => {
+            const main = document.getElementById('main-content');
+            if (main) {
+              e.preventDefault();
+              main.focus();
+            }
+          }}
+        >
+          Skip to main content
+        </a>
         <SettingsProvider>
           <PipPortalProvider>
             <div aria-live="polite" id="live-region" />
-            <Component {...pageProps} />
+            <div id="main-content" tabIndex={-1}>
+              <Component {...pageProps} />
+            </div>
             <ShortcutOverlay />
             <Analytics
               beforeSend={(e) => {
