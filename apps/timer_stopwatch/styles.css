@@ -5,7 +5,7 @@ body {
   align-items: center;
   justify-content: flex-start;
   margin-top: 50px;
-  background: #f0f0f0;
+  background: var(--color-bg);
 }
 .display {
   font-size: 4rem;
@@ -19,7 +19,7 @@ button {
 }
 /* Tab styles */
 .tabs .tab[aria-selected='true'] {
-  background: #ddd;
+  background: color-mix(in srgb, var(--color-muted), var(--color-text) 20%);
   font-weight: bold;
 }
 
@@ -48,7 +48,7 @@ ul {
   max-width: 300px;
 }
 li {
-  background: #fff;
+  background: var(--color-surface);
   margin: 2px 0;
   padding: 5px 10px;
   border-radius: 4px;

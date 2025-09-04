@@ -1,6 +1,6 @@
 body {
   font-family: sans-serif;
-  background: #f0f0f0;
+  background: var(--color-bg);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -9,9 +9,9 @@ body {
 }
 
 .widget-container {
-  background: white;
+  background: var(--color-surface);
   border-radius: 8px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--color-inverse), transparent 90%);
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -33,7 +33,7 @@ body {
 }
 
 #error-message {
-  color: #d00;
+  color: var(--color-accent);
   text-align: center;
 }
 
