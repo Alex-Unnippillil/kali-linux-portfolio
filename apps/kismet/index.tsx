@@ -3,6 +3,7 @@
 import React, { useCallback } from 'react';
 import KismetApp from '../../components/apps/kismet.jsx';
 import DeauthWalkthrough from './components/DeauthWalkthrough';
+import ChannelOccupancyHeatmap from './components/ChannelOccupancyHeatmap';
 import { createLogger } from '../../lib/logger';
 
 const KismetPage: React.FC = () => {
@@ -21,6 +22,7 @@ const KismetPage: React.FC = () => {
   return (
     <>
       <KismetApp onNetworkDiscovered={handleNetworkDiscovered} />
+      <ChannelOccupancyHeatmap />
       <DeauthWalkthrough />
     </>
   );
