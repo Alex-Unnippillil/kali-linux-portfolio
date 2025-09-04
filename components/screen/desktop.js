@@ -16,6 +16,7 @@ import ShortcutSelector from '../screen/shortcut-selector'
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
+import ItemMenu from '../context-menus/item-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
@@ -41,16 +42,23 @@ export class Desktop extends Component {
                 desktop: false,
                 default: false,
                 app: false,
+                item: false,
             },
             context_app: null,
+            context_section: null,
             showNameBar: false,
             showShortcutSelector: false,
+            recent_apps: [],
         }
     }
 
     componentDidMount() {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+
+        let recentApps = [];
+        try { recentApps = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]'); } catch (e) { recentApps = []; }
+        this.setState({ recent_apps: recentApps });
 
         this.fetchAppsData(() => {
             const session = this.props.session || {};
@@ -150,6 +158,7 @@ export class Desktop extends Component {
         const target = e.target.closest('[data-context]');
         const context = target ? target.dataset.context : null;
         const appId = target ? target.dataset.appId : null;
+        const section = target ? target.dataset.section : null;
         switch (context) {
             case "desktop-area":
                 ReactGA.event({
@@ -164,6 +173,13 @@ export class Desktop extends Component {
                     action: `Opened App Context Menu`
                 });
                 this.setState({ context_app: appId }, () => this.showContextMenu(e, "app"));
+                break;
+            case "item":
+                ReactGA.event({
+                    category: `Context Menu`,
+                    action: `Opened Item Context Menu`
+                });
+                this.setState({ context_app: appId, context_section: section }, () => this.showContextMenu(e, "item"));
                 break;
             default:
                 ReactGA.event({
@@ -181,6 +197,7 @@ export class Desktop extends Component {
         const target = e.target.closest('[data-context]');
         const context = target ? target.dataset.context : null;
         const appId = target ? target.dataset.appId : null;
+        const section = target ? target.dataset.section : null;
         const rect = target ? target.getBoundingClientRect() : { left: 0, top: 0, height: 0 };
         const fakeEvent = { pageX: rect.left, pageY: rect.top + rect.height };
         switch (context) {
@@ -191,6 +208,10 @@ export class Desktop extends Component {
             case "app":
                 ReactGA.event({ category: `Context Menu`, action: `Opened App Context Menu` });
                 this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "app"));
+                break;
+            case "item":
+                ReactGA.event({ category: `Context Menu`, action: `Opened Item Context Menu` });
+                this.setState({ context_app: appId, context_section: section }, () => this.showContextMenu(fakeEvent, "item"));
                 break;
             default:
                 ReactGA.event({ category: `Context Menu`, action: `Opened Default Context Menu` });
@@ -221,7 +242,7 @@ export class Desktop extends Component {
         Object.keys(menus).forEach(key => {
             menus[key] = false;
         });
-        this.setState({ context_menus: menus, context_app: null });
+        this.setState({ context_menus: menus, context_app: null, context_section: null });
     }
 
     getMenuPosition = (e) => {
@@ -354,6 +375,64 @@ export class Desktop extends Component {
             }
         });
         return appsJsx;
+    }
+
+    renderPinnedSection = () => {
+        const pinned = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
+        if (!pinned.length) return null;
+        return (
+            <section className="absolute top-8 right-8" aria-label="Pinned applications">
+                <h2 className="text-white text-sm mb-2">Pinned</h2>
+                <div className="flex flex-wrap gap-2">
+                    {pinned.map(id => {
+                        const app = apps.find(a => a.id === id);
+                        if (!app) return null;
+                        return (
+                            <UbuntuApp
+                                key={id}
+                                name={app.title}
+                                id={id}
+                                icon={app.icon}
+                                openApp={this.openApp}
+                                disabled={app.disabled}
+                                prefetch={app.screen?.prefetch}
+                                context="item"
+                                section="pinned"
+                            />
+                        );
+                    })}
+                </div>
+            </section>
+        );
+    }
+
+    renderRecentSection = () => {
+        const recent = this.state.recent_apps.filter(id => !this.state.favourite_apps[id]);
+        if (!recent.length) return null;
+        return (
+            <section className="absolute top-40 right-8" aria-label="Recent applications">
+                <h2 className="text-white text-sm mb-2">Recent</h2>
+                <div className="flex flex-wrap gap-2">
+                    {recent.map(id => {
+                        const app = apps.find(a => a.id === id);
+                        if (!app) return null;
+                        return (
+                            <UbuntuApp
+                                key={id}
+                                name={app.title}
+                                id={id}
+                                icon={app.icon}
+                                openApp={this.openApp}
+                                disabled={app.disabled}
+                                prefetch={app.screen?.prefetch}
+                                context="item"
+                                section="recent"
+                            />
+                        );
+                    })}
+                </div>
+            </section>
+        );
     }
 
     renderWindows = () => {
@@ -536,6 +615,11 @@ export class Desktop extends Component {
                     this.saveSession();
                 });
                 this.app_stack.push(objId);
+                this.setState(prev => {
+                    const recent = [objId, ...prev.recent_apps.filter(id => id !== objId)].slice(0, 10);
+                    safeLocalStorage?.setItem('recentApps', JSON.stringify(recent));
+                    return { recent_apps: recent };
+                });
             }, 200);
         }
     }
@@ -614,6 +698,23 @@ export class Desktop extends Component {
         safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
         this.setState({ favourite_apps }, () => { this.saveSession(); })
         this.hideAllContextMenu()
+    }
+
+    removeRecentApp = (id) => {
+        this.setState(prev => {
+            const recent_apps = prev.recent_apps.filter(appId => appId !== id);
+            safeLocalStorage?.setItem('recentApps', JSON.stringify(recent_apps));
+            return { recent_apps };
+        }, this.hideAllContextMenu);
+    }
+
+    removeContextItem = () => {
+        const { context_app, context_section } = this.state;
+        if (context_section === 'pinned') {
+            this.unpinApp(context_app);
+        } else if (context_section === 'recent') {
+            this.removeRecentApp(context_app);
+        }
     }
 
     focus = (objId) => {
@@ -779,6 +880,10 @@ export class Desktop extends Component {
                 {/* Desktop Apps */}
                 {this.renderDesktopApps()}
 
+                {/* Pinned and Recent Sections */}
+                {this.renderPinnedSection()}
+                {this.renderRecentSection()}
+
                 {/* Context Menus */}
                 <DesktopMenu
                     active={this.state.context_menus.desktop}
@@ -793,6 +898,12 @@ export class Desktop extends Component {
                     pinned={this.initFavourite[this.state.context_app]}
                     pinApp={() => this.pinApp(this.state.context_app)}
                     unpinApp={() => this.unpinApp(this.state.context_app)}
+                    onClose={this.hideAllContextMenu}
+                />
+                <ItemMenu
+                    active={this.state.context_menus.item}
+                    onOpen={() => { this.openApp(this.state.context_app); this.hideAllContextMenu(); }}
+                    onRemove={this.removeContextItem}
                     onClose={this.hideAllContextMenu}
                 />
 
