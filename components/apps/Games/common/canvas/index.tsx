@@ -6,6 +6,7 @@ import React, {
   useImperativeHandle,
   forwardRef,
 } from 'react';
+import { hasOffscreenCanvas } from '../../../../../utils/feature';
 
 export interface CanvasHandle {
   getInputCoords: (
@@ -22,10 +23,47 @@ interface CanvasProps {
 const Canvas = forwardRef<CanvasHandle, CanvasProps>(
   ({ width, height, className }, ref) => {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const workerRef = useRef<Worker | null>(null);
 
     useEffect(() => {
       const canvas = canvasRef.current;
       if (!canvas) return;
+
+      // Prefer OffscreenCanvas with a worker when supported
+      if (typeof Worker === 'function' && hasOffscreenCanvas()) {
+        const worker = new Worker(
+          new URL('../../../../../workers/game-loop.worker.ts', import.meta.url)
+        );
+        workerRef.current = worker;
+        const offscreen = canvas.transferControlToOffscreen();
+
+        const resize = () => {
+          const dpr = window.devicePixelRatio || 1;
+          canvas.style.width = `${width}px`;
+          canvas.style.height = `${height}px`;
+          worker.postMessage({ type: 'resize', width, height, dpr });
+        };
+
+        worker.postMessage(
+          {
+            type: 'init',
+            canvas: offscreen,
+            width,
+            height,
+            dpr: window.devicePixelRatio || 1,
+          },
+          [offscreen]
+        );
+
+        resize();
+        window.addEventListener('resize', resize);
+        return () => {
+          worker.terminate();
+          window.removeEventListener('resize', resize);
+        };
+      }
+
+      // Fallback to main-thread rendering when OffscreenCanvas unsupported
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
