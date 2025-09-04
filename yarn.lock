@@ -11004,17 +11004,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"postcss@patch:postcss@npm:8.5.6#./.yarn/patches/postcss-npm-8.5.6-e7f126c6f3.patch::locator=unnippillil%40workspace%3A.":
-  version: 8.5.6
-  resolution: "postcss@patch:postcss@npm%3A8.5.6#./.yarn/patches/postcss-npm-8.5.6-e7f126c6f3.patch::version=8.5.6&hash=fa4b34&locator=unnippillil%40workspace%3A."
-  dependencies:
-    nanoid: "npm:^3.3.11"
-    picocolors: "npm:^1.1.1"
-    source-map-js: "npm:^1.2.1"
-  checksum: 10c0/fd19713718f927a0fdf0f2b2e304053a8eef63acfddd78ab1be3d6aa5100ff5322646eff6635a9801b01356bca920867db6a34465a4565355c1f15377a9ffc0c
-  languageName: node
-  linkType: hard
-
 "preact@npm:10":
   version: 10.27.1
   resolution: "preact@npm:10.27.1"
@@ -13915,7 +13904,7 @@ __metadata:
     phaser: "npm:3.70.0"
     playwright-core: "npm:^1.55.0"
     pngjs: "npm:^7.0.0"
-    postcss: "patch:postcss@npm:8.5.6#./.yarn/patches/postcss-npm-8.5.6-e7f126c6f3.patch"
+    postcss: "npm:8.5.6"
     prettier: "npm:^3.6.2"
     prop-types: "npm:^15.8.1"
     qrcode: "npm:^1.5.4"
