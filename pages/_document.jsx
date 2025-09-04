@@ -24,6 +24,7 @@ class MyDocument extends Document {
     return (
       <Html lang="en" data-csp-nonce={nonce}>
         <Head>
+          <link rel="icon" href="/favicon.ico" />
           <link rel="manifest" href="/manifest.webmanifest" />
           <meta name="theme-color" content="#0f1317" />
           <Script
