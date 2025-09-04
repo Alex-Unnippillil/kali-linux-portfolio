@@ -144,6 +144,7 @@
     "workbox-build@npm:7.1.1": "patch:workbox-build@npm%3A7.1.1#~/.yarn/patches/workbox-build-npm-7.1.1-a854f3faae.patch",
     "workbox-build@npm:7.1.0": "patch:workbox-build@npm%3A7.1.1#~/.yarn/patches/workbox-build-npm-7.1.1-a854f3faae.patch",
     "glob@^7.1.6": "npm:glob@^9.3.5"
+
   },
   "packageManager": "yarn@4.9.2"
 }
