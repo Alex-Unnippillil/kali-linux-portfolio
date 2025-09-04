@@ -2,7 +2,8 @@ import React from 'react';
 import Image from 'next/image';
 
 export default function Taskbar(props) {
-    const runningApps = props.apps.filter(app => props.closed_windows[app.id] === false);
+    const activeWorkspace = props.activeWorkspace ?? 0;
+    const runningApps = props.apps.filter(app => props.closed_windows[app.id] === false && (!props.windowWorkspaces || props.windowWorkspaces[app.id] === activeWorkspace));
 
     const handleClick = (app) => {
         const id = app.id;
@@ -17,6 +18,21 @@ export default function Taskbar(props) {
 
     return (
         <div className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center z-40" role="toolbar">
+            {props.workspaces && props.workspaces.length > 0 && (
+                <div className="flex ml-1 mr-2">
+                    {props.workspaces.map((w) => (
+                        <button
+                            key={w}
+                            type="button"
+                            aria-label={`Switch to workspace ${w + 1}`}
+                            onClick={() => props.onSelectWorkspace && props.onSelectWorkspace(w)}
+                            className={(activeWorkspace === w ? ' bg-white bg-opacity-20 ' : ' hover:bg-white hover:bg-opacity-10 ') + 'mx-1 px-2 py-1 rounded text-white'}
+                        >
+                            {w + 1}
+                        </button>
+                    ))}
+                </div>
+            )}
             {runningApps.map(app => (
                 <button
                     key={app.id}
