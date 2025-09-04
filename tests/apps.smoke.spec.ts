@@ -23,9 +23,16 @@ const routes = getRoutes(appDir)
   .map((r) => r.replace(/\/index$/, ''));
 
 for (const route of routes) {
-  test(`loads ${route}`, async ({ page }) => {
-    await page.goto('/apps');
-    await page.locator(`a[href="${route}"]`).click();
+  test(`loads ${route}`, async ({ page }, testInfo) => {
+    await page.goto(route);
+
+    // perform a simple action on the page
+    await page.click('body');
+
+    // capture a screenshot for documentation
+    const file = route.replace(/\//g, '_') + '.png';
+    await page.screenshot({ path: testInfo.outputPath(file) });
+
     await expect(page.locator('main')).toBeVisible();
   });
 }
