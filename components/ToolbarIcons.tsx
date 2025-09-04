@@ -1,56 +1,28 @@
 import Image from 'next/image';
+import { useIconPack } from '@/hooks/useIconPack';
+
+function Icon({ name, alt }: { name: string; alt: string }) {
+  const { icons } = useIconPack();
+  const src = icons[name];
+  return <Image src={src} alt={alt} width={16} height={16} />;
+}
 
 export function CloseIcon() {
-  return (
-    <Image
-      src="/themes/Yaru/window/window-close-symbolic.svg"
-      alt="Close"
-      width={16}
-      height={16}
-    />
-  );
+  return <Icon name="close" alt="Close" />;
 }
 
 export function MinimizeIcon() {
-  return (
-    <Image
-      src="/themes/Yaru/window/window-minimize-symbolic.svg"
-      alt="Minimize"
-      width={16}
-      height={16}
-    />
-  );
+  return <Icon name="minimize" alt="Minimize" />;
 }
 
 export function MaximizeIcon() {
-  return (
-    <Image
-      src="/themes/Yaru/window/window-maximize-symbolic.svg"
-      alt="Maximize"
-      width={16}
-      height={16}
-    />
-  );
+  return <Icon name="maximize" alt="Maximize" />;
 }
 
 export function RestoreIcon() {
-  return (
-    <Image
-      src="/themes/Yaru/window/window-restore-symbolic.svg"
-      alt="Restore"
-      width={16}
-      height={16}
-    />
-  );
+  return <Icon name="restore" alt="Restore" />;
 }
 
 export function PinIcon() {
-  return (
-    <Image
-      src="/themes/Yaru/window/window-pin-symbolic.svg"
-      alt="Pin"
-      width={16}
-      height={16}
-    />
-  );
+  return <Icon name="pin" alt="Pin" />;
 }
