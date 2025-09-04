@@ -3,28 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <title>Asteroids</title>
-  <style>
-    body { margin:0; background:black; color:white; }
-    canvas { background:black; display:block; margin:0 auto; touch-action:none; }
-  </style>
+  <link rel="stylesheet" href="index.css">
 </head>
 <body>
   <canvas id="game" width="800" height="600"></canvas>
-  <div id="hud" style="position:fixed;top:10px;left:10px;font-family:monospace;">
+  <div id="hud" class="hud">
     <div id="score">Score: 0</div>
     <div id="level">Level: 1</div>
-    <div style="margin-top:4px;width:100px;height:6px;border:1px solid #fff;">
-      <div id="shield" style="background:cyan;height:100%;width:0;"></div>
+    <div class="shield-bar">
+      <div id="shield" class="shield"></div>
     </div>
-    <label style="display:block;margin-top:4px;font-size:12px;">
+    <label class="hud-label">
       <input type="checkbox" id="particlesToggle" checked /> particles
     </label>
-    <div id="controls" style="margin-top:4px;">
+    <div id="controls" class="controls">
       Move: arrows or left stick. Shoot: space or buttons. Pause: P or Start.
       Hyperspace: H or B. Shield: S or X.
     </div>
   </div>
-  <div id="paused" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-family:monospace;">
+  <div id="paused" class="paused">
     Paused
   </div>
   <script type="module" src="main.js"></script>

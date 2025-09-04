@@ -1,0 +1,41 @@
+body { margin:0; background:black; color:white; }
+canvas { background:black; display:block; margin:0 auto; touch-action:none; }
+
+.hud {
+  position:fixed;
+  top:10px;
+  left:10px;
+  font-family:monospace;
+}
+
+.shield-bar {
+  margin-top:4px;
+  width:100px;
+  height:6px;
+  border:1px solid #fff;
+}
+
+.shield {
+  background:cyan;
+  height:100%;
+  width:0;
+}
+
+.hud-label {
+  display:block;
+  margin-top:4px;
+  font-size:12px;
+}
+
+.controls {
+  margin-top:4px;
+}
+
+.paused {
+  display:none;
+  position:fixed;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  font-family:monospace;
+}
