@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { protocolName } from '../../../components/apps/wireshark/utils';
-import FilterHelper from './FilterHelper';
 import presets from '../filters/presets.json';
 import LayerView from './LayerView';
 
@@ -20,6 +19,17 @@ const protocolColors: Record<string, string> = {
 const samples = [
   { label: 'HTTP', path: '/samples/wireshark/http.pcap' },
   { label: 'DNS', path: '/samples/wireshark/dns.pcap' },
+];
+
+const fieldSuggestions = [
+  'tcp',
+  'udp',
+  'icmp',
+  'ip.addr',
+  'ip.src',
+  'ip.dst',
+  'tcp.port',
+  'udp.port',
 ];
 
 // Convert bytes to hex dump string
@@ -234,9 +244,42 @@ const decodePacketLayers = (pkt: Packet): Layer[] => {
   return layers;
 };
 
+const compileDisplayFilter = (
+  expression: string
+): ((p: Packet) => boolean) => {
+  const f = expression.trim().toLowerCase();
+  let m: RegExpExecArray | null;
+  if (!f) return () => true;
+  if (f === 'tcp') return (p) => p.protocol === 6;
+  if (f === 'udp') return (p) => p.protocol === 17;
+  if (f === 'icmp') return (p) => p.protocol === 1;
+  if ((m = /^ip\.addr\s*==\s*(\d+\.\d+\.\d+\.\d+)$/.exec(f))) {
+    const ip = m[1];
+    return (p) => p.src === ip || p.dest === ip;
+  }
+  if ((m = /^ip\.src\s*==\s*(\d+\.\d+\.\d+\.\d+)$/.exec(f))) {
+    const ip = m[1];
+    return (p) => p.src === ip;
+  }
+  if ((m = /^ip\.dst\s*==\s*(\d+\.\d+\.\d+\.\d+)$/.exec(f))) {
+    const ip = m[1];
+    return (p) => p.dest === ip;
+  }
+  if ((m = /^tcp\.port\s*==\s*(\d+)$/.exec(f))) {
+    const num = parseInt(m[1], 10);
+    return (p) => p.protocol === 6 && (p.sport === num || p.dport === num);
+  }
+  if ((m = /^udp\.port\s*==\s*(\d+)$/.exec(f))) {
+    const num = parseInt(m[1], 10);
+    return (p) => p.protocol === 17 && (p.sport === num || p.dport === num);
+  }
+  throw new Error('Invalid filter expression');
+};
+
 const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
   const [packets, setPackets] = useState<Packet[]>([]);
   const [filter, setFilter] = useState('');
+  const [filterError, setFilterError] = useState('');
   const [selected, setSelected] = useState<number | null>(null);
   const [columns, setColumns] = useState<string[]>([
     'Time',
@@ -246,6 +289,15 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     'Info',
   ]);
   const [dragCol, setDragCol] = useState<string | null>(null);
+  const filterFn = useMemo(() => {
+    try {
+      setFilterError('');
+      return compileDisplayFilter(filter);
+    } catch (e) {
+      setFilterError((e as Error).message);
+      return () => true;
+    }
+  }, [filter]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -289,16 +341,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     setSelected(null);
   };
 
-  const filtered = packets.filter((p) => {
-    if (!filter) return true;
-    const term = filter.toLowerCase();
-    return (
-      p.src.toLowerCase().includes(term) ||
-      p.dest.toLowerCase().includes(term) ||
-      protocolName(p.protocol).toLowerCase().includes(term) ||
-      (p.info || '').toLowerCase().includes(term)
-    );
-  });
+  const filtered = packets.filter(filterFn);
 
   return (
     <div className="p-4 text-white bg-ub-cool-grey h-full w-full flex flex-col space-y-2">
@@ -335,7 +378,14 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
       {packets.length > 0 && (
         <>
           <div className="flex items-center space-x-2">
-            <FilterHelper value={filter} onChange={setFilter} />
+            <input
+              list="protocol-field-suggestions"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder="Quick search (e.g. tcp.port == 80)"
+              aria-label="Quick search"
+              className="px-2 py-1 bg-gray-800 rounded text-white"
+            />
             <button
               onClick={() => navigator.clipboard.writeText(filter)}
               className="px-2 py-1 bg-gray-700 rounded text-xs"
@@ -345,6 +395,14 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
               Copy
             </button>
           </div>
+          {filterError && (
+            <div className="text-xs text-red-400">{filterError}</div>
+          )}
+          <datalist id="protocol-field-suggestions">
+            {fieldSuggestions.map((f) => (
+              <option key={f} value={f} />
+            ))}
+          </datalist>
           <div className="flex space-x-1">
             {presets.map(({ label, expression }) => (
               <button
