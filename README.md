@@ -70,6 +70,10 @@ To send text or links directly into the Sticky Notes app:
 - Dynamic routes or API responses are not cached.
 - Future work may use `injectManifest` for finer control.
 
+### Undercover Theme
+
+A Windows-like appearance mode inspired by Kali's Undercover feature. Toggle **Undercover** in Settings → Appearance to swap icons and panels for a more discreet look.
+
 ---
 
 ## Environment Variables
