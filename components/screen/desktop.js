@@ -442,6 +442,7 @@ export class Desktop extends Component {
                     openApp: this.openApp,
                     disabled: this.state.disabled_apps[app.id],
                     prefetch: app.screen?.prefetch,
+                    displayName: app.displayName,
                 }
 
                 appsJsx.push(
@@ -667,6 +668,7 @@ export class Desktop extends Component {
             icon: appMeta.icon,
             image,
             closedAt: now,
+            path: appMeta.path,
         });
         safeLocalStorage?.setItem('window-trash', JSON.stringify(trash));
         this.updateTrashIcon();
@@ -776,14 +778,49 @@ export class Desktop extends Component {
         try { trash = JSON.parse(safeLocalStorage?.getItem('window-trash') || '[]'); } catch (e) { trash = []; }
         const appIndex = apps.findIndex(app => app.id === 'trash');
         if (appIndex !== -1) {
-            const icon = trash.length
+            const count = trash.length;
+            const icon = count
                 ? '/themes/Yaru/status/user-trash-full-symbolic.svg'
                 : '/themes/Yaru/status/user-trash-symbolic.svg';
+            const displayName = count ? `Trash (${count})` : undefined;
+            let needsUpdate = false;
             if (apps[appIndex].icon !== icon) {
                 apps[appIndex].icon = icon;
+                needsUpdate = true;
+            }
+            if (apps[appIndex].displayName !== displayName) {
+                apps[appIndex].displayName = displayName;
+                needsUpdate = true;
+            }
+            if (needsUpdate) {
                 this.forceUpdate();
             }
         }
+    }
+
+    restoreTrash = () => {
+        let trash = [];
+        try { trash = JSON.parse(safeLocalStorage?.getItem('window-trash') || '[]'); } catch (e) { trash = []; }
+        if (!trash.length) return;
+        if (!window.confirm('Restore all windows?')) return;
+        trash.forEach(item => this.openApp(item.id));
+        safeLocalStorage?.setItem('window-trash', JSON.stringify([]));
+        this.updateTrashIcon();
+        window.dispatchEvent(new Event('trash-change'));
+    }
+
+    emptyTrash = () => {
+        let trash = [];
+        try { trash = JSON.parse(safeLocalStorage?.getItem('window-trash') || '[]'); } catch (e) { trash = []; }
+        if (!trash.length) return;
+        if (!window.confirm('Empty trash?')) return;
+        let history = [];
+        try { history = JSON.parse(safeLocalStorage?.getItem('window-trash-history') || '[]'); } catch (e) { history = []; }
+        history = [...trash, ...history].slice(0, 20);
+        safeLocalStorage?.setItem('window-trash-history', JSON.stringify(history));
+        safeLocalStorage?.setItem('window-trash', JSON.stringify([]));
+        this.updateTrashIcon();
+        window.dispatchEvent(new Event('trash-change'));
     }
 
     addToDesktop = (folder_name) => {
@@ -822,8 +859,16 @@ export class Desktop extends Component {
         return (
             <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
                 <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
-                    <span>New folder name</span>
-                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
+                    <label htmlFor="folder-name-input">New folder name</label>
+                    <input
+                        className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5"
+                        id="folder-name-input"
+                        type="text"
+                        autoComplete="off"
+                        spellCheck="false"
+                        autoFocus={true}
+                        aria-label="Folder name"
+                    />
                 </div>
                 <div className="flex">
                     <button
@@ -904,6 +949,9 @@ export class Desktop extends Component {
                     pinApp={() => this.pinApp(this.state.context_app)}
                     unpinApp={() => this.unpinApp(this.state.context_app)}
                     onClose={this.hideAllContextMenu}
+                    appId={this.state.context_app}
+                    restoreTrash={this.restoreTrash}
+                    emptyTrash={this.emptyTrash}
                 />
                 <TaskbarMenu
                     active={this.state.context_menus.taskbar}
