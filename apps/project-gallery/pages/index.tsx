@@ -1,9 +1,10 @@
 'use client';
 
 import { useRouter } from 'next/router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import FilterChip from '../components/FilterChip';
+import Lightbox from '../components/Lightbox';
 
 const TagIcon = () => (
   <svg
@@ -97,6 +98,49 @@ export default function ProjectGalleryPage() {
   const [year, setYear] = usePersistentState<string>('pg-year', '');
   const [type, setType] = usePersistentState<string>('pg-type', '');
   const [tags, setTags] = usePersistentState<string[]>('pg-tags', []);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const cardRefs = useRef<HTMLDivElement[]>([]);
+  const [columns, setColumns] = useState(1);
+
+  useEffect(() => {
+    const updateColumns = () => {
+      const w = window.innerWidth;
+      let c = 1;
+      if (w >= 768) c = 3;
+      else if (w >= 640) c = 2;
+      setColumns(c);
+    };
+    updateColumns();
+    window.addEventListener('resize', updateColumns);
+    return () => window.removeEventListener('resize', updateColumns);
+  }, []);
+
+  const handleKey = (e: React.KeyboardEvent<HTMLDivElement>, index: number) => {
+    switch (e.key) {
+      case 'ArrowRight':
+        e.preventDefault();
+        cardRefs.current[index + 1]?.focus();
+        break;
+      case 'ArrowLeft':
+        e.preventDefault();
+        cardRefs.current[index - 1]?.focus();
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        cardRefs.current[index + columns]?.focus();
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        cardRefs.current[index - columns]?.focus();
+        break;
+      case 'Enter':
+      case ' ': // space
+        e.preventDefault();
+        setLightboxIndex(index);
+        break;
+      default:
+    }
+  };
 
   // load projects
   useEffect(() => {
@@ -206,10 +250,13 @@ export default function ProjectGalleryPage() {
         ))}
       </div>
       <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-        {filtered.map((p) => (
+        {filtered.map((p, i) => (
           <div
             key={p.id}
             tabIndex={0}
+            ref={(el) => (cardRefs.current[i] = el!)}
+            onKeyDown={(e) => handleKey(e, i)}
+            onClick={() => setLightboxIndex(i)}
             className="group relative h-72 flex flex-col border rounded overflow-hidden transition-transform transition-opacity duration-300 hover:scale-105 hover:opacity-90 focus:scale-105 focus:opacity-90 focus:outline-none"
             aria-label={`${p.title}: ${p.description}`}
           >
@@ -220,21 +267,20 @@ export default function ProjectGalleryPage() {
               <h3 className="font-semibold text-base line-clamp-2">{p.title}</h3>
               <p className="text-sm">{p.description}</p>
             </div>
-            <div className="absolute inset-0 opacity-0 pointer-events-none group-hover:opacity-100 group-focus-within:opacity-100 group-hover:pointer-events-auto group-focus-within:pointer-events-auto transition-opacity bg-black/60 text-white flex flex-col">
-              <div className="p-2 flex flex-wrap gap-1">
-                {p.tags.map((t) => (
-                  <span key={t} className="bg-white text-black rounded px-1 text-xs">
-                    {t}
-                  </span>
-                ))}
-              </div>
-              <div className="mt-auto p-2 text-right">
-                <button className="bg-blue-600 text-white px-4 h-10 rounded">Launch</button>
-              </div>
-            </div>
           </div>
         ))}
       </div>
+      {lightboxIndex !== null && (
+        <Lightbox
+          images={filtered.map((p) => ({
+            src: p.thumbnail,
+            title: p.title,
+            description: p.description,
+          }))}
+          startIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+        />
+      )}
     </div>
   );
 }
