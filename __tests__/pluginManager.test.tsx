@@ -23,10 +23,24 @@ describe('PluginManager', () => {
     (global as any).fetch = jest.fn((url: string) => {
       if (url === '/api/plugins') {
         return Promise.resolve({
-          json: () => Promise.resolve([{ id: 'demo', file: 'demo.json' }]),
+          json: () =>
+            Promise.resolve([
+              {
+                id: 'demo',
+                file: 'demo.json',
+                channel: 'stable',
+                changelog: 'Initial release',
+              },
+              {
+                id: 'demo',
+                file: 'demo-beta.json',
+                channel: 'beta',
+                changelog: 'Beta release',
+              },
+            ]),
         });
       }
-      if (url === '/api/plugins/demo.json') {
+      if (url === '/api/plugins/demo.json' || url === '/api/plugins/demo-beta.json') {
         return Promise.resolve({
           json: () =>
             Promise.resolve({
@@ -70,5 +84,23 @@ describe('PluginManager', () => {
     const exportBtn = screen.getByText('Export CSV');
     fireEvent.click(exportBtn);
     expect((global as any).URL.createObjectURL).toHaveBeenCalled();
+  });
+
+  test('persists selected channel', async () => {
+    const { unmount } = render(<PluginManager />);
+    const select = await screen.findByRole('combobox');
+    fireEvent.change(select, { target: { value: 'beta' } });
+    expect(localStorage.getItem('pluginChannel')).toBe('beta');
+    unmount();
+    render(<PluginManager />);
+    const selectAgain = await screen.findByRole('combobox');
+    expect((selectAgain as HTMLSelectElement).value).toBe('beta');
+  });
+
+  test('shows changelog modal', async () => {
+    render(<PluginManager />);
+    const btn = await screen.findByText('Changelog');
+    fireEvent.click(btn);
+    expect(await screen.findByText('Initial release')).toBeInTheDocument();
   });
 });
