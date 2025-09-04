@@ -26,6 +26,15 @@
   --color-bg: #0f1317;
   --color-text: #F5F5F5;
 
+  /* Global scale */
+  --density: 1;
+
+  /* Default corner radius */
+  --radius: 8px;
+
+  /* Default shadow */
+  --shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
+
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
   --game-color-success: #15803d;
@@ -33,17 +42,17 @@
   --game-color-danger: #b91c1c;
 
   /* Spacing scale */
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.5rem;
-  --space-6: 2rem;
+  --space-1: calc(0.25rem * var(--density));
+  --space-2: calc(0.5rem * var(--density));
+  --space-3: calc(0.75rem * var(--density));
+  --space-4: calc(1rem * var(--density));
+  --space-5: calc(1.5rem * var(--density));
+  --space-6: calc(2rem * var(--density));
 
   /* Radius */
-  --radius-sm: 2px;
-  --radius-md: 4px;
-  --radius-lg: 8px;
+  --radius-sm: calc(var(--radius) / 4);
+  --radius-md: calc(var(--radius) / 2);
+  --radius-lg: var(--radius);
   --radius-round: 9999px;
 
   /* Motion durations */

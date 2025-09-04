@@ -7,6 +7,8 @@ const DEFAULT_SETTINGS = {
   accent: '#1793d1',
   wallpaper: 'wall-2',
   density: 'regular',
+  radius: 8,
+  shadow: 12,
   reducedMotion: false,
   fontScale: 1,
   highContrast: false,
@@ -44,6 +46,28 @@ export async function getDensity() {
 export async function setDensity(density) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem('density', density);
+}
+
+export async function getRadius() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.radius;
+  const val = window.localStorage.getItem('radius');
+  return val ? parseInt(val, 10) : DEFAULT_SETTINGS.radius;
+}
+
+export async function setRadius(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('radius', String(value));
+}
+
+export async function getShadow() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.shadow;
+  const val = window.localStorage.getItem('shadow');
+  return val ? parseInt(val, 10) : DEFAULT_SETTINGS.shadow;
+}
+
+export async function setShadow(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('shadow', String(value));
 }
 
 export async function getReducedMotion() {
@@ -130,6 +154,8 @@ export async function resetSettings() {
     del('bg-image'),
   ]);
   window.localStorage.removeItem('density');
+  window.localStorage.removeItem('radius');
+  window.localStorage.removeItem('shadow');
   window.localStorage.removeItem('reduced-motion');
   window.localStorage.removeItem('font-scale');
   window.localStorage.removeItem('high-contrast');
@@ -144,6 +170,8 @@ export async function exportSettings() {
     accent,
     wallpaper,
     density,
+    radius,
+    shadow,
     reducedMotion,
     fontScale,
     highContrast,
@@ -155,6 +183,8 @@ export async function exportSettings() {
     getAccent(),
     getWallpaper(),
     getDensity(),
+    getRadius(),
+    getShadow(),
     getReducedMotion(),
     getFontScale(),
     getHighContrast(),
@@ -168,6 +198,8 @@ export async function exportSettings() {
     accent,
     wallpaper,
     density,
+    radius,
+    shadow,
     reducedMotion,
     fontScale,
     highContrast,
@@ -192,6 +224,8 @@ export async function importSettings(json) {
     accent,
     wallpaper,
     density,
+    radius,
+    shadow,
     reducedMotion,
     fontScale,
     highContrast,
@@ -204,6 +238,8 @@ export async function importSettings(json) {
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
   if (density !== undefined) await setDensity(density);
+  if (radius !== undefined) await setRadius(radius);
+  if (shadow !== undefined) await setShadow(shadow);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
   if (fontScale !== undefined) await setFontScale(fontScale);
   if (highContrast !== undefined) await setHighContrast(highContrast);
