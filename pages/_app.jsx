@@ -15,6 +15,7 @@ import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
+import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -174,4 +175,6 @@ function MyApp(props) {
 }
 
 export default MyApp;
+
+export { reportWebVitalsUtil as reportWebVitals };
 
