@@ -91,6 +91,33 @@ const FigletApp: React.FC = () => {
 
       (async () => {
         try {
+          // Dynamically load a set of popular fonts. Each font is imported only
+          // when needed, keeping the initial bundle small.
+          const builtin: Record<string, () => Promise<any>> = {
+            Standard: () => import("figlet/importable-fonts/Standard.js"),
+            Slant: () => import("figlet/importable-fonts/Slant.js"),
+            Big: () => import("figlet/importable-fonts/Big.js"),
+            Small: () => import("figlet/importable-fonts/Small.js"),
+            Doom: () => import("figlet/importable-fonts/Doom.js"),
+            Banner: () => import("figlet/importable-fonts/Banner.js"),
+            Block: () => import("figlet/importable-fonts/Block.js"),
+            Shadow: () => import("figlet/importable-fonts/Shadow.js"),
+          };
+          await Promise.all(
+            Object.entries(builtin).map(async ([name, loader]) => {
+              const mod = await loader();
+              workerRef.current?.postMessage({
+                type: "load",
+                name,
+                data: mod.default,
+              });
+            }),
+          );
+        } catch {
+          /* ignore */
+        }
+
+        try {
           if ((navigator as any)?.storage?.getDirectory) {
             const dir = await (navigator as any).storage.getDirectory();
             const handle = await dir.getFileHandle("figlet-last-font.json");

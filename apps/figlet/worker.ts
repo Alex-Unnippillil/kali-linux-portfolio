@@ -1,30 +1,6 @@
 import figlet from 'figlet';
-import Standard from 'figlet/importable-fonts/Standard.js';
-import Slant from 'figlet/importable-fonts/Slant.js';
-import Big from 'figlet/importable-fonts/Big.js';
-import Small from 'figlet/importable-fonts/Small.js';
-import Doom from 'figlet/importable-fonts/Doom.js';
-import Banner from 'figlet/importable-fonts/Banner.js';
-import Block from 'figlet/importable-fonts/Block.js';
-import Shadow from 'figlet/importable-fonts/Shadow.js';
-
-interface FontData {
-  name: string;
-  data: any;
-}
-
-const fonts: FontData[] = [
-  { name: 'Standard', data: Standard },
-  { name: 'Slant', data: Slant },
-  { name: 'Big', data: Big },
-  { name: 'Small', data: Small },
-  { name: 'Doom', data: Doom },
-  { name: 'Banner', data: Banner },
-  { name: 'Block', data: Block },
-  { name: 'Shadow', data: Shadow },
-];
-
-fonts.forEach(({ name, data }) => figlet.parseFont(name, data));
+// Fonts are loaded dynamically from the main thread. This keeps the worker
+// lightweight and allows only the fonts that are actually used to be loaded.
 
 function strip(lines: string[]) {
   return lines.map((l) => l.replace(/\s+$/, ''));
@@ -43,16 +19,6 @@ function isMonospace(name: string) {
   }
   return true;
 }
-
-function init() {
-  for (const { name } of fonts) {
-    const preview = figlet.textSync('Figlet', { font: name as figlet.Fonts });
-    const mono = isMonospace(name);
-    self.postMessage({ type: 'font', font: name, preview, mono });
-  }
-}
-
-init();
 
 self.onmessage = (e: MessageEvent<any>) => {
   if (e.data?.type === 'load') {
