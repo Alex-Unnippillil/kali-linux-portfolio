@@ -1,100 +1,169 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 interface Props {
   onResult: (text: string) => void;
 }
 
 const Scan: React.FC<Props> = ({ onResult }) => {
-  const [preview, setPreview] = useState('');
-  const [error, setError] = useState('');
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const workerRef = useRef<Worker>();
+  const trackRef = useRef<MediaStreamTrack | null>(null);
+  const rafRef = useRef<number>();
+  const decodingRef = useRef(false);
+  const lastTextRef = useRef("");
 
-  const handleDrop = useCallback(
-    async (e: React.DragEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      const file = e.dataTransfer.files[0];
-      if (!file || !file.type.startsWith('image/')) {
-        setError('');
-        return;
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const [deviceId, setDeviceId] = useState("");
+  const [torchOn, setTorchOn] = useState(false);
+  const [torchSupported, setTorchSupported] = useState(false);
+
+  // initialize worker
+  useEffect(() => {
+    const worker = new Worker(
+      new URL("../../../workers/qrDecode.worker.ts", import.meta.url),
+    );
+    workerRef.current = worker;
+    worker.onmessage = ({ data }: MessageEvent<{ text: string | null }>) => {
+      decodingRef.current = false;
+      const text = data.text;
+      if (text && text !== lastTextRef.current) {
+        lastTextRef.current = text;
+        onResult(text);
       }
-      const url = URL.createObjectURL(file);
-      setPreview(url);
-      setError('');
+    };
+    return () => {
+      worker.terminate();
+    };
+  }, [onResult]);
+
+  // enumerate cameras
+  useEffect(() => {
+    const enumerate = async () => {
       try {
-        if ('BarcodeDetector' in window) {
-          const img = new Image();
-          img.src = url;
-          await img.decode();
-          const detector = new (window as any).BarcodeDetector({
-            formats: ['qr_code'],
-          });
-          const codes = await detector.detect(img);
-          if (codes[0]) onResult(codes[0].rawValue);
-        } else {
-          const { BrowserQRCodeReader } = await import('@zxing/browser');
-          const reader = new BrowserQRCodeReader();
-          const res = await reader.decodeFromImageUrl(url);
-          onResult(res.getText());
-        }
+        const list = await navigator.mediaDevices.enumerateDevices();
+        const vids = list.filter((d) => d.kind === "videoinput");
+        setDevices(vids);
+        if (!deviceId && vids[0]) setDeviceId(vids[0].deviceId);
       } catch {
-        setError('No QR code found');
+        /* ignore */
       }
-    },
-    [onResult],
-  );
+    };
+    enumerate();
+    navigator.mediaDevices?.addEventListener("devicechange", enumerate);
+    return () => {
+      navigator.mediaDevices?.removeEventListener("devicechange", enumerate);
+    };
+  }, [deviceId]);
+  // scanning loop
+  const scan = useCallback(() => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const worker = workerRef.current;
+    if (!video || !canvas || !worker) {
+      rafRef.current = requestAnimationFrame(scan);
+      return;
+    }
+    if (decodingRef.current || video.readyState !== video.HAVE_ENOUGH_DATA) {
+      rafRef.current = requestAnimationFrame(scan);
+      return;
+    }
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) {
+      rafRef.current = requestAnimationFrame(scan);
+      return;
+    }
+    const width = video.videoWidth;
+    const height = video.videoHeight;
+    if (!width || !height) {
+      rafRef.current = requestAnimationFrame(scan);
+      return;
+    }
+    canvas.width = width;
+    canvas.height = height;
+    ctx.drawImage(video, 0, 0, width, height);
+    const imageData = ctx.getImageData(0, 0, width, height);
+    decodingRef.current = true;
+    worker.postMessage({ buffer: imageData.data.buffer, width, height }, [
+      imageData.data.buffer,
+    ]);
+    rafRef.current = requestAnimationFrame(scan);
+  }, []);
+
+  // start selected camera
+  useEffect(() => {
+    let active = true;
+    let stream: MediaStream;
+    const start = async () => {
+      if (!deviceId) return;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { deviceId: { exact: deviceId } },
+        });
+        if (!active) return;
+        const video = videoRef.current;
+        if (video) {
+          video.srcObject = stream;
+          await video.play();
+        }
+        const track = stream.getVideoTracks()[0];
+        trackRef.current = track;
+        const caps = track.getCapabilities?.();
+        setTorchSupported(Boolean(caps && caps.torch));
+        setTorchOn(false);
+        rafRef.current = requestAnimationFrame(scan);
+      } catch {
+        /* ignore */
+      }
+    };
+    start();
+    return () => {
+      active = false;
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      stream?.getTracks().forEach((t) => t.stop());
+      const video = videoRef.current;
+      if (video) video.srcObject = null;
+      trackRef.current = null;
+    };
+  }, [deviceId, scan]);
+
+  const toggleTorch = () => {
+    const track = trackRef.current;
+    if (!track) return;
+    const next = !torchOn;
+    track
+      .applyConstraints({ advanced: [{ torch: next }] })
+      .then(() => setTorchOn(next))
+      .catch(() => {});
+  };
 
   return (
-    <div
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={handleDrop}
-      className="w-full h-full relative flex items-center justify-center border-2 border-dashed border-gray-500 text-gray-400"
-    >
-      {preview ? (
-        <img src={preview} alt="Dropped" className="max-w-full max-h-full" />
-      ) : (
-        <p>Drop image</p>
-      )}
-      {/* corner anchors */}
-      <svg
-        className="w-6 h-6 absolute top-0 left-0"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-      >
-        <path d="M3 9V3h6" />
-      </svg>
-      <svg
-        className="w-6 h-6 absolute top-0 right-0"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-      >
-        <path d="M21 9V3h-6" />
-      </svg>
-      <svg
-        className="w-6 h-6 absolute bottom-0 left-0"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-      >
-        <path d="M3 15v6h6" />
-      </svg>
-      <svg
-        className="w-6 h-6 absolute bottom-0 right-0"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-      >
-        <path d="M21 15v6h-6" />
-      </svg>
-      {error && (
-        <p className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-red-500">
-          {error}
-        </p>
-      )}
+    <div className="w-full h-full relative flex items-center justify-center bg-black">
+      <video ref={videoRef} className="w-full h-full object-cover" />
+      <canvas ref={canvasRef} className="hidden" />
+      <div className="absolute top-2 left-2 flex gap-2 bg-black/50 p-1 rounded">
+        <select
+          value={deviceId}
+          onChange={(e) => setDeviceId(e.target.value)}
+          className="text-black text-sm rounded p-1"
+        >
+          {devices.map((d, i) => (
+            <option key={d.deviceId} value={d.deviceId}>
+              {d.label || `Camera ${i + 1}`}
+            </option>
+          ))}
+        </select>
+        {torchSupported && (
+          <button
+            type="button"
+            onClick={toggleTorch}
+            aria-label="Toggle torch"
+            className="px-2 text-sm rounded bg-white/20 text-white"
+          >
+            {torchOn ? "Torch Off" : "Torch On"}
+          </button>
+        )}
+      </div>
     </div>
   );
 };
