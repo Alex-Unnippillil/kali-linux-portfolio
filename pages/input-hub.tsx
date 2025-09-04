@@ -226,7 +226,7 @@ const InputHub = () => {
         </button>
       </form>
       {status && (
-        <div role="status" className="mt-2 text-sm">
+        <div role="status" aria-live="polite" className="mt-2 text-sm">
           {status}
         </div>
       )}

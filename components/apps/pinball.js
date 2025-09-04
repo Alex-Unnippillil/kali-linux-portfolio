@@ -452,8 +452,8 @@ const Pinball = () => {
         {tilt && (
           <span
             className="ml-2 text-red-500 motion-safe:animate-pulse"
-            aria-live="assertive"
-            role="alert"
+            aria-live="polite"
+            role="status"
           >
             TILT <button onClick={resetTilt}>Reset</button>
           </span>
@@ -472,8 +472,8 @@ const Pinball = () => {
       {tilt && (
         <div
           className="absolute inset-0 flex items-center justify-center bg-red-900 bg-opacity-70 pointer-events-none animate-pulse"
-          role="alert"
-          aria-live="assertive"
+          role="status"
+          aria-live="polite"
         >
           TILT
         </div>
