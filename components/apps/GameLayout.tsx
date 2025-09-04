@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import HelpOverlay from './HelpOverlay';
+import { HelpOverlay, OVERLAY_TOGGLE_KEY } from './Games/common';
 import PerfOverlay from './Games/common/perf';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
@@ -72,7 +72,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         target.tagName === 'TEXTAREA' ||
         target.isContentEditable;
       if (isInput) return;
-      if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
+      if (e.key === OVERLAY_TOGGLE_KEY || (e.key === '/' && e.shiftKey)) {
         e.preventDefault();
         setShowHelp((h) => !h);
       }

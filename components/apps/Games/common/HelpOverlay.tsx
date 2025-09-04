@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
-import InputRemap from "./Games/common/input-remap/InputRemap";
-import useInputMapping from "./Games/common/input-remap/useInputMapping";
+import InputRemap from "./input-remap/InputRemap";
+import useInputMapping from "./input-remap/useInputMapping";
 
 interface HelpOverlayProps {
   gameId: string;
