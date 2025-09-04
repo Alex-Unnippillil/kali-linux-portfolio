@@ -284,6 +284,44 @@ describe('Window keyboard dragging', () => {
   });
 });
 
+describe('Edge resistance', () => {
+  it('clamps drag movement near boundaries', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 0,
+      top: 0,
+      right: 100,
+      bottom: 100,
+      width: 100,
+      height: 100,
+      x: 0,
+      y: 0,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag({}, { node: winEl, x: -100, y: -50 } as any);
+    });
+
+    expect(winEl.style.transform).toBe('translate(0px, 0px)');
+  });
+});
+
 describe('Window overlay inert behaviour', () => {
   it('sets and removes inert on default __next root restoring focus', () => {
     const ref = React.createRef<Window>();

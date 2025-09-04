@@ -275,7 +275,31 @@ export class Window extends Component {
         }
     }
 
-    handleDrag = () => {
+    applyEdgeResistance = (node, data) => {
+        if (!node || !data) return;
+        const threshold = 30;
+        const resistance = 0.35; // how much to slow near edges
+        let { x, y } = data;
+        const maxX = this.state.parentSize.width;
+        const maxY = this.state.parentSize.height;
+
+        const resist = (pos, min, max) => {
+            if (pos < min) return min;
+            if (pos < min + threshold) return min + (pos - min) * resistance;
+            if (pos > max) return max;
+            if (pos > max - threshold) return max - (max - pos) * resistance;
+            return pos;
+        }
+
+        x = resist(x, 0, maxX);
+        y = resist(y, 0, maxY);
+        node.style.transform = `translate(${x}px, ${y}px)`;
+    }
+
+    handleDrag = (e, data) => {
+        if (data && data.node) {
+            this.applyEdgeResistance(data.node, data);
+        }
         this.checkOverlap();
         this.checkSnapPreview();
     }
@@ -479,7 +503,7 @@ export class Window extends Component {
                 {this.state.snapPreview && (
                     <div
                         data-testid="snap-preview"
-                        className="fixed border-2 border-dashed border-white pointer-events-none z-40"
+                        className="fixed border-2 border-dashed border-white bg-white bg-opacity-10 pointer-events-none z-40 transition-opacity"
                         style={{ left: this.state.snapPreview.left, top: this.state.snapPreview.top, width: this.state.snapPreview.width, height: this.state.snapPreview.height }}
                     />
                 )}
@@ -497,7 +521,7 @@ export class Window extends Component {
                 >
                     <div
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
