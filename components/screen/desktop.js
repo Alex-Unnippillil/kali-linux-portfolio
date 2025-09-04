@@ -30,6 +30,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.zCounter = 0;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -60,25 +61,27 @@ export class Desktop extends Component {
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
         this.fetchAppsData(() => {
-            const session = this.props.session || {};
-            const positions = {};
-            if (session.dock && session.dock.length) {
-                let favourite_apps = { ...this.state.favourite_apps };
-                session.dock.forEach(id => {
-                    favourite_apps[id] = true;
-                });
-                this.setState({ favourite_apps });
-            }
+            if (!this.restoreWindowStates()) {
+                const session = this.props.session || {};
+                const positions = {};
+                if (session.dock && session.dock.length) {
+                    let favourite_apps = { ...this.state.favourite_apps };
+                    session.dock.forEach(id => {
+                        favourite_apps[id] = true;
+                    });
+                    this.setState({ favourite_apps });
+                }
 
-            if (session.windows && session.windows.length) {
-                session.windows.forEach(({ id, x, y }) => {
-                    positions[id] = { x, y };
-                });
-                this.setState({ window_positions: positions }, () => {
-                    session.windows.forEach(({ id }) => this.openApp(id));
-                });
-            } else {
-                this.openApp('about-alex');
+                if (session.windows && session.windows.length) {
+                    session.windows.forEach(({ id, x, y }) => {
+                        positions[id] = { x, y };
+                    });
+                    this.setState({ window_positions: positions }, () => {
+                        session.windows.forEach(({ id }) => this.openApp(id));
+                    });
+                } else {
+                    this.openApp('about-alex');
+                }
             }
         });
         this.setContextListeners();
@@ -472,11 +475,12 @@ export class Desktop extends Component {
                     minimized: this.state.minimized_windows[app.id],
                     resizable: app.resizable,
                     allowMaximize: app.allowMaximize,
-                    defaultWidth: app.defaultWidth,
-                    defaultHeight: app.defaultHeight,
+                    defaultWidth: pos?.width ?? app.defaultWidth,
+                    defaultHeight: pos?.height ?? app.defaultHeight,
                     initialX: pos ? pos.x : undefined,
                     initialY: pos ? pos.y : undefined,
-                    onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
+                    zIndex: pos?.z,
+                    onPositionChange: (x, y, width, height) => this.updateWindowPosition(app.id, x, y, width, height),
                     snapEnabled: this.props.snapEnabled,
                 }
 
@@ -488,13 +492,22 @@ export class Desktop extends Component {
         return windowsJsx;
     }
 
-    updateWindowPosition = (id, x, y) => {
+    updateWindowPosition = (id, x, y, width, height) => {
         const snap = this.props.snapEnabled
             ? (v) => Math.round(v / 8) * 8
             : (v) => v;
         this.setState(prev => ({
-            window_positions: { ...prev.window_positions, [id]: { x: snap(x), y: snap(y) } }
-        }), this.saveSession);
+            window_positions: {
+                ...prev.window_positions,
+                [id]: {
+                    ...(prev.window_positions[id] || {}),
+                    x: snap(x),
+                    y: snap(y),
+                    width,
+                    height,
+                },
+            }
+        }), () => { this.saveWindowStates(); this.saveSession(); });
     }
 
     saveSession = () => {
@@ -507,6 +520,42 @@ export class Desktop extends Component {
         }));
         const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
         this.props.setSession({ ...this.props.session, windows, dock });
+    }
+
+    saveWindowStates = () => {
+        const states = {};
+        Object.keys(this.state.closed_windows).forEach(id => {
+            if (this.state.closed_windows[id] === false && this.state.window_positions[id]) {
+                states[id] = this.state.window_positions[id];
+            }
+        });
+        safeLocalStorage?.setItem('window-states', JSON.stringify(states));
+    }
+
+    restoreWindowStates = () => {
+        const stored = safeLocalStorage?.getItem('window-states');
+        if (!stored) return false;
+        try {
+            const window_positions = JSON.parse(stored);
+            const ids = Object.keys(window_positions);
+            if (!ids.length) return false;
+            ids.forEach(id => {
+                const w = window_positions[id];
+                const widthPx = (w.width || 60) / 100 * window.innerWidth;
+                const heightPx = (w.height || 85) / 100 * window.innerHeight;
+                const maxX = window.innerWidth - widthPx;
+                const maxY = window.innerHeight - heightPx;
+                w.x = Math.min(Math.max(0, w.x ?? 60), maxX);
+                w.y = Math.min(Math.max(0, w.y ?? 10), maxY);
+            });
+            ids.sort((a, b) => (window_positions[a].z || 0) - (window_positions[b].z || 0));
+            this.setState({ window_positions }, () => {
+                ids.forEach(id => this.openApp(id));
+            });
+            return true;
+        } catch (e) {
+            return false;
+        }
     }
 
     hideSideBar = (objId, hide) => {
@@ -633,6 +682,7 @@ export class Desktop extends Component {
                 closed_windows[objId] = false; // openes app's window
                 this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
                     this.focus(objId);
+                    this.saveWindowStates();
                     this.saveSession();
                 });
                 this.app_stack.push(objId);
@@ -684,8 +734,13 @@ export class Desktop extends Component {
 
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
+        const window_positions = { ...this.state.window_positions };
+        delete window_positions[objId];
 
-        this.setState({ closed_windows, favourite_apps }, this.saveSession);
+        this.setState({ closed_windows, favourite_apps, window_positions }, () => {
+            this.saveWindowStates();
+            this.saveSession();
+        });
     }
 
     pinApp = (id) => {
@@ -717,7 +772,7 @@ export class Desktop extends Component {
     }
 
     focus = (objId) => {
-        // removes focus from all window and 
+        // removes focus from all window and
         // gives focus to window with 'id = objId'
         var focused_windows = this.state.focused_windows;
         focused_windows[objId] = true;
@@ -728,7 +783,14 @@ export class Desktop extends Component {
                 }
             }
         }
-        this.setState({ focused_windows });
+        const z = ++this.zCounter;
+        this.setState(prev => ({
+            focused_windows,
+            window_positions: {
+                ...prev.window_positions,
+                [objId]: { ...(prev.window_positions[objId] || {}), z },
+            },
+        }), this.saveWindowStates);
     }
 
     addNewFolder = () => {
