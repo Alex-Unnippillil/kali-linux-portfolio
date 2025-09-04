@@ -69,6 +69,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children }) => {
             ref={modalRef}
             onKeyDown={handleKeyDown}
             tabIndex={-1}
+            style={{ boxShadow: 'var(--shadow-elevation-4)' }}
         >
             {children}
         </div>

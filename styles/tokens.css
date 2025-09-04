@@ -50,6 +50,12 @@
   --font-multiplier: 1;
   /* Minimum interactive target size */
   --hit-area: 32px;
+
+  /* Shadows */
+  --shadow-elevation-1: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-elevation-2: 0 2px 4px rgba(0, 0, 0, 0.35);
+  --shadow-elevation-3: 0 4px 8px rgba(0, 0, 0, 0.45);
+  --shadow-elevation-4: 0 8px 16px rgba(0, 0, 0, 0.55);
 }
 
 /* High contrast theme */
