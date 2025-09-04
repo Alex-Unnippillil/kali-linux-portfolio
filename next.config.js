@@ -87,6 +87,10 @@ function configureWebpack(config, { isServer }) {
     module: false,
     async_hooks: false,
   };
+  config.resolve.alias = {
+    ...(config.resolve.alias || {}),
+    'react-dom': require('path').resolve(__dirname, 'lib/react-dom-shim.js'),
+  };
   if (isProd) {
     config.optimization = {
       ...(config.optimization || {}),

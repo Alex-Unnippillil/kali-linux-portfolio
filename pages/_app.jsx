@@ -13,6 +13,7 @@ import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
 import { initA2HS } from '@/src/pwa/a2hs';
 
+
 function MyApp(props) {
   const { Component, pageProps } = props;
 
@@ -135,6 +136,7 @@ function MyApp(props) {
   return (
     <SettingsProvider>
       <PipPortalProvider>
+        <UseRouteAbortGuard />
         <div aria-live="polite" id="live-region" />
         <Component {...pageProps} />
         <ShortcutOverlay />
