@@ -1,48 +1,51 @@
-'use client';
+"use client";
 
-import { useRef, useState, useCallback, useEffect } from 'react';
-import QRCode from 'qrcode';
-import Presets from './components/Presets';
-import Scan from './components/Scan';
+import { useRef, useState, useCallback, useEffect } from "react";
+import DOMPurify from "dompurify";
+import QRCode from "qrcode";
+import Presets from "./components/Presets";
+import Scan from "./components/Scan";
 import {
   loadLastGeneration,
   loadLastScan,
   saveLastGeneration,
   saveLastScan,
-} from '../../utils/qrStorage';
+} from "../../utils/qrStorage";
 
 export default function QR() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [payload, setPayload] = useState('');
-  const [mode, setMode] = useState<'generate' | 'scan'>('generate');
+  const [payload, setPayload] = useState("");
+  const [mode, setMode] = useState<"generate" | "scan">("generate");
   const [size, setSize] = useState(256);
-  const [scanResult, setScanResult] = useState('');
-  const [lastGen, setLastGen] = useState('');
-  const [lastScan, setLastScan] = useState('');
+  const [scanResult, setScanResult] = useState("");
+  const [lastGen, setLastGen] = useState("");
+  const [lastScan, setLastScan] = useState("");
 
   useEffect(() => {
-    setLastGen(loadLastGeneration());
-    setLastScan(loadLastScan());
+    setLastGen(DOMPurify.sanitize(loadLastGeneration()));
+    setLastScan(DOMPurify.sanitize(loadLastScan()));
   }, []);
 
   useEffect(() => {
     if (payload) {
-      saveLastGeneration(payload);
-      setLastGen(payload);
+      const clean = DOMPurify.sanitize(payload);
+      saveLastGeneration(clean);
+      setLastGen(clean);
     }
   }, [payload]);
 
   useEffect(() => {
     if (scanResult) {
-      saveLastScan(scanResult);
-      setLastScan(scanResult);
+      const clean = DOMPurify.sanitize(scanResult);
+      saveLastScan(clean);
+      setLastScan(clean);
     }
   }, [scanResult]);
 
   const downloadPng = useCallback(async () => {
     if (!payload) return;
     const data = await QRCode.toDataURL(payload, { margin: 1, width: size });
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = data;
     link.download = `qr-${size}.png`;
     link.click();
@@ -53,11 +56,11 @@ export default function QR() {
     const svg = await QRCode.toString(payload, {
       margin: 1,
       width: size,
-      type: 'svg',
+      type: "svg",
     });
-    const blob = new Blob([svg], { type: 'image/svg+xml' });
+    const blob = new Blob([svg], { type: "image/svg+xml" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
     link.download = `qr-${size}.svg`;
     link.click();
@@ -69,18 +72,18 @@ export default function QR() {
       <div className="flex gap-2">
         <button
           type="button"
-          onClick={() => setMode('generate')}
+          onClick={() => setMode("generate")}
           className={`px-2 py-1 rounded ${
-            mode === 'generate' ? 'bg-blue-600' : 'bg-gray-600'
+            mode === "generate" ? "bg-blue-600" : "bg-gray-600"
           }`}
         >
           Generate
         </button>
         <button
           type="button"
-          onClick={() => setMode('scan')}
+          onClick={() => setMode("scan")}
           className={`px-2 py-1 rounded ${
-            mode === 'scan' ? 'bg-blue-600' : 'bg-gray-600'
+            mode === "scan" ? "bg-blue-600" : "bg-gray-600"
           }`}
         >
           Scan
@@ -88,14 +91,14 @@ export default function QR() {
       </div>
 
       <div className="w-64 aspect-square mx-auto">
-        {mode === 'generate' ? (
+        {mode === "generate" ? (
           <canvas ref={canvasRef} className="w-full h-full bg-white" />
         ) : (
-          <Scan onResult={setScanResult} />
+          <Scan onResult={(t) => setScanResult(DOMPurify.sanitize(t))} />
         )}
       </div>
 
-      {mode === 'generate' && (
+      {mode === "generate" && (
         <>
           <Presets
             canvasRef={canvasRef}
@@ -103,7 +106,10 @@ export default function QR() {
             size={size}
           />
           <div className="flex items-center gap-2">
-            <label htmlFor="qr-size" className="text-sm flex items-center gap-1">
+            <label
+              htmlFor="qr-size"
+              className="text-sm flex items-center gap-1"
+            >
               Size
               <select
                 id="qr-size"
@@ -186,4 +192,3 @@ export default function QR() {
     </div>
   );
 }
-
