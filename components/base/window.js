@@ -50,6 +50,8 @@ export class Window extends Component {
         // Listen for context menu events to toggle inert background
         window.addEventListener('context-menu-open', this.setInertBackground);
         window.addEventListener('context-menu-close', this.removeInertBackground);
+        const root = document.getElementById(this.id);
+        root?.addEventListener('super-arrow', this.handleSuperArrow);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -61,6 +63,8 @@ export class Window extends Component {
         window.removeEventListener('resize', this.resizeBoundries);
         window.removeEventListener('context-menu-open', this.setInertBackground);
         window.removeEventListener('context-menu-close', this.removeInertBackground);
+        const root = document.getElementById(this.id);
+        root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
@@ -558,6 +562,52 @@ export class Window extends Component {
             }
             this.focusWindow();
         }
+    }
+
+    handleSuperArrow = (e) => {
+        const key = e.detail;
+        if (key === 'ArrowLeft') {
+            if (this.state.snapped === 'left') this.unsnapWindow();
+            else this.snapWindow('left');
+        } else if (key === 'ArrowRight') {
+            if (this.state.snapped === 'right') this.unsnapWindow();
+            else this.snapWindow('right');
+        } else if (key === 'ArrowUp') {
+            this.maximizeWindow();
+        } else if (key === 'ArrowDown') {
+            if (this.state.maximized) {
+                this.restoreWindow();
+            } else if (this.state.snapped) {
+                this.unsnapWindow();
+            }
+        }
+    }
+
+    snapWindow = (pos) => {
+        this.focusWindow();
+        const { width, height } = this.state;
+        let newWidth = width;
+        let newHeight = height;
+        let transform = '';
+        if (pos === 'left') {
+            newWidth = 50;
+            newHeight = 96.3;
+            transform = 'translate(-1pt,-2pt)';
+        } else if (pos === 'right') {
+            newWidth = 50;
+            newHeight = 96.3;
+            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
+        }
+        const node = document.getElementById(this.id);
+        if (node && transform) {
+            node.style.transform = transform;
+        }
+        this.setState({
+            snapped: pos,
+            lastSize: { width, height },
+            width: newWidth,
+            height: newHeight
+        }, this.resizeBoundries);
     }
 
     render() {

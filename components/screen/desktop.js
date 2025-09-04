@@ -154,6 +154,59 @@ export class Desktop extends Component {
             e.preventDefault();
             this.openApp('clipboard-manager');
         }
+        else if (e.altKey && e.key === 'Tab') {
+            e.preventDefault();
+            this.cycleApps(e.shiftKey ? -1 : 1);
+        }
+        else if (e.altKey && (e.key === '`' || e.key === '~')) {
+            e.preventDefault();
+            this.cycleAppWindows(e.shiftKey ? -1 : 1);
+        }
+        else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+            e.preventDefault();
+            const id = this.getFocusedWindowId();
+            if (id) {
+                const event = new CustomEvent('super-arrow', { detail: e.key });
+                document.getElementById(id)?.dispatchEvent(event);
+            }
+        }
+    }
+
+    getFocusedWindowId = () => {
+        for (const key in this.state.focused_windows) {
+            if (this.state.focused_windows[key]) {
+                return key;
+            }
+        }
+        return null;
+    }
+
+    cycleApps = (direction) => {
+        if (!this.app_stack.length) return;
+        const currentId = this.getFocusedWindowId();
+        let index = this.app_stack.indexOf(currentId);
+        if (index === -1) index = 0;
+        let next = (index + direction + this.app_stack.length) % this.app_stack.length;
+        // Skip minimized windows
+        for (let i = 0; i < this.app_stack.length; i++) {
+            const id = this.app_stack[next];
+            if (!this.state.minimized_windows[id]) {
+                this.focus(id);
+                break;
+            }
+            next = (next + direction + this.app_stack.length) % this.app_stack.length;
+        }
+    }
+
+    cycleAppWindows = (direction) => {
+        const currentId = this.getFocusedWindowId();
+        if (!currentId) return;
+        const base = currentId.split('#')[0];
+        const windows = this.app_stack.filter(id => id.startsWith(base));
+        if (windows.length <= 1) return;
+        let index = windows.indexOf(currentId);
+        let next = (index + direction + windows.length) % windows.length;
+        this.focus(windows[next]);
     }
 
     openWindowSwitcher = () => {
