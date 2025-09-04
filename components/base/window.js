@@ -227,6 +227,39 @@ export class Window extends Component {
         }
     }
 
+    snapWindow = (position) => {
+        this.setWinowsPosition();
+        const { width, height } = this.state;
+        let newWidth = width;
+        let newHeight = height;
+        let transform = '';
+        if (position === 'left') {
+            newWidth = 50;
+            newHeight = 96.3;
+            transform = 'translate(-1pt,-2pt)';
+        } else if (position === 'right') {
+            newWidth = 50;
+            newHeight = 96.3;
+            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
+        } else if (position === 'top') {
+            newWidth = 100.2;
+            newHeight = 50;
+            transform = 'translate(-1pt,-2pt)';
+        }
+        const r = document.querySelector("#" + this.id);
+        if (r && transform) {
+            r.style.transform = transform;
+        }
+        this.setState({
+            snapPreview: null,
+            snapPosition: null,
+            snapped: position,
+            lastSize: { width, height },
+            width: newWidth,
+            height: newHeight
+        }, this.resizeBoundries);
+    }
+
     checkOverlap = () => {
         var r = document.querySelector("#" + this.id);
         var rect = r.getBoundingClientRect();
@@ -308,38 +341,8 @@ export class Window extends Component {
         this.changeCursorToDefault();
         const snapPos = this.state.snapPosition;
         if (snapPos) {
-            this.setWinowsPosition();
-            const { width, height } = this.state;
-            let newWidth = width;
-            let newHeight = height;
-            let transform = '';
-            if (snapPos === 'left') {
-                newWidth = 50;
-                newHeight = 96.3;
-                transform = 'translate(-1pt,-2pt)';
-            } else if (snapPos === 'right') {
-                newWidth = 50;
-                newHeight = 96.3;
-                transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-            } else if (snapPos === 'top') {
-                newWidth = 100.2;
-                newHeight = 50;
-                transform = 'translate(-1pt,-2pt)';
-            }
-            var r = document.querySelector("#" + this.id);
-            if (r && transform) {
-                r.style.transform = transform;
-            }
-            this.setState({
-                snapPreview: null,
-                snapPosition: null,
-                snapped: snapPos,
-                lastSize: { width, height },
-                width: newWidth,
-                height: newHeight
-            }, this.resizeBoundries);
-        }
-        else {
+            this.snapWindow(snapPos);
+        } else {
             this.setState({ snapPreview: null, snapPosition: null });
         }
     }
@@ -492,8 +495,45 @@ export class Window extends Component {
             this.closeWindow();
         } else if (e.key === 'Tab') {
             this.focusWindow();
-        } else if (e.key === 'ArrowDown' && e.altKey) {
-            this.unsnapWindow();
+        } else if (e.altKey) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                e.stopPropagation();
+                this.unsnapWindow();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                e.stopPropagation();
+                this.snapWindow('left');
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                e.stopPropagation();
+                this.snapWindow('right');
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                e.stopPropagation();
+                this.snapWindow('top');
+            }
+            this.focusWindow();
+        } else if (e.shiftKey) {
+            const step = 1;
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                e.stopPropagation();
+                this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                e.stopPropagation();
+                this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                e.stopPropagation();
+                this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                e.stopPropagation();
+                this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
+            }
+            this.focusWindow();
         }
     }
 
