@@ -20,7 +20,7 @@
     "analyze": "ANALYZE=true yarn build"
   },
   "engines": {
-    "node": "20.x"
+    "node": "22.x"
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
