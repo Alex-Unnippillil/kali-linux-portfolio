@@ -208,7 +208,12 @@ function VirtualGrid({
                 padding: '6px',
               }}
             >
-              <div className="cursor-pointer" onClick={() => onPlay(v)}>
+              <button
+                type="button"
+                className="block w-full text-left cursor-pointer"
+                onClick={() => onPlay(v)}
+                aria-label={`Play ${v.title}`}
+              >
                 <div className="relative">
                   <img
                     src={v.thumbnail}
@@ -223,7 +228,7 @@ function VirtualGrid({
                 <div className="mt-[6px] text-sm line-clamp-2">
                   {truncateTitle(v.title)}
                 </div>
-              </div>
+              </button>
               <div className="mt-[6px] flex justify-between text-xs">
                 <ChannelHovercard id={v.channelId} name={v.channelName} />
                 <div className="space-x-[6px]">
