@@ -1,7 +1,8 @@
-import { openDB } from 'idb';
+import { isBrowser } from '../../utils/env';
+import { makeIdb } from '../../utils/safeIdb';
 
-const notesContainer = document.getElementById('notes');
-const addNoteBtn = document.getElementById('add-note');
+const notesContainer = isBrowser ? document.getElementById('notes') : null;
+const addNoteBtn = isBrowser ? document.getElementById('add-note') : null;
 
 const DB_NAME = 'stickyNotes';
 const STORE_NAME = 'notes';
@@ -9,9 +10,8 @@ const DB_VERSION = 1;
 
 let dbPromise = null;
 function getDB() {
-  if (typeof indexedDB === 'undefined') return null;
   if (!dbPromise) {
-    dbPromise = openDB(DB_NAME, DB_VERSION, {
+    dbPromise = makeIdb(DB_NAME, DB_VERSION, {
       upgrade(db, oldVersion) {
         if (oldVersion < 1) {
           db.createObjectStore(STORE_NAME, { keyPath: 'id' });
@@ -47,6 +47,7 @@ async function saveNotes() {
 }
 
 function createNoteElement(note) {
+  if (!notesContainer) return;
   const el = document.createElement('div');
   el.className = 'note';
   el.style.left = note.x + 'px';
@@ -172,5 +173,7 @@ async function init() {
   }
 }
 
-addNoteBtn.addEventListener('click', addNote);
-void init();
+if (isBrowser && addNoteBtn) {
+  addNoteBtn.addEventListener('click', addNote);
+  void init();
+}
