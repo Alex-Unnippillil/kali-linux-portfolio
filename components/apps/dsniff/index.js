@@ -495,7 +495,7 @@ const Dsniff = () => {
           Copy selected row
         </button>
         <div className="bg-black p-2">
-          <h3 className="font-bold mb-1 text-sm">Remediation</h3>
+          <h3 className="font-bold mb-2 text-sm">Remediation</h3>
           <ul className="list-disc pl-5 text-xs">
             {remediation.map((item, i) => (
               <li key={i}>{item}</li>

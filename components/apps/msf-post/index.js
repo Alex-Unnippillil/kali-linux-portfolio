@@ -195,7 +195,7 @@ const MsfPostApp = () => {
         <div className="w-2/3 pl-4 flex flex-col">
           {selectedModule ? (
             <div>
-              <h3 className="text-md font-semibold mb-1">
+              <h3 className="text-md font-semibold mb-2">
                 {selectedModule.path}
               </h3>
               <p className="text-sm text-gray-400 mb-2">

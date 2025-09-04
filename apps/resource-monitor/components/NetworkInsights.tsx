@@ -33,7 +33,7 @@ export default function NetworkInsights() {
 
   return (
     <div className="p-2 text-xs text-white bg-[var(--kali-bg)]">
-      <h2 className="font-bold mb-1">Active Fetches</h2>
+      <h2 className="font-bold mb-2">Active Fetches</h2>
       <ul className="mb-2 divide-y divide-gray-700 border border-gray-700 rounded bg-[var(--kali-panel)]">
         {active.length === 0 && <li className="p-1 text-gray-400">None</li>}
         {active.map((f) => (
@@ -47,7 +47,7 @@ export default function NetworkInsights() {
           </li>
         ))}
       </ul>
-      <div className="flex items-center mb-1">
+      <div className="flex items-center mb-2">
         <h2 className="font-bold">History</h2>
         <button
           onClick={() => exportMetrics(history)}

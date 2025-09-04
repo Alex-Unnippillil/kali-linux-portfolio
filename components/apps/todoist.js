@@ -666,13 +666,13 @@ export default function Todoist() {
         role="list"
         aria-label={name}
       >
-        <h2 className="mb-1.5 font-bold text-lg text-gray-800">
+        <h2 className="mb-2 font-bold text-lg text-gray-800">
           {name}
           {WIP_LIMITS[name] ? ` (${groups[name].length}/${WIP_LIMITS[name]})` : ''}
         </h2>
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center text-gray-500 mt-3">
-            <img src="/empty-tasks.svg" alt="" className="w-16 h-16 mb-1.5" />
+            <img src="/empty-tasks.svg" alt="" className="w-16 h-16 mb-2" />
             <span className="text-sm">No tasks</span>
           </div>
         ) : (

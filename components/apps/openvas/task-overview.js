@@ -14,9 +14,9 @@ const TaskOverview = () => {
       <FeedStatusCard />
       <div className="p-4 bg-gray-800 rounded">
         <h3 className="text-md font-bold mb-2">Demo Task Overview</h3>
-        <h4 className="text-sm font-bold mb-1">Run History</h4>
+        <h4 className="text-sm font-bold mb-2">Run History</h4>
         <TaskRunChart />
-        <ul className="text-sm space-y-1 mt-2">
+        <ul className="text-sm space-y-2 mt-2">
           {tasks.map((t) => (
             <li key={t.name} className="flex justify-between">
               <span>{t.name}</span>

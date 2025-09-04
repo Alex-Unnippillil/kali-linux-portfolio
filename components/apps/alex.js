@@ -429,9 +429,9 @@ function Projects({ projects }) {
                                     </div>
                                     <div className="text-gray-300 font-light text-sm">{project.date}</div>
                                 </div>
-                                <ul className=" tracking-normal leading-tight text-sm font-light ml-4 mt-1">
+                                <ul className=" tracking-normal leading-tight text-sm font-light ml-4 mt-2">
                                     {project.description.map((desc, idx) => (
-                                        <li key={idx} className="list-disc mt-1 text-gray-100">{desc}</li>
+                                        <li key={idx} className="list-disc mt-2 text-gray-100">{desc}</li>
                                     ))}
                                 </ul>
                                 <div className="flex flex-wrap items-start justify-start text-xs py-2">
@@ -559,7 +559,7 @@ function Resume({ data: resume }) {
                 </div>
                 <div className="mb-4">
                     <div className="font-bold text-lg">Projects</div>
-                    <ul className="list-disc ml-5 mt-2">
+                    <ul className="list-disc ml-6 mt-2">
                         {resume.projects.map((p) => (
                             <li key={p.name} className="text-sm">
                                 <a

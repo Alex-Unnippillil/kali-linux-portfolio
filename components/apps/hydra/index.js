@@ -570,7 +570,7 @@ const HydraApp = () => {
             className="w-full p-2 rounded text-black"
             placeholder="1:3"
           />
-          <p className="mt-1 text-sm">
+          <p className="mt-2 text-sm">
             Candidate space: {candidateSpace.toLocaleString()}
           </p>
           <canvas

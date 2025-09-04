@@ -280,9 +280,9 @@ const UnitConverter = () => {
       <div className="mt-4">
         <h3 className="text-lg">Favorites</h3>
         {favorites.length === 0 && <div className="text-sm">No favorites</div>}
-        <ul className="flex flex-col gap-1 mt-1">
+        <ul className="flex flex-col gap-2 mt-2">
           {favorites.map((fav, idx) => (
-            <li key={`${fav.category}-${fav.fromUnit}-${fav.toUnit}-${idx}`} className="flex items-center gap-2 bg-gray-600 p-1 rounded">
+            <li key={`${fav.category}-${fav.fromUnit}-${fav.toUnit}-${idx}`} className="flex items-center gap-2 bg-gray-600 p-2 rounded">
               <button
                 className="flex-grow text-left"
                 onClick={() => {

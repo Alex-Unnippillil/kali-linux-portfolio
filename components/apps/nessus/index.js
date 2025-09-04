@@ -344,8 +344,8 @@ const Nessus = () => {
       </form>
       {jobs.length > 0 && (
         <div className="mb-4">
-          <h3 className="text-lg mb-1">Scheduled Jobs</h3>
-          <ul className="space-y-1">
+          <h3 className="text-lg mb-2">Scheduled Jobs</h3>
+          <ul className="space-y-2">
             {jobs.map((job, idx) => (
               <li key={idx} className="text-sm">
                 Scan {job.scanId} - {job.schedule}
@@ -354,9 +354,9 @@ const Nessus = () => {
           </ul>
         </div>
       )}
-      <ul className="space-y-1">
+      <ul className="space-y-2">
         {scans.map((scan) => (
-          <li key={scan.id} className="border-b border-gray-700 pb-1">
+          <li key={scan.id} className="border-b border-gray-700 pb-2">
             <div className="flex justify-between items-center">
               <span>
                 {scan.name} - {scan.status}

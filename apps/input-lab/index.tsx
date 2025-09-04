@@ -54,7 +54,7 @@ export default function InputLab() {
             onChange={(e) => setText(e.target.value)}
             className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
           />
-          {error && <p className="mt-1 text-sm text-red-400">{error}</p>}
+          {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
         </div>
       </form>
       <div role="status" aria-live="polite" className="mt-4 text-sm text-green-400">

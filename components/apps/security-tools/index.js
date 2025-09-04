@@ -142,7 +142,7 @@ export default function SecurityTools() {
             <div className="mb-2">
               <h3 className="text-sm font-bold">Suricata</h3>
               {suricataResults.map((log, i) => (
-                <pre key={i} className="bg-black p-1 mb-1 overflow-auto">
+                <pre key={i} className="bg-black p-2 mb-2 overflow-auto">
                   {JSON.stringify(log, null, 2)}
                 </pre>
               ))}
@@ -152,7 +152,7 @@ export default function SecurityTools() {
             <div className="mb-2">
               <h3 className="text-sm font-bold">Zeek</h3>
               {zeekResults.map((log, i) => (
-                <pre key={i} className="bg-black p-1 mb-1 overflow-auto">
+                <pre key={i} className="bg-black p-2 mb-2 overflow-auto">
                   {JSON.stringify(log, null, 2)}
                 </pre>
               ))}
@@ -164,7 +164,7 @@ export default function SecurityTools() {
               {sigmaResults.map(rule => (
                 <div key={rule.id} className="mb-2">
                   <h4 className="font-bold">{rule.title}</h4>
-                  <pre className="bg-black p-1 overflow-auto">
+                  <pre className="bg-black p-2 overflow-auto">
                     {JSON.stringify(rule, null, 2)}
                   </pre>
                 </div>
@@ -209,7 +209,7 @@ export default function SecurityTools() {
             <div>
               <p className="text-xs mb-2">Sample Suricata alerts from local JSON fixture.</p>
               {suricata.map((log, i) => (
-                <pre key={i} className="text-xs bg-black p-1 mb-1 overflow-auto">{JSON.stringify(log, null, 2)}</pre>
+                <pre key={i} className="text-xs bg-black p-2 mb-2 overflow-auto">{JSON.stringify(log, null, 2)}</pre>
               ))}
             </div>
           )}
@@ -218,7 +218,7 @@ export default function SecurityTools() {
             <div>
               <p className="text-xs mb-2">Sample Zeek logs from local JSON fixture.</p>
               {zeek.map((log, i) => (
-                <pre key={i} className="text-xs bg-black p-1 mb-1 overflow-auto">{JSON.stringify(log, null, 2)}</pre>
+                <pre key={i} className="text-xs bg-black p-2 mb-2 overflow-auto">{JSON.stringify(log, null, 2)}</pre>
               ))}
             </div>
           )}

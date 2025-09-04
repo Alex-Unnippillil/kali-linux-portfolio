@@ -73,7 +73,7 @@ const PluginBrowser = () => {
               Requires Volatility {p.minVersion}
             </p>
           )}
-          <p className="text-xs mb-1">{p.description}</p>
+          <p className="text-xs mb-2">{p.description}</p>
           <a
             href={p.doc}
             target="_blank"

@@ -228,8 +228,8 @@ const NmapNSEApp = () => {
                   />
                   <span className="font-mono">{s.name}</span>
                 </label>
-                <p className="text-xs mb-1">{s.description}</p>
-                <div className="flex flex-wrap gap-1 mb-1">
+                <p className="text-xs mb-2">{s.description}</p>
+                <div className="flex flex-wrap gap-2 mb-2">
                   {s.tags.map((t) => (
                     <span key={t} className="px-1 text-xs bg-gray-200 rounded">
                       {t}
@@ -258,7 +258,7 @@ const NmapNSEApp = () => {
           </div>
         </div>
         <div className="mb-4">
-          <p className="block text-sm mb-1">Port presets</p>
+          <p className="block text-sm mb-2">Port presets</p>
           <div className="flex gap-2">
             {portPresets.map((p) => (
               <button
@@ -291,7 +291,7 @@ const NmapNSEApp = () => {
         <h2 className="text-lg mb-2">Script phases</h2>
         {activeScript ? (
           <>
-            <p className="text-sm mb-1">
+            <p className="text-sm mb-2">
               Phases for <span className="font-mono">{activeScript}</span>
             </p>
             <div className="flex space-x-2 mb-2">

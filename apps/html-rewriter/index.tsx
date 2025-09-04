@@ -63,7 +63,7 @@ const HtmlRewriterApp: React.FC = () => {
             value={ruleText}
             onChange={(e) => setRuleText(e.target.value)}
           />
-          {error && <p className="text-red-400 mt-1">{error}</p>}
+          {error && <p className="text-red-400 mt-2">{error}</p>}
         </div>
         <div className="flex-1 flex flex-col">
           <label className="mb-1">Sample HTML</label>

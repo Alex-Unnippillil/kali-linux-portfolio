@@ -22,7 +22,7 @@ export default function HookGraph({ hooks, steps }) {
             rel="noopener noreferrer"
             className="bg-ub-gray-50 text-black p-3 rounded shadow transition-transform duration-300 transform hover:scale-105 fade-in"
           >
-            <h3 className="font-bold text-sm mb-1">{mod.name}</h3>
+            <h3 className="font-bold text-sm mb-2">{mod.name}</h3>
             <p className="text-xs mb-2">{mod.description}</p>
             {mod.demo && (
               <pre className="text-[10px] bg-black text-green-400 p-1 rounded mb-2 overflow-x-auto">

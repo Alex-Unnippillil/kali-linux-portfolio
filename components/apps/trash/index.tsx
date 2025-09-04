@@ -147,7 +147,7 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
             ) : item.icon ? (
               <img src={item.icon} alt={item.title} className="h-20 w-20 mx-auto object-contain" />
             ) : null}
-            <p className="text-center text-xs truncate mt-1" title={item.title}>
+            <p className="text-center text-xs truncate mt-2" title={item.title}>
               {item.title}
             </p>
             <p className="text-center text-[10px] text-gray-400" aria-label={`Closed ${formatAge(item.closedAt)}`}>

@@ -174,7 +174,7 @@ export class Gedit extends Component {
                 {
                     this.state.location &&
                     <div className="bg-ub-gedit-dark border-t border-b border-ubt-gedit-blue p-2">
-                        <h2 className="font-bold text-sm mb-1">Your Local Time</h2>
+                        <h2 className="font-bold text-sm mb-2">Your Local Time</h2>
                         <Image
                             src={`https://staticmap.openstreetmap.de/staticmap.php?center=${this.state.location.latitude},${this.state.location.longitude}&zoom=3&size=300x150&markers=${this.state.location.latitude},${this.state.location.longitude},red-dot`}
                             alt="Map showing your approximate location"
