@@ -7,10 +7,32 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useCallback,
+  useMemo,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
+
+const fuzzySearch = (query: string, list: string[]): string[] => {
+  const q = query.toLowerCase();
+  return list
+    .map((item) => {
+      if (!q) return { item, score: 0 };
+      const t = item.toLowerCase();
+      let qi = 0;
+      let score = 0;
+      for (let i = 0; i < t.length && qi < q.length; i++) {
+        if (t[i] === q[qi]) {
+          score += i;
+          qi++;
+        }
+      }
+      return qi === q.length ? { item, score } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => (a!.score as number) - (b!.score as number))
+    .map((r) => (r as { item: string }).item);
+};
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -100,6 +122,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   });
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
+  const [recentCommands, setRecentCommands] = useState<string[]>([]);
+  const [paletteIndex, setPaletteIndex] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
@@ -123,6 +147,23 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     '#55FFFF',
     '#FFFFFF',
   ];
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('terminal:recent');
+      if (saved) setRecentCommands(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  const addRecent = useCallback((cmd: string) => {
+    setRecentCommands((prev) => {
+      const next = [cmd, ...prev.filter((c) => c !== cmd)].slice(0, 10);
+      try {
+        localStorage.setItem('terminal:recent', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  }, []);
 
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
@@ -241,10 +282,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         const [cmdName, ...cmdRest] = expanded.split(/\s+/);
         const handler = registryRef.current[cmdName];
         historyRef.current.push(cmd);
+        addRecent(cmd);
         if (handler) await handler(cmdRest.join(' '), contextRef.current);
         else if (cmdName) await runWorker(expanded);
       },
-      [runWorker],
+      [runWorker, addRecent],
     );
 
     const autocomplete = useCallback(() => {
@@ -400,6 +442,17 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     return () => window.removeEventListener('keydown', listener);
   }, [paletteOpen]);
 
+  const paletteCommands = useMemo(() => {
+    const base = [...recentCommands, ...Object.keys(registryRef.current)];
+    const filtered = fuzzySearch(paletteInput, base);
+    const deduped = Array.from(new Set(filtered.length ? filtered : base));
+    return deduped;
+  }, [paletteInput, recentCommands]);
+
+  useEffect(() => {
+    setPaletteIndex(0);
+  }, [paletteInput, paletteOpen]);
+
   return (
     <div className="relative h-full w-full">
       {paletteOpen && (
@@ -412,25 +465,47 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               onChange={(e) => setPaletteInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  runCommand(paletteInput);
+                  const cmd = paletteCommands[paletteIndex] || paletteInput;
+                  runCommand(cmd);
                   setPaletteInput('');
                   setPaletteOpen(false);
                   termRef.current?.focus();
                 } else if (e.key === 'Escape') {
                   setPaletteOpen(false);
                   termRef.current?.focus();
+                } else if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  setPaletteIndex((i) =>
+                    i + 1 >= paletteCommands.length ? 0 : i + 1,
+                  );
+                } else if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  setPaletteIndex((i) =>
+                    i - 1 < 0 ? paletteCommands.length - 1 : i - 1,
+                  );
                 }
               }}
             />
             <ul className="max-h-40 overflow-y-auto">
-              {Object.keys(registryRef.current)
-                .filter((c) => c.startsWith(paletteInput))
-                .map((c) => (
-                  <li key={c} className="text-white">
-                    {c}
-                  </li>
-                ))}
+              {paletteCommands.map((c, i) => (
+                <li
+                  key={c}
+                  className={`text-white flex justify-between px-1 ${
+                    i === paletteIndex ? 'bg-gray-700' : ''
+                  }`}
+                >
+                  <span>{c}</span>
+                  {recentCommands.includes(c) && (
+                    <span className="text-xs text-gray-400">recent</span>
+                  )}
+                </li>
+              ))}
             </ul>
+            <div className="mt-2 flex justify-between text-xs text-gray-400">
+              <span>Enter to run</span>
+              <span>Esc to close</span>
+              <span>↑↓ to navigate</span>
+            </div>
           </div>
         </div>
       )}
