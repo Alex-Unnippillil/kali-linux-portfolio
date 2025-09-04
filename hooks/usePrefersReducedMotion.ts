@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import { useSettings } from './useSettings';
 
 export default function usePrefersReducedMotion() {
+  const { reducedMotion } = useSettings();
   const [prefersReduced, setPrefersReduced] = useState(false);
 
   useEffect(() => {
@@ -11,5 +13,5 @@ export default function usePrefersReducedMotion() {
     return () => mq.removeEventListener('change', update);
   }, []);
 
-  return prefersReduced;
+  return reducedMotion || prefersReduced;
 }
