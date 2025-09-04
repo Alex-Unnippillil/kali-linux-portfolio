@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import Toast from '../../ui/Toast';
 
 interface PluginInfo { id: string; file: string; }
 
@@ -7,6 +8,7 @@ interface PluginManifest {
   id: string;
   sandbox: 'worker' | 'iframe';
   code: string;
+  signature: string;
 }
 
 export default function PluginManager() {
@@ -23,6 +25,7 @@ export default function PluginManager() {
       return {};
     }
   );
+  const [toast, setToast] = useState('');
 
   interface LastRun {
     id: string;
@@ -50,6 +53,22 @@ export default function PluginManager() {
   const install = async (plugin: PluginInfo) => {
     const res = await fetch(`/api/plugins/${plugin.file}`);
     const manifest: PluginManifest = await res.json();
+    let valid = false;
+    try {
+      const enc = new TextEncoder();
+      const data = enc.encode(manifest.code);
+      const buf = await crypto.subtle.digest('SHA-256', data);
+      const hash = Array.from(new Uint8Array(buf))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+      valid = hash === manifest.signature;
+    } catch {
+      valid = false;
+    }
+    if (!valid) {
+      setToast('Plugin verification failed');
+      return;
+    }
     const updated = { ...installed, [plugin.id]: manifest };
     setInstalled(updated);
     localStorage.setItem('installedPlugins', JSON.stringify(updated));
@@ -159,6 +178,7 @@ export default function PluginManager() {
           </button>
         </div>
       )}
+      {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
   );
 }
