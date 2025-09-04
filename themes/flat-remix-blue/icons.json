@@ -1,0 +1,7 @@
+{
+  "close": "/themes/flat-remix-blue/window-close.svg",
+  "minimize": "/themes/flat-remix-blue/window-minimize.svg",
+  "maximize": "/themes/flat-remix-blue/window-maximize.svg",
+  "restore": "/themes/flat-remix-blue/window-restore.svg",
+  "pin": "/themes/flat-remix-blue/window-pin.svg"
+}
