@@ -1,12 +1,20 @@
 import 'fake-indexeddb/auto';
 import '@testing-library/jest-dom';
 import { TextEncoder, TextDecoder } from 'util';
+import { setTheme } from './utils/theme';
 
 // Provide TextEncoder/TextDecoder for libraries that expect them in the test environment
 // @ts-ignore
 global.TextEncoder = TextEncoder;
 // @ts-ignore
 global.TextDecoder = TextDecoder as any;
+// @ts-ignore
+global.setTheme = setTheme;
+// @ts-ignore
+if (typeof global.structuredClone !== 'function') {
+  // @ts-ignore
+  global.structuredClone = (val: any) => JSON.parse(JSON.stringify(val));
+}
 
 // Ensure a global `fetch` exists for tests. Jest's jsdom environment
 // doesn't provide one on the Node `global` object, which causes

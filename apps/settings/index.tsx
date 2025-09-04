@@ -8,6 +8,7 @@ import {
   defaults,
   exportSettings as exportSettingsData,
   importSettings as importSettingsData,
+  resetWindowGeometry,
 } from "../../utils/settingsStore";
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
@@ -81,6 +82,11 @@ export default function Settings() {
     } catch (err) {
       console.error("Invalid settings", err);
     }
+  };
+
+  const handleResetGeometry = () => {
+    if (!window.confirm("Reset window geometry?")) return;
+    resetWindowGeometry();
   };
 
   const handleReset = async () => {
@@ -189,7 +195,13 @@ export default function Settings() {
               ></div>
             ))}
           </div>
-          <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
+          <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center space-x-4">
+            <button
+              onClick={handleResetGeometry}
+              className="px-4 py-2 rounded bg-ub-orange text-white"
+            >
+              Reset Window Geometry
+            </button>
             <button
               onClick={handleReset}
               className="px-4 py-2 rounded bg-ub-orange text-white"
