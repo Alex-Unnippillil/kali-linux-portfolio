@@ -1,0 +1,5 @@
+{
+  "id": "demo",
+  "sandbox": "worker",
+  "code": "self.postMessage('content');"
+}

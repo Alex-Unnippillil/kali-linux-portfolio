@@ -12,7 +12,11 @@ export default function handler(req, res) {
   }
   try {
     const data = fs.readFileSync(filePath);
-    res.setHeader('Content-Type', 'application/octet-stream');
+    if (filePath.endsWith('.json')) {
+      res.setHeader('Content-Type', 'application/json');
+    } else {
+      res.setHeader('Content-Type', 'application/octet-stream');
+    }
     res.send(data);
   } catch {
     res.status(404).end('Not found');
