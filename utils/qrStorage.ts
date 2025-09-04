@@ -5,13 +5,7 @@ const LAST_SCAN_KEY = 'qrLastScan';
 const LAST_GEN_KEY = 'qrLastGeneration';
 const FILE_NAME = 'qr-scans.json';
 
-type StorageWithDirectory = StorageManager & {
-  // TODO: refine type when File System Access API types are finalized
-  getDirectory: () => Promise<FileSystemDirectoryHandle>;
-};
-
-const getStorage = (): StorageWithDirectory =>
-  navigator.storage as StorageWithDirectory;
+const getStorage = (): StorageManager => navigator.storage;
 
 const hasOpfs =
   isBrowser && 'storage' in navigator && Boolean(getStorage().getDirectory);
