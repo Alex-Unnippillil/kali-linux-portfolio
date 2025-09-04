@@ -1,0 +1,64 @@
+import React, { Component } from 'react';
+import Image from 'next/image';
+import Clock from '../util-components/clock';
+import Status from '../util-components/status';
+import QuickSettings from '../ui/QuickSettings';
+
+export default class NavbarXFCE extends Component {
+  constructor() {
+    super();
+    this.state = {
+      status_card: false,
+    };
+  }
+
+  render() {
+    return (
+      <div
+        className="main-navbar-xfce fixed top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center select-none z-50"
+        style={{
+          height: 'var(--panel-h)',
+          background: 'var(--kali-surface)',
+          borderBottom: '1px solid var(--kali-border)',
+          color: 'var(--kali-text)',
+          fontSize: '13px',
+        }}
+      >
+        <div className="pl-3 pr-1">
+          <Image
+            src="/themes/Yaru/status/network-wireless-signal-good-symbolic.svg"
+            alt="network icon"
+            width={16}
+            height={16}
+            className="w-4 h-4"
+          />
+        </div>
+        <div className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b border-transparent py-1">
+          <Image
+            src="/themes/Yaru/status/decompiler-symbolic.svg"
+            alt="Decompiler"
+            width={16}
+            height={16}
+            className="inline mr-1"
+          />
+          Activities
+        </div>
+        <div className="pl-2 pr-2 outline-none transition duration-100 ease-in-out border-b border-transparent py-1">
+          <Clock />
+        </div>
+        <button
+          type="button"
+          id="status-bar"
+          aria-label="System status"
+          onClick={() => {
+            this.setState({ status_card: !this.state.status_card });
+          }}
+          className="relative pr-3 pl-3 outline-none transition duration-100 ease-in-out border-b border-transparent focus:border-[var(--kali-accent)] py-1"
+        >
+          <Status />
+          <QuickSettings open={this.state.status_card} />
+        </button>
+      </div>
+    );
+  }
+}
