@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
 
 interface Video {
@@ -66,9 +67,12 @@ const VideoGallery: React.FC = () => {
             className="text-left rounded outline outline-2 outline-offset-2 outline-transparent hover:outline-blue-500 focus-visible:outline-blue-500"
             onClick={() => setPlaying(video.id)}
           >
-            <img
-              src={`https://img.youtube.com/vi/${video.id}/hqdefault.jpg`}
+            <Image
+              src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`}
               alt={video.title}
+              width={480}
+              height={360}
+              sizes="(max-width: 768px) 100vw, 480px"
               className="w-full"
             />
             <p className="mt-2 text-sm" style={{ maxInlineSize: '60ch' }}>{video.title}</p>

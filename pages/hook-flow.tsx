@@ -1,5 +1,6 @@
 "use client";
 
+import Image from 'next/image';
 import React, { useState } from 'react';
 
 const HookFlow: React.FC = () => {
@@ -23,9 +24,12 @@ const HookFlow: React.FC = () => {
 
   return (
     <main className="p-4 space-y-4">
-      <img
+      <Image
         src="/hook-flow.svg"
         alt="React hook flow diagram"
+        width={420}
+        height={120}
+        sizes="(max-width: 420px) 100vw, 420px"
         className="mx-auto"
       />
       <iframe

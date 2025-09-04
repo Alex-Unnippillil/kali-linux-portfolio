@@ -1,5 +1,6 @@
 "use client";
 
+import Image from 'next/image';
 import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { BrowserQRCodeReader, NotFoundException } from '@zxing/library';
@@ -324,7 +325,14 @@ const QRPage: React.FC = () => {
         {error && <FormError className="mt-2">{error}</FormError>}
         {qrPng && (
           <div className="mt-4 flex flex-col items-center gap-2">
-            <img src={qrPng} alt="Generated QR code" className="h-48 w-48" />
+            <Image
+              src={qrPng}
+              alt="Generated QR code"
+              width={192}
+              height={192}
+              sizes="192px"
+              className="h-48 w-48"
+            />
             <div className="flex gap-2">
               <button
                 onClick={downloadPng}
