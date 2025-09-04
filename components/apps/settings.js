@@ -3,7 +3,7 @@ import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, setFocusFollowsMouse, theme, setTheme } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -251,6 +251,7 @@ export function Settings() {
                         setLargeHitAreas(defaults.largeHitAreas);
                         setFontScale(defaults.fontScale);
                         setHighContrast(defaults.highContrast);
+                        setFocusFollowsMouse(defaults.focusFollowsMouse);
                         setTheme('default');
                     }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"

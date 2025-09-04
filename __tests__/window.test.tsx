@@ -1,6 +1,8 @@
 import React, { act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Window from '../components/base/window';
+import { SettingsContext } from '../hooks/useSettings';
+import { defaults as settingDefaults } from '../utils/settingsStore';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('react-draggable', () => ({
@@ -199,7 +201,7 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true, preventDefault: () => {}, stopPropagation: () => {} } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
@@ -402,7 +404,56 @@ describe('Window overlay inert behaviour', () => {
 
     expect(root).not.toHaveAttribute('inert');
 
-    document.body.removeChild(root);
-    document.body.removeChild(opener);
+  document.body.removeChild(root);
+  document.body.removeChild(opener);
+});
+});
+
+describe('Focus follows mouse', () => {
+  it('focuses on mouse enter when enabled', () => {
+    const focus = jest.fn();
+    const contextValue = {
+      accent: settingDefaults.accent,
+      wallpaper: settingDefaults.wallpaper,
+      density: settingDefaults.density,
+      reducedMotion: settingDefaults.reducedMotion,
+      fontScale: settingDefaults.fontScale,
+      highContrast: settingDefaults.highContrast,
+      largeHitAreas: settingDefaults.largeHitAreas,
+      pongSpin: settingDefaults.pongSpin,
+      allowNetwork: settingDefaults.allowNetwork,
+      haptics: settingDefaults.haptics,
+      focusFollowsMouse: true,
+      theme: 'default',
+      setAccent: () => {},
+      setWallpaper: () => {},
+      setDensity: () => {},
+      setReducedMotion: () => {},
+      setFontScale: () => {},
+      setHighContrast: () => {},
+      setLargeHitAreas: () => {},
+      setPongSpin: () => {},
+      setAllowNetwork: () => {},
+      setHaptics: () => {},
+      setTheme: () => {},
+      setFocusFollowsMouse: () => {},
+    };
+    render(
+      <SettingsContext.Provider value={contextValue}>
+        <Window
+          id="test-window"
+          title="Test"
+          screen={() => <div>content</div>}
+          focus={focus}
+          hasMinimised={() => {}}
+          closed={() => {}}
+          hideSideBar={() => {}}
+          openApp={() => {}}
+        />
+      </SettingsContext.Provider>
+    );
+    const win = document.getElementById('test-window')!;
+    fireEvent.mouseEnter(win);
+    expect(focus).toHaveBeenCalledWith('test-window');
   });
 });
