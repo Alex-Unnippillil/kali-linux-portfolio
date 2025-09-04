@@ -14,6 +14,7 @@ interface Props {
 const VIDEO_CACHE_NAME = 'youtube-video-cache';
 const CACHED_LIST_KEY = 'youtube:cached-videos';
 const MAX_CACHE_BYTES = 100 * 1024 * 1024;
+const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
 async function trimVideoCache() {
   if (!('storage' in navigator) || !navigator.storage?.estimate) return;
@@ -40,9 +41,23 @@ function ChannelHovercard({ id, name }: { id: string; name: string }) {
   const fetchInfo = useCallback(async () => {
     if (info) return;
     try {
-      const res = await fetch(`https://piped.video/api/v1/channel/${id}`);
-      const data = await res.json();
-      setInfo(data);
+      if (YOUTUBE_API_KEY) {
+        const res = await fetch(
+          `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${id}&key=${YOUTUBE_API_KEY}`,
+        );
+        const data = await res.json();
+        const item = data.items?.[0];
+        if (item) {
+          setInfo({
+            name: item.snippet?.title,
+            subscriberCount: item.statistics?.subscriberCount,
+          });
+        }
+      } else {
+        const res = await fetch(`https://piped.video/api/v1/channel/${id}`);
+        const data = await res.json();
+        setInfo(data);
+      }
     } catch {
       // ignore errors
     }
@@ -377,22 +392,40 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const search = useCallback(async () => {
     if (!query) return;
     try {
-      const res = await fetch(
-        `https://piped.video/api/v1/search?q=${encodeURIComponent(query)}`
-      );
-      const data = await res.json();
-      const vids: Video[] = (data.items || data)
-        .filter((i: any) => i.type === 'stream' || i.id)
-        .map((i: any) => ({
-          id: i.id || i.url?.split('=')[1],
-          title: i.title || 'Untitled',
-          thumbnail: i.thumbnail || i.thumbnails?.[0]?.url || '',
-          channelName: i.uploaderName || i.channelName || 'Unknown',
-          channelId:
-            i.uploaderUrl?.split('/').pop() ||
-            i.channelUrl?.split('/').pop() ||
+      let vids: Video[] = [];
+      if (YOUTUBE_API_KEY) {
+        const res = await fetch(
+          `https://www.googleapis.com/youtube/v3/search?key=${YOUTUBE_API_KEY}&part=snippet&type=video&q=${encodeURIComponent(query)}`,
+        );
+        const data = await res.json();
+        vids = (data.items || []).map((i: any) => ({
+          id: i.id?.videoId,
+          title: i.snippet?.title || 'Untitled',
+          thumbnail:
+            i.snippet?.thumbnails?.medium?.url ||
+            i.snippet?.thumbnails?.default?.url ||
             '',
+          channelName: i.snippet?.channelTitle || 'Unknown',
+          channelId: i.snippet?.channelId || '',
         }));
+      } else {
+        const res = await fetch(
+          `https://piped.video/api/v1/search?q=${encodeURIComponent(query)}`,
+        );
+        const data = await res.json();
+        vids = (data.items || data)
+          .filter((i: any) => i.type === 'stream' || i.id)
+          .map((i: any) => ({
+            id: i.id || i.url?.split('=')[1],
+            title: i.title || 'Untitled',
+            thumbnail: i.thumbnail || i.thumbnails?.[0]?.url || '',
+            channelName: i.uploaderName || i.channelName || 'Unknown',
+            channelId:
+              i.uploaderUrl?.split('/').pop() ||
+              i.channelUrl?.split('/').pop() ||
+              '',
+          }));
+      }
       setResults(vids);
     } catch {
       // ignore errors
