@@ -1,12 +1,19 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
-import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
+import {
+  resetSettings,
+  defaults,
+  exportSettings as exportSettingsData,
+  importSettings as importSettingsData,
+} from '../../utils/settingsStore';
+import { safeLocalStorage } from '../../utils/safeStorage';
 
 export function Settings() {
     const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
+    const panelFileInput = useRef(null);
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
 
@@ -219,7 +226,7 @@ export function Settings() {
                     ))
                 }
             </div>
-            <div className="flex justify-center my-4 border-t border-gray-900 pt-4 space-x-4">
+            <div className="flex flex-wrap justify-center my-4 border-t border-gray-900 pt-4 space-x-4">
                 <button
                     onClick={async () => {
                         const data = await exportSettingsData();
@@ -240,6 +247,34 @@ export function Settings() {
                     className="px-4 py-2 rounded bg-ub-orange text-white"
                 >
                     Import Settings
+                </button>
+                <button
+                    onClick={() => {
+                        try {
+                            const stored = safeLocalStorage?.getItem('pinnedApps');
+                            const data = JSON.stringify({
+                                pinnedApps: stored ? JSON.parse(stored) : [],
+                            });
+                            const blob = new Blob([data], { type: 'application/json' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'panel-settings.json';
+                            a.click();
+                            URL.revokeObjectURL(url);
+                        } catch (err) {
+                            console.error('Failed to export panel settings', err);
+                        }
+                    }}
+                    className="px-4 py-2 rounded bg-ub-orange text-white"
+                >
+                    Export Panels
+                </button>
+                <button
+                    onClick={() => panelFileInput.current && panelFileInput.current.click()}
+                    className="px-4 py-2 rounded bg-ub-orange text-white"
+                >
+                    Import Panels
                 </button>
                 <button
                     onClick={async () => {
@@ -278,6 +313,29 @@ export function Settings() {
                         if (parsed.theme !== undefined) { setTheme(parsed.theme); }
                     } catch (err) {
                         console.error('Invalid settings', err);
+                    }
+                    e.target.value = '';
+                }}
+                className="hidden"
+            />
+            <input
+                type="file"
+                accept="application/json"
+                ref={panelFileInput}
+                onChange={async (e) => {
+                    const file = e.target.files && e.target.files[0];
+                    if (!file) return;
+                    try {
+                        const text = await file.text();
+                        const parsed = JSON.parse(text);
+                        const ids = Array.isArray(parsed.pinnedApps) ? parsed.pinnedApps : [];
+                        const { default: allApps } = await import('../../apps.config.js');
+                        const validIds = ids.filter((id) => allApps.some((app) => app.id === id));
+                        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(validIds));
+                        allApps.forEach((app) => { app.favourite = validIds.includes(app.id); });
+                        window.dispatchEvent(new Event('pinnedAppsUpdate'));
+                    } catch (err) {
+                        console.error('Invalid panel settings', err);
                     }
                     e.target.value = '';
                 }}
