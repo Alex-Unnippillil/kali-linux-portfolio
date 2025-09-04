@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import { CAR_SKINS, loadSkinAssets } from '../../apps/games/car-racer/customization';
 import { hasOffscreenCanvas } from '../../utils/feature';
+import { playTone } from '../../utils/audio';
 
 // Canvas dimensions
 const WIDTH = 300;
@@ -86,21 +87,10 @@ const CarRacer = () => {
 
   const currentSkin = CAR_SKINS.find((s) => s.key === skin) || CAR_SKINS[0];
 
-  const audioCtxRef = useRef(null);
   const playBeep = React.useCallback(() => {
     if (!soundRef.current || typeof window === 'undefined') return;
-    if (!audioCtxRef.current)
-      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-    const ctx = audioCtxRef.current;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    gain.gain.value = 0.1;
-    osc.frequency.value = 440;
-    osc.start();
-    osc.stop(ctx.currentTime + 0.1);
-  }, [soundRef, audioCtxRef]);
+    playTone({ freq: 440, ms: 100 });
+  }, [soundRef]);
 
   useEffect(() => {
     const stored = localStorage.getItem('car_racer_high');

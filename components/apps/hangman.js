@@ -15,6 +15,7 @@ import {
 } from '../../utils/analytics';
 import { DICTIONARIES } from '../../apps/hangman/engine';
 import { getGuessPool } from '../../apps/games/hangman/logic';
+import { playTone } from '../../utils/audio';
 
 
 // Helper to draw a line segment with a dashed reveal animation
@@ -57,7 +58,6 @@ const Hangman = () => {
   const topics = useMemo(() => Object.keys(DICTIONARIES), []);
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
-  const audioCtxRef = useRef(null);
   const partProgressRef = useRef(new Array(maxWrong).fill(0));
   const partStartRef = useRef(new Array(maxWrong).fill(0));
   const gallowsProgressRef = useRef(0);
@@ -116,28 +116,10 @@ const Hangman = () => {
     return { counts, max };
   }, [dict, letters]);
 
-  const playTone = useCallback(
+  const playToneLocal = useCallback(
     (freq) => {
       if (!sound) return;
-      try {
-        const ctx =
-          audioCtxRef.current ||
-          (audioCtxRef.current = new (window.AudioContext ||
-            window.webkitAudioContext)());
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.frequency.value = freq;
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        gain.gain.exponentialRampToValueAtTime(
-          0.0001,
-          ctx.currentTime + 0.2,
-        );
-        osc.stop(ctx.currentTime + 0.2);
-      } catch (err) {
-        // ignore audio errors
-      }
+      playTone({ freq, ms: 200 });
     },
     [sound],
   );
@@ -241,7 +223,7 @@ const Hangman = () => {
           const newWord =
             avoid[Math.floor(Math.random() * avoid.length)];
           setWord(newWord);
-          playTone(200);
+          playToneLocal(200);
           const idx = wrong;
           partStartRef.current[idx] = performance.now();
           partProgressRef.current[idx] = reduceMotionRef.current ? 1 : 0;
@@ -257,11 +239,11 @@ const Hangman = () => {
         }
       }
       if (word.includes(letter)) {
-        playTone(600);
+        playToneLocal(600);
         setScore((s) => s + 2);
         setAnnouncement(`Correct guess: ${letter}`);
       } else {
-        playTone(200);
+        playToneLocal(200);
         const idx = wrong;
         partStartRef.current[idx] = performance.now();
         partProgressRef.current[idx] = reduceMotionRef.current ? 1 : 0;
@@ -275,7 +257,7 @@ const Hangman = () => {
         );
       }
     },
-    [paused, guessed, wrong, word, playTone, hardMode, dict],
+    [paused, guessed, wrong, word, playToneLocal, hardMode, dict],
   );
 
   const togglePause = useCallback(() => setPaused((p) => !p), []);

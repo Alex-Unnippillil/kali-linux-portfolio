@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { playTone } from '../../utils/audio';
 import GameLayout from './GameLayout';
 import useAssetLoader from '../../hooks/useAssetLoader';
 
@@ -87,16 +88,7 @@ const SpaceInvaders = () => {
 
   const playSound = (freq) => {
     if (!soundRef.current) return;
-    if (!audioCtx.current)
-      audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = audioCtx.current.createOscillator();
-    const gain = audioCtx.current.createGain();
-    osc.frequency.value = freq;
-    osc.connect(gain);
-    gain.connect(audioCtx.current.destination);
-    gain.gain.value = 0.1;
-    osc.start();
-    osc.stop(audioCtx.current.currentTime + 0.1);
+    playTone({ freq, ms: 100 });
   };
 
   const playSweep = (start, end, duration) => {

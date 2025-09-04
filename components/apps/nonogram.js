@@ -12,6 +12,7 @@ import {
   autoFillLines,
 } from "./nonogramUtils";
 import { getDailyPuzzle } from "../../utils/dailyPuzzle";
+import { playTone } from "../../utils/audio";
 
 // visual settings
 const CELL_SIZE = 30;
@@ -79,16 +80,7 @@ const Nonogram = () => {
 
   const playSound = useCallback(() => {
     if (!sound) return;
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      osc.frequency.value = 880;
-      osc.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.05);
-    } catch {
-      /* ignore */
-    }
+    playTone({ freq: 880, ms: 50 });
   }, [sound]);
 
   const checkSolved = useCallback(

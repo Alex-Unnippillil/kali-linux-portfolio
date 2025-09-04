@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { playTone } from "../../utils/audio";
 import seedrandom from "seedrandom";
 import useOPFS from "../../hooks/useOPFS.js";
 
@@ -287,21 +288,7 @@ const WordSearch = () => {
 
   const playBeep = () => {
     if (!sound) return;
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = 600;
-      osc.start();
-      setTimeout(() => {
-        osc.stop();
-        ctx.close();
-      }, 150);
-    } catch {
-      // ignore audio errors
-    }
+    playTone({ freq: 600, ms: 150 });
   };
 
   useEffect(() => {

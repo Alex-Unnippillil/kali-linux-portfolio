@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import GameLayout from './GameLayout';
 import useGameControls from './useGameControls';
 import levelPack from './sokoban_levels.json';
+import { playTone } from '../../utils/audio';
 
 const TILE = 32;
 
@@ -151,21 +152,6 @@ const loadState = (idx, lvls) => {
     setHistoryIndex(0);
   }, [levelIndex, levels]);
 
-  const playBeep = () => {
-    if (!sound) return;
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = 440;
-      osc.start();
-      osc.stop(ctx.currentTime + 0.05);
-    } catch {
-      // ignore audio errors
-    }
-  };
 
 const move = ({ x, y }) => {
   if (paused) return;
@@ -183,7 +169,7 @@ const move = ({ x, y }) => {
     .concat([newState]);
   setHistoryIndex(historyRef.current.length - 1);
   setState(newState);
-  playBeep();
+  if (sound) playTone({ freq: 440, ms: 50 });
   const progressKey = `sokoban-progress-${levelIndex}`;
   if (checkWin(res.board)) {
     const bestKey = `sokoban-best-${levelIndex}`;

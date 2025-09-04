@@ -7,6 +7,7 @@ import {
   getRandomSkin,
 } from '../../apps/games/frogger/config';
 import { getLevelConfig } from '../../apps/games/frogger/levels';
+import { playTone } from '../../utils/audio';
 
 const WIDTH = 7;
 const HEIGHT = 8;
@@ -145,7 +146,6 @@ const Frogger = () => {
   const [reduceMotion, setReduceMotion] = useState(false);
   const reduceMotionRef = useRef(reduceMotion);
   const canvasRef = useRef(null);
-  const audioCtxRef = useRef(null);
   const nextLife = useRef(500);
   const holdRef = useRef();
   const rippleRef = useRef(0);
@@ -198,19 +198,9 @@ const Frogger = () => {
     return () => mql.removeEventListener('change', handler);
   }, []);
 
-  const playTone = (freq, duration = 0.1) => {
+  const tone = (freq, duration = 0.1) => {
     if (!soundRef.current) return;
-    if (!audioCtxRef.current)
-      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-    const ctx = audioCtxRef.current;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(0.1, ctx.currentTime);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + duration);
+    playTone({ freq, ms: duration * 1000 });
   };
 
   const moveFrog = useCallback((dx, dy) => {
@@ -221,7 +211,7 @@ const Frogger = () => {
       if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) return prev;
       vibrate(50);
       if (dy === -1) setScore((s) => s + 10);
-      playTone(440, 0.05);
+      tone(440, 0.05);
       return { x, y };
     });
   }, [setFrog, setScore]);
@@ -322,7 +312,7 @@ const Frogger = () => {
       deathStreakRef.current += 1;
       if (deathStreakRef.current >= 2) safeFlashRef.current = 2;
       ReactGA.event({ category: 'Frogger', action: 'death', value: level });
-      playTone(220, 0.2);
+      tone(220, 0.2);
       setLives((l) => {
         const newLives = l - 1;
         if (newLives <= 0) {
@@ -542,7 +532,7 @@ const Frogger = () => {
         } else if (padResult.levelComplete) {
           setStatus('Level Complete!');
           setScore((s) => s + 100);
-          playTone(880, 0.2);
+          tone(880, 0.2);
           ReactGA.event({
             category: 'Frogger',
             action: 'level_complete',
@@ -562,7 +552,7 @@ const Frogger = () => {
         } else if (padResult.padHit) {
           setScore((s) => s + 100);
           setPads([...padsRef.current]);
-          playTone(660, 0.1);
+          tone(660, 0.1);
           deathStreakRef.current = 0;
           frogRef.current = { ...initialFrog };
         }
