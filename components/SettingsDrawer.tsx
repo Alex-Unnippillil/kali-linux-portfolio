@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { getUnlockedThemes } from '../utils/theme';
 import { useSettings } from '../hooks/useSettings';
+import Modal from './base/Modal';
 
 interface Props {
   highScore?: number;
@@ -16,8 +17,8 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
       <button aria-label="settings" onClick={() => setOpen(!open)}>
         Settings
       </button>
-      {open && (
-        <div role="dialog">
+      <Modal isOpen={open} onClose={() => setOpen(false)}>
+        <div className="p-4 bg-ub-cool-grey rounded-md shadow">
           <label>
             Theme
             <select
@@ -42,7 +43,7 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
             />
           </label>
         </div>
-      )}
+      </Modal>
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React from 'react';
 import UbuntuApp from '../base/ubuntu_app';
+import Modal from '../base/Modal';
 
 class ShortcutSelector extends React.Component {
     constructor() {
@@ -55,23 +56,25 @@ class ShortcutSelector extends React.Component {
 
     render() {
         return (
-            <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim">
-                <input
-                    className="mt-10 mb-8 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
-                    placeholder="Search"
-                    value={this.state.query}
-                    onChange={this.handleChange}
-                />
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 pb-10 place-items-center">
-                    {this.renderApps()}
+            <Modal isOpen={true} onClose={this.props.onClose}>
+                <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim">
+                    <input
+                        className="mt-10 mb-8 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
+                        placeholder="Search"
+                        value={this.state.query}
+                        onChange={this.handleChange}
+                    />
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 pb-10 place-items-center">
+                        {this.renderApps()}
+                    </div>
+                    <button
+                        className="mb-8 px-4 py-2 rounded bg-black bg-opacity-20 text-white"
+                        onClick={this.props.onClose}
+                    >
+                        Cancel
+                    </button>
                 </div>
-                <button
-                    className="mb-8 px-4 py-2 rounded bg-black bg-opacity-20 text-white"
-                    onClick={this.props.onClose}
-                >
-                    Cancel
-                </button>
-            </div>
+            </Modal>
         );
     }
 }
