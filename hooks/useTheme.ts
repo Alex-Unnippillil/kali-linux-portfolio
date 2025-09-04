@@ -1,32 +1,33 @@
 import { useEffect, useState } from 'react';
+import {
+  getTheme,
+  setTheme as storeTheme,
+  THEME_KEY,
+} from '../utils/theme';
 
-const THEME_KEY = 'app-theme';
+export type Theme = 'default' | 'dark' | 'neon' | 'matrix';
 
 export const useTheme = () => {
-  const [theme, setThemeState] = useState<'light' | 'dark'>('dark');
+  const [theme, setThemeState] = useState<Theme>('default');
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const stored = window.localStorage.getItem(THEME_KEY);
-    let initial: 'light' | 'dark' = 'light';
-    if (stored === 'light' || stored === 'dark') {
-      initial = stored;
-    } else {
-      const prefersDark = window.matchMedia?.(
-        '(prefers-color-scheme: dark)'
-      ).matches;
-      initial = prefersDark ? 'dark' : 'light';
-    }
+    const initial = getTheme() as Theme;
     setThemeState(initial);
-    document.documentElement.classList.toggle('dark', initial === 'dark');
+    storeTheme(initial);
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === THEME_KEY && e.newValue) {
+        setThemeState(e.newValue as Theme);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
-  const setTheme = (next: 'light' | 'dark') => {
+  const setTheme = (next: Theme) => {
     setThemeState(next);
-    if (typeof window !== 'undefined') {
-      document.documentElement.classList.toggle('dark', next === 'dark');
-      window.localStorage.setItem(THEME_KEY, next);
-    }
+    storeTheme(next);
   };
 
   return { theme, setTheme };

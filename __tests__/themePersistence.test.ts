@@ -1,4 +1,9 @@
-import { getTheme, setTheme, getUnlockedThemes } from '../utils/theme';
+import {
+  getTheme,
+  setTheme,
+  getUnlockedThemes,
+  THEME_KEY,
+} from '../utils/theme';
 
 describe('theme persistence and unlocking', () => {
   beforeEach(() => {
@@ -9,7 +14,7 @@ describe('theme persistence and unlocking', () => {
     setTheme('dark');
     expect(getTheme()).toBe('dark');
     // simulate reload by reading from localStorage again
-    expect(window.localStorage.getItem('app:theme')).toBe('dark');
+    expect(window.localStorage.getItem(THEME_KEY)).toBe('dark');
   });
 
   test('themes unlock at score milestones', () => {
