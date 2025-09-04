@@ -12,6 +12,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import useRovingTabIndex from "../../hooks/useRovingTabIndex";
 
 export default function Settings() {
   const {
@@ -102,6 +103,8 @@ export default function Settings() {
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
+  const wallpaperGridRef = useRef<HTMLDivElement>(null);
+  useRovingTabIndex(wallpaperGridRef);
 
   return (
     <div className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey">
@@ -159,14 +162,18 @@ export default function Settings() {
           <div className="flex justify-center my-4">
             <BackgroundSlideshow />
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 justify-items-center border-t border-gray-900">
+          <div
+            ref={wallpaperGridRef}
+            role="listbox"
+            aria-label="Available wallpapers"
+            className="grid grid-cols-2 md:grid-cols-4 gap-4 justify-items-center border-t border-gray-900"
+          >
             {wallpapers.map((name) => (
               <div
                 key={name}
-                role="button"
+                role="option"
                 aria-label={`Select ${name.replace("wall-", "wallpaper ")}`}
-                aria-pressed={name === wallpaper}
-                tabIndex={0}
+                aria-selected={name === wallpaper}
                 onClick={() => changeBackground(name)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {

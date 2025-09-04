@@ -1,5 +1,6 @@
 "use client";
-import React from "react";
+import React, { useRef } from "react";
+import useRovingTabIndex from "../hooks/useRovingTabIndex";
 
 type Tab<T extends string> = {
   id: T;
@@ -11,6 +12,7 @@ interface TabsProps<T extends string> {
   active: T;
   onChange: (id: T) => void;
   className?: string;
+  orientation?: "horizontal" | "vertical";
 }
 
 export default function Tabs<T extends string>({
@@ -18,9 +20,18 @@ export default function Tabs<T extends string>({
   active,
   onChange,
   className = "",
+  orientation = "horizontal",
 }: TabsProps<T>) {
+  const ref = useRef<HTMLDivElement>(null);
+  useRovingTabIndex(ref, true, orientation);
+
   return (
-    <div role="tablist" className={`flex ${className}`.trim()}>
+    <div
+      ref={ref}
+      role="tablist"
+      aria-orientation={orientation}
+      className={`flex ${className}`.trim()}
+    >
       {tabs.map((t) => (
         <button
           key={t.id}
