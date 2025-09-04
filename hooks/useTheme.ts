@@ -10,17 +10,23 @@ export const useTheme = () => {
         const next = getTheme();
         setThemeState(next);
         applyTheme(next);
-
       }
     };
     window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+    const media = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+    const handleMedia = () => {
+      if (getTheme() === 'auto') applyTheme('auto');
+    };
+    media?.addEventListener('change', handleMedia);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      media?.removeEventListener('change', handleMedia);
+    };
   }, []);
 
   const setTheme = (next: string) => {
     setThemeState(next);
     applyTheme(next);
-
   };
 
   return { theme, setTheme };
