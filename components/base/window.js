@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Component } from 'react';
+import React, { Component, useState } from 'react';
 import NextImage from 'next/image';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
@@ -658,6 +658,8 @@ export class Window extends Component {
                             id={this.id}
                             allowMaximize={this.props.allowMaximize !== false}
                             pip={() => this.props.screen(this.props.addFolder, this.props.openApp)}
+                            sticky={this.props.sticky}
+                            toggleSticky={this.props.toggleSticky}
                         />
                         {(this.id === "settings"
                             ? <Settings />
@@ -733,8 +735,34 @@ export class WindowXBorder extends Component {
 export function WindowEditButtons(props) {
     const { togglePin } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
+    const [menuOpen, setMenuOpen] = useState(false);
+    const handleSticky = () => {
+        props.toggleSticky && props.toggleSticky();
+        setMenuOpen(false);
+    };
     return (
         <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center h-11 min-w-[8.25rem]">
+            <div className="relative">
+                <button
+                    type="button"
+                    aria-label="Window menu"
+                    className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                    onClick={() => setMenuOpen(!menuOpen)}
+                >
+                    ⋮
+                </button>
+                {menuOpen && (
+                    <div className="absolute right-0 mt-1 w-40 context-menu-bg border border-gray-900 rounded text-white z-50">
+                        <button
+                            type="button"
+                            className="w-full text-left px-3 py-1 text-sm hover:bg-gray-700"
+                            onClick={handleSticky}
+                        >
+                            {props.sticky ? 'Unstick from Workspaces' : 'Stick to All Workspaces'}
+                        </button>
+                    </div>
+                )}
+            </div>
             {pipSupported && props.pip && (
                 <button
                     type="button"
@@ -768,40 +796,39 @@ export function WindowEditButtons(props) {
                 />
             </button>
             {props.allowMaximize && (
-                props.isMaximised
-                    ? (
-                        <button
-                            type="button"
-                            aria-label="Window restore"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
-                            onClick={props.maximize}
-                        >
-                            <NextImage
-                                src="/themes/Yaru/window/window-restore-symbolic.svg"
-                                alt="Kali window restore"
-                                className="h-4 w-4 inline"
-                                width={16}
-                                height={16}
-                                sizes="16px"
-                            />
-                        </button>
-                    ) : (
-                        <button
-                            type="button"
-                            aria-label="Window maximize"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
-                            onClick={props.maximize}
-                        >
-                            <NextImage
-                                src="/themes/Yaru/window/window-maximize-symbolic.svg"
-                                alt="Kali window maximize"
-                                className="h-4 w-4 inline"
-                                width={16}
-                                height={16}
-                                sizes="16px"
-                            />
-                        </button>
-                    )
+                props.isMaximised ? (
+                    <button
+                        type="button"
+                        aria-label="Window restore"
+                        className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                        onClick={props.maximize}
+                    >
+                        <NextImage
+                            src="/themes/Yaru/window/window-restore-symbolic.svg"
+                            alt="Kali window restore"
+                            className="h-4 w-4 inline"
+                            width={16}
+                            height={16}
+                            sizes="16px"
+                        />
+                    </button>
+                ) : (
+                    <button
+                        type="button"
+                        aria-label="Window maximize"
+                        className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                        onClick={props.maximize}
+                    >
+                        <NextImage
+                            src="/themes/Yaru/window/window-maximize-symbolic.svg"
+                            alt="Kali window maximize"
+                            className="h-4 w-4 inline"
+                            width={16}
+                            height={16}
+                            sizes="16px"
+                        />
+                    </button>
+                )
             )}
             <button
                 type="button"
@@ -820,7 +847,7 @@ export function WindowEditButtons(props) {
                 />
             </button>
         </div>
-    )
+    );
 }
 
 // Window's Main Screen

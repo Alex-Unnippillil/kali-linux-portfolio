@@ -40,6 +40,7 @@ export class Desktop extends Component {
             hideSideBar: false,
             minimized_windows: {},
             window_positions: {},
+            sticky_windows: {},
             desktop_apps: [],
             context_menus: {
                 desktop: false,
@@ -62,6 +63,7 @@ export class Desktop extends Component {
         this.fetchAppsData(() => {
             const session = this.props.session || {};
             const positions = {};
+            const sticky = {};
             if (session.dock && session.dock.length) {
                 let favourite_apps = { ...this.state.favourite_apps };
                 session.dock.forEach(id => {
@@ -71,10 +73,11 @@ export class Desktop extends Component {
             }
 
             if (session.windows && session.windows.length) {
-                session.windows.forEach(({ id, x, y }) => {
+                session.windows.forEach(({ id, x, y, sticky: s }) => {
                     positions[id] = { x, y };
+                    sticky[id] = !!s;
                 });
-                this.setState({ window_positions: positions }, () => {
+                this.setState({ window_positions: positions, sticky_windows: sticky }, () => {
                     session.windows.forEach(({ id }) => this.openApp(id));
                 });
             } else {
@@ -478,6 +481,8 @@ export class Desktop extends Component {
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
+                    sticky: this.state.sticky_windows[app.id],
+                    toggleSticky: () => this.toggleSticky(app.id),
                 }
 
                 windowsJsx.push(
@@ -503,7 +508,8 @@ export class Desktop extends Component {
         const windows = openWindows.map(id => ({
             id,
             x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
-            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10
+            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10,
+            sticky: !!this.state.sticky_windows[id]
         }));
         const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
         this.props.setSession({ ...this.props.session, windows, dock });
@@ -603,6 +609,10 @@ export class Desktop extends Component {
         } else {
             let closed_windows = this.state.closed_windows;
             let favourite_apps = this.state.favourite_apps;
+            let sticky_windows = { ...this.state.sticky_windows };
+            if (sticky_windows[objId] === undefined) {
+                sticky_windows[objId] = false;
+            }
             let frequentApps = [];
             try { frequentApps = JSON.parse(safeLocalStorage?.getItem('frequentApps') || '[]'); } catch (e) { frequentApps = []; }
             var currentApp = frequentApps.find(app => app.id === objId);
@@ -631,13 +641,22 @@ export class Desktop extends Component {
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
-                this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
+                this.setState({ closed_windows, favourite_apps, sticky_windows, allAppsView: false }, () => {
                     this.focus(objId);
                     this.saveSession();
                 });
                 this.app_stack.push(objId);
             }, 200);
         }
+    }
+
+    toggleSticky = (objId) => {
+        this.setState(prev => ({
+            sticky_windows: {
+                ...prev.sticky_windows,
+                [objId]: !prev.sticky_windows[objId]
+            }
+        }), this.saveSession);
     }
 
     closeApp = async (objId) => {
