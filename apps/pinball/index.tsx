@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Engine, Render, World, Bodies, Body, Runner, Events } from 'matter-js';
 import { useTiltSensor } from './tilt';
 
 const themes: Record<string, { bg: string; flipper: string }> = {
@@ -12,17 +11,7 @@ const themes: Record<string, { bg: string; flipper: string }> = {
 
 export default function Pinball() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  // References for core Matter.js entities
-
-  const engineRef = useRef<Engine | null>(null);
-  const leftFlipperRef = useRef<Body | null>(null);
-  const rightFlipperRef = useRef<Body | null>(null);
-  const ballRef = useRef<Body | null>(null);
-  const sparksRef = useRef<{ x: number; y: number; life: number }[]>([]);
-  const laneGlowRef = useRef<{ left: boolean; right: boolean }>({
-    left: false,
-    right: false,
-  });
+  const workerRef = useRef<Worker | null>(null);
   const [theme, setTheme] = useState<keyof typeof themes>('classic');
   const [power, setPower] = useState(1);
   const [bounce, setBounce] = useState(0.5);
@@ -32,8 +21,10 @@ export default function Pinball() {
 
   const handleTilt = useCallback(() => {
     setTilt(true);
+    workerRef.current?.postMessage({ type: 'tilt', value: true });
     setTimeout(() => {
       setTilt(false);
+      workerRef.current?.postMessage({ type: 'tilt', value: false });
       nudgesRef.current = [];
     }, 3000);
   }, []);
@@ -42,183 +33,57 @@ export default function Pinball() {
 
   useEffect(() => {
     if (!canvasRef.current) return;
-    const engine = Engine.create();
-    engine.gravity.y = 1;
-    const render = Render.create({
-      canvas: canvasRef.current,
-      engine,
-      options: {
-        width: 400,
-        height: 600,
-        wireframes: false,
-        background: themes[theme].bg,
-      },
-    });
-    engineRef.current = engine;
+    const worker = new Worker(new URL('./worker.ts', import.meta.url));
+    workerRef.current = worker;
+    const offscreen = canvasRef.current.transferControlToOffscreen();
+    worker.postMessage(
+      { type: 'init', canvas: offscreen, theme, power, bounce },
+      [offscreen],
+    );
+    worker.onmessage = (e: MessageEvent<any>) => {
+      if (e.data.type === 'score') {
+        setScore(e.data.score);
+      }
+    };
+    return () => {
+      worker.terminate();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    const ball = Bodies.circle(200, 100, 12, {
-      restitution: 0.9,
-      render: { visible: false },
-    });
-    ballRef.current = ball;
-    const walls = [
-      Bodies.rectangle(200, 0, 400, 40, { isStatic: true }),
-      Bodies.rectangle(200, 600, 400, 40, { isStatic: true }),
-      Bodies.rectangle(0, 300, 40, 600, { isStatic: true }),
-      Bodies.rectangle(400, 300, 40, 600, { isStatic: true }),
-    ];
-    const leftFlipper = Bodies.rectangle(120, 560, 80, 20, {
-      isStatic: true,
-      angle: Math.PI / 8,
-      restitution: bounce,
-      render: { fillStyle: themes[theme].flipper },
-    });
-    const rightFlipper = Bodies.rectangle(280, 560, 80, 20, {
-      isStatic: true,
-      angle: -Math.PI / 8,
-      restitution: bounce,
-      render: { fillStyle: themes[theme].flipper },
-    });
-    leftFlipperRef.current = leftFlipper;
-    rightFlipperRef.current = rightFlipper;
-    const leftLane = Bodies.rectangle(80, 80, 40, 10, {
-      isStatic: true,
-      isSensor: true,
-    });
-    const rightLane = Bodies.rectangle(320, 80, 40, 10, {
-      isStatic: true,
-      isSensor: true,
-    });
-    World.add(engine.world, [ball, ...walls, leftFlipper, rightFlipper, leftLane, rightLane]);
-    Render.run(render);
-    const runner = Runner.create();
-    Runner.run(runner, engine);
+  useEffect(() => {
+    workerRef.current?.postMessage({ type: 'settings', theme, power, bounce });
+  }, [theme, power, bounce]);
 
-    Events.on(engine, 'collisionStart', (evt) => {
-      evt.pairs.forEach((pair) => {
-        const bodies = [pair.bodyA, pair.bodyB];
-        if (bodies.includes(ball) && bodies.includes(leftFlipper)) {
-          const { x, y } = pair.collision.supports[0];
-          sparksRef.current.push({ x, y, life: 1 });
-        }
-        if (bodies.includes(ball) && bodies.includes(rightFlipper)) {
-          const { x, y } = pair.collision.supports[0];
-          sparksRef.current.push({ x, y, life: 1 });
-        }
-        if (bodies.includes(ball) && bodies.includes(leftLane)) {
-          laneGlowRef.current.left = true;
-          setScore((s) => s + 100);
-          setTimeout(() => (laneGlowRef.current.left = false), 500);
-        }
-        if (bodies.includes(ball) && bodies.includes(rightLane)) {
-          laneGlowRef.current.right = true;
-          setScore((s) => s + 100);
-          setTimeout(() => (laneGlowRef.current.right = false), 500);
-        }
-      });
-    });
-
-    Events.on(render, 'afterRender', () => {
-      const ctx = render.context;
-      if (!ballRef.current) return;
-      const ball = ballRef.current;
-      const { x, y } = ball.position;
-      const radius = 12;
-      const gradient = ctx.createRadialGradient(x - 4, y - 4, radius / 4, x, y, radius);
-      gradient.addColorStop(0, '#fff');
-      gradient.addColorStop(1, '#999');
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fill();
-
-      [
-        { lane: leftLane, glow: laneGlowRef.current.left },
-        { lane: rightLane, glow: laneGlowRef.current.right },
-      ].forEach(({ lane, glow }) => {
-        const { x: lx, y: ly } = lane.position;
-        ctx.save();
-        if (glow) {
-          ctx.shadowColor = '#ffff00';
-          ctx.shadowBlur = 20;
-          ctx.fillStyle = '#ff0';
-        } else {
-          ctx.fillStyle = '#555';
-        }
-        ctx.fillRect(lx - 20, ly - 5, 40, 10);
-        ctx.restore();
-      });
-
-      sparksRef.current = sparksRef.current.filter((s) => {
-        const r = 8 * s.life;
-        const g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, r);
-        g.addColorStop(0, 'rgba(255,255,200,0.8)');
-        g.addColorStop(1, 'rgba(255,200,0,0)');
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
-        ctx.fill();
-        s.life -= 0.05;
-        return s.life > 0;
-      });
-    });
-
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (tilt) return;
-      if (e.code === 'ArrowLeft') {
-        Body.setAngle(leftFlipper, -Math.PI / 4 * power);
-      } else if (e.code === 'ArrowRight') {
-        Body.setAngle(rightFlipper, Math.PI / 4 * power);
-      } else if (e.code === 'KeyN') {
+      if (e.code === 'KeyN') {
         const now = Date.now();
         nudgesRef.current = nudgesRef.current.filter((t) => now - t < 5000);
         nudgesRef.current.push(now);
-        if (ballRef.current) {
-          Body.applyForce(ballRef.current, ballRef.current.position, { x: 0.02, y: 0 });
-        }
+        workerRef.current?.postMessage({ type: 'nudge' });
         if (nudgesRef.current.length >= 3) {
-          setTilt(true);
-          setTimeout(() => {
-            setTilt(false);
-            nudgesRef.current = [];
-          }, 3000);
+          handleTilt();
         }
+        return;
+      }
+      if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') {
+        workerRef.current?.postMessage({ type: 'keydown', code: e.code });
       }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'ArrowLeft') {
-        Body.setAngle(leftFlipper, Math.PI / 8);
-      }
-      if (e.code === 'ArrowRight') {
-        Body.setAngle(rightFlipper, -Math.PI / 8);
+      if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') {
+        workerRef.current?.postMessage({ type: 'keyup', code: e.code });
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
-
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
-      Render.stop(render);
-      Runner.stop(runner);
-      World.clear(engine.world, false);
-      Engine.clear(engine);
     };
-  }, [theme, power, bounce, tilt]);
-
-  useEffect(() => {
-    if (leftFlipperRef.current) {
-      leftFlipperRef.current.restitution = bounce;
-      leftFlipperRef.current.render.fillStyle = themes[theme].flipper;
-    }
-    if (rightFlipperRef.current) {
-      rightFlipperRef.current.restitution = bounce;
-      rightFlipperRef.current.render.fillStyle = themes[theme].flipper;
-    }
-    if (engineRef.current) {
-      (engineRef.current.render.options as any).background = themes[theme].bg;
-    }
-  }, [bounce, theme]);
+  }, [handleTilt, tilt]);
 
   return (
     <div className="flex flex-col items-center space-y-2">
@@ -247,7 +112,10 @@ export default function Pinball() {
         </label>
         <label className="flex flex-col text-xs">
           Theme
-          <select value={theme} onChange={(e) => setTheme(e.target.value as keyof typeof themes)}>
+          <select
+            value={theme}
+            onChange={(e) => setTheme(e.target.value as keyof typeof themes)}
+          >
             {Object.keys(themes).map((t) => (
               <option key={t} value={t}>
                 {t}
