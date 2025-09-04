@@ -1,35 +1,41 @@
 import React from 'react';
 import UbuntuApp from '../base/ubuntu_app';
+import { parseDesktopEntry } from '../../lib/xdg/desktop';
+import { groupByCategory } from '../../lib/xdg/menu';
 
 class AllApplications extends React.Component {
     constructor() {
         super();
         this.state = {
             query: '',
-            apps: [],
-            unfilteredApps: [],
+            menu: {},
+            unfilteredEntries: [],
+            appMap: new Map(),
         };
     }
 
     componentDidMount() {
-        const { apps = [], games = [] } = this.props;
+        const { apps = [], games = [], entries: providedEntries } = this.props;
         const combined = [...apps];
         games.forEach((game) => {
             if (!combined.some((app) => app.id === game.id)) combined.push(game);
         });
-        this.setState({ apps: combined, unfilteredApps: combined });
+        const appMap = new Map(combined.map((app) => [app.id, app]));
+        const entries = providedEntries ?? combined.map((app) => parseDesktopEntry(app));
+        const menu = groupByCategory(entries);
+        this.setState({ appMap, unfilteredEntries: entries, menu });
     }
 
     handleChange = (e) => {
         const value = e.target.value;
-        const { unfilteredApps } = this.state;
-        const apps =
+        const { unfilteredEntries } = this.state;
+        const entries =
             value === '' || value === null
-                ? unfilteredApps
-                : unfilteredApps.filter((app) =>
-                      app.title.toLowerCase().includes(value.toLowerCase())
+                ? unfilteredEntries
+                : unfilteredEntries.filter((entry) =>
+                      entry.title.toLowerCase().includes(value.toLowerCase())
                   );
-        this.setState({ query: value, apps });
+        this.setState({ query: value, menu: groupByCategory(entries) });
     };
 
     openApp = (id) => {
@@ -38,18 +44,31 @@ class AllApplications extends React.Component {
         }
     };
 
-    renderApps = () => {
-        const apps = this.state.apps || [];
-        return apps.map((app) => (
-            <UbuntuApp
-                key={app.id}
-                name={app.title}
-                id={app.id}
-                icon={app.icon}
-                openApp={() => this.openApp(app.id)}
-                disabled={app.disabled}
-                prefetch={app.screen?.prefetch}
-            />
+    renderMenu = () => {
+        const { menu, appMap } = this.state;
+        return Object.entries(menu).map(([category, entries]) => (
+            <div key={category} className="w-full">
+                <h2 className="w-full px-4 mb-4 text-white text-lg font-semibold">
+                    {category}
+                </h2>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 pb-10 place-items-center">
+                    {entries.map((entry) => {
+                        const app = appMap.get(entry.id);
+                        if (!app) return null;
+                        return (
+                            <UbuntuApp
+                                key={entry.id}
+                                name={app.title}
+                                id={app.id}
+                                icon={app.icon}
+                                openApp={() => this.openApp(app.id)}
+                                disabled={app.disabled}
+                                prefetch={app.screen?.prefetch}
+                            />
+                        );
+                    })}
+                </div>
+            </div>
         ));
     };
 
@@ -62,13 +81,10 @@ class AllApplications extends React.Component {
                     value={this.state.query}
                     onChange={this.handleChange}
                 />
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 pb-10 place-items-center">
-                    {this.renderApps()}
-                </div>
+                {this.renderMenu()}
             </div>
         );
     }
 }
 
 export default AllApplications;
-

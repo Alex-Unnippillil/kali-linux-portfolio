@@ -8,7 +8,7 @@ const BackgroundImage = dynamic(
     { ssr: false }
 );
 import SideBar from './side_bar';
-import apps, { games } from '../../apps.config';
+import apps, { games, desktopEntries } from '../../apps.config';
 import Window from '../base/window';
 import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
@@ -936,6 +936,7 @@ export class Desktop extends Component {
                 { this.state.allAppsView ?
                     <AllApplications apps={apps}
                         games={games}
+                        entries={desktopEntries}
                         recentApps={this.app_stack}
                         openApp={this.openApp} /> : null}
 
