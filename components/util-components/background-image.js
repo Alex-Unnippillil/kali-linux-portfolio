@@ -39,15 +39,12 @@ export default function BackgroundImage() {
     }, [wallpaper]);
 
     return (
-        <div
-            style={{
-                backgroundImage: `url(/wallpapers/${wallpaper}.webp)`,
-                backgroundSize: "cover",
-                backgroundRepeat: "no-repeat",
-                backgroundPositionX: "center"
-            }}
-            className="bg-ubuntu-img absolute -z-10 top-0 right-0 overflow-hidden h-full w-full"
-        >
+        <div className="bg-ubuntu-img absolute -z-10 top-0 right-0 overflow-hidden h-full w-full">
+            <img
+                src={`/wallpapers/${wallpaper}.webp`}
+                alt=""
+                className="w-full h-full object-cover"
+            />
             {needsOverlay && (
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 to-transparent" aria-hidden="true"></div>
             )}
