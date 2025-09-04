@@ -9687,7 +9687,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"magic-string@npm:^0.30.10":
+"magic-string@npm:^0.30.18":
   version: 0.30.18
   resolution: "magic-string@npm:0.30.18"
   dependencies:
@@ -13867,7 +13867,7 @@ __metadata:
     jspdf: "npm:^3.0.2"
     kaitai-struct: "npm:^0.10.0"
     leaflet: "npm:^1.9.4"
-    magic-string: "patch:magic-string@npm:0.30.18#./.yarn/patches/magic-string-npm-0.30.18-561c76e200.patch"
+    magic-string: "npm:^0.30.18"
     mathjs: "npm:^14.6.0"
     matter-js: "npm:0.20.0"
     monaco-editor: "npm:^0.52.2"
