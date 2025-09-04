@@ -1,4 +1,8 @@
 import Document, { Html, Head, Main, NextScript } from 'next/document';
+import fs from 'fs';
+import path from 'path';
+
+const sprite = fs.readFileSync(path.join(process.cwd(), 'public', 'panel-icons.svg'), 'utf8');
 
 class MyDocument extends Document {
   /**
@@ -21,6 +25,7 @@ class MyDocument extends Document {
           <script nonce={nonce} src="/theme.js" />
         </Head>
         <body>
+          <div dangerouslySetInnerHTML={{ __html: sprite }} />
           <Main />
           <NextScript nonce={nonce} />
         </body>
