@@ -51,3 +51,10 @@ export default function usePersistentState<T>(
 
   return [state, setState, reset, clear] as const;
 }
+
+export const useSnapSetting = () =>
+  usePersistentState<boolean>(
+    'snap-enabled',
+    true,
+    (value): value is boolean => typeof value === 'boolean',
+  );

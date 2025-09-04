@@ -19,6 +19,7 @@ import AppMenu from '../context-menus/app-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { useSnapSetting } from '../../hooks/usePersistentState';
 
 export class Desktop extends Component {
     constructor() {
@@ -381,6 +382,7 @@ export class Desktop extends Component {
                     initialX: pos ? pos.x : undefined,
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
+                    snapEnabled: this.props.snapEnabled,
                 }
 
                 windowsJsx.push(
@@ -392,8 +394,11 @@ export class Desktop extends Component {
     }
 
     updateWindowPosition = (id, x, y) => {
+        const snap = this.props.snapEnabled
+            ? (v) => Math.round(v / 8) * 8
+            : (v) => v;
         this.setState(prev => ({
-            window_positions: { ...prev.window_positions, [id]: { x, y } }
+            window_positions: { ...prev.window_positions, [id]: { x: snap(x), y: snap(y) } }
         }), this.saveSession);
     }
 
@@ -812,4 +817,7 @@ export class Desktop extends Component {
     }
 }
 
-export default Desktop
+export default function DesktopWithSnap(props) {
+    const [snapEnabled] = useSnapSetting();
+    return <Desktop {...props} snapEnabled={snapEnabled} />;
+}
