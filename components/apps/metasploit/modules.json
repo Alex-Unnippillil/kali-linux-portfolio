@@ -5,6 +5,8 @@
     "severity": "low",
     "type": "auxiliary",
     "platform": "multi",
+    "rank": "normal",
+    "reliability": "experimental",
     "cve": [
       "CVE-2007-4387"
     ],
@@ -28,6 +30,8 @@
     "severity": "low",
     "type": "auxiliary",
     "platform": "multi",
+    "rank": "excellent",
+    "reliability": "reliable",
     "cve": [
       "CVE-2014-6041"
     ],
