@@ -61,3 +61,16 @@ jobs:
           cache: yarn
       - run: yarn install --immutable --immutable-cache
       - run: yarn npm audit
+
+  lighthouse:
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - run: yarn build
+      - run: yarn lhci
