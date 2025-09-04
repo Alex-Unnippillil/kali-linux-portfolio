@@ -7,6 +7,10 @@ const STORE_NAME = 'scores';
 
 function openDB() {
   return new Promise((resolve, reject) => {
+    if (typeof indexedDB === 'undefined') {
+      resolve(null);
+      return;
+    }
     const req = indexedDB.open(DB_NAME, 1);
     req.onupgradeneeded = () => {
       req.result.createObjectStore(STORE_NAME);
@@ -19,6 +23,7 @@ function openDB() {
 async function getHighscore() {
   try {
     const db = await openDB();
+    if (!db) return 0;
     return await new Promise((resolve) => {
       const tx = db.transaction(STORE_NAME, 'readonly');
       const store = tx.objectStore(STORE_NAME);
@@ -34,6 +39,7 @@ async function getHighscore() {
 async function setHighscore(score) {
   try {
     const db = await openDB();
+    if (!db) return;
     await new Promise((resolve) => {
       const tx = db.transaction(STORE_NAME, 'readwrite');
       tx.objectStore(STORE_NAME).put(score, 'highscore');
