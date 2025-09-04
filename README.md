@@ -234,8 +234,6 @@ These external domains are whitelisted in the default CSP. Update this list when
 
 | Domain | Purpose |
 | --- | --- |
-| `fonts.googleapis.com` | Stylesheets for Google Fonts |
-| `fonts.gstatic.com` | Font files for Google Fonts |
 | `platform.twitter.com` | Twitter widgets and scripts |
 | `syndication.twitter.com` | Twitter embed scripts |
 | `cdn.syndication.twimg.com` | Twitter asset CDN |

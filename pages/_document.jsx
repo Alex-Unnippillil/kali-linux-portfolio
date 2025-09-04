@@ -1,6 +1,7 @@
 import Document, { Html, Head, Main, NextScript } from 'next/document';
 import Script from 'next/script';
 import crypto from 'node:crypto';
+import { ubuntu } from './_app';
 
 class MyDocument extends Document {
   /**
@@ -22,7 +23,7 @@ class MyDocument extends Document {
   render() {
     const { nonce } = this.props;
     return (
-      <Html lang="en" data-csp-nonce={nonce}>
+      <Html lang="en" data-csp-nonce={nonce} className={ubuntu.className}>
         <Head>
           <link rel="icon" href="/favicon.ico" />
           <link rel="manifest" href="/manifest.webmanifest" />
