@@ -42,7 +42,13 @@ const AppsPage = () => {
             className="flex flex-col items-center rounded border p-4 text-center focus:outline-none focus:ring"
             aria-label={app.title}
           >
-            {app.icon && <img src={app.icon} alt="" className="h-16 w-16" />}
+            {app.icon && (
+              <img
+                src={app.icon}
+                alt={`${app.title} icon`}
+                className="h-16 w-16"
+              />
+            )}
             <span className="mt-2">{app.title}</span>
           </Link>
         ))}

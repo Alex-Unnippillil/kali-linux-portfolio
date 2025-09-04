@@ -110,7 +110,11 @@ function Sidebar({
             className="mb-[6px] cursor-pointer"
             onClick={() => onPlay(v)}
           >
-            <img src={v.thumbnail} alt="" className="h-24 w-full rounded object-cover" />
+            <img
+              src={v.thumbnail}
+              alt={`${v.title} thumbnail`}
+              className="h-24 w-full rounded object-cover"
+            />
             <div>{v.title}</div>
           </div>
         ))}
@@ -130,7 +134,11 @@ function Sidebar({
             tabIndex={0}
             onKeyDown={(e) => handleKey(i, e)}
           >
-            <img src={v.thumbnail} alt="" className="h-24 w-full rounded object-cover" />
+            <img
+              src={v.thumbnail}
+              alt={`${v.name || v.title} thumbnail`}
+              className="h-24 w-full rounded object-cover"
+            />
             <div>{v.name || v.title}</div>
           </div>
         ))}
