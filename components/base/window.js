@@ -139,8 +139,18 @@ export class Window extends Component {
         shrink();
     }
 
+    getOverlayRoot = () => {
+        if (this.props.overlayRoot) {
+            if (typeof this.props.overlayRoot === 'string') {
+                return document.getElementById(this.props.overlayRoot);
+            }
+            return this.props.overlayRoot;
+        }
+        return document.getElementById('__next');
+    }
+
     activateOverlay = () => {
-        const root = document.getElementById('root');
+        const root = this.getOverlayRoot();
         if (root) {
             root.setAttribute('inert', '');
         }
@@ -148,7 +158,7 @@ export class Window extends Component {
     }
 
     deactivateOverlay = () => {
-        const root = document.getElementById('root');
+        const root = this.getOverlayRoot();
         if (root) {
             root.removeAttribute('inert');
         }
