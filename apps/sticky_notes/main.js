@@ -7,25 +7,34 @@ const DB_NAME = 'stickyNotes';
 const STORE_NAME = 'notes';
 const DB_VERSION = 1;
 
-const dbPromise = openDB(DB_NAME, DB_VERSION, {
-  upgrade(db, oldVersion) {
-    if (oldVersion < 1) {
-      db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-    }
-  },
-  blocked() {
-    console.error('Sticky notes DB upgrade blocked');
-  },
-  blocking() {
-    console.warn('Waiting for other tabs to close the Sticky notes DB');
-  },
-});
+let dbPromise = null;
+function getDB() {
+  if (typeof indexedDB === 'undefined') return null;
+  if (!dbPromise) {
+    dbPromise = openDB(DB_NAME, DB_VERSION, {
+      upgrade(db, oldVersion) {
+        if (oldVersion < 1) {
+          db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+        }
+      },
+      blocked() {
+        console.error('Sticky notes DB upgrade blocked');
+      },
+      blocking() {
+        console.warn('Waiting for other tabs to close the Sticky notes DB');
+      },
+    });
+  }
+  return dbPromise;
+}
 
 let notes = [];
 
 async function saveNotes() {
   try {
-    const db = await dbPromise;
+    const dbp = getDB();
+    if (!dbp) return;
+    const db = await dbp;
     const tx = db.transaction(STORE_NAME, 'readwrite');
     await tx.store.clear();
     for (const note of notes) {
@@ -128,7 +137,9 @@ function enableDrag(el, note) {
 }
 async function init() {
   try {
-    const db = await dbPromise;
+    const dbp = getDB();
+    if (!dbp) return;
+    const db = await dbp;
     notes = await db.getAll(STORE_NAME);
 
     if (notes.length === 0) {

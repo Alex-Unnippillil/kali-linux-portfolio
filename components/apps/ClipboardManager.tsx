@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useState, useCallback } from 'react';
 import { openDB, type IDBPDatabase } from 'idb';
 
@@ -9,16 +11,22 @@ interface ClipItem {
 
 const DB_NAME = 'clipboard-manager';
 const STORE_NAME = 'items';
+const isBrowser =
+  typeof window !== 'undefined' && typeof indexedDB !== 'undefined';
 
-let dbPromise: Promise<IDBPDatabase> | null = null;
+let dbPromise: ReturnType<typeof openDB> | null = null;
+function getDB() {
+  if (!isBrowser) return null;
 
-function getDb() {
-  if (typeof indexedDB === 'undefined') return null;
   if (!dbPromise) {
     dbPromise = openDB(DB_NAME, 1, {
       upgrade(db) {
         if (!db.objectStoreNames.contains(STORE_NAME)) {
-          db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+          db.createObjectStore(STORE_NAME, {
+            keyPath: 'id',
+            autoIncrement: true,
+          });
+
         }
       },
     });
@@ -31,8 +39,10 @@ const ClipboardManager: React.FC = () => {
 
   const loadItems = useCallback(async () => {
     try {
-      const db = await getDb();
-      if (!db) return;
+      const dbp = getDB();
+      if (!dbp) return;
+      const db = await dbp;
+
       const all = await db.getAll(STORE_NAME);
       setItems(all.sort((a, b) => (b.id ?? 0) - (a.id ?? 0)));
     } catch {
@@ -44,8 +54,10 @@ const ClipboardManager: React.FC = () => {
     async (text: string) => {
       if (!text) return;
       try {
-        const db = await getDb();
-        if (!db) return;
+        const dbp = getDB();
+        if (!dbp) return;
+        const db = await dbp;
+
         const tx = db.transaction(STORE_NAME, 'readwrite');
         await tx.store.add({ text, created: Date.now() });
         await tx.done;
@@ -95,8 +107,10 @@ const ClipboardManager: React.FC = () => {
 
   const clearHistory = async () => {
     try {
-      const db = await getDb();
-      if (!db) return;
+      const dbp = getDB();
+      if (!dbp) return;
+      const db = await dbp;
+
       await db.clear(STORE_NAME);
       setItems([]);
     } catch {
