@@ -46,6 +46,12 @@
   --radius-lg: 8px;
   --radius-round: 9999px;
 
+  /* Bubble styling */
+  --bubble-bg: var(--color-ub-cool-grey);
+  --bubble-text: var(--color-text);
+  --bubble-border: var(--color-ub-border-orange);
+  --bubble-radius: var(--radius-md);
+
   /* Motion durations */
   --motion-fast: 150ms;
   --motion-medium: 300ms;
