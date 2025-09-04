@@ -12,5 +12,9 @@ describe('Calc output sanitization', () => {
     expect(resultEl.textContent).toBe('Invalid Expression');
     expect(resultEl.innerHTML).toBe('Invalid Expression');
   });
+
+  test('performs precise decimal arithmetic', () => {
+    expect(evaluateExpression('0.1 + 0.2')).toBe('0.3');
+  });
 });
 

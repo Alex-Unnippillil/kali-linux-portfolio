@@ -1,14 +1,16 @@
 // @ts-nocheck
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { create, all } from 'mathjs';
+import Decimal, { add, subtract } from '../../../../utils/decimal';
 import usePersistentState from '../../../hooks/usePersistentState';
 import { useHistory, HistoryEntry } from '../../../../calc/history';
 
 const math = create(all);
+math.config({ number: 'BigNumber', precision: 20 });
 
-const formatNumber = (n: number) => {
-  if (Number.isInteger(n)) return String(n);
-  return parseFloat(n.toFixed(10)).toString();
+const formatNumber = (n: Decimal) => {
+  if (n.isInteger()) return n.toString();
+  return n.toDecimalPlaces(10).toString();
 };
 
 export const evaluateExpression = (expression: string) => {
@@ -17,14 +19,10 @@ export const evaluateExpression = (expression: string) => {
   if (/[<>]/.test(trimmed)) return 'Invalid Expression';
   try {
     const result = math.evaluate(trimmed);
-    if (
-      typeof result === 'number' ||
-      math.isBigNumber(result) ||
-      math.isFraction(result)
-    ) {
-      const num = math.number(result as any);
-      if (!Number.isFinite(num)) return 'Invalid Expression';
-      return formatNumber(num);
+    if (math.isBigNumber(result) || typeof result === 'number') {
+      const dec = new Decimal(result as any);
+      if (!dec.isFinite()) return 'Invalid Expression';
+      return formatNumber(dec);
     }
     return String(result);
   } catch {
@@ -45,8 +43,8 @@ const Calc: React.FC<CalcProps> = ({ addFolder, openApp }) => {
   const safeHistory = Array.isArray(history) ? history : [];
   const [memory, setMemory] = usePersistentState(
     'calc-memory',
-    () => 0,
-    (v) => typeof v === 'number',
+    () => '0',
+    (v): v is string => typeof v === 'string',
   );
   const [showSci, setShowSci] = useState(false);
   const [showDateDiff, setShowDateDiff] = useState(false);
@@ -100,24 +98,24 @@ const Calc: React.FC<CalcProps> = ({ addFolder, openApp }) => {
 
   const handleMemoryAdd = useCallback(() => {
     try {
-      const val = math.number(math.evaluate(display));
-      if (!Number.isNaN(val))
-        setMemory((m: number) => math.add(m, val));
+      const val = math.evaluate(display);
+      if (math.isBigNumber(val) || typeof val === 'number')
+        setMemory((m: string) => add(m, val).toString());
     } catch {
       // ignore invalid expression
     }
   }, [display, setMemory]);
   const handleMemorySubtract = useCallback(() => {
     try {
-      const val = math.number(math.evaluate(display));
-      if (!Number.isNaN(val))
-        setMemory((m: number) => math.subtract(m, val));
+      const val = math.evaluate(display);
+      if (math.isBigNumber(val) || typeof val === 'number')
+        setMemory((m: string) => subtract(m, val).toString());
     } catch {
       // ignore invalid expression
     }
   }, [display, setMemory]);
   const handleMemoryRecall = useCallback(() => {
-    setDisplay(String(memory));
+    setDisplay(memory);
   }, [memory]);
 
   const handleScientific = useCallback(
@@ -149,7 +147,7 @@ const Calc: React.FC<CalcProps> = ({ addFolder, openApp }) => {
         default:
           return;
       }
-      setDisplay(formatNumber(math.number(result)));
+      setDisplay(formatNumber(new Decimal(math.number(result))));
     },
     [display],
   );

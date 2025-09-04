@@ -13882,6 +13882,7 @@ __metadata:
     cron-parser: "npm:^5.3.0"
     cytoscape: "npm:^3.33.1"
     cytoscape-cose-bilkent: "npm:^4.1.0"
+    decimal.js: "npm:^10.4.3"
     diff: "npm:^8"
     dompurify: "npm:^3.2.6"
     eslint: "npm:^9.13.0"
