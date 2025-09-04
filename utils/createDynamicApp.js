@@ -5,10 +5,15 @@ import { logEvent } from './analytics';
 export const createDynamicApp = (id, title) =>
   dynamic(
     () =>
-      import(/* webpackPrefetch: true */ `../components/apps/${id}`).then((mod) => {
-        logEvent({ category: 'Application', action: `Loaded ${title}` });
-        return mod.default;
-      }),
+      import(/* webpackPrefetch: true */ `../components/apps/${id}`)
+        .then((mod) => {
+          logEvent({ category: 'Application', action: `Loaded ${title}` });
+          return mod.default;
+        })
+        .catch((err) => {
+          console.error(`Failed to load ${title}`, err);
+          throw err;
+        }),
     {
       ssr: false,
       loading: () => (
