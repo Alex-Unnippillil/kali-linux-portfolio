@@ -14,12 +14,12 @@ const ContentSecurityPolicy = [
   "object-src 'none'",
   // Allow external images and data URIs for badges/icons
   "img-src 'self' https: data:",
-  // Permit Google Fonts
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  // Explicitly allow external stylesheets and inline styles
-  "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  // Allow loading fonts from Google
-  "font-src 'self' https://fonts.gstatic.com",
+  // Permit external stylesheets and inline styles
+  "style-src 'self' 'unsafe-inline'",
+  // Explicitly allow external style elements and inline styles
+  "style-src-elem 'self' 'unsafe-inline'",
+  // Allow loading fonts from this origin
+  "font-src 'self'",
   // External scripts required for embedded timelines
   "script-src 'self' 'unsafe-inline' https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
   // Allow outbound connections for embeds and the in-browser Chrome app
