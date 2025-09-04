@@ -1,12 +1,27 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { render, screen } from '@testing-library/react';
-import Toast from '../components/ui/Toast';
+import {
+  ToastProvider,
+  useSuccessToast,
+} from '../components/ui/Toast';
 import FormError from '../components/ui/FormError';
 
+function TriggerToast() {
+  const success = useSuccessToast();
+  useEffect(() => {
+    success('Saved');
+  }, [success]);
+  return null;
+}
+
 describe('live region components', () => {
-  it('Toast uses polite live region', () => {
-    const { unmount } = render(<Toast message="Saved" />);
-    const region = screen.getByRole('status');
+  it('Toast uses polite live region', async () => {
+    const { unmount } = render(
+      <ToastProvider>
+        <TriggerToast />
+      </ToastProvider>,
+    );
+    const region = await screen.findByRole('status');
     expect(region).toHaveAttribute('aria-live', 'polite');
     unmount();
   });

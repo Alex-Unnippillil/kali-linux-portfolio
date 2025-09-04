@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import FormError from "../../components/ui/FormError";
-import Toast from "../../components/ui/Toast";
+import { useSuccessToast, useErrorToast } from "../../components/ui/Toast";
 import { processContactForm } from "../../components/apps/contact";
 import { copyToClipboard } from "../../utils/clipboard";
 import { openMailto } from "../../utils/mailto";
@@ -28,8 +28,9 @@ const ContactApp: React.FC = () => {
   const [message, setMessage] = useState("");
   const [honeypot, setHoneypot] = useState("");
   const [error, setError] = useState("");
-  const [toast, setToast] = useState("");
   const [csrfToken, setCsrfToken] = useState("");
+  const successToast = useSuccessToast();
+  const errorToast = useErrorToast();
 
   useEffect(() => {
     const saved = localStorage.getItem(DRAFT_KEY);
@@ -67,7 +68,7 @@ const ContactApp: React.FC = () => {
         recaptchaToken,
       });
       if (result.success) {
-        setToast("Message sent");
+        successToast("Message sent");
         setName("");
         setEmail("");
         setMessage("");
@@ -76,12 +77,12 @@ const ContactApp: React.FC = () => {
         trackEvent("contact_submit", { method: "form" });
       } else {
         setError(result.error || "Submission failed");
-        setToast("Failed to send");
+        errorToast("Failed to send");
         trackEvent("contact_submit_error", { method: "form" });
       }
     } catch {
       setError("Submission failed");
-      setToast("Failed to send");
+      errorToast("Failed to send");
       trackEvent("contact_submit_error", { method: "form" });
     }
   };
@@ -209,7 +210,6 @@ const ContactApp: React.FC = () => {
           Send
         </button>
       </form>
-      {toast && <Toast message={toast} onClose={() => setToast("")} />}
     </div>
   );
 };

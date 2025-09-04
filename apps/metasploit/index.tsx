@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import modulesData from '../../components/apps/metasploit/modules.json';
 import MetasploitApp from '../../components/apps/metasploit';
-import Toast from '../../components/ui/Toast';
+import { useSuccessToast } from '../../components/ui/Toast';
 
 interface Module {
   name: string;
@@ -47,7 +47,7 @@ const MetasploitPage: React.FC = () => {
   const [split, setSplit] = useState(60);
   const splitRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
-  const [toast, setToast] = useState('');
+  const successToast = useSuccessToast();
   const [query, setQuery] = useState('');
   const [tag, setTag] = useState('');
 
@@ -99,7 +99,7 @@ const MetasploitPage: React.FC = () => {
     };
   }, []);
 
-  const handleGenerate = () => setToast('Payload generated');
+  const handleGenerate = () => successToast('Payload generated');
 
   const renderTree = (node: TreeNode) => (
     <ul className="ml-2">
@@ -209,7 +209,6 @@ const MetasploitPage: React.FC = () => {
           </div>
         </div>
       </div>
-      {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
   );
 };

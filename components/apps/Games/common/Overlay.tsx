@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import Toast from '../../../ui/Toast';
+import { useLongTaskToast } from '../../../ui/Toast';
 
 /**
  * Heads up display for games. Provides pause/resume, sound toggle and
@@ -21,7 +21,8 @@ export default function Overlay({
   const [fps, setFps] = useState(0);
   const frame = useRef(performance.now());
   const count = useRef(0);
-  const [toast, setToast] = useState('');
+  const longTaskToast = useLongTaskToast();
+  const dismissToast = useRef<(() => void) | null>(null);
   const pausedByDisconnect = useRef(false);
 
   // track fps using requestAnimationFrame
@@ -65,14 +66,15 @@ export default function Overlay({
   useEffect(() => {
     const handleDisconnect = () => {
       pausedByDisconnect.current = true;
-      setToast('Controller disconnected. Reconnect to resume.');
+      dismissToast.current = longTaskToast('Controller disconnected. Reconnect to resume.');
       setPaused(true);
       onPause?.();
     };
     const handleConnect = () => {
       if (pausedByDisconnect.current) {
         pausedByDisconnect.current = false;
-        setToast('');
+        dismissToast.current?.();
+        dismissToast.current = null;
         setPaused(false);
         onResume?.();
       }
@@ -96,13 +98,6 @@ export default function Overlay({
         </button>
         <span className="fps">{fps} FPS</span>
       </div>
-      {toast && (
-        <Toast
-          message={toast}
-          onClose={() => setToast('')}
-          duration={1000000}
-        />
-      )}
     </>
   );
 }

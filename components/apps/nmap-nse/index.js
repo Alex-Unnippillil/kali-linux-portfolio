@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import Toast from '../../ui/Toast';
+import { useSuccessToast } from '../../ui/Toast';
 import DiscoveryMap from './DiscoveryMap';
 
 // Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
@@ -84,7 +84,7 @@ const NmapNSEApp = () => {
   const [scriptOptions, setScriptOptions] = useState({});
   const [activeScript, setActiveScript] = useState(scripts[0].name);
   const [phaseStep, setPhaseStep] = useState(0);
-  const [toast, setToast] = useState('');
+  const successToast = useSuccessToast();
   const outputRef = useRef(null);
   const phases = ['prerule', 'hostrule', 'portrule'];
 
@@ -134,7 +134,7 @@ const NmapNSEApp = () => {
     if (typeof window !== 'undefined') {
       try {
         await navigator.clipboard.writeText(command);
-        setToast('Command copied');
+        successToast('Command copied');
       } catch (e) {
         // ignore
       }
@@ -148,7 +148,7 @@ const NmapNSEApp = () => {
     if (!text.trim()) return;
     try {
       await navigator.clipboard.writeText(text);
-      setToast('Output copied');
+      successToast('Output copied');
     } catch (e) {
       // ignore
     }
@@ -162,7 +162,7 @@ const NmapNSEApp = () => {
     const sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(range);
-    setToast('Output selected');
+    successToast('Output selected');
   };
 
   const handleOutputKey = (e) => {
@@ -435,7 +435,6 @@ const NmapNSEApp = () => {
           </button>
         </div>
       </div>
-      {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
   );
 };

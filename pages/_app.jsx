@@ -16,6 +16,7 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { ToastProvider } from '../components/ui/Toast';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -152,19 +153,21 @@ function MyApp(props) {
       <div className={ubuntu.className}>
         <SettingsProvider>
           <PipPortalProvider>
-            <div aria-live="polite" id="live-region" />
-            <Component {...pageProps} />
-            <ShortcutOverlay />
-            <Analytics
-              beforeSend={(e) => {
-                if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-                const evt = e;
-                if (evt.metadata?.email) delete evt.metadata.email;
-                return e;
-              }}
-            />
+            <ToastProvider>
+              <div aria-live="polite" id="live-region" />
+              <Component {...pageProps} />
+              <ShortcutOverlay />
+              <Analytics
+                beforeSend={(e) => {
+                  if (e.url.includes('/admin') || e.url.includes('/private')) return null;
+                  const evt = e;
+                  if (evt.metadata?.email) delete evt.metadata.email;
+                  return e;
+                }}
+              />
 
-            {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+              {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+            </ToastProvider>
           </PipPortalProvider>
         </SettingsProvider>
       </div>
