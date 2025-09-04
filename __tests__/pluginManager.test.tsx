@@ -30,6 +30,7 @@ describe('PluginManager', () => {
         return Promise.resolve({
           json: () =>
             Promise.resolve({
+              version: 1,
               id: 'demo',
               sandbox: 'worker',
               code: "self.postMessage('content');",
@@ -70,5 +71,28 @@ describe('PluginManager', () => {
     const exportBtn = screen.getByText('Export CSV');
     fireEvent.click(exportBtn);
     expect((global as any).URL.createObjectURL).toHaveBeenCalled();
+  });
+
+  test('shows validation errors inline for invalid manifest', async () => {
+    (global as any).fetch = jest.fn((url: string) => {
+      if (url === '/api/plugins') {
+        return Promise.resolve({
+          json: () => Promise.resolve([{ id: 'bad', file: 'bad.json' }]),
+        });
+      }
+      if (url === '/api/plugins/bad.json') {
+        return Promise.resolve({
+          json: () =>
+            Promise.resolve({
+              id: 'bad',
+              sandbox: 'worker',
+              code: "self.postMessage('content');",
+            }),
+        });
+      }
+      return Promise.reject(new Error('unknown url'));
+    });
+    render(<PluginManager />);
+    expect(await screen.findByText(/Invalid manifest/)).toBeInTheDocument();
   });
 });

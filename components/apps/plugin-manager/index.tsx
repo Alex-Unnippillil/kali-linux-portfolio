@@ -1,16 +1,18 @@
 'use client';
 import { useEffect, useState } from 'react';
+import {
+  validateManifest,
+  type PluginManifest,
+} from '../../../plugins/schema';
 
-interface PluginInfo { id: string; file: string; }
-
-interface PluginManifest {
+interface PluginInfo {
   id: string;
-  sandbox: 'worker' | 'iframe';
-  code: string;
+  file: string;
 }
 
 export default function PluginManager() {
   const [plugins, setPlugins] = useState<PluginInfo[]>([]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [installed, setInstalled] = useState<Record<string, PluginManifest>>(
     () => {
       if (typeof window !== 'undefined') {
@@ -41,18 +43,43 @@ export default function PluginManager() {
   });
 
   useEffect(() => {
-    fetch('/api/plugins')
-      .then((res) => res.json())
-      .then(setPlugins)
-      .catch(() => setPlugins([]));
+    (async () => {
+      try {
+        const res = await fetch('/api/plugins');
+        const list: PluginInfo[] = await res.json();
+        setPlugins(list);
+        const errs: Record<string, string> = {};
+        await Promise.all(
+          list.map(async (p) => {
+            try {
+              const mr = await fetch(`/api/plugins/${p.file}`);
+              const data = await mr.json();
+              validateManifest(data);
+            } catch (e) {
+              const msg =
+                e instanceof Error ? e.message : 'Unknown error';
+              errs[p.id] = `Invalid manifest: ${msg}`;
+            }
+          })
+        );
+        setErrors(errs);
+      } catch {
+        setPlugins([]);
+      }
+    })();
   }, []);
 
   const install = async (plugin: PluginInfo) => {
-    const res = await fetch(`/api/plugins/${plugin.file}`);
-    const manifest: PluginManifest = await res.json();
-    const updated = { ...installed, [plugin.id]: manifest };
-    setInstalled(updated);
-    localStorage.setItem('installedPlugins', JSON.stringify(updated));
+    try {
+      const res = await fetch(`/api/plugins/${plugin.file}`);
+      const manifest = validateManifest(await res.json());
+      const updated = { ...installed, [plugin.id]: manifest };
+      setInstalled(updated);
+      localStorage.setItem('installedPlugins', JSON.stringify(updated));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      setErrors((prev) => ({ ...prev, [plugin.id]: `Invalid manifest: ${msg}` }));
+    }
   };
 
   const run = (plugin: PluginInfo) => {
@@ -125,22 +152,29 @@ export default function PluginManager() {
       <h1 className="text-xl mb-4">Plugin Catalog</h1>
       <ul>
         {plugins.map((p) => (
-          <li key={p.id} className="flex items-center mb-2">
-            <span className="flex-grow">{p.id}</span>
-            <button
-              className="bg-ub-orange px-2 py-1 rounded disabled:opacity-50"
-              onClick={() => install(p)}
-              disabled={installed[p.id] !== undefined}
-            >
-              {installed[p.id] ? 'Installed' : 'Install'}
-            </button>
-            {installed[p.id] && (
+          <li key={p.id} className="mb-2">
+            <div className="flex items-center">
+              <span className="flex-grow">{p.id}</span>
               <button
-                className="bg-ub-green text-black px-2 py-1 rounded ml-2"
-                onClick={() => run(p)}
+                className="bg-ub-orange px-2 py-1 rounded disabled:opacity-50"
+                onClick={() => install(p)}
+                disabled={
+                  installed[p.id] !== undefined || errors[p.id] !== undefined
+                }
               >
-                Run
+                {installed[p.id] ? 'Installed' : 'Install'}
               </button>
+              {installed[p.id] && !errors[p.id] && (
+                <button
+                  className="bg-ub-green text-black px-2 py-1 rounded ml-2"
+                  onClick={() => run(p)}
+                >
+                  Run
+                </button>
+              )}
+            </div>
+            {errors[p.id] && (
+              <div className="text-red-500 text-xs mt-1">{errors[p.id]}</div>
             )}
           </li>
         ))}
