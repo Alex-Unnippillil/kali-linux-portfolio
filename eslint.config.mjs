@@ -1,4 +1,5 @@
 import { FlatCompat } from '@eslint/eslintrc';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
 import noTopLevelWindow from './eslint-plugin-no-top-level-window/index.js';
 
 const compat = new FlatCompat();
@@ -26,4 +27,16 @@ export default [
       '@next/next/no-img-element': 'off',
     },
   }),
+  {
+    files: [
+      'components/**/*.{ts,tsx,js,jsx}',
+      'games/space-invaders/components/**/*.{ts,tsx,js,jsx}',
+    ],
+    plugins: {
+      'jsx-a11y': jsxA11y,
+    },
+    rules: {
+      'jsx-a11y/no-noninteractive-element-interactions': 'error',
+    },
+  },
 ];

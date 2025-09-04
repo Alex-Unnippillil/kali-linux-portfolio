@@ -530,7 +530,15 @@ const TerminalPaneInner = (
     );
 
     return (
-      <div className="flex-1 w-full h-full relative" onClick={onFocus}>
+      <div
+        className="flex-1 w-full h-full relative"
+        role="button"
+        tabIndex={0}
+        onClick={onFocus}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') onFocus();
+        }}
+      >
         <div
           className="h-full w-full bg-ub-cool-grey"
           ref={containerRef}
