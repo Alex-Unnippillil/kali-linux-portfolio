@@ -13,6 +13,12 @@ export default [
       'no-top-level-window/no-top-level-window-or-document': 'error',
     },
   },
+  {
+    files: ['utils/qrStorage.ts', 'utils/safeStorage.ts', 'utils/sync.ts'],
+    rules: {
+      'no-restricted-globals': ['error', 'window', 'document'],
+    },
+  },
   ...compat.config({
     extends: ['next/core-web-vitals'],
     rules: {

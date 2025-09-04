@@ -1,11 +1,12 @@
+import { isBrowser } from './isBrowser';
+
 type StateMessage = { type: 'state'; state: unknown };
 type LeaderboardMessage = { type: 'leaderboard'; leaderboard: unknown };
 type SyncMessage = StateMessage | LeaderboardMessage;
 
-const channel =
-  typeof window !== 'undefined' && 'BroadcastChannel' in self
-    ? new BroadcastChannel('sync')
-    : null;
+const channel = isBrowser() && 'BroadcastChannel' in self
+  ? new BroadcastChannel('sync')
+  : null;
 
 export const broadcastState = (state: unknown): void => {
   channel?.postMessage({ type: 'state', state } as StateMessage);
