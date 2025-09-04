@@ -497,7 +497,16 @@ export class Window extends Component {
                 >
                     <div
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        className={
+                            this.state.cursorType +
+                            " " +
+                            (this.state.closed ? " closed-window " : "") +
+                            (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg") +
+                            (this.props.minimized ? " opacity-0 invisible duration-200 " : "") +
+                            (this.state.grabbed ? " opacity-70 " : "") +
+                            (this.props.isFocused ? " z-30 " : " z-20 notFocused") +
+                            " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow window-chrome flex flex-col"
+                        }
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
@@ -539,7 +548,7 @@ export default Window
 export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
     return (
         <div
-            className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 py-1.5 px-3 text-white w-full select-none rounded-b-none"}
+            className={" relative bg-ub-window-title border-b border-white border-opacity-5 py-1.5 px-3 text-white w-full select-none rounded-t-lg"}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
@@ -694,7 +703,7 @@ export class WindowMainScreen extends Component {
     }
     render() {
         return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
+            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen rounded-b-lg" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}> 
                 {this.props.screen(this.props.addFolder, this.props.openApp)}
             </div>
         )
