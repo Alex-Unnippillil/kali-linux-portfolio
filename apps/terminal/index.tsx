@@ -88,6 +88,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const filesRef = useRef<Record<string, string>>(files);
   const aliasesRef = useRef<Record<string, string>>({});
   const historyRef = useRef<string[]>([]);
+  const suggestionRef = useRef('');
   const contextRef = useRef<CommandContext>({
     writeLine: () => {},
     files: filesRef.current,
@@ -146,8 +147,39 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   contextRef.current.writeLine = writeLine;
 
   const prompt = useCallback(() => {
-    if (termRef.current) termRef.current.write('$ ');
+    if (termRef.current)
+      termRef.current.write(
+        '\x1b[1;32m┌──(\x1b[1;34mkali@web\x1b[1;32m)-[\x1b[0;34m~\x1b[1;32m]\x1b[0m\r\n\x1b[1;32m└─$ \x1b[0m',
+      );
+    suggestionRef.current = '';
   }, []);
+
+  const clearSuggestion = useCallback(() => {
+    const term = termRef.current;
+    const len = suggestionRef.current.length;
+    if (term && len > 0) {
+      term.write(' '.repeat(len));
+      term.write('\b'.repeat(len));
+      suggestionRef.current = '';
+    }
+  }, []);
+
+  const renderSuggestion = useCallback(() => {
+    const term = termRef.current;
+    if (!term) return;
+    clearSuggestion();
+    const current = commandRef.current;
+    if (!current) return;
+    const match = Object.keys(registryRef.current).find(
+      (c) => c.startsWith(current) && c !== current,
+    );
+    if (match) {
+      const remainder = match.slice(current.length);
+      term.write(`\x1b[90m${remainder}\x1b[0m`);
+      term.write('\b'.repeat(remainder.length));
+      suggestionRef.current = remainder;
+    }
+  }, [clearSuggestion]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(contentRef.current).catch(() => {});
@@ -252,36 +284,43 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       const registry = registryRef.current;
       const matches = Object.keys(registry).filter((c) => c.startsWith(current));
       if (matches.length === 1) {
+        clearSuggestion();
         const completion = matches[0].slice(current.length);
         termRef.current?.write(completion);
         commandRef.current = matches[0];
+        renderSuggestion();
       } else if (matches.length > 1) {
-        writeLine(matches.join('  '));
+        writeLine(`\x1b[90m${matches.join('  ')}\x1b[0m`);
         prompt();
         termRef.current?.write(commandRef.current);
+        renderSuggestion();
       }
-    }, [prompt, writeLine]);
+    }, [prompt, writeLine, clearSuggestion, renderSuggestion]);
 
     const handleInput = useCallback(
       (data: string) => {
         for (const ch of data) {
           if (ch === '\r') {
+            clearSuggestion();
             termRef.current?.writeln('');
             runCommand(commandRef.current.trim());
             commandRef.current = '';
             prompt();
           } else if (ch === '\u007F') {
             if (commandRef.current.length > 0) {
+              clearSuggestion();
               termRef.current?.write('\b \b');
               commandRef.current = commandRef.current.slice(0, -1);
+              renderSuggestion();
             }
           } else {
             commandRef.current += ch;
             termRef.current?.write(ch);
+            renderSuggestion();
           }
         }
       },
-      [runCommand, prompt],
+      [runCommand, prompt, renderSuggestion, clearSuggestion],
     );
 
   useImperativeHandle(ref, () => ({
@@ -408,6 +447,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
             <input
               autoFocus
               className="w-full mb-2 bg-black text-white p-2"
+              aria-label="Command palette"
               value={paletteInput}
               onChange={(e) => setPaletteInput(e.target.value)}
               onKeyDown={(e) => {
