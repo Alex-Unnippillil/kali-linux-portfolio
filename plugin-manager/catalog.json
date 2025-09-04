@@ -1,0 +1,4 @@
+[
+  { "id": "demo", "file": "demo.txt", "description": "Demo plugin" },
+  { "id": "alpha", "file": "alpha.txt", "description": "Alpha plugin" }
+]

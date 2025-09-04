@@ -1,0 +1,2 @@
+Demo plugin output line 1
+Demo plugin output line 2
