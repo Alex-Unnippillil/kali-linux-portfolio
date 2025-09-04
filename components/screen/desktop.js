@@ -14,6 +14,7 @@ import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
 import WindowSwitcher from '../screen/window-switcher'
+import LauncherCreator from './launcher-creator'
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
@@ -50,6 +51,7 @@ export class Desktop extends Component {
             context_app: null,
             showNameBar: false,
             showShortcutSelector: false,
+            showLauncherCreator: false,
             showWindowSwitcher: false,
             switcherWindows: [],
         }
@@ -85,6 +87,7 @@ export class Desktop extends Component {
         this.setEventListeners();
         this.checkForNewFolders();
         this.checkForAppShortcuts();
+        this.checkForLaunchers();
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
@@ -585,6 +588,16 @@ export class Desktop extends Component {
         // if the app is disabled
         if (this.state.disabled_apps[objId]) return;
 
+        const appMeta = apps.find(a => a.id === objId);
+        if (appMeta && appMeta.command) {
+            if (/^https?:\/\//.test(appMeta.command)) {
+                window.open(appMeta.command, '_blank');
+            } else if (appMeta.command !== objId) {
+                this.openApp(appMeta.command);
+            }
+            return;
+        }
+
         // if app is already open, focus it instead of spawning a new window
         if (this.state.closed_windows[objId] === false) {
             // if it's minimised, restore its last position
@@ -739,6 +752,10 @@ export class Desktop extends Component {
         this.setState({ showShortcutSelector: true });
     }
 
+    openLauncherCreator = () => {
+        this.setState({ showLauncherCreator: true });
+    }
+
     addShortcutToDesktop = (app_id) => {
         const appIndex = apps.findIndex(app => app.id === app_id);
         if (appIndex === -1) return;
@@ -768,6 +785,53 @@ export class Desktop extends Component {
                 safeLocalStorage?.setItem('app_shortcuts', JSON.stringify([]));
             }
             this.updateAppsData();
+        }
+    }
+
+    createLauncher = ({ name, comment, icon, command }) => {
+        const id = name.trim().replace(/\s+/g, '-').toLowerCase();
+        const finalIcon = icon || '/themes/Yaru/apps/bash.png';
+        apps.push({
+            id,
+            title: name,
+            icon: finalIcon,
+            comment,
+            command,
+            disabled: false,
+            favourite: false,
+            desktop_shortcut: true,
+            screen: () => { },
+        });
+        let launchers = [];
+        try { launchers = JSON.parse(safeLocalStorage?.getItem('custom_launchers') || '[]'); } catch (e) { launchers = []; }
+        launchers.push({ id, title: name, icon: finalIcon, comment, command });
+        safeLocalStorage?.setItem('custom_launchers', JSON.stringify(launchers));
+        this.setState({ showLauncherCreator: false }, this.updateAppsData);
+    }
+
+    checkForLaunchers = () => {
+        const stored = safeLocalStorage?.getItem('custom_launchers');
+        if (!stored) {
+            safeLocalStorage?.setItem('custom_launchers', JSON.stringify([]));
+            return;
+        }
+        try {
+            JSON.parse(stored).forEach(l => {
+                apps.push({
+                    id: l.id,
+                    title: l.title,
+                    icon: l.icon || '/themes/Yaru/apps/bash.png',
+                    comment: l.comment,
+                    command: l.command,
+                    disabled: false,
+                    favourite: false,
+                    desktop_shortcut: true,
+                    screen: () => { },
+                });
+            });
+            this.updateAppsData();
+        } catch (e) {
+            safeLocalStorage?.setItem('custom_launchers', JSON.stringify([]));
         }
     }
 
@@ -895,6 +959,7 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
+                    openLauncherCreator={this.openLauncherCreator}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
@@ -944,6 +1009,11 @@ export class Desktop extends Component {
                         games={games}
                         onSelect={this.addShortcutToDesktop}
                         onClose={() => this.setState({ showShortcutSelector: false })} /> : null}
+
+                { this.state.showLauncherCreator ?
+                    <LauncherCreator
+                        onSave={this.createLauncher}
+                        onClose={() => this.setState({ showLauncherCreator: false })} /> : null}
 
                 { this.state.showWindowSwitcher ?
                     <WindowSwitcher
