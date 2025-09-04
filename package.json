@@ -127,7 +127,6 @@
     "jest": "30.0.5",
     "jest-environment-jsdom": "30.0.5",
     "magic-string": "0.30.18",
-
     "node-mocks-http": "1.17.2",
     "pa11y": "^9.0.0",
     "playwright-core": "^1.55.0",
@@ -139,13 +138,12 @@
   },
   "resolutions": {
     "magic-string": "0.30.18",
-
     "source-map": "^0.7.6",
     "test-exclude": "7.0.1",
     "webpack": "^5.92.0",
     "workbox-build@npm:7.1.1": "patch:workbox-build@npm%3A7.1.1#~/.yarn/patches/workbox-build-npm-7.1.1-a854f3faae.patch",
     "workbox-build@npm:7.1.0": "patch:workbox-build@npm%3A7.1.1#~/.yarn/patches/workbox-build-npm-7.1.1-a854f3faae.patch",
-    "glob@^7.1.6": "^9.3.5"
+    "glob@^7.1.6": "npm:glob@^9.3.5"
   },
   "packageManager": "yarn@4.9.2"
 }
