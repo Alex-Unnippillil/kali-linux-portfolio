@@ -3,7 +3,7 @@ import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, radius, setRadius, shadow, setShadow, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -98,6 +98,28 @@ export function Settings() {
                     <option value="regular">Regular</option>
                     <option value="compact">Compact</option>
                 </select>
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey">Radius:</label>
+                <input
+                    type="range"
+                    min="0"
+                    max="32"
+                    value={radius}
+                    onChange={(e) => setRadius(parseInt(e.target.value))}
+                    className="ubuntu-slider"
+                />
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey">Shadow:</label>
+                <input
+                    type="range"
+                    min="0"
+                    max="24"
+                    value={shadow}
+                    onChange={(e) => setShadow(parseInt(e.target.value))}
+                    className="ubuntu-slider"
+                />
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Font Size:</label>
