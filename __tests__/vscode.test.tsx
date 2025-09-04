@@ -1,29 +1,17 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import VsCode from '../apps/vscode';
+import VsCode from '../components/apps/vscode';
+
+jest.mock('@monaco-editor/react', () => {
+  const Mock = () => <div data-testid="editor" />;
+  Mock.displayName = 'MockMonacoEditor';
+  return Mock;
+});
 
 describe('VsCode app', () => {
-  it('renders external frame', () => {
+  it('renders editor and language selector', async () => {
     render(<VsCode />);
-    const frame = screen.getByTitle('VsCode');
-    expect(frame.tagName).toBe('IFRAME');
-    expect(screen.queryByRole('alert')).toBeNull();
-  });
-
-  it('shows banner when cookies are blocked', async () => {
-    const original = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie');
-    Object.defineProperty(document, 'cookie', {
-      configurable: true,
-      get: () => '',
-      set: () => {},
-    });
-
-    render(<VsCode />);
-    const alert = await screen.findByRole('alert');
-    expect(alert).toBeInTheDocument();
-
-    if (original) {
-      Object.defineProperty(document, 'cookie', original);
-    }
+    expect(screen.getByRole('combobox')).toBeInTheDocument();
+    expect(await screen.findByTestId('editor')).toBeInTheDocument();
   });
 });
