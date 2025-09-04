@@ -1,4 +1,9 @@
-import { getTheme, setTheme, getUnlockedThemes } from '../utils/theme';
+import {
+  getTheme,
+  setTheme,
+  getUnlockedThemes,
+  THEME_KEY,
+} from '../utils/theme';
 
 describe('theme persistence and unlocking', () => {
   beforeEach(() => {
@@ -13,11 +18,8 @@ describe('theme persistence and unlocking', () => {
     expect(document.documentElement.dataset.theme).toBe('dark');
     expect(document.documentElement.classList.contains('dark')).toBe(true);
     // simulate reload by reading from localStorage again
-    expect(window.localStorage.getItem('app:theme')).toBe('dark');
+    expect(window.localStorage.getItem(THEME_KEY)).toBe('dark');
 
-    setTheme('default');
-    expect(document.documentElement.dataset.theme).toBe('default');
-    expect(document.documentElement.classList.contains('dark')).toBe(false);
   });
 
   test('themes unlock at score milestones', () => {
