@@ -12,9 +12,10 @@ export const getDailyPuzzle = <T>(
   gameId: string,
   puzzles: T[],
   date: Date = new Date(),
-): T => {
+  defaultPuzzle: T | null = null,
+): T | null => {
   if (puzzles.length === 0) {
-    throw new Error("No puzzles available");
+    return defaultPuzzle;
   }
   const seed = getDailySeed(gameId, date);
   const idx = hash(seed) % puzzles.length;
