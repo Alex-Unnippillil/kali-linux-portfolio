@@ -19,6 +19,10 @@ export default function Settings() {
     setAccent,
     wallpaper,
     setWallpaper,
+    lockWallpaper,
+    setLockWallpaper,
+    rotateWallpapers,
+    setRotateWallpapers,
     density,
     setDensity,
     reducedMotion,
@@ -53,7 +57,8 @@ export default function Settings() {
     "wall-8",
   ];
 
-  const changeBackground = (name: string) => setWallpaper(name);
+  const changeDesktopBackground = (name: string) => setWallpaper(name);
+  const changeLockBackground = (name: string) => setLockWallpaper(name);
 
   const handleExport = async () => {
     const data = await exportSettingsData();
@@ -73,6 +78,10 @@ export default function Settings() {
       const parsed = JSON.parse(text);
       if (parsed.accent !== undefined) setAccent(parsed.accent);
       if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
+      if (parsed.lockWallpaper !== undefined)
+        setLockWallpaper(parsed.lockWallpaper);
+      if (parsed.rotateWallpapers !== undefined)
+        setRotateWallpapers(parsed.rotateWallpapers);
       if (parsed.density !== undefined) setDensity(parsed.density);
       if (parsed.reducedMotion !== undefined)
         setReducedMotion(parsed.reducedMotion);
@@ -96,6 +105,8 @@ export default function Settings() {
     window.localStorage.clear();
     setAccent(defaults.accent);
     setWallpaper(defaults.wallpaper);
+    setLockWallpaper(defaults.lockWallpaper);
+    setRotateWallpapers(defaults.rotateWallpapers);
     setDensity(defaults.density as any);
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
@@ -112,15 +123,26 @@ export default function Settings() {
       </div>
       {activeTab === "appearance" && (
         <>
-          <div
-            className="md:w-2/5 w-2/3 h-1/3 m-auto my-4"
-            style={{
-              backgroundImage: `url(/wallpapers/${wallpaper}.webp)`,
-              backgroundSize: "cover",
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "center center",
-            }}
-          ></div>
+          <div className="flex justify-center gap-4 my-4">
+            <div
+              className="md:w-2/5 w-1/2 h-1/3"
+              style={{
+                backgroundImage: `url(/wallpapers/kali/${wallpaper}.webp)`,
+                backgroundSize: "cover",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "center center",
+              }}
+            ></div>
+            <div
+              className="md:w-2/5 w-1/2 h-1/3"
+              style={{
+                backgroundImage: `url(/wallpapers/kali/${lockWallpaper}.webp)`,
+                backgroundSize: "cover",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "center center",
+              }}
+            ></div>
+          </div>
           <div className="flex justify-center my-4">
             <label className="mr-2 text-ubt-grey">Theme:</label>
             <select
@@ -151,7 +173,7 @@ export default function Settings() {
             </div>
           </div>
           <div className="flex justify-center my-4">
-            <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">Wallpaper:</label>
+            <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">Desktop Wallpaper:</label>
             <input
               id="wallpaper-slider"
               type="range"
@@ -160,14 +182,11 @@ export default function Settings() {
               step="1"
               value={wallpapers.indexOf(wallpaper)}
               onChange={(e) =>
-                changeBackground(wallpapers[parseInt(e.target.value, 10)])
+                changeDesktopBackground(wallpapers[parseInt(e.target.value, 10)])
               }
               className="ubuntu-slider"
-              aria-label="Wallpaper"
+              aria-label="Desktop Wallpaper"
             />
-          </div>
-          <div className="flex justify-center my-4">
-            <BackgroundSlideshow />
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 justify-items-center border-t border-gray-900">
             {wallpapers.map((name) => (
@@ -177,11 +196,11 @@ export default function Settings() {
                 aria-label={`Select ${name.replace("wall-", "wallpaper ")}`}
                 aria-pressed={name === wallpaper}
                 tabIndex={0}
-                onClick={() => changeBackground(name)}
+                onClick={() => changeDesktopBackground(name)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    changeBackground(name);
+                    changeDesktopBackground(name);
                   }
                 }}
                 className={
@@ -191,13 +210,70 @@ export default function Settings() {
                   " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"
                 }
                 style={{
-                  backgroundImage: `url(/wallpapers/${name}.webp)`,
+                  backgroundImage: `url(/wallpapers/kali/${name}.webp)`,
                   backgroundSize: "cover",
                   backgroundRepeat: "no-repeat",
                   backgroundPosition: "center center",
                 }}
               ></div>
             ))}
+          </div>
+          <div className="flex justify-center my-4">
+            <label htmlFor="lock-wallpaper-slider" className="mr-2 text-ubt-grey">Lock Wallpaper:</label>
+            <input
+              id="lock-wallpaper-slider"
+              type="range"
+              min="0"
+              max={wallpapers.length - 1}
+              step="1"
+              value={wallpapers.indexOf(lockWallpaper)}
+              onChange={(e) =>
+                changeLockBackground(wallpapers[parseInt(e.target.value, 10)])
+              }
+              className="ubuntu-slider"
+              aria-label="Lock Wallpaper"
+            />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 justify-items-center border-t border-gray-900">
+            {wallpapers.map((name) => (
+              <div
+                key={`lock-${name}`}
+                role="button"
+                aria-label={`Select ${name.replace("wall-", "wallpaper ")}`}
+                aria-pressed={name === lockWallpaper}
+                tabIndex={0}
+                onClick={() => changeLockBackground(name)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    changeLockBackground(name);
+                  }
+                }}
+                className={
+                  (name === lockWallpaper
+                    ? " border-yellow-700 "
+                    : " border-transparent ") +
+                  " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"
+                }
+                style={{
+                  backgroundImage: `url(/wallpapers/kali/${name}.webp)`,
+                  backgroundSize: "cover",
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "center center",
+                }}
+              ></div>
+            ))}
+          </div>
+          <div className="flex justify-center my-4">
+            <BackgroundSlideshow />
+          </div>
+          <div className="flex justify-center my-4">
+            <label htmlFor="rotate-wallpapers" className="mr-2 text-ubt-grey">Rotate Daily:</label>
+            <ToggleSwitch
+              id="rotate-wallpapers"
+              checked={rotateWallpapers}
+              onChange={setRotateWallpapers}
+            />
           </div>
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
             <button
