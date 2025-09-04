@@ -19,6 +19,11 @@ const CLUE_SPACE = 60; // space for row/column clues around grid
 
 const Nonogram = () => {
   const puzzle = useMemo(() => getDailyPuzzle("nonogram", puzzles), []);
+
+  if (!puzzle) {
+    return <div>No puzzle available.</div>;
+  }
+
   const rows = puzzle.rows;
   const cols = puzzle.cols;
   const height = rows.length;
