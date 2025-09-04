@@ -1,7 +1,7 @@
 import type { TwinStickState } from '../utils/gamepad';
 
 let gamepad: any;
-let pollTwinStick: (deadzone?: number) => TwinStickState;
+let pollTwinStick: (deadzone?: number, fireButtons?: number[]) => TwinStickState;
 let rafCallback: FrameRequestCallback | null;
 
 beforeEach(() => {
@@ -59,11 +59,18 @@ describe('GamepadManager', () => {
 
 describe('pollTwinStick', () => {
   test('returns state for first gamepad respecting deadzone and fire button', () => {
-    const pad1: any = { axes: [0.3, 0.1, 0.2, 0.6], buttons: [{ pressed: true }] };
+    const pad1: any = { axes: [0.3, 0.1, 0.2, 0.6], buttons: [{ pressed: true }, { pressed: false }] };
     const pad2: any = { axes: [1, 1, 1, 1], buttons: [] };
     (navigator as any).getGamepads = () => [pad1, pad2];
 
-    const state = pollTwinStick();
-    expect(state).toEqual({ moveX: 0.3, moveY: 0, aimX: 0, aimY: 0.6, fire: true });
+    const state = pollTwinStick(undefined, [0]);
+    expect(state).toEqual({
+      moveX: 0.3,
+      moveY: 0,
+      aimX: 0,
+      aimY: 0.6,
+      fire: true,
+      buttons: [true, false],
+    });
   });
 });

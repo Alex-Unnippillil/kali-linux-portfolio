@@ -14,6 +14,6 @@ describe('HelpOverlay', () => {
     expect(
       screen.getByText('Reach the 2048 tile by merging numbers.')
     ).toBeInTheDocument();
-    expect(screen.getByText(/up: ArrowUp/i)).toBeInTheDocument();
+    expect(screen.getByText(/up: ArrowUp \/ B12/i)).toBeInTheDocument();
   });
 });
