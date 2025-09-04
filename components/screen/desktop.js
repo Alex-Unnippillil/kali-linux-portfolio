@@ -45,6 +45,7 @@ export class Desktop extends Component {
             context_app: null,
             showNameBar: false,
             showShortcutSelector: false,
+            isMobile: false,
         }
     }
 
@@ -81,12 +82,15 @@ export class Desktop extends Component {
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
+        this.updateMobileMode();
+        window.addEventListener('resize', this.updateMobileMode);
     }
 
     componentWillUnmount() {
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
+        window.removeEventListener('resize', this.updateMobileMode);
     }
 
     checkForNewFolders = () => {
@@ -135,6 +139,12 @@ export class Desktop extends Component {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
         document.removeEventListener('keydown', this.handleContextKey);
+    }
+
+    updateMobileMode = () => {
+        const query = '(max-width: 360px) and (max-height: 640px)';
+        const isMobile = typeof window !== 'undefined' && window.matchMedia(query).matches;
+        this.setState(prev => ({ isMobile, allAppsView: isMobile ? true : prev.allAppsView }));
     }
 
     handleGlobalShortcut = (e) => {
@@ -358,9 +368,37 @@ export class Desktop extends Component {
 
     renderWindows = () => {
         let windowsJsx = [];
+        if (this.state.isMobile) {
+            const last = this.app_stack[this.app_stack.length - 1];
+            const app = apps.find(a => a.id === last);
+            if (app && this.state.closed_windows[app.id] === false) {
+                const pos = this.state.window_positions[app.id];
+                const props = {
+                    title: app.title,
+                    id: app.id,
+                    screen: app.screen,
+                    addFolder: this.addToDesktop,
+                    closed: this.closeApp,
+                    openApp: this.openApp,
+                    focus: this.focus,
+                    isFocused: this.state.focused_windows[app.id],
+                    hideSideBar: this.hideSideBar,
+                    hasMinimised: this.hasMinimised,
+                    minimized: this.state.minimized_windows[app.id],
+                    resizable: app.resizable,
+                    allowMaximize: app.allowMaximize,
+                    defaultWidth: app.defaultWidth,
+                    defaultHeight: app.defaultHeight,
+                    initialX: pos ? pos.x : undefined,
+                    initialY: pos ? pos.y : undefined,
+                    onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
+                };
+                windowsJsx.push(<Window key={app.id} {...props} />);
+            }
+            return windowsJsx;
+        }
         apps.forEach((app, index) => {
             if (this.state.closed_windows[app.id] === false) {
-
                 const pos = this.state.window_positions[app.id];
                 const props = {
                     title: app.title,
@@ -382,10 +420,7 @@ export class Desktop extends Component {
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                 }
-
-                windowsJsx.push(
-                    <Window key={app.id} {...props} />
-                )
+                windowsJsx.push(<Window key={app.id} {...props} />)
             }
         });
         return windowsJsx;
@@ -485,6 +520,14 @@ export class Desktop extends Component {
         // if the app is disabled
         if (this.state.disabled_apps[objId]) return;
 
+        let closed_windows = { ...this.state.closed_windows };
+        let favourite_apps = { ...this.state.favourite_apps };
+
+        if (this.state.isMobile) {
+            Object.keys(closed_windows).forEach(id => { closed_windows[id] = true; });
+            this.app_stack = [];
+        }
+
         if (this.state.minimized_windows[objId]) {
             // focus this app's window
             this.focus(objId);
@@ -496,18 +539,21 @@ export class Desktop extends Component {
             // tell childs that his app has been not minimised
             let minimized_windows = this.state.minimized_windows;
             minimized_windows[objId] = false;
-            this.setState({ minimized_windows: minimized_windows }, this.saveSession);
+            closed_windows[objId] = false;
+            this.setState({ minimized_windows, closed_windows }, this.saveSession);
             return;
         }
 
         //if app is already opened
         if (this.app_stack.includes(objId)) {
-            this.focus(objId);
-            this.saveSession();
+            this.app_stack = [objId];
+            closed_windows[objId] = false;
+            this.setState({ closed_windows }, () => {
+                this.focus(objId);
+                this.saveSession();
+            });
         }
         else {
-            let closed_windows = this.state.closed_windows;
-            let favourite_apps = this.state.favourite_apps;
             let frequentApps = [];
             try { frequentApps = JSON.parse(safeLocalStorage?.getItem('frequentApps') || '[]'); } catch (e) { frequentApps = []; }
             var currentApp = frequentApps.find(app => app.id === objId);
@@ -590,7 +636,10 @@ export class Desktop extends Component {
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
-        this.setState({ closed_windows, favourite_apps }, this.saveSession);
+        this.setState({ closed_windows, favourite_apps }, () => {
+            this.saveSession();
+            if (this.state.isMobile) this.setState({ allAppsView: true });
+        });
     }
 
     pinApp = (id) => {
@@ -753,22 +802,24 @@ export class Desktop extends Component {
                 </div>
 
                 {/* Background Image */}
-                <BackgroundImage />
+                {!this.state.isMobile && <BackgroundImage />}
 
                 {/* Ubuntu Side Menu Bar */}
-                <SideBar apps={apps}
-                    hide={this.state.hideSideBar}
-                    hideSideBar={this.hideSideBar}
-                    favourite_apps={this.state.favourite_apps}
-                    showAllApps={this.showAllApps}
-                    allAppsView={this.state.allAppsView}
-                    closed_windows={this.state.closed_windows}
-                    focused_windows={this.state.focused_windows}
-                    isMinimized={this.state.minimized_windows}
-                    openAppByAppId={this.openApp} />
+                {!this.state.isMobile && (
+                    <SideBar apps={apps}
+                        hide={this.state.hideSideBar}
+                        hideSideBar={this.hideSideBar}
+                        favourite_apps={this.state.favourite_apps}
+                        showAllApps={this.showAllApps}
+                        allAppsView={this.state.allAppsView}
+                        closed_windows={this.state.closed_windows}
+                        focused_windows={this.state.focused_windows}
+                        isMinimized={this.state.minimized_windows}
+                        openAppByAppId={this.openApp} />
+                )}
 
                 {/* Desktop Apps */}
-                {this.renderDesktopApps()}
+                {!this.state.isMobile && this.renderDesktopApps()}
 
                 {/* Context Menus */}
                 <DesktopMenu
@@ -795,7 +846,7 @@ export class Desktop extends Component {
                     )
                 }
 
-                { this.state.allAppsView ?
+                { (this.state.allAppsView || this.state.isMobile) ?
                     <AllApplications apps={apps}
                         games={games}
                         recentApps={this.app_stack}

@@ -541,3 +541,10 @@ textarea:focus-visible {
 .gallery-container > * {
     scroll-snap-align: start;
 }
+
+/* Mobile breakpoint for app drawer */
+@media (max-width: 360px) and (max-height: 640px) {
+    #desktop {
+        padding-top: 0;
+    }
+}
