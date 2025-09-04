@@ -33,6 +33,7 @@ export default function Calculator() {
     let formatBase: any;
     let getLastResult: any;
     let setBase: any;
+    let setPreciseMode: any;
 
     const load = async () => {
       if (typeof window !== 'undefined' && !(window as any).math) {
@@ -52,6 +53,7 @@ export default function Calculator() {
       formatBase = mod.formatBase;
       getLastResult = mod.getLastResult;
       setBase = mod.setBase;
+      setPreciseMode = mod.setPreciseMode;
 
       const display = document.getElementById('display') as HTMLInputElement;
       const buttons = document.querySelectorAll<HTMLButtonElement>('.btn');
@@ -60,6 +62,7 @@ export default function Calculator() {
       const formulasToggle = document.getElementById('toggle-formulas');
       const formulasEl = document.getElementById('formulas');
       const baseSelect = document.getElementById('base-select') as HTMLSelectElement | null;
+      const preciseToggle = document.getElementById('toggle-precise');
 
       const insertAtCursor = (text: string) => {
         const start = display.selectionStart ?? display.value.length;
@@ -171,6 +174,14 @@ export default function Calculator() {
 
       formulasToggle?.addEventListener('click', () => {
         formulasEl?.classList.toggle('hidden');
+      });
+
+      preciseToggle?.addEventListener('click', () => {
+        const on = preciseToggle.getAttribute('aria-pressed') === 'true';
+        const next = !on;
+        preciseToggle.setAttribute('aria-pressed', String(next));
+        preciseToggle.textContent = `Precise Mode: ${next ? 'On' : 'Off'}`;
+        setPreciseMode(next);
       });
 
       baseSelect?.addEventListener('change', () => {
