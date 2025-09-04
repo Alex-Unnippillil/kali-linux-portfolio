@@ -3,7 +3,6 @@ import usePersistentState from '../../hooks/usePersistentState';
 import useOPFS from '../../hooks/useOPFS.js';
 import GameLayout from './GameLayout';
 import useGameControls from './useGameControls';
-import { findHint, scoreMoves } from '../../apps/games/_2048/ai';
 import { vibrate } from './Games/common/haptics';
 import {
   random,
@@ -237,6 +236,7 @@ const Game2048 = () => {
   const [best, setBest] = useState(0);
   const [undosLeft, setUndosLeft] = useState(UNDO_LIMIT);
   const moveLock = useRef(false);
+  const workerRef = useRef(null);
   const { highContrast } = useSettings();
 
   useEffect(() => {
@@ -281,6 +281,17 @@ const Game2048 = () => {
   const today = typeof window !== 'undefined' ? new Date().toISOString().slice(0, 10) : '';
 
   useEffect(() => {
+    if (typeof Worker !== 'function') return;
+    workerRef.current = new Worker(new URL('./2048.worker.js', import.meta.url));
+    workerRef.current.onmessage = (e) => {
+      const { type, move, scores } = e.data;
+      if (type === 'hint') setHint(move);
+      else if (type === 'score') setMoveScores(scores);
+    };
+    return () => workerRef.current?.terminate();
+  }, []);
+
+  useEffect(() => {
     if (!bestReady) return;
     if (seed !== today) {
       resetRng(today);
@@ -303,11 +314,10 @@ const Game2048 = () => {
   }, [bestReady, seed, hardMode, bestMap]);
 
   useEffect(() => {
-    setHint(findHint(board));
-  }, [board]);
-
-  useEffect(() => {
-    if (coach) setMoveScores(scoreMoves(board));
+    if (!workerRef.current) return;
+    workerRef.current.postMessage({ type: 'hint', board });
+    if (coach) workerRef.current.postMessage({ type: 'score', board });
+    else setMoveScores(null);
   }, [board, coach]);
 
   useEffect(() => {
@@ -404,23 +414,22 @@ const Game2048 = () => {
   }, []);
 
   useEffect(() => {
-    if (!demo) return;
+    if (!demo || !hint) return;
     const dirMap = {
       ArrowLeft: { x: -1, y: 0 },
       ArrowRight: { x: 1, y: 0 },
       ArrowUp: { x: 0, y: -1 },
       ArrowDown: { x: 0, y: 1 },
     };
-    const id = setInterval(() => {
-      const best = findHint(board);
-      if (!best) {
+    const id = setTimeout(() => {
+      if (!hint) {
         setDemo(false);
         return;
       }
-      handleDirection(dirMap[best]);
+      handleDirection(dirMap[hint]);
     }, 400);
-    return () => clearInterval(id);
-  }, [demo, board, handleDirection]);
+    return () => clearTimeout(id);
+  }, [demo, hint, handleDirection]);
 
   useEffect(() => {
     const esc = (e) => {
