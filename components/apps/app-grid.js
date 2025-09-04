@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
 import AutoSizer from 'react-virtualized-auto-sizer';
-import { FixedSizeGrid as Grid } from 'react-window';
+import { Grid } from 'react-window';
 
 function fuzzyHighlight(text, query) {
   const q = query.toLowerCase();
@@ -62,7 +62,7 @@ export default function AppGrid({ openApp }) {
       setFocusedIndex(idx);
       const row = Math.floor(idx / colCount);
       const col = idx % colCount;
-      gridRef.current?.scrollToItem({ rowIndex: row, columnIndex: col, align: 'smart' });
+      gridRef.current?.scrollToCell({ rowIndex: row, columnIndex: col, rowAlign: 'smart', columnAlign: 'smart' });
       setTimeout(() => {
         const el = document.getElementById('app-' + filtered[idx].id);
         el?.focus();
@@ -104,7 +104,7 @@ export default function AppGrid({ openApp }) {
             const rowCount = Math.ceil(filtered.length / columnCount);
             return (
               <Grid
-                ref={gridRef}
+                gridRef={gridRef}
                 columnCount={columnCount}
                 columnWidth={width / columnCount}
                 height={height}
