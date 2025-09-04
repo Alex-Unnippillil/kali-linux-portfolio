@@ -29,6 +29,8 @@ const MetasploitApp = ({
   const [selectedSeverity, setSelectedSeverity] = useState(null);
   const [selectedTag, setSelectedTag] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState('');
+  const [selectedRank, setSelectedRank] = useState('');
+  const [selectedReliability, setSelectedReliability] = useState('');
   const [cveFilter, setCveFilter] = useState('');
   const [animationStyle, setAnimationStyle] = useState({ opacity: 1 });
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -58,6 +60,15 @@ const MetasploitApp = ({
   );
   const allPlatforms = useMemo(
     () => Array.from(new Set(modules.map((m) => m.platform).filter(Boolean))).sort(),
+    []
+  );
+  const allRanks = useMemo(
+    () => Array.from(new Set(modules.map((m) => m.rank).filter(Boolean))).sort(),
+    []
+  );
+  const allReliabilities = useMemo(
+    () =>
+      Array.from(new Set(modules.map((m) => m.reliability).filter(Boolean))).sort(),
     []
   );
 
@@ -94,6 +105,8 @@ const MetasploitApp = ({
     return modules.filter((m) => {
       if (selectedTag && !m.tags.includes(selectedTag)) return false;
       if (selectedPlatform && m.platform !== selectedPlatform) return false;
+      if (selectedRank && m.rank !== selectedRank) return false;
+      if (selectedReliability && m.reliability !== selectedReliability) return false;
       if (
         cveFilter &&
         !(m.cve || []).some((c) => c.toLowerCase().includes(cveFilter.toLowerCase()))
@@ -108,7 +121,15 @@ const MetasploitApp = ({
       const field = (m[searchField] || '').toString().toLowerCase();
       return field.includes(q);
     });
-  }, [query, searchField, selectedTag, selectedPlatform, cveFilter]);
+  }, [
+    query,
+    searchField,
+    selectedTag,
+    selectedPlatform,
+    selectedRank,
+    selectedReliability,
+    cveFilter,
+  ]);
 
   const modulesByType = useMemo(() => {
     const filteredMods = modules.filter(
@@ -116,6 +137,8 @@ const MetasploitApp = ({
         (!selectedSeverity || m.severity === selectedSeverity) &&
         (!selectedTag || m.tags.includes(selectedTag)) &&
         (!selectedPlatform || m.platform === selectedPlatform) &&
+        (!selectedRank || m.rank === selectedRank) &&
+        (!selectedReliability || m.reliability === selectedReliability) &&
         (!cveFilter ||
           (m.cve || []).some((c) =>
             c.toLowerCase().includes(cveFilter.toLowerCase())
@@ -125,7 +148,14 @@ const MetasploitApp = ({
       acc[type] = filteredMods.filter((m) => m.type === type);
       return acc;
     }, {});
-  }, [selectedSeverity, selectedTag, selectedPlatform, cveFilter]);
+  }, [
+    selectedSeverity,
+    selectedTag,
+    selectedPlatform,
+    selectedRank,
+    selectedReliability,
+    cveFilter,
+  ]);
 
   useEffect(() => {
     if (reduceMotion) return;
@@ -402,6 +432,34 @@ const MetasploitApp = ({
               placeholder="Filter by CVE"
               spellCheck={false}
             />
+          </div>
+          <div className="mb-2">
+            <select
+              className="bg-ub-grey text-white p-1 rounded"
+              value={selectedRank}
+              onChange={(e) => setSelectedRank(e.target.value)}
+            >
+              <option value="">All Ranks</option>
+              {allRanks.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="mb-2">
+            <select
+              className="bg-ub-grey text-white p-1 rounded"
+              value={selectedReliability}
+              onChange={(e) => setSelectedReliability(e.target.value)}
+            >
+              <option value="">All Reliabilities</option>
+              {allReliabilities.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="flex flex-wrap mb-2">
               {severities.map((s) => (
