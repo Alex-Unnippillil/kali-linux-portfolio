@@ -13899,6 +13899,7 @@ __metadata:
     typescript: "npm:^5.6"
     wait-on: "npm:^8.0.4"
     webpack: "npm:^5.92.0"
+    workbox-build: "patch:workbox-build@npm:7.1.1#./.yarn/patches/workbox-build-npm-7.1.1-a854f3faae.patch"
     ws: "npm:^8.18.0"
     zod: "npm:^3.23.8"
   languageName: unknown
@@ -14349,7 +14350,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"workbox-build@npm:7.1.1":
+"workbox-build@npm:7.1.1, workbox-build@npm:workbox-build@7.1.1":
   version: 7.1.1
   resolution: "workbox-build@npm:7.1.1"
   dependencies:
@@ -14394,9 +14395,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"workbox-build@patch:workbox-build@npm%3A7.1.1#~/.yarn/patches/workbox-build-npm-7.1.1-a854f3faae.patch":
+"workbox-build@patch:workbox-build@npm:7.1.1#./.yarn/patches/workbox-build-npm-7.1.1-a854f3faae.patch::locator=unnippillil%40workspace%3A.":
   version: 7.1.1
-  resolution: "workbox-build@patch:workbox-build@npm%3A7.1.1#~/.yarn/patches/workbox-build-npm-7.1.1-a854f3faae.patch::version=7.1.1&hash=5e1bdc"
+  resolution: "workbox-build@patch:workbox-build@npm%3A7.1.1#./.yarn/patches/workbox-build-npm-7.1.1-a854f3faae.patch::version=7.1.1&hash=5e1bdc&locator=unnippillil%40workspace%3A."
   dependencies:
     "@apideck/better-ajv-errors": "npm:^0.3.1"
     "@babel/core": "npm:^7.24.4"
