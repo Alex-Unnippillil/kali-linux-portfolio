@@ -4,6 +4,8 @@ import { useRouter } from 'next/router';
 import { useEffect, useMemo, useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import FilterChip from '../components/FilterChip';
+import TagManager, { TagMeta } from '../components/TagManager';
+import tagData from '../../../data/tag-metadata.json';
 
 const TagIcon = () => (
   <svg
@@ -118,13 +120,24 @@ export default function ProjectGalleryPage() {
   const [tags, setTags] = usePersistentState<string[]>('pg-tags', []);
   const [search, setSearch] = usePersistentState<string>('pg-search', '');
   const [demoOnly, setDemoOnly] = usePersistentState<boolean>('pg-demo', false);
+  const [tagMeta, setTagMeta] = useState<TagMeta[]>([]);
 
-  // load projects
+  // load projects and tag metadata
   useEffect(() => {
     fetch('/projects.json')
       .then((r) => r.json())
-      .then((data) => setProjects(data as Project[]))
-      .catch(() => setProjects([]));
+      .then((data) => {
+        setProjects(data as Project[]);
+        const unique = Array.from(new Set((data as Project[]).flatMap((p) => p.tags)));
+        const meta = unique.map(
+          (t) => (tagData as TagMeta[]).find((tm) => tm.name === t) || { name: t, color: '#6b7280' }
+        );
+        setTagMeta(meta);
+      })
+      .catch(() => {
+        setProjects([]);
+        setTagMeta([]);
+      });
   }, []);
 
   // initialize from query string
@@ -179,10 +192,6 @@ export default function ProjectGalleryPage() {
     () => Array.from(new Set(projects.map((p) => p.type))),
     [projects]
   );
-  const tagList = useMemo(
-    () => Array.from(new Set(projects.flatMap((p) => p.tags))),
-    [projects]
-  );
 
   const filtered = useMemo(
     () =>
@@ -205,6 +214,7 @@ export default function ProjectGalleryPage() {
       <div className="flex flex-wrap gap-2 items-center">
         <input
           type="text"
+          aria-label="Search projects"
           placeholder="Search..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -217,16 +227,22 @@ export default function ProjectGalleryPage() {
           icon={<PlayIcon />}
         />
       </div>
+      <TagManager tags={tagMeta} onChange={setTagMeta} />
       <div className="flex flex-wrap gap-2">
-        {tagList.map((t) => (
+        {tagMeta.map((t) => (
           <FilterChip
-            key={t}
-            label={t}
-            active={tags.includes(t)}
+            key={t.name}
+            label={t.name}
+            active={tags.includes(t.name)}
             onClick={() =>
-              setTags(tags.includes(t) ? tags.filter((tag) => tag !== t) : [...tags, t])
+              setTags(
+                tags.includes(t.name)
+                  ? tags.filter((tag) => tag !== t.name)
+                  : [...tags, t.name]
+              )
             }
             icon={<TagIcon />}
+            color={t.color}
           />
         ))}
       </div>
@@ -282,11 +298,18 @@ export default function ProjectGalleryPage() {
             </div>
             <div className="absolute inset-0 opacity-0 pointer-events-none group-hover:opacity-100 group-focus-within:opacity-100 group-hover:pointer-events-auto group-focus-within:pointer-events-auto transition-opacity bg-black/60 text-white flex flex-col">
               <div className="p-2 flex flex-wrap gap-1">
-                {p.tags.map((t) => (
-                  <span key={t} className="bg-white text-black rounded px-1 text-xs">
-                    {t}
-                  </span>
-                ))}
+                {p.tags.map((t) => {
+                  const meta = tagMeta.find((tm) => tm.name === t);
+                  return (
+                    <span
+                      key={t}
+                      className="rounded px-1 text-xs"
+                      style={{ backgroundColor: meta?.color || '#ffffff', color: '#000' }}
+                    >
+                      {t}
+                    </span>
+                  );
+                })}
               </div>
               <div className="mt-auto p-2 text-right">
                 <button className="bg-blue-600 text-white px-4 h-10 rounded">Launch</button>
