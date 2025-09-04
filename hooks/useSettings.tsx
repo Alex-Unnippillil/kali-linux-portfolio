@@ -18,6 +18,8 @@ import {
   setPongSpin as savePongSpin,
   getAllowNetwork as loadAllowNetwork,
   setAllowNetwork as saveAllowNetwork,
+  getLowSpec as loadLowSpec,
+  setLowSpec as saveLowSpec,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -50,6 +52,7 @@ interface SettingsContextValue {
   pongSpin: boolean;
   allowNetwork: boolean;
   theme: string;
+  lowSpec: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -60,6 +63,7 @@ interface SettingsContextValue {
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setLowSpec: (value: boolean) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -73,6 +77,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   theme: 'default',
+  lowSpec: defaults.lowSpec,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -83,6 +88,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setPongSpin: () => {},
   setAllowNetwork: () => {},
   setTheme: () => {},
+  setLowSpec: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -95,6 +101,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
+  const [lowSpec, setLowSpec] = useState<boolean>(defaults.lowSpec);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
@@ -109,6 +116,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setLargeHitAreas(await loadLargeHitAreas());
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
+      setLowSpec(await loadLowSpec());
       setTheme(loadTheme());
     })();
   }, []);
@@ -211,6 +219,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   }, [allowNetwork]);
 
+  useEffect(() => {
+    document.documentElement.classList.toggle('low-spec', lowSpec);
+    saveLowSpec(lowSpec);
+  }, [lowSpec]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -223,6 +236,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         largeHitAreas,
         pongSpin,
         allowNetwork,
+        lowSpec,
         theme,
         setAccent,
         setWallpaper,
@@ -234,6 +248,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setTheme,
+        setLowSpec,
       }}
     >
       {children}

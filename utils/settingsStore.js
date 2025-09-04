@@ -13,6 +13,7 @@ const DEFAULT_SETTINGS = {
   largeHitAreas: false,
   pongSpin: true,
   allowNetwork: false,
+  lowSpec: false,
 };
 
 export async function getAccent() {
@@ -107,6 +108,16 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getLowSpec() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.lowSpec;
+  return window.localStorage.getItem('low-spec') === 'true';
+}
+
+export async function setLowSpec(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('low-spec', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -120,6 +131,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('large-hit-areas');
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
+  window.localStorage.removeItem('low-spec');
 }
 
 export async function exportSettings() {
@@ -133,6 +145,7 @@ export async function exportSettings() {
     largeHitAreas,
     pongSpin,
     allowNetwork,
+    lowSpec,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -143,6 +156,7 @@ export async function exportSettings() {
     getLargeHitAreas(),
     getPongSpin(),
     getAllowNetwork(),
+    getLowSpec(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -155,6 +169,7 @@ export async function exportSettings() {
     largeHitAreas,
     pongSpin,
     allowNetwork,
+    lowSpec,
     theme,
   });
 }
@@ -178,6 +193,7 @@ export async function importSettings(json) {
     largeHitAreas,
     pongSpin,
     allowNetwork,
+    lowSpec,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -189,6 +205,7 @@ export async function importSettings(json) {
   if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas);
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
+  if (lowSpec !== undefined) await setLowSpec(lowSpec);
   if (theme !== undefined) setTheme(theme);
 }
 
