@@ -530,7 +530,12 @@ const TerminalPaneInner = (
     );
 
     return (
-      <div className="flex-1 w-full h-full relative" onClick={onFocus}>
+      <button
+        type="button"
+        aria-label="Focus terminal"
+        className="flex-1 w-full h-full relative text-left bg-transparent p-0"
+        onClick={onFocus}
+      >
         <div
           className="h-full w-full bg-ub-cool-grey"
           ref={containerRef}
@@ -544,7 +549,7 @@ const TerminalPaneInner = (
             (reverse-i-search)`{revSearch.query}`: {revSearch.match}
           </div>
         )}
-      </div>
+      </button>
     );
 };
 

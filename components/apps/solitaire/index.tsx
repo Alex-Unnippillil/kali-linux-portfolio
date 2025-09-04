@@ -761,9 +761,14 @@ const Solitaire = () => {
         </label>
       </div>
       <div className="flex space-x-4 mb-4">
-        <div className="w-16 h-24 min-w-[24px] min-h-[24px]" onClick={draw}>
+        <button
+          type="button"
+          className="w-16 h-24 min-w-[24px] min-h-[24px] bg-transparent p-0"
+          onClick={draw}
+          aria-label="Draw card"
+        >
           {game.stock.length ? renderFaceDown() : <div />}
-        </div>
+        </button>
         <div className="w-16 h-24 min-w-[24px] min-h-[24px]" onDragOver={(e) => e.preventDefault()}>
           {game.waste.length ? (
             <div
