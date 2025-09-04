@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import share, { canShare } from '../../utils/share';
+import CvePanel from './components/CvePanel';
 
 interface Script {
   name: string;
@@ -124,7 +125,7 @@ const NmapNSE: React.FC = () => {
       </header>
       <div className="flex flex-1">
         {/* script browser */}
-        <aside className="w-1/3 border-r border-gray-700 flex flex-col">
+        <aside className="w-1/4 border-r border-gray-700 flex flex-col">
           <div className="sticky top-0 p-2 bg-gray-900 z-10 flex flex-wrap items-center gap-2">
             {tags.map((tag) => (
               <button
@@ -209,6 +210,11 @@ const NmapNSE: React.FC = () => {
             <p>Select a script to view details.</p>
           )}
         </main>
+
+        {/* advisories */}
+        <aside className="w-1/4 border-l border-gray-700 p-4 overflow-y-auto">
+          <CvePanel script={selected?.name || null} />
+        </aside>
       </div>
     </div>
   );
