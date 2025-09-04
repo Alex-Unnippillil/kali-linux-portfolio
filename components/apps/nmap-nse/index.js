@@ -352,16 +352,51 @@ const NmapNSEApp = () => {
           {results.hosts.map((host) => (
             <li key={host.ip}>
               <div className="text-blue-400 font-mono">{host.ip}</div>
-              <ul className="ml-4">
+              <ul className="ml-4 space-y-1">
                 {host.ports.map((p) => (
-                  <li key={p.port} className="flex items-center gap-2">
-                    <span className="font-mono">{p.port}/tcp {p.service}</span>
-                    <span
-                      className={`px-1.5 py-0.5 rounded text-xs ${cvssColor(p.cvss)}`}
-                      aria-label={`CVSS score ${p.cvss}`}
-                    >
-                      CVSS {p.cvss}
-                    </span>
+                  <li key={p.port}>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono">
+                        {p.port}/tcp {p.service}
+                      </span>
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-xs ${cvssColor(p.cvss)}`}
+                        aria-label={`CVSS score ${p.cvss}`}
+                      >
+                        CVSS {p.cvss}
+                      </span>
+                    </div>
+                    {p.scripts?.length > 0 && (
+                      <ul className="ml-4 mt-1 space-y-1">
+                        {p.scripts.map((sc) => {
+                          const meta = scripts.find((s) => s.name === sc.name);
+                          return (
+                            <li key={sc.name}>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-mono">{sc.name}</span>
+                                {meta && (
+                                  <div className="flex flex-wrap gap-1">
+                                    {meta.tags.map((t) => (
+                                      <span
+                                        key={t}
+                                        className="px-1.5 py-0.5 rounded text-xs bg-gray-700"
+                                      >
+                                        {t}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              {sc.output && (
+                                <pre className="ml-4 text-green-400 whitespace-pre-wrap">
+                                  {sc.output}
+                                </pre>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
                   </li>
                 ))}
               </ul>
