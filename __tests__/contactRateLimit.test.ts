@@ -27,6 +27,7 @@ describe('contact api rate limiter', () => {
         name: 'Alex',
         email: 'alex@example.com',
         message: 'Hello',
+        purpose: 'hiring',
         honeypot: '',
         recaptchaToken: 'tok',
       },
