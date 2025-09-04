@@ -2,6 +2,13 @@ import 'fake-indexeddb/auto';
 import '@testing-library/jest-dom';
 import { TextEncoder, TextDecoder } from 'util';
 
+// Polyfill structuredClone for environments where it's missing
+// @ts-ignore
+if (typeof global.structuredClone !== 'function') {
+  // @ts-ignore
+  global.structuredClone = (val: unknown) => JSON.parse(JSON.stringify(val));
+}
+
 // Provide TextEncoder/TextDecoder for libraries that expect them in the test environment
 // @ts-ignore
 global.TextEncoder = TextEncoder;
