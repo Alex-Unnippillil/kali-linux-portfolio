@@ -547,7 +547,7 @@ const Chrome: React.FC = () => {
                 return (
                   <img
                     src={`https://www.google.com/s2/favicons?sz=64&domain_url=${origin}`}
-                    alt=""
+                    alt={`${t.title} favicon`}
                     className="w-8 h-8 mb-1"
                   />
                 );
@@ -733,7 +733,7 @@ const Chrome: React.FC = () => {
                 return src ? (
                   <img
                     src={src}
-                    alt=""
+                    alt={`${origin} favicon`}
                     className="w-4 h-4 mr-1 flex-shrink-0"
                   />
                 ) : null;
