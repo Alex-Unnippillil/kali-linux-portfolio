@@ -545,8 +545,9 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
+            title={title}
         >
-            <div className="flex justify-center text-sm font-bold">{title}</div>
+            <div className="w-full text-sm font-bold text-center truncate">{title}</div>
         </div>
     )
 }
