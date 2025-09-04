@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import Image from 'next/image'
 import SideBarApp from '../base/side_bar_app';
+import useRovingTabIndex from '../../hooks/useRovingTabIndex';
 
 let renderApps = (props) => {
     let sideBarAppsJsx = [];
@@ -25,10 +26,28 @@ export default function SideBar(props) {
         }, 2000);
     }
 
+    const navRef = useRef(null);
+    useRovingTabIndex(navRef, !props.hide, 'vertical');
+
+    const focusAppGrid = () => {
+        const firstApp = document.querySelector('#app-grid [tabindex="0"], #app-grid [data-app-id]');
+        if (firstApp && firstApp instanceof HTMLElement) firstApp.focus();
+    };
+
+    const handleKeyDown = (e) => {
+        if (!props.allAppsView) return;
+        if (e.key === 'ArrowRight' || e.key === 'Tab') {
+            e.preventDefault();
+            focusAppGrid();
+        }
+    };
+
     return (
         <>
             <nav
                 aria-label="Dock"
+                ref={navRef}
+                onKeyDown={handleKeyDown}
                 className={(props.hide ? " -translate-x-full " : "") +
                     " absolute transform duration-300 select-none z-40 left-0 top-0 h-full min-h-screen w-16 flex flex-col justify-start items-center pt-7 border-black border-opacity-60 bg-black bg-opacity-50"}
             >
@@ -51,7 +70,9 @@ export function AllApps(props) {
     const [title, setTitle] = useState(false);
 
     return (
-        <div
+        <button
+            type="button"
+            role="menuitem"
             className={`w-10 h-10 rounded m-1 hover:bg-white hover:bg-opacity-10 flex items-center justify-center transition-hover transition-active`}
             style={{ marginTop: 'auto' }}
             onMouseEnter={() => {
@@ -80,6 +101,6 @@ export function AllApps(props) {
                     Show Applications
                 </div>
             </div>
-        </div>
+        </button>
     );
 }
