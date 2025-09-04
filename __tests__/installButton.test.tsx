@@ -22,9 +22,12 @@ describe('InstallButton', () => {
       window.dispatchEvent(event);
     });
 
+    // The install prompt shouldn't trigger automatically.
+    expect(prompt).not.toHaveBeenCalled();
+
     const button = await screen.findByText(/install/i);
     await userEvent.click(button);
-    expect(prompt).toHaveBeenCalled();
+    expect(prompt).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       resolveChoice({ outcome: 'accepted', platform: 'test' });

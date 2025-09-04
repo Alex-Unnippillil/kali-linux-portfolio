@@ -8,26 +8,28 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const InstallButton: React.FC = () => {
-  const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  // Store the install prompt event so it can be triggered later by a user action.
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
     const handler = (e: BeforeInstallPromptEvent) => {
       e.preventDefault();
-      setPrompt(e);
+      setDeferredPrompt(e);
     };
     (window as any).addEventListener('beforeinstallprompt', handler);
     return () => (window as any).removeEventListener('beforeinstallprompt', handler);
   }, []);
 
   const handleInstall = async () => {
-    if (!prompt) return;
-    await prompt.prompt();
-    await prompt.userChoice;
+    if (!deferredPrompt) return;
+    await deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
     trackEvent('cta_click', { location: 'install_button' });
-    setPrompt(null);
+    // Reset the stored event to avoid prompting multiple times.
+    setDeferredPrompt(null);
   };
 
-  if (!prompt) return null;
+  if (!deferredPrompt) return null;
 
   return (
     <button
