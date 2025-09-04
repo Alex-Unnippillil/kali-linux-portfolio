@@ -206,7 +206,7 @@ export class Desktop extends Component {
     }
 
     hideAllContextMenu = () => {
-        let menus = this.state.context_menus;
+        const menus = { ...this.state.context_menus };
         Object.keys(menus).forEach(key => {
             menus[key] = false;
         });
