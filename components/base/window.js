@@ -615,14 +615,14 @@ export default Window
 export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
     return (
         <div
-            className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 py-1.5 px-3 text-white w-full select-none rounded-b-none"}
+            className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
         >
-            <div className="flex justify-center text-sm font-bold">{title}</div>
+            <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>
     )
 }
@@ -666,7 +666,7 @@ export function WindowEditButtons(props) {
     const { togglePin } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
     return (
-        <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center">
+        <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center h-11 min-w-[8.25rem]">
             {pipSupported && props.pip && (
                 <button
                     type="button"

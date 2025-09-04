@@ -134,10 +134,13 @@ export class SideBarApp extends Component {
                             " rounded border border-gray-400 border-opacity-40 shadow-lg overflow-hidden bg-black bg-opacity-50"
                         }
                     >
-                        <img
+                        <Image
+                            width={128}
+                            height={80}
                             src={this.state.thumbnail}
                             alt={`Preview of ${this.props.title}`}
-                            className="w-32 h-auto"
+                            className="w-32 h-20 object-cover"
+                            sizes="128px"
                         />
                     </div>
                 )}
