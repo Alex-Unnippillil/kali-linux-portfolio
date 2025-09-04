@@ -27,6 +27,10 @@ export default function Settings() {
     setFontScale,
     highContrast,
     setHighContrast,
+    pauseOnBlur,
+    setPauseOnBlur,
+    muteOnBlur,
+    setMuteOnBlur,
     theme,
     setTheme,
   } = useSettings();
@@ -238,6 +242,22 @@ export default function Settings() {
               checked={highContrast}
               onChange={setHighContrast}
               ariaLabel="High Contrast"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Pause on blur:</span>
+            <ToggleSwitch
+              checked={pauseOnBlur}
+              onChange={setPauseOnBlur}
+              ariaLabel="Pause on blur"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Mute on blur:</span>
+            <ToggleSwitch
+              checked={muteOnBlur}
+              onChange={setMuteOnBlur}
+              ariaLabel="Mute on blur"
             />
           </div>
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">

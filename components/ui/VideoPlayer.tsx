@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import PipPortalProvider, { usePipPortal } from "../common/PipPortal";
+import { useSettings } from "../../hooks/useSettings";
 
 interface VideoPlayerProps {
   src: string;
@@ -19,6 +20,11 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
   const [pipSupported, setPipSupported] = useState(false);
   const [docPipSupported, setDocPipSupported] = useState(false);
   const [isPip, setIsPip] = useState(false);
+  const { pauseOnBlur, muteOnBlur } = useSettings();
+  const [showPaused, setShowPaused] = useState(false);
+  const [showMuted, setShowMuted] = useState(false);
+  const pausedByBlur = useRef(false);
+  const mutedByBlur = useRef(false);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -127,9 +133,54 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
     await open(<DocPipControls initialVolume={initialVolume} />);
   };
 
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const handleBlur = () => {
+      if (pauseOnBlur && !video.paused) {
+        video.pause();
+        pausedByBlur.current = true;
+        setShowPaused(true);
+      }
+      if (muteOnBlur && !video.muted) {
+        video.muted = true;
+        mutedByBlur.current = true;
+        setShowMuted(true);
+      }
+    };
+    const handleFocus = () => {
+      if (pausedByBlur.current) {
+        video.play().catch(() => {});
+        pausedByBlur.current = false;
+        setShowPaused(false);
+      }
+      if (mutedByBlur.current) {
+        video.muted = false;
+        mutedByBlur.current = false;
+        setShowMuted(false);
+      }
+    };
+    window.addEventListener("blur", handleBlur);
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [pauseOnBlur, muteOnBlur]);
+
   return (
     <div className={`relative ${className}`.trim()}>
       <video ref={videoRef} src={src} poster={poster} controls className="w-full h-auto" />
+      {(showPaused || showMuted) && (
+        <div className="absolute top-2 left-2 flex flex-col space-y-1 text-xs text-white">
+          {showPaused && (
+            <span className="bg-black bg-opacity-50 px-2 py-1 rounded">Paused</span>
+          )}
+          {showMuted && (
+            <span className="bg-black bg-opacity-50 px-2 py-1 rounded">Muted</span>
+          )}
+        </div>
+      )}
       {pipSupported && (
         <button
           type="button"
