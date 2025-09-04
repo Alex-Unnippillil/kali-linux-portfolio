@@ -168,7 +168,25 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
 
 const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
   const info = GAME_INSTRUCTIONS[gameId];
-  const [mapping, setKey] = useInputMapping(gameId, info?.actions || {});
+  const defaultPads: Record<string, number> = {
+    up: 12,
+    down: 13,
+    left: 14,
+    right: 15,
+    action: 0,
+    pause: 9,
+    fire: 0,
+    hyperspace: 3,
+  };
+  const defaults: Record<string, { key: string; pad?: number }> = info?.actions
+    ? Object.fromEntries(
+        Object.entries(info.actions).map(([a, k]) => [
+          a,
+          { key: k as string, pad: defaultPads[a] },
+        ]),
+      )
+    : {};
+  const [mapping, setKey] = useInputMapping(gameId, defaults);
   const overlayRef = useRef<HTMLDivElement>(null);
   const prevFocus = useRef<HTMLElement | null>(null);
   const noop = () => null;
@@ -226,14 +244,17 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
             <p>
               <strong>Controls:</strong>{" "}
               {Object.entries(mapping)
-                .map(([a, k]) => `${a}: ${k}`)
+                .map(
+                  ([a, m]) =>
+                    `${a}: ${m.key || "-"}${m.pad !== undefined ? ` / B${m.pad}` : ""}`,
+                )
                 .join(", ")}
             </p>
             <div className="mt-2">
               <InputRemap
                 mapping={mapping}
-                setKey={setKey as (action: string, key: string) => string | null}
-                actions={info.actions}
+                setKey={setKey as any}
+                actions={defaults as any}
               />
             </div>
           </>

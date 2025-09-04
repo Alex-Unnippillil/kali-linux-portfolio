@@ -27,11 +27,11 @@ const EXHAUST_COLOR = '#ffa500';
 const SHIELD_DURATION = 600; // frames
 const RADAR_COLORS = { outline: '#0f0', ship: '#fff', asteroid: '#0f0', ufo: '#f00' };
 const DEFAULT_MAP = {
-  up: 'ArrowUp',
-  left: 'ArrowLeft',
-  right: 'ArrowRight',
-  fire: ' ',
-  hyperspace: 'h',
+  up: { key: 'ArrowUp', pad: 12 },
+  left: { key: 'ArrowLeft', pad: 14 },
+  right: { key: 'ArrowRight', pad: 15 },
+  fire: { key: ' ', pad: 0 },
+  hyperspace: { key: 'h', pad: 3 },
 };
 
 // Simple Quadtree for collision queries
@@ -336,10 +336,11 @@ const Asteroids = () => {
     function pollGamepad() {
       const pad = navigator.getGamepads ? navigator.getGamepads()[0] : null;
       if (pad) {
+        const map = getMapping('asteroids', DEFAULT_MAP);
         padState.turn = pad.axes[0] || 0;
         padState.thrust = pad.axes[1] < -0.2 ? -pad.axes[1] : 0;
-        padState.fire = pad.buttons[0].pressed;
-        padState.hyperspace = pad.buttons[1].pressed;
+        padState.fire = !!pad.buttons[map.fire.pad]?.pressed;
+        padState.hyperspace = !!pad.buttons[map.hyperspace.pad]?.pressed;
       }
     }
 
@@ -458,12 +459,12 @@ const Asteroids = () => {
       const { keys, joystick, fire, hyperspace: hyper } = controlsRef.current;
       const map = getMapping('asteroids', DEFAULT_MAP);
       const turn =
-        (keys[map.left] ? -1 : 0) +
-        (keys[map.right] ? 1 : 0) +
+        (keys[map.left.key] ? -1 : 0) +
+        (keys[map.right.key] ? 1 : 0) +
         padState.turn +
         (joystick.active ? joystick.x : 0);
       const thrust =
-        (keys[map.up] ? 1 : 0) +
+        (keys[map.up.key] ? 1 : 0) +
         padState.thrust +
         (joystick.active ? -joystick.y : 0);
       if (fire) {

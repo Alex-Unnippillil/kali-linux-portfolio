@@ -2,8 +2,19 @@ import { useState, useEffect } from 'react';
 
 const cache = {};
 
-export const getMapping = (gameId, defaults = {}) =>
-  cache[gameId] ? { ...defaults, ...cache[gameId] } : defaults;
+const normalize = (mapping = {}) => {
+  const res = {};
+  Object.entries(mapping).forEach(([action, val]) => {
+    if (typeof val === 'string') res[action] = { key: val };
+    else res[action] = { ...val };
+  });
+  return res;
+};
+
+export const getMapping = (gameId, defaults = {}) => {
+  const norm = normalize(defaults);
+  return cache[gameId] ? { ...norm, ...cache[gameId] } : norm;
+};
 
 async function readMapping(gameId, defaults) {
   try {
@@ -11,11 +22,11 @@ async function readMapping(gameId, defaults) {
     const dir = await root.getDirectoryHandle('controls', { create: true });
     const file = await dir.getFileHandle(`${gameId}.json`);
     const data = await file.getFile();
-    const json = JSON.parse(await data.text());
+    const json = normalize(JSON.parse(await data.text()));
     cache[gameId] = json;
-    return { ...defaults, ...json };
+    return { ...normalize(defaults), ...json };
   } catch {
-    return defaults;
+    return normalize(defaults);
   }
 }
 
@@ -34,36 +45,48 @@ async function writeMapping(gameId, mapping) {
 }
 
 export default function useInputMapping(gameId, defaults = {}) {
-  const [mapping, setMapping] = useState(defaults);
+  const normDefaults = normalize(defaults);
+  const [mapping, setMapping] = useState(normDefaults);
 
   useEffect(() => {
     let active = true;
     if (navigator.storage?.getDirectory) {
-      readMapping(gameId, defaults).then((m) => {
+      readMapping(gameId, normDefaults).then((m) => {
         if (active) setMapping(m);
       });
     }
     return () => {
       active = false;
     };
-  }, [gameId, defaults]);
+  }, [gameId, normDefaults]);
 
-  const setKey = (action, key) => {
+  const setBinding = (action, bind) => {
     let conflict = null;
     setMapping((prev) => {
       const next = { ...prev };
-      Object.keys(next).forEach((a) => {
-        if (a !== action && next[a] === key) {
-          conflict = a;
-          delete next[a];
-        }
-      });
-      next[action] = key;
+      if (bind.key !== undefined) {
+        Object.keys(next).forEach((a) => {
+          if (a !== action && next[a].key === bind.key) {
+            conflict = a;
+            next[a] = { ...next[a], key: undefined };
+          }
+        });
+        next[action] = { ...next[action], key: bind.key };
+      }
+      if (bind.pad !== undefined) {
+        Object.keys(next).forEach((a) => {
+          if (a !== action && next[a].pad === bind.pad) {
+            conflict = a;
+            next[a] = { ...next[a], pad: undefined };
+          }
+        });
+        next[action] = { ...next[action], pad: bind.pad };
+      }
       writeMapping(gameId, next);
       return next;
     });
     return conflict;
   };
 
-  return [mapping, setKey];
+  return [mapping, setBinding];
 }

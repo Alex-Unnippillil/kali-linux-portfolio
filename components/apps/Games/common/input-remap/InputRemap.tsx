@@ -1,9 +1,15 @@
 import React, { useState } from 'react';
+import { gamepad, ButtonEvent } from '../../../../../utils/gamepad';
+
+interface Binding {
+  key?: string;
+  pad?: number;
+}
 
 interface Props {
-  mapping: Record<string, string>;
-  setKey: (action: string, key: string) => string | null;
-  actions: Record<string, string>;
+  mapping: Record<string, Binding>;
+  setKey: (action: string, bind: Binding) => string | null;
+  actions: Record<string, Binding>;
 }
 
 const InputRemap: React.FC<Props> = ({ mapping, setKey, actions }) => {
@@ -13,15 +19,27 @@ const InputRemap: React.FC<Props> = ({ mapping, setKey, actions }) => {
   const capture = (action: string) => {
     setWaiting(action);
     setMessage(null);
-    const handler = (e: KeyboardEvent) => {
+    const keyHandler = (e: KeyboardEvent) => {
       e.preventDefault();
-      const conflict = setKey(action, e.key);
+      const conflict = setKey(action, { key: e.key });
       if (conflict) setMessage(`Replaced ${conflict}`);
       else setMessage(null);
       setWaiting(null);
-      window.removeEventListener('keydown', handler);
+      window.removeEventListener('keydown', keyHandler);
+      gamepad.off('button', padHandler);
     };
-    window.addEventListener('keydown', handler);
+    const padHandler = (e: ButtonEvent) => {
+      if (!e.pressed) return;
+      const conflict = setKey(action, { pad: e.index });
+      if (conflict) setMessage(`Replaced ${conflict}`);
+      else setMessage(null);
+      setWaiting(null);
+      window.removeEventListener('keydown', keyHandler);
+      gamepad.off('button', padHandler);
+    };
+    window.addEventListener('keydown', keyHandler);
+    gamepad.on('button', padHandler);
+    gamepad.start();
   };
 
   return (
@@ -34,7 +52,9 @@ const InputRemap: React.FC<Props> = ({ mapping, setKey, actions }) => {
             onClick={() => capture(action)}
             className="px-2 py-1 bg-gray-700 rounded focus:outline-none focus:ring"
           >
-            {waiting === action ? 'Press key...' : mapping[action]}
+            {waiting === action
+              ? 'Press key or button...'
+              : `${mapping[action]?.key ?? '-'}${mapping[action]?.pad !== undefined ? ` / B${mapping[action].pad}` : ''}`}
           </button>
         </div>
       ))}

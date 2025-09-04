@@ -11,12 +11,12 @@ import usePersistedState from '../../hooks/usePersistedState';
  * If a ref is provided, an object describing input state is returned.
  */
 const defaultMap = {
-  up: 'ArrowUp',
-  down: 'ArrowDown',
-  left: 'ArrowLeft',
-  right: 'ArrowRight',
-  fire: ' ',
-  hyperspace: 'h',
+  up: { key: 'ArrowUp', pad: 12 },
+  down: { key: 'ArrowDown', pad: 13 },
+  left: { key: 'ArrowLeft', pad: 14 },
+  right: { key: 'ArrowRight', pad: 15 },
+  fire: { key: ' ', pad: 0 },
+  hyperspace: { key: 'h', pad: 3 },
 };
 
 const useGameControls = (arg, gameId = 'default') => {
@@ -28,7 +28,9 @@ const useGameControls = (arg, gameId = 'default') => {
     hyperspace: false,
     joystick: { x: 0, y: 0, active: false, startX: 0, startY: 0 },
   });
-  const gamepad = useGamepad();
+  const map = getMapping(gameId, defaultMap);
+  const fireButton = map.fire?.pad;
+  const gamepad = useGamepad(0.25, fireButton !== undefined ? [fireButton] : undefined);
   const padTime = useRef(0);
 
   // keyboard controls for directional games
@@ -36,10 +38,10 @@ const useGameControls = (arg, gameId = 'default') => {
     if (!onDirection) return undefined;
     const handleKey = (e) => {
       const map = getMapping(gameId, defaultMap);
-      if (e.key === map.up) onDirection({ x: 0, y: -1 });
-      if (e.key === map.down) onDirection({ x: 0, y: 1 });
-      if (e.key === map.left) onDirection({ x: -1, y: 0 });
-      if (e.key === map.right) onDirection({ x: 1, y: 0 });
+      if (e.key === map.up.key) onDirection({ x: 0, y: -1 });
+      if (e.key === map.down.key) onDirection({ x: 0, y: 1 });
+      if (e.key === map.left.key) onDirection({ x: -1, y: 0 });
+      if (e.key === map.right.key) onDirection({ x: 1, y: 0 });
     };
     let timeout;
     const debounced = (e) => {
@@ -106,14 +108,14 @@ const useGameControls = (arg, gameId = 'default') => {
     if (onDirection) return undefined;
     const handleDown = (e) => {
       const map = getMapping(gameId, defaultMap);
-      if (e.key === map.fire) stateRef.current.fire = true;
-      else if (e.key === map.hyperspace) stateRef.current.hyperspace = true;
+      if (e.key === map.fire.key) stateRef.current.fire = true;
+      else if (e.key === map.hyperspace.key) stateRef.current.hyperspace = true;
       else stateRef.current.keys[e.key] = true;
     };
     const handleUp = (e) => {
       const map = getMapping(gameId, defaultMap);
-      if (e.key === map.fire) stateRef.current.fire = false;
-      else if (e.key === map.hyperspace) stateRef.current.hyperspace = false;
+      if (e.key === map.fire.key) stateRef.current.fire = false;
+      else if (e.key === map.hyperspace.key) stateRef.current.hyperspace = false;
       else stateRef.current.keys[e.key] = false;
     };
     window.addEventListener('keydown', handleDown);
@@ -177,8 +179,12 @@ const useGameControls = (arg, gameId = 'default') => {
     if (onDirection) return;
     stateRef.current.joystick.x = gamepad.moveX;
     stateRef.current.joystick.y = gamepad.moveY;
-    stateRef.current.fire = gamepad.fire || stateRef.current.fire;
-  }, [gamepad, onDirection]);
+    if (map.fire?.pad !== undefined)
+      stateRef.current.fire = gamepad.buttons[map.fire.pad] || stateRef.current.fire;
+    if (map.hyperspace?.pad !== undefined)
+      stateRef.current.hyperspace =
+        gamepad.buttons[map.hyperspace.pad] || stateRef.current.hyperspace;
+  }, [gamepad, onDirection, map]);
 
   return onDirection ? null : stateRef.current;
 };
