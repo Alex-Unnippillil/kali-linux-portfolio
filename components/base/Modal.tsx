@@ -25,11 +25,6 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children }) => {
     const triggerRef = useRef<HTMLElement | null>(null);
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-        if (e.key === 'Escape') {
-            e.preventDefault();
-            onClose();
-            return;
-        }
         if (e.key !== 'Tab') return;
         const elements = modalRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS);
         if (!elements || elements.length === 0) return;
@@ -43,7 +38,19 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children }) => {
             e.preventDefault();
             last.focus();
         }
-    }, [onClose]);
+    }, []);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                onClose();
+            }
+        };
+        document.addEventListener('keydown', handleKey);
+        return () => document.removeEventListener('keydown', handleKey);
+    }, [isOpen, onClose]);
 
     useEffect(() => {
         if (isOpen) {
