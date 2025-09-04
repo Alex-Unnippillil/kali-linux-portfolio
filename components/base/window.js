@@ -183,7 +183,7 @@ export class Window extends Component {
         this.setState({ cursorType: "cursor-default", grabbed: false })
     }
 
-    handleVerticleResize = () => {
+    handleVerticalResize = () => {
         if (this.props.resizable === false) return;
         this.setState({ height: this.state.height + 0.1 }, this.resizeBoundries);
     }
@@ -193,7 +193,7 @@ export class Window extends Component {
         this.setState({ width: this.state.width + 0.1 }, this.resizeBoundries);
     }
 
-    setWinowsPosition = () => {
+    setWindowsPosition = () => {
         var r = document.querySelector("#" + this.id);
         if (!r) return;
         var rect = r.getBoundingClientRect();
@@ -284,7 +284,7 @@ export class Window extends Component {
         this.changeCursorToDefault();
         const snapPos = this.state.snapPosition;
         if (snapPos) {
-            this.setWinowsPosition();
+            this.setWindowsPosition();
             const { width, height } = this.state;
             let newWidth = width;
             let newHeight = height;
@@ -329,7 +329,7 @@ export class Window extends Component {
         if (this.state.maximized) {
             posx = -510;
         }
-        this.setWinowsPosition();
+        this.setWindowsPosition();
         // get corrosponding sidebar app's position
         var r = document.querySelector("#sidebar-" + this.id);
         var sidebBarApp = r.getBoundingClientRect();
@@ -403,7 +403,7 @@ export class Window extends Component {
         else {
             this.focusWindow();
             var r = document.querySelector("#" + this.id);
-            this.setWinowsPosition();
+            this.setWindowsPosition();
             // translate window to maximize position
             r.style.transform = `translate(-1pt,-2pt)`;
             this.setState({ maximized: true, height: 96.3, width: 100.2 });
@@ -412,7 +412,7 @@ export class Window extends Component {
     }
 
     closeWindow = () => {
-        this.setWinowsPosition();
+        this.setWindowsPosition();
         this.setState({ closed: true }, () => {
             this.deactivateOverlay();
             this.props.hideSideBar(this.id, false);
@@ -451,7 +451,7 @@ export class Window extends Component {
                     node.style.transform = `translate(${x}px, ${y}px)`;
                     this.checkOverlap();
                     this.checkSnapPreview();
-                    this.setWinowsPosition();
+                    this.setWindowsPosition();
                 }
             }
         }
@@ -505,7 +505,7 @@ export class Window extends Component {
                         onKeyDown={this.handleKeyDown}
                     >
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticalResize} />}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
