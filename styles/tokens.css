@@ -40,6 +40,11 @@
   --space-5: 1.5rem;
   --space-6: 2rem;
 
+  /* Component sizing */
+  --panel-height: 40px;
+  --control-padding-y: 0.25rem;
+  --control-padding-x: 0.5rem;
+
   /* Radius */
   --radius-sm: 2px;
   --radius-md: 4px;

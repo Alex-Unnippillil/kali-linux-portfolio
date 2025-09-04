@@ -16,7 +16,7 @@ export default function Taskbar(props) {
     };
 
     return (
-        <div className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center z-40" role="toolbar">
+        <div className="absolute bottom-0 left-0 w-full bg-black bg-opacity-50 flex items-center z-40" style={{ height: 'var(--panel-height)' }} role="toolbar">
             {runningApps.map(app => (
                 <button
                     key={app.id}
@@ -26,7 +26,8 @@ export default function Taskbar(props) {
                     data-app-id={app.id}
                     onClick={() => handleClick(app)}
                     className={(props.focused_windows[app.id] && !props.minimized_windows[app.id] ? ' bg-white bg-opacity-20 ' : ' ') +
-                        'relative flex items-center mx-1 px-2 py-1 rounded hover:bg-white hover:bg-opacity-10'}
+                        'relative flex items-center mx-1 rounded hover:bg-white hover:bg-opacity-10'}
+                    style={{ padding: 'var(--control-padding-y) var(--control-padding-x)' }}
                 >
                     <Image
                         width={24}

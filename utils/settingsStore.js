@@ -6,7 +6,7 @@ import { getTheme, setTheme } from './theme';
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
   wallpaper: 'wall-2',
-  density: 'regular',
+  density: 'comfortable',
   reducedMotion: false,
   fontScale: 1,
   highContrast: false,
