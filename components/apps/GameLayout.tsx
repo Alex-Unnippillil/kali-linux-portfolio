@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import HelpOverlay from './HelpOverlay';
+import HelpOverlay, { GAME_INSTRUCTIONS } from './HelpOverlay';
 import PerfOverlay from './Games/common/perf';
+import InputRemap from './Games/common/input-remap/InputRemap';
+import useInputMapping from './Games/common/input-remap/useInputMapping';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 interface GameLayoutProps {
@@ -25,11 +27,15 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   editor,
 }) => {
   const [showHelp, setShowHelp] = useState(false);
+  const [showBindings, setShowBindings] = useState(false);
   const [paused, setPaused] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
+  const info = GAME_INSTRUCTIONS[gameId];
+  const [mapping, setKey] = useInputMapping(gameId, info?.actions || {});
 
   const close = useCallback(() => setShowHelp(false), []);
   const toggle = useCallback(() => setShowHelp((h) => !h), []);
+  const toggleBindings = useCallback(() => setShowBindings((b) => !b), []);
 
   const fallbackCopy = useCallback((text: string) => {
     if (navigator.clipboard) {
@@ -127,6 +133,28 @@ const GameLayout: React.FC<GameLayoutProps> = ({
 
   return (
     <div className="relative h-full w-full" data-reduced-motion={prefersReducedMotion}>
+      {showBindings && info?.actions && (
+        <div
+          className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="p-4 bg-gray-800 rounded shadow-lg">
+            <InputRemap
+              mapping={mapping}
+              setKey={setKey as (action: string, key: string) => string | null}
+              actions={info.actions}
+            />
+            <button
+              type="button"
+              onClick={toggleBindings}
+              className="mt-4 px-3 py-1 bg-gray-700 rounded focus:outline-none focus:ring"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
       {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
       {paused && (
         <div
@@ -159,6 +187,15 @@ const GameLayout: React.FC<GameLayoutProps> = ({
             className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
           >
             Share Score
+          </button>
+        )}
+        {info?.actions && (
+          <button
+            type="button"
+            onClick={toggleBindings}
+            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          >
+            Controls
           </button>
         )}
         <button

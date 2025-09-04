@@ -1,7 +1,7 @@
 import type { TwinStickState } from '../utils/gamepad';
 
 let gamepad: any;
-let pollTwinStick: (deadzone?: number) => TwinStickState;
+let pollTwinStick: (deadzone?: number, vibrate?: boolean) => TwinStickState;
 let rafCallback: FrameRequestCallback | null;
 
 beforeEach(() => {
@@ -65,5 +65,16 @@ describe('pollTwinStick', () => {
 
     const state = pollTwinStick();
     expect(state).toEqual({ moveX: 0.3, moveY: 0, aimX: 0, aimY: 0.6, fire: true });
+  });
+
+  test('triggers vibration when enabled and firing', () => {
+    const pad: any = {
+      axes: [0, 0, 0, 0],
+      buttons: [{ pressed: true }],
+      vibrationActuator: { playEffect: jest.fn() },
+    };
+    (navigator as any).getGamepads = () => [pad];
+    pollTwinStick(0.25, true);
+    expect(pad.vibrationActuator.playEffect).toHaveBeenCalled();
   });
 });
