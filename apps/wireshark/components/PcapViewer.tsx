@@ -1,32 +1,33 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import { protocolName } from '../../../components/apps/wireshark/utils';
-import FilterHelper from './FilterHelper';
-import presets from '../filters/presets.json';
-import LayerView from './LayerView';
-
+import React, { useEffect, useState } from "react";
+import { protocolName } from "../../../components/apps/wireshark/utils";
+import FilterHelper from "./FilterHelper";
+import presets from "../filters/presets.json";
+import LayerView from "./LayerView";
 
 interface PcapViewerProps {
   showLegend?: boolean;
 }
 
 const protocolColors: Record<string, string> = {
-  TCP: 'bg-blue-900',
-  UDP: 'bg-green-900',
-  ICMP: 'bg-yellow-800',
+  TCP: "bg-blue-900",
+  UDP: "bg-green-900",
+  ICMP: "bg-yellow-800",
 };
 
 const samples = [
-  { label: 'HTTP', path: '/samples/wireshark/http.pcap' },
-  { label: 'DNS', path: '/samples/wireshark/dns.pcap' },
+  { label: "HTTP", path: "/samples/wireshark/http.pcap" },
+  { label: "DNS", path: "/samples/wireshark/dns.pcap" },
 ];
 
 // Convert bytes to hex dump string
 const toHex = (bytes: Uint8Array) =>
-  Array.from(bytes, (b, i) =>
-    `${b.toString(16).padStart(2, '0')}${(i + 1) % 16 === 0 ? '\n' : ' '}`
-  ).join('');
+  Array.from(
+    bytes,
+    (b, i) =>
+      `${b.toString(16).padStart(2, "0")}${(i + 1) % 16 === 0 ? "\n" : " "}`,
+  ).join("");
 
 interface Packet {
   timestamp: string;
@@ -46,13 +47,13 @@ interface Layer {
 
 // Basic Ethernet + IPv4 parser
 const parseEthernetIpv4 = (data: Uint8Array) => {
-  if (data.length < 34) return { src: '', dest: '', protocol: 0, info: '' };
+  if (data.length < 34) return { src: "", dest: "", protocol: 0, info: "" };
   const etherType = (data[12] << 8) | data[13];
-  if (etherType !== 0x0800) return { src: '', dest: '', protocol: 0, info: '' };
+  if (etherType !== 0x0800) return { src: "", dest: "", protocol: 0, info: "" };
   const protocol = data[23];
-  const src = Array.from(data.slice(26, 30)).join('.');
-  const dest = Array.from(data.slice(30, 34)).join('.');
-  let info = '';
+  const src = Array.from(data.slice(26, 30)).join(".");
+  const dest = Array.from(data.slice(30, 34)).join(".");
+  let info = "";
   if (protocol === 6 && data.length >= 54) {
     const sport = (data[34] << 8) | data[35];
     const dport = (data[36] << 8) | data[37];
@@ -75,7 +76,7 @@ const parsePcap = (buf: ArrayBuffer): Packet[] => {
   let little: boolean;
   if (magic === 0xa1b2c3d4) little = false;
   else if (magic === 0xd4c3b2a1) little = true;
-  else throw new Error('Unsupported pcap format');
+  else throw new Error("Unsupported pcap format");
   let offset = 24;
   const packets: Packet[] = [];
   while (offset + 16 <= view.byteLength) {
@@ -88,7 +89,7 @@ const parsePcap = (buf: ArrayBuffer): Packet[] => {
     const data = new Uint8Array(buf.slice(offset, offset + capLen));
     const meta: any = parseEthernetIpv4(data);
     packets.push({
-      timestamp: `${tsSec}.${tsUsec.toString().padStart(6, '0')}`,
+      timestamp: `${tsSec}.${tsUsec.toString().padStart(6, "0")}`,
       src: meta.src,
       dest: meta.dest,
       protocol: meta.protocol,
@@ -167,8 +168,8 @@ const parseWithWasm = async (buf: ArrayBuffer): Promise<Packet[]> => {
   try {
     // Attempt to load wasm parser; fall back to JS parsing
     await WebAssembly.instantiateStreaming(
-      fetch('https://unpkg.com/pcap.js@latest/pcap.wasm'),
-      {}
+      fetch("https://unpkg.com/pcap.js@latest/pcap.wasm"),
+      {},
     );
   } catch {
     // Ignore errors and use JS parser
@@ -182,14 +183,14 @@ const decodePacketLayers = (pkt: Packet): Layer[] => {
   const layers: Layer[] = [];
   if (data.length >= 14) {
     const destMac = Array.from(data.slice(0, 6))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join(':');
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join(":");
     const srcMac = Array.from(data.slice(6, 12))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join(':');
-    const type = ((data[12] << 8) | data[13]).toString(16).padStart(4, '0');
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join(":");
+    const type = ((data[12] << 8) | data[13]).toString(16).padStart(4, "0");
     layers.push({
-      name: 'Ethernet',
+      name: "Ethernet",
       fields: {
         Destination: destMac,
         Source: srcMac,
@@ -198,11 +199,11 @@ const decodePacketLayers = (pkt: Packet): Layer[] => {
     });
   }
   if (data.length >= 34) {
-    const srcIp = Array.from(data.slice(26, 30)).join('.');
-    const destIp = Array.from(data.slice(30, 34)).join('.');
+    const srcIp = Array.from(data.slice(26, 30)).join(".");
+    const destIp = Array.from(data.slice(30, 34)).join(".");
     const proto = data[23];
     layers.push({
-      name: 'IPv4',
+      name: "IPv4",
       fields: {
         Source: srcIp,
         Destination: destIp,
@@ -213,20 +214,20 @@ const decodePacketLayers = (pkt: Packet): Layer[] => {
       const sport = (data[34] << 8) | data[35];
       const dport = (data[36] << 8) | data[37];
       layers.push({
-        name: 'TCP',
+        name: "TCP",
         fields: {
-          'Source Port': sport.toString(),
-          'Destination Port': dport.toString(),
+          "Source Port": sport.toString(),
+          "Destination Port": dport.toString(),
         },
       });
     } else if (proto === 17 && data.length >= 42) {
       const sport = (data[34] << 8) | data[35];
       const dport = (data[36] << 8) | data[37];
       layers.push({
-        name: 'UDP',
+        name: "UDP",
         fields: {
-          'Source Port': sport.toString(),
-          'Destination Port': dport.toString(),
+          "Source Port": sport.toString(),
+          "Destination Port": dport.toString(),
         },
       });
     }
@@ -236,41 +237,56 @@ const decodePacketLayers = (pkt: Packet): Layer[] => {
 
 const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
   const [packets, setPackets] = useState<Packet[]>([]);
-  const [filter, setFilter] = useState('');
+  const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<number | null>(null);
   const [columns, setColumns] = useState<string[]>([
-    'Time',
-    'Source',
-    'Destination',
-    'Protocol',
-    'Info',
+    "Time",
+    "Source",
+    "Destination",
+    "Protocol",
+    "Info",
   ]);
   const [dragCol, setDragCol] = useState<string | null>(null);
+  const TIME_FORMAT_KEY = "pcap_time_format";
+  type TimeFormat = "iso" | "local" | "relative" | "delta";
+  const [timeFormat, setTimeFormat] = useState<TimeFormat>("relative");
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'c') {
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "c") {
         navigator.clipboard.writeText(filter);
       }
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
   }, [filter]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    const f = params.get('filter');
+    const f = params.get("filter");
     if (f) setFilter(f);
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
+    const saved = localStorage.getItem(TIME_FORMAT_KEY) as TimeFormat | null;
+    if (saved) setTimeFormat(saved);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
-    if (filter) url.searchParams.set('filter', filter);
-    else url.searchParams.delete('filter');
-    window.history.replaceState(null, '', url.toString());
+    if (filter) url.searchParams.set("filter", filter);
+    else url.searchParams.delete("filter");
+    window.history.replaceState(null, "", url.toString());
   }, [filter]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(TIME_FORMAT_KEY, timeFormat);
+  }, [timeFormat]);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -296,9 +312,30 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
       p.src.toLowerCase().includes(term) ||
       p.dest.toLowerCase().includes(term) ||
       protocolName(p.protocol).toLowerCase().includes(term) ||
-      (p.info || '').toLowerCase().includes(term)
+      (p.info || "").toLowerCase().includes(term)
     );
   });
+
+  const formatTime = (pkts: Packet[], pkt: Packet, index: number) => {
+    const ts = parseFloat(pkt.timestamp);
+    switch (timeFormat) {
+      case "iso":
+        return new Date(ts * 1000).toISOString();
+      case "local":
+        return new Date(ts * 1000).toLocaleString();
+      case "relative": {
+        const base = parseFloat(pkts[0]?.timestamp || pkt.timestamp);
+        return (ts - base).toFixed(6);
+      }
+      case "delta": {
+        if (index === 0) return "0.000000";
+        const prev = parseFloat(pkts[index - 1].timestamp);
+        return (ts - prev).toFixed(6);
+      }
+      default:
+        return pkt.timestamp;
+    }
+  };
 
   return (
     <div className="p-4 text-white bg-ub-cool-grey h-full w-full flex flex-col space-y-2">
@@ -308,11 +345,12 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
           accept=".pcap,.pcapng"
           onChange={handleFile}
           className="text-sm"
+          aria-label="Open pcap file"
         />
         <select
           onChange={(e) => {
             if (e.target.value) handleSample(e.target.value);
-            e.target.value = '';
+            e.target.value = "";
           }}
           className="text-sm bg-gray-700 text-white rounded"
         >
@@ -331,6 +369,32 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
         >
           Sample sources
         </a>
+        <div className="relative">
+          <button
+            onClick={() => setShowSettings((s) => !s)}
+            className="px-2 py-1 bg-gray-700 rounded text-xs"
+            type="button"
+          >
+            Settings
+          </button>
+          {showSettings && (
+            <div className="absolute right-0 mt-1 bg-gray-800 p-2 rounded space-y-1 text-xs">
+              <label className="block">
+                Time
+                <select
+                  className="ml-2 bg-gray-700"
+                  value={timeFormat}
+                  onChange={(e) => setTimeFormat(e.target.value as TimeFormat)}
+                >
+                  <option value="iso">ISO</option>
+                  <option value="local">Local</option>
+                  <option value="relative">Relative</option>
+                  <option value="delta">Delta</option>
+                </select>
+              </label>
+            </div>
+          )}
+        </div>
       </div>
       {packets.length > 0 && (
         <>
@@ -351,9 +415,10 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
                 key={expression}
                 onClick={() => setFilter(expression)}
                 className={`w-4 h-4 rounded ${
-                  protocolColors[label.toUpperCase()] || 'bg-gray-500'
+                  protocolColors[label.toUpperCase()] || "bg-gray-500"
                 }`}
                 title={label}
+                aria-label={label}
                 type="button"
               />
             ))}
@@ -402,29 +467,29 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
                       key={i}
                       className={`cursor-pointer hover:bg-gray-700 ${
                         selected === i
-                          ? 'outline outline-2 outline-white'
+                          ? "outline outline-2 outline-white"
                           : protocolColors[
                               protocolName(pkt.protocol).toString()
-                            ] || ''
+                            ] || ""
                       }`}
                       onClick={() => setSelected(i)}
                     >
                       {columns.map((col) => {
-                        let val = '';
+                        let val = "";
                         switch (col) {
-                          case 'Time':
-                            val = pkt.timestamp;
+                          case "Time":
+                            val = formatTime(filtered, pkt, i);
                             break;
-                          case 'Source':
+                          case "Source":
                             val = pkt.src;
                             break;
-                          case 'Destination':
+                          case "Destination":
                             val = pkt.dest;
                             break;
-                          case 'Protocol':
+                          case "Protocol":
                             val = protocolName(pkt.protocol);
                             break;
-                          case 'Info':
+                          case "Info":
                             val = pkt.info;
                             break;
                         }
@@ -443,12 +508,18 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
               {selected !== null ? (
                 <>
                   {decodePacketLayers(filtered[selected]).map((layer, i) => (
-                    <LayerView key={i} name={layer.name} fields={layer.fields} />
+                    <LayerView
+                      key={i}
+                      name={layer.name}
+                      fields={layer.fields}
+                    />
                   ))}
-                  <pre className="text-green-400">{toHex(filtered[selected].data)}</pre>
+                  <pre className="text-green-400">
+                    {toHex(filtered[selected].data)}
+                  </pre>
                 </>
               ) : (
-                'Select a packet'
+                "Select a packet"
               )}
             </div>
           </div>
@@ -459,4 +530,3 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
 };
 
 export default PcapViewer;
-
