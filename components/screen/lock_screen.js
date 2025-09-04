@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Clock from '../util-components/clock';
 import { useSettings } from '../../hooks/useSettings';
 
@@ -6,10 +6,15 @@ export default function LockScreen(props) {
 
     const { wallpaper } = useSettings();
 
-    if (props.isLocked) {
+    useEffect(() => {
+        if (!props.isLocked) return;
         window.addEventListener('click', props.unLockScreen);
         window.addEventListener('keypress', props.unLockScreen);
-    };
+        return () => {
+            window.removeEventListener('click', props.unLockScreen);
+            window.removeEventListener('keypress', props.unLockScreen);
+        };
+    }, [props.isLocked, props.unLockScreen]);
 
     return (
         <div
