@@ -164,11 +164,14 @@ export const minimax = (
   return { column, score: value };
 };
 
+export type Difficulty = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
 export const getBestMove = (
   board: Board,
-  depth: number,
+  depth: Difficulty,
   player: 'red' | 'yellow',
 ): { column: number; scores: (number | null)[] } => {
+  const searchDepth = Math.min(Math.max(depth, 1), 7);
   const valid = getValidLocations(board);
   const scores: (number | null)[] = Array(COLS).fill(null);
   let bestColumn = valid[0] ?? 0;
@@ -177,7 +180,13 @@ export const getBestMove = (
     const row = getValidRow(board, col);
     const newBoard = board.map((r) => [...r]);
     newBoard[row][col] = player;
-    const score = minimax(newBoard, depth - 1, -Infinity, Infinity, player === 'yellow').score;
+    const score = minimax(
+      newBoard,
+      searchDepth - 1,
+      -Infinity,
+      Infinity,
+      player === 'yellow',
+    ).score;
     scores[col] = score;
     if (player === 'red') {
       if (score > bestScore) {
