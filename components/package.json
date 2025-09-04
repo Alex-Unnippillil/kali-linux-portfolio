@@ -1,0 +1,9 @@
+{
+  "name": "components",
+  "private": true,
+  "scripts": {
+    "lint": "eslint --max-warnings=0 .",
+    "test": "echo \"No tests for components\"",
+    "build": "echo \"No build step for components\""
+  }
+}
