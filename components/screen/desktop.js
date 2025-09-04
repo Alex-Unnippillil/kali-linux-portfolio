@@ -16,6 +16,8 @@ import ShortcutSelector from '../screen/shortcut-selector'
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
+import Taskbar from './taskbar';
+import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
@@ -41,6 +43,7 @@ export class Desktop extends Component {
                 desktop: false,
                 default: false,
                 app: false,
+                taskbar: false,
             },
             context_app: null,
             showNameBar: false,
@@ -165,6 +168,13 @@ export class Desktop extends Component {
                 });
                 this.setState({ context_app: appId }, () => this.showContextMenu(e, "app"));
                 break;
+            case "taskbar":
+                ReactGA.event({
+                    category: `Context Menu`,
+                    action: `Opened Taskbar Context Menu`
+                });
+                this.setState({ context_app: appId }, () => this.showContextMenu(e, "taskbar"));
+                break;
             default:
                 ReactGA.event({
                     category: `Context Menu`,
@@ -191,6 +201,10 @@ export class Desktop extends Component {
             case "app":
                 ReactGA.event({ category: `Context Menu`, action: `Opened App Context Menu` });
                 this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "app"));
+                break;
+            case "taskbar":
+                ReactGA.event({ category: `Context Menu`, action: `Opened Taskbar Context Menu` });
+                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "taskbar"));
                 break;
             default:
                 ReactGA.event({ category: `Context Menu`, action: `Opened Default Context Menu` });
@@ -776,6 +790,16 @@ export class Desktop extends Component {
                     isMinimized={this.state.minimized_windows}
                     openAppByAppId={this.openApp} />
 
+                {/* Taskbar */}
+                <Taskbar
+                    apps={apps}
+                    closed_windows={this.state.closed_windows}
+                    minimized_windows={this.state.minimized_windows}
+                    focused_windows={this.state.focused_windows}
+                    openApp={this.openApp}
+                    minimize={this.hasMinimised}
+                />
+
                 {/* Desktop Apps */}
                 {this.renderDesktopApps()}
 
@@ -794,6 +818,25 @@ export class Desktop extends Component {
                     pinApp={() => this.pinApp(this.state.context_app)}
                     unpinApp={() => this.unpinApp(this.state.context_app)}
                     onClose={this.hideAllContextMenu}
+                />
+                <TaskbarMenu
+                    active={this.state.context_menus.taskbar}
+                    minimized={this.state.context_app ? this.state.minimized_windows[this.state.context_app] : false}
+                    onMinimize={() => {
+                        const id = this.state.context_app;
+                        if (!id) return;
+                        if (this.state.minimized_windows[id]) {
+                            this.openApp(id);
+                        } else {
+                            this.hasMinimised(id);
+                        }
+                    }}
+                    onClose={() => {
+                        const id = this.state.context_app;
+                        if (!id) return;
+                        this.closeApp(id);
+                    }}
+                    onCloseMenu={this.hideAllContextMenu}
                 />
 
                 {/* Folder Input Name Bar */}
