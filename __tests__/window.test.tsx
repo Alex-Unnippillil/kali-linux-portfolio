@@ -1,6 +1,6 @@
 import React, { act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import Window from '../components/base/window';
+import Window, { WindowHandle } from '../components/base/window';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('react-draggable', () => ({
@@ -44,7 +44,7 @@ describe('Window lifecycle', () => {
 
 describe('Window snapping preview', () => {
   it('shows preview when dragged near left edge', () => {
-    const ref = React.createRef<Window>();
+    const ref = React.createRef<WindowHandle>();
     render(
       <Window
         id="test-window"
@@ -81,7 +81,7 @@ describe('Window snapping preview', () => {
   });
 
   it('hides preview when away from edge', () => {
-    const ref = React.createRef<Window>();
+    const ref = React.createRef<WindowHandle>();
     render(
       <Window
         id="test-window"
@@ -120,7 +120,7 @@ describe('Window snapping preview', () => {
 
 describe('Window snapping finalize and release', () => {
   it('snaps window on drag stop near left edge', () => {
-    const ref = React.createRef<Window>();
+    const ref = React.createRef<WindowHandle>();
     render(
       <Window
         id="test-window"
@@ -161,7 +161,7 @@ describe('Window snapping finalize and release', () => {
   });
 
   it('releases snap with Alt+ArrowDown restoring size', () => {
-    const ref = React.createRef<Window>();
+    const ref = React.createRef<WindowHandle>();
     render(
       <Window
         id="test-window"
@@ -208,7 +208,7 @@ describe('Window snapping finalize and release', () => {
   });
 
   it('releases snap when starting drag', () => {
-    const ref = React.createRef<Window>();
+    const ref = React.createRef<WindowHandle>();
     render(
       <Window
         id="test-window"
@@ -286,7 +286,7 @@ describe('Window keyboard dragging', () => {
 
 describe('Window overlay inert behaviour', () => {
   it('sets and removes inert on default __next root restoring focus', () => {
-    const ref = React.createRef<Window>();
+    const ref = React.createRef<WindowHandle>();
     const root = document.createElement('div');
     root.id = '__next';
     document.body.appendChild(root);
@@ -327,7 +327,7 @@ describe('Window overlay inert behaviour', () => {
   });
 
   it('respects overlayRoot prop when provided', () => {
-    const ref = React.createRef<Window>();
+    const ref = React.createRef<WindowHandle>();
     const root = document.createElement('div');
     root.id = 'custom-root';
     document.body.appendChild(root);
