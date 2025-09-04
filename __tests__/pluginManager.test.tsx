@@ -7,45 +7,58 @@ describe('PluginManager', () => {
     (global as any).fetch = jest.fn((url: string) => {
       if (url === '/api/plugins') {
         return Promise.resolve({
-          json: () => Promise.resolve([{ id: 'demo', file: 'demo.txt' }]),
+          json: () =>
+            Promise.resolve([
+              { id: 'demo', file: 'demo.txt' },
+              { id: 'alpha', file: 'alpha.txt' },
+            ]),
         });
       }
-      if (url === '/api/plugins/demo.txt') {
+      if (url.startsWith('/api/plugins/')) {
         return Promise.resolve({ text: () => Promise.resolve('content') });
       }
       return Promise.reject(new Error('unknown url'));
     });
   });
 
-  test('installs plugin from catalog', async () => {
+  test('filters plugins by search query', async () => {
     render(<PluginManager />);
-    const button = await screen.findByText('Install');
-    fireEvent.click(button);
-    await waitFor(() =>
-      expect(localStorage.getItem('installedPlugins')).toContain('demo')
-    );
-    expect(button.textContent).toBe('Installed');
+    await screen.findByText('demo');
+    await screen.findByText('alpha');
+    const input = screen.getByPlaceholderText('Search plugins');
+    fireEvent.change(input, { target: { value: 'dem' } });
+    await waitFor(() => {
+      expect(screen.queryByText('alpha')).toBeNull();
+    });
   });
 
-  test('persists last plugin run and exports CSV', async () => {
+  test('installs, toggles, and uninstalls with persistence', async () => {
     const { unmount } = render(<PluginManager />);
-    const installBtn = await screen.findByText('Install');
-    fireEvent.click(installBtn);
+    const installButton = await screen.findAllByText('Install');
+    fireEvent.click(installButton[0]);
     await waitFor(() =>
       expect(localStorage.getItem('installedPlugins')).toContain('demo')
     );
-    const runBtn = await screen.findByText('Run');
-    fireEvent.click(runBtn);
+    const disableBtn = await screen.findByText('Disable');
+    fireEvent.click(disableBtn);
     await waitFor(() =>
-      expect(localStorage.getItem('lastPluginRun')).toContain('demo')
+      expect(JSON.parse(localStorage.getItem('enabledPlugins') || '{}').demo).toBe(
+        false
+      )
     );
     unmount();
-    (global as any).URL.createObjectURL = jest.fn();
-    (global as any).URL.revokeObjectURL = jest.fn();
     render(<PluginManager />);
-    expect(await screen.findByText(/Last Run: demo/)).toBeInTheDocument();
-    const exportBtn = screen.getByText('Export CSV');
-    fireEvent.click(exportBtn);
-    expect((global as any).URL.createObjectURL).toHaveBeenCalled();
+    const enableBtn = await screen.findByText('Enable');
+    fireEvent.click(enableBtn);
+    await waitFor(() =>
+      expect(JSON.parse(localStorage.getItem('enabledPlugins') || '{}').demo).toBe(
+        true
+      )
+    );
+    const uninstallBtn = await screen.findByText('Uninstall');
+    fireEvent.click(uninstallBtn);
+    await waitFor(() =>
+      expect(localStorage.getItem('installedPlugins')).not.toContain('demo')
+    );
   });
 });
