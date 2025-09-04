@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import Toast from '../../ui/Toast';
-import DiscoveryMap from './DiscoveryMap';
+import Toast from '../ui/Toast';
+import DiscoveryMap from './nmap-nse/DiscoveryMap';
 
 // Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
 const scripts = [
@@ -74,6 +74,80 @@ const cvssColor = (score) => {
   return 'bg-green-700';
 };
 
+// parse Nmap normal output into a structured host->port map
+const parseNmap = (text) => {
+  const hosts = {};
+  let currentHost = null;
+  let currentPort = null;
+  let inPorts = false;
+  text.split('\n').forEach((line) => {
+    const hostMatch = line.match(/^Nmap scan report for\s+(.+)/);
+    if (hostMatch) {
+      currentHost = hostMatch[1].trim();
+      hosts[currentHost] = {};
+      inPorts = false;
+      return;
+    }
+    if (/^PORT\s+STATE\s+SERVICE/.test(line)) {
+      inPorts = true;
+      return;
+    }
+    if (inPorts) {
+      const portMatch = line.match(/^(\d+\/\w+)\s+\S+\s+(\S+)/);
+      if (portMatch) {
+        currentPort = portMatch[1];
+        hosts[currentHost][currentPort] = {
+          service: portMatch[2],
+          scripts: [],
+        };
+        return;
+      }
+      const scriptMatch = line.match(/^\|\s*(.+)/);
+      if (scriptMatch && currentHost && currentPort) {
+        hosts[currentHost][currentPort].scripts.push(scriptMatch[1].trim());
+        return;
+      }
+      if (!line.trim()) {
+        inPorts = false;
+        currentPort = null;
+      }
+    }
+  });
+  return hosts;
+};
+
+const diffResults = (a, b) => {
+  const out = [];
+  const hosts = new Set([...Object.keys(a), ...Object.keys(b)]);
+  hosts.forEach((h) => {
+    const ports = new Set([
+      ...Object.keys(a[h] || {}),
+      ...Object.keys(b[h] || {}),
+    ]);
+    ports.forEach((p) => {
+      const left = a[h]?.[p];
+      const right = b[h]?.[p];
+      const scriptsA = left?.scripts.join('\n') || '';
+      const scriptsB = right?.scripts.join('\n') || '';
+      if (
+        !left ||
+        !right ||
+        left.service !== right.service ||
+        scriptsA !== scriptsB
+      ) {
+        out.push({ host: h, port: p, left, right });
+      }
+    });
+  });
+  return out;
+};
+
+const formatEntry = (entry) => {
+  if (!entry) return 'missing';
+  const scripts = entry.scripts.length ? ` | ${entry.scripts.join('; ')}` : '';
+  return `${entry.service}${scripts}`;
+};
+
 const NmapNSEApp = () => {
   const [target, setTarget] = useState('example.com');
   const [selectedScripts, setSelectedScripts] = useState([scripts[0].name]);
@@ -87,6 +161,7 @@ const NmapNSEApp = () => {
   const [toast, setToast] = useState('');
   const outputRef = useRef(null);
   const phases = ['prerule', 'hostrule', 'portrule'];
+  const [diff, setDiff] = useState([]);
 
   useEffect(() => {
     fetch('/demo/nmap-nse.json')
@@ -185,6 +260,18 @@ const NmapNSEApp = () => {
           {'\n'}
         </span>
       );
+    });
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    const files = Array.from(e.dataTransfer.files).slice(0, 2);
+    Promise.all(files.map((f) => f.text())).then((texts) => {
+      if (texts.length === 2) {
+        const left = parseNmap(texts[0]);
+        const right = parseNmap(texts[1]);
+        setDiff(diffResults(left, right));
+      }
     });
   };
 
@@ -399,6 +486,23 @@ const NmapNSEApp = () => {
             Select All
           </button>
         </div>
+        <h2 className="text-lg mb-2 mt-6">Compare outputs</h2>
+        <div
+          onDrop={handleDrop}
+          onDragOver={(e) => e.preventDefault()}
+          className="mb-4 p-4 border-2 border-dashed border-gray-600 text-center"
+        >
+          Drop two Nmap output files here
+        </div>
+        {diff.length > 0 && (
+          <ul className="mb-4 space-y-1 font-mono">
+            {diff.map((d) => (
+              <li key={`${d.host}-${d.port}`} className="text-red-400">
+                {d.host} {d.port}: {formatEntry(d.left)} vs {formatEntry(d.right)}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
       {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
