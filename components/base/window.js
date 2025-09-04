@@ -7,8 +7,10 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import { SettingsContext } from '../../hooks/useSettings';
 
 export class Window extends Component {
+    static contextType = SettingsContext;
     constructor(props) {
         super(props);
         this.id = null;
@@ -37,6 +39,8 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._focusMode = null;
+        this.onMouseOverFocus = () => this.focusWindow();
     }
 
     componentDidMount() {
@@ -56,6 +60,11 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        this.updateFocusMode();
+    }
+
+    componentDidUpdate() {
+        this.updateFocusMode();
     }
 
     componentWillUnmount() {
@@ -66,9 +75,23 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        root?.removeEventListener('mouseover', this.onMouseOverFocus);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+    }
+
+    updateFocusMode = () => {
+        const mode = this.context?.focusMode;
+        const root = document.getElementById(this.id);
+        if (!root || mode === this._focusMode) return;
+        if (this._focusMode === 'mouse') {
+            root.removeEventListener('mouseover', this.onMouseOverFocus);
+        }
+        if (mode === 'mouse') {
+            root.addEventListener('mouseover', this.onMouseOverFocus);
+        }
+        this._focusMode = mode;
     }
 
     setDefaultWindowDimenstion = () => {
