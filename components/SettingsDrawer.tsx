@@ -9,7 +9,7 @@ interface Props {
 const SettingsDrawer = ({ highScore = 0 }: Props) => {
   const [open, setOpen] = useState(false);
   const unlocked = getUnlockedThemes(highScore);
-  const { accent, setAccent, theme, setTheme } = useSettings();
+  const { accent, setAccent, theme, setTheme, dprScaling, setDprScaling } = useSettings();
 
   return (
     <div>
@@ -39,6 +39,15 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
               type="color"
               value={accent}
               onChange={(e) => setAccent(e.target.value)}
+            />
+          </label>
+          <label>
+            HiDPI scaling
+            <input
+              aria-label="dpr-scaling-toggle"
+              type="checkbox"
+              checked={dprScaling}
+              onChange={(e) => setDprScaling(e.target.checked)}
             />
           </label>
         </div>

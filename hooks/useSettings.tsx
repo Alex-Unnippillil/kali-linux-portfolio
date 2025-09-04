@@ -18,6 +18,8 @@ import {
   setPongSpin as savePongSpin,
   getAllowNetwork as loadAllowNetwork,
   setAllowNetwork as saveAllowNetwork,
+  getDprScaling as loadDprScaling,
+  setDprScaling as saveDprScaling,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -49,6 +51,7 @@ interface SettingsContextValue {
   largeHitAreas: boolean;
   pongSpin: boolean;
   allowNetwork: boolean;
+  dprScaling: boolean;
   theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
@@ -59,6 +62,7 @@ interface SettingsContextValue {
   setLargeHitAreas: (value: boolean) => void;
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
+  setDprScaling: (value: boolean) => void;
   setTheme: (value: string) => void;
 }
 
@@ -72,6 +76,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   largeHitAreas: defaults.largeHitAreas,
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
+  dprScaling: defaults.dprScaling,
   theme: 'default',
   setAccent: () => {},
   setWallpaper: () => {},
@@ -82,6 +87,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setLargeHitAreas: () => {},
   setPongSpin: () => {},
   setAllowNetwork: () => {},
+  setDprScaling: () => {},
   setTheme: () => {},
 });
 
@@ -95,6 +101,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
+  const [dprScaling, setDprScaling] = useState<boolean>(defaults.dprScaling);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
@@ -109,6 +116,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setLargeHitAreas(await loadLargeHitAreas());
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
+      setDprScaling(await loadDprScaling());
       setTheme(loadTheme());
     })();
   }, []);
@@ -211,6 +219,24 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   }, [allowNetwork]);
 
+  useEffect(() => {
+    const BASE_TITLEBAR_HEIGHT = 32;
+    const BASE_ICON_SIZE = 24;
+    const multiplier =
+      dprScaling && typeof window !== 'undefined' && window.devicePixelRatio >= 1.5
+        ? window.devicePixelRatio
+        : 1;
+    document.documentElement.style.setProperty(
+      '--titlebar-height',
+      `${BASE_TITLEBAR_HEIGHT * multiplier}px`,
+    );
+    document.documentElement.style.setProperty(
+      '--titlebar-icon-size',
+      `${BASE_ICON_SIZE * multiplier}px`,
+    );
+    saveDprScaling(dprScaling);
+  }, [dprScaling]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -223,6 +249,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         largeHitAreas,
         pongSpin,
         allowNetwork,
+        dprScaling,
         theme,
         setAccent,
         setWallpaper,
@@ -233,6 +260,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setLargeHitAreas,
         setPongSpin,
         setAllowNetwork,
+        setDprScaling,
         setTheme,
       }}
     >
