@@ -88,12 +88,14 @@ export class Desktop extends Component {
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
+        window.addEventListener('open-app', this.handleOpenAppEvent);
     }
 
     componentWillUnmount() {
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
+        window.removeEventListener('open-app', this.handleOpenAppEvent);
     }
 
     checkForNewFolders = () => {
@@ -574,6 +576,13 @@ export class Desktop extends Component {
         return result;
     }
 
+    handleOpenAppEvent = (e) => {
+        const id = e.detail;
+        if (id) {
+            this.openApp(id);
+        }
+    }
+
     openApp = (objId) => {
 
         // google analytics
@@ -627,6 +636,13 @@ export class Desktop extends Component {
             });
 
             safeLocalStorage?.setItem('frequentApps', JSON.stringify(frequentApps));
+
+            let recentApps = [];
+            try { recentApps = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]'); } catch (e) { recentApps = []; }
+            recentApps = recentApps.filter(id => id !== objId);
+            recentApps.unshift(objId);
+            recentApps = recentApps.slice(0, 10);
+            safeLocalStorage?.setItem('recentApps', JSON.stringify(recentApps));
 
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
