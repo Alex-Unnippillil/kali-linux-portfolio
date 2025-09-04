@@ -1,7 +1,29 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import useKeymap from '../../apps/settings/keymapRegistry';
+
+// Minimal keymap registry that reads from localStorage
+const defaultShortcuts = [
+  { description: 'Show keyboard shortcuts', keys: '?' },
+];
+
+const useKeymap = () => {
+  const [shortcuts] = useState(() => {
+    try {
+      const stored = window.localStorage.getItem('keymap');
+      if (stored) {
+        return Object.entries(JSON.parse(stored)).map(([description, keys]) => ({
+          description,
+          keys: String(keys),
+        }));
+      }
+    } catch {
+      /* ignore */
+    }
+    return defaultShortcuts;
+  });
+  return { shortcuts };
+};
 
 const formatEvent = (e: KeyboardEvent) => {
   const parts = [
