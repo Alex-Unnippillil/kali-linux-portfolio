@@ -10,7 +10,6 @@ import {
 import GraphView from "../../../apps/radare2/components/GraphView";
 import GuideOverlay from "./GuideOverlay";
 import { useTheme } from "../../../hooks/useTheme";
-import styles from "./theme.module.css";
 
 const Radare2 = ({ initialData = {} }) => {
   const {
@@ -30,7 +29,7 @@ const Radare2 = ({ initialData = {} }) => {
   const [showGuide, setShowGuide] = useState(false);
   const [strings, setStrings] = useState([]);
   const disasmRef = useRef(null);
-  const { theme, setTheme } = useTheme();
+  const { theme } = useTheme();
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -104,9 +103,7 @@ const Radare2 = ({ initialData = {} }) => {
 
   return (
     <div
-      className={`h-full w-full p-4 overflow-auto ${
-        theme === "dark" ? styles["r2-dark"] : styles["r2-light"]
-      }`}
+      className="h-full w-full p-4 overflow-auto"
       style={{ backgroundColor: "var(--r2-bg)", color: "var(--r2-text)" }}
     >
       {showGuide && <GuideOverlay onClose={() => setShowGuide(false)} />}
@@ -177,16 +174,6 @@ const Radare2 = ({ initialData = {} }) => {
           }}
         >
           Help
-        </button>
-        <button
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="px-3 py-1 rounded"
-          style={{
-            backgroundColor: "var(--r2-surface)",
-            border: "1px solid var(--r2-border)",
-          }}
-        >
-          {theme === "dark" ? "Light" : "Dark"}
         </button>
       </div>
 

@@ -20,6 +20,7 @@ import {
   setAllowNetwork as saveAllowNetwork,
   defaults,
 } from '../utils/settingsStore';
+import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
 
 // Utility to lighten or darken a hex color by a percentage
@@ -48,6 +49,7 @@ interface SettingsContextValue {
   largeHitAreas: boolean;
   pongSpin: boolean;
   allowNetwork: boolean;
+  theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -57,6 +59,7 @@ interface SettingsContextValue {
   setLargeHitAreas: (value: boolean) => void;
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
+  setTheme: (value: string) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -69,6 +72,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   largeHitAreas: defaults.largeHitAreas,
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
+  theme: 'default',
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -78,6 +82,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setLargeHitAreas: () => {},
   setPongSpin: () => {},
   setAllowNetwork: () => {},
+  setTheme: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -90,6 +95,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
+  const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -103,8 +109,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setLargeHitAreas(await loadLargeHitAreas());
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
+      setTheme(loadTheme());
     })();
   }, []);
+
+  useEffect(() => {
+    saveTheme(theme);
+  }, [theme]);
 
   useEffect(() => {
     const border = shadeColor(accent, -0.2);
@@ -212,6 +223,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         largeHitAreas,
         pongSpin,
         allowNetwork,
+        theme,
         setAccent,
         setWallpaper,
         setDensity,
@@ -221,6 +233,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setLargeHitAreas,
         setPongSpin,
         setAllowNetwork,
+        setTheme,
       }}
     >
       {children}
