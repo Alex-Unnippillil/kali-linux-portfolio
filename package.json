@@ -27,6 +27,7 @@
     "@emailjs/browser": "^3.10.0",
     "@monaco-editor/react": "^4.7.0",
     "@mozilla/readability": "^0.6.0",
+    "@napi-rs/canvas": "patch:@napi-rs/canvas@npm:0.1.77#./.yarn/patches/@napi-rs-canvas-npm-0.1.77-27723c2ab5.patch",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.56.1",
     "@vercel/analytics": "^1.5.0",
@@ -63,7 +64,7 @@
     "mathjs": "^14.6.0",
     "matter-js": "0.20.0",
     "monaco-editor": "^0.52.2",
-    "next": "^15.0.0",
+    "next": "patch:next@npm:15.5.2#./.yarn/patches/next-npm-15.5.2-fix-module-issuer.patch",
     "pcap-parser": "^0.2.1",
     "pdfjs-dist": "^5.4.54",
     "phaser": "3.70.0",
@@ -133,8 +134,8 @@
     "postcss": "^8.5.6",
     "test-exclude": "^7.0.1",
     "webpack": "^5.92.0",
-    "next@npm:^15.0.0": "patch:next@npm:15.5.2#./.yarn/patches/next-npm-15.5.2-fix-module-issuer.patch",
-    "@napi-rs/canvas@npm:^0.1.74": "patch:@napi-rs/canvas@npm:0.1.77#./.yarn/patches/@napi-rs-canvas-npm-0.1.77-27723c2ab5.patch"
+    "next@npm:^15.0.0": "15.5.2",
+    "@napi-rs/canvas@npm:^0.1.74": "0.1.77"
   },
   "packageManager": "yarn@4.9.2"
 }
