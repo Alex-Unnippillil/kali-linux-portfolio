@@ -268,6 +268,7 @@ const Game2048 = () => {
 
   return (
     <GameShell
+      game="2048"
       settings={settings}
       onPause={() => setPaused(true)}
       onResume={() => setPaused(false)}

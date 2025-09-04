@@ -136,7 +136,7 @@ const Snake = () => {
   const width = state.gridSize * CELL_SIZE;
 
   return (
-    <GameShell settings={settings}>
+    <GameShell game="snake" settings={settings}>
       <div className="flex flex-col items-center">
         <div className="flex justify-between mb-2 text-white" style={{ width }}>
           <div className="flex space-x-2">

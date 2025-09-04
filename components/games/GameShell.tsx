@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useState, useCallback, ReactNode } from 'react';
+import React, { useState, useCallback, ReactNode, useRef } from 'react';
 import useOrientationGuard from '../../hooks/useOrientationGuard';
 import useGameInput from '../../hooks/useGameInput';
 import usePersistentState from '../usePersistentState';
+import { exportGameSettings, importGameSettings } from '../../utils/gameSettings';
 
 interface GameShellProps {
+  game: string;
   children: ReactNode;
   controls?: ReactNode;
   settings?: ReactNode;
@@ -19,6 +21,7 @@ interface GameShellProps {
  * reacts to device orientation changes.
  */
 export default function GameShell({
+  game,
   children,
   controls = null,
   settings = null,
@@ -51,7 +54,25 @@ export default function GameShell({
     }
   };
 
-  useGameInput({ onInput: handleInput });
+  useGameInput({ onInput: handleInput, game });
+
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleExport = () => {
+    const data = exportGameSettings(game);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${game}-settings.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = async (file: File) => {
+    const text = await file.text();
+    importGameSettings(game, text);
+  };
 
   return (
     <div className={`game-shell${paused ? ' paused' : ''}${muted ? ' muted' : ''}`}
@@ -84,6 +105,26 @@ export default function GameShell({
           Settings
         </button>
       )}
+      <button onClick={handleExport} aria-label="Export Settings">
+        Export
+      </button>
+      <button
+        onClick={() => fileRef.current?.click()}
+        aria-label="Import Settings"
+      >
+        Import
+      </button>
+      <input
+        type="file"
+        accept="application/json"
+        ref={fileRef}
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          const file = e.target.files && e.target.files[0];
+          if (file) handleImport(file);
+          if (e.target) e.target.value = '';
+        }}
+      />
     </div>
   );
 }

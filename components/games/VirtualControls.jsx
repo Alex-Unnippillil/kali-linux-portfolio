@@ -8,7 +8,7 @@ import useGameInput from '../../hooks/useGameInput';
  * render any controls but exposes a slot for custom controls. It registers the
  * game input hook so keyboard users can still interact without touch/gamepad.
  */
-export default function VirtualControls({ children }) {
-  useGameInput();
+export default function VirtualControls({ children, game }) {
+  useGameInput({ game });
   return <div className="virtual-controls">{children}</div>;
 }

@@ -21,23 +21,24 @@ type InputEvent = {
 };
 
 type ControlsProps = {
+  game: string;
   onInput?: (e: InputEvent) => void;
   onContrastChange?: (enabled: boolean) => void;
 };
 
-export default function Controls({ onInput, onContrastChange }: ControlsProps) {
+export default function Controls({ game, onInput, onContrastChange }: ControlsProps) {
   const [keymap, setKeymap] = usePersistentState<Record<Action, string>>(
-    'game-keymap',
+    `${game}:keymap`,
     DEFAULT_MAP,
   );
   const [highContrast, setHighContrast] = usePersistentState<boolean>(
-    'game-high-contrast',
+    `${game}:high-contrast`,
     false,
   );
   const [remapping, setRemapping] = useState<Action | null>(null);
   const [message, setMessage] = useState('');
 
-  useGameInput({ onInput });
+  useGameInput({ onInput, game });
 
   useEffect(() => {
     onContrastChange && onContrastChange(highContrast);
