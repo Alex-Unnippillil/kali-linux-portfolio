@@ -1,5 +1,7 @@
 {
   "id": "demo",
   "sandbox": "worker",
-  "code": "self.postMessage('content');"
+  "code": "self.postMessage('content');",
+  "channel": "stable",
+  "changelog": "Initial release"
 }

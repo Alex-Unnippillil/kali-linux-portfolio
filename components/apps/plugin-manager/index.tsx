@@ -1,7 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
 
-interface PluginInfo { id: string; file: string; }
+interface PluginInfo {
+  id: string;
+  file: string;
+  channel: 'stable' | 'beta';
+  changelog: string;
+}
 
 interface PluginManifest {
   id: string;
@@ -11,6 +16,13 @@ interface PluginManifest {
 
 export default function PluginManager() {
   const [plugins, setPlugins] = useState<PluginInfo[]>([]);
+  const [channel, setChannel] = useState<'stable' | 'beta'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('pluginChannel') as 'stable' | 'beta') || 'stable';
+    }
+    return 'stable';
+  });
+  const [changelog, setChangelog] = useState<string | null>(null);
   const [installed, setInstalled] = useState<Record<string, PluginManifest>>(
     () => {
       if (typeof window !== 'undefined') {
@@ -46,6 +58,14 @@ export default function PluginManager() {
       .then(setPlugins)
       .catch(() => setPlugins([]));
   }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('pluginChannel', channel);
+    } catch {
+      /* ignore */
+    }
+  }, [channel]);
 
   const install = async (plugin: PluginInfo) => {
     const res = await fetch(`/api/plugins/${plugin.file}`);
@@ -123,27 +143,49 @@ export default function PluginManager() {
   return (
     <div className="p-4 text-white">
       <h1 className="text-xl mb-4">Plugin Catalog</h1>
+      <div className="mb-4">
+        <label className="mr-2" htmlFor="channel-select">
+          Channel:
+        </label>
+        <select
+          id="channel-select"
+          value={channel}
+          onChange={(e) => setChannel(e.target.value as 'stable' | 'beta')}
+          className="bg-black text-white border border-gray-600 p-1"
+        >
+          <option value="stable">stable</option>
+          <option value="beta">beta</option>
+        </select>
+      </div>
       <ul>
-        {plugins.map((p) => (
-          <li key={p.id} className="flex items-center mb-2">
-            <span className="flex-grow">{p.id}</span>
-            <button
-              className="bg-ub-orange px-2 py-1 rounded disabled:opacity-50"
-              onClick={() => install(p)}
-              disabled={installed[p.id] !== undefined}
-            >
-              {installed[p.id] ? 'Installed' : 'Install'}
-            </button>
-            {installed[p.id] && (
+        {plugins
+          .filter((p) => p.channel === channel)
+          .map((p) => (
+            <li key={`${p.id}-${p.channel}`} className="flex items-center mb-2">
+              <span className="flex-grow">{p.id}</span>
               <button
-                className="bg-ub-green text-black px-2 py-1 rounded ml-2"
-                onClick={() => run(p)}
+                className="bg-ub-orange px-2 py-1 rounded disabled:opacity-50"
+                onClick={() => install(p)}
+                disabled={installed[p.id] !== undefined}
               >
-                Run
+                {installed[p.id] ? 'Installed' : 'Install'}
               </button>
-            )}
-          </li>
-        ))}
+              <button
+                className="bg-ub-blue text-white px-2 py-1 rounded ml-2"
+                onClick={() => setChangelog(p.changelog)}
+              >
+                Changelog
+              </button>
+              {installed[p.id] && (
+                <button
+                  className="bg-ub-green text-black px-2 py-1 rounded ml-2"
+                  onClick={() => run(p)}
+                >
+                  Run
+                </button>
+              )}
+            </li>
+          ))}
       </ul>
       {lastRun && (
         <div className="mt-4">
@@ -157,6 +199,31 @@ export default function PluginManager() {
           >
             Export CSV
           </button>
+        </div>
+      )}
+      {changelog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-black p-4 rounded max-w-md w-full">
+            <h2 className="text-lg mb-2">Changelog</h2>
+            {/^(https?:\/\/)/.test(changelog) ? (
+              <a
+                href={changelog}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline break-words"
+              >
+                {changelog}
+              </a>
+            ) : (
+              <pre className="whitespace-pre-wrap break-words">{changelog}</pre>
+            )}
+            <button
+              onClick={() => setChangelog(null)}
+              className="mt-2 bg-ub-orange px-2 py-1 rounded"
+            >
+              Close
+            </button>
+          </div>
         </div>
       )}
     </div>
