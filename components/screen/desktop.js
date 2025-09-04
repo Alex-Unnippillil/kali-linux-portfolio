@@ -162,6 +162,14 @@ export class Desktop extends Component {
             e.preventDefault();
             this.cycleAppWindows(e.shiftKey ? -1 : 1);
         }
+        else if (e.altKey && e.key === ' ') {
+            e.preventDefault();
+            const id = this.getFocusedWindowId();
+            if (id) {
+                const evt = new CustomEvent('open-window-menu');
+                document.getElementById(id)?.dispatchEvent(evt);
+            }
+        }
         else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
             e.preventDefault();
             const id = this.getFocusedWindowId();
