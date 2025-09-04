@@ -17,7 +17,11 @@ const DEFAULT_SETTINGS = {
 
 export async function getAccent() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.accent;
-  return (await get('accent')) || DEFAULT_SETTINGS.accent;
+  try {
+    return (await get('accent')) || DEFAULT_SETTINGS.accent;
+  } catch {
+    return DEFAULT_SETTINGS.accent;
+  }
 }
 
 export async function setAccent(accent) {
@@ -27,7 +31,11 @@ export async function setAccent(accent) {
 
 export async function getWallpaper() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.wallpaper;
-  return (await get('bg-image')) || DEFAULT_SETTINGS.wallpaper;
+  try {
+    return (await get('bg-image')) || DEFAULT_SETTINGS.wallpaper;
+  } catch {
+    return DEFAULT_SETTINGS.wallpaper;
+  }
 }
 
 export async function setWallpaper(wallpaper) {
@@ -37,7 +45,11 @@ export async function setWallpaper(wallpaper) {
 
 export async function getDensity() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.density;
-  return window.localStorage.getItem('density') || DEFAULT_SETTINGS.density;
+  try {
+    return window.localStorage.getItem('density') || DEFAULT_SETTINGS.density;
+  } catch {
+    return DEFAULT_SETTINGS.density;
+  }
 }
 
 export async function setDensity(density) {
@@ -47,7 +59,13 @@ export async function setDensity(density) {
 
 export async function getReducedMotion() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.reducedMotion;
-  return window.localStorage.getItem('reduced-motion') === 'true';
+  try {
+    const stored = window.localStorage.getItem('reduced-motion');
+    if (stored !== null) return stored === 'true';
+  } catch {
+    return DEFAULT_SETTINGS.reducedMotion;
+  }
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 export async function setReducedMotion(value) {
@@ -57,8 +75,12 @@ export async function setReducedMotion(value) {
 
 export async function getFontScale() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.fontScale;
-  const stored = window.localStorage.getItem('font-scale');
-  return stored ? parseFloat(stored) : DEFAULT_SETTINGS.fontScale;
+  try {
+    const stored = window.localStorage.getItem('font-scale');
+    return stored ? parseFloat(stored) : DEFAULT_SETTINGS.fontScale;
+  } catch {
+    return DEFAULT_SETTINGS.fontScale;
+  }
 }
 
 export async function setFontScale(scale) {
@@ -68,7 +90,11 @@ export async function setFontScale(scale) {
 
 export async function getHighContrast() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.highContrast;
-  return window.localStorage.getItem('high-contrast') === 'true';
+  try {
+    return window.localStorage.getItem('high-contrast') === 'true';
+  } catch {
+    return DEFAULT_SETTINGS.highContrast;
+  }
 }
 
 export async function setHighContrast(value) {
@@ -78,7 +104,11 @@ export async function setHighContrast(value) {
 
 export async function getLargeHitAreas() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.largeHitAreas;
-  return window.localStorage.getItem('large-hit-areas') === 'true';
+  try {
+    return window.localStorage.getItem('large-hit-areas') === 'true';
+  } catch {
+    return DEFAULT_SETTINGS.largeHitAreas;
+  }
 }
 
 export async function setLargeHitAreas(value) {
@@ -88,8 +118,12 @@ export async function setLargeHitAreas(value) {
 
 export async function getPongSpin() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
-  const val = window.localStorage.getItem('pong-spin');
-  return val === null ? DEFAULT_SETTINGS.pongSpin : val === 'true';
+  try {
+    const val = window.localStorage.getItem('pong-spin');
+    return val === null ? DEFAULT_SETTINGS.pongSpin : val === 'true';
+  } catch {
+    return DEFAULT_SETTINGS.pongSpin;
+  }
 }
 
 export async function setPongSpin(value) {
@@ -99,7 +133,11 @@ export async function setPongSpin(value) {
 
 export async function getAllowNetwork() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.allowNetwork;
-  return window.localStorage.getItem('allow-network') === 'true';
+  try {
+    return window.localStorage.getItem('allow-network') === 'true';
+  } catch {
+    return DEFAULT_SETTINGS.allowNetwork;
+  }
 }
 
 export async function setAllowNetwork(value) {
