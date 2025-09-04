@@ -267,7 +267,7 @@ export class Window extends Component {
             this.setState({ snapPreview: snap, snapPosition: 'right' });
         }
         else if (rect.top <= threshold) {
-            snap = { left: '0', top: '0', width: '100%', height: '50%' };
+            snap = { left: '0', top: '0', width: '100%', height: '100%' };
             this.setState({ snapPreview: snap, snapPosition: 'top' });
         }
         else {
@@ -284,6 +284,11 @@ export class Window extends Component {
         this.changeCursorToDefault();
         const snapPos = this.state.snapPosition;
         if (snapPos) {
+            if (snapPos === 'top') {
+                this.maximizeWindow();
+                this.setState({ snapPreview: null, snapPosition: null });
+                return;
+            }
             this.setWinowsPosition();
             const { width, height } = this.state;
             let newWidth = width;
@@ -297,10 +302,6 @@ export class Window extends Component {
                 newWidth = 50;
                 newHeight = 96.3;
                 transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-            } else if (snapPos === 'top') {
-                newWidth = 100.2;
-                newHeight = 50;
-                transform = 'translate(-1pt,-2pt)';
             }
             var r = document.querySelector("#" + this.id);
             if (r && transform) {

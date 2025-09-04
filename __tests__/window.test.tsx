@@ -160,6 +160,89 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.height).toBe(96.3);
   });
 
+  it('snaps window on drag stop near right edge', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: window.innerWidth - 105,
+      top: 10,
+      right: window.innerWidth - 5,
+      bottom: 110,
+      width: 100,
+      height: 100,
+      x: window.innerWidth - 105,
+      y: 10,
+      toJSON: () => {},
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+    act(() => {
+      ref.current!.handleStop();
+    });
+
+    expect(ref.current!.state.snapped).toBe('right');
+    expect(ref.current!.state.width).toBe(50);
+    expect(ref.current!.state.height).toBe(96.3);
+  });
+
+  it('maximizes window on drag stop near top edge', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 50,
+      top: 5,
+      right: 150,
+      bottom: 105,
+      width: 100,
+      height: 100,
+      x: 50,
+      y: 5,
+      toJSON: () => {},
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+    act(() => {
+      ref.current!.handleStop();
+    });
+
+    expect(ref.current!.state.maximized).toBe(true);
+    expect(ref.current!.state.width).toBe(100.2);
+    expect(ref.current!.state.height).toBe(96.3);
+    expect(ref.current!.state.snapped).toBeNull();
+  });
+
   it('releases snap with Alt+ArrowDown restoring size', () => {
     const ref = React.createRef<Window>();
     render(
