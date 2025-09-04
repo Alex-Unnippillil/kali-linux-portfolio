@@ -4,47 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Timer & Stopwatch</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      margin-top: 50px;
-      background: #f0f0f0;
-    }
-    .display {
-      font-size: 4rem;
-      font-family: 'Courier New', monospace;
-      margin: 20px 0;
-    }
-    button {
-      margin: 5px;
-      padding: 10px 20px;
-      font-size: 1rem;
-    }
-    input {
-      width: 60px;
-      text-align: center;
-      font-size: 1rem;
-      padding: 5px;
-    }
-    ul {
-      list-style: none;
-      padding: 0;
-      margin-top: 10px;
-      width: 100%;
-      max-width: 300px;
-    }
-    li {
-      background: #fff;
-      margin: 2px 0;
-      padding: 5px 10px;
-      border-radius: 4px;
-      font-family: 'Courier New', monospace;
-    }
-  </style>
+  <link rel="stylesheet" href="index.css">
 </head>
 <body>
   <div>
@@ -65,7 +25,7 @@
     </div>
   </div>
 
-  <div id="stopwatchControls" style="display:none;">
+  <div id="stopwatchControls" class="hidden">
     <div class="display" id="stopwatchDisplay">00:00</div>
     <div>
       <button id="startWatch">Start</button>

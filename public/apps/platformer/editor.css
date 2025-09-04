@@ -1,0 +1,4 @@
+body { font-family: sans-serif; padding: 4px; }
+#palette button { width: 24px; height: 24px; margin: 2px; }
+#output { width: 100%; margin-top: 4px; }
+canvas { border: 1px solid #555; image-rendering: pixelated; }

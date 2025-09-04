@@ -1,0 +1,4 @@
+body { font-family: Arial, sans-serif; margin: 2rem; }
+button { margin-bottom: 1rem; }
+li { cursor: pointer; margin: 0.25rem 0; }
+li:hover { text-decoration: underline; }
