@@ -285,15 +285,15 @@ describe('Window keyboard dragging', () => {
 });
 
 describe('Window overlay inert behaviour', () => {
-  it('sets and removes inert on #root restoring focus', () => {
+  it('sets and removes inert on default __next root restoring focus', () => {
     const ref = React.createRef<Window>();
     const root = document.createElement('div');
-    root.id = 'root';
+    root.id = '__next';
     document.body.appendChild(root);
 
-      const opener = document.createElement('button');
-      document.body.appendChild(opener);
-      opener.focus();
+    const opener = document.createElement('button');
+    document.body.appendChild(opener);
+    opener.focus();
 
     render(
       <Window
@@ -322,5 +322,49 @@ describe('Window overlay inert behaviour', () => {
 
     expect(root).not.toHaveAttribute('inert');
 
+    document.body.removeChild(root);
+    document.body.removeChild(opener);
+  });
+
+  it('respects overlayRoot prop when provided', () => {
+    const ref = React.createRef<Window>();
+    const root = document.createElement('div');
+    root.id = 'custom-root';
+    document.body.appendChild(root);
+
+    const opener = document.createElement('button');
+    document.body.appendChild(opener);
+    opener.focus();
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+        overlayRoot="custom-root"
+      />,
+      { container: root }
+    );
+
+    act(() => {
+      ref.current!.activateOverlay();
+    });
+
+    expect(root).toHaveAttribute('inert');
+
+    act(() => {
+      ref.current!.closeWindow();
+    });
+
+    expect(root).not.toHaveAttribute('inert');
+
+    document.body.removeChild(root);
+    document.body.removeChild(opener);
   });
 });
