@@ -14,12 +14,12 @@ export default class Navbar extends Component {
 
 	render() {
 		return (
-                        <div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
+                        <div className="main-navbar-vp absolute top-0 right-0 w-screen h-10 px-2 flex flex-nowrap justify-between items-center bg-[var(--color-surface)]/95 backdrop-blur-sm border-b border-[var(--color-border)] text-ubt-grey text-sm select-none z-[60]">
                                 <div className="pl-3 pr-1">
                                         <Image src="/themes/Yaru/status/network-wireless-signal-good-symbolic.svg" alt="network icon" width={16} height={16} className="w-4 h-4" />
                                 </div>
                                 <div
-                                        className={'pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1 '}
+                                        className={'pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b border-transparent hover:border-[var(--color-border)] focus:border-[var(--color-border)] py-1 '}
                                 >
                                         <Image
                                                 src="/themes/Yaru/status/decompiler-symbolic.svg"
@@ -32,7 +32,7 @@ export default class Navbar extends Component {
                                 </div>
                                 <div
                                         className={
-                                                'pl-2 pr-2 text-xs md:text-sm outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1'
+                                                'pl-2 pr-2 text-xs md:text-sm outline-none transition duration-100 ease-in-out border-b border-transparent hover:border-[var(--color-border)] focus:border-[var(--color-border)] py-1'
                                         }
                                 >
                                         <Clock />
@@ -44,9 +44,7 @@ export default class Navbar extends Component {
                                         onClick={() => {
                                                 this.setState({ status_card: !this.state.status_card });
                                         }}
-                                        className={
-                                                'relative pr-3 pl-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent focus:border-ubb-orange py-1 '
-                                        }
+                                        className={'relative pr-3 pl-3 outline-none transition duration-100 ease-in-out border-b border-transparent hover:border-[var(--color-border)] focus:border-[var(--color-border)] py-1 '}
                                 >
                                         <Status />
                                         <QuickSettings open={this.state.status_card} />
