@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Filter from 'bad-words';
 import { toPng } from 'html-to-image';
-import offlineQuotes from '../../public/quotes.json';
+import offlineQuotes from '../../public/quotes/quotes.json';
 import PlaylistBuilder from './components/PlaylistBuilder';
 import share, { canShare } from '../../utils/share';
 import Posterizer from './components/Posterizer';
@@ -75,6 +75,7 @@ export default function QuoteApp() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [category, setCategory] = useState('');
   const [search, setSearch] = useState('');
+  const [authorFilter, setAuthorFilter] = useState('');
   const [favorites, setFavorites] = useState<string[]>([]);
   const [dailyQuote, setDailyQuote] = useState<Quote | null>(null);
   const [posterize, setPosterize] = useState(false);
@@ -136,15 +137,17 @@ export default function QuoteApp() {
 
   const filtered = useMemo(() => {
     const lower = search.toLowerCase();
+    const lowerAuthor = authorFilter.toLowerCase();
     return quotes.filter((q) => {
       const matchCategory =
         category === 'favorites'
           ? favorites.includes(keyOf(q))
           : !category || q.tags.includes(category);
       const matchSearch = q.content.toLowerCase().includes(lower);
-      return matchCategory && matchSearch;
+      const matchAuthor = q.author.toLowerCase().includes(lowerAuthor);
+      return matchCategory && matchSearch && matchAuthor;
     });
-  }, [quotes, category, search, favorites]);
+  }, [quotes, category, search, authorFilter, favorites]);
 
   useEffect(() => {
     if (!current) {
@@ -421,6 +424,12 @@ export default function QuoteApp() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search"
+            className="px-2 py-1 rounded text-black"
+          />
+          <input
+            value={authorFilter}
+            onChange={(e) => setAuthorFilter(e.target.value)}
+            placeholder="Author"
             className="px-2 py-1 rounded text-black"
           />
           <select

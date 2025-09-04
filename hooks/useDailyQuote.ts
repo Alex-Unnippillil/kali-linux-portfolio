@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import Filter from 'bad-words';
-import offlineQuotesData from '../public/quotes.json';
+import offlineQuotesData from '../public/quotes/quotes.json';
 
 const SAFE_CATEGORIES = [
   'inspirational',
@@ -81,35 +81,17 @@ export default function useDailyQuote(tag?: string) {
       // ignore storage errors
     }
 
-    const fetchQuote = async () => {
-      let fetched: { content: string; author: string; tags?: string[] } | null = null;
-      try {
-        const url = tag
-          ? `/api/quote?tag=${encodeURIComponent(tag)}`
-          : '/api/quote';
-        const res = await fetch(url);
-        if (res.ok) {
-          const data = await res.json();
-          fetched = { content: data.content, author: data.author, tags: data.tags };
-        }
-      } catch {
-        // ignore network errors
-      }
-      if (!fetched) {
-        const pool = tag
-          ? offlineQuotes.filter((q) => q.tags.includes(tag))
-          : offlineQuotes;
-        fetched = pool[Math.floor(Math.random() * pool.length)];
-      }
-      const toStore: Quote = { ...fetched, date: today } as Quote;
-      try {
-        localStorage.setItem('dailyQuote', JSON.stringify(toStore));
-      } catch {
-        // ignore storage errors
-      }
-      setQuote(toStore);
-    };
-    fetchQuote();
+    const pool = tag
+      ? offlineQuotes.filter((q) => q.tags.includes(tag))
+      : offlineQuotes;
+    const fetched = pool[Math.floor(Math.random() * pool.length)];
+    const toStore: Quote = { ...fetched, date: today } as Quote;
+    try {
+      localStorage.setItem('dailyQuote', JSON.stringify(toStore));
+    } catch {
+      // ignore storage errors
+    }
+    setQuote(toStore);
   }, [tag]);
 
   return quote;
