@@ -17,6 +17,7 @@ import { useSettings } from '../../hooks/useSettings';
 
 const SIZE = 4;
 const UNDO_LIMIT = 5;
+const HISTORY_LIMIT = 100;
 
 // seeded RNG so tests can be deterministic
 export const setSeed = (seed) => resetRng(seed);
@@ -216,7 +217,9 @@ const Game2048 = () => {
   const [board, setBoard] = usePersistentState('2048-board', initBoard, validateBoard);
   const [won, setWon] = usePersistentState('2048-won', false, (v) => typeof v === 'boolean');
   const [lost, setLost] = usePersistentState('2048-lost', false, (v) => typeof v === 'boolean');
-  const [history, setHistory] = useState([]);
+  const historyRef = useRef(new Array(HISTORY_LIMIT));
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [historyCount, setHistoryCount] = useState(0);
   const [moves, setMoves] = useState(0);
   const [hardMode, setHardMode] = usePersistentState('2048-hard', false, (v) => typeof v === 'boolean');
   const [skin, setSkin] = usePersistentState('2048-skin', 'classic', (v) => typeof v === 'string');
@@ -237,6 +240,9 @@ const Game2048 = () => {
   const [best, setBest] = useState(0);
   const [undosLeft, setUndosLeft] = useState(UNDO_LIMIT);
   const moveLock = useRef(false);
+  const [replaying, setReplaying] = useState(false);
+  const replayTimer = useRef(null);
+  const replayingRef = useRef(false);
   const { highContrast } = useSettings();
 
   useEffect(() => {
@@ -286,7 +292,9 @@ const Game2048 = () => {
       resetRng(today);
       setSeedState(today);
       setBoard(initBoard(hardMode));
-      setHistory([]);
+      historyRef.current = new Array(HISTORY_LIMIT);
+      setHistoryIndex(-1);
+      setHistoryCount(0);
       setMoves(0);
       setWon(false);
       setLost(false);
@@ -334,10 +342,10 @@ const Game2048 = () => {
         moveLock.current = true;
         const rngState = serializeRng();
         const added = addRandomTile(moved, hardMode, hardMode ? 2 : 1);
-        setHistory((h) => [
-          ...h,
-          { board: cloneBoard(board), score, moves, rng: rngState },
-        ]);
+        const nextIdx = (historyIndex + 1) % HISTORY_LIMIT;
+        historyRef.current[nextIdx] = { board: cloneBoard(board), score, moves, rng: rngState };
+        setHistoryIndex(nextIdx);
+        setHistoryCount((c) => (c < HISTORY_LIMIT ? c + 1 : HISTORY_LIMIT));
         setAnimCells(new Set(added));
         setMergeCells(new Set(mergedCells));
         if (gained > 0) {
@@ -392,6 +400,9 @@ const Game2048 = () => {
       seed,
       bestMap,
       setBestMap,
+      historyIndex,
+      setHistoryIndex,
+      setHistoryCount,
     ],
   );
 
@@ -435,7 +446,9 @@ const Game2048 = () => {
   const reset = useCallback(() => {
     resetRng(seed || today);
     setBoard(initBoard(hardMode));
-    setHistory([]);
+    historyRef.current = new Array(HISTORY_LIMIT);
+    setHistoryIndex(-1);
+    setHistoryCount(0);
     setMoves(0);
     setWon(false);
     setLost(false);
@@ -448,7 +461,8 @@ const Game2048 = () => {
     seed,
     today,
     setBoard,
-    setHistory,
+    setHistoryIndex,
+    setHistoryCount,
     setMoves,
     setWon,
     setLost,
@@ -463,8 +477,9 @@ const Game2048 = () => {
   };
 
   const undo = useCallback(() => {
-    if (!history.length || undosLeft === 0) return;
-    const prev = history[history.length - 1];
+    if (historyCount === 0 || undosLeft === 0) return;
+    const prev = historyRef.current[historyIndex];
+    if (!prev) return;
     deserializeRng(prev.rng);
     setBoard(cloneBoard(prev.board));
     setScore(prev.score);
@@ -473,10 +488,12 @@ const Game2048 = () => {
     setLost(!hasMoves(prev.board));
     setAnimCells(new Set());
     setMergeCells(new Set());
-    setHistory((h) => h.slice(0, -1));
+    setHistoryIndex((i) => (i - 1 + HISTORY_LIMIT) % HISTORY_LIMIT);
+    setHistoryCount((c) => c - 1);
     setUndosLeft((u) => u - 1);
   }, [
-    history,
+    historyCount,
+    historyIndex,
     undosLeft,
     setBoard,
     setScore,
@@ -485,8 +502,63 @@ const Game2048 = () => {
     setLost,
     setAnimCells,
     setMergeCells,
-    setHistory,
+    setHistoryIndex,
+    setHistoryCount,
     setUndosLeft,
+  ]);
+
+  const toggleReplay = useCallback(() => {
+    if (replaying) {
+      replayingRef.current = false;
+      clearTimeout(replayTimer.current);
+      replayTimer.current = null;
+      setReplaying(false);
+      moveLock.current = false;
+      return;
+    }
+    if (historyCount === 0) return;
+    replayingRef.current = true;
+    setReplaying(true);
+    moveLock.current = true;
+    const sequence = [];
+    const start = (historyIndex - historyCount + 1 + HISTORY_LIMIT) % HISTORY_LIMIT;
+    for (let i = 0; i < historyCount; i++) {
+      const idx = (start + i) % HISTORY_LIMIT;
+      const snap = historyRef.current[idx];
+      if (snap) sequence.push(snap);
+    }
+    sequence.push({ board: cloneBoard(board), score, moves });
+    let step = 0;
+    const play = () => {
+      if (!replayingRef.current) return;
+      const s = sequence[step++];
+      setBoard(cloneBoard(s.board));
+      setScore(s.score);
+      setMoves(s.moves);
+      setWon(checkWin(s.board));
+      setLost(!hasMoves(s.board));
+      if (step < sequence.length) {
+        replayTimer.current = setTimeout(play, 300);
+      } else {
+        replayingRef.current = false;
+        setReplaying(false);
+        moveLock.current = false;
+      }
+    };
+    play();
+  }, [
+    replaying,
+    historyCount,
+    historyIndex,
+    board,
+    score,
+    moves,
+    setBoard,
+    setScore,
+    setMoves,
+    setWon,
+    setLost,
+    moveLock,
   ]);
 
   useEffect(() => {
@@ -504,6 +576,13 @@ const Game2048 = () => {
     return () => window.removeEventListener('keydown', handler);
   }, [undo, reset]);
 
+  useEffect(() => {
+    return () => {
+      replayingRef.current = false;
+      clearTimeout(replayTimer.current);
+    };
+  }, []);
+
   return (
     <GameLayout gameId="2048" score={score} highScore={best}>
       <>
@@ -517,9 +596,16 @@ const Game2048 = () => {
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded disabled:opacity-50"
             onClick={undo}
-            disabled={history.length === 0 || undosLeft === 0}
+            disabled={historyCount === 0 || undosLeft === 0 || replaying}
           >
             Undo ({undosLeft})
+          </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded disabled:opacity-50"
+            onClick={toggleReplay}
+            disabled={historyCount === 0}
+          >
+            {replaying ? 'Stop Replay' : 'Replay'}
           </button>
           <label className="flex items-center space-x-1 px-2">
             <input
