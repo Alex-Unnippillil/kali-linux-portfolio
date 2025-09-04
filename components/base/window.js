@@ -18,6 +18,7 @@ export class Window extends Component {
             props.initialX ??
             (isPortrait ? window.innerWidth * 0.05 : 60);
         this.startY = props.initialY ?? 10;
+        const above = typeof window !== "undefined" && window.above && window.above[props.id];
         this.state = {
             cursorType: "cursor-default",
             width: props.defaultWidth || (isPortrait ? 90 : 60),
@@ -33,6 +34,7 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            above: !!above,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
@@ -379,6 +381,17 @@ export class Window extends Component {
         this.props.focus(this.id);
     }
 
+    toggleAbove = () => {
+        this.setState(prev => {
+            const next = !prev.above;
+            if (typeof window !== "undefined") {
+                window.above = window.above || {};
+                window.above[this.id] = next;
+            }
+            return { above: next };
+        });
+    }
+
     minimizeWindow = () => {
         let posx = -310;
         if (this.state.maximized) {
@@ -612,6 +625,7 @@ export class Window extends Component {
     }
 
     render() {
+        const zClass = this.state.above ? " z-40 " : (this.props.isFocused ? " z-30 " : " z-20 notFocused");
         return (
             <>
                 {this.state.snapPreview && (
@@ -635,7 +649,7 @@ export class Window extends Component {
                 >
                     <div
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + zClass + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
@@ -658,6 +672,8 @@ export class Window extends Component {
                             id={this.id}
                             allowMaximize={this.props.allowMaximize !== false}
                             pip={() => this.props.screen(this.props.addFolder, this.props.openApp)}
+                            toggleAbove={this.toggleAbove}
+                            above={this.state.above}
                         />
                         {(this.id === "settings"
                             ? <Settings />
@@ -752,6 +768,22 @@ export function WindowEditButtons(props) {
                     />
                 </button>
             )}
+            <button
+                type="button"
+                aria-label="Window keep above"
+                aria-pressed={props.above}
+                className={"mx-1 bg-white " + (props.above ? "bg-opacity-10" : "bg-opacity-0 hover:bg-opacity-10") + " rounded-full flex justify-center items-center h-6 w-6"}
+                onClick={props.toggleAbove}
+            >
+                <NextImage
+                    src="/themes/Yaru/window/window-always-on-top-symbolic.svg"
+                    alt="Kali window keep above"
+                    className="h-4 w-4 inline"
+                    width={16}
+                    height={16}
+                    sizes="16px"
+                />
+            </button>
             <button
                 type="button"
                 aria-label="Window minimize"
