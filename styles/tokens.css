@@ -16,10 +16,11 @@
   --color-ubt-grey: #F6F6F5;
   --color-ubt-warm-grey: #AEA79F;
   --color-ubt-cool-grey: #333333;
-  --color-ubt-blue: #62A0EA;
-  --color-ubt-green: #73D216;
-  --color-ubt-gedit-orange: #F39A21;
-  --color-ubt-gedit-blue: #50B6C6;
+  /* High contrast-friendly token colors */
+  --color-ubt-blue: #1E40AF;
+  --color-ubt-green: #2F5D12;
+  --color-ubt-gedit-orange: #A55B00;
+  --color-ubt-gedit-blue: #006A80;
   --color-ubt-gedit-dark: #003B70;
   --color-ub-border-orange: #1793d1;
   --color-ub-dark-grey: #2a2e36;

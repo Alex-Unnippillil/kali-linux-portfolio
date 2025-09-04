@@ -13,6 +13,9 @@
   },
   "urls": [
     "http://localhost:3000",
-    "http://localhost:3000/apps"
+    "http://localhost:3000/apps",
+    "http://localhost:3000/apps/calculator",
+    "http://localhost:3000/games/blackjack",
+    "http://localhost:3000/profile"
   ]
 }
