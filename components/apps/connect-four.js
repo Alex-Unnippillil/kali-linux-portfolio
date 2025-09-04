@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import GameLayout from './GameLayout';
+import { evaluateColumns } from '../../games/connect-four/solver';
 
 const ROWS = 6;
 const COLS = 7;
@@ -176,6 +177,7 @@ export default function ConnectFour() {
   const [hoverCol, setHoverCol] = useState(null);
   const [animDisc, setAnimDisc] = useState(null);
   const [winningCells, setWinningCells] = useState([]);
+  const [scores, setScores] = useState(Array(COLS).fill(null));
 
   const finalizeMove = useCallback((newBoard, color) => {
     const winCells = checkWinner(newBoard, color);
@@ -216,6 +218,10 @@ export default function ConnectFour() {
       return { history: g.history.slice(0, -1) };
     });
   };
+
+  useEffect(() => {
+    setScores(evaluateColumns(board, player));
+  }, [board, player]);
 
   useEffect(() => {
     if (!animDisc) return;
@@ -261,6 +267,20 @@ export default function ConnectFour() {
     setHoverCol(null);
   };
 
+  const validScores = scores.filter((s) => s !== null);
+  const minScore = validScores.length ? Math.min(...validScores) : 0;
+  const maxScore = validScores.length ? Math.max(...validScores) : 0;
+  const getColor = useCallback(
+    (s) => {
+      if (s == null || maxScore === minScore) return undefined;
+      const t = (s - minScore) / (maxScore - minScore);
+      const r = Math.round(255 * (1 - t));
+      const g = Math.round(255 * t);
+      return `rgba(${r}, ${g}, 0, 0.5)`;
+    },
+    [minScore, maxScore],
+  );
+
   const boardWidth = COLS * SLOT - GAP;
 
   return (
@@ -288,9 +308,12 @@ export default function ConnectFour() {
                 <button
                   key={`${rIdx}-${cIdx}`}
                   aria-label={`cell-${rIdx}-${cIdx}`}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center focus:outline-none ${
-                    hoverCol === cIdx && !winner ? 'bg-gray-600' : 'bg-gray-700'
-                  }`}
+                  className="w-10 h-10 rounded-full flex items-center justify-center focus:outline-none bg-gray-700"
+                  style={
+                    hoverCol === cIdx && !winner
+                      ? { backgroundColor: getColor(scores[cIdx]) }
+                      : undefined
+                  }
                   onClick={() => handleClick(cIdx)}
                   onMouseEnter={() => setHoverCol(cIdx)}
                 >

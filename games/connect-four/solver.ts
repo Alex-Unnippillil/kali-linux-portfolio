@@ -192,3 +192,19 @@ export const getBestMove = (
   return { column: bestColumn, scores };
 };
 
+export const evaluateColumns = (
+  board: Board,
+  player: 'red' | 'yellow',
+): (number | null)[] => {
+  const base = scorePosition(board, player);
+  const scores: (number | null)[] = Array(COLS).fill(null);
+  for (let c = 0; c < COLS; c++) {
+    const row = getValidRow(board, c);
+    if (row === -1) continue;
+    const newBoard = board.map((r) => [...r]);
+    newBoard[row][c] = player;
+    scores[c] = scorePosition(newBoard, player) - base;
+  }
+  return scores;
+};
+
