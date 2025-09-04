@@ -19,7 +19,7 @@ Always test inside controlled labs and obtain written permission before performi
 
 ---
 
-## Quick Start
+## Setup
 
 ### Requirements
 - **Node.js 20.x** (repo includes `.nvmrc`; run `nvm use`)
@@ -28,6 +28,7 @@ Always test inside controlled labs and obtain written permission before performi
 
 ### Install & Run (Dev)
 ```bash
+cp .env.local.example .env.local  # populate with required keys
 nvm install  # installs Node 20 from .nvmrc if needed
 nvm use
 yarn install
@@ -70,13 +71,33 @@ To send text or links directly into the Sticky Notes app:
 
 ---
 
-## Core Commands
+## Environment Variables
+
+Copy `.env.local.example` to `.env.local` and fill in required API keys:
+
+- `NEXT_PUBLIC_ENABLE_ANALYTICS` – enable client-side analytics when set to `true`.
+- `FEATURE_TOOL_APIS` – toggle simulated tool APIs (`enabled` or `disabled`).
+- `RECAPTCHA_SECRET` and related `NEXT_PUBLIC_RECAPTCHA_*` keys for contact form spam protection.
+
+See `.env.local.example` for the full list.
+
+---
+
+## Scripts
 
 - `yarn install` – install project dependencies.
 - `yarn dev` – start the development server with hot reloading.
 - `yarn test` – run the test suite.
 - `yarn lint` – check code for linting issues.
 - `yarn export` – generate a static export in the `out/` directory.
+
+---
+
+## Local Development Tips
+
+- Run `yarn lint` and `yarn test` before committing changes.
+- For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
+- When iterating on service worker changes, run `yarn build:sw` to regenerate the precache manifest.
 
 ---
 
@@ -484,32 +505,6 @@ See [`LICENSE`](./LICENSE).
 
 
 ---
-
-## NPM/Yarn Scripts
-
-- `dev` → `next dev`
-- `build` → `next build`
-- `start` → `next start`
-- `export` → `NEXT_PUBLIC_STATIC_EXPORT=true next build && yarn build:sw`
-- `test` → `jest`
-- `test:watch` → `jest --watch`
-- `lint` → `eslint --max-warnings=0 .`
-- `smoke` → `node scripts/smoke-all-apps.mjs`
-
-### Smoke Tests
-
-Start the development server in one terminal:
-
-```bash
-npm run dev
-```
-
-In another terminal, run the Playwright smoke test which visits every `/apps/*` route and fails on console errors:
-
-```bash
-npm run smoke
-```
-
 
 ## Calculator Syntax
 
