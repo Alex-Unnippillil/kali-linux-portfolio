@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
 
 interface Video {
   id: string;
@@ -11,6 +12,8 @@ const VideoGallery: React.FC = () => {
   const [videos, setVideos] = useState<Video[]>([]);
   const [query, setQuery] = useState('');
   const [playing, setPlaying] = useState<string | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
 
   useEffect(() => {
     const fetchVideos = async () => {
@@ -30,6 +33,15 @@ const VideoGallery: React.FC = () => {
       }
     };
     fetchVideos();
+  }, []);
+
+  useEffect(() => {
+    const updateWidth = () => {
+      setWidth(listRef.current?.clientWidth || window.innerWidth);
+    };
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
   }, []);
 
   const filtered = videos.filter((v) =>
@@ -58,22 +70,36 @@ const VideoGallery: React.FC = () => {
           />
         </div>
       )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {filtered.map((video) => (
-          <button
-            key={video.id}
-            type="button"
-            className="text-left rounded outline outline-2 outline-offset-2 outline-transparent hover:outline-blue-500 focus-visible:outline-blue-500"
-            onClick={() => setPlaying(video.id)}
+      <div ref={listRef} className="w-full">
+        {width > 0 && (
+          <List
+            height={600}
+            itemCount={filtered.length}
+            itemSize={200}
+            width={width}
           >
-            <img
-              src={`https://img.youtube.com/vi/${video.id}/hqdefault.jpg`}
-              alt={video.title}
-              className="w-full"
-            />
-            <p className="mt-2 text-sm" style={{ maxInlineSize: '60ch' }}>{video.title}</p>
-          </button>
-        ))}
+            {({ index, style }: ListChildComponentProps) => {
+              const video = filtered[index];
+              return (
+                <div style={style} key={video.id} className="p-2">
+                  <button
+                    type="button"
+                    className="text-left w-full rounded outline outline-2 outline-offset-2 outline-transparent hover:outline-blue-500 focus-visible:outline-blue-500"
+                    onClick={() => setPlaying(video.id)}
+                  >
+                    <img
+                      src={`https://img.youtube.com/vi/${video.id}/hqdefault.jpg`}
+                      alt={video.title}
+                      className="w-full"
+                      loading="lazy"
+                    />
+                    <p className="mt-2 text-sm" style={{ maxInlineSize: '60ch' }}>{video.title}</p>
+                  </button>
+                </div>
+              );
+            }}
+          </List>
+        )}
       </div>
     </main>
   );

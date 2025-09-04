@@ -73,11 +73,12 @@ const BadgeList = ({ badges, className = '' }) => {
               }}
               aria-label={badge.label}
             >
-              <img
-                src={badge.src}
-                alt={badge.alt}
-                title={badge.description || badge.label}
-              />
+            <img
+              src={badge.src}
+              alt={badge.alt}
+              title={badge.description || badge.label}
+              loading="lazy"
+            />
             </button>
           ))}
       </div>
