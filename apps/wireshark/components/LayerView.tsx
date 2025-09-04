@@ -1,17 +1,29 @@
 import React, { useState } from 'react';
 
-interface Props {
-  name: string;
-  fields: Record<string, string>;
+interface Field {
+  label: string;
+  value: string;
+  start: number;
+  end: number;
 }
 
-const LayerView: React.FC<Props> = ({ name, fields }) => {
+interface Props {
+  name: string;
+  start: number;
+  end: number;
+  fields: Field[];
+  onHover: (range: [number, number] | null) => void;
+}
+
+const LayerView: React.FC<Props> = ({ name, start, end, fields, onHover }) => {
   const [open, setOpen] = useState(true);
 
   return (
     <div className="text-xs">
       <button
         onClick={() => setOpen(!open)}
+        onMouseEnter={() => onHover([start, end])}
+        onMouseLeave={() => onHover(null)}
         className="flex items-center cursor-pointer select-none"
         type="button"
       >
@@ -26,9 +38,14 @@ const LayerView: React.FC<Props> = ({ name, fields }) => {
       </button>
       {open && (
         <ul className="pl-5 mt-1 space-y-0.5">
-          {Object.entries(fields).map(([k, v]) => (
-            <li key={k} className="whitespace-pre-wrap">
-              {k}: {v}
+          {fields.map((f) => (
+            <li
+              key={f.label}
+              className="whitespace-pre-wrap"
+              onMouseEnter={() => onHover([f.start, f.end])}
+              onMouseLeave={() => onHover(null)}
+            >
+              {f.label}: {f.value}
             </li>
           ))}
         </ul>

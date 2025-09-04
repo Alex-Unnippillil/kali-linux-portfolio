@@ -17,12 +17,6 @@ const protocolColors: Record<string, string> = {
   ICMP: 'bg-yellow-800',
 };
 
-// Convert bytes to hex dump string
-const toHex = (bytes: Uint8Array) =>
-  Array.from(bytes, (b, i) =>
-    `${b.toString(16).padStart(2, '0')}${(i + 1) % 16 === 0 ? '\n' : ' '}`
-  ).join('');
-
 interface Packet {
   timestamp: string;
   src: string;
@@ -34,9 +28,18 @@ interface Packet {
   dport?: number;
 }
 
+interface Field {
+  label: string;
+  value: string;
+  start: number;
+  end: number;
+}
+
 interface Layer {
   name: string;
-  fields: Record<string, string>;
+  start: number;
+  end: number;
+  fields: Field[];
 }
 
 // Basic Ethernet + IPv4 parser
@@ -175,6 +178,7 @@ const parseWithWasm = async (buf: ArrayBuffer): Promise<Packet[]> => {
 const decodePacketLayers = (pkt: Packet): Layer[] => {
   const data = pkt.data;
   const layers: Layer[] = [];
+
   if (data.length >= 14) {
     const destMac = Array.from(data.slice(0, 6))
       .map((b) => b.toString(16).padStart(2, '0'))
@@ -185,47 +189,101 @@ const decodePacketLayers = (pkt: Packet): Layer[] => {
     const type = ((data[12] << 8) | data[13]).toString(16).padStart(4, '0');
     layers.push({
       name: 'Ethernet',
-      fields: {
-        Destination: destMac,
-        Source: srcMac,
-        Type: `0x${type}`,
-      },
+      start: 0,
+      end: 14,
+      fields: [
+        { label: 'Destination', value: destMac, start: 0, end: 6 },
+        { label: 'Source', value: srcMac, start: 6, end: 12 },
+        { label: 'Type', value: `0x${type}`, start: 12, end: 14 },
+      ],
     });
   }
+
   if (data.length >= 34) {
+    const ihl = (data[14] & 0x0f) * 4;
     const srcIp = Array.from(data.slice(26, 30)).join('.');
     const destIp = Array.from(data.slice(30, 34)).join('.');
     const proto = data[23];
     layers.push({
       name: 'IPv4',
-      fields: {
-        Source: srcIp,
-        Destination: destIp,
-        Protocol: protocolName(proto),
-      },
+      start: 14,
+      end: 14 + ihl,
+      fields: [
+        { label: 'Version', value: String(data[14] >> 4), start: 14, end: 15 },
+        { label: 'Header Length', value: String(ihl), start: 14, end: 15 },
+        {
+          label: 'Total Length',
+          value: String((data[16] << 8) | data[17]),
+          start: 16,
+          end: 18,
+        },
+        {
+          label: 'Protocol',
+          value: protocolName(proto),
+          start: 23,
+          end: 24,
+        },
+        { label: 'Source', value: srcIp, start: 26, end: 30 },
+        { label: 'Destination', value: destIp, start: 30, end: 34 },
+      ],
     });
-    if (proto === 6 && data.length >= 54) {
-      const sport = (data[34] << 8) | data[35];
-      const dport = (data[36] << 8) | data[37];
+
+    const payloadStart = 14 + ihl;
+
+    if (proto === 6 && data.length >= payloadStart + 20) {
+      const sport = (data[payloadStart] << 8) | data[payloadStart + 1];
+      const dport = (data[payloadStart + 2] << 8) | data[payloadStart + 3];
       layers.push({
         name: 'TCP',
-        fields: {
-          'Source Port': sport.toString(),
-          'Destination Port': dport.toString(),
-        },
+        start: payloadStart,
+        end: payloadStart + 20,
+        fields: [
+          {
+            label: 'Source Port',
+            value: String(sport),
+            start: payloadStart,
+            end: payloadStart + 2,
+          },
+          {
+            label: 'Destination Port',
+            value: String(dport),
+            start: payloadStart + 2,
+            end: payloadStart + 4,
+          },
+        ],
       });
-    } else if (proto === 17 && data.length >= 42) {
-      const sport = (data[34] << 8) | data[35];
-      const dport = (data[36] << 8) | data[37];
+    } else if (proto === 17 && data.length >= payloadStart + 8) {
+      const sport = (data[payloadStart] << 8) | data[payloadStart + 1];
+      const dport = (data[payloadStart + 2] << 8) | data[payloadStart + 3];
+      const udpLen = (data[payloadStart + 4] << 8) | data[payloadStart + 5];
       layers.push({
         name: 'UDP',
-        fields: {
-          'Source Port': sport.toString(),
-          'Destination Port': dport.toString(),
-        },
+        start: payloadStart,
+        end: payloadStart + 8,
+        fields: [
+          {
+            label: 'Source Port',
+            value: String(sport),
+            start: payloadStart,
+            end: payloadStart + 2,
+          },
+          {
+            label: 'Destination Port',
+            value: String(dport),
+            start: payloadStart + 2,
+            end: payloadStart + 4,
+          },
+          {
+            label: 'Length',
+            value: String(udpLen),
+            start: payloadStart + 4,
+            end: payloadStart + 6,
+          },
+        ],
       });
     }
   }
+
   return layers;
 };
 
@@ -241,6 +299,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     'Info',
   ]);
   const [dragCol, setDragCol] = useState<string | null>(null);
+  const [hoverRange, setHoverRange] = useState<[number, number] | null>(null);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -406,9 +465,31 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
               {selected !== null ? (
                 <>
                   {decodePacketLayers(filtered[selected]).map((layer, i) => (
-                    <LayerView key={i} name={layer.name} fields={layer.fields} />
+                    <LayerView
+                      key={i}
+                      name={layer.name}
+                      start={layer.start}
+                      end={layer.end}
+                      fields={layer.fields}
+                      onHover={setHoverRange}
+                    />
                   ))}
-                  <pre className="text-green-400">{toHex(filtered[selected].data)}</pre>
+                  <pre className="text-green-400">
+                    {Array.from(filtered[selected].data).map((b, i) => (
+                      <React.Fragment key={i}>
+                        <span
+                          className={
+                            hoverRange && i >= hoverRange[0] && i < hoverRange[1]
+                              ? 'bg-yellow-400 text-black'
+                              : ''
+                          }
+                        >
+                          {b.toString(16).padStart(2, '0')}
+                        </span>
+                        {(i + 1) % 16 === 0 ? '\n' : ' '}
+                      </React.Fragment>
+                    ))}
+                  </pre>
                 </>
               ) : (
                 'Select a packet'
