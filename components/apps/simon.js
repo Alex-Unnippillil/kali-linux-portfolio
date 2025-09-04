@@ -424,7 +424,7 @@ const Simon = () => {
             </button>
           ))}
         </div>
-        <div className="mb-4" aria-live="assertive" role="status">
+        <div className="mb-4" aria-live="polite" role="status">
           {status}
         </div>
         <div className="flex flex-wrap gap-4 items-center">
