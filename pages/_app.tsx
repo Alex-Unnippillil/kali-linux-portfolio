@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import type { AppProps } from 'next/app';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -16,6 +18,7 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import Whisker from '../components/menu/Whisker';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -25,9 +28,12 @@ const ubuntu = Ubuntu({
 });
 
 
-function MyApp(props) {
-  const { Component, pageProps } = props;
+function MyApp({ Component, pageProps }: AppProps) {
+  const [menuRoot, setMenuRoot] = useState<HTMLElement | null>(null);
 
+  useEffect(() => {
+    setMenuRoot(document.getElementById('menu-root'));
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof window.initA2HS === 'function') {
@@ -160,6 +166,7 @@ function MyApp(props) {
           <PipPortalProvider>
             <div aria-live="polite" id="live-region" />
             <Component {...pageProps} />
+            {menuRoot && createPortal(<Whisker />, menuRoot)}
             <ShortcutOverlay />
             <Analytics
               beforeSend={(e) => {
@@ -174,6 +181,7 @@ function MyApp(props) {
           </PipPortalProvider>
         </SettingsProvider>
       </div>
+      <div id="menu-root" />
     </ErrorBoundary>
 
 
