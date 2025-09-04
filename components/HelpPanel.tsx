@@ -52,6 +52,7 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
     <>
       <button
         type="button"
+        id="help-button"
         aria-label="Help"
         aria-expanded={open}
         onClick={toggle}
@@ -69,6 +70,13 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
             onClick={(e) => e.stopPropagation()}
           >
             <div dangerouslySetInnerHTML={{ __html: html }} />
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event('replay-tour'))}
+              className="mt-4 underline"
+            >
+              Replay Tour
+            </button>
           </div>
         </div>
       )}

@@ -10,12 +10,14 @@ import '../styles/resume-print.css';
 import '../styles/print.css';
 import '@xterm/xterm/css/xterm.css';
 import 'leaflet/dist/leaflet.css';
+import 'antd/dist/reset.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import GuidedTour from '../components/GuidedTour';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -154,6 +156,7 @@ function MyApp(props) {
           <PipPortalProvider>
             <div aria-live="polite" id="live-region" />
             <Component {...pageProps} />
+            <GuidedTour />
             <ShortcutOverlay />
             <Analytics
               beforeSend={(e) => {
