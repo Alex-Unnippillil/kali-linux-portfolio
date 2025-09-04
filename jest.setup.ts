@@ -8,6 +8,13 @@ global.TextEncoder = TextEncoder;
 // @ts-ignore
 global.TextDecoder = TextDecoder as any;
 
+// Provide a structuredClone polyfill for environments lacking it
+// @ts-ignore
+if (typeof global.structuredClone !== 'function') {
+  // @ts-ignore
+  global.structuredClone = (val: unknown) => JSON.parse(JSON.stringify(val));
+}
+
 // Ensure a global `fetch` exists for tests. Jest's jsdom environment
 // doesn't provide one on the Node `global` object, which causes
 // `jest.spyOn(global, 'fetch')` to fail. Providing a simple stub allows
