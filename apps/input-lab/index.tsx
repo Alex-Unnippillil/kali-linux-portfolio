@@ -13,6 +13,36 @@ export default function InputLab() {
   const [text, setText] = useState('');
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
+  const [eventLog, setEventLog] = useState<
+    { time: string; type: string; [key: string]: unknown }[]
+  >([]);
+
+  const logEvent = (type: string, details: Record<string, unknown> = {}) => {
+    setEventLog((prev) => [
+      ...prev,
+      { time: new Date().toISOString(), type, ...details },
+    ]);
+  };
+
+  const handleCaret = (
+    e: React.SyntheticEvent<HTMLInputElement, Event>,
+    extra: Record<string, unknown> = {},
+  ) => {
+    const { selectionStart, selectionEnd } = e.currentTarget;
+    logEvent('caret', { start: selectionStart, end: selectionEnd, ...extra });
+  };
+
+  const exportLog = () => {
+    const blob = new Blob([JSON.stringify(eventLog, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'input-lab-log.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // Load saved text on mount
   useEffect(() => {
@@ -52,6 +82,31 @@ export default function InputLab() {
             type="text"
             value={text}
             onChange={(e) => setText(e.target.value)}
+            onCompositionStart={(e) =>
+              logEvent('compositionstart', { data: e.data })
+            }
+            onCompositionUpdate={(e) =>
+              logEvent('compositionupdate', { data: e.data })
+            }
+            onCompositionEnd={(e) =>
+              logEvent('compositionend', { data: e.data })
+            }
+            onSelect={handleCaret}
+            onKeyUp={(e) => {
+              if (
+                [
+                  'ArrowLeft',
+                  'ArrowRight',
+                  'ArrowUp',
+                  'ArrowDown',
+                  'Home',
+                  'End',
+                ].includes(e.key)
+              ) {
+                handleCaret(e);
+              }
+            }}
+            onClick={handleCaret}
             className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
           />
           {error && <p className="mt-1 text-sm text-red-400">{error}</p>}
@@ -60,6 +115,18 @@ export default function InputLab() {
       <div role="status" aria-live="polite" className="mt-4 text-sm text-green-400">
         {status}
       </div>
+      {eventLog.length > 0 && (
+        <pre className="mt-4 max-h-64 overflow-y-auto whitespace-pre-wrap rounded bg-gray-800 p-2 text-xs">
+          {JSON.stringify(eventLog, null, 2)}
+        </pre>
+      )}
+      <button
+        type="button"
+        onClick={exportLog}
+        className="mt-4 rounded bg-blue-600 px-3 py-1 text-sm"
+      >
+        Export Log
+      </button>
     </div>
   );
 }
