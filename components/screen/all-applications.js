@@ -53,6 +53,25 @@ class AllApplications extends React.Component {
         ));
     };
 
+    renderRecentApps = () => {
+        const recentIds = this.props.recentApps || [];
+        const apps = this.state.unfilteredApps;
+        const recentApps = recentIds
+            .map((id) => apps.find((app) => app.id === id))
+            .filter(Boolean);
+        return recentApps.map((app) => (
+            <UbuntuApp
+                key={app.id}
+                name={app.title}
+                id={app.id}
+                icon={app.icon}
+                openApp={() => this.openApp(app.id)}
+                disabled={app.disabled}
+                prefetch={app.screen?.prefetch}
+            />
+        ));
+    };
+
     render() {
         return (
             <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim">
@@ -62,6 +81,14 @@ class AllApplications extends React.Component {
                     value={this.state.query}
                     onChange={this.handleChange}
                 />
+                {this.props.recentApps && this.props.recentApps.length > 0 && (
+                    <>
+                        <h2 className="mb-4 text-lg font-semibold text-white">Recently used</h2>
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 pb-6 place-items-center">
+                            {this.renderRecentApps()}
+                        </div>
+                    </>
+                )}
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 pb-10 place-items-center">
                     {this.renderApps()}
                 </div>
