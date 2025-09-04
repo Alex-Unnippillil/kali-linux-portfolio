@@ -1,7 +1,11 @@
 export type HapticPattern = number | number[];
 
-const supportsVibration = () =>
+export const supportsVibration = () =>
   typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
+
+const hapticsEnabled = () =>
+  typeof window === 'undefined' ||
+  window.localStorage.getItem('haptics') !== 'false';
 
 const supportsGamepadVibration = () => {
   if (typeof navigator === 'undefined' || !('getGamepads' in navigator)) return false;
@@ -30,6 +34,7 @@ const triggerGamepad = (duration: number) => {
 };
 
 export const vibrate = (pattern: HapticPattern) => {
+  if (!hapticsEnabled()) return;
   const duration = Array.isArray(pattern)
     ? pattern.reduce((sum, n) => sum + (n > 0 ? n : 0), 0)
     : pattern;
@@ -58,6 +63,7 @@ const haptics = {
   danger,
   gameOver,
   patterns,
+  supportsVibration,
 };
 
 export default haptics;
