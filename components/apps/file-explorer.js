@@ -112,9 +112,9 @@ export default function FileExplorer() {
     getDir,
     readFile: opfsRead,
     writeFile: opfsWrite,
-    deleteFile: opfsDelete,
   } = useOPFS();
-  const [unsavedDir, setUnsavedDir] = useState(null);
+  const [metaDir, setMetaDir] = useState(null);
+  const saveTimeoutRef = useRef(null);
 
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
@@ -125,25 +125,32 @@ export default function FileExplorer() {
   useEffect(() => {
     if (!opfsSupported || !root) return;
     (async () => {
-      setUnsavedDir(await getDir('unsaved'));
+      const draft = await getDir('.drafts');
+      setMetaDir(draft);
       setDirHandle(root);
       setPath([{ name: root.name || '/', handle: root }]);
       await readDir(root);
+      if (draft) {
+        try {
+          const last = await opfsRead('last.json', draft);
+          if (last) {
+            const { path: p = [], name } = JSON.parse(last);
+            let dir = root;
+            const newPath = [{ name: root.name || '/', handle: root }];
+            for (const part of p) {
+              dir = await dir.getDirectoryHandle(part);
+              newPath.push({ name: part, handle: dir });
+            }
+            setDirHandle(dir);
+            setPath(newPath);
+            await readDir(dir);
+            const handle = await dir.getFileHandle(name);
+            await openFile({ name, handle }, draft, newPath);
+          }
+        } catch {}
+      }
     })();
-  }, [opfsSupported, root, getDir]);
-
-  const saveBuffer = async (name, data) => {
-    if (unsavedDir) await opfsWrite(name, data, unsavedDir);
-  };
-
-  const loadBuffer = async (name) => {
-    if (!unsavedDir) return null;
-    return await opfsRead(name, unsavedDir);
-  };
-
-  const removeBuffer = async (name) => {
-    if (unsavedDir) await opfsDelete(name, unsavedDir);
-  };
+  }, [opfsSupported, root, getDir, opfsRead]);
 
   const openFallback = async (e) => {
     const file = e.target.files[0];
@@ -174,24 +181,30 @@ export default function FileExplorer() {
     } catch {}
   };
 
-  const openFile = async (file) => {
+  const openFile = async (file, mdir = metaDir, p = path) => {
     setCurrentFile(file);
-    let text = '';
-    if (opfsSupported) {
-      const unsaved = await loadBuffer(file.name);
-      if (unsaved !== null) text = unsaved;
-    }
-    if (!text) {
+    try {
       const f = await file.handle.getFile();
-      text = await f.text();
+      const text = await f.text();
+      setContent(text);
+      const relPath = p.slice(1).map((pt) => pt.name);
+      if (mdir) {
+        await opfsWrite(
+          'last.json',
+          JSON.stringify({ path: relPath, name: file.name }),
+          mdir,
+        );
+      }
+    } catch {
+      setContent('');
     }
-    setContent(text);
   };
 
   const readDir = async (handle) => {
     const ds = [];
     const fs = [];
     for await (const [name, h] of handle.entries()) {
+      if (name.startsWith('.')) continue;
       if (h.kind === 'file') fs.push({ name, handle: h });
       else if (h.kind === 'directory') ds.push({ name, handle: h });
     }
@@ -222,20 +235,26 @@ export default function FileExplorer() {
     await readDir(prev.handle);
   };
 
-  const saveFile = async () => {
-    if (!currentFile) return;
-    try {
-      const writable = await currentFile.handle.createWritable();
-      await writable.write(content);
-      await writable.close();
-      if (opfsSupported) await removeBuffer(currentFile.name);
-    } catch {}
-  };
-
   const onChange = (e) => {
     const text = e.target.value;
     setContent(text);
-    if (opfsSupported && currentFile) saveBuffer(currentFile.name, text);
+    if (!currentFile) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        const writable = await currentFile.handle.createWritable();
+        await writable.write(text);
+        await writable.close();
+        if (metaDir) {
+          const relPath = path.slice(1).map((p) => p.name);
+          await opfsWrite(
+            'last.json',
+            JSON.stringify({ path: relPath, name: currentFile.name }),
+            metaDir,
+          );
+        }
+      } catch {}
+    }, 500);
   };
 
   const runSearch = () => {
@@ -257,7 +276,13 @@ export default function FileExplorer() {
     }
   };
 
-  useEffect(() => () => workerRef.current?.terminate(), []);
+  useEffect(
+    () => () => {
+      workerRef.current?.terminate();
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    },
+    [],
+  );
 
   if (!supported) {
     return (
@@ -307,11 +332,6 @@ export default function FileExplorer() {
           </button>
         )}
         <Breadcrumbs path={path} onNavigate={navigateTo} />
-        {currentFile && (
-          <button onClick={saveFile} className="px-2 py-1 bg-black bg-opacity-50 rounded">
-            Save
-          </button>
-        )}
       </div>
       <div className="flex flex-1 overflow-hidden">
         <div className="w-40 overflow-auto border-r border-gray-600">
