@@ -29,6 +29,8 @@ export default function Settings() {
     setHighContrast,
     haptics,
     setHaptics,
+    compositorEnabled,
+    setCompositorEnabled,
     theme,
     setTheme,
   } = useSettings();
@@ -168,6 +170,14 @@ export default function Settings() {
           </div>
           <div className="flex justify-center my-4">
             <BackgroundSlideshow />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Compositor:</span>
+            <ToggleSwitch
+              checked={compositorEnabled}
+              onChange={setCompositorEnabled}
+              ariaLabel="Compositor"
+            />
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 justify-items-center border-t border-gray-900">
             {wallpapers.map((name) => (
