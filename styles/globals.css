@@ -18,65 +18,48 @@
   --color-dark: #0c0f12; /* card back */
 }
 
-/* Dark theme overrides */
-:root[data-theme='dark'] {
+/* Dark theme */
+html[data-theme='dark'] {
   --color-bg: #000000;
-  --color-text: #ffffff;
-  --color-primary: #1793d1;
-  --color-secondary: #0a0a0a;
-  --color-accent: #1793d1;
-  --color-muted: #111111;
-  --color-surface: #0a0a0a;
-  --color-inverse: #000000;
+  --color-text: #e5e5e5;
+  --color-primary: #1e88e5;
+  --color-secondary: #121212;
+  --color-accent: #bb86fc;
+  --color-muted: #1f1f1f;
+  --color-surface: #121212;
+  --color-inverse: #ffffff;
   --color-border: #333333;
   --color-terminal: #00ff00;
-  --color-dark: #050505;
-  --color-ub-grey: #000000;
-  --color-ub-cool-grey: #0a0a0a;
-  --color-ubt-grey: #ffffff;
-  --color-ubt-cool-grey: #cccccc;
-  --color-ub-orange: #1793d1;
-  --color-ub-border-orange: #1793d1;
+  --color-dark: #0a0a0a;
 }
 
-/* Neon theme overrides */
-:root[data-theme='neon'] {
+/* Neon theme */
+html[data-theme='neon'] {
   --color-bg: #000000;
-  --color-text: #f8f8ff;
-  --color-primary: #ff00ff;
-  --color-secondary: #00ffff;
+  --color-text: #ffffff;
+  --color-primary: #39ff14;
+  --color-secondary: #1a1a1a;
   --color-accent: #ff00ff;
-  --color-muted: #111111;
-  --color-surface: #0a0a0a;
-  --color-inverse: #000000;
-  --color-border: #ff00ff;
+  --color-muted: #222222;
+  --color-surface: #111111;
+  --color-inverse: #ffffff;
+  --color-border: #333333;
   --color-terminal: #39ff14;
   --color-dark: #000000;
-  --color-ub-grey: #000000;
-  --color-ub-cool-grey: #0a0a0a;
-  --color-ubt-grey: #f8f8ff;
-  --color-ubt-cool-grey: #ff00ff;
-  --color-ub-orange: #ff00ff;
-  --color-ub-border-orange: #ff00ff;
 }
 
-/* Matrix theme overrides */
-:root[data-theme='matrix'] {
+/* Matrix theme */
+html[data-theme='matrix'] {
   --color-bg: #000000;
   --color-text: #00ff00;
   --color-primary: #00ff00;
-  --color-secondary: #003300;
+  --color-secondary: #001100;
   --color-accent: #00ff00;
-  --color-muted: #001a00;
-  --color-surface: #000d00;
-  --color-inverse: #000000;
-  --color-border: #00ff00;
+  --color-muted: #003300;
+  --color-surface: #001100;
+  --color-inverse: #ffffff;
+  --color-border: #003300;
   --color-terminal: #00ff00;
   --color-dark: #000000;
-  --color-ub-grey: #000000;
-  --color-ub-cool-grey: #001100;
-  --color-ubt-grey: #00ff00;
-  --color-ubt-cool-grey: #00cc00;
-  --color-ub-orange: #00ff00;
-  --color-ub-border-orange: #00ff00;
+
 }
