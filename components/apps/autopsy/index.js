@@ -344,9 +344,9 @@ function Autopsy({ initialArtifacts = null }) {
   const [plugins, setPlugins] = useState([]);
   const [selectedPlugin, setSelectedPlugin] = useState('');
   const [announcement, setAnnouncement] = useState('');
-  const [typeFilter, setTypeFilter] = useState('All');
   const [userFilter, setUserFilter] = useState('All');
-  const [pluginFilter, setPluginFilter] = useState('All');
+  const [activePlugins, setActivePlugins] = useState(new Set());
+  const [activeTypes, setActiveTypes] = useState(new Set());
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [selectedArtifact, setSelectedArtifact] = useState(null);
@@ -416,20 +416,29 @@ function Autopsy({ initialArtifacts = null }) {
       .catch(() => setHashDB({}));
   }, [currentCase, initialArtifacts]);
 
-  const types = ['All', ...Array.from(new Set(artifacts.map((a) => a.type)))];
   const users = [
     'All',
     ...Array.from(new Set(artifacts.map((a) => a.user).filter(Boolean))),
   ];
-  const pluginOptions = [
-    'All',
-    ...Array.from(new Set(artifacts.map((a) => a.plugin).filter(Boolean))),
-  ];
+  const pluginCounts = useMemo(() => {
+    const counts = {};
+    artifacts.forEach((a) => {
+      counts[a.plugin] = (counts[a.plugin] || 0) + 1;
+    });
+    return counts;
+  }, [artifacts]);
+  const typeCounts = useMemo(() => {
+    const counts = {};
+    artifacts.forEach((a) => {
+      counts[a.type] = (counts[a.type] || 0) + 1;
+    });
+    return counts;
+  }, [artifacts]);
   const filteredArtifacts = artifacts.filter(
     (a) =>
-      (typeFilter === 'All' || a.type === typeFilter) &&
+      (!activeTypes.size || activeTypes.has(a.type)) &&
       (userFilter === 'All' || a.user === userFilter) &&
-      (pluginFilter === 'All' || a.plugin === pluginFilter) &&
+      (!activePlugins.size || activePlugins.has(a.plugin)) &&
       (!startTime || new Date(a.timestamp) >= new Date(startTime)) &&
       (!endTime || new Date(a.timestamp) <= new Date(endTime))
   );
@@ -440,10 +449,8 @@ function Autopsy({ initialArtifacts = null }) {
       a.description.toLowerCase().includes(searchLower) ||
       (a.user && a.user.toLowerCase().includes(searchLower))
   );
-  const filteredTimeline = timelineEvents.filter(
-    (t) =>
-      (!startTime || new Date(t.timestamp) >= new Date(startTime)) &&
-      (!endTime || new Date(t.timestamp) <= new Date(endTime))
+  const filteredTimeline = timelineEvents.filter((t) =>
+    filteredArtifacts.some((a) => a.timestamp === t.timestamp)
   );
   const visibleTimeline = filteredTimeline.filter((t) =>
     t.name.toLowerCase().includes(searchLower)
@@ -649,19 +656,7 @@ function Autopsy({ initialArtifacts = null }) {
       )}
       {artifacts.length > 0 && (
         <div className="space-y-2">
-          <div className="flex flex-wrap gap-2">
-            <select
-              aria-label="Filter by type"
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="bg-ub-grey text-white px-2 py-1 rounded"
-            >
-              {types.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+          <div className="flex flex-wrap gap-4 items-start">
             <select
               aria-label="Filter by user"
               value={userFilter}
@@ -674,18 +669,52 @@ function Autopsy({ initialArtifacts = null }) {
                 </option>
               ))}
             </select>
-            <select
-              aria-label="Filter by plugin"
-              value={pluginFilter}
-              onChange={(e) => setPluginFilter(e.target.value)}
-              className="bg-ub-grey text-white px-2 py-1 rounded"
-            >
-              {pluginOptions.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
+            <div className="flex space-x-4">
+              <div>
+                <div className="text-xs font-bold">Plugins</div>
+                {Object.entries(pluginCounts).map(([p, count]) => (
+                  <label key={p} className="block text-xs">
+                    <input
+                      type="checkbox"
+                      className="mr-1"
+                      checked={activePlugins.has(p)}
+                      onChange={() =>
+                        setActivePlugins((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(p)) next.delete(p);
+                          else next.add(p);
+                          return next;
+                        })
+                      }
+                      aria-label={`plugin ${p}`}
+                    />
+                    {p} ({count})
+                  </label>
+                ))}
+              </div>
+              <div>
+                <div className="text-xs font-bold">Artifacts</div>
+                {Object.entries(typeCounts).map(([t, count]) => (
+                  <label key={t} className="block text-xs">
+                    <input
+                      type="checkbox"
+                      className="mr-1"
+                      checked={activeTypes.has(t)}
+                      onChange={() =>
+                        setActiveTypes((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(t)) next.delete(t);
+                          else next.add(t);
+                          return next;
+                        })
+                      }
+                      aria-label={`artifact ${t}`}
+                    />
+                    {t} ({count})
+                  </label>
+                ))}
+              </div>
+            </div>
             <input
               type="datetime-local"
               aria-label="Start time"
