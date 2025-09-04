@@ -9664,9 +9664,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"magic-string@npm:0.30.10":
-  version: 0.30.10
-  resolution: "magic-string@npm:0.30.10"
+"magic-string@npm:0.30.18":
+  version: 0.30.18
+  resolution: "magic-string@npm:0.30.18"
 
   dependencies:
     "@jridgewell/sourcemap-codec": "npm:^1.4.15"
@@ -13239,7 +13239,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"test-exclude@npm:^7.0.1":
+"test-exclude@npm:7.0.1":
   version: 7.0.1
   resolution: "test-exclude@npm:7.0.1"
   dependencies:
@@ -13861,7 +13861,7 @@ __metadata:
     jspdf: "npm:^3.0.2"
     kaitai-struct: "npm:^0.10.0"
     leaflet: "npm:^1.9.4"
-    magic-string: "patch:magic-string@npm:0.30.10#./.yarn/patches/magic-string-0.30.10.patch"
+    magic-string: "npm:0.30.18"
 
     mathjs: "npm:^14.6.0"
     matter-js: "npm:0.20.0"
@@ -13895,7 +13895,7 @@ __metadata:
     stockfish: "npm:^16.0.0"
     swr: "npm:^2.2.5"
     tailwindcss: "npm:^3.2.4"
-    test-exclude: "patch:test-exclude@npm:7.0.1#./.yarn/patches/test-exclude-npm-7.0.1-e6cf81110b.patch"
+    test-exclude: "npm:7.0.1"
     three: "npm:^0.179.1"
     turndown: "npm:^7.2.1"
     typescript: "npm:^5.6"
