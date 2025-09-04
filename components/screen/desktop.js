@@ -667,6 +667,7 @@ export class Desktop extends Component {
             icon: appMeta.icon,
             image,
             closedAt: now,
+            path: objId,
         });
         safeLocalStorage?.setItem('window-trash', JSON.stringify(trash));
         this.updateTrashIcon();
@@ -779,8 +780,17 @@ export class Desktop extends Component {
             const icon = trash.length
                 ? '/themes/Yaru/status/user-trash-full-symbolic.svg'
                 : '/themes/Yaru/status/user-trash-symbolic.svg';
+            const count = trash.length;
+            let shouldUpdate = false;
             if (apps[appIndex].icon !== icon) {
                 apps[appIndex].icon = icon;
+                shouldUpdate = true;
+            }
+            if (apps[appIndex].tasks !== count) {
+                apps[appIndex].tasks = count;
+                shouldUpdate = true;
+            }
+            if (shouldUpdate) {
                 this.forceUpdate();
             }
         }
