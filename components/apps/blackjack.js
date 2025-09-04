@@ -21,8 +21,9 @@ const Blackjack = () => {
   const [message, setMessage] = useState('Place your bet');
   const [paused, setPaused] = useState(false);
   const [sound, setSound] = useState(true);
-  const [options, setOptions] = useState({ decks: 6, hitSoft17: true });
+  const [options, setOptions] = useState({ decks: 6, hitSoft17: true, penetration: 0.75 });
   const [showHints, setShowHints] = useState(false);
+  const [showCount, setShowCount] = useState(false);
   const [history, setHistory] = useState([]);
   const [pendingAction, setPendingAction] = useState(null);
 
@@ -32,9 +33,10 @@ const Blackjack = () => {
         bankroll: br,
         decks: options.decks,
         hitSoft17: options.hitSoft17,
+        penetration: options.penetration,
       });
     },
-    [bankroll, options.decks, options.hitSoft17],
+    [bankroll, options.decks, options.hitSoft17, options.penetration],
   );
 
   const computeCardPos = (handIdx, cardIdx, isDealer = false) => {
@@ -291,32 +293,46 @@ const Blackjack = () => {
             ctx.font = '16px sans-serif';
             ctx.fillText(hand.bet.toString(), baseX, HEIGHT - 70);
 
-            if (showHints) {
-              const hint = basicStrategy(hand.cards, dealer[0], {
-                canDouble: game.bankroll >= hand.bet && hand.cards.length === 2,
-                canSplit:
-                  hand.cards.length === 2 && cardValue(hand.cards[0]) === cardValue(hand.cards[1]) && game.bankroll >= hand.bet,
-                canSurrender: hand.cards.length === 2,
-              });
-              const badgeX = baseX + hand.cards.length * CARD_W * 0.7 + 10;
-              const badgeY = HEIGHT - CARD_H - 50;
-              ctx.fillStyle = 'gold';
-              ctx.beginPath();
-              ctx.arc(badgeX, badgeY, 12, 0, Math.PI * 2);
-              ctx.fill();
-              ctx.fillStyle = '#000';
-              ctx.font = '12px sans-serif';
-              ctx.fillText(hint[0].toUpperCase(), badgeX - 4, badgeY + 4);
-            }
-          });
+          if (showHints) {
+            const hint = basicStrategy(hand.cards, dealer[0], {
+              canDouble: game.bankroll >= hand.bet && hand.cards.length === 2,
+              canSplit:
+                hand.cards.length === 2 && cardValue(hand.cards[0]) === cardValue(hand.cards[1]) && game.bankroll >= hand.bet,
+              canSurrender: hand.cards.length === 2,
+            });
+            const badgeX = baseX + hand.cards.length * CARD_W * 0.7 + 10;
+            const badgeY = HEIGHT - CARD_H - 50;
+            ctx.fillStyle = 'gold';
+            ctx.beginPath();
+            ctx.arc(badgeX, badgeY, 12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#000';
+            ctx.font = '12px sans-serif';
+            ctx.fillText(hint[0].toUpperCase(), badgeX - 4, badgeY + 4);
+          }
+        });
+
+        if (showCount) {
+          const shoe = game.shoe;
+          const decksRemaining = shoe.cards.length / 52;
+          const trueCount = shoe.runningCount / Math.max(1, decksRemaining);
+          const penetration = shoe.dealt / (shoe.decks * 52);
+          ctx.fillStyle = 'rgba(0,0,0,0.5)';
+          ctx.fillRect(10, 10, 140, 60);
+          ctx.fillStyle = 'white';
+          ctx.font = '14px sans-serif';
+          ctx.fillText(`RC: ${shoe.runningCount}`, 15, 30);
+          ctx.fillText(`TC: ${trueCount.toFixed(1)}`, 15, 45);
+          ctx.fillText(`Pen: ${(penetration * 100).toFixed(0)}%`, 15, 60);
         }
       }
-      animRef.current = requestAnimationFrame(loop);
-    };
+    }
+    animRef.current = requestAnimationFrame(loop);
+  };
 
     animRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animRef.current);
-  }, [paused, canvasRef, showHints]);
+  }, [paused, canvasRef, showHints, showCount]);
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
@@ -351,6 +367,23 @@ const Blackjack = () => {
           </select>
         </label>
         <label className="flex items-center space-x-1">
+          <span>Penetration</span>
+          <select
+            className="bg-gray-700"
+            value={options.penetration}
+            onChange={(e) =>
+              setOptions((o) => ({ ...o, penetration: parseFloat(e.target.value) }))
+            }
+            disabled={gameRef.current && gameRef.current.playerHands.length > 0}
+          >
+            {[0.5, 0.6, 0.7, 0.75, 0.8, 0.85, 0.9].map((p) => (
+              <option key={p} value={p}>
+                {Math.round(p * 100)}%
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex items-center space-x-1">
           <input
             type="checkbox"
             checked={options.hitSoft17}
@@ -366,6 +399,14 @@ const Blackjack = () => {
             onChange={(e) => setShowHints(e.target.checked)}
           />
           <span>Show hints</span>
+        </label>
+        <label className="flex items-center space-x-1">
+          <input
+            type="checkbox"
+            checked={showCount}
+            onChange={(e) => setShowCount(e.target.checked)}
+          />
+          <span>Counting overlay</span>
         </label>
       </div>
       <div
