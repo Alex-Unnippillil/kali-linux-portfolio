@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import HelpOverlay from './HelpOverlay';
 import PerfOverlay from './Games/common/perf';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import { useSettings } from '../../hooks/useSettings';
 
 interface GameLayoutProps {
   gameId?: string;
@@ -27,6 +28,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   const [showHelp, setShowHelp] = useState(false);
   const [paused, setPaused] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
+  const { lowSpec } = useSettings();
 
   const close = useCallback(() => setShowHelp(false), []);
   const toggle = useCallback(() => setShowHelp((h) => !h), []);
@@ -178,7 +180,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         {score !== undefined && <div>Score: {score}</div>}
         {highScore !== undefined && <div>High: {highScore}</div>}
       </div>
-      {!prefersReducedMotion && <PerfOverlay />}
+      {!prefersReducedMotion && !lowSpec && <PerfOverlay />}
       {editor && (
         <div className="absolute bottom-2 left-2 z-30">{editor}</div>
       )}

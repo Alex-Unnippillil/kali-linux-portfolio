@@ -11,6 +11,7 @@ interface PerfSample {
 
 const MAX_SAMPLES = 120;
 const MAX_MS = 50; // cap graph at 50ms (20 FPS)
+const FRAME_BUDGET = 16; // ideal frame time in ms for 60 FPS
 
 export const exportPerfReport = (samples: PerfSample[]) => {
   if (!samples.length || typeof document === 'undefined') return;
@@ -89,6 +90,12 @@ const PerfOverlay: React.FC = () => {
           const w = canvas.width;
           const h = canvas.height;
           ctx.clearRect(0, 0, w, h);
+          const budgetY = h - (FRAME_BUDGET / MAX_MS) * h;
+          ctx.strokeStyle = '#ff0000';
+          ctx.beginPath();
+          ctx.moveTo(0, budgetY);
+          ctx.lineTo(w, budgetY);
+          ctx.stroke();
           ctx.strokeStyle = '#00ff00';
           ctx.beginPath();
           samples.forEach((s, i) => {
@@ -101,9 +108,10 @@ const PerfOverlay: React.FC = () => {
           ctx.stroke();
           const latest = samples[samples.length - 1];
           const fps = latest ? (1000 / latest.dt).toFixed(1) : '0';
+          const ms = latest ? latest.dt.toFixed(1) : '0';
           ctx.fillStyle = '#ffffff';
           ctx.font = '12px sans-serif';
-          ctx.fillText(`${fps} FPS`, 4, 12);
+          ctx.fillText(`${fps} FPS / ${ms}ms`, 4, 12);
         }
       }
       lastRef.current = now;

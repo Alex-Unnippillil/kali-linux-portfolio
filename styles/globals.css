@@ -63,3 +63,13 @@ html[data-theme='matrix'] {
   --color-dark: #000000;
 
 }
+
+/* Low-spec mode disables heavy visual effects */
+.low-spec *,
+.low-spec *::before,
+.low-spec *::after {
+  animation: none !important;
+  transition: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+}

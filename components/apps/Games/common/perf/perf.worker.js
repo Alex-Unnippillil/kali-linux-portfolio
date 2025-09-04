@@ -1,5 +1,6 @@
 const MAX_SAMPLES = 120;
 const MAX_MS = 50;
+const FRAME_BUDGET = 16;
 
 let ctx;
 let samples = [];
@@ -24,6 +25,13 @@ function draw() {
   const w = ctx.canvas.width;
   const h = ctx.canvas.height;
   ctx.clearRect(0, 0, w, h);
+  // frame budget line
+  const budgetY = h - (FRAME_BUDGET / MAX_MS) * h;
+  ctx.strokeStyle = '#ff0000';
+  ctx.beginPath();
+  ctx.moveTo(0, budgetY);
+  ctx.lineTo(w, budgetY);
+  ctx.stroke();
   ctx.strokeStyle = '#00ff00';
   ctx.beginPath();
   samples.forEach((s, i) => {
@@ -38,6 +46,7 @@ function draw() {
   const fps = latest ? (1000 / latest.dt).toFixed(1) : '0';
   ctx.fillStyle = '#ffffff';
   ctx.font = '12px sans-serif';
-  ctx.fillText(`${fps} FPS`, 4, 12);
+  const ms = latest ? latest.dt.toFixed(1) : '0';
+  ctx.fillText(`${fps} FPS / ${ms}ms`, 4, 12);
 }
 
