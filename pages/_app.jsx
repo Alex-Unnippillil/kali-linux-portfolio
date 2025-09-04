@@ -11,6 +11,12 @@ import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
+import { Ubuntu } from 'next/font/google';
+
+const ubuntu = Ubuntu({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '700'],
+});
 
 function MyApp(props) {
   const { Component, pageProps } = props;
@@ -131,23 +137,25 @@ function MyApp(props) {
   }, []);
 
   return (
-    <SettingsProvider>
-      <PipPortalProvider>
-        <div aria-live="polite" id="live-region" />
-        <Component {...pageProps} />
-        <ShortcutOverlay />
-        <Analytics
-          beforeSend={(e) => {
-            if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-            const evt = e;
-            if (evt.metadata?.email) delete evt.metadata.email;
-            return e;
-          }}
-        />
+    <div className={ubuntu.className}>
+      <SettingsProvider>
+        <PipPortalProvider>
+          <div aria-live="polite" id="live-region" />
+          <Component {...pageProps} />
+          <ShortcutOverlay />
+          <Analytics
+            beforeSend={(e) => {
+              if (e.url.includes('/admin') || e.url.includes('/private')) return null;
+              const evt = e;
+              if (evt.metadata?.email) delete evt.metadata.email;
+              return e;
+            }}
+          />
 
-        {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
-      </PipPortalProvider>
-    </SettingsProvider>
+          {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+        </PipPortalProvider>
+      </SettingsProvider>
+    </div>
   );
 }
 
