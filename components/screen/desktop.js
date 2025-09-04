@@ -13,6 +13,7 @@ import Window from '../base/window';
 import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
+import AltTabOverlay from './AltTabOverlay'
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
@@ -45,6 +46,8 @@ export class Desktop extends Component {
             context_app: null,
             showNameBar: false,
             showShortcutSelector: false,
+            altTabVisible: false,
+            altTabIndex: 0,
         }
     }
 
@@ -81,12 +84,16 @@ export class Desktop extends Component {
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
+        window.addEventListener('keydown', this.handleAltTab);
+        window.addEventListener('keyup', this.handleAltRelease);
     }
 
     componentWillUnmount() {
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
+        window.removeEventListener('keydown', this.handleAltTab);
+        window.removeEventListener('keyup', this.handleAltRelease);
     }
 
     checkForNewFolders = () => {
@@ -120,6 +127,31 @@ export class Desktop extends Component {
             openSettings.addEventListener("click", () => {
                 this.openApp("settings");
             });
+        }
+    }
+
+    getOpenApps = () => {
+        return this.app_stack.filter(id => !this.state.closed_windows[id]);
+    }
+
+    handleAltTab = (e) => {
+        if (e.key === 'Tab' && e.altKey) {
+            e.preventDefault();
+            const open = this.getOpenApps();
+            if (!open.length) return;
+            this.setState((prev) => ({
+                altTabVisible: true,
+                altTabIndex: (prev.altTabIndex + 1) % open.length,
+            }));
+        }
+    }
+
+    handleAltRelease = (e) => {
+        if (e.key === 'Alt') {
+            const open = this.getOpenApps();
+            const id = open[this.state.altTabIndex];
+            if (id) this.focus(id);
+            this.setState({ altTabVisible: false, altTabIndex: 0 });
         }
     }
 
@@ -820,6 +852,12 @@ export class Desktop extends Component {
                         games={games}
                         onSelect={this.addShortcutToDesktop}
                         onClose={() => this.setState({ showShortcutSelector: false })} /> : null}
+
+                <AltTabOverlay
+                    apps={this.getOpenApps().map(id => apps.find(a => a.id === id)).filter(Boolean)}
+                    active={this.state.altTabIndex}
+                    show={this.state.altTabVisible}
+                />
 
             </main>
         )
