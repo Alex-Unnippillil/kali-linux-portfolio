@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import useSWR from "swr";
 import usePersistentState from "../../../hooks/usePersistentState";
 
 interface AlertsProps {
@@ -28,62 +29,42 @@ const Alerts = ({ latitude, longitude }: AlertsProps) => {
     isNumber,
   );
 
+  const { data } = useSWR(
+    enabled ? ["alerts", latitude, longitude] : null,
+    ([, lat, lon]) =>
+      fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m&forecast_days=1`,
+      ).then((res) => res.json()),
+    {
+      refreshInterval: enabled ? 5 * 60 * 1000 : 0,
+      revalidateOnFocus: enabled,
+    },
+  );
+
   useEffect(() => {
     if (!enabled || typeof window === "undefined") return;
     if ("Notification" in window && Notification.permission === "default") {
       void Notification.requestPermission();
     }
+  }, [enabled]);
 
-    let timer: number | undefined;
-
-    const poll = async () => {
-      try {
-        const res = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&hourly=temperature_2m&forecast_days=1`,
-        );
-        const json = await res.json();
-        const temps: unknown = json?.hourly?.temperature_2m;
-        if (!Array.isArray(temps)) return;
-        const numbers = temps.filter((t): t is number => typeof t === "number");
-        if (numbers.some((t) => t >= high)) {
-          const max = Math.max(...numbers);
-          new Notification("High temperature forecast", {
-            body: `${max}\u00B0`,
-          });
-        } else if (numbers.some((t) => t <= low)) {
-          const min = Math.min(...numbers);
-          new Notification("Low temperature forecast", {
-            body: `${min}\u00B0`,
-          });
-        }
-      } catch {
-        // ignore errors
-      }
-    };
-
-    const start = () => {
-      poll();
-      timer = window.setInterval(poll, 5 * 60 * 1000);
-    };
-
-    const stop = () => {
-      if (timer) window.clearInterval(timer);
-    };
-
-    const handleFocus = () => start();
-    const handleBlur = () => stop();
-
-    if (document.hasFocus()) start();
-
-    window.addEventListener("focus", handleFocus);
-    window.addEventListener("blur", handleBlur);
-
-    return () => {
-      stop();
-      window.removeEventListener("focus", handleFocus);
-      window.removeEventListener("blur", handleBlur);
-    };
-  }, [enabled, high, low, latitude, longitude]);
+  useEffect(() => {
+    if (!enabled || !data) return;
+    const temps: unknown = data?.hourly?.temperature_2m;
+    if (!Array.isArray(temps)) return;
+    const numbers = temps.filter((t): t is number => typeof t === "number");
+    if (numbers.some((t) => t >= high)) {
+      const max = Math.max(...numbers);
+      new Notification("High temperature forecast", {
+        body: `${max}\u00B0`,
+      });
+    } else if (numbers.some((t) => t <= low)) {
+      const min = Math.min(...numbers);
+      new Notification("Low temperature forecast", {
+        body: `${min}\u00B0`,
+      });
+    }
+  }, [data, enabled, high, low]);
 
   return (
     <div className="space-y-2 p-2">
