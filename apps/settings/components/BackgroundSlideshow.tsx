@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import { useSettings } from '../../../hooks/useSettings';
@@ -57,10 +58,13 @@ export default function BackgroundSlideshow() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {available.map((file) => (
           <label key={file} className="flex flex-col items-center cursor-pointer">
-            <img
+            <Image
               src={`/images/wallpapers/${file}`}
               alt={file}
-              className="w-24 h-16 object-cover mb-1 border border-ubt-cool-grey"
+              width={96}
+              height={64}
+              sizes="96px"
+              className="object-cover mb-1 border border-ubt-cool-grey"
             />
             <input
               type="checkbox"

@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
@@ -42,7 +43,16 @@ const AppsPage = () => {
             className="flex flex-col items-center rounded border p-4 text-center focus:outline-none focus:ring"
             aria-label={app.title}
           >
-            {app.icon && <img src={app.icon} alt="" className="h-16 w-16" />}
+            {app.icon && (
+              <Image
+                src={app.icon}
+                alt=""
+                width={64}
+                height={64}
+                sizes="64px"
+                className="h-16 w-16"
+              />
+            )}
             <span className="mt-2">{app.title}</span>
           </Link>
         ))}

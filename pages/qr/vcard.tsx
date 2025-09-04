@@ -1,5 +1,6 @@
 "use client";
 
+import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 
@@ -110,7 +111,16 @@ const VCardPage: React.FC = () => {
       {vcard && (
         <div className="flex flex-col items-center gap-2">
           <pre className="whitespace-pre-wrap break-all text-xs">{vcard}</pre>
-          {png && <img src={png} alt="vCard QR" className="h-48 w-48" />}
+          {png && (
+            <Image
+              src={png}
+              alt="vCard QR"
+              width={192}
+              height={192}
+              sizes="192px"
+              className="h-48 w-48"
+            />
+          )}
           <div className="flex gap-2">
             <button
               type="button"
