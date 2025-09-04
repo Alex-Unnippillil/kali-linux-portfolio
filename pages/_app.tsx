@@ -1,6 +1,8 @@
 "use client";
+/* eslint-disable @next/next/no-before-interactive-script-outside-document */
 
 import { useEffect } from 'react';
+import type { AppProps } from 'next/app';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -24,40 +26,43 @@ const ubuntu = Ubuntu({
 });
 
 
-function MyApp(props) {
-  const { Component, pageProps } = props;
+function MyApp({ Component, pageProps }: AppProps) {
 
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && typeof window.initA2HS === 'function') {
-      window.initA2HS();
+    if (
+      typeof window !== 'undefined' &&
+      typeof (window as { initA2HS?: () => void }).initA2HS === 'function'
+    ) {
+      (window as { initA2HS?: () => void }).initA2HS!();
     }
-    const initAnalytics = async () => {
+    const initAnalytics = async (): Promise<void> => {
       const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
       if (trackingId) {
         const { default: ReactGA } = await import('react-ga4');
         ReactGA.initialize(trackingId);
       }
     };
-    initAnalytics().catch((err) => {
+    initAnalytics().catch((err: unknown) => {
       console.error('Analytics initialization failed', err);
     });
 
     if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
       // Register PWA service worker generated via @ducanh2912/next-pwa
-      const register = async () => {
+      const register = async (): Promise<void> => {
         try {
           const registration = await navigator.serviceWorker.register('/sw.js');
 
-          window.manualRefresh = () => registration.update();
+          (window as { manualRefresh?: () => void }).manualRefresh = () =>
+            registration.update();
 
           if ('periodicSync' in registration) {
             try {
               const status = await navigator.permissions.query({
                 name: 'periodic-background-sync',
-              });
+              } as unknown as PermissionDescriptor);
               if (status.state === 'granted') {
-                await registration.periodicSync.register('content-sync', {
+                await (registration as any).periodicSync.register('content-sync', {
                   minInterval: 24 * 60 * 60 * 1000,
                 });
               } else {
@@ -69,11 +74,11 @@ function MyApp(props) {
           } else {
             registration.update();
           }
-        } catch (err) {
+        } catch (err: unknown) {
           console.error('Service worker registration failed', err);
         }
       };
-      register().catch((err) => {
+      register().catch((err: unknown) => {
         console.error('Service worker setup failed', err);
       });
     }
@@ -83,16 +88,16 @@ function MyApp(props) {
     const liveRegion = document.getElementById('live-region');
     if (!liveRegion) return;
 
-    const update = (message) => {
+    const update = (message: string): void => {
       liveRegion.textContent = '';
       setTimeout(() => {
         liveRegion.textContent = message;
       }, 100);
     };
 
-    const handleCopy = () => update('Copied to clipboard');
-    const handleCut = () => update('Cut to clipboard');
-    const handlePaste = () => update('Pasted from clipboard');
+    const handleCopy = (): void => update('Copied to clipboard');
+    const handleCut = (): void => update('Cut to clipboard');
+    const handlePaste = (): void => update('Pasted from clipboard');
 
     window.addEventListener('copy', handleCopy);
     window.addEventListener('cut', handleCut);
@@ -102,13 +107,13 @@ function MyApp(props) {
     const originalWrite = clipboard?.writeText?.bind(clipboard);
     const originalRead = clipboard?.readText?.bind(clipboard);
     if (originalWrite) {
-      clipboard.writeText = async (text) => {
+      clipboard.writeText = async (text: string): Promise<void> => {
         update('Copied to clipboard');
         return originalWrite(text);
       };
     }
     if (originalRead) {
-      clipboard.readText = async () => {
+      clipboard.readText = async (): Promise<string> => {
         const text = await originalRead();
         update('Pasted from clipboard');
         return text;
@@ -117,18 +122,20 @@ function MyApp(props) {
 
     const OriginalNotification = window.Notification;
     if (OriginalNotification) {
-      const WrappedNotification = function (title, options) {
+      const WrappedNotification = function (
+        title: string,
+        options?: NotificationOptions,
+      ): Notification {
         update(`${title}${options?.body ? ' ' + options.body : ''}`);
         return new OriginalNotification(title, options);
-      };
-      WrappedNotification.requestPermission = OriginalNotification.requestPermission.bind(
-        OriginalNotification,
-      );
+      } as any;
+      (WrappedNotification as any).requestPermission =
+        OriginalNotification.requestPermission.bind(OriginalNotification);
       Object.defineProperty(WrappedNotification, 'permission', {
         get: () => OriginalNotification.permission,
       });
-      WrappedNotification.prototype = OriginalNotification.prototype;
-      window.Notification = WrappedNotification;
+      (WrappedNotification as any).prototype = OriginalNotification.prototype;
+      window.Notification = WrappedNotification as any;
     }
 
     return () => {
@@ -155,9 +162,9 @@ function MyApp(props) {
             <Component {...pageProps} />
             <ShortcutOverlay />
             <Analytics
-              beforeSend={(e) => {
+              beforeSend={(e: any) => {
                 if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-                const evt = e;
+                const evt: any = e;
                 if (evt.metadata?.email) delete evt.metadata.email;
                 return e;
               }}
