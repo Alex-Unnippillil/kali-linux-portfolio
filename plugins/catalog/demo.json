@@ -1,5 +1,6 @@
 {
   "id": "demo",
+  "permission": "network",
   "sandbox": "worker",
   "code": "self.postMessage('content');"
 }

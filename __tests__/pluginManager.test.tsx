@@ -23,7 +23,15 @@ describe('PluginManager', () => {
     (global as any).fetch = jest.fn((url: string) => {
       if (url === '/api/plugins') {
         return Promise.resolve({
-          json: () => Promise.resolve([{ id: 'demo', file: 'demo.json' }]),
+          json: () =>
+            Promise.resolve([
+              {
+                id: 'demo',
+                file: 'demo.json',
+                permission: 'network',
+                sandbox: 'worker',
+              },
+            ]),
         });
       }
       if (url === '/api/plugins/demo.json') {
@@ -32,6 +40,7 @@ describe('PluginManager', () => {
             Promise.resolve({
               id: 'demo',
               sandbox: 'worker',
+              permission: 'network',
               code: "self.postMessage('content');",
             }),
         });
@@ -42,6 +51,8 @@ describe('PluginManager', () => {
 
   test('installs plugin from catalog', async () => {
     render(<PluginManager />);
+    expect(await screen.findByText('network')).toBeInTheDocument();
+    expect(await screen.findByText('worker')).toBeInTheDocument();
     const button = await screen.findByText('Install');
     fireEvent.click(button);
     await waitFor(() =>
