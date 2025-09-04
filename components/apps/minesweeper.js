@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
+import GameLayout from './GameLayout';
 import usePersistedState from '../../hooks/usePersistedState';
 import calculate3BV from '../../games/minesweeper/metrics';
 import { serializeBoard, deserializeBoard } from '../../games/minesweeper/save';
+import { getDailySeed } from '../../utils/dailySeed';
 
 /**
  * Classic Minesweeper implementation.
@@ -31,6 +33,15 @@ const mulberry32 = (a) => {
   t = Math.imul(t ^ (t >>> 15), t | 1);
   t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
+
+// convert string seed to 32-bit number
+const hashSeed = (str) => {
+  let h = 0;
+  for (let i = 0; i < str.length; i += 1) {
+    h = Math.imul(31, h) + str.charCodeAt(i);
+  }
+  return h >>> 0;
 };
 
 const cloneBoard = (board) =>
@@ -251,6 +262,41 @@ const Minesweeper = () => {
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const urlSeed = params.get('seed');
+    if (urlSeed) {
+      const num = parseInt(urlSeed, 36);
+      if (!Number.isNaN(num)) {
+        setSeed(num);
+        return;
+      }
+    }
+    const saved = localStorage.getItem('minesweeper-state');
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        if (data.seed !== undefined) {
+          setSeed(data.seed);
+          return;
+        }
+      } catch {}
+    }
+    getDailySeed('minesweeper').then((s) => setSeed(hashSeed(s)));
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    params.set('seed', seed.toString(36));
+    window.history.replaceState(
+      {},
+      '',
+      `${window.location.pathname}?${params.toString()}`,
+    );
+  }, [seed]);
 
   useEffect(() => {
     if (status === 'playing' && !paused) {
@@ -938,7 +984,8 @@ const Minesweeper = () => {
       : '🙂';
 
   return (
-    <div className="relative h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
+    <GameLayout gameId="minesweeper">
+      <div className="relative h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
       <div className="mb-2 flex items-center space-x-2">
         <span>Seed:</span>
         <span className="font-mono">{seed.toString(36)}</span>
@@ -1070,8 +1117,9 @@ const Minesweeper = () => {
           </div>
         </div>
       )}
-      <div aria-live="polite" className="sr-only">{ariaMessage}</div>
-    </div>
+        <div aria-live="polite" className="sr-only">{ariaMessage}</div>
+      </div>
+    </GameLayout>
   );
 };
 
