@@ -183,14 +183,51 @@ export class Window extends Component {
         this.setState({ cursorType: "cursor-default", grabbed: false })
     }
 
+    getContentMinSize = () => {
+        const root = document.getElementById(this.id);
+        if (!root) return { minWidth: 0, minHeight: 0 };
+        const container = root.querySelector('.windowMainScreen');
+        if (!container) return { minWidth: 0, minHeight: 0 };
+        const inner = container.firstElementChild || container;
+        const rect = inner.getBoundingClientRect();
+        const width = inner.scrollWidth || rect.width || 0;
+        const height = inner.scrollHeight || rect.height || 0;
+        return {
+            minWidth: width ? (width / window.innerWidth) * 100 : 0,
+            minHeight: height ? (height / window.innerHeight) * 100 : 0,
+        };
+    }
+
     handleVerticleResize = () => {
         if (this.props.resizable === false) return;
-        this.setState({ height: this.state.height + 0.1 }, this.resizeBoundries);
+        const { minHeight } = this.getContentMinSize();
+        this.setState(prev => {
+            let height = Math.max(prev.height + 0.1, minHeight);
+            if (this.props.allowMaximize === false) {
+                const maxRatio = 1.6;
+                const minHeightAllowed = prev.width / maxRatio;
+                const maxHeightAllowed = prev.width * maxRatio;
+                if (height < minHeightAllowed) height = minHeightAllowed;
+                if (height > maxHeightAllowed) height = maxHeightAllowed;
+            }
+            return { height };
+        }, this.resizeBoundries);
     }
 
     handleHorizontalResize = () => {
         if (this.props.resizable === false) return;
-        this.setState({ width: this.state.width + 0.1 }, this.resizeBoundries);
+        const { minWidth } = this.getContentMinSize();
+        this.setState(prev => {
+            let width = Math.max(prev.width + 0.1, minWidth);
+            if (this.props.allowMaximize === false) {
+                const maxRatio = 1.6;
+                const minWidthAllowed = prev.height / maxRatio;
+                const maxWidthAllowed = prev.height * maxRatio;
+                if (width < minWidthAllowed) width = minWidthAllowed;
+                if (width > maxWidthAllowed) width = maxWidthAllowed;
+            }
+            return { width };
+        }, this.resizeBoundries);
     }
 
     setWinowsPosition = () => {
