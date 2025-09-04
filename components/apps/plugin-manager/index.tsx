@@ -120,6 +120,44 @@ export default function PluginManager() {
     URL.revokeObjectURL(url);
   };
 
+  const exportInstalled = async () => {
+    try {
+      const dir = await (navigator as any).storage.getDirectory();
+      const fileHandle = await dir.getFileHandle(
+        `plugins-${Date.now()}.json`,
+        { create: true }
+      );
+      const writable = await fileHandle.createWritable();
+      await writable.write(JSON.stringify(installed));
+      await writable.close();
+      alert('Plugin set exported');
+    } catch {
+      alert('Export failed');
+    }
+  };
+
+  const importInstalled = async (file: File) => {
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      setInstalled(data);
+      localStorage.setItem('installedPlugins', JSON.stringify(data));
+    } catch {
+      alert('Import failed');
+    }
+  };
+
+  const triggerImport = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json';
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (file) importInstalled(file);
+    };
+    input.click();
+  };
+
   return (
     <div className="p-4 text-white">
       <h1 className="text-xl mb-4">Plugin Catalog</h1>
@@ -145,6 +183,20 @@ export default function PluginManager() {
           </li>
         ))}
       </ul>
+      <div className="mt-4 space-x-2">
+        <button
+          className="bg-ub-blue px-2 py-1 rounded"
+          onClick={exportInstalled}
+        >
+          Export Set
+        </button>
+        <button
+          className="bg-ub-blue px-2 py-1 rounded"
+          onClick={triggerImport}
+        >
+          Import Set
+        </button>
+      </div>
       {lastRun && (
         <div className="mt-4">
           <h2 className="text-lg mb-2">Last Run: {lastRun.id}</h2>
