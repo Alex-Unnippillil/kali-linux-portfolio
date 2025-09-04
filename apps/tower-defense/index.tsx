@@ -49,6 +49,40 @@ const TowerDefense = () => {
   >([]);
   const damageTicksRef = useRef<{ x: number; y: number; life: number }[]>([]);
 
+  const [waveConfig, setWaveConfig] = useState<
+    (keyof typeof ENEMY_TYPES)[][]
+  >([Array(5).fill("fast") as (keyof typeof ENEMY_TYPES)[]]);
+  const [waveJson, setWaveJson] = useState("");
+  useEffect(() => {
+    setWaveJson(JSON.stringify(waveConfig, null, 2));
+  }, [waveConfig]);
+  const addWave = () => setWaveConfig((w) => [...w, []]);
+  const addEnemyToWave = (
+    index: number,
+    type: keyof typeof ENEMY_TYPES,
+  ) => {
+    setWaveConfig((w) => {
+      const copy = w.map((wave) => [...wave]);
+      copy[index].push(type);
+      return copy;
+    });
+  };
+  const importWaves = () => {
+    try {
+      const data = JSON.parse(waveJson) as (keyof typeof ENEMY_TYPES)[][];
+      if (Array.isArray(data)) setWaveConfig(data);
+    } catch {
+      alert("Invalid wave JSON");
+    }
+  };
+  const exportWaves = () => {
+    const json = JSON.stringify(waveConfig, null, 2);
+    setWaveJson(json);
+    navigator.clipboard
+      ?.writeText(json)
+      .catch(() => {});
+  };
+
   const togglePath = (x: number, y: number) => {
     const key = `${x},${y}`;
     setPath((p) => {
@@ -172,8 +206,9 @@ const TowerDefense = () => {
 
   const spawnEnemyInstance = () => {
     if (!path.length) return;
-    const types = Object.keys(ENEMY_TYPES) as (keyof typeof ENEMY_TYPES)[];
-    const type = types[Math.floor(Math.random() * types.length)];
+    const wave = waveConfig[waveRef.current - 1] || [];
+    const type = wave[enemiesSpawnedRef.current];
+    if (!type) return;
     const spec = ENEMY_TYPES[type];
     const enemy = spawnEnemy(enemyPool.current, {
       id: Date.now(),
@@ -206,9 +241,10 @@ const TowerDefense = () => {
       }
     } else if (running.current) {
       spawnTimer.current += dt;
+      const currentWave = waveConfig[waveRef.current - 1] || [];
       if (
         spawnTimer.current > 1 &&
-        enemiesSpawnedRef.current < waveRef.current * 5
+        enemiesSpawnedRef.current < currentWave.length
       ) {
         spawnTimer.current = 0;
         spawnEnemyInstance();
@@ -268,19 +304,21 @@ const TowerDefense = () => {
         t.life -= dt * 2;
       });
       damageTicksRef.current = damageTicksRef.current.filter((t) => t.life > 0);
-      if (
-        enemiesSpawnedRef.current >= waveRef.current * 5 &&
-        enemiesRef.current.length === 0
-      ) {
-        running.current = false;
-        waveRef.current += 1;
-        waveCountdownRef.current = 5;
-        forceRerender((n) => n + 1);
+        if (
+          enemiesSpawnedRef.current >= currentWave.length &&
+          enemiesRef.current.length === 0
+        ) {
+          running.current = false;
+          if (waveRef.current < waveConfig.length) {
+            waveRef.current += 1;
+            waveCountdownRef.current = 5;
+          }
+          forceRerender((n) => n + 1);
+        }
       }
-    }
-    draw();
-    requestAnimationFrame(update);
-  };
+      draw();
+      requestAnimationFrame(update);
+    };
 
   useEffect(() => {
     lastTime.current = performance.now();
@@ -288,13 +326,13 @@ const TowerDefense = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const start = () => {
-    if (!path.length) return;
-    setEditing(false);
-    waveRef.current = 1;
-    waveCountdownRef.current = 3;
-    forceRerender((n) => n + 1);
-  };
+    const start = () => {
+      if (!path.length || !waveConfig.length) return;
+      setEditing(false);
+      waveRef.current = 1;
+      waveCountdownRef.current = 3;
+      forceRerender((n) => n + 1);
+    };
 
   const upgrade = (type: "range" | "damage") => {
     if (selected === null) return;
@@ -329,6 +367,51 @@ const TowerDefense = () => {
           >
             Start
           </button>
+        </div>
+        <div className="space-y-1 mb-2 text-xs">
+          {waveConfig.map((wave, i) => (
+            <div key={i} className="flex items-center space-x-2">
+              <span>
+                Wave {i + 1}: {wave.join(", ") || "empty"}
+              </span>
+              {(
+                Object.keys(ENEMY_TYPES) as (keyof typeof ENEMY_TYPES)[]
+              ).map((t) => (
+                <button
+                  key={t}
+                  className="bg-gray-700 px-1 rounded"
+                  onClick={() => addEnemyToWave(i, t)}
+                >
+                  +{t}
+                </button>
+              ))}
+            </div>
+          ))}
+          <button
+            className="bg-gray-700 text-xs px-2 py-1 rounded"
+            onClick={addWave}
+          >
+            Add Wave
+          </button>
+          <textarea
+            className="w-full bg-black text-white p-1 rounded h-24"
+            value={waveJson}
+            onChange={(e) => setWaveJson(e.target.value)}
+          />
+          <div className="space-x-2">
+            <button
+              className="px-2 py-1 bg-gray-700 rounded"
+              onClick={importWaves}
+            >
+              Import
+            </button>
+            <button
+              className="px-2 py-1 bg-gray-700 rounded"
+              onClick={exportWaves}
+            >
+              Export
+            </button>
+          </div>
         </div>
         <div className="flex">
           <canvas
