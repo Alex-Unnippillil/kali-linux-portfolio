@@ -6,10 +6,8 @@
 .yarn/*
 !.yarn/releases
 !.yarn/plugins
-!.yarn/plugins.yml
 !.yarn/sdks
 !.yarn/versions
-!.yarn/patches
 /.pnp
 .pnp.cjs
 .pnp.loader.mjs
