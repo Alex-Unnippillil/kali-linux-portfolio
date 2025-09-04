@@ -14,6 +14,7 @@ import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
 import WindowSwitcher from '../screen/window-switcher'
+import QuickOpen from './quick-open'
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
@@ -51,6 +52,7 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            showQuickOpen: false,
         }
     }
 
@@ -152,6 +154,9 @@ export class Desktop extends Component {
         } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
             e.preventDefault();
             this.openApp('clipboard-manager');
+        } else if (e.ctrlKey && e.key.toLowerCase() === 'p') {
+            e.preventDefault();
+            this.setState({ showQuickOpen: true });
         }
     }
 
@@ -892,6 +897,9 @@ export class Desktop extends Component {
                         windows={this.state.switcherWindows}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
+
+                { this.state.showQuickOpen ?
+                    <QuickOpen onClose={() => this.setState({ showQuickOpen: false })} /> : null}
 
             </main>
         )
