@@ -474,6 +474,7 @@ play/pause and track controls include keyboard hotkeys.
 ## Production Hardening Checklist
 
 - [x] **Pin Node to 20.x** across runtime and CI.
+- [ ] **Track Node.js `DEP0170` deprecation** for custom protocol URLs; update tooling/dependencies when Node fully removes support and ensure `yarn install` runs without related warnings.
 - [ ] **Tighten CSP** (`connect-src`, `frame-src`, remove `http:` and `'unsafe-inline'`).
 - [ ] **Set env vars** in the hosting platform; rotate EmailJS keys regularly.
 - [ ] **Disable/flag API demo routes** for production or protect behind feature flags.
