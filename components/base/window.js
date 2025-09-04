@@ -32,6 +32,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._resizeData = null;
     }
 
     componentDidMount() {
@@ -57,6 +58,8 @@ export class Window extends Component {
         window.removeEventListener('resize', this.resizeBoundries);
         window.removeEventListener('context-menu-open', this.setInertBackground);
         window.removeEventListener('context-menu-close', this.removeInertBackground);
+        window.removeEventListener('mousemove', this.performResize);
+        window.removeEventListener('mouseup', this.stopResize);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
@@ -183,14 +186,66 @@ export class Window extends Component {
         this.setState({ cursorType: "cursor-default", grabbed: false })
     }
 
-    handleVerticleResize = () => {
+    initResize = (dir, e) => {
         if (this.props.resizable === false) return;
-        this.setState({ height: this.state.height + 0.1 }, this.resizeBoundries);
+        e.preventDefault();
+        e.stopPropagation();
+        this.focusWindow();
+        const node = document.getElementById(this.id);
+        if (!node) return;
+        const rect = node.getBoundingClientRect();
+        this._resizeData = {
+            dir,
+            startX: e.clientX,
+            startY: e.clientY,
+            startWidth: rect.width,
+            startHeight: rect.height,
+            startLeft: rect.left,
+            startTop: rect.top,
+        };
+        window.addEventListener('mousemove', this.performResize);
+        window.addEventListener('mouseup', this.stopResize);
     }
 
-    handleHorizontalResize = () => {
-        if (this.props.resizable === false) return;
-        this.setState({ width: this.state.width + 0.1 }, this.resizeBoundries);
+    performResize = (e) => {
+        if (!this._resizeData) return;
+        const { dir, startX, startY, startWidth, startHeight, startLeft, startTop } = this._resizeData;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        let newWidth = startWidth;
+        let newHeight = startHeight;
+        let newLeft = startLeft;
+        let newTop = startTop;
+        if (dir.includes('e')) {
+            newWidth = startWidth + dx;
+        }
+        if (dir.includes('s')) {
+            newHeight = startHeight + dy;
+        }
+        if (dir.includes('w')) {
+            newWidth = startWidth - dx;
+            newLeft = startLeft + dx;
+        }
+        if (dir.includes('n')) {
+            newHeight = startHeight - dy;
+            newTop = startTop + dy;
+        }
+        const widthPct = (newWidth / window.innerWidth) * 100;
+        const heightPct = (newHeight / window.innerHeight) * 100;
+        const node = document.getElementById(this.id);
+        if (node && (dir.includes('w') || dir.includes('n'))) {
+            node.style.transform = `translate(${newLeft}px, ${newTop}px)`;
+        }
+        this.setState({ width: widthPct, height: heightPct }, this.resizeBoundries);
+    }
+
+    stopResize = () => {
+        if (this._resizeData) {
+            this.setWinowsPosition();
+            this._resizeData = null;
+        }
+        window.removeEventListener('mousemove', this.performResize);
+        window.removeEventListener('mouseup', this.stopResize);
     }
 
     setWinowsPosition = () => {
@@ -504,8 +559,58 @@ export class Window extends Component {
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                        {this.props.resizable !== false && (
+                            <>
+                                {/* Top */}
+                                <div
+                                    className="absolute top-0 left-0 w-full h-2"
+                                    style={{ cursor: 'n-resize' }}
+                                    onMouseDown={(e) => this.initResize('n', e)}
+                                />
+                                {/* Bottom */}
+                                <div
+                                    className="absolute bottom-0 left-0 w-full h-2"
+                                    style={{ cursor: 's-resize' }}
+                                    onMouseDown={(e) => this.initResize('s', e)}
+                                />
+                                {/* Left */}
+                                <div
+                                    className="absolute top-0 left-0 h-full w-2"
+                                    style={{ cursor: 'w-resize' }}
+                                    onMouseDown={(e) => this.initResize('w', e)}
+                                />
+                                {/* Right */}
+                                <div
+                                    className="absolute top-0 right-0 h-full w-2"
+                                    style={{ cursor: 'e-resize' }}
+                                    onMouseDown={(e) => this.initResize('e', e)}
+                                />
+                                {/* Top Left */}
+                                <div
+                                    className="absolute top-0 left-0 w-2 h-2"
+                                    style={{ cursor: 'nwse-resize' }}
+                                    onMouseDown={(e) => this.initResize('nw', e)}
+                                />
+                                {/* Top Right */}
+                                <div
+                                    className="absolute top-0 right-0 w-2 h-2"
+                                    style={{ cursor: 'nesw-resize' }}
+                                    onMouseDown={(e) => this.initResize('ne', e)}
+                                />
+                                {/* Bottom Left */}
+                                <div
+                                    className="absolute bottom-0 left-0 w-2 h-2"
+                                    style={{ cursor: 'nesw-resize' }}
+                                    onMouseDown={(e) => this.initResize('sw', e)}
+                                />
+                                {/* Bottom Right */}
+                                <div
+                                    className="absolute bottom-0 right-0 w-2 h-2"
+                                    style={{ cursor: 'nwse-resize' }}
+                                    onMouseDown={(e) => this.initResize('se', e)}
+                                />
+                            </>
+                        )}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
@@ -549,40 +654,6 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
             <div className="flex justify-center text-sm font-bold">{title}</div>
         </div>
     )
-}
-
-// Window's Borders
-export class WindowYBorder extends Component {
-    componentDidMount() {
-        // Use the browser's Image constructor rather than the imported Next.js
-        // Image component to avoid runtime errors when running in tests.
-
-        this.trpImg = new window.Image(0, 0);
-        this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        this.trpImg.style.opacity = 0;
-    }
-    render() {
-        return (
-            <div className=" window-y-border border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }} onDrag={this.props.resize}>
-            </div>
-        )
-    }
-}
-
-export class WindowXBorder extends Component {
-    componentDidMount() {
-        // Use the global Image constructor instead of Next.js Image component
-
-        this.trpImg = new window.Image(0, 0);
-        this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        this.trpImg.style.opacity = 0;
-    }
-    render() {
-        return (
-            <div className=" window-x-border border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }} onDrag={this.props.resize}>
-            </div>
-        )
-    }
 }
 
 // Window's Edit Buttons
