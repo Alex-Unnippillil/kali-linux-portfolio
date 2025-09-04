@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { Engine, Render, World, Bodies, Body, Runner, Events } from 'matter-js';
-import { useTiltSensor } from './tilt';
+import { useEffect, useRef, useState, useCallback } from "react";
+import { Engine, Render, World, Bodies, Body, Runner, Events } from "matter-js";
+import { useTiltSensor } from "./tilt";
 
 const themes: Record<string, { bg: string; flipper: string }> = {
-  classic: { bg: '#0b3d91', flipper: '#ffd700' },
-  space: { bg: '#000000', flipper: '#00ffff' },
-  forest: { bg: '#064e3b', flipper: '#9acd32' },
+  classic: { bg: "#0b3d91", flipper: "#ffd700" },
+  space: { bg: "#000000", flipper: "#00ffff" },
+  forest: { bg: "#064e3b", flipper: "#9acd32" },
 };
 
 export default function Pinball() {
@@ -23,12 +23,13 @@ export default function Pinball() {
     left: false,
     right: false,
   });
-  const [theme, setTheme] = useState<keyof typeof themes>('classic');
+  const [theme, setTheme] = useState<keyof typeof themes>("classic");
   const [power, setPower] = useState(1);
   const [bounce, setBounce] = useState(0.5);
   const [tilt, setTilt] = useState(false);
   const [score, setScore] = useState(0);
   const nudgesRef = useRef<number[]>([]);
+  const lastNudgeRef = useRef(0);
 
   const handleTilt = useCallback(() => {
     setTilt(true);
@@ -37,6 +38,29 @@ export default function Pinball() {
       nudgesRef.current = [];
     }, 3000);
   }, []);
+
+  const handleNudge = useCallback(() => {
+    const now = Date.now();
+    nudgesRef.current = nudgesRef.current.filter((t) => now - t < 3000);
+    nudgesRef.current.push(now);
+    if (ballRef.current) {
+      Body.applyForce(ballRef.current, ballRef.current.position, {
+        x: 0.02,
+        y: 0,
+      });
+    }
+    if (nudgesRef.current.length >= 3) {
+      handleTilt();
+    }
+  }, [handleTilt]);
+
+  const tryNudge = useCallback(() => {
+    if (tilt) return;
+    const now = Date.now();
+    if (now - lastNudgeRef.current < 500) return;
+    lastNudgeRef.current = now;
+    handleNudge();
+  }, [tilt, handleNudge]);
 
   useTiltSensor(25, handleTilt);
 
@@ -89,12 +113,19 @@ export default function Pinball() {
       isStatic: true,
       isSensor: true,
     });
-    World.add(engine.world, [ball, ...walls, leftFlipper, rightFlipper, leftLane, rightLane]);
+    World.add(engine.world, [
+      ball,
+      ...walls,
+      leftFlipper,
+      rightFlipper,
+      leftLane,
+      rightLane,
+    ]);
     Render.run(render);
     const runner = Runner.create();
     Runner.run(runner, engine);
 
-    Events.on(engine, 'collisionStart', (evt) => {
+    Events.on(engine, "collisionStart", (evt) => {
       evt.pairs.forEach((pair) => {
         const bodies = [pair.bodyA, pair.bodyB];
         if (bodies.includes(ball) && bodies.includes(leftFlipper)) {
@@ -118,15 +149,22 @@ export default function Pinball() {
       });
     });
 
-    Events.on(render, 'afterRender', () => {
+    Events.on(render, "afterRender", () => {
       const ctx = render.context;
       if (!ballRef.current) return;
       const ball = ballRef.current;
       const { x, y } = ball.position;
       const radius = 12;
-      const gradient = ctx.createRadialGradient(x - 4, y - 4, radius / 4, x, y, radius);
-      gradient.addColorStop(0, '#fff');
-      gradient.addColorStop(1, '#999');
+      const gradient = ctx.createRadialGradient(
+        x - 4,
+        y - 4,
+        radius / 4,
+        x,
+        y,
+        radius,
+      );
+      gradient.addColorStop(0, "#fff");
+      gradient.addColorStop(1, "#999");
       ctx.fillStyle = gradient;
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
@@ -139,11 +177,11 @@ export default function Pinball() {
         const { x: lx, y: ly } = lane.position;
         ctx.save();
         if (glow) {
-          ctx.shadowColor = '#ffff00';
+          ctx.shadowColor = "#ffff00";
           ctx.shadowBlur = 20;
-          ctx.fillStyle = '#ff0';
+          ctx.fillStyle = "#ff0";
         } else {
-          ctx.fillStyle = '#555';
+          ctx.fillStyle = "#555";
         }
         ctx.fillRect(lx - 20, ly - 5, 40, 10);
         ctx.restore();
@@ -152,8 +190,8 @@ export default function Pinball() {
       sparksRef.current = sparksRef.current.filter((s) => {
         const r = 8 * s.life;
         const g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, r);
-        g.addColorStop(0, 'rgba(255,255,200,0.8)');
-        g.addColorStop(1, 'rgba(255,200,0,0)');
+        g.addColorStop(0, "rgba(255,255,200,0.8)");
+        g.addColorStop(1, "rgba(255,200,0,0)");
         ctx.fillStyle = g;
         ctx.beginPath();
         ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
@@ -165,46 +203,52 @@ export default function Pinball() {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (tilt) return;
-      if (e.code === 'ArrowLeft') {
-        Body.setAngle(leftFlipper, -Math.PI / 4 * power);
-      } else if (e.code === 'ArrowRight') {
-        Body.setAngle(rightFlipper, Math.PI / 4 * power);
-      } else if (e.code === 'KeyN') {
-        const now = Date.now();
-        nudgesRef.current = nudgesRef.current.filter((t) => now - t < 5000);
-        nudgesRef.current.push(now);
-        if (ballRef.current) {
-          Body.applyForce(ballRef.current, ballRef.current.position, { x: 0.02, y: 0 });
-        }
-        if (nudgesRef.current.length >= 3) {
-          setTilt(true);
-          setTimeout(() => {
-            setTilt(false);
-            nudgesRef.current = [];
-          }, 3000);
-        }
+      if (e.code === "ArrowLeft") {
+        Body.setAngle(leftFlipper, (-Math.PI / 4) * power);
+      } else if (e.code === "ArrowRight") {
+        Body.setAngle(rightFlipper, (Math.PI / 4) * power);
+      } else if (e.code === "KeyN") {
+        tryNudge();
       }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'ArrowLeft') {
+      if (e.code === "ArrowLeft") {
         Body.setAngle(leftFlipper, Math.PI / 8);
       }
-      if (e.code === 'ArrowRight') {
+      if (e.code === "ArrowRight") {
         Body.setAngle(rightFlipper, -Math.PI / 8);
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
       Render.stop(render);
       Runner.stop(runner);
       World.clear(engine.world, false);
       Engine.clear(engine);
     };
-  }, [theme, power, bounce, tilt]);
+  }, [theme, power, bounce, tilt, tryNudge]);
+
+  useEffect(() => {
+    let raf: number;
+    let lastPressed = false;
+    const poll = () => {
+      const gp = navigator.getGamepads ? navigator.getGamepads()[0] : null;
+      if (gp) {
+        const pressed = gp.buttons[5]?.pressed || gp.axes[1] < -0.8;
+        if (pressed && !lastPressed) {
+          tryNudge();
+        }
+        lastPressed = pressed;
+      }
+      raf = requestAnimationFrame(poll);
+    };
+    raf = requestAnimationFrame(poll);
+    return () => cancelAnimationFrame(raf);
+  }, [tryNudge]);
 
   useEffect(() => {
     if (leftFlipperRef.current) {
@@ -247,7 +291,10 @@ export default function Pinball() {
         </label>
         <label className="flex flex-col text-xs">
           Theme
-          <select value={theme} onChange={(e) => setTheme(e.target.value as keyof typeof themes)}>
+          <select
+            value={theme}
+            onChange={(e) => setTheme(e.target.value as keyof typeof themes)}
+          >
             {Object.keys(themes).map((t) => (
               <option key={t} value={t}>
                 {t}
@@ -259,11 +306,11 @@ export default function Pinball() {
       <div className="relative">
         <canvas ref={canvasRef} width={400} height={600} className="border" />
         <div className="absolute top-2 left-1/2 -translate-x-1/2 text-white font-mono text-xl">
-          {score.toString().padStart(6, '0')}
+          {score.toString().padStart(6, "0")}
         </div>
         {!tilt && (
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-white text-xs opacity-75">
-            Press N to nudge
+            Press N or RB to nudge
           </div>
         )}
         {tilt && (
@@ -277,4 +324,3 @@ export default function Pinball() {
     </div>
   );
 }
-
