@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { addRecentApp, getRecentApps } from '../../utils/recent';
 
 export class Desktop extends Component {
     constructor() {
@@ -41,6 +42,7 @@ export class Desktop extends Component {
             minimized_windows: {},
             window_positions: {},
             desktop_apps: [],
+            recentApps: getRecentApps(),
             context_menus: {
                 desktop: false,
                 default: false,
@@ -636,6 +638,8 @@ export class Desktop extends Component {
                     this.saveSession();
                 });
                 this.app_stack.push(objId);
+                const recentApps = addRecentApp(objId);
+                this.setState({ recentApps });
             }, 200);
         }
     }
@@ -936,7 +940,7 @@ export class Desktop extends Component {
                 { this.state.allAppsView ?
                     <AllApplications apps={apps}
                         games={games}
-                        recentApps={this.app_stack}
+                        recentApps={this.state.recentApps}
                         openApp={this.openApp} /> : null}
 
                 { this.state.showShortcutSelector ?
