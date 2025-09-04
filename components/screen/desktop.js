@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { DEFAULT_SHORTCUTS } from '../../apps/settings/keymapRegistry';
 
 export class Desktop extends Component {
     constructor() {
@@ -53,6 +54,39 @@ export class Desktop extends Component {
             showWindowSwitcher: false,
             switcherWindows: [],
         }
+        this.shortcutMap = {};
+    }
+
+    formatEvent = (e) => {
+        const parts = [
+            e.ctrlKey ? 'Ctrl' : '',
+            e.altKey ? 'Alt' : '',
+            e.shiftKey ? 'Shift' : '',
+            e.metaKey ? 'Meta' : '',
+            e.key.length === 1 ? e.key.toUpperCase() : e.key,
+        ];
+        return parts.filter(Boolean).join('+');
+    }
+
+    loadShortcuts = () => {
+        try {
+            this.shortcutMap = JSON.parse(window.localStorage.getItem('keymap') || '{}');
+        } catch (e) {
+            this.shortcutMap = {};
+        }
+    }
+
+    handleShortcutChange = (e) => {
+        if (e.detail && e.detail.description) {
+            this.shortcutMap[e.detail.description] = e.detail.keys;
+        }
+    }
+
+    getShortcut = (description) => {
+        const stored = this.shortcutMap[description];
+        if (stored) return stored;
+        const found = DEFAULT_SHORTCUTS.find(s => s.description === description);
+        return found ? found.keys : '';
     }
 
     componentDidMount() {
@@ -87,6 +121,8 @@ export class Desktop extends Component {
         this.checkForAppShortcuts();
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
+        this.loadShortcuts();
+        window.addEventListener('keymap-change', this.handleShortcutChange);
         document.addEventListener('keydown', this.handleGlobalShortcut);
     }
 
@@ -94,6 +130,7 @@ export class Desktop extends Component {
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
+        window.removeEventListener('keymap-change', this.handleShortcutChange);
     }
 
     checkForNewFolders = () => {
@@ -145,6 +182,19 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcut = (e) => {
+        const combo = this.formatEvent(e);
+        const appFinder = this.getShortcut('Application Finder');
+        if (combo === appFinder) {
+            e.preventDefault();
+            this.showAllApps();
+            return;
+        }
+        const openSettings = this.getShortcut('Open settings');
+        if (combo === openSettings) {
+            e.preventDefault();
+            this.openApp('settings');
+            return;
+        }
         if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
             if (!this.state.showWindowSwitcher) {

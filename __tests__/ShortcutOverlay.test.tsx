@@ -13,6 +13,7 @@ describe('ShortcutOverlay', () => {
       JSON.stringify({
         'Show keyboard shortcuts': 'A',
         'Open settings': 'A',
+        'Application Finder': 'B',
       })
     );
     render(<ShortcutOverlay />);
@@ -21,8 +22,10 @@ describe('ShortcutOverlay', () => {
       screen.getByText('Show keyboard shortcuts')
     ).toBeInTheDocument();
     expect(screen.getByText('Open settings')).toBeInTheDocument();
+    expect(screen.getByText('Application Finder')).toBeInTheDocument();
     const items = screen.getAllByRole('listitem');
     expect(items[0]).toHaveAttribute('data-conflict', 'true');
     expect(items[1]).toHaveAttribute('data-conflict', 'true');
+    expect(items[2]).toHaveAttribute('data-conflict', 'false');
   });
 });
