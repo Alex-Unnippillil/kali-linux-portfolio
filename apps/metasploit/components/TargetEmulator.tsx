@@ -8,6 +8,8 @@ import usePersistentState from '../../../hooks/usePersistentState';
 interface ModuleInfo {
   name: string;
   description?: string;
+  rank?: string;
+  reliability?: string;
 }
 
 interface SavedSession {

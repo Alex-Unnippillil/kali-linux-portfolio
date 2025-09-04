@@ -10,6 +10,8 @@ interface Module {
   description: string;
   type: string;
   severity: string;
+  rank?: string;
+  reliability?: string;
   [key: string]: any;
 }
 
@@ -177,6 +179,18 @@ const MetasploitPage: React.FC = () => {
                 </span>
               </h2>
               <p className="whitespace-pre-wrap">{selected.description}</p>
+              <div className="mt-2 text-sm">
+                {selected.rank && (
+                  <p>
+                    <strong>Rank:</strong> {selected.rank}
+                  </p>
+                )}
+                {selected.reliability && (
+                  <p>
+                    <strong>Reliability:</strong> {selected.reliability}
+                  </p>
+                )}
+              </div>
             </div>
           ) : (
             <p>Select a module to view details</p>
