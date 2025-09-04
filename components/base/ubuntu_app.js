@@ -36,8 +36,9 @@ export class UbuntuApp extends Component {
                 role="button"
                 aria-label={this.props.name}
                 aria-disabled={this.props.disabled}
-                data-context="app"
+                data-context={this.props.context || "app"}
                 data-app-id={this.props.id}
+                data-section={this.props.section}
                 draggable
                 onDragStart={this.handleDragStart}
                 onDragEnd={this.handleDragEnd}
