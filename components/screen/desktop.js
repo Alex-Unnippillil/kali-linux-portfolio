@@ -19,6 +19,7 @@ import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import Taskbar from './taskbar';
 import TaskbarMenu from '../context-menus/taskbar-menu';
+import WindowMenu from '../context-menus/window-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
@@ -46,12 +47,16 @@ export class Desktop extends Component {
                 default: false,
                 app: false,
                 taskbar: false,
+                window: false,
             },
             context_app: null,
             showNameBar: false,
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            workspaces: ['Workspace 1', 'Workspace 2', 'Workspace 3'],
+            currentWorkspace: 0,
+            window_workspaces: {},
         }
     }
 
@@ -212,7 +217,11 @@ export class Desktop extends Component {
     openWindowSwitcher = () => {
         const windows = this.app_stack
             .filter(id => this.state.closed_windows[id] === false)
-            .map(id => apps.find(a => a.id === id))
+            .map(id => {
+                const app = apps.find(a => a.id === id);
+                if (!app) return null;
+                return { ...app, workspace: this.state.window_workspaces[id] || 0 };
+            })
             .filter(Boolean);
         if (windows.length) {
             this.setState({ showWindowSwitcher: true, switcherWindows: windows });
@@ -226,6 +235,24 @@ export class Desktop extends Component {
     selectWindow = (id) => {
         this.setState({ showWindowSwitcher: false, switcherWindows: [] }, () => {
             this.openApp(id);
+        });
+    }
+
+    moveWindowToWorkspace = (id, workspace) => {
+        this.setState(prev => {
+            const window_workspaces = { ...prev.window_workspaces, [id]: workspace };
+            let switcherWindows = prev.switcherWindows;
+            if (prev.showWindowSwitcher) {
+                switcherWindows = this.app_stack
+                    .filter(wid => prev.closed_windows[wid] === false)
+                    .map(wid => {
+                        const app = apps.find(a => a.id === wid);
+                        if (!app) return null;
+                        return { ...app, workspace: window_workspaces[wid] || 0 };
+                    })
+                    .filter(Boolean);
+            }
+            return { window_workspaces, switcherWindows };
         });
     }
 
@@ -257,6 +284,13 @@ export class Desktop extends Component {
                 });
                 this.setState({ context_app: appId }, () => this.showContextMenu(e, "taskbar"));
                 break;
+            case "window":
+                ReactGA.event({
+                    category: `Context Menu`,
+                    action: `Opened Window Context Menu`
+                });
+                this.setState({ context_app: appId }, () => this.showContextMenu(e, "window"));
+                break;
             default:
                 ReactGA.event({
                     category: `Context Menu`,
@@ -287,6 +321,10 @@ export class Desktop extends Component {
             case "taskbar":
                 ReactGA.event({ category: `Context Menu`, action: `Opened Taskbar Context Menu` });
                 this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "taskbar"));
+                break;
+            case "window":
+                ReactGA.event({ category: `Context Menu`, action: `Opened Window Context Menu` });
+                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "window"));
                 break;
             default:
                 ReactGA.event({ category: `Context Menu`, action: `Opened Default Context Menu` });
@@ -455,7 +493,7 @@ export class Desktop extends Component {
     renderWindows = () => {
         let windowsJsx = [];
         apps.forEach((app, index) => {
-            if (this.state.closed_windows[app.id] === false) {
+            if (this.state.closed_windows[app.id] === false && (this.state.window_workspaces[app.id] || 0) === this.state.currentWorkspace) {
 
                 const pos = this.state.window_positions[app.id];
                 const props = {
@@ -478,6 +516,7 @@ export class Desktop extends Component {
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
+                    workspace: this.state.window_workspaces[app.id] || 0,
                 }
 
                 windowsJsx.push(
@@ -631,7 +670,8 @@ export class Desktop extends Component {
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
-                this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
+                const window_workspaces = { ...this.state.window_workspaces, [objId]: this.state.currentWorkspace };
+                this.setState({ closed_windows, favourite_apps, allAppsView: false, window_workspaces }, () => {
                     this.focus(objId);
                     this.saveSession();
                 });
@@ -924,6 +964,31 @@ export class Desktop extends Component {
                     }}
                     onCloseMenu={this.hideAllContextMenu}
                 />
+                <WindowMenu
+                    active={this.state.context_menus.window}
+                    minimized={this.state.context_app ? this.state.minimized_windows[this.state.context_app] : false}
+                    workspaces={this.state.workspaces}
+                    onMinimize={() => {
+                        const id = this.state.context_app;
+                        if (!id) return;
+                        if (this.state.minimized_windows[id]) {
+                            this.openApp(id);
+                        } else {
+                            this.hasMinimised(id);
+                        }
+                    }}
+                    onClose={() => {
+                        const id = this.state.context_app;
+                        if (!id) return;
+                        this.closeApp(id);
+                    }}
+                    onMove={(ws) => {
+                        const id = this.state.context_app;
+                        if (!id) return;
+                        this.moveWindowToWorkspace(id, ws);
+                    }}
+                    onCloseMenu={this.hideAllContextMenu}
+                />
 
                 {/* Folder Input Name Bar */}
                 {
@@ -948,6 +1013,7 @@ export class Desktop extends Component {
                 { this.state.showWindowSwitcher ?
                     <WindowSwitcher
                         windows={this.state.switcherWindows}
+                        workspaces={this.state.workspaces}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
 
