@@ -33,6 +33,31 @@ describe('theme persistence and unlocking', () => {
     expect(document.documentElement.classList.contains('dark')).toBe(true);
   });
 
+  test('updates CSS variables without reload', () => {
+    const style = document.createElement('style');
+    style.innerHTML = `
+      :root { --color-bg: white; }
+      html[data-theme='dark'] { --color-bg: black; }
+      html[data-theme='neon'] { --color-bg: red; }
+    `;
+    document.head.appendChild(style);
+
+    setTheme('default');
+    expect(
+      getComputedStyle(document.documentElement).getPropertyValue('--color-bg')
+    ).toBe('white');
+
+    setTheme('dark');
+    expect(
+      getComputedStyle(document.documentElement).getPropertyValue('--color-bg')
+    ).toBe('black');
+
+    setTheme('neon');
+    expect(
+      getComputedStyle(document.documentElement).getPropertyValue('--color-bg')
+    ).toBe('red');
+  });
+
   test('defaults to system preference when no stored theme', () => {
     // simulate dark mode preference
     // @ts-ignore
