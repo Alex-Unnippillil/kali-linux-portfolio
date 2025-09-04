@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { playTone } from '../../utils/audio';
 import usePersistedState from '../../hooks/usePersistedState';
 import calculate3BV from '../../games/minesweeper/metrics';
 import { serializeBoard, deserializeBoard } from '../../games/minesweeper/save';
@@ -162,7 +163,6 @@ const calculateRiskMap = (board) => {
 
 const Minesweeper = () => {
   const canvasRef = useRef(null);
-  const audioRef = useRef(null);
   const workerRef = useRef(null);
   const initWorker = () => {
     if (typeof window !== 'undefined' && typeof Worker === 'function') {
@@ -401,18 +401,8 @@ const Minesweeper = () => {
 
   const playSound = (type) => {
     if (!sound || typeof window === 'undefined') return;
-    if (!audioRef.current)
-      audioRef.current = new (window.AudioContext || window.webkitAudioContext)();
-    const ctx = audioRef.current;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'square';
-    osc.frequency.value =
-      type === 'boom' ? 120 : type === 'flag' ? 330 : 440;
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.15);
+    const freq = type === 'boom' ? 120 : type === 'flag' ? 330 : 440;
+    playTone({ freq, ms: 150, wave: 'square' });
   };
 
   const checkAndHandleWin = (newBoard) => {

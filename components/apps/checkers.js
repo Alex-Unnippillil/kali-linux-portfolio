@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { playTone } from '../../utils/audio';
 import GameLayout from './GameLayout';
 import usePersistedState from '../../hooks/usePersistedState';
 import {
@@ -143,17 +144,7 @@ const Checkers = () => {
 
   const playBeep = useCallback(() => {
     if (!sound) return;
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      osc.type = 'square';
-      osc.frequency.value = 500;
-      osc.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.1);
-    } catch (e) {
-      // ignore
-    }
+    playTone({ freq: 500, ms: 100, wave: 'square' });
   }, [sound]);
 
   const draw = useCallback(

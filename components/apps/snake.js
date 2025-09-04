@@ -6,6 +6,7 @@ import useGameHaptics from '../../hooks/useGameHaptics';
 import usePersistentState from '../../hooks/usePersistentState';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import { playTone } from '../../utils/audio';
 import {
   GRID_SIZE,
   randomFood,
@@ -44,7 +45,6 @@ const Snake = () => {
   const rafRef = useRef();
   const lastRef = useRef(0);
   const runningRef = useRef(true);
-  const audioCtx = useRef(null);
   const haptics = useGameHaptics();
   const prefersReducedMotion = usePrefersReducedMotion();
 
@@ -113,26 +113,7 @@ const Snake = () => {
   const beep = useCallback(
     (freq) => {
       if (!sound) return;
-      try {
-        const ctx =
-          audioCtx.current ||
-          new (window.AudioContext || window.webkitAudioContext)();
-        audioCtx.current = ctx;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.frequency.value = freq;
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        gain.gain.setValueAtTime(0.2, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(
-          0.001,
-          ctx.currentTime + 0.15,
-        );
-        osc.start();
-        osc.stop(ctx.currentTime + 0.15);
-      } catch {
-        // ignore audio errors
-      }
+      playTone({ freq, ms: 150 });
     },
     [sound],
   );

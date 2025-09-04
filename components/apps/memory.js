@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import GameLayout from './GameLayout';
 import { createDeck, PATTERN_THEMES, fisherYatesShuffle } from './memory_utils';
+import { playTone } from '../../utils/audio';
 
 const DEFAULT_TIME = { 2: 30, 4: 60, 6: 120 };
 
@@ -83,20 +84,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
 
   const beep = useCallback(() => {
     if (!sound || typeof window === 'undefined') return;
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.value = 600;
-      osc.connect(ctx.destination);
-      osc.start();
-      setTimeout(() => {
-        osc.stop();
-        ctx.close();
-      }, 100);
-    } catch {
-      // ignore audio errors
-    }
+    playTone({ freq: 600, ms: 100 });
   }, [sound]);
 
   const reset = useCallback(() => {

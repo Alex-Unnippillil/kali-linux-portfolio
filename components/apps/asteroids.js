@@ -16,6 +16,7 @@ import GameLayout from './GameLayout';
 import { vibrate } from './Games/common/haptics';
 import { getMapping } from './Games/common/input-remap/useInputMapping';
 import useOPFS from '../../hooks/useOPFS';
+import { playTone } from '../../utils/audio';
 
 // Arcade-style tuning constants
 const THRUST = 0.1;
@@ -108,7 +109,6 @@ class Quadtree {
 const Asteroids = () => {
   const canvasRef = useRef(null);
   const requestRef = useRef();
-  const audioCtx = useRef(null);
   const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
   const controlsRef = useRef(useGameControls(canvasRef));
   const [paused, setPaused] = useState(false);
@@ -263,17 +263,7 @@ const Asteroids = () => {
 
     // Audio using WebAudio lazily
     const playSound = (freq) => {
-      if (!audioCtx.current) audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
-      const ctxAudio = audioCtx.current;
-      const osc = ctxAudio.createOscillator();
-      const gain = ctxAudio.createGain();
-      osc.frequency.value = freq;
-      osc.connect(gain);
-      gain.connect(ctxAudio.destination);
-      osc.start();
-      gain.gain.setValueAtTime(0.2, ctxAudio.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctxAudio.currentTime + 0.3);
-      osc.stop(ctxAudio.currentTime + 0.3);
+      playTone({ freq, ms: 300 });
     };
 
     // Spawn asteroids for a level

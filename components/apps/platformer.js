@@ -7,25 +7,9 @@ import {
   movePlayer,
   physics,
 } from '../../public/apps/platformer/engine.js';
+import { playTone } from '../../utils/audio';
 
 const TILE_SIZE = 16;
-
-// simple beep for coin collection
-function playCoinSound() {
-  try {
-    const ac = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ac.createOscillator();
-    const gain = ac.createGain();
-    osc.frequency.value = 800;
-    osc.connect(gain);
-    gain.connect(ac.destination);
-    osc.start();
-    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.2);
-    osc.stop(ac.currentTime + 0.2);
-  } catch (e) {
-    /* ignore */
-  }
-}
 
 const Platformer = () => {
   const canvasRef = useRef(null);
@@ -182,7 +166,7 @@ const Platformer = () => {
       if (collectCoin(tiles, cx, cy)) {
         score++;
         setAriaMsg(`Score ${score}`);
-        if (sound) playCoinSound();
+        if (sound) playTone({ freq: 800, ms: 200 });
         if (score > progress.highscore)
           setProgress((p) => ({ ...p, highscore: score }));
       }

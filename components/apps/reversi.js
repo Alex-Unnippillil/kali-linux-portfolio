@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { playTone } from '../../utils/audio';
 import {
   SIZE,
   DIRECTIONS,
@@ -19,7 +20,6 @@ const Reversi = () => {
   const playerRef = useRef('B');
   const pausedRef = useRef(false);
   const animRef = useRef(0);
-  const audioRef = useRef(null);
   const workerRef = useRef(null);
   const aiThinkingRef = useRef(false);
   const reduceMotionRef = useRef(false);
@@ -98,18 +98,7 @@ const Reversi = () => {
 
   const playSound = React.useCallback(() => {
     if (!sound) return;
-    const ctx =
-      audioRef.current || new (window.AudioContext || window.webkitAudioContext)();
-    audioRef.current = ctx;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = 500;
-    osc.start();
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-    osc.stop(ctx.currentTime + 0.1);
+    playTone({ freq: 500, ms: 100 });
   }, [sound]);
 
   const queueFlips = (r, c, player, prevBoard) => {

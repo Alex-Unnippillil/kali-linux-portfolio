@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import confetti from 'canvas-confetti';
 import usePersistentState from '../usePersistentState';
 import { PieceGenerator } from '../../games/tetris/logic';
+import { playTone } from '../../utils/audio';
 
 const WIDTH = 10;
 const HEIGHT = 20;
@@ -277,34 +278,14 @@ const Tetris = () => {
 
   const dropInterval = Math.max(100, 1000 - (level - 1) * 100);
 
-  const audioCtxRef = useRef(null);
   const playSound = useCallback(
     (freq = 440, duration = 0.1) => {
       if (!sound) return;
-      try {
-        const ctx =
-          audioCtxRef.current ||
-          new (window.AudioContext || window.webkitAudioContext)();
-        audioCtxRef.current = ctx;
-        const osc = ctx.createOscillator();
-        osc.type = 'square';
-        osc.frequency.value = freq;
-        osc.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + duration);
-      } catch {
-        /* ignore */
-      }
+      playTone({ freq, ms: duration * 1000, wave: 'square' });
     },
     [sound],
   );
 
-  useEffect(
-    () => () => {
-      audioCtxRef.current?.close?.();
-    },
-    [],
-  );
 
   const thud = useCallback(() => {
     playSound(120, 0.05);

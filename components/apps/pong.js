@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { playTone } from '../../utils/audio';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import useGameControls from './useGameControls';
 import usePersistentState from '../../hooks/usePersistentState';
@@ -35,7 +36,6 @@ const PongInner = () => {
   const [offerSDP, setOfferSDP] = useState('');
   const [answerSDP, setAnswerSDP] = useState('');
   const [connected, setConnected] = useState(false);
-  const audioCtxRef = useRef(null);
   const [sound, setSound] = useState(true);
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
@@ -76,21 +76,7 @@ const PongInner = () => {
     const playSound = useCallback(
       (freq) => {
         if (!sound) return;
-        try {
-          if (!audioCtxRef.current) {
-            audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-          }
-          const ctx = audioCtxRef.current;
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.frequency.value = freq;
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start();
-          osc.stop(ctx.currentTime + 0.1);
-        } catch {
-          // ignore audio errors
-        }
+        playTone({ freq, ms: 100 });
       },
       [sound],
     );

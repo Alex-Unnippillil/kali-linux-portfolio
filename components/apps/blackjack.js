@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { playTone } from '../../utils/audio';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import { BlackjackGame, basicStrategy, cardValue, handValue } from './blackjack/engine';
 
@@ -13,7 +14,6 @@ const Blackjack = () => {
   const gameRef = useRef(null);
   const animRef = useRef(null);
   const animationsRef = useRef([]); // active tweens
-  const audioCtxRef = useRef(null);
 
   const [bet, setBet] = useState(0);
   const [bankroll, setBankroll] = useState(1000);
@@ -97,28 +97,12 @@ const Blackjack = () => {
 
   const playSound = () => {
     if (!sound) return;
-    const ctx = audioCtxRef.current || (audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)());
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = 440;
-    gain.gain.value = 0.1;
-    osc.start();
-    osc.stop(ctx.currentTime + 0.1);
+    playTone({ freq: 440, ms: 100 });
   };
 
   const playChipSound = () => {
     if (!sound) return;
-    const ctx = audioCtxRef.current || (audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)());
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = 600 + Math.random() * 400; // pitch jitter
-    gain.gain.value = 0.15;
-    osc.start();
-    osc.stop(ctx.currentTime + 0.05);
+    playTone({ freq: 600 + Math.random() * 400, ms: 50 });
   };
 
   const start = () => {

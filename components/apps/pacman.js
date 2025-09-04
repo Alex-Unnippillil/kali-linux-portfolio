@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import useAssetLoader from '../../hooks/useAssetLoader';
 import SpeedControls from '../../games/pacman/components/SpeedControls';
+import { playTone } from '../../utils/audio';
 
 /**
  * Small Pacman implementation used inside the portfolio. The goal of this
@@ -118,7 +119,6 @@ const Pacman = () => {
   const nextFruitRef = useRef(0);
   const levelTimerRef = useRef(0);
   const statusRef = useRef('Playing');
-  const audioCtxRef = useRef(null);
   const touchStartRef = useRef(null);
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
@@ -161,21 +161,7 @@ const Pacman = () => {
 
   const playSound = (freq) => {
     if (!soundRef.current) return;
-    try {
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      const ctx = audioCtxRef.current;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.frequency.value = freq;
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.1);
-    } catch {
-      // ignore audio errors
-    }
+    playTone({ freq, ms: 100 });
   };
 
   const resetPositions = () => {

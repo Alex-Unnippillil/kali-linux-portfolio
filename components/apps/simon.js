@@ -4,6 +4,7 @@ import seedrandom from "seedrandom";
 import GameLayout from "./GameLayout";
 import usePersistentState from "../usePersistentState";
 import { vibrate } from "./Games/common/haptics";
+import { playTone } from "../../utils/audio";
 
 const padStyles = [
   {
@@ -138,7 +139,6 @@ const Simon = () => {
     "simon_leaderboard",
     {},
   );
-  const audioCtx = useRef(null);
   const errorSound = useRef(null);
   const rngRef = useRef(Math.random);
   const timeoutRef = useRef(null);
@@ -166,23 +166,6 @@ const Simon = () => {
     [mode, timing, setLeaderboard],
   );
 
-  const scheduleTone = (freq, startTime, duration) => {
-    const ctx =
-      audioCtx.current ||
-      new (window.AudioContext || window.webkitAudioContext)();
-    audioCtx.current = ctx;
-    if (ctx.state === "suspended") ctx.resume();
-    const oscillator = ctx.createOscillator();
-    const gain = ctx.createGain();
-    oscillator.frequency.value = freq;
-    oscillator.connect(gain);
-    gain.connect(ctx.destination);
-    gain.gain.setValueAtTime(0.0001, startTime);
-    gain.gain.exponentialRampToValueAtTime(0.5, startTime + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
-    oscillator.start(startTime);
-    oscillator.stop(startTime + duration + 0.05);
-  };
 
   const flashPad = useCallback(
     (idx, duration) => {
@@ -205,39 +188,25 @@ const Simon = () => {
   }, [tempo, mode, sequence.length]);
 
   const playSequence = useCallback(() => {
-    const ctx =
-      audioCtx.current ||
-      new (window.AudioContext || window.webkitAudioContext)();
-    audioCtx.current = ctx;
-    if (ctx.state === "suspended") ctx.resume();
     setIsPlayerTurn(false);
     setStatus("Listen...");
-    const start = ctx.currentTime + 0.1;
     const baseDelta = stepDuration();
     const ramp = 0.97;
-    const schedule = createToneSchedule(
-      sequence.length,
-      start,
-      baseDelta,
-      ramp,
-    );
+    let delay = 100;
     let currentDelta = baseDelta;
-    let finalDelta = baseDelta;
-    schedule.forEach((time, i) => {
-      const idx = sequence[i];
-      scheduleTone(tones[idx], time, currentDelta);
-      const delay = (time - ctx.currentTime) * 1000;
-      setTimeout(() => flashPad(idx, currentDelta), delay);
-      finalDelta = currentDelta;
+    sequence.forEach((idx) => {
+      setTimeout(() => {
+        playTone({ freq: tones[idx], ms: currentDelta * 1000 });
+        flashPad(idx, currentDelta);
+      }, delay);
+      delay += currentDelta * 1000;
       currentDelta *= ramp;
     });
-    const totalDelay =
-      (schedule[schedule.length - 1] - ctx.currentTime + finalDelta) * 1000;
     setTimeout(() => {
       setStatus("Your turn");
       setIsPlayerTurn(true);
       setStep(0);
-    }, totalDelay);
+    }, delay);
   }, [flashPad, sequence, stepDuration]);
 
   useEffect(() => {
@@ -320,8 +289,7 @@ const Simon = () => {
       if (!isPlayerTurn) return;
       const duration = stepDuration();
       flashPad(idx, duration);
-      const start = (audioCtx.current?.currentTime || 0) + 0.001;
-      scheduleTone(tones[idx], start, duration);
+      playTone({ freq: tones[idx], ms: duration * 1000 });
 
       if (sequence[step] !== idx) {
         if (!errorSound.current) {

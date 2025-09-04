@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import { Chess } from "chess.js";
 import { suggestMoves } from "../../games/chess/engine/wasmEngine";
+import { playTone } from "../../utils/audio";
 
 // 0x88 board representation utilities
 const EMPTY = 0;
@@ -280,12 +281,7 @@ const getBestMove = (board, side, depth) => {
 };
 
 const playBeep = () => {
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const osc = ctx.createOscillator();
-  osc.frequency.value = 400;
-  osc.connect(ctx.destination);
-  osc.start();
-  osc.stop(ctx.currentTime + 0.1);
+  playTone({ freq: 400, ms: 100 });
 };
 
 const ChessGame = () => {
