@@ -22,6 +22,7 @@ import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { addRecentApp } from '../../utils/recentApps';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
 export class Desktop extends Component {
@@ -52,6 +53,7 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            recent_apps: [],
         }
     }
 
@@ -88,6 +90,15 @@ export class Desktop extends Component {
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
+
+        try {
+            const recent = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]');
+            if (Array.isArray(recent)) {
+                this.setState({ recent_apps: recent });
+            }
+        } catch (e) {
+            safeLocalStorage?.setItem('recentApps', JSON.stringify([]));
+        }
     }
 
     componentWillUnmount() {
@@ -585,6 +596,8 @@ export class Desktop extends Component {
         // if the app is disabled
         if (this.state.disabled_apps[objId]) return;
 
+        this.updateRecentApps(objId);
+
         // if app is already open, focus it instead of spawning a new window
         if (this.state.closed_windows[objId] === false) {
             // if it's minimised, restore its last position
@@ -638,6 +651,12 @@ export class Desktop extends Component {
                 this.app_stack.push(objId);
             }, 200);
         }
+    }
+
+    updateRecentApps = (id) => {
+        const recent_apps = addRecentApp(this.state.recent_apps, id, 10);
+        this.setState({ recent_apps });
+        safeLocalStorage?.setItem('recentApps', JSON.stringify(recent_apps));
     }
 
     closeApp = async (objId) => {
@@ -936,7 +955,7 @@ export class Desktop extends Component {
                 { this.state.allAppsView ?
                     <AllApplications apps={apps}
                         games={games}
-                        recentApps={this.app_stack}
+                        recentApps={this.state.recent_apps}
                         openApp={this.openApp} /> : null}
 
                 { this.state.showShortcutSelector ?
