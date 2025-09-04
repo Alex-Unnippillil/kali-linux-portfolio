@@ -17,6 +17,11 @@ const protocolColors: Record<string, string> = {
   ICMP: 'bg-yellow-800',
 };
 
+const samples = [
+  { label: 'HTTP', path: '/samples/wireshark/http.pcap' },
+  { label: 'DNS', path: '/samples/wireshark/dns.pcap' },
+];
+
 // Convert bytes to hex dump string
 const toHex = (bytes: Uint8Array) =>
   Array.from(bytes, (b, i) =>
@@ -276,6 +281,14 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     setSelected(null);
   };
 
+  const handleSample = async (path: string) => {
+    const res = await fetch(path);
+    const buf = await res.arrayBuffer();
+    const pkts = await parseWithWasm(buf);
+    setPackets(pkts);
+    setSelected(null);
+  };
+
   const filtered = packets.filter((p) => {
     if (!filter) return true;
     const term = filter.toLowerCase();
@@ -289,12 +302,36 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
 
   return (
     <div className="p-4 text-white bg-ub-cool-grey h-full w-full flex flex-col space-y-2">
-      <input
-        type="file"
-        accept=".pcap,.pcapng"
-        onChange={handleFile}
-        className="text-sm"
-      />
+      <div className="flex items-center space-x-2">
+        <input
+          type="file"
+          accept=".pcap,.pcapng"
+          onChange={handleFile}
+          className="text-sm"
+        />
+        <select
+          onChange={(e) => {
+            if (e.target.value) handleSample(e.target.value);
+            e.target.value = '';
+          }}
+          className="text-sm bg-gray-700 text-white rounded"
+        >
+          <option value="">Open sample</option>
+          {samples.map(({ label, path }) => (
+            <option key={path} value={path}>
+              {label}
+            </option>
+          ))}
+        </select>
+        <a
+          href="https://wiki.wireshark.org/SampleCaptures"
+          target="_blank"
+          rel="noreferrer"
+          className="text-xs underline"
+        >
+          Sample sources
+        </a>
+      </div>
       {packets.length > 0 && (
         <>
           <div className="flex items-center space-x-2">
