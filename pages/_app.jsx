@@ -11,6 +11,7 @@ import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
+import { safeRegisterSW } from '../lib/safe-service-worker';
 
 function MyApp(props) {
   const { Component, pageProps } = props;
@@ -28,40 +29,7 @@ function MyApp(props) {
       console.error('Analytics initialization failed', err);
     });
 
-    if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
-      // Register PWA service worker generated via @ducanh2912/next-pwa
-      const register = async () => {
-        try {
-          const registration = await navigator.serviceWorker.register('/sw.js');
-
-          window.manualRefresh = () => registration.update();
-
-          if ('periodicSync' in registration) {
-            try {
-              const status = await navigator.permissions.query({
-                name: 'periodic-background-sync',
-              });
-              if (status.state === 'granted') {
-                await registration.periodicSync.register('content-sync', {
-                  minInterval: 24 * 60 * 60 * 1000,
-                });
-              } else {
-                registration.update();
-              }
-            } catch {
-              registration.update();
-            }
-          } else {
-            registration.update();
-          }
-        } catch (err) {
-          console.error('Service worker registration failed', err);
-        }
-      };
-      register().catch((err) => {
-        console.error('Service worker setup failed', err);
-      });
-    }
+    safeRegisterSW();
   }, []);
 
   useEffect(() => {
