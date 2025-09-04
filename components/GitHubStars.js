@@ -44,7 +44,7 @@ const GitHubStars = ({ user, repo }) => {
   if (!repo) return null;
 
   return (
-    <div ref={ref} className="inline-flex items-center text-xs text-gray-300">
+    <div ref={ref} className="inline-flex items-center text-xs text-ubt-grey">
       {loading ? (
         <div className="h-5 w-12 bg-gray-200 animate-pulse rounded" />
       ) : (
@@ -53,7 +53,10 @@ const GitHubStars = ({ user, repo }) => {
           <button
             onClick={fetchStars}
             aria-label="Refresh star count"
-            className="ml-2 text-gray-400 hover:text-white"
+            className={[
+              "ml-2 text-ubt-grey hover:text-white",
+              "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-outline-color)]",
+            ].join(" ")}
           >
             ↻
           </button>
