@@ -21,7 +21,12 @@ export type GamepadEventMap = {
 type Listener<T> = (event: T) => void;
 
 class GamepadManager {
-  private listeners: Record<string, Set<Listener<any>>> = {};
+  private listeners: Record<keyof GamepadEventMap, Set<Listener<any>>> = {
+    connected: new Set(),
+    disconnected: new Set(),
+    button: new Set(),
+    axis: new Set(),
+  };
   private prevState = new Map<number, { buttons: number[]; axes: number[] }>();
 
   private raf: number | null = null;
