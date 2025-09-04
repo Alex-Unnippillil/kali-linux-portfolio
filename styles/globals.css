@@ -19,7 +19,12 @@
   --color-focus-ring: var(--color-accent);
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
+  --screen-brightness: 1;
   accent-color: var(--color-control-accent);
+}
+
+body {
+  filter: brightness(var(--screen-brightness));
 }
 
 /* Dark theme */

@@ -20,6 +20,10 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getBrightness as loadBrightness,
+  setBrightness as saveBrightness,
+  getPresentationMode as loadPresentationMode,
+  setPresentationMode as savePresentationMode,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -63,6 +67,8 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  brightness: number;
+  presentationMode: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +80,8 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setBrightness: (value: number) => void;
+  setPresentationMode: (value: boolean) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +96,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  brightness: defaults.brightness,
+  presentationMode: defaults.presentationMode,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +109,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setBrightness: () => {},
+  setPresentationMode: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -113,7 +125,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [brightness, setBrightness] = useState<number>(defaults.brightness);
+  const [presentationMode, setPresentationMode] = useState<boolean>(defaults.presentationMode);
   const fetchRef = useRef<typeof fetch | null>(null);
+  const prevBrightness = useRef<number>(defaults.brightness);
 
   useEffect(() => {
     (async () => {
@@ -127,6 +142,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setBrightness(await loadBrightness());
+      setPresentationMode(await loadPresentationMode());
       setTheme(loadTheme());
     })();
   }, []);
@@ -236,6 +253,21 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    document.documentElement.style.setProperty('--screen-brightness', String(brightness));
+    saveBrightness(brightness);
+  }, [brightness]);
+
+  useEffect(() => {
+    savePresentationMode(presentationMode);
+    if (presentationMode) {
+      prevBrightness.current = brightness;
+      setBrightness(1);
+    } else {
+      setBrightness(prevBrightness.current);
+    }
+  }, [presentationMode]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -250,6 +282,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        brightness,
+        presentationMode,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +295,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setBrightness,
+        setPresentationMode,
       }}
     >
       {children}
