@@ -29,7 +29,7 @@ export default function SideBar(props) {
         <>
             <nav
                 aria-label="Dock"
-                className={(props.hide ? " -translate-x-full " : "") + " absolute transform duration-300 select-none z-40 left-0 top-0 h-full pt-7 w-auto flex flex-col justify-start items-center border-black border-opacity-60 bg-black bg-opacity-50"}
+                className={(props.hide ? " -translate-x-full " : "") + " absolute transform duration-300 select-none z-40 left-0 top-0 h-full pt-6 w-auto flex flex-col justify-start items-center border-black border-opacity-60 bg-black bg-opacity-50"}
             >
                 {
                     (
