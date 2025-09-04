@@ -24,6 +24,8 @@ export class Window extends Component {
             height: props.defaultHeight || 85,
             closed: false,
             maximized: false,
+            shaded: false,
+            preShadeHeight: null,
             parentSize: {
                 height: 100,
                 width: 100
@@ -379,6 +381,35 @@ export class Window extends Component {
         this.props.focus(this.id);
     }
 
+    toggleShade = () => {
+        if (this.state.shaded) {
+            this.unshadeWindow();
+        } else {
+            this.shadeWindow();
+        }
+    }
+
+    shadeWindow = () => {
+        if (this.state.shaded) return;
+        const bar = document.querySelector(`#${this.id} .bg-ub-window-title`);
+        const barHeight = bar ? bar.offsetHeight : 0;
+        const percent = (barHeight / window.innerHeight) * 100;
+        this.setState(prev => ({
+            preShadeHeight: prev.height,
+            height: percent,
+            shaded: true
+        }), this.resizeBoundries);
+    }
+
+    unshadeWindow = () => {
+        if (!this.state.shaded) return;
+        this.setState(prev => ({
+            height: prev.preShadeHeight ?? prev.height,
+            shaded: false,
+            preShadeHeight: null
+        }), this.resizeBoundries);
+    }
+
     minimizeWindow = () => {
         let posx = -310;
         if (this.state.maximized) {
@@ -634,7 +665,7 @@ export class Window extends Component {
                     bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
                 >
                     <div
-                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
+                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%`, transition: 'height 0.2s ease' }}
                         className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                         id={this.id}
                         role="dialog"
@@ -649,6 +680,7 @@ export class Window extends Component {
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
+                            onDoubleClick={this.toggleShade}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -674,7 +706,7 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onDoubleClick }) {
     return (
         <div
             className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
@@ -683,6 +715,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
+            onDoubleClick={onDoubleClick}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>
