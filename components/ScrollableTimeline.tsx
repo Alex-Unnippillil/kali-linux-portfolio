@@ -130,6 +130,7 @@ const ScrollableTimeline: React.FC = () => {
                         src={first.image}
                         alt={first.title}
                         className="w-full h-32 object-cover mb-2 rounded"
+                        loading="lazy"
                       />
                       <p className="text-sm md:text-base mb-2">{first.title}</p>
                       {renderTags(first.tags)}
@@ -159,6 +160,7 @@ const ScrollableTimeline: React.FC = () => {
                       src={m.image}
                       alt={m.title}
                       className="w-full h-32 object-cover mb-2 rounded"
+                      loading="lazy"
                     />
                     <p className="text-sm md:text-base">{m.title}</p>
                   </a>
