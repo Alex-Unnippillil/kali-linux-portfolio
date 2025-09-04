@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { loadFalsePositives, loadJobDefinitions } from '../components/apps/nessus/index';
+import { WindowMainScreen } from '../components/base/window';
 
 const NessusDashboard: React.FC = () => {
   const [totals, setTotals] = useState({ jobs: 0, falsePositives: 0 });
@@ -13,23 +14,27 @@ const NessusDashboard: React.FC = () => {
   const max = Math.max(totals.jobs, totals.falsePositives, 1);
 
   return (
-    <div className="p-4 bg-gray-900 min-h-screen text-white">
-      <h1 className="text-2xl mb-4">Nessus Dashboard</h1>
-      <div className="flex items-end space-x-4 h-48">
-        <div
-          className="bg-blue-600 w-24 text-center flex flex-col justify-end"
-          style={{ height: `${(totals.jobs / max) * 100}%` }}
-        >
-          <span className="pb-2 text-sm">Jobs {totals.jobs}</span>
+    <WindowMainScreen
+      screen={() => (
+        <div className="p-4 text-white">
+          <h1 className="mb-4 text-2xl">Nessus Dashboard</h1>
+          <div className="flex h-48 items-end space-x-4">
+            <div
+              className="flex w-24 flex-col justify-end bg-blue-600 text-center"
+              style={{ height: `${(totals.jobs / max) * 100}%` }}
+            >
+              <span className="pb-2 text-sm">Jobs {totals.jobs}</span>
+            </div>
+            <div
+              className="flex w-24 flex-col justify-end bg-green-600 text-center"
+              style={{ height: `${(totals.falsePositives / max) * 100}%` }}
+            >
+              <span className="pb-2 text-sm">False {totals.falsePositives}</span>
+            </div>
+          </div>
         </div>
-        <div
-          className="bg-green-600 w-24 text-center flex flex-col justify-end"
-          style={{ height: `${(totals.falsePositives / max) * 100}%` }}
-        >
-          <span className="pb-2 text-sm">False {totals.falsePositives}</span>
-        </div>
-      </div>
-    </div>
+      )}
+    />
   );
 };
 
