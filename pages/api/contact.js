@@ -120,7 +120,11 @@ export default async function handler(req, res) {
 
   try {
     const supabase = getServiceSupabase();
-    await supabase.from('contact_messages').insert([sanitized]);
+    if (supabase) {
+      await supabase.from('contact_messages').insert([sanitized]);
+    } else {
+      console.warn('Supabase client not configured; contact message not stored', { ip });
+    }
   } catch {
     console.warn('Failed to store contact message', { ip });
   }

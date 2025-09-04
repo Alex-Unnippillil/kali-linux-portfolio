@@ -12,8 +12,13 @@ export default function NotesPage() {
   const [state, setState] = useState<NotesPageState>({ notes: null });
 
   useEffect(() => {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string | undefined;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string | undefined;
+    if (!supabaseUrl || !supabaseKey) {
+      console.warn('Supabase env vars missing; notes feature disabled');
+      setState({ notes: null, error: 'supabase_unavailable' });
+      return;
+    }
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     supabase
