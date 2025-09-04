@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ExportButtons from '../../apps/kismet/components/ExportButtons';
 
 // Helper to convert bytes to MAC address string
 const macToString = (bytes) =>
@@ -162,6 +163,7 @@ const KismetApp = ({ onNetworkDiscovered }) => {
 
       {networks.length > 0 && (
         <>
+          <ExportButtons data={networks} />
           <table className="text-sm w-full" aria-label="Networks">
             <thead>
               <tr className="text-left">
