@@ -1,3 +1,5 @@
+import { isBrowser } from './isBrowser';
+
 const STORAGE_KEY = 'qrScans';
 const LAST_SCAN_KEY = 'qrLastScan';
 const LAST_GEN_KEY = 'qrLastGeneration';
@@ -12,12 +14,10 @@ const getStorage = (): StorageWithDirectory =>
   navigator.storage as StorageWithDirectory;
 
 const hasOpfs =
-  typeof window !== 'undefined' &&
-  'storage' in navigator &&
-  Boolean(getStorage().getDirectory);
+  isBrowser() && 'storage' in navigator && Boolean(getStorage().getDirectory);
 
 export const loadScans = async (): Promise<string[]> => {
-  if (typeof window === 'undefined') return [];
+  if (!isBrowser()) return [];
   if (hasOpfs) {
     try {
       const root = await getStorage().getDirectory();
@@ -36,7 +36,7 @@ export const loadScans = async (): Promise<string[]> => {
 };
 
 export const saveScans = async (scans: string[]): Promise<void> => {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   if (hasOpfs) {
     const root = await getStorage().getDirectory();
     const handle = await root.getFileHandle(FILE_NAME, { create: true });
@@ -49,7 +49,7 @@ export const saveScans = async (scans: string[]): Promise<void> => {
 };
 
 export const clearScans = async (): Promise<void> => {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   if (hasOpfs) {
     try {
       const root = await getStorage().getDirectory();
@@ -63,21 +63,21 @@ export const clearScans = async (): Promise<void> => {
 };
 
 export const loadLastScan = (): string => {
-  if (typeof window === 'undefined') return '';
+  if (!isBrowser()) return '';
   return localStorage.getItem(LAST_SCAN_KEY) || '';
 };
 
 export const saveLastScan = (scan: string): void => {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   localStorage.setItem(LAST_SCAN_KEY, scan);
 };
 
 export const loadLastGeneration = (): string => {
-  if (typeof window === 'undefined') return '';
+  if (!isBrowser()) return '';
   return localStorage.getItem(LAST_GEN_KEY) || '';
 };
 
 export const saveLastGeneration = (payload: string): void => {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   localStorage.setItem(LAST_GEN_KEY, payload);
 };
