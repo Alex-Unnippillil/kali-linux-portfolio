@@ -30,6 +30,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.draggingApp = null;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -41,6 +42,7 @@ export class Desktop extends Component {
             minimized_windows: {},
             window_positions: {},
             desktop_apps: [],
+            trashCount: 0,
             context_menus: {
                 desktop: false,
                 default: false,
@@ -340,6 +342,14 @@ export class Desktop extends Component {
         }
     }
 
+    getDesktopOrder = () => {
+        try {
+            return JSON.parse(safeLocalStorage?.getItem('desktop_app_order') || '[]');
+        } catch (e) {
+            return [];
+        }
+    }
+
     fetchAppsData = (callback) => {
         let pinnedApps = safeLocalStorage?.getItem('pinnedApps');
         if (pinnedApps) {
@@ -350,7 +360,7 @@ export class Desktop extends Component {
             safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps));
         }
         let focused_windows = {}, closed_windows = {}, disabled_apps = {}, favourite_apps = {}, overlapped_windows = {}, minimized_windows = {};
-        let desktop_apps = [];
+        let desktop_apps = ['home'];
         apps.forEach((app) => {
             focused_windows = {
                 ...focused_windows,
@@ -378,6 +388,17 @@ export class Desktop extends Component {
             }
             if (app.desktop_shortcut) desktop_apps.push(app.id);
         });
+        const order = this.getDesktopOrder();
+        if (order.length) {
+            desktop_apps.sort((a, b) => {
+                const ai = order.indexOf(a);
+                const bi = order.indexOf(b);
+                if (ai === -1 && bi === -1) return 0;
+                if (ai === -1) return 1;
+                if (bi === -1) return -1;
+                return ai - bi;
+            });
+        }
         this.setState({
             focused_windows,
             closed_windows,
@@ -392,9 +413,37 @@ export class Desktop extends Component {
         this.initFavourite = { ...favourite_apps };
     }
 
+    openDesktopItem = (id) => {
+        if (id === 'home') {
+            this.openApp('files');
+        } else {
+            this.openApp(id);
+        }
+    }
+
+    handleIconDragStart = (id) => {
+        this.draggingApp = id;
+    }
+
+    handleIconDrop = (targetId) => {
+        const sourceId = this.draggingApp;
+        this.draggingApp = null;
+        if (!sourceId) return;
+        this.setState(prev => {
+            const desktop_apps = [...prev.desktop_apps];
+            const from = desktop_apps.indexOf(sourceId);
+            const to = targetId ? desktop_apps.indexOf(targetId) : desktop_apps.length - 1;
+            if (from === -1 || to === -1 || from === to) return null;
+            desktop_apps.splice(from, 1);
+            desktop_apps.splice(to, 0, sourceId);
+            safeLocalStorage?.setItem('desktop_app_order', JSON.stringify(desktop_apps));
+            return { desktop_apps };
+        });
+    }
+
     updateAppsData = () => {
         let focused_windows = {}, closed_windows = {}, favourite_apps = {}, minimized_windows = {}, disabled_apps = {};
-        let desktop_apps = [];
+        let desktop_apps = ['home'];
         apps.forEach((app) => {
             focused_windows = {
                 ...focused_windows,
@@ -418,6 +467,17 @@ export class Desktop extends Component {
             }
             if (app.desktop_shortcut) desktop_apps.push(app.id);
         });
+        const order = this.getDesktopOrder();
+        if (order.length) {
+            desktop_apps.sort((a, b) => {
+                const ai = order.indexOf(a);
+                const bi = order.indexOf(b);
+                if (ai === -1 && bi === -1) return 0;
+                if (ai === -1) return 1;
+                if (bi === -1) return -1;
+                return ai - bi;
+            });
+        }
         this.setState({
             focused_windows,
             closed_windows,
@@ -431,25 +491,49 @@ export class Desktop extends Component {
 
     renderDesktopApps = () => {
         if (Object.keys(this.state.closed_windows).length === 0) return;
-        let appsJsx = [];
-        apps.forEach((app, index) => {
-            if (this.state.desktop_apps.includes(app.id)) {
+        return (
+            <div
+                id="desktop-icons"
+                className="absolute inset-0 grid grid-cols-[repeat(auto-fill,minmax(6rem,1fr))] auto-rows-[5.5rem] content-start p-2 gap-2"
+                data-context="desktop-area"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => this.handleIconDrop(null)}
+            >
+                {this.state.desktop_apps.map(id => {
+                    if (id === 'home') {
+                        return (
+                            <UbuntuApp
+                                key="home"
+                                id="home"
+                                name="Home"
+                                icon="/themes/Yaru/system/user-home.png"
+                                openApp={this.openDesktopItem}
+                                disabled={false}
+                                onDragStart={() => this.handleIconDragStart('home')}
+                                onDrop={() => this.handleIconDrop('home')}
+                                onDragOver={(e) => e.preventDefault()}
+                            />
+                        );
+                    }
+                    const app = apps.find(a => a.id === id);
+                    if (!app) return null;
+                    const props = {
+                        name: app.title,
+                        id: app.id,
+                        icon: app.icon,
+                        openApp: this.openDesktopItem,
+                        disabled: this.state.disabled_apps[app.id],
+                        prefetch: app.screen?.prefetch,
+                        badge: app.id === 'trash' ? this.state.trashCount : undefined,
+                        onDragStart: () => this.handleIconDragStart(app.id),
+                        onDrop: () => this.handleIconDrop(app.id),
+                        onDragOver: (e) => e.preventDefault(),
+                    };
 
-                const props = {
-                    name: app.title,
-                    id: app.id,
-                    icon: app.icon,
-                    openApp: this.openApp,
-                    disabled: this.state.disabled_apps[app.id],
-                    prefetch: app.screen?.prefetch,
-                }
-
-                appsJsx.push(
-                    <UbuntuApp key={app.id} {...props} />
-                );
-            }
-        });
-        return appsJsx;
+                    return <UbuntuApp key={app.id} {...props} />;
+                })}
+            </div>
+        );
     }
 
     renderWindows = () => {
@@ -784,6 +868,9 @@ export class Desktop extends Component {
                 this.forceUpdate();
             }
         }
+        if (this.state.trashCount !== trash.length) {
+            this.setState({ trashCount: trash.length });
+        }
     }
 
     addToDesktop = (folder_name) => {
@@ -822,8 +909,8 @@ export class Desktop extends Component {
         return (
             <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
                 <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
-                    <span>New folder name</span>
-                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
+                    <label htmlFor="folder-name-input">New folder name</label>
+                    <input aria-label="Folder name" className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
                 </div>
                 <div className="flex">
                     <button
