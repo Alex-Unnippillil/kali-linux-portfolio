@@ -7795,7 +7795,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"glob@npm:^7.1.4, glob@npm:^7.1.6":
+"glob@npm:^7.1.6":
   version: 7.2.3
   resolution: "glob@npm:7.2.3"
   dependencies:
@@ -9694,30 +9694,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"magic-string@npm:0.30.18":
+"magic-string@npm:^0.30.10":
   version: 0.30.18
   resolution: "magic-string@npm:0.30.18"
   dependencies:
     "@jridgewell/sourcemap-codec": "npm:^1.5.5"
   checksum: 10c0/80fba01e13ce1f5c474a0498a5aa462fa158eb56567310747089a0033e432d83a2021ee2c109ac116010cd9dcf90a5231d89fbe3858165f73c00a50a74dbefcd
-  languageName: node
-  linkType: hard
-
-"magic-string@npm:^0.25.0, magic-string@npm:^0.25.7":
-  version: 0.25.9
-  resolution: "magic-string@npm:0.25.9"
-  dependencies:
-    sourcemap-codec: "npm:^1.4.8"
-  checksum: 10c0/37f5e01a7e8b19a072091f0b45ff127cda676232d373ce2c551a162dd4053c575ec048b9cbb4587a1f03adb6c5d0fd0dd49e8ab070cd2c83a4992b2182d9cb56
-  languageName: node
-  linkType: hard
-
-"magic-string@patch:magic-string@npm:0.30.18#./.yarn/patches/magic-string-npm-0.30.18-561c76e200.patch::locator=unnippillil%40workspace%3A.":
-  version: 0.30.18
-  resolution: "magic-string@patch:magic-string@npm%3A0.30.18#./.yarn/patches/magic-string-npm-0.30.18-561c76e200.patch::version=0.30.18&hash=cd7093&locator=unnippillil%40workspace%3A."
-  dependencies:
-    "@jridgewell/sourcemap-codec": "npm:^1.5.5"
-  checksum: 10c0/ae2bf18c928260acc6d441cfc746b350eed51fdf477a2c72cbcc0b44af35668a39b17a92a7693ac3b42d553d5cafcf3d1623b44115f8ff92154a603ae911d31b
   languageName: node
   linkType: hard
 
@@ -9914,7 +9896,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"minimatch@npm:^3.0.4, minimatch@npm:^3.1.1, minimatch@npm:^3.1.2":
+"minimatch@npm:^3.1.1, minimatch@npm:^3.1.2":
   version: 3.1.2
   resolution: "minimatch@npm:3.1.2"
   dependencies:
@@ -11011,8 +10993,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"postcss@npm:^8.4.21, postcss@npm:^8.4.47":
-
+"postcss@npm:8.5.6, postcss@npm:^8.4.47":
   version: 8.5.6
   resolution: "postcss@npm:8.5.6"
   dependencies:
@@ -11020,17 +11001,6 @@ __metadata:
     picocolors: "npm:^1.1.1"
     source-map-js: "npm:^1.2.1"
   checksum: 10c0/5127cc7c91ed7a133a1b7318012d8bfa112da9ef092dddf369ae699a1f10ebbd89b1b9f25f3228795b84585c72aabd5ced5fc11f2ba467eedf7b081a66fad024
-  languageName: node
-  linkType: hard
-
-"postcss@patch:postcss@npm:8.5.6#./.yarn/patches/postcss-npm-8.5.6-e7f126c6f3.patch::locator=unnippillil%40workspace%3A.":
-  version: 8.5.6
-  resolution: "postcss@patch:postcss@npm%3A8.5.6#./.yarn/patches/postcss-npm-8.5.6-e7f126c6f3.patch::version=8.5.6&hash=fa4b34&locator=unnippillil%40workspace%3A."
-  dependencies:
-    nanoid: "npm:^3.3.11"
-    picocolors: "npm:^1.1.1"
-    source-map-js: "npm:^1.2.1"
-  checksum: 10c0/fd19713718f927a0fdf0f2b2e304053a8eef63acfddd78ab1be3d6aa5100ff5322646eff6635a9801b01356bca920867db6a34465a4565355c1f15377a9ffc0c
   languageName: node
   linkType: hard
 
@@ -12766,13 +12736,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"sourcemap-codec@npm:^1.4.8":
-  version: 1.4.8
-  resolution: "sourcemap-codec@npm:1.4.8"
-  checksum: 10c0/f099279fdaae070ff156df7414bbe39aad69cdd615454947ed3e19136bfdfcb4544952685ee73f56e17038f4578091e12b17b283ed8ac013882916594d95b9e6
-  languageName: node
-  linkType: hard
-
 "sprintf-js@npm:~1.0.2":
   version: 1.0.3
   resolution: "sprintf-js@npm:1.0.3"
@@ -13305,7 +13268,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"test-exclude@npm:7.0.1":
+"test-exclude@npm:^7.0.1":
   version: 7.0.1
   resolution: "test-exclude@npm:7.0.1"
   dependencies:
@@ -13313,28 +13276,6 @@ __metadata:
     glob: "npm:^10.4.1"
     minimatch: "npm:^9.0.4"
   checksum: 10c0/6d67b9af4336a2e12b26a68c83308c7863534c65f27ed4ff7068a56f5a58f7ac703e8fc80f698a19bb154fd8f705cdf7ec347d9512b2c522c737269507e7b263
-  languageName: node
-  linkType: hard
-
-"test-exclude@npm:^6.0.0":
-  version: 6.0.0
-  resolution: "test-exclude@npm:6.0.0"
-  dependencies:
-    "@istanbuljs/schema": "npm:^0.1.2"
-    glob: "npm:^7.1.4"
-    minimatch: "npm:^3.0.4"
-  checksum: 10c0/019d33d81adff3f9f1bfcff18125fb2d3c65564f437d9be539270ee74b994986abb8260c7c2ce90e8f30162178b09dbbce33c6389273afac4f36069c48521f57
-  languageName: node
-  linkType: hard
-
-"test-exclude@patch:test-exclude@npm:7.0.1#./.yarn/patches/test-exclude-npm-7.0.1-e6cf81110b.patch::locator=unnippillil%40workspace%3A.":
-  version: 7.0.1
-  resolution: "test-exclude@patch:test-exclude@npm%3A7.0.1#./.yarn/patches/test-exclude-npm-7.0.1-e6cf81110b.patch::version=7.0.1&hash=210079&locator=unnippillil%40workspace%3A."
-  dependencies:
-    "@istanbuljs/schema": "npm:^0.1.2"
-    glob: "npm:^10.4.1"
-    minimatch: "npm:^9.0.4"
-  checksum: 10c0/38a3ee460b053617876d11290f1d9b69ca0ce052e1dd1751a775592653a7a09487744f75da917f3a464d49533b22517461b9fec49541cf8a17cf945c8d21d435
   languageName: node
   linkType: hard
 
@@ -13963,7 +13904,7 @@ __metadata:
     phaser: "npm:3.70.0"
     playwright-core: "npm:^1.55.0"
     pngjs: "npm:^7.0.0"
-    postcss: "patch:postcss@npm:8.5.6#./.yarn/patches/postcss-npm-8.5.6-e7f126c6f3.patch"
+    postcss: "npm:8.5.6"
     prettier: "npm:^3.6.2"
     prop-types: "npm:^15.8.1"
     qrcode: "npm:^1.5.4"
