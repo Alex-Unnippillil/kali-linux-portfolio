@@ -2,7 +2,6 @@ import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
 
 import { displayX } from './components/apps/x';
 import { displaySpotify } from './components/apps/spotify';
-import { displaySettings } from './components/apps/settings';
 import { displayChrome } from './components/apps/chrome';
 import { displayGedit } from './components/apps/gedit';
 import { displayTodoist } from './components/apps/todoist';
@@ -21,6 +20,7 @@ export const chromeDefaultTiles = [
 
 // Dynamic applications and games
 const TerminalApp = createDynamicApp('terminal', 'Terminal');
+const SettingsApp = createDynamicApp('settings', 'Settings');
 // VSCode app uses a Stack iframe, so no editor dependencies are required
 const VsCodeApp = createDynamicApp('vscode', 'VsCode');
 const YouTubeApp = createDynamicApp('youtube', 'YouTube');
@@ -116,6 +116,7 @@ const ContactApp = createDynamicApp('contact', 'Contact');
 
 
 const displayTerminal = createDisplay(TerminalApp);
+const displaySettings = createDisplay(SettingsApp);
 const displayVsCode = createDisplay(VsCodeApp);
 const displayYouTube = createDisplay(YouTubeApp);
 const displayCalculator = createDisplay(CalculatorApp);

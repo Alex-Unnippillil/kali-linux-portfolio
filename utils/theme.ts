@@ -38,6 +38,11 @@ export const setTheme = (theme: string): void => {
   }
 };
 
+// Expose setTheme globally for legacy callers and tests
+if (typeof window !== 'undefined') {
+  (window as any).setTheme = setTheme;
+}
+
 export const getUnlockedThemes = (highScore: number): string[] =>
   Object.entries(THEME_UNLOCKS)
     .filter(([, score]) => highScore >= score)
