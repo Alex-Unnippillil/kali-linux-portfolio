@@ -1,4 +1,5 @@
 // Simple Pong game with spin mechanics and gamepad rumble/audio feedback
+(function () {
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 canvas.width = 600;
@@ -145,6 +146,7 @@ function playBeep(freq = 440) {
 }
 
 function rumble() {
+  if (!(navigator.vibrationActuator && window.features?.gamepadHaptics)) return;
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   for (const p of pads) {
     const actuator = p && p.vibrationActuator;
@@ -157,3 +159,5 @@ function rumble() {
     }
   }
 }
+
+})();

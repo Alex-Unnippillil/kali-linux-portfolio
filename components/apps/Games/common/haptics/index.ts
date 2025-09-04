@@ -1,10 +1,21 @@
+import { features } from '../../../../../utils/features';
+
 export type HapticPattern = number | number[];
 
+const hasNavigatorActuator = () =>
+  typeof navigator !== 'undefined' && !!(navigator as any).vibrationActuator;
+
 const supportsVibration = () =>
-  typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
+  hasNavigatorActuator() && typeof navigator.vibrate === 'function';
 
 const supportsGamepadVibration = () => {
-  if (typeof navigator === 'undefined' || !('getGamepads' in navigator)) return false;
+  if (
+    !features.gamepadHaptics ||
+    !hasNavigatorActuator() ||
+    typeof navigator === 'undefined' ||
+    !('getGamepads' in navigator)
+  )
+    return false;
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   return Array.from(pads).some(
     (p) => p && p.vibrationActuator && typeof p.vibrationActuator.playEffect === 'function'
@@ -30,6 +41,8 @@ const triggerGamepad = (duration: number) => {
 };
 
 export const vibrate = (pattern: HapticPattern) => {
+  if (!features.gamepadHaptics || !hasNavigatorActuator()) return;
+
   const duration = Array.isArray(pattern)
     ? pattern.reduce((sum, n) => sum + (n > 0 ? n : 0), 0)
     : pattern;

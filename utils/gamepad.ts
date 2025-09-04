@@ -1,3 +1,5 @@
+import { features } from './features';
+
 export interface ButtonEvent {
   gamepad: Gamepad;
   index: number;
@@ -58,7 +60,7 @@ class GamepadManager {
   }
 
   private poll = () => {
-    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
     for (const pad of pads) {
       if (!pad) continue;
 
@@ -70,7 +72,14 @@ class GamepadManager {
           const pressed = b.value > 0.5;
           const prevPressed = prevVal > 0.5;
           this.emit('button', { gamepad: pad, index: i, value: b.value, pressed });
-          if (pressed && !prevPressed && pad.vibrationActuator?.playEffect) {
+          const nav = navigator as any;
+          if (
+            pressed &&
+            !prevPressed &&
+            features.gamepadHaptics &&
+            nav.vibrationActuator &&
+            pad.vibrationActuator?.playEffect
+          ) {
             try {
               pad.vibrationActuator.playEffect('dual-rumble', {
                 duration: 30,
