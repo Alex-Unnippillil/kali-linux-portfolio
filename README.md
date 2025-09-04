@@ -239,17 +239,19 @@ These external domains are whitelisted in the default CSP. Update this list when
 | `cdn.syndication.twimg.com` | Twitter asset CDN |
 | `*.twitter.com` | Additional Twitter content |
 | `*.x.com` | X (Twitter) domain equivalents |
-| `*.google.com` | Google services used by demos (e.g., reCAPTCHA) |
+| `*.google.com` | Google services and Chrome app favicons |
+| `example.com` | Chrome app demo origin |
+| `developer.mozilla.org` | Chrome app demo origin |
+| `en.wikipedia.org` | Chrome app demo origin |
 | `cdn.jsdelivr.net` | Math.js library |
 | `cdnjs.cloudflare.com` | PDF.js worker |
 | `stackblitz.com` | StackBlitz IDE embeds |
 | `www.youtube.com` | YouTube IFrame API |
 | `www.youtube-nocookie.com` | YouTube video embeds (privacy-enhanced) |
 | `open.spotify.com` | Spotify embeds |
-| `https://*` / `http://*` / `ws://*` / `wss://*` | Wide dev allowance for external resources; tighten for production |
 
 **Notes for prod hardening**
-- The sample CSP currently **permits wide `connect-src` and `frame-src`** to enable sandboxed iframes (Chrome app) and demos. In production, **tighten** these to the exact domains you embed. Remove `http:` origins; prefer `https:` only.
+- Review `connect-src` and `frame-src` to ensure only required domains are present for your deployment.
 - Consider removing `'unsafe-inline'` from `style-src` once all inline styles are eliminated.
 - If deploying on a domain that serves a PDF resume via `<object>`, keep `X-Frame-Options: SAMEORIGIN`. Otherwise you can rely on CSP `frame-ancestors` instead.
 

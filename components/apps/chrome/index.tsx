@@ -797,7 +797,14 @@ const Chrome: React.FC = () => {
           {showFlags && (
             <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-2 space-y-1">
               <p>Active sandbox flags: {SANDBOX_FLAGS.join(', ') || '(none)'}</p>
-              <p>Note: combining <code>allow-scripts</code> with <code>allow-same-origin</code> defeats isolation.</p>
+              <p>
+                Pages run in an isolated iframe. Scripts, forms and popups work, but network
+                access is blocked by CSP.
+              </p>
+              <p>
+                Note: combining <code>allow-scripts</code> with <code>allow-same-origin</code> defeats
+                isolation.
+              </p>
             </div>
           )}
         </div>
