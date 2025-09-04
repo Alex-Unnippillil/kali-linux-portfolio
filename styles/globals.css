@@ -19,6 +19,10 @@
   --color-focus-ring: var(--color-accent);
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
+  /* Toast bubble theme variables */
+  --toast-bg: var(--color-surface);
+  --toast-text: var(--color-text);
+  --toast-border: var(--color-border);
   accent-color: var(--color-control-accent);
 }
 

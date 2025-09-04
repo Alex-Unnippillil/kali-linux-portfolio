@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { kaliTheme } from '../../styles/themes/kali';
 
 interface ToastProps {
   message: string;
@@ -16,15 +17,20 @@ const Toast: React.FC<ToastProps> = ({
   duration = 6000,
 }) => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const closeRef = useRef<NodeJS.Timeout | null>(null);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     setVisible(true);
     timeoutRef.current = setTimeout(() => {
-      onClose && onClose();
+      setVisible(false);
+      closeRef.current = setTimeout(() => {
+        onClose && onClose();
+      }, 300);
     }, duration);
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (closeRef.current) clearTimeout(closeRef.current);
     };
   }, [duration, onClose]);
 
@@ -32,7 +38,13 @@ const Toast: React.FC<ToastProps> = ({
     <div
       role="status"
       aria-live="polite"
-      className={`fixed top-4 left-1/2 -translate-x-1/2 transform bg-gray-900 text-white border border-gray-700 px-4 py-3 rounded-md shadow-md flex items-center transition-transform duration-150 ease-in-out ${visible ? 'translate-y-0' : '-translate-y-full'}`}
+      className={`fixed top-4 left-1/2 -translate-x-1/2 transform px-4 py-3 shadow-md flex items-center transition-transform duration-300 ease-in-out ${visible ? 'translate-y-0' : '-translate-y-full'}`}
+      style={{
+        background: kaliTheme.bubble.background,
+        color: kaliTheme.bubble.text,
+        border: `1px solid ${kaliTheme.bubble.border}`,
+        borderRadius: 'var(--radius-md)',
+      }}
     >
       <span>{message}</span>
       {onAction && actionLabel && (
