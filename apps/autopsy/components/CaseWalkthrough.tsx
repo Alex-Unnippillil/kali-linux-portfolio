@@ -2,12 +2,7 @@
 
 import React from 'react';
 import caseData from '../data/case.json';
-
-interface TimelineEntry {
-  timestamp: string;
-  event: string;
-  thumbnail: string;
-}
+import Timeline, { TimelineEntry } from './Timeline';
 
 interface FileNode {
   name: string;
@@ -53,16 +48,7 @@ const CaseWalkthrough: React.FC = () => {
     <div className="space-y-6">
       <section>
         <h2 className="text-lg font-bold mb-2">Timeline</h2>
-        <ul className="space-y-2">
-          {timeline.map((item, idx) => (
-            <li key={idx} className="flex items-center text-sm">
-              <img src={item.thumbnail} alt="" className="w-6 h-6 mr-2" />
-              <span>
-                {new Date(item.timestamp).toLocaleString()} – {item.event}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <Timeline events={timeline} />
       </section>
       <section>
         <h2 className="text-lg font-bold mb-2">File Tree</h2>
