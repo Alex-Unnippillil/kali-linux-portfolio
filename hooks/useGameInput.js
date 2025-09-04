@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 
 // Default keyboard mapping. Users can override via settings stored in
-// localStorage under the `game-keymap` key.
+// localStorage under a `:keymap` key namespaced per game.
 const DEFAULT_MAP = {
   up: 'ArrowUp',
   down: 'ArrowDown',
@@ -14,21 +14,23 @@ const DEFAULT_MAP = {
 };
 
 // Keyboard input handler that respects user remapping. It emits high level
-// actions like `up`/`down`/`pause` instead of raw keyboard events.
-export default function useGameInput({ onInput } = {}) {
+// actions like `up`/`down`/`pause` instead of raw keyboard events. A `game`
+// identifier can be provided to scope bindings per game.
+export default function useGameInput({ onInput, game } = {}) {
   const mapRef = useRef(DEFAULT_MAP);
 
-  // Load mapping once on mount
+  // Load mapping once on mount or when game changes
   useEffect(() => {
+    const key = game ? `${game}:keymap` : 'game-keymap';
     try {
-      const stored = window.localStorage.getItem('game-keymap');
+      const stored = window.localStorage.getItem(key);
       if (stored) {
         mapRef.current = { ...DEFAULT_MAP, ...JSON.parse(stored) };
       }
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [game]);
 
   useEffect(() => {
     const handle = (e) => {

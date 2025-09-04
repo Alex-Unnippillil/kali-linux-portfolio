@@ -145,7 +145,7 @@ const SudokuGame: React.FC = () => {
   );
 
   return (
-    <GameShell>
+    <GameShell game="sudoku">
       <div className="sr-only" aria-live="polite">
         {ariaMessage}
       </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import usePersistentState from '../../hooks/usePersistentState';
+import { exportGameSettings, importGameSettings } from '../../utils/gameSettings';
 
 const WIDTH = 300;
 const HEIGHT = 500;
@@ -50,7 +51,10 @@ const LaneRunner = () => {
   const [control, setControl] = useState('keys');
   const [tiltAllowed, setTiltAllowed] = useState(false);
   const [tiltOffset, setTiltOffset] = useState(0);
-  const [sensitivity, setSensitivity] = useState(1);
+  const [sensitivity, setSensitivity] = usePersistentState(
+    'lane-runner:sensitivity',
+    1,
+  );
   const [score, setScore] = useState(0);
   const [speed, setSpeed] = useState(0);
   const [running, setRunning] = useState(true);
@@ -58,11 +62,36 @@ const LaneRunner = () => {
   const [lives, setLives] = useState(3);
   const [curve, setCurve] = usePersistentState('lane-runner:curve', 'linear');
   const gammaRef = useRef(0);
+  const fileRef = useRef(null);
 
   const handleCalibrate = () => setTiltOffset(gammaRef.current);
   const handleRestart = () => {
     setLives(3);
     setReset((r) => r + 1);
+  };
+
+  const handleExport = () => {
+    const data = exportGameSettings('lane-runner');
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'lane-runner-settings.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = async (file) => {
+    const text = await file.text();
+    importGameSettings('lane-runner', text);
+    try {
+      const parsed = JSON.parse(text);
+      if (typeof parsed.sensitivity === 'number')
+        setSensitivity(parsed.sensitivity);
+      if (typeof parsed.curve === 'string') setCurve(parsed.curve);
+    } catch {
+      /* ignore */
+    }
   };
 
   useEffect(() => {
@@ -248,6 +277,28 @@ const LaneRunner = () => {
           </>
         )}
         {control === 'tilt' && !tiltAllowed && <div>Tilt not permitted</div>}
+        <div className="flex items-center gap-1 mt-2">
+          <button onClick={handleExport} className="px-2 py-1 bg-gray-700">
+            Export
+          </button>
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="px-2 py-1 bg-gray-700"
+          >
+            Import
+          </button>
+          <input
+            type="file"
+            accept="application/json"
+            ref={fileRef}
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files && e.target.files[0];
+              if (file) handleImport(file);
+              e.target.value = '';
+            }}
+          />
+        </div>
       </div>
       {!running && (
         <button

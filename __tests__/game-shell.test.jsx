@@ -16,7 +16,7 @@ function HookTester({ hook }) {
 describe('game utilities', () => {
   it('mounts and unmounts GameShell', () => {
     const { unmount, getByRole } = render(
-      <GameShell controls={<div />} settings={<div />}>child</GameShell>
+      <GameShell game="test" controls={<div />} settings={<div />}>child</GameShell>
     );
     getByRole('button', { name: /pause/i });
     unmount();

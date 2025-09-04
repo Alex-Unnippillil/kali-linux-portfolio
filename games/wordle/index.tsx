@@ -190,7 +190,7 @@ const WordleGame = () => {
   };
 
   return (
-    <GameShell settings={settings}>
+    <GameShell game="wordle" settings={settings}>
       <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 space-y-4 overflow-y-auto">
         <div className="w-full bg-gray-800 text-center py-1 text-sm">
           Daily Mode

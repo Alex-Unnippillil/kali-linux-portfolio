@@ -95,6 +95,7 @@ const MemoryGame: React.FC = () => {
 
   return (
     <GameShell
+      game="memory"
       settings={
         <div className="flex items-center space-x-4">
           <SizeSelector value={size} onChange={setSize} />
