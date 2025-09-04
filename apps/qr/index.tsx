@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useRef, useState, useCallback, useEffect, ChangeEvent } from 'react';
 import QRCode from 'qrcode';
 import Presets from './components/Presets';
 import Scan from './components/Scan';
@@ -16,6 +16,9 @@ export default function QR() {
   const [payload, setPayload] = useState('');
   const [mode, setMode] = useState<'generate' | 'scan'>('generate');
   const [size, setSize] = useState(256);
+  const [margin, setMargin] = useState(1);
+  const [ecc, setEcc] = useState<'L' | 'M' | 'Q' | 'H'>('M');
+  const [logo, setLogo] = useState<string | null>(null);
   const [scanResult, setScanResult] = useState('');
   const [lastGen, setLastGen] = useState('');
   const [lastScan, setLastScan] = useState('');
@@ -39,9 +42,20 @@ export default function QR() {
     }
   }, [scanResult]);
 
-  const downloadPng = useCallback(async () => {
-    if (!payload) return;
-    const data = await QRCode.toDataURL(payload, { margin: 1, width: size });
+  const handleLogo = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => setLogo(reader.result as string);
+      reader.readAsDataURL(file);
+    },
+    [],
+  );
+
+  const downloadPng = useCallback(() => {
+    if (!payload || !canvasRef.current) return;
+    const data = canvasRef.current.toDataURL('image/png');
     const link = document.createElement('a');
     link.href = data;
     link.download = `qr-${size}.png`;
@@ -50,11 +64,18 @@ export default function QR() {
 
   const downloadSvg = useCallback(async () => {
     if (!payload) return;
-    const svg = await QRCode.toString(payload, {
-      margin: 1,
+    let svg = await QRCode.toString(payload, {
+      margin,
       width: size,
       type: 'svg',
+      errorCorrectionLevel: ecc,
     });
+    if (logo) {
+      const imgSize = size * 0.2;
+      const pos = (size - imgSize) / 2;
+      const logoTag = `<image href="${logo}" x="${pos}" y="${pos}" width="${imgSize}" height="${imgSize}"/>`;
+      svg = svg.replace('</svg>', `${logoTag}</svg>`);
+    }
     const blob = new Blob([svg], { type: 'image/svg+xml' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -62,7 +83,7 @@ export default function QR() {
     link.download = `qr-${size}.svg`;
     link.click();
     URL.revokeObjectURL(url);
-  }, [payload, size]);
+  }, [payload, size, margin, ecc, logo]);
 
   return (
     <div className="p-4 space-y-4 text-white bg-ub-cool-grey h-full overflow-auto">
@@ -101,8 +122,11 @@ export default function QR() {
             canvasRef={canvasRef}
             onPayloadChange={setPayload}
             size={size}
+            margin={margin}
+            ecc={ecc}
+            logo={logo}
           />
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <label htmlFor="qr-size" className="text-sm flex items-center gap-1">
               Size
               <select
@@ -116,6 +140,53 @@ export default function QR() {
                 <option value={512}>512</option>
               </select>
             </label>
+            <label htmlFor="qr-margin" className="text-sm flex items-center gap-1">
+              Margin
+              <select
+                id="qr-margin"
+                value={margin}
+                onChange={(e) => setMargin(parseInt(e.target.value, 10))}
+                className="ml-1 rounded p-1 text-black"
+              >
+                <option value={0}>0</option>
+                <option value={1}>1</option>
+                <option value={2}>2</option>
+                <option value={4}>4</option>
+              </select>
+            </label>
+            <label htmlFor="qr-ecc" className="text-sm flex items-center gap-1">
+              ECC
+              <select
+                id="qr-ecc"
+                value={ecc}
+                onChange={(e) => setEcc(e.target.value as typeof ecc)}
+                className="ml-1 rounded p-1 text-black"
+              >
+                <option value="L">L</option>
+                <option value="M">M</option>
+                <option value="Q">Q</option>
+                <option value="H">H</option>
+              </select>
+            </label>
+            <label htmlFor="qr-logo" className="text-sm flex items-center gap-1">
+              Logo
+              <input
+                id="qr-logo"
+                type="file"
+                accept="image/*"
+                onChange={handleLogo}
+                className="ml-1 rounded p-1 text-black"
+              />
+            </label>
+            {logo && (
+              <button
+                type="button"
+                onClick={() => setLogo(null)}
+                className="px-2 py-1 bg-gray-600 rounded text-sm"
+              >
+                Clear Logo
+              </button>
+            )}
             <button
               type="button"
               onClick={downloadPng}

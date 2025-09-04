@@ -13,9 +13,19 @@ interface Props {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   onPayloadChange?: (payload: string) => void;
   size: number;
+  margin: number;
+  ecc: 'L' | 'M' | 'Q' | 'H';
+  logo?: string | null;
 }
 
-const Presets: React.FC<Props> = ({ canvasRef, onPayloadChange, size }) => {
+const Presets: React.FC<Props> = ({
+  canvasRef,
+  onPayloadChange,
+  size,
+  margin,
+  ecc,
+  logo,
+}) => {
   const [preset, setPreset] = useState<Preset>('text');
   const [text, setText] = useState('');
   const [url, setUrl] = useState('');
@@ -45,11 +55,31 @@ const Presets: React.FC<Props> = ({ canvasRef, onPayloadChange, size }) => {
       return;
     }
 
-    QRCode.toCanvas(canvas, payload, { margin: 1, width: size }).catch(() => {
-      const ctx = canvas.getContext('2d');
-      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-    });
-  }, [payload, canvasRef, size]);
+    QRCode.toCanvas(canvas, payload, {
+      margin,
+      width: size,
+      errorCorrectionLevel: ecc,
+    })
+      .then(() => {
+        if (logo) {
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            const img = new Image();
+            img.src = logo;
+            img.onload = () => {
+              const imgSize = size * 0.2;
+              const x = (canvas.width - imgSize) / 2;
+              const y = (canvas.height - imgSize) / 2;
+              ctx.drawImage(img, x, y, imgSize, imgSize);
+            };
+          }
+        }
+      })
+      .catch(() => {
+        const ctx = canvas.getContext('2d');
+        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+      });
+  }, [payload, canvasRef, size, margin, ecc, logo]);
 
   const copyPayload = async () => {
     if (!payload) return;
