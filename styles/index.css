@@ -46,11 +46,6 @@ button:focus-visible {
     border-block-end: 5px solid var(--color-muted);
 }
 
-.arrow-custom {
-    border-inline-start: 5px solid transparent;
-    border-inline-end: 5px solid transparent;
-    border-block-end: 5px solid var(--color-text);
-}
 
 .animateShow {
     animation: transformDownShow 200ms 1 forwards;
@@ -96,47 +91,6 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     width: 12px;
     height: 12px;
     position: relative;
-}
-
-/* Window's styling */
-.arrow-custom-up {
-    border-inline-start: 5px solid transparent;
-    border-inline-end: 5px solid transparent;
-    border-block-end: 5px solid var(--color-text);
-    width: 0;
-}
-
-.arrow-custom-down {
-    border-inline-start: 5px solid transparent;
-    border-inline-end: 5px solid transparent;
-    border-block-start: 5px solid var(--color-text);
-    width: 0;
-}
-
-.arrow-custom-left {
-    border-block-end: 5px solid transparent;
-    border-block-start: 5px solid transparent;
-    border-inline-end: 5px solid var(--color-text);
-    width: 0;
-}
-
-.arrow-custom-right {
-    border-block-start: 5px solid transparent;
-    border-block-end: 5px solid transparent;
-    border-inline-start: 5px solid var(--color-text);
-    width: 0;
-}
-
-.window-y-border {
-    height: calc(100% - 10px);
-    width: calc(100% + 10px);
-    cursor: e-resize;
-}
-
-.window-x-border {
-    height: calc(100% + 10px);
-    width: calc(100% - 10px);
-    cursor: n-resize;
 }
 
 .notFocused {

@@ -6,6 +6,7 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import styles from './window.module.css';
 
 export class Window extends Component {
     constructor(props) {
@@ -699,12 +700,15 @@ export class WindowYBorder extends Component {
         this.trpImg.style.opacity = 0;
     }
     render() {
-        return (
-            <div className=" window-y-border border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }} onDrag={this.props.resize}>
-            </div>
-        )
+            return (
+                <div
+                    className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
+                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
+                    onDrag={this.props.resize}
+                ></div>
+            )
+        }
     }
-}
 
 export class WindowXBorder extends Component {
     componentDidMount() {
@@ -715,12 +719,15 @@ export class WindowXBorder extends Component {
         this.trpImg.style.opacity = 0;
     }
     render() {
-        return (
-            <div className=" window-x-border border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }} onDrag={this.props.resize}>
-            </div>
-        )
+            return (
+                <div
+                    className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
+                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
+                    onDrag={this.props.resize}
+                ></div>
+            )
+        }
     }
-}
 
 // Window's Edit Buttons
 export function WindowEditButtons(props) {
