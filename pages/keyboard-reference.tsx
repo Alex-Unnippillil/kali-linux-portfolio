@@ -32,6 +32,14 @@ const KeyboardReference = () => (
           <td className="p-2 border border-ubt-grey">Alt + F4</td>
           <td className="p-2 border border-ubt-grey">Close current window</td>
         </tr>
+        <tr>
+          <td className="p-2 border border-ubt-grey">Ctrl + Alt + ←</td>
+          <td className="p-2 border border-ubt-grey">Switch to previous workspace</td>
+        </tr>
+        <tr>
+          <td className="p-2 border border-ubt-grey">Ctrl + Alt + →</td>
+          <td className="p-2 border border-ubt-grey">Switch to next workspace</td>
+        </tr>
       </tbody>
     </table>
   </main>
