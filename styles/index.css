@@ -18,7 +18,7 @@ button, [role="button"], input[type="button"], input[type="submit"], input[type=
 
 a:focus-visible,
 button:focus-visible {
-    outline: 2px solid var(--color-ubt-blue) !important;
+    outline: var(--focus-outline-width) solid var(--focus-outline-color) !important;
     outline-offset: 2px;
 }
 
@@ -537,7 +537,7 @@ pre {
 /* Visible focus rings for copy buttons and text areas */
 button:focus-visible,
 textarea:focus-visible {
-    outline: 2px solid var(--color-primary);
+    outline: var(--focus-outline-width) solid var(--focus-outline-color);
     outline-offset: 2px;
 }
 

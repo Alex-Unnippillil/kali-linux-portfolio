@@ -38,4 +38,19 @@ describe('InstallButton', () => {
 
     await waitFor(() => expect(screen.queryByText(/install/i)).toBeNull());
   });
+
+  test('can be focused via keyboard', async () => {
+    render(<InstallButton />);
+    initA2HS();
+    const event: any = new Event('beforeinstallprompt');
+    event.preventDefault = jest.fn();
+    event.prompt = jest.fn();
+    event.userChoice = Promise.resolve({ outcome: 'dismissed' });
+    await act(async () => {
+      window.dispatchEvent(event);
+    });
+    const button = await screen.findByRole('button', { name: /install/i });
+    await userEvent.tab();
+    expect(button).toHaveFocus();
+  });
 });
