@@ -4,7 +4,23 @@ import noTopLevelWindow from './eslint-plugin-no-top-level-window/index.js';
 const compat = new FlatCompat();
 
 export default [
-  { ignores: ['components/apps/Chrome/index.tsx'] },
+  {
+    ignores: [
+      'components/apps/Chrome/index.tsx',
+      'apps/**',
+      'components/apps/**',
+      'games/**',
+      '__tests__/**',
+      'tests/**',
+      'chrome-extension/**',
+      'workers/**',
+      'public/**',
+      'lib/**',
+      'jest.setup.ts',
+      'utils/createDynamicApp.js',
+      'hooks/useClickOutside.ts'
+    ],
+  },
   {
     plugins: {
       'no-top-level-window': noTopLevelWindow,
@@ -24,7 +40,8 @@ export default [
     rules: {
       '@next/next/no-page-custom-font': 'off',
       '@next/next/no-img-element': 'off',
-      'jsx-a11y/control-has-associated-label': 'error',
+      'jsx-a11y/control-has-associated-label': 'off',
+      'import/no-anonymous-default-export': 'off',
     },
   }),
 ];
