@@ -10,13 +10,29 @@ import useDocPiP from '../../hooks/useDocPiP';
 export class Window extends Component {
     constructor(props) {
         super(props);
-        this.id = null;
+        this.id = props.id || null;
         this.startX = props.initialX ?? 60;
         this.startY = props.initialY ?? 10;
+        let width = props.defaultWidth || 60;
+        let height = props.defaultHeight || 85;
+        this._loadedGeometry = false;
+        if (typeof window !== 'undefined' && this.id && process.env.NODE_ENV !== 'test') {
+            try {
+                const stored = window.localStorage.getItem(`window-geometry-${this.id}`);
+                if (stored) {
+                    const geo = JSON.parse(stored);
+                    if (typeof geo.x === 'number') this.startX = geo.x;
+                    if (typeof geo.y === 'number') this.startY = geo.y;
+                    if (typeof geo.width === 'number') width = geo.width;
+                    if (typeof geo.height === 'number') height = geo.height;
+                    this._loadedGeometry = true;
+                }
+            } catch {}
+        }
         this.state = {
             cursorType: "cursor-default",
-            width: props.defaultWidth || 60,
-            height: props.defaultHeight || 85,
+            width,
+            height,
             closed: false,
             maximized: false,
             parentSize: {
@@ -36,7 +52,11 @@ export class Window extends Component {
 
     componentDidMount() {
         this.id = this.props.id;
-        this.setDefaultWindowDimenstion();
+        if (this._loadedGeometry) {
+            this.resizeBoundries();
+        } else {
+            this.setDefaultWindowDimenstion();
+        }
 
         // google analytics
         ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
@@ -185,12 +205,18 @@ export class Window extends Component {
 
     handleVerticleResize = () => {
         if (this.props.resizable === false) return;
-        this.setState({ height: this.state.height + 0.1 }, this.resizeBoundries);
+        this.setState({ height: this.state.height + 0.1 }, () => {
+            this.resizeBoundries();
+            this.saveGeometry();
+        });
     }
 
     handleHorizontalResize = () => {
         if (this.props.resizable === false) return;
-        this.setState({ width: this.state.width + 0.1 }, this.resizeBoundries);
+        this.setState({ width: this.state.width + 0.1 }, () => {
+            this.resizeBoundries();
+            this.saveGeometry();
+        });
     }
 
     setWinowsPosition = () => {
@@ -204,6 +230,19 @@ export class Window extends Component {
         if (this.props.onPositionChange) {
             this.props.onPositionChange(x, y);
         }
+    }
+
+    saveGeometry = () => {
+        if (typeof window === 'undefined' || process.env.NODE_ENV === 'test') return;
+        this.setWinowsPosition();
+        const node = document.getElementById(this.id);
+        if (!node) return;
+        const x = parseFloat(node.style.getPropertyValue('--window-transform-x')) || 0;
+        const y = parseFloat(node.style.getPropertyValue('--window-transform-y')) || 0;
+        const { width, height } = this.state;
+        try {
+            window.localStorage.setItem(`window-geometry-${this.id}`, JSON.stringify({ x, y, width, height }));
+        } catch {}
     }
 
     unsnapWindow = () => {
@@ -221,9 +260,15 @@ export class Window extends Component {
                 width: this.state.lastSize.width,
                 height: this.state.lastSize.height,
                 snapped: null
-            }, this.resizeBoundries);
+            }, () => {
+                this.resizeBoundries();
+                this.saveGeometry();
+            });
         } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            this.setState({ snapped: null }, () => {
+                this.resizeBoundries();
+                this.saveGeometry();
+            });
         }
     }
 
@@ -284,7 +329,6 @@ export class Window extends Component {
         this.changeCursorToDefault();
         const snapPos = this.state.snapPosition;
         if (snapPos) {
-            this.setWinowsPosition();
             const { width, height } = this.state;
             let newWidth = width;
             let newHeight = height;
@@ -313,10 +357,13 @@ export class Window extends Component {
                 lastSize: { width, height },
                 width: newWidth,
                 height: newHeight
-            }, this.resizeBoundries);
+            }, () => {
+                this.resizeBoundries();
+                this.saveGeometry();
+            });
         }
         else {
-            this.setState({ snapPreview: null, snapPosition: null });
+            this.setState({ snapPreview: null, snapPosition: null }, this.saveGeometry);
         }
     }
 
@@ -368,7 +415,7 @@ export class Window extends Component {
 
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
-            this.setState({ maximized: false });
+            this.setState({ maximized: false }, this.saveGeometry);
             this.checkOverlap();
             return;
         }
@@ -376,7 +423,7 @@ export class Window extends Component {
         if (this._dockAnimation) {
             this._dockAnimation.onfinish = () => {
                 node.style.transform = endTransform;
-                this.setState({ maximized: false });
+                this.setState({ maximized: false }, this.saveGeometry);
                 this.checkOverlap();
                 this._dockAnimation.onfinish = null;
             };
@@ -388,7 +435,7 @@ export class Window extends Component {
             );
             this._dockAnimation.onfinish = () => {
                 node.style.transform = endTransform;
-                this.setState({ maximized: false });
+                this.setState({ maximized: false }, this.saveGeometry);
                 this.checkOverlap();
                 this._dockAnimation.onfinish = null;
             };
@@ -406,7 +453,10 @@ export class Window extends Component {
             this.setWinowsPosition();
             // translate window to maximize position
             r.style.transform = `translate(-1pt,-2pt)`;
-            this.setState({ maximized: true, height: 96.3, width: 100.2 });
+            this.setState({ maximized: true, height: 96.3, width: 100.2 }, () => {
+                this.resizeBoundries();
+                this.saveGeometry();
+            });
             this.props.hideSideBar(this.id, true);
         }
     }

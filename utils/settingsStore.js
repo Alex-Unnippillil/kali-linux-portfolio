@@ -122,6 +122,13 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
 }
 
+export async function resetWindowGeometry() {
+  if (typeof window === 'undefined') return;
+  Object.keys(window.localStorage)
+    .filter((key) => key.startsWith('window-geometry-'))
+    .forEach((key) => window.localStorage.removeItem(key));
+}
+
 export async function exportSettings() {
   const [
     accent,
