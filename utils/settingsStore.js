@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  iconTheme: 'Yaru',
 };
 
 export async function getAccent() {
@@ -69,6 +70,16 @@ export async function getFontScale() {
 export async function setFontScale(scale) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem('font-scale', String(scale));
+}
+
+export async function getIconTheme() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.iconTheme;
+  return window.localStorage.getItem('icon-theme') || DEFAULT_SETTINGS.iconTheme;
+}
+
+export async function setIconTheme(theme) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('icon-theme', theme);
 }
 
 export async function getHighContrast() {
@@ -137,6 +148,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('icon-theme');
 }
 
 export async function exportSettings() {
@@ -151,6 +163,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    iconTheme,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +175,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getIconTheme(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +189,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    iconTheme,
     theme,
   });
 }
@@ -199,6 +214,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    iconTheme,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +227,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (iconTheme !== undefined) await setIconTheme(iconTheme);
   if (theme !== undefined) setTheme(theme);
 }
 
