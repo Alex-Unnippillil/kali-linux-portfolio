@@ -1,8 +1,15 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import GameLayout from './GameLayout';
+import {
+  ROWS,
+  COLS,
+  createEmptyBoard,
+  getValidRow,
+  checkWinner,
+  isBoardFull,
+  getBestMove,
+} from '../../games/connect-four/solver';
 
-const ROWS = 6;
-const COLS = 7;
 const CELL_SIZE = 40; // tailwind h-10 w-10
 const GAP = 4; // gap-1 => 4px
 const SLOT = CELL_SIZE + GAP;
@@ -17,157 +24,6 @@ const COLOR_NAMES = {
   yellow: 'Orange',
 };
 
-const createEmptyBoard = () =>
-  Array.from({ length: ROWS }, () => Array(COLS).fill(null));
-
-const getValidRow = (board, col) => {
-  for (let r = ROWS - 1; r >= 0; r -= 1) {
-    if (!board[r][col]) return r;
-  }
-  return -1;
-};
-
-const checkWinner = (board, player) => {
-  const dirs = [
-    [0, 1],
-    [1, 0],
-    [1, 1],
-    [1, -1],
-  ];
-  for (let r = 0; r < ROWS; r += 1) {
-    for (let c = 0; c < COLS; c += 1) {
-      if (board[r][c] !== player) continue;
-      for (const [dr, dc] of dirs) {
-        const cells = [];
-        for (let i = 0; i < 4; i += 1) {
-          const rr = r + dr * i;
-          const cc = c + dc * i;
-          if (rr < 0 || rr >= ROWS || cc < 0 || cc >= COLS) break;
-          if (board[rr][cc] !== player) break;
-          cells.push({ r: rr, c: cc });
-        }
-        if (cells.length === 4) return cells;
-      }
-    }
-  }
-  return null;
-};
-
-const isBoardFull = (board) => board[0].every(Boolean);
-
-const evaluateWindow = (window, player) => {
-  const opp = player === 'red' ? 'yellow' : 'red';
-  let score = 0;
-  const playerCount = window.filter((v) => v === player).length;
-  const oppCount = window.filter((v) => v === opp).length;
-  const empty = window.filter((v) => v === null).length;
-  if (playerCount === 4) score += 100;
-  else if (playerCount === 3 && empty === 1) score += 5;
-  else if (playerCount === 2 && empty === 2) score += 2;
-  if (oppCount === 3 && empty === 1) score -= 4;
-  return score;
-};
-
-const scorePosition = (board, player) => {
-  let score = 0;
-  const center = Math.floor(COLS / 2);
-  const centerArray = board.map((row) => row[center]);
-  score += centerArray.filter((v) => v === player).length * 3;
-  for (let r = 0; r < ROWS; r += 1) {
-    for (let c = 0; c < COLS - 3; c += 1) {
-      score += evaluateWindow(board[r].slice(c, c + 4), player);
-    }
-  }
-  for (let c = 0; c < COLS; c += 1) {
-    for (let r = 0; r < ROWS - 3; r += 1) {
-      score += evaluateWindow(
-        [board[r][c], board[r + 1][c], board[r + 2][c], board[r + 3][c]],
-        player,
-      );
-    }
-  }
-  for (let r = 0; r < ROWS - 3; r += 1) {
-    for (let c = 0; c < COLS - 3; c += 1) {
-      score += evaluateWindow(
-        [
-          board[r][c],
-          board[r + 1][c + 1],
-          board[r + 2][c + 2],
-          board[r + 3][c + 3],
-        ],
-        player,
-      );
-    }
-  }
-  for (let r = 3; r < ROWS; r += 1) {
-    for (let c = 0; c < COLS - 3; c += 1) {
-      score += evaluateWindow(
-        [
-          board[r][c],
-          board[r - 1][c + 1],
-          board[r - 2][c + 2],
-          board[r - 3][c + 3],
-        ],
-        player,
-      );
-    }
-  }
-  return score;
-};
-
-const getValidLocations = (board) => {
-  const locations = [];
-  for (let c = 0; c < COLS; c += 1) {
-    if (!board[0][c]) locations.push(c);
-  }
-  return locations;
-};
-
-const minimax = (board, depth, alpha, beta, maximizing) => {
-  const validLocations = getValidLocations(board);
-  const isTerminal =
-    checkWinner(board, 'red') ||
-    checkWinner(board, 'yellow') ||
-    validLocations.length === 0;
-  if (depth === 0 || isTerminal) {
-    if (checkWinner(board, 'red')) return { score: 1000000 };
-    if (checkWinner(board, 'yellow')) return { score: -1000000 };
-    return { score: scorePosition(board, 'red') };
-  }
-  if (maximizing) {
-    let value = -Infinity;
-    let column = validLocations[0];
-    for (const col of validLocations) {
-      const row = getValidRow(board, col);
-      const newBoard = board.map((r) => [...r]);
-      newBoard[row][col] = 'red';
-      const score = minimax(newBoard, depth - 1, alpha, beta, false).score;
-      if (score > value) {
-        value = score;
-        column = col;
-      }
-      alpha = Math.max(alpha, value);
-      if (alpha >= beta) break;
-    }
-    return { column, score: value };
-  }
-  let value = Infinity;
-  let column = validLocations[0];
-  for (const col of validLocations) {
-    const row = getValidRow(board, col);
-    const newBoard = board.map((r) => [...r]);
-    newBoard[row][col] = 'yellow';
-    const score = minimax(newBoard, depth - 1, alpha, beta, true).score;
-    if (score < value) {
-      value = score;
-      column = col;
-    }
-    beta = Math.min(beta, value);
-    if (alpha >= beta) break;
-  }
-  return { column, score: value };
-};
-
 export default function ConnectFour() {
   const [board, setBoard] = useState(createEmptyBoard());
   const [player, setPlayer] = useState('yellow');
@@ -176,6 +32,7 @@ export default function ConnectFour() {
   const [hoverCol, setHoverCol] = useState(null);
   const [animDisc, setAnimDisc] = useState(null);
   const [winningCells, setWinningCells] = useState([]);
+  const [difficulty, setDifficulty] = useState(4);
 
   const finalizeMove = useCallback((newBoard, color) => {
     const winCells = checkWinner(newBoard, color);
@@ -247,10 +104,10 @@ export default function ConnectFour() {
 
   useEffect(() => {
     if (player === 'red' && !winner && !animDisc) {
-      const { column } = minimax(board, 4, -Infinity, Infinity, true);
+      const { column } = getBestMove(board, difficulty, 'red');
       if (column !== undefined) dropDisc(column, 'red');
     }
-  }, [player, winner, board, animDisc, dropDisc]);
+  }, [player, winner, board, animDisc, dropDisc, difficulty]);
 
   const reset = () => {
     setBoard(createEmptyBoard());
@@ -277,6 +134,20 @@ export default function ConnectFour() {
         >
           Restart
         </button>
+        <div className="mb-2">
+          AI Depth:
+          <select
+            value={difficulty}
+            onChange={(e) => setDifficulty(parseInt(e.target.value, 10))}
+            className="bg-gray-700 rounded p-1 ml-2"
+          >
+            {Array.from({ length: 7 }, (_, i) => i + 1).map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+        </div>
         <div
           className="relative"
           style={{ width: boardWidth, height: BOARD_HEIGHT }}
