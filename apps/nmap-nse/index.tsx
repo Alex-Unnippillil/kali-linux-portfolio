@@ -2,6 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import share, { canShare } from '../../utils/share';
+import ReportView, { Report } from './components/ReportView';
+import parseNmapXml from './utils/parseNmapXml';
 
 interface Script {
   name: string;
@@ -25,6 +27,8 @@ const NmapNSE: React.FC = () => {
   const [result, setResult] = useState<{ script: string; output: string } | null>(
     null
   );
+  const [report, setReport] = useState<Report | null>(null);
+  const [error, setError] = useState('');
 
   // load static script metadata
   useEffect(() => {
@@ -56,6 +60,24 @@ const NmapNSE: React.FC = () => {
       ),
     [activeTag, data, search]
   );
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = parseNmapXml(reader.result as string);
+        setReport(parsed);
+        setError('');
+      } catch (err: any) {
+        setError(err.message || 'Invalid Nmap XML');
+        setReport(null);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
 
   const run = () => {
     if (!selected) return;
@@ -169,6 +191,21 @@ const NmapNSE: React.FC = () => {
 
         {/* details */}
         <main className="flex-1 p-4 overflow-y-auto">
+          <div className="mb-4">
+            <input
+              type="file"
+              accept=".xml"
+              onChange={handleFile}
+              aria-label="nmap xml file"
+              className="block"
+            />
+            {error && (
+              <p role="alert" className="text-red-400 mt-2">
+                {error}
+              </p>
+            )}
+          </div>
+          {report && <ReportView report={report} />}
           {selected ? (
             <div>
               <h1 className="text-2xl mb-2 font-mono">{selected.name}</h1>
@@ -215,4 +252,3 @@ const NmapNSE: React.FC = () => {
 };
 
 export default NmapNSE;
-
