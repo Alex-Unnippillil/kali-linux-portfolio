@@ -57,7 +57,9 @@ export class UbuntuApp extends Component {
                     alt={"Kali " + this.props.name}
                     sizes="40px"
                 />
-                {this.props.displayName || this.props.name}
+                <span className="label">
+                    {this.props.displayName || this.props.name}
+                </span>
 
             </div>
         )
