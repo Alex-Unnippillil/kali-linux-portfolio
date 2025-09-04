@@ -10994,6 +10994,7 @@ __metadata:
   linkType: hard
 
 "postcss@npm:^8.4.47, postcss@npm:^8.5.6":
+
   version: 8.5.6
   resolution: "postcss@npm:8.5.6"
   dependencies:
@@ -13905,6 +13906,7 @@ __metadata:
     playwright-core: "npm:^1.55.0"
     pngjs: "npm:^7.0.0"
     postcss: "npm:^8.5.6"
+
     prettier: "npm:^3.6.2"
     prop-types: "npm:^15.8.1"
     qrcode: "npm:^1.5.4"

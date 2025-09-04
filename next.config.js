@@ -89,7 +89,7 @@ function configureWebpack(config, { isServer }) {
   };
   config.resolve.alias = {
     ...(config.resolve.alias || {}),
-    'react-dom': require('path').resolve(__dirname, 'lib/react-dom-shim.js'),
+    'react-dom$': require('path').resolve(__dirname, 'lib/react-dom-shim.js'),
   };
   if (isProd) {
     config.optimization = {
