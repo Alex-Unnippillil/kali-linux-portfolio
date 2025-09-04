@@ -135,5 +135,11 @@
     "webpack": "^5.92.0",
     "ws": "^8.18.0"
   },
+  "resolutions": {
+    "magic-string": "^0.30.10",
+    "test-exclude": "^7.0.1",
+    "webpack": "^5.92.0"
+  },
+
   "packageManager": "yarn@4.9.2"
 }
