@@ -80,6 +80,12 @@ To send text or links directly into the Sticky Notes app:
 
 ---
 
+## Contributing
+
+See the [PR Review Checklist](./docs/PR_REVIEW.md) for guidance on design, tests, risk, style, and migrations when submitting or reviewing changes.
+
+---
+
 ## Speed Insights
 
 - Enable Speed Insights in the Vercel project dashboard.
