@@ -2,7 +2,7 @@ import React from 'react';
 import UnitConverter from './UnitConverter';
 import Base64Converter from './Base64Converter';
 import HashConverter from './HashConverter';
-import usePersistentState from '../../usePersistentState';
+import usePersistentState from '../../../hooks/usePersistentState';
 
 const tabs = [
   { id: 'unit', label: 'Unit', component: <UnitConverter /> },

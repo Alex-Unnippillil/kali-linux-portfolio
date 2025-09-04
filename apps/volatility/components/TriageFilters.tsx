@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import usePersistentState from '../../../components/usePersistentState.js';
+import usePersistentState from '../../../hooks/usePersistentState';
 
 // Static dataset illustrating possible suspicious markers
 const markers = [
@@ -23,10 +23,10 @@ type Marker = {
 };
 
 const TriageFilters: React.FC = () => {
-  const [activeFilters, setActiveFilters] = usePersistentState(
+  const [activeFilters, setActiveFilters] = usePersistentState<Severity[]>(
     'volatility-triage-filters',
     [...severities]
-  ) as [Severity[], (value: React.SetStateAction<Severity[]>) => void];
+  );
 
   const toggleFilter = (sev: Severity) => {
     setActiveFilters((prev: Severity[]) =>

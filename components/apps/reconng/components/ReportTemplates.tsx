@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import usePersistentState from '../../../hooks/usePersistentState';
+import usePersistentState from '../../../../hooks/usePersistentState';
 import defaultTemplates from '../../../../templates/export/report-templates.json';
 
 interface Finding {

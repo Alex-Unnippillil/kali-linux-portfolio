@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import modules from './modules.json';
-import usePersistentState from '../../usePersistentState';
+import usePersistentState from '../../../hooks/usePersistentState';
 import ConsolePane from './ConsolePane';
 
 const severities = ['critical', 'high', 'medium', 'low'];
