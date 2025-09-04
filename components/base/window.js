@@ -1,98 +1,106 @@
 "use client";
 
-import React, { Component } from 'react';
+import React, { Component, useState, useEffect, useRef, useImperativeHandle } from 'react';
 import NextImage from 'next/image';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 
-export class Window extends Component {
-    constructor(props) {
-        super(props);
-        this.id = null;
-        this.startX = props.initialX ?? 60;
-        this.startY = props.initialY ?? 10;
-        this.state = {
-            cursorType: "cursor-default",
-            width: props.defaultWidth || 60,
-            height: props.defaultHeight || 85,
-            closed: false,
-            maximized: false,
+/**
+ * @typedef {Object} WindowProps
+ * @property {string} id
+ * @property {string} title
+ * @property {(addFolder?: any, openApp?: any) => React.ReactNode} screen
+ * @property {Function} focus
+ * @property {Function} hasMinimised
+ * @property {Function} closed
+ * @property {Function} hideSideBar
+ * @property {Function} openApp
+ * @property {boolean} [resizable]
+ * @property {boolean} [allowMaximize]
+ * @property {boolean} [minimized]
+ * @property {boolean} [isFocused]
+ * @property {number} [defaultWidth]
+ * @property {number} [defaultHeight]
+ * @property {number} [initialX]
+ * @property {number} [initialY]
+ * @property {any} [overlayRoot]
+ * @property {(x:number,y:number)=>void} [onPositionChange]
+ * @property {any} [addFolder]
+ */
+
+/**
+ * @typedef {Object} WindowState
+ * @property {string} cursorType
+ * @property {number} width
+ * @property {number} height
+ * @property {boolean} closed
+ * @property {boolean} maximized
+ * @property {{height:number,width:number}} parentSize
+ * @property {{left:string,top:string,width:string,height:string}|null} snapPreview
+ * @property {"left"|"right"|"top"|null} snapPosition
+ * @property {"left"|"right"|"top"|null} snapped
+ * @property {{width:number,height:number}|null} lastSize
+ * @property {boolean} grabbed
+ */
+
+const Window = React.forwardRef(function Window(props, ref) {
+    const idRef = useRef(props.id);
+    const startX = props.initialX ?? 60;
+    const startY = props.initialY ?? 10;
+    const uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
+    const usageTimeout = useRef(null);
+    const menuOpener = useRef(null);
+    const dockAnimation = useRef(null);
+
+    /** @type {[WindowState, Function]} */
+    const [state, setState] = useState({
+        cursorType: "cursor-default",
+        width: props.defaultWidth || 60,
+        height: props.defaultHeight || 85,
+        closed: false,
+        maximized: false,
+        parentSize: { height: 100, width: 100 },
+        snapPreview: null,
+        snapPosition: null,
+        snapped: null,
+        lastSize: null,
+        grabbed: false,
+    });
+
+    const updateState = (update) => {
+        setState(prev => ({ ...prev, ...(typeof update === 'function' ? update(prev) : update) }));
+    };
+
+    const resizeBoundries = (h = state.height, w = state.width) => {
+        updateState({
             parentSize: {
-                height: 100,
-                width: 100
-            },
-            snapPreview: null,
-            snapPosition: null,
-            snapped: null,
-            lastSize: null,
-            grabbed: false,
-        }
-        this._usageTimeout = null;
-        this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
-        this._menuOpener = null;
-    }
-
-    componentDidMount() {
-        this.id = this.props.id;
-        this.setDefaultWindowDimenstion();
-
-        // google analytics
-        ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
-
-        // on window resize, resize boundary
-        window.addEventListener('resize', this.resizeBoundries);
-        // Listen for context menu events to toggle inert background
-        window.addEventListener('context-menu-open', this.setInertBackground);
-        window.addEventListener('context-menu-close', this.removeInertBackground);
-        if (this._uiExperiments) {
-            this.scheduleUsageCheck();
-        }
-    }
-
-    componentWillUnmount() {
-        ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
-
-        window.removeEventListener('resize', this.resizeBoundries);
-        window.removeEventListener('context-menu-open', this.setInertBackground);
-        window.removeEventListener('context-menu-close', this.removeInertBackground);
-        if (this._usageTimeout) {
-            clearTimeout(this._usageTimeout);
-        }
-    }
-
-    setDefaultWindowDimenstion = () => {
-        if (this.props.defaultHeight && this.props.defaultWidth) {
-            this.setState({ height: this.props.defaultHeight, width: this.props.defaultWidth }, this.resizeBoundries);
-        }
-        else if (window.innerWidth < 640) {
-            this.setState({ height: 60, width: 85 }, this.resizeBoundries);
-        }
-        else {
-            this.setState({ height: 85, width: 60 }, this.resizeBoundries);
-        }
-    }
-
-    resizeBoundries = () => {
-        this.setState({
-            parentSize: {
-                height: window.innerHeight //parent height
-                    - (window.innerHeight * (this.state.height / 100.0))  // this window's height
-                    - 28 // some padding
-                ,
-                width: window.innerWidth // parent width
-                    - (window.innerWidth * (this.state.width / 100.0)) //this window's width
-            }
-        }, () => {
-            if (this._uiExperiments) {
-                this.scheduleUsageCheck();
+                height: window.innerHeight - (window.innerHeight * (h / 100.0)) - 28,
+                width: window.innerWidth - (window.innerWidth * (w / 100.0))
             }
         });
-    }
+        if (uiExperiments) {
+            scheduleUsageCheck();
+        }
+    };
 
-    computeContentUsage = () => {
-        const root = document.getElementById(this.id);
+    const setDefaultWindowDimenstion = () => {
+        let h = state.height, w = state.width;
+        if (props.defaultHeight && props.defaultWidth) {
+            h = props.defaultHeight;
+            w = props.defaultWidth;
+        } else if (window.innerWidth < 640) {
+            h = 60; w = 85;
+        } else {
+            h = 85; w = 60;
+        }
+        updateState({ height: h, width: w });
+        resizeBoundries(h, w);
+    };
+
+    const computeContentUsage = () => {
+        const root = document.getElementById(idRef.current);
         if (!root) return 100;
         const container = root.querySelector('.windowMainScreen');
         if (!container) return 100;
@@ -102,113 +110,114 @@ export class Window extends Component {
         const area = containerRect.width * containerRect.height;
         if (area === 0) return 100;
         return (innerRect.width * innerRect.height) / area * 100;
-    }
+    };
 
-    scheduleUsageCheck = () => {
-        if (this._usageTimeout) {
-            clearTimeout(this._usageTimeout);
+    const scheduleUsageCheck = () => {
+        if (usageTimeout.current) {
+            clearTimeout(usageTimeout.current);
         }
-        this._usageTimeout = setTimeout(() => {
-            const usage = this.computeContentUsage();
+        usageTimeout.current = setTimeout(() => {
+            const usage = computeContentUsage();
             if (usage < 65) {
-                this.optimizeWindow();
+                optimizeWindow();
             }
         }, 200);
-    }
+    };
 
-    optimizeWindow = () => {
-        const root = document.getElementById(this.id);
+    const optimizeWindow = () => {
+        const root = document.getElementById(idRef.current);
         if (!root) return;
         const container = root.querySelector('.windowMainScreen');
         if (!container) return;
-
         container.style.padding = '0px';
-
         const shrink = () => {
-            const usage = this.computeContentUsage();
+            const usage = computeContentUsage();
             if (usage >= 80) return;
-            this.setState(prev => ({
+            updateState(prev => ({
                 width: Math.max(prev.width - 1, 20),
                 height: Math.max(prev.height - 1, 20)
-            }), () => {
-                if (this.computeContentUsage() < 80) {
-                    setTimeout(shrink, 50);
-                }
-            });
+            }));
+            if (computeContentUsage() < 80) {
+                setTimeout(shrink, 50);
+            }
         };
         shrink();
-    }
+    };
 
-    getOverlayRoot = () => {
-        if (this.props.overlayRoot) {
-            if (typeof this.props.overlayRoot === 'string') {
-                return document.getElementById(this.props.overlayRoot);
+    const getOverlayRoot = () => {
+        if (props.overlayRoot) {
+            if (typeof props.overlayRoot === 'string') {
+                return document.getElementById(props.overlayRoot);
             }
-            return this.props.overlayRoot;
+            return props.overlayRoot;
         }
         return document.getElementById('__next');
-    }
+    };
 
-    activateOverlay = () => {
-        const root = this.getOverlayRoot();
+    const activateOverlay = () => {
+        const root = getOverlayRoot();
         if (root) {
             root.setAttribute('inert', '');
         }
-        this._menuOpener = document.activeElement;
-    }
+        menuOpener.current = document.activeElement;
+    };
 
-    deactivateOverlay = () => {
-        const root = this.getOverlayRoot();
+    const deactivateOverlay = () => {
+        const root = getOverlayRoot();
         if (root) {
             root.removeAttribute('inert');
         }
-        if (this._menuOpener && typeof this._menuOpener.focus === 'function') {
-            this._menuOpener.focus();
+        if (menuOpener.current && typeof menuOpener.current.focus === 'function') {
+            menuOpener.current.focus();
         }
-        this._menuOpener = null;
-    }
+        menuOpener.current = null;
+    };
 
-    changeCursorToMove = () => {
-        this.focusWindow();
-        if (this.state.maximized) {
-            this.restoreWindow();
+    const changeCursorToMove = () => {
+        focusWindow();
+        if (state.maximized) {
+            restoreWindow();
         }
-        if (this.state.snapped) {
-            this.unsnapWindow();
+        if (state.snapped) {
+            unsnapWindow();
         }
-        this.setState({ cursorType: "cursor-move", grabbed: true })
-    }
+        updateState({ cursorType: "cursor-move", grabbed: true });
+    };
 
-    changeCursorToDefault = () => {
-        this.setState({ cursorType: "cursor-default", grabbed: false })
-    }
+    const changeCursorToDefault = () => {
+        updateState({ cursorType: "cursor-default", grabbed: false });
+    };
 
-    handleVerticleResize = () => {
-        if (this.props.resizable === false) return;
-        this.setState({ height: this.state.height + 0.1 }, this.resizeBoundries);
-    }
+    const handleVerticleResize = () => {
+        if (props.resizable === false) return;
+        const h = state.height + 0.1;
+        updateState({ height: h });
+        resizeBoundries(h, state.width);
+    };
 
-    handleHorizontalResize = () => {
-        if (this.props.resizable === false) return;
-        this.setState({ width: this.state.width + 0.1 }, this.resizeBoundries);
-    }
+    const handleHorizontalResize = () => {
+        if (props.resizable === false) return;
+        const w = state.width + 0.1;
+        updateState({ width: w });
+        resizeBoundries(state.height, w);
+    };
 
-    setWinowsPosition = () => {
-        var r = document.querySelector("#" + this.id);
+    const setWinowsPosition = () => {
+        const r = document.querySelector("#" + idRef.current);
         if (!r) return;
-        var rect = r.getBoundingClientRect();
+        const rect = r.getBoundingClientRect();
         const x = rect.x;
         const y = rect.y - 32;
         r.style.setProperty('--window-transform-x', x.toFixed(1).toString() + "px");
         r.style.setProperty('--window-transform-y', y.toFixed(1).toString() + "px");
-        if (this.props.onPositionChange) {
-            this.props.onPositionChange(x, y);
+        if (props.onPositionChange) {
+            props.onPositionChange(x, y);
         }
-    }
+    };
 
-    unsnapWindow = () => {
-        if (!this.state.snapped) return;
-        var r = document.querySelector("#" + this.id);
+    const unsnapWindow = () => {
+        if (!state.snapped) return;
+        const r = document.querySelector("#" + idRef.current);
         if (r) {
             const x = r.style.getPropertyValue('--window-transform-x');
             const y = r.style.getPropertyValue('--window-transform-y');
@@ -216,76 +225,78 @@ export class Window extends Component {
                 r.style.transform = `translate(${x},${y})`;
             }
         }
-        if (this.state.lastSize) {
-            this.setState({
-                width: this.state.lastSize.width,
-                height: this.state.lastSize.height,
+        if (state.lastSize) {
+            updateState({
+                width: state.lastSize.width,
+                height: state.lastSize.height,
                 snapped: null
-            }, this.resizeBoundries);
+            });
+            resizeBoundries(state.lastSize.height, state.lastSize.width);
         } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            updateState({ snapped: null });
+            resizeBoundries();
         }
-    }
+    };
 
-    checkOverlap = () => {
-        var r = document.querySelector("#" + this.id);
-        var rect = r.getBoundingClientRect();
-        if (rect.x.toFixed(1) < 50) { // if this window overlapps with SideBar
-            this.props.hideSideBar(this.id, true);
+    const checkOverlap = () => {
+        const r = document.querySelector("#" + idRef.current);
+        const rect = r.getBoundingClientRect();
+        if (rect.x.toFixed(1) < 50) {
+            props.hideSideBar(idRef.current, true);
         }
         else {
-            this.props.hideSideBar(this.id, false);
+            props.hideSideBar(idRef.current, false);
         }
-    }
+    };
 
-    setInertBackground = () => {
-        const root = document.getElementById(this.id);
+    const setInertBackground = () => {
+        const root = document.getElementById(idRef.current);
         if (root) {
             root.setAttribute('inert', '');
         }
-    }
+    };
 
-    removeInertBackground = () => {
-        const root = document.getElementById(this.id);
+    const removeInertBackground = () => {
+        const root = document.getElementById(idRef.current);
         if (root) {
             root.removeAttribute('inert');
         }
-    }
+    };
 
-    checkSnapPreview = () => {
-        var r = document.querySelector("#" + this.id);
+    const checkSnapPreview = () => {
+        const r = document.querySelector("#" + idRef.current);
         if (!r) return;
-        var rect = r.getBoundingClientRect();
+        const rect = r.getBoundingClientRect();
         const threshold = 30;
         let snap = null;
         if (rect.left <= threshold) {
             snap = { left: '0', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'left' });
+            updateState({ snapPreview: snap, snapPosition: 'left' });
         }
         else if (rect.right >= window.innerWidth - threshold) {
             snap = { left: '50%', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'right' });
+            updateState({ snapPreview: snap, snapPosition: 'right' });
         }
         else if (rect.top <= threshold) {
             snap = { left: '0', top: '0', width: '100%', height: '50%' };
-            this.setState({ snapPreview: snap, snapPosition: 'top' });
+            updateState({ snapPreview: snap, snapPosition: 'top' });
         }
         else {
-            if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
+            if (state.snapPreview) updateState({ snapPreview: null, snapPosition: null });
         }
-    }
+    };
 
-    handleDrag = () => {
-        this.checkOverlap();
-        this.checkSnapPreview();
-    }
+    const handleDrag = () => {
+        checkOverlap();
+        checkSnapPreview();
+    };
 
-    handleStop = () => {
-        this.changeCursorToDefault();
-        const snapPos = this.state.snapPosition;
+    const handleStop = () => {
+        changeCursorToDefault();
+        const snapPos = state.snapPosition;
         if (snapPos) {
-            this.setWinowsPosition();
-            const { width, height } = this.state;
+            setWinowsPosition();
+            const { width, height } = state;
             let newWidth = width;
             let newHeight = height;
             let transform = '';
@@ -302,64 +313,63 @@ export class Window extends Component {
                 newHeight = 50;
                 transform = 'translate(-1pt,-2pt)';
             }
-            var r = document.querySelector("#" + this.id);
+            const r = document.querySelector("#" + idRef.current);
             if (r && transform) {
                 r.style.transform = transform;
             }
-            this.setState({
+            updateState({
                 snapPreview: null,
                 snapPosition: null,
                 snapped: snapPos,
                 lastSize: { width, height },
                 width: newWidth,
                 height: newHeight
-            }, this.resizeBoundries);
+            });
+            resizeBoundries(newHeight, newWidth);
         }
         else {
-            this.setState({ snapPreview: null, snapPosition: null });
+            updateState({ snapPreview: null, snapPosition: null });
         }
-    }
+    };
 
-    focusWindow = () => {
-        this.props.focus(this.id);
-    }
+    const focusWindow = () => {
+        props.focus(idRef.current);
+    };
 
-    minimizeWindow = () => {
+    const minimizeWindow = () => {
         let posx = -310;
-        if (this.state.maximized) {
+        if (state.maximized) {
             posx = -510;
         }
-        this.setWinowsPosition();
-        // get corrosponding sidebar app's position
-        var r = document.querySelector("#sidebar-" + this.id);
-        var sidebBarApp = r.getBoundingClientRect();
+        setWinowsPosition();
+        const r = document.querySelector("#sidebar-" + idRef.current);
+        const sidebBarApp = r.getBoundingClientRect();
 
-        const node = document.querySelector("#" + this.id);
+        const node = document.querySelector("#" + idRef.current);
         const endTransform = `translate(${posx}px,${sidebBarApp.y.toFixed(1) - 240}px) scale(0.2)`;
         const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
-            this.props.hasMinimised(this.id);
+            props.hasMinimised(idRef.current);
             return;
         }
 
         const startTransform = node.style.transform;
-        this._dockAnimation = node.animate(
+        dockAnimation.current = node.animate(
             [{ transform: startTransform }, { transform: endTransform }],
             { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
         );
-        this._dockAnimation.onfinish = () => {
+        dockAnimation.current.onfinish = () => {
             node.style.transform = endTransform;
-            this.props.hasMinimised(this.id);
-            this._dockAnimation.onfinish = null;
+            props.hasMinimised(idRef.current);
+            dockAnimation.current.onfinish = null;
         };
-    }
+    };
 
-    restoreWindow = () => {
-        const node = document.querySelector("#" + this.id);
-        this.setDefaultWindowDimenstion();
-        // get previous position
+    const restoreWindow = () => {
+        const node = document.querySelector("#" + idRef.current);
+        setDefaultWindowDimenstion();
         let posx = node.style.getPropertyValue("--window-transform-x");
         let posy = node.style.getPropertyValue("--window-transform-y");
         const startTransform = node.style.transform;
@@ -368,70 +378,68 @@ export class Window extends Component {
 
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
-            this.setState({ maximized: false });
-            this.checkOverlap();
+            updateState({ maximized: false });
+            checkOverlap();
             return;
         }
 
-        if (this._dockAnimation) {
-            this._dockAnimation.onfinish = () => {
+        if (dockAnimation.current) {
+            dockAnimation.current.onfinish = () => {
                 node.style.transform = endTransform;
-                this.setState({ maximized: false });
-                this.checkOverlap();
-                this._dockAnimation.onfinish = null;
+                updateState({ maximized: false });
+                checkOverlap();
+                dockAnimation.current.onfinish = null;
             };
-            this._dockAnimation.reverse();
+            dockAnimation.current.reverse();
         } else {
-            this._dockAnimation = node.animate(
+            dockAnimation.current = node.animate(
                 [{ transform: startTransform }, { transform: endTransform }],
                 { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
             );
-            this._dockAnimation.onfinish = () => {
+            dockAnimation.current.onfinish = () => {
                 node.style.transform = endTransform;
-                this.setState({ maximized: false });
-                this.checkOverlap();
-                this._dockAnimation.onfinish = null;
+                updateState({ maximized: false });
+                checkOverlap();
+                dockAnimation.current.onfinish = null;
             };
         }
-    }
+    };
 
-    maximizeWindow = () => {
-        if (this.props.allowMaximize === false) return;
-        if (this.state.maximized) {
-            this.restoreWindow();
+    const maximizeWindow = () => {
+        if (props.allowMaximize === false) return;
+        if (state.maximized) {
+            restoreWindow();
         }
         else {
-            this.focusWindow();
-            var r = document.querySelector("#" + this.id);
-            this.setWinowsPosition();
-            // translate window to maximize position
+            focusWindow();
+            const r = document.querySelector("#" + idRef.current);
+            setWinowsPosition();
             r.style.transform = `translate(-1pt,-2pt)`;
-            this.setState({ maximized: true, height: 96.3, width: 100.2 });
-            this.props.hideSideBar(this.id, true);
+            updateState({ maximized: true, height: 96.3, width: 100.2 });
+            props.hideSideBar(idRef.current, true);
         }
-    }
+    };
 
-    closeWindow = () => {
-        this.setWinowsPosition();
-        this.setState({ closed: true }, () => {
-            this.deactivateOverlay();
-            this.props.hideSideBar(this.id, false);
-            setTimeout(() => {
-                this.props.closed(this.id)
-            }, 300) // after 300ms this window will be unmounted from parent (Desktop)
-        });
-    }
+    const closeWindow = () => {
+        setWinowsPosition();
+        updateState({ closed: true });
+        deactivateOverlay();
+        props.hideSideBar(idRef.current, false);
+        setTimeout(() => {
+            props.closed(idRef.current);
+        }, 300);
+    };
 
-    handleTitleBarKeyDown = (e) => {
+    const handleTitleBarKeyDown = (e) => {
         if (e.key === ' ' || e.key === 'Space' || e.key === 'Enter') {
             e.preventDefault();
             e.stopPropagation();
-            if (this.state.grabbed) {
-                this.handleStop();
+            if (state.grabbed) {
+                handleStop();
             } else {
-                this.changeCursorToMove();
+                changeCursorToMove();
             }
-        } else if (this.state.grabbed) {
+        } else if (state.grabbed) {
             const step = 10;
             let dx = 0, dy = 0;
             if (e.key === 'ArrowLeft') dx = -step;
@@ -441,7 +449,7 @@ export class Window extends Component {
             if (dx !== 0 || dy !== 0) {
                 e.preventDefault();
                 e.stopPropagation();
-                const node = document.getElementById(this.id);
+                const node = document.getElementById(idRef.current);
                 if (node) {
                     const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
                     let x = match ? parseFloat(match[1]) : 0;
@@ -449,91 +457,123 @@ export class Window extends Component {
                     x += dx;
                     y += dy;
                     node.style.transform = `translate(${x}px, ${y}px)`;
-                    this.checkOverlap();
-                    this.checkSnapPreview();
-                    this.setWinowsPosition();
+                    checkOverlap();
+                    checkSnapPreview();
+                    setWinowsPosition();
                 }
             }
         }
-    }
+    };
 
-    releaseGrab = () => {
-        if (this.state.grabbed) {
-            this.handleStop();
+    const releaseGrab = () => {
+        if (state.grabbed) {
+            handleStop();
         }
-    }
+    };
 
-    handleKeyDown = (e) => {
+    const handleKeyDown = (e) => {
         if (e.key === 'Escape') {
-            this.closeWindow();
+            closeWindow();
         } else if (e.key === 'Tab') {
-            this.focusWindow();
+            focusWindow();
         } else if (e.key === 'ArrowDown' && e.altKey) {
-            this.unsnapWindow();
+            unsnapWindow();
         }
-    }
+    };
 
-    render() {
-        return (
-            <>
-                {this.state.snapPreview && (
-                    <div
-                        data-testid="snap-preview"
-                        className="fixed border-2 border-dashed border-white pointer-events-none z-40"
-                        style={{ left: this.state.snapPreview.left, top: this.state.snapPreview.top, width: this.state.snapPreview.width, height: this.state.snapPreview.height }}
-                    />
-                )}
-                <Draggable
-                    axis="both"
-                    handle=".bg-ub-window-title"
-                    grid={[1, 1]}
-                    scale={1}
-                    onStart={this.changeCursorToMove}
-                    onStop={this.handleStop}
-                    onDrag={this.handleDrag}
-                    allowAnyClick={false}
-                    defaultPosition={{ x: this.startX, y: this.startY }}
-                    bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
+    useEffect(() => {
+        idRef.current = props.id;
+        setDefaultWindowDimenstion();
+        ReactGA.send({ hitType: "pageview", page: `/${idRef.current}`, title: "Custom Title" });
+        const resizeListener = () => resizeBoundries();
+        const contextOpen = () => setInertBackground();
+        const contextClose = () => removeInertBackground();
+        window.addEventListener('resize', resizeListener);
+        window.addEventListener('context-menu-open', contextOpen);
+        window.addEventListener('context-menu-close', contextClose);
+        if (uiExperiments) {
+            scheduleUsageCheck();
+        }
+        return () => {
+            ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+            window.removeEventListener('resize', resizeListener);
+            window.removeEventListener('context-menu-open', contextOpen);
+            window.removeEventListener('context-menu-close', contextClose);
+            if (usageTimeout.current) {
+                clearTimeout(usageTimeout.current);
+            }
+        };
+    }, []);
+
+    useImperativeHandle(ref, () => ({
+        handleDrag,
+        handleStop,
+        changeCursorToMove,
+        handleKeyDown,
+        activateOverlay,
+        closeWindow,
+        state
+    }), [state]);
+
+    return (
+        <>
+            {state.snapPreview && (
+                <div
+                    data-testid="snap-preview"
+                    className="fixed border-2 border-dashed border-white pointer-events-none z-40"
+                    style={{ left: state.snapPreview.left, top: state.snapPreview.top, width: state.snapPreview.width, height: state.snapPreview.height }}
+                />
+            )}
+            <Draggable
+                axis="both"
+                handle=".bg-ub-window-title"
+                grid={[1, 1]}
+                scale={1}
+                onStart={changeCursorToMove}
+                onStop={handleStop}
+                onDrag={handleDrag}
+                allowAnyClick={false}
+                defaultPosition={{ x: startX, y: startY }}
+                bounds={{ left: 0, top: 0, right: state.parentSize.width, bottom: state.parentSize.height }}
+            >
+                <div
+                    style={{ width: `${state.width}%`, height: `${state.height}%` }}
+                    className={state.cursorType + " " + (state.closed ? " closed-window " : "") + (state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (props.minimized ? " opacity-0 invisible duration-200 " : "") + (state.grabbed ? " opacity-70 " : "") + (props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                    id={idRef.current}
+                    role="dialog"
+                    aria-label={props.title}
+                    tabIndex={0}
+                    onKeyDown={handleKeyDown}
                 >
-                    <div
-                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
-                        id={this.id}
-                        role="dialog"
-                        aria-label={this.props.title}
-                        tabIndex={0}
-                        onKeyDown={this.handleKeyDown}
-                    >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
-                        <WindowTopBar
-                            title={this.props.title}
-                            onKeyDown={this.handleTitleBarKeyDown}
-                            onBlur={this.releaseGrab}
-                            grabbed={this.state.grabbed}
-                        />
-                        <WindowEditButtons
-                            minimize={this.minimizeWindow}
-                            maximize={this.maximizeWindow}
-                            isMaximised={this.state.maximized}
-                            close={this.closeWindow}
-                            id={this.id}
-                            allowMaximize={this.props.allowMaximize !== false}
-                            pip={() => this.props.screen(this.props.addFolder, this.props.openApp)}
-                        />
-                        {(this.id === "settings"
-                            ? <Settings />
-                            : <WindowMainScreen screen={this.props.screen} title={this.props.title}
-                                addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
-                                openApp={this.props.openApp} />)}
-                    </div>
-                </Draggable >
-            </>
-        )
-    }
-}
+                    {props.resizable !== false && <WindowYBorder resize={handleHorizontalResize} />}
+                    {props.resizable !== false && <WindowXBorder resize={handleVerticleResize} />}
+                    <WindowTopBar
+                        title={props.title}
+                        onKeyDown={handleTitleBarKeyDown}
+                        onBlur={releaseGrab}
+                        grabbed={state.grabbed}
+                    />
+                    <WindowEditButtons
+                        minimize={minimizeWindow}
+                        maximize={maximizeWindow}
+                        isMaximised={state.maximized}
+                        close={closeWindow}
+                        id={idRef.current}
+                        allowMaximize={props.allowMaximize !== false}
+                        pip={() => props.screen(props.addFolder, props.openApp)}
+                    />
+                    {(idRef.current === "settings"
+                        ? <Settings />
+                        : <WindowMainScreen screen={props.screen} title={props.title}
+                            addFolder={props.id === "terminal" ? props.addFolder : null}
+                            openApp={props.openApp} />)}
+                </div>
+            </Draggable >
+        </>
+    );
+});
 
-export default Window
+export default Window;
 
 // Window's title bar
 export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
