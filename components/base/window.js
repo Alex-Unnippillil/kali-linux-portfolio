@@ -46,6 +46,7 @@ export class Window extends Component {
         // Listen for context menu events to toggle inert background
         window.addEventListener('context-menu-open', this.setInertBackground);
         window.addEventListener('context-menu-close', this.removeInertBackground);
+        window.addEventListener('resize-window-preset', this.handlePresetResize);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -57,6 +58,7 @@ export class Window extends Component {
         window.removeEventListener('resize', this.resizeBoundries);
         window.removeEventListener('context-menu-open', this.setInertBackground);
         window.removeEventListener('context-menu-close', this.removeInertBackground);
+        window.removeEventListener('resize-window-preset', this.handlePresetResize);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
@@ -137,6 +139,15 @@ export class Window extends Component {
             });
         };
         shrink();
+    }
+
+    handlePresetResize = (e) => {
+        const { id, width, height } = e.detail || {}
+        if (id && id !== this.id) return
+        if (!width || !height) return
+        const newWidth = width / window.innerWidth * 100
+        const newHeight = height / window.innerHeight * 100
+        this.setState({ width: newWidth, height: newHeight }, this.resizeBoundries)
     }
 
     getOverlayRoot = () => {

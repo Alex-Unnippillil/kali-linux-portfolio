@@ -787,14 +787,16 @@ export class Desktop extends Component {
                 {/* Context Menus */}
                 <DesktopMenu
                     active={this.state.context_menus.desktop}
+                    appId={this.state.context_app}
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
-                <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
+                <DefaultMenu active={this.state.context_menus.default} appId={this.state.context_app} onClose={this.hideAllContextMenu} />
                 <AppMenu
                     active={this.state.context_menus.app}
+                    appId={this.state.context_app}
                     pinned={this.initFavourite[this.state.context_app]}
                     pinApp={() => this.pinApp(this.state.context_app)}
                     unpinApp={() => this.unpinApp(this.state.context_app)}

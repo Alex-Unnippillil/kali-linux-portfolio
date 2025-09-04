@@ -43,6 +43,17 @@ function DesktopMenu(props) {
         }
     }
 
+    const handleResize = (w, h) => {
+        window.dispatchEvent(new CustomEvent('resize-window-preset', { detail: { id: props.appId, width: w, height: h } }))
+        props.onClose && props.onClose()
+    }
+
+    const presets = [
+        { width: 640, height: 480 },
+        { width: 800, height: 600 },
+        { width: 1024, height: 768 }
+    ]
+
     return (
         <div
             id="desktop-menu"
@@ -50,6 +61,19 @@ function DesktopMenu(props) {
             aria-label="Desktop context menu"
             className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
         >
+            {presets.map(p => (
+                <button
+                    key={`${p.width}x${p.height}`}
+                    type="button"
+                    onClick={() => handleResize(p.width, p.height)}
+                    role="menuitem"
+                    aria-label={`Resize window to ${p.width}x${p.height}`}
+                    className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                >
+                    <span className="ml-5">{p.width}×{p.height}</span>
+                </button>
+            ))}
+            <Devider />
             <button
                 onClick={props.addNewFolder}
                 type="button"
