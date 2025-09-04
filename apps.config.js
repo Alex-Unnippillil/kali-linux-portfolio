@@ -26,6 +26,7 @@ const VsCodeApp = createDynamicApp('vscode', 'VsCode');
 const YouTubeApp = createDynamicApp('youtube', 'YouTube');
 const CalculatorApp = createDynamicApp('calculator', 'Calculator');
 const ConverterApp = createDynamicApp('converter', 'Converter');
+const EstimatorApp = createDynamicApp('estimate', 'Estimator');
 const TicTacToeApp = createDynamicApp('tictactoe', 'Tic Tac Toe');
 const ChessApp = createDynamicApp('chess', 'Chess');
 // Classic four-in-a-row game
@@ -266,6 +267,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayInputLab,
+  },
+  {
+    id: 'estimate',
+    title: 'Estimator',
+    icon: './themes/Yaru/apps/calc.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: EstimatorApp,
   },
 ];
 
