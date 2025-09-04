@@ -117,6 +117,7 @@ const Radare2 = ({ initialData = {} }) => {
           value={seekAddr}
           onChange={(e) => setSeekAddr(e.target.value)}
           placeholder="seek 0x..."
+          aria-label="seek address"
           className="px-2 py-1 rounded"
           style={{
             backgroundColor: "var(--r2-surface)",
@@ -138,6 +139,7 @@ const Radare2 = ({ initialData = {} }) => {
           value={findTerm}
           onChange={(e) => setFindTerm(e.target.value)}
           placeholder="find"
+          aria-label="find term"
           className="px-2 py-1 rounded"
           style={{
             backgroundColor: "var(--r2-surface)",
@@ -178,7 +180,12 @@ const Radare2 = ({ initialData = {} }) => {
       </div>
 
       {mode === "graph" ? (
-        <GraphView blocks={blocks} theme={theme} />
+        <GraphView
+          blocks={blocks}
+          theme={theme}
+          selectedAddr={currentAddr || undefined}
+          onSelect={scrollToAddr}
+        />
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
           <HexEditor hex={hex} theme={theme} />
@@ -261,6 +268,7 @@ const Radare2 = ({ initialData = {} }) => {
             value={noteText}
             onChange={(e) => setNoteText(e.target.value)}
             placeholder="Add note"
+            aria-label="note text"
             className="w-full p-2 rounded"
             style={{
               backgroundColor: "var(--r2-surface)",
