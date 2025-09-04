@@ -10,6 +10,7 @@ export const useTheme = () => {
         const next = getTheme();
         setThemeState(next);
         applyTheme(next);
+
       }
     };
     window.addEventListener('storage', handleStorage);
@@ -19,6 +20,7 @@ export const useTheme = () => {
   const setTheme = (next: string) => {
     setThemeState(next);
     applyTheme(next);
+
   };
 
   return { theme, setTheme };
