@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Draggable, { DraggableEvent, DraggableData } from 'react-draggable';
 
 interface NodeData {
@@ -17,6 +17,7 @@ const initialNodes: Record<string, NodeData> = {
 
 export default function ArpDiagram() {
   const [nodes, setNodes] = useState<Record<string, NodeData>>(initialNodes);
+  const nodeRefs = useRef<Record<string, React.RefObject<HTMLDivElement>>>({});
 
   const handleDrag = (key: string) => (_: DraggableEvent, data: DraggableData) => {
     setNodes((n) => ({ ...n, [key]: { ...n[key], x: data.x, y: data.y } }));
@@ -35,19 +36,22 @@ export default function ArpDiagram() {
         <path d={getLine('attacker', 'victim')} stroke="#f87171" strokeWidth={2} />
         <path d={getLine('attacker', 'gateway')} stroke="#f87171" strokeWidth={2} />
       </svg>
-      {Object.entries(nodes).map(([key, node]) => (
+      {Object.entries(nodes).map(([key, node]) => {
+        const ref = nodeRefs.current[key] || (nodeRefs.current[key] = React.createRef());
+        return (
         <Draggable
           key={key}
           grid={[6, 6]}
           bounds="parent"
           position={{ x: node.x, y: node.y }}
           onDrag={handleDrag(key)}
+          nodeRef={ref}
         >
-          <div className="absolute w-10 h-10 rounded-full bg-gray-700 border border-white flex items-center justify-center text-[10px]">
+          <div ref={ref} className="absolute w-10 h-10 rounded-full bg-gray-700 border border-white flex items-center justify-center text-[10px]">
             {node.label}
           </div>
         </Draggable>
-      ))}
+      );})}
     </div>
   );
 }

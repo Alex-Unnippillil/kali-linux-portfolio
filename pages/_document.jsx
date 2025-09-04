@@ -26,6 +26,7 @@ class MyDocument extends Document {
         <Head>
           <link rel="manifest" href="/manifest.webmanifest" />
           <meta name="theme-color" content="#0f1317" />
+          <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
           <Script
             src="/theme.js"
             strategy="afterInteractive"

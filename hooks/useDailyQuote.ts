@@ -85,9 +85,9 @@ export default function useDailyQuote(tag?: string) {
       let fetched: { content: string; author: string; tags?: string[] } | null = null;
       try {
         const url = tag
-          ? `https://api.quotable.io/random?tags=${encodeURIComponent(tag)}`
-          : 'https://api.quotable.io/random';
-        const res = await fetch(url);
+          ? `/api/quote?tag=${encodeURIComponent(tag)}`
+          : '/api/quote';
+        const res = await fetch(url, { credentials: 'same-origin' });
         if (res.ok) {
           const data = await res.json();
           fetched = { content: data.content, author: data.author, tags: data.tags };

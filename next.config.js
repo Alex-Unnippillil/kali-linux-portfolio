@@ -14,12 +14,12 @@ const ContentSecurityPolicy = [
   "object-src 'none'",
   // Allow external images and data URIs for badges/icons
   "img-src 'self' https: data:",
-  // Permit Google Fonts
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  // Permit inline styles
+  "style-src 'self' 'unsafe-inline'",
   // Explicitly allow external stylesheets and inline styles
-  "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  // Allow loading fonts from Google
-  "font-src 'self' https://fonts.gstatic.com",
+  "style-src-elem 'self' 'unsafe-inline'",
+  // Allow loading fonts from self
+  "font-src 'self'",
   // External scripts required for embedded timelines
   "script-src 'self' 'unsafe-inline' https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
   // Allow outbound connections for embeds and the in-browser Chrome app
@@ -60,6 +60,10 @@ const securityHeaders = [
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 });
+const withPWA = require('@ducanh2912/next-pwa').default({
+  dest: 'public',
+  disable: process.env.NODE_ENV === 'development',
+});
 
 const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 const isProd = process.env.NODE_ENV === 'production';
@@ -97,7 +101,7 @@ try {
   console.warn('Missing env vars; running without validation');
 }
 
-module.exports = withBundleAnalyzer({
+module.exports = withPWA(withBundleAnalyzer({
   ...(isStaticExport && { output: 'export' }),
   webpack: configureWebpack,
 
@@ -149,5 +153,5 @@ module.exports = withBundleAnalyzer({
           ];
         },
       }),
-});
+}));
 

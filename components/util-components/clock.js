@@ -7,21 +7,19 @@ export default class Clock extends Component {
         this.day_list = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         this.state = {
             hour_12: true,
-            current_time: new Date()
+            current_time: null
         };
     }
 
     componentDidMount() {
+        const setNow = () => this.setState({ current_time: new Date() });
+        setNow();
         if (typeof window !== 'undefined' && typeof Worker === 'function') {
             this.worker = new Worker(new URL('../../workers/timer.worker.ts', import.meta.url));
-            this.worker.onmessage = () => {
-                this.setState({ current_time: new Date() });
-            };
+            this.worker.onmessage = setNow;
             this.worker.postMessage({ action: 'start', interval: 10 * 1000 });
         } else {
-            this.update_time = setInterval(() => {
-                this.setState({ current_time: new Date() });
-            }, 10 * 1000);
+            this.update_time = setInterval(setNow, 10 * 1000);
         }
     }
 
@@ -35,6 +33,7 @@ export default class Clock extends Component {
 
     render() {
         const { current_time } = this.state;
+        if (!current_time) return <span aria-hidden="true">--:--</span>;
 
         let day = this.day_list[current_time.getDay()];
         let hour = current_time.getHours();

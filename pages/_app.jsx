@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Ubuntu } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import 'tailwindcss/tailwind.css';
@@ -11,6 +12,8 @@ import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
+
+const ubuntu = Ubuntu({ subsets: ['latin'], weight: ['300','400','500','700'], display: 'swap' });
 
 function MyApp(props) {
   const { Component, pageProps } = props;
@@ -132,6 +135,7 @@ function MyApp(props) {
   return (
     <SettingsProvider>
       <PipPortalProvider>
+        <div className={ubuntu.className}>
         <div aria-live="polite" id="live-region" />
         <Component {...pageProps} />
         <ShortcutOverlay />
@@ -145,6 +149,7 @@ function MyApp(props) {
         />
 
         {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+      </div>
       </PipPortalProvider>
     </SettingsProvider>
   );

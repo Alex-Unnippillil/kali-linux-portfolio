@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Draggable from 'react-draggable';
 import {
   MonteCarloAI,
@@ -96,6 +96,7 @@ const Battleship = () => {
     false,
   );
   const [dragHint, setDragHint] = useState(null);
+  const shipRefs = useRef([]);
 
   const tryPlace = (shipId, x, y, dir) => {
     const ship = ships.find((s) => s.id === shipId);
@@ -451,7 +452,9 @@ const Battleship = () => {
           <div className="flex space-x-4">
             <div className="relative border border-ub-dark-grey" style={{width:BOARD_SIZE*CELL,height:BOARD_SIZE*CELL}}>
               {renderBoard(playerBoard)}
-                {ships.map((ship,i)=>(
+                {ships.map((ship,i)=>{
+                  const nodeRef = shipRefs.current[i] || (shipRefs.current[i] = React.createRef());
+                  return (
                   <Draggable
                     key={ship.id}
                     grid={[CELL,CELL]}
@@ -460,14 +463,16 @@ const Battleship = () => {
                     onDrag={(e,data)=>handleDrag(i,e,data)}
                     onStop={(e,data)=>handleDragStop(i,e,data)}
                     disabled={phase!=='placement'}
+                    nodeRef={nodeRef}
                   >
                     <div
+                      ref={nodeRef}
                       className="absolute bg-blue-700 opacity-80"
                       style={{width:(ship.dir===0?ship.len:1)*CELL,height:(ship.dir===1?ship.len:1)*CELL}}
                       onDoubleClick={()=>rotateShip(ship.id)}
                     />
                   </Draggable>
-                ))}
+                );})}
             </div>
             <div className="flex flex-col space-y-2">
               <button className="px-2 py-1 bg-gray-700" onClick={randomize}>Randomize</button>
