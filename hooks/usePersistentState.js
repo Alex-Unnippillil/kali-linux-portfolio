@@ -2,16 +2,24 @@
 
 import { useState, useEffect } from 'react';
 
-// Persist state in localStorage.
-export default function usePersistentState(key, initialValue) {
+// Persist state in localStorage with validation and helpers.
+export default function usePersistentState(key, initial, validator) {
+  const getInitial = () => (typeof initial === "function" ? initial() : initial);
+
   const [state, setState] = useState(() => {
-    if (typeof window === 'undefined') return initialValue;
+    if (typeof window === "undefined") return getInitial();
     try {
       const stored = window.localStorage.getItem(key);
-      return stored ? JSON.parse(stored) : initialValue;
+      if (stored !== null) {
+        const parsed = JSON.parse(stored);
+        if (!validator || validator(parsed)) {
+          return parsed;
+        }
+      }
     } catch {
-      return initialValue;
+      // ignore parsing errors and fall back
     }
+    return getInitial();
   });
 
   useEffect(() => {
@@ -22,5 +30,22 @@ export default function usePersistentState(key, initialValue) {
     }
   }, [key, state]);
 
-  return [state, setState];
+  const reset = () => setState(getInitial());
+  const clear = () => {
+    try {
+      window.localStorage.removeItem(key);
+    } catch {
+      // ignore remove errors
+    }
+    reset();
+  };
+
+  return [state, setState, reset, clear];
 }
+
+export const useSnapSetting = () =>
+  usePersistentState(
+    "snap-enabled",
+    true,
+    (value) => typeof value === "boolean",
+  );
