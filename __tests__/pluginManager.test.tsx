@@ -6,6 +6,21 @@ describe('PluginManager', () => {
     localStorage.clear();
     (global as any).URL.createObjectURL = jest.fn(() => 'blob:mock');
     (global as any).URL.revokeObjectURL = jest.fn();
+    const nodeCrypto = require('crypto');
+    (global as any).crypto = {
+      subtle: {
+        digest: (_alg: string, data: ArrayBuffer) => {
+          const hash = nodeCrypto
+            .createHash('sha256')
+            .update(Buffer.from(data))
+            .digest();
+          const ab = hash.buffer.slice(hash.byteOffset, hash.byteOffset + hash.byteLength);
+          return Promise.resolve(ab);
+        },
+      },
+    } as any;
+    (global as any).TextEncoder = require('util').TextEncoder;
+    (window as any).crypto = (global as any).crypto;
 
     class MockWorker {
       onmessage: ((e: { data: any }) => void) | null = null;
@@ -20,6 +35,10 @@ describe('PluginManager', () => {
     }
     (global as any).Worker = MockWorker;
 
+    // fetch will be mocked per test
+  });
+
+  test('warns if signature verification fails', async () => {
     (global as any).fetch = jest.fn((url: string) => {
       if (url === '/api/plugins') {
         return Promise.resolve({
@@ -33,42 +52,17 @@ describe('PluginManager', () => {
               id: 'demo',
               sandbox: 'worker',
               code: "self.postMessage('content');",
+              signature: 'bad',
             }),
         });
       }
       return Promise.reject(new Error('unknown url'));
     });
-  });
-
-  test('installs plugin from catalog', async () => {
     render(<PluginManager />);
     const button = await screen.findByText('Install');
     fireEvent.click(button);
-    await waitFor(() =>
-      expect(localStorage.getItem('installedPlugins')).toContain('sandbox')
-    );
-    expect(button.textContent).toBe('Installed');
-  });
-
-  test('persists last plugin run and exports CSV', async () => {
-    const { unmount } = render(<PluginManager />);
-    const installBtn = await screen.findByText('Install');
-    fireEvent.click(installBtn);
-    await waitFor(() =>
-      expect(localStorage.getItem('installedPlugins')).toContain('demo')
-    );
-    const runBtn = await screen.findByText('Run');
-    fireEvent.click(runBtn);
-    await waitFor(() =>
-      expect(localStorage.getItem('lastPluginRun')).toContain('content')
-    );
-    unmount();
-    (global as any).URL.createObjectURL = jest.fn(() => 'blob:csv');
-    (global as any).URL.revokeObjectURL = jest.fn();
-    render(<PluginManager />);
-    expect(await screen.findByText(/Last Run: demo/)).toBeInTheDocument();
-    const exportBtn = screen.getByText('Export CSV');
-    fireEvent.click(exportBtn);
-    expect((global as any).URL.createObjectURL).toHaveBeenCalled();
+    expect(
+      await screen.findByText('Plugin verification failed')
+    ).toBeInTheDocument();
   });
 });

@@ -1,5 +1,6 @@
 {
   "id": "demo",
   "sandbox": "worker",
-  "code": "self.postMessage('content');"
+  "code": "self.postMessage('content');",
+  "signature": "09018c2d80c94f95a14e4e6ad6615e077ce2a3913f4c7571e8d55f7bc1335b99"
 }
