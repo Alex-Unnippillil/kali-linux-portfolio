@@ -1,6 +1,6 @@
 import dynamic from 'next/dynamic';
 
-const VSCode = dynamic(() => import('../../apps/vscode'), {
+const VSCode = dynamic(() => import('../../components/apps/vscode'), {
   ssr: false,
   loading: () => <p>Loading...</p>,
 });
