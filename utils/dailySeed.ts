@@ -1,3 +1,5 @@
+"use client";
+
 import { getSeed, setSeed } from './idb';
 
 function today(): string {

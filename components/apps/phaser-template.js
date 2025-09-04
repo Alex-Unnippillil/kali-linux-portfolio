@@ -1,3 +1,5 @@
+"use client";
+
 import Phaser from 'phaser';
 import { Howl } from 'howler';
 

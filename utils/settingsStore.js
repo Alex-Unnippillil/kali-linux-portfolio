@@ -1,3 +1,5 @@
+"use client";
+
 import { get, set, del } from 'idb-keyval';
 import { getTheme, setTheme } from './theme';
 

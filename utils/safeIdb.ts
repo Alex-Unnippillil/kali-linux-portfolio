@@ -1,4 +1,6 @@
-import { openDB, type IDBPDatabase, type OpenDBCallbacks } from 'idb';
+"use client";
+
+import type { IDBPDatabase, OpenDBCallbacks } from 'idb';
 import { hasIDB } from './env';
 
 export function makeIdb<DBTypes extends unknown>(
@@ -7,5 +9,5 @@ export function makeIdb<DBTypes extends unknown>(
   options?: OpenDBCallbacks<DBTypes>
 ): Promise<IDBPDatabase<DBTypes>> | null {
   if (!hasIDB) return null;
-  return openDB<DBTypes>(name, version, options);
+  return import('idb').then(({ openDB }) => openDB<DBTypes>(name, version, options));
 }

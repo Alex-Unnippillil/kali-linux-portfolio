@@ -1,3 +1,5 @@
+"use client";
+
 import { useCallback, useEffect, useRef } from 'react';
 import { createStore, get, set, del, keys } from 'idb-keyval';
 import useOPFS from '../../../../../hooks/useOPFS';
