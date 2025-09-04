@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import HexEditor from "./HexEditor";
 import {
   loadNotes,
@@ -30,6 +30,17 @@ const Radare2 = ({ initialData = {} }) => {
   const [strings, setStrings] = useState([]);
   const disasmRef = useRef(null);
   const { theme } = useTheme();
+
+  const callMap = useMemo(() => {
+    const map = {};
+    Object.entries(xrefs).forEach(([target, callers]) => {
+      callers.forEach((caller) => {
+        if (!map[caller]) map[caller] = [];
+        map[caller].push(target);
+      });
+    });
+    return map;
+  }, [xrefs]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -114,6 +125,7 @@ const Radare2 = ({ initialData = {} }) => {
           className="w-12 h-12"
         />
         <input
+          aria-label="seek address"
           value={seekAddr}
           onChange={(e) => setSeekAddr(e.target.value)}
           placeholder="seek 0x..."
@@ -135,6 +147,7 @@ const Radare2 = ({ initialData = {} }) => {
           Seek
         </button>
         <input
+          aria-label="find"
           value={findTerm}
           onChange={(e) => setFindTerm(e.target.value)}
           placeholder="find"
@@ -195,33 +208,50 @@ const Radare2 = ({ initialData = {} }) => {
             }}
           >
             <ul className="text-sm">
-              {disasm.map((line, idx) => (
-                <li
-                  key={line.addr}
-                  id={`asm-${idx}`}
-                  className="cursor-pointer"
-                  style={{
-                    backgroundColor:
-                      currentAddr === line.addr
+              {disasm.map((line, idx) => {
+                const targets = callMap[line.addr] || [];
+                const isCurrent = currentAddr === line.addr;
+                const isCaller = (xrefs[currentAddr] || []).includes(line.addr);
+                return (
+                  <li
+                    key={line.addr}
+                    id={`asm-${idx}`}
+                    className="cursor-pointer"
+                    style={{
+                      backgroundColor: isCurrent
                         ? "var(--r2-accent)"
+                        : isCaller
+                        ? "rgba(251,191,36,0.2)"
                         : "transparent",
-                    color:
-                      currentAddr === line.addr ? "#000" : "var(--r2-text)",
-                  }}
-                  onClick={() => setCurrentAddr(line.addr)}
-                >
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleBookmark(line.addr);
+                      color: isCurrent ? "#000" : "var(--r2-text)",
                     }}
-                    className="mr-1"
+                    onClick={() => setCurrentAddr(line.addr)}
                   >
-                    {bookmarks.includes(line.addr) ? "★" : "☆"}
-                  </button>
-                  {line.addr}: {line.text}
-                </li>
-              ))}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleBookmark(line.addr);
+                      }}
+                      className="mr-1"
+                    >
+                      {bookmarks.includes(line.addr) ? "★" : "☆"}
+                    </button>
+                    {line.addr}: {line.text}
+                    {targets.map((t) => (
+                      <button
+                        key={t}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          scrollToAddr(t);
+                        }}
+                        className="ml-2 underline"
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </div>
@@ -254,10 +284,21 @@ const Radare2 = ({ initialData = {} }) => {
       {currentAddr && (
         <div className="mt-4">
           <h2 className="text-lg">Xrefs for {currentAddr}</h2>
-          <p className="mb-2">
-            {(xrefs[currentAddr] || []).join(", ") || "None"}
-          </p>
+          <div className="mb-2">
+            {(xrefs[currentAddr] || []).length > 0
+              ? xrefs[currentAddr].map((xr) => (
+                  <button
+                    key={xr}
+                    onClick={() => scrollToAddr(xr)}
+                    className="mr-2 underline"
+                  >
+                    {xr}
+                  </button>
+                ))
+              : "None"}
+          </div>
           <textarea
+            aria-label="note text"
             value={noteText}
             onChange={(e) => setNoteText(e.target.value)}
             placeholder="Add note"
