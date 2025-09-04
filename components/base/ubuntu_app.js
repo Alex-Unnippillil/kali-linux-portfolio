@@ -11,8 +11,16 @@ export class UbuntuApp extends Component {
         this.setState({ dragging: true });
     }
 
-    handleDragEnd = () => {
+    handleDragEnd = (e) => {
         this.setState({ dragging: false });
+        if (this.props.onMove && !this.props.autoArrange) {
+            const desktop = document.getElementById('desktop');
+            const rect = e.target.getBoundingClientRect();
+            const drect = desktop ? desktop.getBoundingClientRect() : { left: 0, top: 0 };
+            const x = rect.left - drect.left;
+            const y = rect.top - drect.top;
+            this.props.onMove(this.props.id, x, y);
+        }
     }
 
     openApp = () => {
@@ -38,7 +46,7 @@ export class UbuntuApp extends Component {
                 aria-disabled={this.props.disabled}
                 data-context="app"
                 data-app-id={this.props.id}
-                draggable
+                draggable={!this.props.autoArrange}
                 onDragStart={this.handleDragStart}
                 onDragEnd={this.handleDragEnd}
                 className={(this.state.launching ? " app-icon-launch " : "") + (this.state.dragging ? " opacity-70 " : "") +
@@ -49,6 +57,7 @@ export class UbuntuApp extends Component {
                 tabIndex={this.props.disabled ? -1 : 0}
                 onMouseEnter={this.handlePrefetch}
                 onFocus={this.handlePrefetch}
+                style={this.props.position ? { position: 'absolute', left: this.props.position.x, top: this.props.position.y } : {}}
             >
                 <Image
                     width={40}
