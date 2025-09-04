@@ -49,7 +49,12 @@ export default function FixturesLoader({ onData }: LoaderProps) {
   return (
     <div className="text-xs" aria-label="fixtures loader">
       <div className="mb-2 flex items-center">
-        <button onClick={loadSample} className="px-2 py-1 bg-ub-cool-grey text-white mr-2" type="button">
+        <button
+          id="load-sample"
+          onClick={loadSample}
+          className="px-2 py-1 bg-ub-cool-grey text-white mr-2"
+          type="button"
+        >
           Load Sample
         </button>
         <label className="px-2 py-1 bg-ub-cool-grey text-white mr-2 cursor-pointer">
