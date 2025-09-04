@@ -66,7 +66,9 @@ export default class Ubuntu extends Component {
 			action: `Set Screen to Locked`
 		});
 
-		document.getElementById('status-bar').blur();
+                const statusBar = document.getElementById('status-bar');
+                // Consider using a React ref if the status bar element lives within this component tree
+                statusBar?.blur();
 		setTimeout(() => {
 			this.setState({ screen_locked: true });
 		}, 100); // waiting for all windows to close (transition-duration)
@@ -96,7 +98,9 @@ export default class Ubuntu extends Component {
 			action: `Switched off the Ubuntu`
 		});
 
-		document.getElementById('status-bar').blur();
+                const statusBar = document.getElementById('status-bar');
+                // Consider using a React ref if the status bar element lives within this component tree
+                statusBar?.blur();
 		this.setState({ shutDownScreen: true });
                 safeLocalStorage?.setItem('shut-down', true);
 	};
