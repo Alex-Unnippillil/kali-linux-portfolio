@@ -105,34 +105,37 @@ function Sidebar({
       <h2 className="mb-[6px] text-lg font-semibold">Queue</h2>
       <div data-testid="queue-list">
         {queue.map((v) => (
-          <div
+          <button
             key={v.id}
-            className="mb-[6px] cursor-pointer"
+            type="button"
+            aria-label={`Play ${v.title}`}
+            className="mb-[6px] w-full cursor-pointer text-left focus:outline-none focus:ring"
             onClick={() => onPlay(v)}
           >
             <img src={v.thumbnail} alt="" className="h-24 w-full rounded object-cover" />
             <div>{v.title}</div>
-          </div>
+          </button>
         ))}
         {!queue.length && <div className="text-ubt-grey">Empty</div>}
       </div>
       <h2 className="mb-[6px] mt-[24px] text-lg font-semibold">Watch Later</h2>
       <div data-testid="watch-later-list">
         {watchLater.map((v, i) => (
-          <div
+          <button
             key={`${v.id}-${v.start ?? 0}-${v.end ?? 0}`}
-            className="mb-[6px] cursor-pointer"
+            type="button"
+            aria-label={`Play ${v.name || v.title}`}
+            className="mb-[6px] w-full cursor-pointer text-left focus:outline-none focus:ring"
             onClick={() => onPlay(v)}
             draggable
             onDragStart={(e) => e.dataTransfer.setData('text/plain', String(i))}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => handleDrop(i, e)}
-            tabIndex={0}
             onKeyDown={(e) => handleKey(i, e)}
           >
             <img src={v.thumbnail} alt="" className="h-24 w-full rounded object-cover" />
             <div>{v.name || v.title}</div>
-          </div>
+          </button>
         ))}
         {!watchLater.length && <div className="text-ubt-grey">Empty</div>}
       </div>
@@ -208,7 +211,12 @@ function VirtualGrid({
                 padding: '6px',
               }}
             >
-              <div className="cursor-pointer" onClick={() => onPlay(v)}>
+              <button
+                type="button"
+                aria-label={`Play ${v.title}`}
+                className="cursor-pointer w-full text-left bg-transparent border-0 p-0 focus:outline-none focus:ring"
+                onClick={() => onPlay(v)}
+              >
                 <div className="relative">
                   <img
                     src={v.thumbnail}
@@ -223,7 +231,7 @@ function VirtualGrid({
                 <div className="mt-[6px] text-sm line-clamp-2">
                   {truncateTitle(v.title)}
                 </div>
-              </div>
+              </button>
               <div className="mt-[6px] flex justify-between text-xs">
                 <ChannelHovercard id={v.channelId} name={v.channelName} />
                 <div className="space-x-[6px]">
