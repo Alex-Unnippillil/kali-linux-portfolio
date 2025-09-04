@@ -9673,6 +9673,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"magic-string@npm:^0.25.0, magic-string@npm:^0.25.7":
+  version: 0.25.9
+  resolution: "magic-string@npm:0.25.9"
+  dependencies:
+    sourcemap-codec: "npm:^1.4.8"
+  checksum: 10c0/37f5e01a7e8b19a072091f0b45ff127cda676232d373ce2c551a162dd4053c575ec048b9cbb4587a1f03adb6c5d0fd0dd49e8ab070cd2c83a4992b2182d9cb56
+  languageName: node
+  linkType: hard
+
+"magic-string@patch:magic-string@npm:0.30.18#./.yarn/patches/magic-string-0.30.18.patch::locator=unnippillil%40workspace%3A.":
+  version: 0.30.18
+  resolution: "magic-string@patch:magic-string@npm%3A0.30.18#./.yarn/patches/magic-string-0.30.18.patch::version=0.30.18&hash=11d37a&locator=unnippillil%40workspace%3A."
+  dependencies:
+    "@jridgewell/sourcemap-codec": "npm:^1.4.15"
+  checksum: 10c0/ae2bf18c928260acc6d441cfc746b350eed51fdf477a2c72cbcc0b44af35668a39b17a92a7693ac3b42d553d5cafcf3d1623b44115f8ff92154a603ae911d31b
+  languageName: node
+  linkType: hard
+
 "make-dir@npm:^4.0.0":
   version: 4.0.0
   resolution: "make-dir@npm:4.0.0"
@@ -12706,6 +12724,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"sourcemap-codec@npm:^1.4.8":
+  version: 1.4.8
+  resolution: "sourcemap-codec@npm:1.4.8"
+  checksum: 10c0/f099279fdaae070ff156df7414bbe39aad69cdd615454947ed3e19136bfdfcb4544952685ee73f56e17038f4578091e12b17b283ed8ac013882916594d95b9e6
+  languageName: node
+  linkType: hard
+
 "sprintf-js@npm:~1.0.2":
   version: 1.0.3
   resolution: "sprintf-js@npm:1.0.3"
@@ -13860,7 +13885,7 @@ __metadata:
     jspdf: "npm:^3.0.2"
     kaitai-struct: "npm:^0.10.0"
     leaflet: "npm:^1.9.4"
-    magic-string: "npm:0.30.18"
+    magic-string: "patch:magic-string@npm:0.30.18#./.yarn/patches/magic-string-0.30.18.patch"
     mathjs: "npm:^14.6.0"
     matter-js: "npm:0.20.0"
     monaco-editor: "npm:^0.52.2"
