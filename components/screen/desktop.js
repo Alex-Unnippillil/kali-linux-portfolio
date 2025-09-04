@@ -13,6 +13,7 @@ import Window from '../base/window';
 import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
+import WindowSwitcher from '../screen/window-switcher'
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
@@ -45,6 +46,8 @@ export class Desktop extends Component {
             context_app: null,
             showNameBar: false,
             showShortcutSelector: false,
+            showWindowSwitcher: false,
+            switcherWindows: [],
         }
     }
 
@@ -138,10 +141,35 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcut = (e) => {
-        if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
+        if (e.altKey && e.key === 'Tab') {
+            e.preventDefault();
+            if (!this.state.showWindowSwitcher) {
+                this.openWindowSwitcher();
+            }
+        } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
             e.preventDefault();
             this.openApp('clipboard-manager');
         }
+    }
+
+    openWindowSwitcher = () => {
+        const windows = this.app_stack
+            .filter(id => this.state.closed_windows[id] === false)
+            .map(id => apps.find(a => a.id === id))
+            .filter(Boolean);
+        if (windows.length) {
+            this.setState({ showWindowSwitcher: true, switcherWindows: windows });
+        }
+    }
+
+    closeWindowSwitcher = () => {
+        this.setState({ showWindowSwitcher: false, switcherWindows: [] });
+    }
+
+    selectWindow = (id) => {
+        this.setState({ showWindowSwitcher: false, switcherWindows: [] }, () => {
+            this.openApp(id);
+        });
     }
 
     checkContextMenu = (e) => {
@@ -815,6 +843,12 @@ export class Desktop extends Component {
                         games={games}
                         onSelect={this.addShortcutToDesktop}
                         onClose={() => this.setState({ showShortcutSelector: false })} /> : null}
+
+                { this.state.showWindowSwitcher ?
+                    <WindowSwitcher
+                        windows={this.state.switcherWindows}
+                        onSelect={this.selectWindow}
+                        onClose={this.closeWindowSwitcher} /> : null}
 
             </main>
         )
