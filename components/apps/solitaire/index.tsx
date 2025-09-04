@@ -27,6 +27,9 @@ type Stats = {
   lastDaily: string | null;
 };
 
+const getStatsKey = (v: Variant, mode: 1 | 3, passes: number) =>
+  `solitaireStats-${v}-d${mode}-p${passes === Infinity ? 'u' : passes}`;
+
 type AnimatedCard = Card & {
   x: number;
   y: number;
@@ -50,8 +53,11 @@ const renderFaceDown = () => (
 
 const Solitaire = () => {
   const [drawMode, setDrawMode] = useState<1 | 3>(1);
+  const [passLimit, setPassLimit] = useState<number>(3);
   const [variant, setVariant] = useState<Variant>('klondike');
-  const [game, setGame] = useState<GameState>(() => initializeGame(drawMode));
+  const [game, setGame] = useState<GameState>(() =>
+    initializeGame(drawMode, undefined, undefined, passLimit),
+  );
   const [drag, setDrag] = useState<{ source: 'tableau' | 'waste'; pile: number; index: number } | null>(null);
   const [won, setWon] = useState(false);
   const [time, setTime] = useState(0);
@@ -98,7 +104,7 @@ const Solitaire = () => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const saved = JSON.parse(
-      localStorage.getItem(`solitaireStats-${variant}`) || '{}',
+      localStorage.getItem(getStatsKey(variant, drawMode, passLimit)) || '{}',
     );
     setStats({
       gamesPlayed: 0,
@@ -109,7 +115,7 @@ const Solitaire = () => {
       lastDaily: null,
       ...saved,
     });
-  }, [variant]);
+  }, [variant, drawMode, passLimit]);
 
   useEffect(() => {
     const updateScale = () => {
@@ -153,14 +159,14 @@ const Solitaire = () => {
       if (winnable && !daily) {
         for (let attempt = 0; attempt < 1000; attempt += 1) {
           const d = createDeck();
-          const test = initializeGame(mode, d.slice());
+          const test = initializeGame(mode, d.slice(), undefined, passLimit);
           if (findHint(test)) {
             deck = d;
             break;
           }
         }
       }
-      setGame(initializeGame(mode, deck, seed));
+      setGame(initializeGame(mode, deck, seed, passLimit));
       setWon(false);
       setCascade([]);
       setTime(0);
@@ -177,12 +183,15 @@ const Solitaire = () => {
       setStats((s) => {
         const ns = { ...s, gamesPlayed: s.gamesPlayed + 1 };
         if (typeof window !== 'undefined') {
-          localStorage.setItem(`solitaireStats-${v}`, JSON.stringify(ns));
+          localStorage.setItem(
+            getStatsKey(v, mode, passLimit),
+            JSON.stringify(ns),
+          );
         }
         return ns;
       });
     },
-    [drawMode, variant, winnableOnly],
+    [drawMode, variant, winnableOnly, passLimit],
   );
 
   useEffect(() => {
@@ -222,7 +231,10 @@ const Solitaire = () => {
           lastDaily,
         };
         if (typeof window !== 'undefined') {
-          localStorage.setItem(`solitaireStats-${variant}`, JSON.stringify(ns));
+          localStorage.setItem(
+            getStatsKey(variant, drawMode, passLimit),
+            JSON.stringify(ns),
+          );
         }
         return ns;
       });
@@ -236,7 +248,7 @@ const Solitaire = () => {
     return () => {
       if (timer.current) clearInterval(timer.current);
     };
-  }, [won, paused, game, time, isDaily, variant, setStats, vegasScore]);
+  }, [won, paused, game, time, isDaily, variant, drawMode, passLimit, setStats, vegasScore]);
 
   useEffect(() => {
     if (game.foundations.every((p) => p.length === 13)) {
@@ -300,7 +312,11 @@ const Solitaire = () => {
   }, [hint]);
 
   useEffect(() => {
-    setAriaMessage(`Score ${vegasScore}, time ${time} seconds, redeals ${game.redeals}`);
+    setAriaMessage(
+      `Score ${vegasScore}, time ${time} seconds, redeals ${
+        game.redeals === Infinity ? 'infinite' : game.redeals
+      }`,
+    );
   }, [vegasScore, time, game.redeals]);
 
   useEffect(() => {
@@ -697,7 +713,7 @@ const Solitaire = () => {
       <div className="flex justify-between mb-2 flex-wrap gap-2">
         <div>Score: {vegasScore}</div>
         <div>Bankroll: {bankroll}</div>
-        <div>Redeals: {game.redeals}</div>
+        <div>Redeals: {game.redeals === Infinity ? '∞' : game.redeals}</div>
         <div>Mode: {winnableOnly ? 'Winnable' : 'Random'}</div>
         <div>
           Best: {stats.bestScore ? `${stats.bestScore} (${stats.bestTime}s)` : 'N/A'}
@@ -750,6 +766,21 @@ const Solitaire = () => {
           }}
         >
           Draw {drawMode === 1 ? '1' : '3'}
+        </button>
+        <button
+          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={() => {
+            const opts = [3, 1, Infinity];
+            const next = opts[(opts.indexOf(passLimit) + 1) % opts.length];
+            ReactGA.event({
+              category: 'Solitaire',
+              action: 'variant_select',
+              label: `passes_${next === Infinity ? 'unlimited' : next}`,
+            });
+            setPassLimit(next);
+          }}
+        >
+          Passes {passLimit === Infinity ? '∞' : passLimit}
         </button>
         <label className="flex items-center space-x-1">
           <input
