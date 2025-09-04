@@ -11,5 +11,6 @@ describe('getChatId', () => {
     expect(log.level).toBe('error');
     expect(log.message).toBe('chat is required');
     spy.mockRestore();
+
   });
 });

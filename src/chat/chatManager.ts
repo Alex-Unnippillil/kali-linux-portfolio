@@ -11,4 +11,5 @@ export function getChatId(chat?: Chat, logger: Logger = createLogger()) {
   }
   logger.info('chat id retrieved', { chatId: chat.id });
   return chat.id;
+
 }
