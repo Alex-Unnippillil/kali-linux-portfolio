@@ -21,6 +21,8 @@ export default function Settings() {
     setWallpaper,
     density,
     setDensity,
+    rows,
+    setRows,
     reducedMotion,
     setReducedMotion,
     fontScale,
@@ -79,6 +81,7 @@ export default function Settings() {
       if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
+      if (parsed.rows !== undefined) setRows(parsed.rows);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
     } catch (err) {
       console.error("Invalid settings", err);
@@ -100,6 +103,7 @@ export default function Settings() {
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
+    setRows(defaults.rows);
     setTheme("default");
   };
 
@@ -234,6 +238,17 @@ export default function Settings() {
             >
               <option value="regular">Regular</option>
               <option value="compact">Compact</option>
+            </select>
+          </div>
+          <div className="flex justify-center my-4">
+            <label className="mr-2 text-ubt-grey">Rows:</label>
+            <select
+              value={rows}
+              onChange={(e) => setRows(parseInt(e.target.value, 10))}
+              className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+            >
+              <option value={1}>1</option>
+              <option value={2}>2</option>
             </select>
           </div>
           <div className="flex justify-center my-4 items-center">
