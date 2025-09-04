@@ -13,6 +13,7 @@ const DEFAULT_SETTINGS = {
   largeHitAreas: false,
   pongSpin: true,
   allowNetwork: false,
+  haptics: true,
 };
 
 export async function getAccent() {
@@ -86,6 +87,17 @@ export async function setLargeHitAreas(value) {
   window.localStorage.setItem('large-hit-areas', value ? 'true' : 'false');
 }
 
+export async function getHaptics() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.haptics;
+  const val = window.localStorage.getItem('haptics');
+  return val === null ? DEFAULT_SETTINGS.haptics : val === 'true';
+}
+
+export async function setHaptics(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('haptics', value ? 'true' : 'false');
+}
+
 export async function getPongSpin() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
   const val = window.localStorage.getItem('pong-spin');
@@ -120,6 +132,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('large-hit-areas');
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
+  window.localStorage.removeItem('haptics');
 }
 
 export async function exportSettings() {
@@ -133,6 +146,7 @@ export async function exportSettings() {
     largeHitAreas,
     pongSpin,
     allowNetwork,
+    haptics,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -143,6 +157,7 @@ export async function exportSettings() {
     getLargeHitAreas(),
     getPongSpin(),
     getAllowNetwork(),
+    getHaptics(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -155,6 +170,7 @@ export async function exportSettings() {
     largeHitAreas,
     pongSpin,
     allowNetwork,
+    haptics,
     theme,
   });
 }
@@ -178,6 +194,7 @@ export async function importSettings(json) {
     largeHitAreas,
     pongSpin,
     allowNetwork,
+    haptics,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -189,6 +206,7 @@ export async function importSettings(json) {
   if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas);
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
+  if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
 }
 

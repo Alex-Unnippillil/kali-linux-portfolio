@@ -1,19 +1,20 @@
 "use client";
 
 import { useCallback } from 'react';
-import usePersistedState from './usePersistedState';
+import { useSettings } from './useSettings';
 import {
   vibrate as vibrateNative,
   patterns,
+  supportsVibration,
 } from '../components/apps/Games/common/haptics';
 
 // Exposes helpers for triggering game haptics with an on/off toggle.
 export default function useGameHaptics() {
-  const [enabled, setEnabled] = usePersistedState('game:haptics', true);
+  const { haptics: enabled, setHaptics } = useSettings();
 
   const vibrate = useCallback(
     (pattern) => {
-      if (!enabled) return;
+      if (!enabled || !supportsVibration()) return;
       vibrateNative(pattern);
     },
     [enabled]
@@ -23,7 +24,7 @@ export default function useGameHaptics() {
   const danger = useCallback(() => vibrate(patterns.danger), [vibrate]);
   const gameOver = useCallback(() => vibrate(patterns.gameOver), [vibrate]);
 
-  const toggle = useCallback(() => setEnabled((e) => !e), [setEnabled]);
+  const toggle = useCallback(() => setHaptics(!enabled), [setHaptics, enabled]);
 
   return { enabled, toggle, vibrate, score, danger, gameOver };
 }
