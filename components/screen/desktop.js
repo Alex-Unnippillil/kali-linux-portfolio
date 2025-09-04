@@ -16,6 +16,7 @@ import ShortcutSelector from '../screen/shortcut-selector'
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
+import DockMenu from '../context-menus/dock-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
@@ -41,6 +42,7 @@ export class Desktop extends Component {
                 desktop: false,
                 default: false,
                 app: false,
+                dock: false,
             },
             context_app: null,
             showNameBar: false,
@@ -158,6 +160,13 @@ export class Desktop extends Component {
                 });
                 this.showContextMenu(e, "desktop");
                 break;
+            case "dock":
+                ReactGA.event({
+                    category: `Context Menu`,
+                    action: `Opened Dock Context Menu`
+                });
+                this.setState({ context_app: appId }, () => this.showContextMenu(e, "dock"));
+                break;
             case "app":
                 ReactGA.event({
                     category: `Context Menu`,
@@ -187,6 +196,10 @@ export class Desktop extends Component {
             case "desktop-area":
                 ReactGA.event({ category: `Context Menu`, action: `Opened Desktop Context Menu` });
                 this.showContextMenu(fakeEvent, "desktop");
+                break;
+            case "dock":
+                ReactGA.event({ category: `Context Menu`, action: `Opened Dock Context Menu` });
+                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "dock"));
                 break;
             case "app":
                 ReactGA.event({ category: `Context Menu`, action: `Opened App Context Menu` });
@@ -779,6 +792,14 @@ export class Desktop extends Component {
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
+                <DockMenu
+                    active={this.state.context_menus.dock}
+                    onClose={this.hideAllContextMenu}
+                    onQuit={() => this.closeApp(this.state.context_app)}
+                    onHide={() => this.hasMinimised(this.state.context_app)}
+                    onNewWindow={() => this.openApp(this.state.context_app)}
+                    onUnpin={() => this.unpinApp(this.state.context_app)}
+                />
                 <AppMenu
                     active={this.state.context_menus.app}
                     pinned={this.initFavourite[this.state.context_app]}
