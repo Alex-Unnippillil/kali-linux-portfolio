@@ -116,6 +116,42 @@ describe('Window snapping preview', () => {
 
     expect(screen.queryByTestId('snap-preview')).toBeNull();
   });
+
+  it('shows quadrant preview with Ctrl modifier', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 5,
+      top: 10,
+      right: 105,
+      bottom: 110,
+      width: 100,
+      height: 100,
+      x: 5,
+      y: 10,
+      toJSON: () => {},
+    });
+
+    act(() => {
+      ref.current!.handleDrag({ ctrlKey: true } as any);
+    });
+
+    expect(ref.current!.state.snapPosition).toBe('top-left');
+  });
 });
 
 describe('Window snapping finalize and release', () => {
@@ -199,7 +235,7 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true, preventDefault: () => {}, stopPropagation: () => {} } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
@@ -252,6 +288,51 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBeNull();
     expect(ref.current!.state.width).toBe(60);
     expect(ref.current!.state.height).toBe(85);
+  });
+
+  it('cancels snap on Escape key', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 5,
+      top: 10,
+      right: 105,
+      bottom: 110,
+      width: 100,
+      height: 100,
+      x: 5,
+      y: 10,
+      toJSON: () => {},
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+    expect(ref.current!.state.snapPreview).not.toBeNull();
+
+    act(() => {
+      ref.current!.handleKeyDown({ key: 'Escape', preventDefault: () => {}, stopPropagation: () => {} } as any);
+    });
+    expect(ref.current!.state.snapPreview).toBeNull();
+
+    act(() => {
+      ref.current!.handleStop();
+    });
+    expect(ref.current!.state.snapped).toBeNull();
   });
 });
 
