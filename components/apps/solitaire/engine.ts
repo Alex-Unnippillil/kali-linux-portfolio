@@ -54,6 +54,7 @@ export const initializeGame = (
   draw: 1 | 3 = 1,
   deck?: Card[],
   seed?: number,
+  passLimit: number = 3,
 ): GameState => {
   const workingDeck = deck || createDeck(seed);
   const tableau: Card[][] = Array.from({ length: 7 }, () => []);
@@ -75,7 +76,7 @@ export const initializeGame = (
     foundations: Array.from({ length: 4 }, () => []),
     draw,
     score: 0,
-    redeals: 3,
+    redeals: passLimit,
   };
 };
 
