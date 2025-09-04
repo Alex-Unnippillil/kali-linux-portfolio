@@ -271,7 +271,7 @@ export class Window extends Component {
             transform = `translate(${window.innerWidth / 2}px,-2pt)`;
         } else if (position === 'top') {
             newWidth = 100.2;
-            newHeight = 50;
+            newHeight = 96.3;
             transform = 'translate(-1pt,-2pt)';
         }
         const r = document.querySelector("#" + this.id);
@@ -328,7 +328,7 @@ export class Window extends Component {
             this.setState({ snapPreview: snap, snapPosition: 'right' });
         }
         else if (rect.top <= threshold) {
-            snap = { left: '0', top: '0', width: '100%', height: '50%' };
+            snap = { left: '0', top: '0', width: '100%', height: '100%' };
             this.setState({ snapPreview: snap, snapPosition: 'top' });
         }
         else {
