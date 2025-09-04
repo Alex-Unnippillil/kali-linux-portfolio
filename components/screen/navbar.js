@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Clock from '../util-components/clock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
+import NotificationBell from '../util-components/NotificationBell';
 
 export default class Navbar extends Component {
 	constructor() {
@@ -35,8 +36,9 @@ export default class Navbar extends Component {
                                                 'pl-2 pr-2 text-xs md:text-sm outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1'
                                         }
                                 >
-                                        <Clock />
+                                <Clock />
                                 </div>
+                                <NotificationBell />
                                 <button
                                         type="button"
                                         id="status-bar"
@@ -51,7 +53,7 @@ export default class Navbar extends Component {
                                         <Status />
                                         <QuickSettings open={this.state.status_card} />
                                 </button>
-			</div>
-		);
-	}
+                        </div>
+                );
+        }
 }

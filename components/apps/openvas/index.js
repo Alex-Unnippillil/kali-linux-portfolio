@@ -3,6 +3,7 @@ import TaskOverview from './task-overview';
 import PolicySettings from './policy-settings';
 import pciProfile from './templates/pci.json';
 import hipaaProfile from './templates/hipaa.json';
+import useNotifications from '../../../hooks/useNotifications';
 
 const templates = { PCI: pciProfile, HIPAA: hipaaProfile };
 
@@ -25,7 +26,14 @@ const profileTabs = [
 ];
 
 // Simple helper for notifications that falls back to alert()
-const notify = (title, body) => {
+const notify = (title, body, push) => {
+  if (push) {
+    try {
+      push('OpenVAS', `${title}: ${body}`);
+    } catch {
+      /* ignore */
+    }
+  }
   if (typeof window === 'undefined') return;
   if ('Notification' in window && Notification.permission === 'granted') {
     new Notification(title, { body });
@@ -188,6 +196,7 @@ const clearSession = () => {
 };
 
 const OpenVASApp = () => {
+  const { pushNotification } = useNotifications();
   const [target, setTarget] = useState('');
   const [group, setGroup] = useState('');
   const [profile, setProfile] = useState('PCI');
@@ -269,10 +278,10 @@ const OpenVASApp = () => {
       setOutput(data);
       workerRef.current?.postMessage({ text: data });
       generateSummary(data);
-      notify('OpenVAS Scan Complete', `Target ${t} finished`);
+      notify('OpenVAS Scan Complete', `Target ${t} finished`, pushNotification);
     } catch (e) {
       setOutput(e.message);
-      notify('OpenVAS Scan Failed', e.message);
+      notify('OpenVAS Scan Failed', e.message, pushNotification);
     } finally {
       setLoading(false);
       clearSession();
