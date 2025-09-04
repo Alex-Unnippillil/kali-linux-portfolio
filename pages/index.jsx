@@ -30,7 +30,7 @@ const InstallButton = dynamic(
  */
 const App = () => (
   <>
-    <a href="#window-area" className="sr-only focus:not-sr-only">
+    <a href="#window-area" tabIndex={-1} className="sr-only focus:not-sr-only">
       Skip to content
     </a>
     <Meta />
