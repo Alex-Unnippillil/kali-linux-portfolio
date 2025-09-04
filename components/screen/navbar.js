@@ -39,6 +39,15 @@ export default class Navbar extends Component {
                                 </div>
                                 <button
                                         type="button"
+                                        id="help-button"
+                                        aria-label="Help"
+                                        onClick={this.props.openTour}
+                                        className={'pr-3 pl-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent focus:border-ubb-orange py-1'}
+                                >
+                                        ?
+                                </button>
+                                <button
+                                        type="button"
                                         id="status-bar"
                                         aria-label="System status"
                                         onClick={() => {

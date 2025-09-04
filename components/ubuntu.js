@@ -5,23 +5,35 @@ import BootingScreen from './screen/booting_screen';
 import Desktop from './screen/desktop';
 import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
+import GuidedTour from './ui/GuidedTour';
 import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
 
 export default class Ubuntu extends Component {
 	constructor() {
 		super();
-		this.state = {
-			screen_locked: false,
-			bg_image_name: 'wall-2',
-			booting_screen: true,
-			shutDownScreen: false
-		};
+                this.state = {
+                        screen_locked: false,
+                        bg_image_name: 'wall-2',
+                        booting_screen: true,
+                        shutDownScreen: false,
+                        showTour: false,
+                };
 	}
 
-	componentDidMount() {
-		this.getLocalData();
-	}
+        componentDidMount() {
+                const firstVisit = !safeLocalStorage?.getItem('booting_screen');
+                this.getLocalData();
+                if (process.env.NODE_ENV !== 'test') {
+                        const seen = safeLocalStorage?.getItem('desktop-tour');
+                        if (!seen) {
+                                setTimeout(() => {
+                                        this.setState({ showTour: true });
+                                        safeLocalStorage?.setItem('desktop-tour', '1');
+                                }, firstVisit ? 2500 : 0);
+                        }
+                }
+        }
 
 	setTimeOutBootScreen = () => {
 		setTimeout(() => {
@@ -105,13 +117,21 @@ export default class Ubuntu extends Component {
                 safeLocalStorage?.setItem('shut-down', true);
 	};
 
-	turnOn = () => {
-		ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+        turnOn = () => {
+                ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
-		this.setState({ shutDownScreen: false, booting_screen: true });
-		this.setTimeOutBootScreen();
+                this.setState({ shutDownScreen: false, booting_screen: true });
+                this.setTimeOutBootScreen();
                 safeLocalStorage?.setItem('shut-down', false);
-	};
+        };
+
+        openTour = () => {
+                this.setState({ showTour: true });
+        };
+
+        closeTour = () => {
+                this.setState({ showTour: false });
+        };
 
 	render() {
 		return (
@@ -126,9 +146,10 @@ export default class Ubuntu extends Component {
 					isShutDown={this.state.shutDownScreen}
 					turnOn={this.turnOn}
 				/>
-				<Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
-				<Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
-			</div>
-		);
-	}
+                                <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} openTour={this.openTour} />
+                                <Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
+                                <GuidedTour open={this.state.showTour} onClose={this.closeTour} />
+                        </div>
+                );
+        }
 }
