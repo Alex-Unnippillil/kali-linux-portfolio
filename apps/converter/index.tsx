@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import copyToClipboard from '../../utils/clipboard';
+import { useEffect, useState } from "react";
+import copyToClipboard from "../../utils/clipboard";
 
 type Rates = Record<string, number>;
 const initialRates = {
@@ -12,15 +12,26 @@ const initialRates = {
 type Domain = keyof typeof initialRates;
 const categories = Object.keys(initialRates) as Domain[];
 const icons: Record<Domain, string> = {
-  currency: '💱',
-  length: '📏',
-  weight: '⚖️',
+  currency: "💱",
+  length: "📏",
+  weight: "⚖️",
 };
 
-const formatPreview = (val: string) => {
+type Notation = "fixed" | "engineering" | "scientific";
+
+const formatNumber = (
+  val: string,
+  notation: Notation,
+  trailingZeros: boolean,
+) => {
   const n = parseFloat(val);
-  if (isNaN(n)) return '';
-  return n.toLocaleString();
+  if (isNaN(n)) return "";
+  const opts: Intl.NumberFormatOptions = {
+    notation: notation === "fixed" ? "standard" : notation,
+    maximumFractionDigits: 10,
+  };
+  if (trailingZeros) opts.minimumFractionDigits = 10;
+  return n.toLocaleString(undefined, opts);
 };
 
 function CopyButton({ value }: { value: string }) {
@@ -41,14 +52,16 @@ function CopyButton({ value }: { value: string }) {
 }
 
 export default function Converter() {
-  const [active, setActive] = useState<Domain>('currency');
+  const [active, setActive] = useState<Domain>("currency");
   const [rates, setRates] = useState<Record<Domain, Rates>>(initialRates);
-  const [fromUnit, setFromUnit] = useState('');
-  const [toUnit, setToUnit] = useState('');
-  const [fromValue, setFromValue] = useState('');
-  const [toValue, setToValue] = useState('');
-  const [focused, setFocused] = useState<'from' | 'to' | null>(null);
-  const HISTORY_KEY = 'converter-history';
+  const [fromUnit, setFromUnit] = useState("");
+  const [toUnit, setToUnit] = useState("");
+  const [fromValue, setFromValue] = useState("");
+  const [toValue, setToValue] = useState("");
+  const [focused, setFocused] = useState<"from" | "to" | null>(null);
+  const [notation, setNotation] = useState<Notation>("fixed");
+  const [trailingZeros, setTrailingZeros] = useState(false);
+  const HISTORY_KEY = "converter-history";
   const [history, setHistory] = useState<
     { fromValue: string; fromUnit: string; toValue: string; toUnit: string }[]
   >([]);
@@ -67,9 +80,9 @@ export default function Converter() {
   useEffect(() => {
     const load = async () => {
       const [currency, length, weight] = await Promise.all([
-        import('../../data/conversions/currency.json'),
-        import('../../data/conversions/length.json'),
-        import('../../data/conversions/weight.json'),
+        import("../../data/conversions/currency.json"),
+        import("../../data/conversions/length.json"),
+        import("../../data/conversions/weight.json"),
       ]);
       setRates({
         currency: currency.default as Rates,
@@ -87,8 +100,8 @@ export default function Converter() {
       setFromUnit(units[0]);
       setToUnit(units[1] || units[0]);
     }
-    setFromValue('');
-    setToValue('');
+    setFromValue("");
+    setToValue("");
   }, [active, rates]);
 
   const addHistory = (
@@ -98,9 +111,10 @@ export default function Converter() {
     toU: string,
   ) =>
     setHistory((h) => {
-      const newHistory = (
-        [{ fromValue: fromVal, fromUnit: fromU, toValue: toVal, toUnit: toU }, ...h]
-      ).slice(0, 10);
+      const newHistory = [
+        { fromValue: fromVal, fromUnit: fromU, toValue: toVal, toUnit: toU },
+        ...h,
+      ].slice(0, 10);
       localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
       return newHistory;
     });
@@ -109,7 +123,7 @@ export default function Converter() {
     setFromValue(val);
     const n = parseFloat(val);
     if (isNaN(n)) {
-      setToValue('');
+      setToValue("");
       return;
     }
     const data = rates[active as Domain];
@@ -123,7 +137,7 @@ export default function Converter() {
     setToValue(val);
     const n = parseFloat(val);
     if (isNaN(n)) {
-      setFromValue('');
+      setFromValue("");
       return;
     }
     const data = rates[active];
@@ -151,13 +165,32 @@ export default function Converter() {
             key={c}
             onClick={() => setActive(c)}
             className={`px-3 py-1 flex items-center gap-1 text-sm ${
-              c === active ? 'bg-white text-black' : 'bg-gray-700'
+              c === active ? "bg-white text-black" : "bg-gray-700"
             }`}
           >
             <span className="text-2xl">{icons[c]}</span>
             {c}
           </button>
         ))}
+      </div>
+      <div className="mb-4 flex items-center gap-2">
+        <select
+          className="text-black p-1 rounded"
+          value={notation}
+          onChange={(e) => setNotation(e.target.value as Notation)}
+        >
+          <option value="fixed">Fixed</option>
+          <option value="engineering">Engineering</option>
+          <option value="scientific">Scientific</option>
+        </select>
+        <label className="flex items-center gap-1 text-sm">
+          <input
+            type="checkbox"
+            checked={trailingZeros}
+            onChange={(e) => setTrailingZeros(e.target.checked)}
+          />
+          Trailing zeros
+        </label>
       </div>
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row items-center gap-[6px]">
@@ -166,16 +199,16 @@ export default function Converter() {
               <input
                 type="number"
                 className={`text-black p-1 rounded flex-1 font-mono ${
-                  focused === 'from' ? 'text-2xl' : 'text-base'
+                  focused === "from" ? "text-2xl" : "text-base"
                 }`}
                 value={fromValue}
-                onFocus={() => setFocused('from')}
+                onFocus={() => setFocused("from")}
                 onBlur={() => setFocused(null)}
                 onChange={(e) => convertFrom(e.target.value)}
                 aria-label="from value"
               />
               <span className="h-4 text-xs text-gray-400 font-mono">
-                {formatPreview(fromValue)}
+                {formatNumber(fromValue, notation, trailingZeros)}
               </span>
             </div>
             <select
@@ -192,7 +225,11 @@ export default function Converter() {
                 </option>
               ))}
             </select>
-            <CopyButton value={formatPreview(fromValue) || fromValue} />
+            <CopyButton
+              value={
+                formatNumber(fromValue, notation, trailingZeros) || fromValue
+              }
+            />
           </div>
           <button
             className="p-2 bg-gray-700 rounded-full"
@@ -206,16 +243,16 @@ export default function Converter() {
               <input
                 type="number"
                 className={`text-black p-1 rounded flex-1 font-mono ${
-                  focused === 'to' ? 'text-2xl' : 'text-base'
+                  focused === "to" ? "text-2xl" : "text-base"
                 }`}
                 value={toValue}
-                onFocus={() => setFocused('to')}
+                onFocus={() => setFocused("to")}
                 onBlur={() => setFocused(null)}
                 onChange={(e) => convertTo(e.target.value)}
                 aria-label="to value"
               />
               <span className="h-4 text-xs text-gray-400 font-mono">
-                {formatPreview(toValue)}
+                {formatNumber(toValue, notation, trailingZeros)}
               </span>
             </div>
             <select
@@ -232,7 +269,9 @@ export default function Converter() {
                 </option>
               ))}
             </select>
-            <CopyButton value={formatPreview(toValue) || toValue} />
+            <CopyButton
+              value={formatNumber(toValue, notation, trailingZeros) || toValue}
+            />
           </div>
         </div>
         {history.length > 0 && (
@@ -242,9 +281,9 @@ export default function Converter() {
                 key={i}
                 className="flex items-center justify-between bg-gray-800 px-2 py-1 rounded"
               >
-                <span>{`${h.fromValue} ${h.fromUnit} = ${h.toValue} ${h.toUnit}`}</span>
+                <span>{`${formatNumber(h.fromValue, notation, trailingZeros)} ${h.fromUnit} = ${formatNumber(h.toValue, notation, trailingZeros)} ${h.toUnit}`}</span>
                 <CopyButton
-                  value={`${h.fromValue} ${h.fromUnit} = ${h.toValue} ${h.toUnit}`}
+                  value={`${formatNumber(h.fromValue, notation, trailingZeros)} ${h.fromUnit} = ${formatNumber(h.toValue, notation, trailingZeros)} ${h.toUnit}`}
                 />
               </div>
             ))}
