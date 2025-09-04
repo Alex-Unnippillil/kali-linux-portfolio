@@ -16,11 +16,16 @@ button, [role="button"], input[type="button"], input[type="submit"], input[type=
     min-height: var(--hit-area);
 }
 
-a:focus-visible,
-button:focus-visible {
-    outline: 2px solid var(--color-ubt-blue) !important;
-    outline-offset: 2px;
-}
+  a:focus-visible,
+  button:focus-visible,
+  [role="button"]:focus-visible,
+  [tabindex]:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+      outline: 2px solid var(--color-ubt-blue) !important;
+      outline-offset: 2px;
+  }
 
 /* Top NavBar styling */
 
