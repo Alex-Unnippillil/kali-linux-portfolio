@@ -26,6 +26,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.desktopRefs = [];
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -37,6 +38,7 @@ export class Desktop extends Component {
             minimized_windows: {},
             window_positions: {},
             desktop_apps: [],
+            desktopFocus: 0,
             context_menus: {
                 desktop: false,
                 default: false,
@@ -335,10 +337,13 @@ export class Desktop extends Component {
 
     renderDesktopApps = () => {
         if (Object.keys(this.state.closed_windows).length === 0) return;
-        let appsJsx = [];
+        const appsJsx = [];
+        this.desktopRefs = [];
+        let focusIndex = -1;
         apps.forEach((app, index) => {
             if (this.state.desktop_apps.includes(app.id)) {
-
+                focusIndex += 1;
+                const isFocused = focusIndex === this.state.desktopFocus;
                 const props = {
                     name: app.title,
                     id: app.id,
@@ -346,7 +351,11 @@ export class Desktop extends Component {
                     openApp: this.openApp,
                     disabled: this.state.disabled_apps[app.id],
                     prefetch: app.screen?.prefetch,
-                }
+                    tabIndex: isFocused ? 0 : -1,
+                    innerRef: (el) => { this.desktopRefs[focusIndex] = el; },
+                    onFocus: () => this.setState({ desktopFocus: focusIndex }),
+                    onKeyDown: this.handleDesktopKeyDown(focusIndex, app.id)
+                };
 
                 appsJsx.push(
                     <UbuntuApp key={app.id} {...props} />
@@ -354,6 +363,36 @@ export class Desktop extends Component {
             }
         });
         return appsJsx;
+    }
+
+    handleDesktopKeyDown = (index, appId) => (e) => {
+        const total = this.desktopRefs.length;
+        let newIndex = index;
+        switch (e.key) {
+            case 'ArrowRight':
+            case 'ArrowDown':
+                e.preventDefault();
+                newIndex = (index + 1) % total;
+                break;
+            case 'ArrowLeft':
+            case 'ArrowUp':
+                e.preventDefault();
+                newIndex = (index - 1 + total) % total;
+                break;
+            case 'Enter':
+                e.preventDefault();
+                this.openApp(appId);
+                return;
+            case 'Escape':
+                e.preventDefault();
+                this.desktopRefs[index]?.blur();
+                return;
+            default:
+                return;
+        }
+        this.setState({ desktopFocus: newIndex }, () => {
+            this.desktopRefs[newIndex]?.focus();
+        });
     }
 
     renderWindows = () => {
