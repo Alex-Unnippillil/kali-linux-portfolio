@@ -9,6 +9,11 @@ body{
     font-display: swap;
     background-color: var(--color-bg);
     color: var(--color-text);
+    line-height: var(--line-height-base);
+    letter-spacing: var(--letter-spacing-base);
+    word-spacing: var(--word-spacing-base);
+    text-align: var(--text-align-base);
+    hyphens: var(--hyphenation);
 }
 
 button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .hit-area {
@@ -548,4 +553,14 @@ textarea:focus-visible {
 
 .gallery-container > * {
     scroll-snap-align: start;
+}
+
+/* Comfortable reading mode styles */
+.reading-mode a {
+    text-decoration: underline;
+}
+
+.reading-mode em,
+.reading-mode i {
+    font-style: normal;
 }
