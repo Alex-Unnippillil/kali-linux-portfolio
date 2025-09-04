@@ -10,7 +10,11 @@ const customJestConfig = {
     '^@xterm/xterm/css/xterm.css$': '<rootDir>/__mocks__/styleMock.js',
     '^@/(.*)$': '<rootDir>/$1',
   },
-  testPathIgnorePatterns: ['<rootDir>/playwright/', '<rootDir>/__tests__/playwright/'],
+  testPathIgnorePatterns: [
+    '<rootDir>/playwright/',
+    '<rootDir>/__tests__/playwright/',
+    '<rootDir>/tests/',
+  ],
 };
 
 module.exports = createJestConfig(customJestConfig);
