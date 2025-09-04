@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { protocolName } from '../../../components/apps/wireshark/utils';
 import FilterHelper from './FilterHelper';
 import presets from '../filters/presets.json';
 import LayerView from './LayerView';
+import useOPFS from '../../../hooks/useOPFS';
 
 
 interface PcapViewerProps {
@@ -21,6 +22,11 @@ const samples = [
   { label: 'HTTP', path: '/samples/wireshark/http.pcap' },
   { label: 'DNS', path: '/samples/wireshark/dns.pcap' },
 ];
+
+const replacer = (_: string, value: any) =>
+  value instanceof Uint8Array ? Array.from(value) : value;
+const reviver = (key: string, value: any) =>
+  key === 'data' && Array.isArray(value) ? new Uint8Array(value) : value;
 
 // Convert bytes to hex dump string
 const toHex = (bytes: Uint8Array) =>
@@ -247,6 +253,41 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
   ]);
   const [dragCol, setDragCol] = useState<string | null>(null);
 
+  const { supported, getDir, readFile, writeFile } = useOPFS();
+  const cacheDirRef = useRef<FileSystemDirectoryHandle | null>(null);
+
+  useEffect(() => {
+    if (!supported) return;
+    getDir('pcap-cache').then((dir) => {
+      cacheDirRef.current = dir;
+    });
+  }, [supported, getDir]);
+
+  const loadCached = useCallback(
+    async (key: string): Promise<Packet[] | null> => {
+      const dir = cacheDirRef.current;
+      if (!supported || !dir) return null;
+      const text = await readFile(`${key}.json`, dir);
+      if (!text) return null;
+      try {
+        return JSON.parse(text, reviver) as Packet[];
+      } catch {
+        return null;
+      }
+    },
+    [supported, readFile],
+  );
+
+  const saveCached = useCallback(
+    async (key: string, pkts: Packet[]): Promise<void> => {
+      const dir = cacheDirRef.current;
+      if (!supported || !dir) return;
+      const json = JSON.stringify(pkts, replacer);
+      await writeFile(`${key}.json`, json, dir);
+    },
+    [supported, writeFile],
+  );
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'c') {
@@ -275,16 +316,26 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const buf = await file.arrayBuffer();
-    const pkts = await parseWithWasm(buf);
+    const key = `${file.name}-${file.size}-${file.lastModified}`;
+    let pkts = await loadCached(key);
+    if (!pkts) {
+      const buf = await file.arrayBuffer();
+      pkts = await parseWithWasm(buf);
+      await saveCached(key, pkts);
+    }
     setPackets(pkts);
     setSelected(null);
   };
 
   const handleSample = async (path: string) => {
-    const res = await fetch(path);
-    const buf = await res.arrayBuffer();
-    const pkts = await parseWithWasm(buf);
+    const key = `sample-${path}`;
+    let pkts = await loadCached(key);
+    if (!pkts) {
+      const res = await fetch(path);
+      const buf = await res.arrayBuffer();
+      pkts = await parseWithWasm(buf);
+      await saveCached(key, pkts);
+    }
     setPackets(pkts);
     setSelected(null);
   };
@@ -308,6 +359,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
           accept=".pcap,.pcapng"
           onChange={handleFile}
           className="text-sm"
+          aria-label="Open pcap file"
         />
         <select
           onChange={(e) => {
@@ -318,11 +370,11 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
         >
           <option value="">Open sample</option>
           {samples.map(({ label, path }) => (
-            <option key={path} value={path}>
-              {label}
-            </option>
-          ))}
-        </select>
+              <option key={path} value={path}>
+                {label}
+              </option>
+            ))}
+          </select>
         <a
           href="https://wiki.wireshark.org/SampleCaptures"
           target="_blank"
@@ -346,17 +398,18 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
             </button>
           </div>
           <div className="flex space-x-1">
-            {presets.map(({ label, expression }) => (
-              <button
-                key={expression}
-                onClick={() => setFilter(expression)}
-                className={`w-4 h-4 rounded ${
-                  protocolColors[label.toUpperCase()] || 'bg-gray-500'
-                }`}
-                title={label}
-                type="button"
-              />
-            ))}
+              {presets.map(({ label, expression }) => (
+                <button
+                  key={expression}
+                  onClick={() => setFilter(expression)}
+                  className={`w-4 h-4 rounded ${
+                    protocolColors[label.toUpperCase()] || 'bg-gray-500'
+                  }`}
+                  title={label}
+                  type="button"
+                  aria-label={label}
+                />
+              ))}
           </div>
 
           {showLegend && (

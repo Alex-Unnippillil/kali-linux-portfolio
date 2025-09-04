@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import Image from 'next/image';
 import Waterfall from './Waterfall';
 import BurstChart from './BurstChart';
@@ -8,6 +8,7 @@ import FlowGraph from '../../../apps/wireshark/components/FlowGraph';
 import FilterHelper from '../../../apps/wireshark/components/FilterHelper';
 import ColorRuleEditor from '../../../apps/wireshark/components/ColorRuleEditor';
 import { parsePcap } from '../../../utils/pcap';
+import useOPFS from '../../../hooks/useOPFS';
 
 const toHex = (bytes) =>
   Array.from(bytes, (b, i) =>
@@ -60,6 +61,45 @@ const WiresharkApp = ({ initialPackets = [] }) => {
     { name: 'eth0', type: 'wired' },
     { name: 'wlan0', type: 'wireless' },
   ];
+
+  const { supported, getDir, readFile, writeFile } = useOPFS();
+  const cacheDirRef = useRef(null);
+
+  useEffect(() => {
+    if (!supported) return;
+    getDir('pcap-cache').then((dir) => {
+      cacheDirRef.current = dir;
+    });
+  }, [supported, getDir]);
+
+  const loadCached = useCallback(
+    async (key) => {
+      const dir = cacheDirRef.current;
+      if (!supported || !dir) return null;
+      const text = await readFile(`${key}.json`, dir);
+      if (!text) return null;
+      try {
+        return JSON.parse(text, (k, v) =>
+          k === 'data' && Array.isArray(v) ? new Uint8Array(v) : v,
+        );
+      } catch {
+        return null;
+      }
+    },
+    [supported, readFile],
+  );
+
+  const saveCached = useCallback(
+    async (key, pkts) => {
+      const dir = cacheDirRef.current;
+      if (!supported || !dir) return;
+      const json = JSON.stringify(pkts, (k, v) =>
+        v instanceof Uint8Array ? Array.from(v) : v,
+      );
+      await writeFile(`${key}.json`, json, dir);
+    },
+    [supported, writeFile],
+  );
 
   // Load persisted filter on mount
   useEffect(() => {
@@ -128,8 +168,13 @@ const WiresharkApp = ({ initialPackets = [] }) => {
 
   const handleFile = async (file) => {
     try {
-      const buffer = await file.arrayBuffer();
-      const parsed = parsePcap(buffer);
+      const key = `${file.name}-${file.size}-${file.lastModified}`;
+      let parsed = await loadCached(key);
+      if (!parsed) {
+        const buffer = await file.arrayBuffer();
+        parsed = parsePcap(buffer);
+        await saveCached(key, parsed);
+      }
       setPackets(parsed);
       setTimeline(parsed);
       setError('');
@@ -302,11 +347,11 @@ const WiresharkApp = ({ initialPackets = [] }) => {
           className="px-2 py-1 bg-gray-800 rounded text-white"
         />
         <datalist id="bpf-suggestions">
-          <option value="tcp" />
-          <option value="udp" />
-          <option value="icmp" />
-          <option value="port 80" />
-          <option value="host 10.0.0.1" />
+          <option value="tcp">tcp</option>
+          <option value="udp">udp</option>
+          <option value="icmp">icmp</option>
+          <option value="port 80">port 80</option>
+          <option value="host 10.0.0.1">host 10.0.0.1</option>
         </datalist>
         <a
           href="https://www.wireshark.org/docs/dfref/"
