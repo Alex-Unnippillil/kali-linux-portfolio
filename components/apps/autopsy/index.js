@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import KeywordSearchPanel from './KeywordSearchPanel';
 import demoArtifacts from './data/sample-artifacts.json';
 import ReportExport from '../../../apps/autopsy/components/ReportExport';
+import demoCase from '../../../apps/autopsy/data/case.json';
 
 const escapeFilename = (str = '') =>
   str
@@ -345,6 +346,7 @@ function Autopsy({ initialArtifacts = null }) {
   const [announcement, setAnnouncement] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');
   const [userFilter, setUserFilter] = useState('All');
+  const [pluginFilter, setPluginFilter] = useState('All');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [selectedArtifact, setSelectedArtifact] = useState(null);
@@ -353,6 +355,9 @@ function Autopsy({ initialArtifacts = null }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [keyword, setKeyword] = useState('');
   const [previewTab, setPreviewTab] = useState('hex');
+  const [timelineEvents] = useState(
+    demoCase.timeline.map((t) => ({ name: t.event, timestamp: t.timestamp }))
+  );
   const parseWorkerRef = useRef(null);
 
   useEffect(() => {
@@ -412,11 +417,19 @@ function Autopsy({ initialArtifacts = null }) {
   }, [currentCase, initialArtifacts]);
 
   const types = ['All', ...Array.from(new Set(artifacts.map((a) => a.type)))];
-  const users = ['All', ...Array.from(new Set(artifacts.map((a) => a.user).filter(Boolean)))];
+  const users = [
+    'All',
+    ...Array.from(new Set(artifacts.map((a) => a.user).filter(Boolean))),
+  ];
+  const pluginOptions = [
+    'All',
+    ...Array.from(new Set(artifacts.map((a) => a.plugin).filter(Boolean))),
+  ];
   const filteredArtifacts = artifacts.filter(
     (a) =>
       (typeFilter === 'All' || a.type === typeFilter) &&
       (userFilter === 'All' || a.user === userFilter) &&
+      (pluginFilter === 'All' || a.plugin === pluginFilter) &&
       (!startTime || new Date(a.timestamp) >= new Date(startTime)) &&
       (!endTime || new Date(a.timestamp) <= new Date(endTime))
   );
@@ -426,6 +439,14 @@ function Autopsy({ initialArtifacts = null }) {
       a.name.toLowerCase().includes(searchLower) ||
       a.description.toLowerCase().includes(searchLower) ||
       (a.user && a.user.toLowerCase().includes(searchLower))
+  );
+  const filteredTimeline = timelineEvents.filter(
+    (t) =>
+      (!startTime || new Date(t.timestamp) >= new Date(startTime)) &&
+      (!endTime || new Date(t.timestamp) <= new Date(endTime))
+  );
+  const visibleTimeline = filteredTimeline.filter((t) =>
+    t.name.toLowerCase().includes(searchLower)
   );
 
   const createCase = () => {
@@ -586,6 +607,14 @@ function Autopsy({ initialArtifacts = null }) {
           Create Case
         </button>
       </div>
+      <a
+        href="https://sleuthkit.org/autopsy/docs/user-docs/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline text-ubt-blue text-sm"
+      >
+        Autopsy documentation
+      </a>
       {currentCase && (
         <div className="space-y-2">
           <div className="text-sm">Current case: {currentCase}</div>
@@ -645,6 +674,18 @@ function Autopsy({ initialArtifacts = null }) {
                 </option>
               ))}
             </select>
+            <select
+              aria-label="Filter by plugin"
+              value={pluginFilter}
+              onChange={(e) => setPluginFilter(e.target.value)}
+              className="bg-ub-grey text-white px-2 py-1 rounded"
+            >
+              {pluginOptions.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
             <input
               type="datetime-local"
               aria-label="Start time"
@@ -666,10 +707,10 @@ function Autopsy({ initialArtifacts = null }) {
             artifacts={visibleArtifacts}
             onSelect={setSelectedArtifact}
           />
-          {visibleArtifacts.length > 0 && (
+          {visibleTimeline.length > 0 && (
             <>
               <div className="text-sm font-bold">Timeline</div>
-              <Timeline events={visibleArtifacts} onSelect={setSelectedArtifact} />
+              <Timeline events={visibleTimeline} onSelect={() => {}} />
             </>
           )}
           {fileTree && (
