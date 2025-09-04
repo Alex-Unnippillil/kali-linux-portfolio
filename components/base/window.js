@@ -635,7 +635,19 @@ export class Window extends Component {
                 >
                     <div
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        className={
+                            this.state.cursorType +
+                            " " +
+                            (this.state.closed ? " closed-window " : "") +
+                            (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") +
+                            (this.props.minimized ? " opacity-0 invisible duration-200 " : "") +
+                            (this.state.grabbed ? " opacity-70 " : "") +
+                            (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") +
+                            (this.props.above
+                                ? (this.props.isFocused ? " z-40 " : " z-30 ")
+                                : (this.props.isFocused ? " z-30 " : " z-20 notFocused")) +
+                            " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"
+                        }
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
@@ -645,6 +657,7 @@ export class Window extends Component {
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
                         <WindowTopBar
+                            id={this.id}
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
@@ -674,10 +687,12 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+export function WindowTopBar({ id, title, onKeyDown, onBlur, grabbed }) {
     return (
         <div
             className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
+            data-context="window"
+            data-app-id={id}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
@@ -734,7 +749,11 @@ export function WindowEditButtons(props) {
     const { togglePin } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
     return (
-        <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center h-11 min-w-[8.25rem]">
+        <div
+            className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center h-11 min-w-[8.25rem]"
+            data-context="window"
+            data-app-id={props.id}
+        >
             {pipSupported && props.pip && (
                 <button
                     type="button"

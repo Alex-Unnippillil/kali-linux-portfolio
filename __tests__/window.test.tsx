@@ -118,6 +118,46 @@ describe('Window snapping preview', () => {
   });
 });
 
+describe('Window z-index', () => {
+  it('uses higher z-index when above', () => {
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        isFocused={false}
+        above={true}
+      />
+    );
+    const winEl = document.getElementById('test-window');
+    expect(winEl?.className).toMatch(/z-30/);
+  });
+
+  it('uses highest z-index when above and focused', () => {
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        isFocused={true}
+        above={true}
+      />
+    );
+    const winEl = document.getElementById('test-window');
+    expect(winEl?.className).toMatch(/z-40/);
+  });
+});
+
 describe('Window snapping finalize and release', () => {
   it('snaps window on drag stop near left edge', () => {
     const ref = React.createRef<Window>();
@@ -199,7 +239,7 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true, preventDefault: () => {}, stopPropagation: () => {} } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
