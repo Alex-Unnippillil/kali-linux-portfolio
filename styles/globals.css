@@ -73,7 +73,16 @@ html[data-theme='matrix'] {
   color: var(--color-inverse);
 }
 
-*:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
+:where(
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  summary,
+  [role='button'],
+  [tabindex]:not([tabindex='-1'])
+):focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-outline-color) !important;
   outline-offset: 2px;
 }
