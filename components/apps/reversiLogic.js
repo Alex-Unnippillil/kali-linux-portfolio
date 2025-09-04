@@ -89,53 +89,13 @@ const corners = [
   [SIZE - 1, 0],
   [SIZE - 1, SIZE - 1],
 ];
-
-const stableFromCorner = (board, r, c, dr, dc, player) => {
-  let i = r;
-  let j = c;
-  let count = 0;
-  while (inside(i, j) && board[i][j] === player) {
-    count += 1;
-    i += dr;
-    j += dc;
-  }
-  return count;
+export const DEFAULT_WEIGHTS = {
+  mobility: 5,
+  corners: 25,
+  edges: 10,
 };
 
-const stabilityCount = (board, player) => {
-  let score = 0;
-  // Top-left corner
-  if (board[0][0] === player) {
-    score +=
-      stableFromCorner(board, 0, 0, 1, 0, player) +
-      stableFromCorner(board, 0, 0, 0, 1, player) -
-      1;
-  }
-  // Top-right corner
-  if (board[0][SIZE - 1] === player) {
-    score +=
-      stableFromCorner(board, 0, SIZE - 1, 1, 0, player) +
-      stableFromCorner(board, 0, SIZE - 1, 0, -1, player) -
-      1;
-  }
-  // Bottom-left corner
-  if (board[SIZE - 1][0] === player) {
-    score +=
-      stableFromCorner(board, SIZE - 1, 0, -1, 0, player) +
-      stableFromCorner(board, SIZE - 1, 0, 0, 1, player) -
-      1;
-  }
-  // Bottom-right corner
-  if (board[SIZE - 1][SIZE - 1] === player) {
-    score +=
-      stableFromCorner(board, SIZE - 1, SIZE - 1, -1, 0, player) +
-      stableFromCorner(board, SIZE - 1, SIZE - 1, 0, -1, player) -
-      1;
-  }
-  return score;
-};
-
-export const evaluateBoard = (board, player) => {
+export const evaluateBoard = (board, player, weights = DEFAULT_WEIGHTS) => {
   const opponent = player === 'B' ? 'W' : 'B';
   let cornerScore = 0;
   corners.forEach(([r, c]) => {
@@ -145,11 +105,29 @@ export const evaluateBoard = (board, player) => {
   const mobility =
     Object.keys(computeLegalMoves(board, player)).length -
     Object.keys(computeLegalMoves(board, opponent)).length;
-  const stability =
-    stabilityCount(board, player) - stabilityCount(board, opponent);
+  let edgeScore = 0;
+  for (let i = 1; i < SIZE - 1; i += 1) {
+    // top row
+    if (board[0][i] === player) edgeScore += 1;
+    else if (board[0][i] === opponent) edgeScore -= 1;
+    // bottom row
+    if (board[SIZE - 1][i] === player) edgeScore += 1;
+    else if (board[SIZE - 1][i] === opponent) edgeScore -= 1;
+    // left column
+    if (board[i][0] === player) edgeScore += 1;
+    else if (board[i][0] === opponent) edgeScore -= 1;
+    // right column
+    if (board[i][SIZE - 1] === player) edgeScore += 1;
+    else if (board[i][SIZE - 1] === opponent) edgeScore -= 1;
+  }
   const { black, white } = countPieces(board);
   const parity = player === 'B' ? black - white : white - black;
-  return 25 * cornerScore + 5 * mobility + 10 * stability + parity;
+  return (
+    weights.corners * cornerScore +
+    weights.mobility * mobility +
+    weights.edges * edgeScore +
+    parity
+  );
 };
 
 export const minimax = (
@@ -157,6 +135,7 @@ export const minimax = (
   player,
   depth,
   maximizer,
+  weights,
   alpha = -Infinity,
   beta = Infinity,
 ) => {
@@ -167,13 +146,13 @@ export const minimax = (
     if (entries.length === 0) {
       const oppMoves = Object.keys(computeLegalMoves(board, opponent));
       if (oppMoves.length !== 0) {
-        return minimax(board, opponent, depth - 1, maximizer, alpha, beta);
+        return minimax(board, opponent, depth - 1, maximizer, weights, alpha, beta);
       }
       const { black, white } = countPieces(board);
       const diff = maximizer === 'B' ? black - white : white - black;
       return diff * 1000;
     }
-    return evaluateBoard(board, maximizer);
+    return evaluateBoard(board, maximizer, weights);
   }
 
   if (player === maximizer) {
@@ -181,7 +160,7 @@ export const minimax = (
     for (const [key, flips] of entries) {
       const [r, c] = key.split('-').map(Number);
       const newBoard = applyMove(board, r, c, player, flips);
-      const val = minimax(newBoard, opponent, depth - 1, maximizer, alpha, beta);
+      const val = minimax(newBoard, opponent, depth - 1, maximizer, weights, alpha, beta);
       value = Math.max(value, val);
       alpha = Math.max(alpha, val);
       if (alpha >= beta) break;
@@ -193,7 +172,7 @@ export const minimax = (
   for (const [key, flips] of entries) {
     const [r, c] = key.split('-').map(Number);
     const newBoard = applyMove(board, r, c, player, flips);
-    const val = minimax(newBoard, opponent, depth - 1, maximizer, alpha, beta);
+    const val = minimax(newBoard, opponent, depth - 1, maximizer, weights, alpha, beta);
     value = Math.min(value, val);
     beta = Math.min(beta, val);
     if (beta <= alpha) break;
@@ -201,7 +180,7 @@ export const minimax = (
   return value;
 };
 
-export const bestMove = (board, player, depth) => {
+export const bestMove = (board, player, depth, weights = DEFAULT_WEIGHTS) => {
   const movesObj = computeLegalMoves(board, player);
   const entries = Object.entries(movesObj);
   if (entries.length === 0) return null;
@@ -211,7 +190,15 @@ export const bestMove = (board, player, depth) => {
   for (const [key, flips] of entries) {
     const [r, c] = key.split('-').map(Number);
     const newBoard = applyMove(board, r, c, player, flips);
-    const val = minimax(newBoard, opponent, depth - 1, player, -Infinity, Infinity);
+    const val = minimax(
+      newBoard,
+      opponent,
+      depth - 1,
+      player,
+      weights,
+      -Infinity,
+      Infinity,
+    );
     if (val > bestVal) {
       bestVal = val;
       best = [r, c];
