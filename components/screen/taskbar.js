@@ -1,7 +1,42 @@
 import React from 'react';
 import Image from 'next/image';
+import { useEffect, useRef, useState } from 'react';
+import usePersistentState from '../../hooks/usePersistentState';
 
 export default function Taskbar(props) {
+    const [autohideBehavior] = usePersistentState('xfce.panel.autohideBehavior', 'never');
+    const [hidden, setHidden] = useState(autohideBehavior !== 'never');
+    const hideTimer = useRef(null);
+
+    const cancelHide = () => {
+        if (hideTimer.current) {
+            clearTimeout(hideTimer.current);
+            hideTimer.current = null;
+        }
+        setHidden(false);
+    };
+
+    const scheduleHide = () => {
+        if (autohideBehavior === 'never') return;
+        const delay = autohideBehavior === 'intelligent' ? 500 : 100;
+        hideTimer.current = setTimeout(() => setHidden(true), delay);
+    };
+
+    useEffect(() => {
+        setHidden(autohideBehavior !== 'never');
+    }, [autohideBehavior]);
+
+    useEffect(() => {
+        if (autohideBehavior === 'never') return;
+        const handleMove = (e) => {
+            if (e.clientY >= window.innerHeight - 5) {
+                cancelHide();
+            }
+        };
+        window.addEventListener('mousemove', handleMove);
+        return () => window.removeEventListener('mousemove', handleMove);
+    }, [autohideBehavior]);
+
     const runningApps = props.apps.filter(app => props.closed_windows[app.id] === false);
 
     const handleClick = (app) => {
@@ -16,7 +51,12 @@ export default function Taskbar(props) {
     };
 
     return (
-        <div className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center z-40" role="toolbar">
+        <div
+            onMouseEnter={cancelHide}
+            onMouseLeave={scheduleHide}
+            className={`absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center z-40 transition-transform duration-200 ${hidden ? 'translate-y-full' : ''}`}
+            role="toolbar"
+        >
             {runningApps.map(app => (
                 <button
                     key={app.id}

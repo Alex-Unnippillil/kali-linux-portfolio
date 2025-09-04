@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
+import usePersistentState from '../../hooks/usePersistentState';
 
 export function Settings() {
     const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const [autohide, setAutohide] = usePersistentState('xfce.panel.autohideBehavior', 'never');
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -100,8 +102,21 @@ export function Settings() {
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Font Size:</label>
+                <label className="mr-2 text-ubt-grey">Panel Autohide:</label>
+                <select
+                    value={autohide}
+                    onChange={(e) => setAutohide(e.target.value)}
+                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                >
+                    <option value="never">Never</option>
+                    <option value="always">Always</option>
+                    <option value="intelligent">Intelligent</option>
+                </select>
+            </div>
+            <div className="flex justify-center my-4 items-center">
+                <label htmlFor="font-size" className="mr-2 text-ubt-grey">Font Size:</label>
                 <input
+                    id="font-size"
                     type="range"
                     min="0.75"
                     max="1.5"
@@ -109,73 +124,74 @@ export function Settings() {
                     value={fontScale}
                     onChange={(e) => setFontScale(parseFloat(e.target.value))}
                     className="ubuntu-slider"
+                    aria-label="Font Size"
                 />
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={reducedMotion}
-                        onChange={(e) => setReducedMotion(e.target.checked)}
-                        className="mr-2"
-                    />
-                    Reduced Motion
-                </label>
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="reduced-motion"
+                    type="checkbox"
+                    checked={reducedMotion}
+                    onChange={(e) => setReducedMotion(e.target.checked)}
+                    className="mr-2"
+                    aria-label="Reduced Motion"
+                />
+                <label htmlFor="reduced-motion" className="mr-2 text-ubt-grey">Reduced Motion</label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={largeHitAreas}
-                        onChange={(e) => setLargeHitAreas(e.target.checked)}
-                        className="mr-2"
-                    />
-                    Large Hit Areas
-                </label>
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="large-hit-areas"
+                    type="checkbox"
+                    checked={largeHitAreas}
+                    onChange={(e) => setLargeHitAreas(e.target.checked)}
+                    className="mr-2"
+                    aria-label="Large Hit Areas"
+                />
+                <label htmlFor="large-hit-areas" className="mr-2 text-ubt-grey">Large Hit Areas</label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={highContrast}
-                        onChange={(e) => setHighContrast(e.target.checked)}
-                        className="mr-2"
-                    />
-                    High Contrast
-                </label>
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="high-contrast"
+                    type="checkbox"
+                    checked={highContrast}
+                    onChange={(e) => setHighContrast(e.target.checked)}
+                    className="mr-2"
+                    aria-label="High Contrast"
+                />
+                <label htmlFor="high-contrast" className="mr-2 text-ubt-grey">High Contrast</label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={allowNetwork}
-                        onChange={(e) => setAllowNetwork(e.target.checked)}
-                        className="mr-2"
-                    />
-                    Allow Network Requests
-                </label>
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="allow-network"
+                    type="checkbox"
+                    checked={allowNetwork}
+                    onChange={(e) => setAllowNetwork(e.target.checked)}
+                    className="mr-2"
+                    aria-label="Allow Network Requests"
+                />
+                <label htmlFor="allow-network" className="mr-2 text-ubt-grey">Allow Network Requests</label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={haptics}
-                        onChange={(e) => setHaptics(e.target.checked)}
-                        className="mr-2"
-                    />
-                    Haptics
-                </label>
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="haptics"
+                    type="checkbox"
+                    checked={haptics}
+                    onChange={(e) => setHaptics(e.target.checked)}
+                    className="mr-2"
+                    aria-label="Haptics"
+                />
+                <label htmlFor="haptics" className="mr-2 text-ubt-grey">Haptics</label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={pongSpin}
-                        onChange={(e) => setPongSpin(e.target.checked)}
-                        className="mr-2"
-                    />
-                    Pong Spin
-                </label>
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="pong-spin"
+                    type="checkbox"
+                    checked={pongSpin}
+                    onChange={(e) => setPongSpin(e.target.checked)}
+                    className="mr-2"
+                    aria-label="Pong Spin"
+                />
+                <label htmlFor="pong-spin" className="mr-2 text-ubt-grey">Pong Spin</label>
             </div>
             <div className="flex justify-center my-4">
                 <div
@@ -261,6 +277,7 @@ export function Settings() {
             <input
                 type="file"
                 accept="application/json"
+                aria-label="Import settings file"
                 ref={fileInput}
                 onChange={async (e) => {
                     const file = e.target.files && e.target.files[0];
