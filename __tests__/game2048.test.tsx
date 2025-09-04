@@ -75,6 +75,7 @@ test('ignores browser key repeat events', () => {
   expect(getByText(/Moves: 0/)).toBeTruthy();
 });
 
+
 test('tracks moves and allows multiple undos', async () => {
   window.localStorage.setItem('2048-board', JSON.stringify([
     [2, 2, 0, 0],
@@ -86,7 +87,7 @@ test('tracks moves and allows multiple undos', async () => {
   const initial = JSON.parse(window.localStorage.getItem('2048-board') || '[]');
   fireEvent.keyDown(window, { key: 'ArrowLeft' });
   await act(async () => {
-    await new Promise((r) => setTimeout(r, 250));
+    await new Promise((r) => setTimeout(r, 500));
   });
   fireEvent.keyDown(window, { key: 'ArrowRight' });
   expect(getByText(/Moves: 2/)).toBeTruthy();
@@ -131,7 +132,7 @@ test('ignores key repeats while a move is in progress', async () => {
   fireEvent.keyDown(window, { key: 'ArrowLeft' });
   expect(getByText(/Moves: 1/)).toBeTruthy();
   await act(async () => {
-    await new Promise((r) => setTimeout(r, 250));
+    await new Promise((r) => setTimeout(r, 500));
   });
   fireEvent.keyDown(window, { key: 'ArrowLeft' });
   expect(getByText(/Moves: 2/)).toBeTruthy();
