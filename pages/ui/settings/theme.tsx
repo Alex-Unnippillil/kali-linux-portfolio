@@ -63,6 +63,7 @@ export default function ThemeSettings() {
           <option value="dark">Dark</option>
           <option value="neon">Neon</option>
           <option value="matrix">Matrix</option>
+          <option value="undercover">Undercover (Windows-like)</option>
         </select>
 
         <div className="mt-6">

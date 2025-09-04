@@ -70,6 +70,7 @@ export function Settings() {
                     <option value="dark">Dark</option>
                     <option value="neon">Neon</option>
                     <option value="matrix">Matrix</option>
+                    <option value="undercover">Undercover (Windows-like)</option>
                 </select>
             </div>
             <div className="flex justify-center my-4">
