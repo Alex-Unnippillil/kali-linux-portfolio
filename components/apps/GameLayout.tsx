@@ -1,9 +1,19 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  createContext,
+  useContext,
+} from 'react';
 import HelpOverlay from './HelpOverlay';
 import PerfOverlay from './Games/common/perf';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import {
+  serialize as serializeRng,
+  deserialize as deserializeRng,
+} from '../../apps/games/rng';
 
 interface GameLayoutProps {
   gameId?: string;
@@ -14,6 +24,24 @@ interface GameLayoutProps {
   highScore?: number;
   editor?: React.ReactNode;
 }
+
+interface RecordedInput {
+  t: number;
+  input: any;
+  rng: string;
+}
+
+interface RecorderContextValue {
+  record: (input: any) => void;
+  registerReplay: (fn: (input: any, index: number) => void) => void;
+}
+
+const RecorderContext = createContext<RecorderContextValue>({
+  record: () => {},
+  registerReplay: () => {},
+});
+
+export const useInputRecorder = () => useContext(RecorderContext);
 
 const GameLayout: React.FC<GameLayoutProps> = ({
   gameId = 'unknown',
@@ -26,6 +54,11 @@ const GameLayout: React.FC<GameLayoutProps> = ({
 }) => {
   const [showHelp, setShowHelp] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [log, setLog] = useState<RecordedInput[]>([]);
+  const [replayHandler, setReplayHandler] = useState<
+    ((input: any, index: number) => void) | undefined
+  >(undefined);
+  const [replaying, setReplaying] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
 
   const close = useCallback(() => setShowHelp(false), []);
@@ -62,6 +95,55 @@ const GameLayout: React.FC<GameLayoutProps> = ({
       fallbackCopy(`${text} ${url}`);
     }
   }, [fallbackCopy, highScore, gameId]);
+
+  const record = useCallback(
+    (input: any) => {
+      if (replaying) return;
+      setLog((l) => [...l, { t: Date.now(), input, rng: serializeRng() }]);
+    },
+    [replaying],
+  );
+
+  const registerReplay = useCallback(
+    (fn: (input: any, index: number) => void) => {
+      setReplayHandler(() => fn);
+    },
+    [],
+  );
+
+  const snapshot = useCallback(() => {
+    const data = JSON.stringify(log, null, 2);
+    try {
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${gameId}-inputs.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      /* ignore download errors */
+    }
+    console.log(data);
+  }, [log, gameId]);
+
+  const replay = useCallback(() => {
+    if (!replayHandler || log.length === 0) return;
+    setReplaying(true);
+    let i = 0;
+    const step = () => {
+      if (i >= log.length) {
+        setReplaying(false);
+        return;
+      }
+      const ev = log[i];
+      deserializeRng(ev.rng);
+      replayHandler(ev.input, i);
+      i += 1;
+      setTimeout(step, 100);
+    };
+    step();
+  }, [log, replayHandler]);
 
   // Keyboard shortcut to toggle help overlay
   useEffect(() => {
@@ -125,13 +207,16 @@ const GameLayout: React.FC<GameLayoutProps> = ({
 
   const resume = useCallback(() => setPaused(false), []);
 
+  const contextValue = { record, registerReplay };
+
   return (
-    <div className="relative h-full w-full" data-reduced-motion={prefersReducedMotion}>
-      {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
-      {paused && (
-        <div
-          className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
-          role="dialog"
+    <RecorderContext.Provider value={contextValue}>
+      <div className="relative h-full w-full" data-reduced-motion={prefersReducedMotion}>
+        {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
+        {paused && (
+          <div
+            className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
+            role="dialog"
           aria-modal="true"
         >
           <button
@@ -145,6 +230,27 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         </div>
       )}
       <div className="absolute top-2 right-2 z-40 flex space-x-2">
+        <button
+          type="button"
+          onClick={() => setPaused((p) => !p)}
+          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+        >
+          {paused ? 'Resume' : 'Pause'}
+        </button>
+        <button
+          type="button"
+          onClick={snapshot}
+          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+        >
+          Snapshot
+        </button>
+        <button
+          type="button"
+          onClick={replay}
+          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+        >
+          Replay
+        </button>
         <button
           type="button"
           onClick={shareApp}
@@ -182,7 +288,8 @@ const GameLayout: React.FC<GameLayoutProps> = ({
       {editor && (
         <div className="absolute bottom-2 left-2 z-30">{editor}</div>
       )}
-    </div>
+      </div>
+    </RecorderContext.Provider>
   );
 };
 
