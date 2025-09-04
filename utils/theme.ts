@@ -8,6 +8,11 @@ export const THEME_UNLOCKS: Record<string, number> = {
   matrix: 1000,
 };
 
+const DARK_THEMES = ['dark', 'neon', 'matrix'] as const;
+
+export const isDarkTheme = (theme: string): boolean =>
+  DARK_THEMES.includes(theme as (typeof DARK_THEMES)[number]);
+
 export const getTheme = (): string => {
   if (typeof window === 'undefined') return 'default';
   try {
@@ -27,6 +32,7 @@ export const setTheme = (theme: string): void => {
   try {
     window.localStorage.setItem(THEME_KEY, theme);
     document.documentElement.dataset.theme = theme;
+    document.documentElement.classList.toggle('dark', isDarkTheme(theme));
   } catch {
     /* ignore storage errors */
   }
