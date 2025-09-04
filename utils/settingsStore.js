@@ -13,6 +13,8 @@ const DEFAULT_SETTINGS = {
   largeHitAreas: false,
   pongSpin: true,
   allowNetwork: false,
+  pauseOnBlur: false,
+  muteOnBlur: false,
 };
 
 export async function getAccent() {
@@ -107,6 +109,26 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getPauseOnBlur() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.pauseOnBlur;
+  return window.localStorage.getItem('pause-on-blur') === 'true';
+}
+
+export async function setPauseOnBlur(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('pause-on-blur', value ? 'true' : 'false');
+}
+
+export async function getMuteOnBlur() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.muteOnBlur;
+  return window.localStorage.getItem('mute-on-blur') === 'true';
+}
+
+export async function setMuteOnBlur(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('mute-on-blur', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -120,6 +142,8 @@ export async function resetSettings() {
   window.localStorage.removeItem('large-hit-areas');
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
+  window.localStorage.removeItem('pause-on-blur');
+  window.localStorage.removeItem('mute-on-blur');
 }
 
 export async function exportSettings() {
@@ -133,6 +157,8 @@ export async function exportSettings() {
     largeHitAreas,
     pongSpin,
     allowNetwork,
+    pauseOnBlur,
+    muteOnBlur,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -143,6 +169,8 @@ export async function exportSettings() {
     getLargeHitAreas(),
     getPongSpin(),
     getAllowNetwork(),
+    getPauseOnBlur(),
+    getMuteOnBlur(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -155,6 +183,8 @@ export async function exportSettings() {
     largeHitAreas,
     pongSpin,
     allowNetwork,
+    pauseOnBlur,
+    muteOnBlur,
     theme,
   });
 }
@@ -178,6 +208,8 @@ export async function importSettings(json) {
     largeHitAreas,
     pongSpin,
     allowNetwork,
+    pauseOnBlur,
+    muteOnBlur,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -189,6 +221,8 @@ export async function importSettings(json) {
   if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas);
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
+  if (pauseOnBlur !== undefined) await setPauseOnBlur(pauseOnBlur);
+  if (muteOnBlur !== undefined) await setMuteOnBlur(muteOnBlur);
   if (theme !== undefined) setTheme(theme);
 }
 
