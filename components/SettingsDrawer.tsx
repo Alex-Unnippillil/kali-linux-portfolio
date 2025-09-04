@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getTheme, setTheme, getUnlockedThemes } from '../utils/theme';
+import { getUnlockedThemes } from '../utils/theme';
 import { useSettings } from '../hooks/useSettings';
 
 interface Props {
@@ -8,14 +8,8 @@ interface Props {
 
 const SettingsDrawer = ({ highScore = 0 }: Props) => {
   const [open, setOpen] = useState(false);
-  const [theme, setThemeState] = useState(getTheme());
   const unlocked = getUnlockedThemes(highScore);
-  const { accent, setAccent } = useSettings();
-
-  const changeTheme = (t: string) => {
-    setThemeState(t);
-    setTheme(t);
-  };
+  const { accent, setAccent, theme, setTheme } = useSettings();
 
   return (
     <div>
@@ -29,7 +23,7 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
             <select
               aria-label="theme-select"
               value={theme}
-              onChange={(e) => changeTheme(e.target.value)}
+              onChange={(e) => setTheme(e.target.value)}
             >
               {unlocked.map((t) => (
                 <option key={t} value={t}>

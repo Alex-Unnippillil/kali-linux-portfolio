@@ -9,7 +9,6 @@ import {
   exportSettings as exportSettingsData,
   importSettings as importSettingsData,
 } from "../../utils/settingsStore";
-import { getTheme, setTheme } from "../../utils/theme";
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
@@ -28,8 +27,9 @@ export default function Settings() {
     setFontScale,
     highContrast,
     setHighContrast,
+    theme,
+    setTheme,
   } = useSettings();
-  const [theme, setThemeState] = useState<string>(getTheme());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const tabs = [
@@ -77,10 +77,7 @@ export default function Settings() {
       if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
-      if (parsed.theme !== undefined) {
-        setThemeState(parsed.theme);
-        setTheme(parsed.theme);
-      }
+      if (parsed.theme !== undefined) setTheme(parsed.theme);
     } catch (err) {
       console.error("Invalid settings", err);
     }
@@ -101,7 +98,6 @@ export default function Settings() {
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
-    setThemeState("default");
     setTheme("default");
   };
 
@@ -127,10 +123,7 @@ export default function Settings() {
             <label className="mr-2 text-ubt-grey">Theme:</label>
             <select
               value={theme}
-              onChange={(e) => {
-                setThemeState(e.target.value);
-                setTheme(e.target.value);
-              }}
+              onChange={(e) => setTheme(e.target.value)}
               className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
             >
               <option value="default">Default</option>

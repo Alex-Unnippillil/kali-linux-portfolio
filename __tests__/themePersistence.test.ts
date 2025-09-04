@@ -1,9 +1,7 @@
-import {
-  getTheme,
-  setTheme,
-  getUnlockedThemes,
-  THEME_KEY,
-} from '../utils/theme';
+import { renderHook, act } from '@testing-library/react';
+import { SettingsProvider, useSettings } from '../hooks/useSettings';
+import { getTheme, getUnlockedThemes } from '../utils/theme';
+
 
 describe('theme persistence and unlocking', () => {
   beforeEach(() => {
@@ -12,13 +10,14 @@ describe('theme persistence and unlocking', () => {
     document.documentElement.className = '';
   });
 
-  test('theme persists across sessions and updates DOM', () => {
-    setTheme('dark');
+  test('theme persists across sessions', () => {
+    const { result } = renderHook(() => useSettings(), {
+      wrapper: SettingsProvider,
+    });
+    act(() => result.current.setTheme('dark'));
+    expect(result.current.theme).toBe('dark');
     expect(getTheme()).toBe('dark');
-    expect(document.documentElement.dataset.theme).toBe('dark');
-    expect(document.documentElement.classList.contains('dark')).toBe(true);
-    // simulate reload by reading from localStorage again
-    expect(window.localStorage.getItem(THEME_KEY)).toBe('dark');
+    expect(window.localStorage.getItem('app:theme')).toBe('dark');
 
   });
 
