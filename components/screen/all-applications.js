@@ -1,5 +1,6 @@
 import React from 'react';
 import UbuntuApp from '../base/ubuntu_app';
+import { getRecent } from '../../utils/recent';
 
 class AllApplications extends React.Component {
     constructor() {
@@ -8,6 +9,7 @@ class AllApplications extends React.Component {
             query: '',
             apps: [],
             unfilteredApps: [],
+            recent: [],
         };
     }
 
@@ -17,7 +19,11 @@ class AllApplications extends React.Component {
         games.forEach((game) => {
             if (!combined.some((app) => app.id === game.id)) combined.push(game);
         });
-        this.setState({ apps: combined, unfilteredApps: combined });
+        const recentIds = getRecent();
+        const recent = recentIds
+            .map((id) => combined.find((app) => app.id === id))
+            .filter(Boolean);
+        this.setState({ apps: combined, unfilteredApps: combined, recent });
     }
 
     handleChange = (e) => {
@@ -53,6 +59,21 @@ class AllApplications extends React.Component {
         ));
     };
 
+    renderRecent = () => {
+        const apps = this.state.recent || [];
+        return apps.map((app) => (
+            <UbuntuApp
+                key={'recent-' + app.id}
+                name={app.title}
+                id={app.id}
+                icon={app.icon}
+                openApp={() => this.openApp(app.id)}
+                disabled={app.disabled}
+                prefetch={app.screen?.prefetch}
+            />
+        ));
+    };
+
     render() {
         return (
             <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim">
@@ -62,6 +83,14 @@ class AllApplications extends React.Component {
                     value={this.state.query}
                     onChange={this.handleChange}
                 />
+                {this.state.recent.length > 0 && (
+                    <div className="mb-8 flex flex-col items-center w-full">
+                        <h2 className="mb-4 text-lg">Recently Used</h2>
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 pb-4 place-items-center">
+                            {this.renderRecent()}
+                        </div>
+                    </div>
+                )}
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 pb-10 place-items-center">
                     {this.renderApps()}
                 </div>
