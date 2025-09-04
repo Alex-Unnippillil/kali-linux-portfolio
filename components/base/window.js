@@ -11,11 +11,15 @@ export class Window extends Component {
     constructor(props) {
         super(props);
         this.id = null;
-        this.startX = props.initialX ?? 60;
+        const isPortrait =
+            typeof window !== "undefined" && window.innerHeight > window.innerWidth;
+        this.startX =
+            props.initialX ??
+            (isPortrait ? window.innerWidth * 0.05 : 60);
         this.startY = props.initialY ?? 10;
         this.state = {
             cursorType: "cursor-default",
-            width: props.defaultWidth || 60,
+            width: props.defaultWidth || (isPortrait ? 90 : 60),
             height: props.defaultHeight || 85,
             closed: false,
             maximized: false,
@@ -64,12 +68,20 @@ export class Window extends Component {
 
     setDefaultWindowDimenstion = () => {
         if (this.props.defaultHeight && this.props.defaultWidth) {
-            this.setState({ height: this.props.defaultHeight, width: this.props.defaultWidth }, this.resizeBoundries);
+            this.setState(
+                { height: this.props.defaultHeight, width: this.props.defaultWidth },
+                this.resizeBoundries
+            );
+            return;
         }
-        else if (window.innerWidth < 640) {
+
+        const isPortrait = window.innerHeight > window.innerWidth;
+        if (isPortrait) {
+            this.startX = window.innerWidth * 0.05;
+            this.setState({ height: 85, width: 90 }, this.resizeBoundries);
+        } else if (window.innerWidth < 640) {
             this.setState({ height: 60, width: 85 }, this.resizeBoundries);
-        }
-        else {
+        } else {
             this.setState({ height: 85, width: 60 }, this.resizeBoundries);
         }
     }

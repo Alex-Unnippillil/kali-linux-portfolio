@@ -199,6 +199,11 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: cursor-pulse 1s steps(2) infinite;
 }
 
+dialog {
+    display: flex;
+    flex-direction: column;
+}
+
 /* High contrast handling for precipitation text */
 .precip-text {
     color: #0ea5e9;
