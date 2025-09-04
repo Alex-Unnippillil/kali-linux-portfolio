@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
+import { getDb } from '../../utils/safeIDB';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -61,31 +62,19 @@ const DB_NAME = 'file-explorer';
 const STORE_NAME = 'recent';
 
 function openDB() {
-  return new Promise((resolve, reject) => {
-    if (typeof indexedDB === 'undefined') {
-      resolve(null);
-      return;
-    }
-    const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = () => {
-      req.result.createObjectStore(STORE_NAME, { autoIncrement: true });
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+  return getDb(DB_NAME, 1, {
+    upgrade(db) {
+      db.createObjectStore(STORE_NAME, { autoIncrement: true });
+    },
   });
 }
 
 async function getRecentDirs() {
   try {
-    const db = await openDB();
-    if (!db) return [];
-    return await new Promise((resolve) => {
-      const tx = db.transaction(STORE_NAME, 'readonly');
-      const store = tx.objectStore(STORE_NAME);
-      const req = store.getAll();
-      req.onsuccess = () => resolve(req.result || []);
-      req.onerror = () => resolve([]);
-    });
+    const dbp = openDB();
+    if (!dbp) return [];
+    const db = await dbp;
+    return (await db.getAll(STORE_NAME)) || [];
   } catch {
     return [];
   }
@@ -93,15 +82,11 @@ async function getRecentDirs() {
 
 async function addRecentDir(handle) {
   try {
-    const db = await openDB();
-    if (!db) return;
+    const dbp = openDB();
+    if (!dbp) return;
+    const db = await dbp;
     const entry = { name: handle.name, handle };
-    await new Promise((resolve) => {
-      const tx = db.transaction(STORE_NAME, 'readwrite');
-      tx.objectStore(STORE_NAME).put(entry);
-      tx.oncomplete = resolve;
-      tx.onerror = resolve;
-    });
+    await db.put(STORE_NAME, entry);
   } catch {}
 }
 

@@ -1,5 +1,8 @@
+"use client";
+
+/* eslint-disable no-top-level-window/no-top-level-window-or-document */
 import { isBrowser } from '../../utils/env';
-import { makeIdb } from '../../utils/safeIdb';
+import { getDb } from '../../utils/safeIDB';
 
 let notesContainer = null;
 let addNoteBtn = null;
@@ -19,7 +22,7 @@ const DB_VERSION = 1;
 let dbPromise = null;
 function getDB() {
   if (!dbPromise) {
-    dbPromise = makeIdb(DB_NAME, DB_VERSION, {
+    dbPromise = getDb(DB_NAME, DB_VERSION, {
       upgrade(db, oldVersion) {
         if (oldVersion < 1) {
           db.createObjectStore(STORE_NAME, { keyPath: 'id' });
