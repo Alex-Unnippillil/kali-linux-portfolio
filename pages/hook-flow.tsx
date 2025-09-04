@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from 'react';
+import Image from 'next/image';
+import { BLUR_DATA_URL } from '@/lib/blurDataURL';
 
 const HookFlow: React.FC = () => {
   const [consented, setConsented] = useState(false);
@@ -23,11 +25,16 @@ const HookFlow: React.FC = () => {
 
   return (
     <main className="p-4 space-y-4">
-      <img
-        src="/hook-flow.svg"
-        alt="React hook flow diagram"
-        className="mx-auto"
-      />
+      <div className="relative mx-auto w-full max-w-[420px] aspect-[7/2]">
+        <Image
+          src="/hook-flow.svg"
+          alt="React hook flow diagram"
+          fill
+          loading="lazy"
+          placeholder="blur"
+          blurDataURL={BLUR_DATA_URL}
+        />
+      </div>
       <iframe
         title="React Hooks Documentation"
         src="https://react.dev/learn/hooks"
