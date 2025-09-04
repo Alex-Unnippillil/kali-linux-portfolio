@@ -2,6 +2,7 @@
   "name": "unnippillil",
   "version": "2.1.0",
   "private": true,
+  "workspaces": ["apps", "components"],
   "homepage": "https://unnippillil.com/",
   "scripts": {
     "build:gamepad": "tsc -p tsconfig.gamepad.json",
