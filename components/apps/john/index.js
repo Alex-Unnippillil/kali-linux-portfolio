@@ -394,7 +394,7 @@ const JohnApp = () => {
           <div className="text-xs bg-gray-900 p-2 rounded">
             {candidates.length > 0 && (
               <>
-                <p className="mb-1">Candidate preview:</p>
+                <p className="mb-2">Candidate preview:</p>
                 <ul className="max-h-24 overflow-auto">
                   {candidates.map((c, i) => (
                     <li key={i}>{c}</li>
@@ -462,7 +462,7 @@ const JohnApp = () => {
                 {`${Math.round(progress)}%`}
               </span>
             </div>
-            <p className="text-xs mt-1 text-white" aria-live="polite">
+            <p className="text-xs mt-2 text-white" aria-live="polite">
               {`Keyspace ${Math.round(progress)}% - ${phase}`}
             </p>
           </>

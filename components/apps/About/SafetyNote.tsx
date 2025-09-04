@@ -11,7 +11,7 @@ export default function SafetyNote() {
       aria-labelledby="safety-note-heading"
       className="mt-8 w-5/6 md:w-3/4 text-xs md:text-sm text-center border border-yellow-500 rounded p-3 bg-ub-cool-grey"
     >
-      <h2 id="safety-note-heading" className="text-sm md:text-base font-bold mb-1">
+      <h2 id="safety-note-heading" className="text-sm md:text-base font-bold mb-2">
         Safety Notice
       </h2>
       <p>

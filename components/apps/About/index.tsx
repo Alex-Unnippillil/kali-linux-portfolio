@@ -456,9 +456,9 @@ function Projects({ projects }: { projects: any[] }) {
                 </div>
                 <div className="text-gray-300 font-light text-sm">{project.date}</div>
               </div>
-              <ul className=" tracking-normal leading-tight text-sm font-light ml-4 mt-1">
+              <ul className=" tracking-normal leading-tight text-sm font-light ml-4 mt-2">
                 {project.description.map((desc: string) => (
-                  <li key={desc} className="list-disc mt-1 text-gray-100">
+                  <li key={desc} className="list-disc mt-2 text-gray-100">
                     {desc}
                   </li>
                 ))}

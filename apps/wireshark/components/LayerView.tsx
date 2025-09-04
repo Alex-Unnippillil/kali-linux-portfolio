@@ -25,7 +25,7 @@ const LayerView: React.FC<Props> = ({ name, fields }) => {
         {name}
       </button>
       {open && (
-        <ul className="pl-5 mt-1 space-y-0.5">
+        <ul className="pl-6 mt-2 space-y-2">
           {Object.entries(fields).map(([k, v]) => (
             <li key={k} className="whitespace-pre-wrap">
               {k}: {v}

@@ -63,3 +63,30 @@ html[data-theme='matrix'] {
   --color-dark: #000000;
 
 }
+
+/* Base typography spacing aligned to 8px grid */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin-block-start: 0;
+  margin-block-end: 16px; /* 2 x 8px */
+}
+
+p {
+  margin-block-start: 0;
+  margin-block-end: 16px; /* 2 x 8px */
+}
+
+ul,
+ol {
+  margin-block-start: 0;
+  margin-block-end: 16px; /* 2 x 8px */
+  padding-inline-start: 24px; /* 3 x 8px */
+}
+
+li {
+  margin-block-end: 8px; /* 1 x 8px */
+}

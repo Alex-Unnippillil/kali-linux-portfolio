@@ -223,7 +223,7 @@ const OpenVASReport: React.FC = () => {
                   {expanded[key] && (
                     <tr>
                       <td colSpan={3} className="p-2 bg-gray-800">
-                        <p className="text-sm mb-1">{f.description}</p>
+                        <p className="text-sm mb-2">{f.description}</p>
                         <p className="text-xs text-yellow-300">{f.remediation}</p>
                       </td>
                     </tr>

@@ -169,8 +169,8 @@ const NiktoPage: React.FC = () => {
           </p>
           {headers.length > 0 && (
             <div className="mb-4">
-              <h3 className="text-md mb-1">Headers</h3>
-              <ul className="text-sm space-y-1 font-mono">
+              <h3 className="text-md mb-2">Headers</h3>
+              <ul className="text-sm space-y-2 font-mono">
                 {headers.map((h) => (
                   <li key={h.name}>
                     <span className="font-bold">{h.name}:</span> {h.value}

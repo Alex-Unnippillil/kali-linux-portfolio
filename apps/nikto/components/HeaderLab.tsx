@@ -95,7 +95,7 @@ const HeaderLab: React.FC = () => {
       />
       {Object.keys(headers).length > 0 && (
         <div>
-          <h3 className="text-md mb-1">Parsed Headers</h3>
+          <h3 className="text-md mb-2">Parsed Headers</h3>
           <table className="w-full text-sm">
             <tbody>
               {Object.entries(headers).map(([name, value]) => (
@@ -110,8 +110,8 @@ const HeaderLab: React.FC = () => {
       )}
       {hints.length > 0 && (
         <div>
-          <h3 className="text-md mb-1">Security Tips</h3>
-          <ul className="list-disc ml-6 space-y-1 text-green-300">
+          <h3 className="text-md mb-2">Security Tips</h3>
+          <ul className="list-disc ml-6 space-y-2 text-green-300">
             {hints.map((tip, i) => (
               <li key={i}>{tip}</li>
             ))}

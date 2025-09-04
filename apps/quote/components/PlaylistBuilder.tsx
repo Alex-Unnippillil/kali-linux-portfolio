@@ -126,7 +126,7 @@ export default function PlaylistBuilder({ quotes, playlist, setPlaylist }: Playl
       </div>
       {Object.keys(saved).length > 0 && (
         <div className="mb-2">
-          <h3 className="text-md mb-1">Saved Playlists</h3>
+          <h3 className="text-md mb-2">Saved Playlists</h3>
           <ul className="max-h-32 overflow-auto border border-gray-700 rounded">
             {Object.entries(saved).map(([name, list]) => (
               <li
@@ -155,7 +155,7 @@ export default function PlaylistBuilder({ quotes, playlist, setPlaylist }: Playl
           </ul>
         </div>
       )}
-      <h3 className="text-md mb-1">Current Playlist</h3>
+      <h3 className="text-md mb-2">Current Playlist</h3>
       <ol className="max-h-32 overflow-auto border border-gray-700 rounded">
         {playlist.map((i, idx) => (
           <li

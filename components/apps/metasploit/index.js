@@ -459,7 +459,7 @@ const MetasploitApp = ({
             {showLoot && (
               <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
                 <div>
-                  <h4 className="font-bold mb-1">Loot</h4>
+                  <h4 className="font-bold mb-2">Loot</h4>
                   <ul className="max-h-24 overflow-auto">
                     {loot.map((l, i) => (
                       <li key={i}>
@@ -469,7 +469,7 @@ const MetasploitApp = ({
                   </ul>
                 </div>
                 <div>
-                  <h4 className="font-bold mb-1">Notes</h4>
+                  <h4 className="font-bold mb-2">Notes</h4>
                   <ul className="max-h-24 overflow-auto">
                     {notes.map((n, i) => (
                       <li key={i}>
@@ -485,15 +485,15 @@ const MetasploitApp = ({
         <aside className="w-1/3 bg-ub-grey p-2 overflow-auto text-xs">
           {selectedModule ? (
             <>
-              <h3 className="font-bold mb-1">{selectedModule.name}</h3>
-              <p className="mb-1">{selectedModule.description}</p>
+              <h3 className="font-bold mb-2">{selectedModule.name}</h3>
+              <p className="mb-2">{selectedModule.description}</p>
               {selectedModule.disclosure_date && (
-                <p className="mb-1">
+                <p className="mb-2">
                   <strong>Disclosed:</strong> {selectedModule.disclosure_date}
                 </p>
               )}
               {selectedModule.teaches && (
-                <p className="mb-1">
+                <p className="mb-2">
                   <strong>Teaches:</strong> {selectedModule.teaches}
                 </p>
               )}

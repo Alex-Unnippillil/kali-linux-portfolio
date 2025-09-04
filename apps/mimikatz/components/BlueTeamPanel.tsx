@@ -31,8 +31,8 @@ const BlueTeamPanel: React.FC<Props> = ({ logs }) => {
           </button>
           {open[idx] && (
             <div className="p-2 bg-blue-600 text-sm">
-              <p className="mb-1">{entry.log}</p>
-              <p className="mb-1">
+              <p className="mb-2">{entry.log}</p>
+              <p className="mb-2">
                 <span className="font-semibold">Mitigation:</span> {entry.mitigation}
               </p>
               {entry.resource && (

@@ -78,12 +78,12 @@ const RouterProfiles: React.FC<RouterProfilesProps> = ({ onChange }) => {
         ))}
       </select>
       {selected.lockAttempts !== Infinity && (
-        <p className="text-xs text-gray-400 mt-1">
+        <p className="text-xs text-gray-400 mt-2">
           Locks after {selected.lockAttempts} failed attempts for {selected.lockDuration}s
         </p>
       )}
       {selected.lockAttempts === Infinity && (
-        <p className="text-xs text-gray-400 mt-1">No WPS lockout behaviour</p>
+        <p className="text-xs text-gray-400 mt-2">No WPS lockout behaviour</p>
       )}
     </div>
   );
