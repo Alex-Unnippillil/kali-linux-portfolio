@@ -195,22 +195,33 @@ export class Window extends Component {
         this.setState({ cursorType: "cursor-default", grabbed: false })
     }
 
+    snapToGrid = (value) => {
+        if (!this.props.snapEnabled) return value;
+        return Math.round(value / 8) * 8;
+    }
+
     handleVerticleResize = () => {
         if (this.props.resizable === false) return;
-        this.setState({ height: this.state.height + 0.1 }, this.resizeBoundries);
+        const px = (this.state.height / 100) * window.innerHeight + 1;
+        const snapped = this.snapToGrid(px);
+        const heightPercent = snapped / window.innerHeight * 100;
+        this.setState({ height: heightPercent }, this.resizeBoundries);
     }
 
     handleHorizontalResize = () => {
         if (this.props.resizable === false) return;
-        this.setState({ width: this.state.width + 0.1 }, this.resizeBoundries);
+        const px = (this.state.width / 100) * window.innerWidth + 1;
+        const snapped = this.snapToGrid(px);
+        const widthPercent = snapped / window.innerWidth * 100;
+        this.setState({ width: widthPercent }, this.resizeBoundries);
     }
 
     setWinowsPosition = () => {
         var r = document.querySelector("#" + this.id);
         if (!r) return;
         var rect = r.getBoundingClientRect();
-        const x = rect.x;
-        const y = rect.y - 32;
+        const x = this.snapToGrid(rect.x);
+        const y = this.snapToGrid(rect.y - 32);
         r.style.setProperty('--window-transform-x', x.toFixed(1).toString() + "px");
         r.style.setProperty('--window-transform-y', y.toFixed(1).toString() + "px");
         if (this.props.onPositionChange) {
@@ -562,7 +573,7 @@ export class Window extends Component {
                 <Draggable
                     axis="both"
                     handle=".bg-ub-window-title"
-                    grid={[1, 1]}
+                    grid={this.props.snapEnabled ? [8, 8] : [1, 1]}
                     scale={1}
                     onStart={this.changeCursorToMove}
                     onStop={this.handleStop}
