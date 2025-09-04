@@ -1,0 +1,17 @@
+@layer components {
+  .window-frame {
+    @apply overflow-hidden min-w-1/4 min-h-1/4 absolute border-black border-opacity-40 border border-t-0 flex flex-col;
+  }
+
+  .window-toolbar {
+    @apply absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center;
+  }
+
+  .window-toolbar-btn {
+    @apply rounded-full flex justify-center items-center h-11 w-11;
+  }
+
+  .window-toolbar-btn-default {
+    @apply bg-white bg-opacity-0 hover:bg-opacity-10;
+  }
+}
