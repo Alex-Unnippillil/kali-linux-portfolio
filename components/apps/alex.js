@@ -90,10 +90,17 @@ export class AboutAlex extends Component {
                 <div className="md:flex hidden flex-col w-1/4 md:w-1/5 text-sm overflow-y-auto windowMainScreen border-r border-black">
                     {this.renderNavLinks()}
                 </div>
-                <div onClick={this.showNavBar} className="md:hidden flex flex-col items-center justify-center absolute bg-ub-cool-grey rounded w-6 h-6 top-1 left-1">
-                    <div className=" w-3.5 border-t border-white"></div>
-                    <div className=" w-3.5 border-t border-white" style={{ marginTop: "2pt", marginBottom: "2pt" }}></div>
-                    <div className=" w-3.5 border-t border-white"></div>
+                <div className="md:hidden flex flex-col items-center justify-center absolute top-1 left-1">
+                    <button
+                        type="button"
+                        aria-label="Toggle navigation"
+                        onClick={this.showNavBar}
+                        className="bg-ub-cool-grey rounded w-6 h-6 flex flex-col items-center justify-center focus:outline-none focus:ring"
+                    >
+                        <div className=" w-3.5 border-t border-white"></div>
+                        <div className=" w-3.5 border-t border-white" style={{ marginTop: "2pt", marginBottom: "2pt" }}></div>
+                        <div className=" w-3.5 border-t border-white"></div>
+                    </button>
                     <div className={(this.state.navbar ? " visible animateShow z-30 " : " invisible ") + " md:hidden text-xs absolute bg-ub-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 shadow border-black border border-opacity-20"}>
                         {this.renderNavLinks()}
                     </div>
@@ -321,14 +328,14 @@ const SkillSection = ({ title, badges }) => {
         ))}
       </div>
       {selected && (
-        <div
-          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
-          onClick={() => setSelected(null)}
-        >
-          <div
-            className="bg-ub-cool-grey p-4 rounded max-w-xs"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <button
+            type="button"
+            aria-label="Close"
+            className="absolute inset-0 bg-black bg-opacity-50 focus:outline-none"
+            onClick={() => setSelected(null)}
+          />
+          <div className="bg-ub-cool-grey p-4 rounded max-w-xs relative">
             <div className="font-bold mb-2 text-center">{selected.alt}</div>
             <p className="text-sm text-center">{selected.description}</p>
             <button

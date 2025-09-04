@@ -279,15 +279,27 @@ export default function FileExplorer() {
         <div className="w-40 overflow-auto border-r border-gray-600">
           <div className="p-2 font-bold">Recent</div>
           {recent.map((r, i) => (
-            <div key={i} className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30" onClick={() => openRecent(r)}>
+            <button
+              key={i}
+              type="button"
+              aria-label={`Open ${r.name}`}
+              className="px-2 w-full text-left cursor-pointer hover:bg-black hover:bg-opacity-30 focus:outline-none focus:bg-black focus:bg-opacity-30"
+              onClick={() => openRecent(r)}
+            >
               {r.name}
-            </div>
+            </button>
           ))}
           <div className="p-2 font-bold">Files</div>
           {files.map((f, i) => (
-            <div key={i} className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30" onClick={() => openFile(f)}>
+            <button
+              key={i}
+              type="button"
+              aria-label={`Open ${f.name}`}
+              className="px-2 w-full text-left cursor-pointer hover:bg-black hover:bg-opacity-30 focus:outline-none focus:bg-black focus:bg-opacity-30"
+              onClick={() => openFile(f)}
+            >
               {f.name}
-            </div>
+            </button>
           ))}
         </div>
         <div className="flex-1 flex flex-col">
