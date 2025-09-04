@@ -1,3 +1,5 @@
+const plugin = require('tailwindcss/plugin');
+
 module.exports = {
   darkMode: 'class',
   mode: 'jit',
@@ -93,5 +95,17 @@ module.exports = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    plugin(function ({ addUtilities }) {
+      const cols = {};
+      for (let i = 1; i <= 12; i++) {
+        const width = `${(i / 12) * 100}%`;
+        cols[`.col-${i}`] = { flex: `0 0 ${width}`, maxWidth: width };
+        if (i < 12) {
+          cols[`.offset-${i}`] = { marginLeft: width };
+        }
+      }
+      addUtilities(cols, ['responsive']);
+    }),
+  ],
 };
