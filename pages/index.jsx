@@ -1,7 +1,11 @@
-import Ubuntu from '../components/ubuntu';
+import dynamic from 'next/dynamic';
 import Meta from '../components/SEO/Meta';
-import InstallButton from '../components/InstallButton';
 import BetaBadge from '../components/BetaBadge';
+
+const Ubuntu = dynamic(() => import('../components/ubuntu'), { ssr: false });
+const InstallButton = dynamic(() => import('../components/InstallButton'), {
+  ssr: false,
+});
 
 /**
  * @returns {JSX.Element}

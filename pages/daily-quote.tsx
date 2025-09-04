@@ -1,3 +1,5 @@
+"use client";
+
 import { useRef } from 'react';
 import useDailyQuote from '../hooks/useDailyQuote';
 import { toPng } from 'html-to-image';

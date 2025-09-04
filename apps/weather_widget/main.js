@@ -1,5 +1,8 @@
 import demoCity from './demoCity.json';
+import { isBrowser } from '../../utils/env';
+import { safeLocalStorage } from '../../utils/safeStorage';
 
+if (isBrowser) {
 const widget = document.getElementById('weather');
 const tempEl = widget.querySelector('.temp');
 const feelsEl = widget.querySelector('.feels-like');
@@ -16,12 +19,12 @@ const pinCityBtn = document.getElementById('pin-city');
 const datalist = document.getElementById('saved-cities');
 const errorMessageEl = document.getElementById('error-message');
 
-let apiKey = localStorage.getItem('weatherApiKey') || '';
+let apiKey = safeLocalStorage?.getItem('weatherApiKey') || '';
 if (apiKey) apiKeyInput.value = apiKey;
 
 let unit = unitToggle.value;
 
-let savedCities = JSON.parse(localStorage.getItem('savedCities') || '[]');
+let savedCities = JSON.parse(safeLocalStorage?.getItem('savedCities') || '[]');
 
 function updateDatalist() {
   datalist.innerHTML = '';
@@ -34,7 +37,7 @@ function updateDatalist() {
 
 function updatePinButton() {
   const city = citySearch.value.trim();
-  if (localStorage.getItem('pinnedCity') === city) {
+  if (safeLocalStorage?.getItem('pinnedCity') === city) {
     pinCityBtn.textContent = 'Unpin';
   } else {
     pinCityBtn.textContent = 'Pin';
@@ -137,16 +140,16 @@ async function updateWeather() {
     let data;
     if (apiKey && city) {
       data = await fetchLiveWeather(city);
-      localStorage.setItem('lastCity', city);
+      safeLocalStorage?.setItem('lastCity', city);
       if (!savedCities.includes(city)) {
         savedCities.push(city);
-        localStorage.setItem('savedCities', JSON.stringify(savedCities));
+        safeLocalStorage?.setItem('savedCities', JSON.stringify(savedCities));
         updateDatalist();
       }
     } else {
       data = demoCity;
       citySearch.value = demoCity.name;
-      localStorage.setItem('lastCity', demoCity.name);
+      safeLocalStorage?.setItem('lastCity', demoCity.name);
     }
     renderWeather(data);
     errorMessageEl.textContent = '';
@@ -179,9 +182,9 @@ unitToggle.addEventListener('change', () => {
 saveApiKeyBtn.addEventListener('click', () => {
   apiKey = apiKeyInput.value.trim();
   if (apiKey) {
-    localStorage.setItem('weatherApiKey', apiKey);
+    safeLocalStorage?.setItem('weatherApiKey', apiKey);
   } else {
-    localStorage.removeItem('weatherApiKey');
+    safeLocalStorage?.removeItem('weatherApiKey');
   }
   updateWeather();
 });
@@ -189,16 +192,16 @@ saveApiKeyBtn.addEventListener('click', () => {
 pinCityBtn.addEventListener('click', () => {
   const city = citySearch.value.trim();
   if (!city) return;
-  if (localStorage.getItem('pinnedCity') === city) {
-    localStorage.removeItem('pinnedCity');
+  if (safeLocalStorage?.getItem('pinnedCity') === city) {
+    safeLocalStorage?.removeItem('pinnedCity');
   } else {
-    localStorage.setItem('pinnedCity', city);
+    safeLocalStorage?.setItem('pinnedCity', city);
   }
   updatePinButton();
 });
 
-const pinned = localStorage.getItem('pinnedCity');
-const lastCity = localStorage.getItem('lastCity');
+const pinned = safeLocalStorage?.getItem('pinnedCity');
+const lastCity = safeLocalStorage?.getItem('lastCity');
 if (pinned) {
   citySearch.value = pinned;
 } else if (lastCity) {
@@ -209,3 +212,4 @@ updatePinButton();
 updateWeather();
 
 setInterval(updateWeather, 10 * 60 * 1000);
+}

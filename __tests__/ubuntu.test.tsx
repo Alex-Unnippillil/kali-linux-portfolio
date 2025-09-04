@@ -30,4 +30,25 @@ describe('Ubuntu component', () => {
     expect(bootScreen).toHaveClass('invisible');
     expect(screen.getByTestId('desktop')).toBeInTheDocument();
   });
+
+  it('handles lockScreen when status bar is missing', () => {
+    let instance: Ubuntu | null = null;
+    render(<Ubuntu ref={(c) => (instance = c)} />);
+    expect(instance).not.toBeNull();
+    act(() => {
+      instance!.lockScreen();
+      jest.advanceTimersByTime(100);
+    });
+    expect(instance!.state.screen_locked).toBe(true);
+  });
+
+  it('handles shutDown when status bar is missing', () => {
+    let instance: Ubuntu | null = null;
+    render(<Ubuntu ref={(c) => (instance = c)} />);
+    expect(instance).not.toBeNull();
+    act(() => {
+      instance!.shutDown();
+    });
+    expect(instance!.state.shutDownScreen).toBe(true);
+  });
 });
