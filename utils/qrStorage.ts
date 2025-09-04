@@ -3,16 +3,24 @@ const LAST_SCAN_KEY = 'qrLastScan';
 const LAST_GEN_KEY = 'qrLastGeneration';
 const FILE_NAME = 'qr-scans.json';
 
+type StorageWithDirectory = StorageManager & {
+  // TODO: refine type when File System Access API types are finalized
+  getDirectory: () => Promise<FileSystemDirectoryHandle>;
+};
+
+const getStorage = (): StorageWithDirectory =>
+  navigator.storage as StorageWithDirectory;
+
 const hasOpfs =
   typeof window !== 'undefined' &&
   'storage' in navigator &&
-  Boolean((navigator.storage as any).getDirectory);
+  Boolean(getStorage().getDirectory);
 
 export const loadScans = async (): Promise<string[]> => {
   if (typeof window === 'undefined') return [];
   if (hasOpfs) {
     try {
-      const root = await (navigator.storage as any).getDirectory();
+      const root = await getStorage().getDirectory();
       const handle = await root.getFileHandle(FILE_NAME);
       const file = await handle.getFile();
       return JSON.parse(await file.text());
@@ -30,7 +38,7 @@ export const loadScans = async (): Promise<string[]> => {
 export const saveScans = async (scans: string[]): Promise<void> => {
   if (typeof window === 'undefined') return;
   if (hasOpfs) {
-    const root = await (navigator.storage as any).getDirectory();
+    const root = await getStorage().getDirectory();
     const handle = await root.getFileHandle(FILE_NAME, { create: true });
     const writable = await handle.createWritable();
     await writable.write(JSON.stringify(scans));
@@ -44,7 +52,7 @@ export const clearScans = async (): Promise<void> => {
   if (typeof window === 'undefined') return;
   if (hasOpfs) {
     try {
-      const root = await (navigator.storage as any).getDirectory();
+      const root = await getStorage().getDirectory();
       await root.removeEntry(FILE_NAME);
     } catch {
       /* ignore */
