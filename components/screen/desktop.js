@@ -26,6 +26,8 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.prefetchIdle = null;
+        this.prefetchEvents = ['pointerdown', 'keydown', 'touchstart'];
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -81,12 +83,14 @@ export class Desktop extends Component {
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
+        this.schedulePrefetchRecentApps();
     }
 
     componentWillUnmount() {
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
+        this.cancelPrefetch();
     }
 
     checkForNewFolders = () => {
@@ -135,6 +139,44 @@ export class Desktop extends Component {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
         document.removeEventListener('keydown', this.handleContextKey);
+    }
+
+    getRecentApps = () => {
+        let recent = [];
+        try { recent = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]'); } catch (e) { recent = []; }
+        return recent;
+    }
+
+    cleanupPrefetchListeners = () => {
+        this.prefetchEvents.forEach(evt => {
+            window.removeEventListener(evt, this.cancelPrefetch);
+        });
+    }
+
+    cancelPrefetch = () => {
+        if (this.prefetchIdle) {
+            window.cancelIdleCallback(this.prefetchIdle);
+            this.prefetchIdle = null;
+        }
+        this.cleanupPrefetchListeners();
+    }
+
+    schedulePrefetchRecentApps = () => {
+        if (typeof window === 'undefined' || !('requestIdleCallback' in window)) return;
+        const recent = this.getRecentApps().slice(0, 3);
+        if (!recent.length) return;
+        this.prefetchIdle = window.requestIdleCallback(() => {
+            recent.forEach(id => {
+                const app = apps.find(a => a.id === id);
+                if (app && typeof app.screen?.prefetch === 'function') {
+                    app.screen.prefetch();
+                }
+            });
+            this.cleanupPrefetchListeners();
+        });
+        this.prefetchEvents.forEach(evt => {
+            window.addEventListener(evt, this.cancelPrefetch);
+        });
     }
 
     handleGlobalShortcut = (e) => {
@@ -499,6 +541,12 @@ export class Desktop extends Component {
             this.setState({ minimized_windows: minimized_windows }, this.saveSession);
             return;
         }
+
+        let recentApps = [];
+        try { recentApps = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]'); } catch (e) { recentApps = []; }
+        recentApps = recentApps.filter(id => id !== objId);
+        recentApps.unshift(objId);
+        safeLocalStorage?.setItem('recentApps', JSON.stringify(recentApps.slice(0, 20)));
 
         //if app is already opened
         if (this.app_stack.includes(objId)) {
