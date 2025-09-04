@@ -18,11 +18,13 @@ const ubuntu = Ubuntu({
   weight: ['300', '400', '500', '700'],
 });
 
+
 function MyApp(props) {
   const { Component, pageProps } = props;
 
 
   useEffect(() => {
+    initA2HS();
     const initAnalytics = async () => {
       const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
       if (trackingId) {
@@ -156,6 +158,7 @@ function MyApp(props) {
         </PipPortalProvider>
       </SettingsProvider>
     </div>
+
   );
 }
 
