@@ -14,6 +14,14 @@ body {
   padding: 8px 12px;
 }
 
+#search-notes {
+  position: fixed;
+  top: 10px;
+  left: 120px;
+  z-index: 1000;
+  padding: 8px 12px;
+}
+
 #notes {
   position: relative;
   width: 100%;
@@ -33,13 +41,14 @@ body {
   border-radius: 4px;
 }
 
-.note textarea {
+.note .note-content {
   width: 100%;
-  height: 150px;
+  min-height: 150px;
   border: none;
   background: transparent;
   resize: none;
   outline: none;
+  white-space: pre-wrap;
 }
 
 .note .controls {
@@ -59,4 +68,13 @@ body {
     width: 150px;
     min-height: 150px;
   }
+}
+
+.search-match {
+  background: yellow;
+  color: black;
+}
+
+.search-current {
+  outline: 2px solid red;
 }

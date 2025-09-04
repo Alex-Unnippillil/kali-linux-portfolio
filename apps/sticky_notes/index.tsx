@@ -10,7 +10,14 @@ export default function StickyNotes() {
 
   return (
     <div>
-      <button id="add-note">Add Note</button>
+      <div className="toolbar">
+        <button id="add-note">Add Note</button>
+        <input
+          id="search-notes"
+          type="text"
+          placeholder="Search..."
+        />
+      </div>
       <div id="notes" />
     </div>
   );

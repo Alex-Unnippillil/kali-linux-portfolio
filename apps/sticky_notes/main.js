@@ -6,11 +6,15 @@ import { getDb } from '../../utils/safeIDB';
 
 let notesContainer = null;
 let addNoteBtn = null;
+let searchInput = null;
+let matches = [];
+let currentMatch = 0;
 
 function initDom() {
   if (!isBrowser) return;
   notesContainer = document.getElementById('notes');
   addNoteBtn = document.getElementById('add-note');
+  searchInput = document.getElementById('search-notes');
 }
 
 initDom();
@@ -41,6 +45,34 @@ function getDB() {
 
 let notes = [];
 
+// OPFS index helpers
+let opfsDir = null;
+async function getIndexDir() {
+  try {
+    if (!opfsDir) {
+      // @ts-ignore - OPFS not yet in TypeScript libs
+      const root = await navigator.storage?.getDirectory();
+      if (!root) return null;
+      opfsDir = await root.getDirectoryHandle('sticky-notes', { create: true });
+    }
+    return opfsDir;
+  } catch {
+    return null;
+  }
+}
+
+async function writeIndex() {
+  const dir = await getIndexDir();
+  if (!dir) return;
+  try {
+    const handle = await dir.getFileHandle('index.json', { create: true });
+    const writable = await handle.createWritable();
+    const data = notes.map(({ id, content }) => ({ id, content }));
+    await writable.write(JSON.stringify(data));
+    await writable.close();
+  } catch {}
+}
+
 async function saveNotes() {
   try {
     const dbp = getDB();
@@ -49,9 +81,11 @@ async function saveNotes() {
     const tx = db.transaction(STORE_NAME, 'readwrite');
     await tx.store.clear();
     for (const note of notes) {
-      await tx.store.put(note);
+      const { id, content, x, y, color, width, height } = note;
+      await tx.store.put({ id, content, x, y, color, width, height });
     }
     await tx.done;
+    await writeIndex();
   } catch (err) {
     console.error('Failed to save notes', err);
   }
@@ -87,17 +121,21 @@ function createNoteElement(note) {
     notes = notes.filter((n) => n.id !== note.id);
     el.remove();
     void saveNotes();
+    applySearch(searchInput?.value || '');
   });
 
   controls.appendChild(colorInput);
   controls.appendChild(deleteBtn);
   el.appendChild(controls);
 
-  const textarea = document.createElement('textarea');
-  textarea.value = note.content;
-  textarea.addEventListener('input', (e) => {
-    note.content = e.target.value;
+  const textarea = document.createElement('div');
+  textarea.className = 'note-content';
+  textarea.contentEditable = 'true';
+  textarea.innerText = note.content;
+  textarea.addEventListener('input', () => {
+    note.content = textarea.textContent;
     void saveNotes();
+    applySearch(searchInput?.value || '');
   });
   el.appendChild(textarea);
   el.addEventListener('mouseup', () => {
@@ -123,12 +161,17 @@ function addNote(content = '') {
   notes.push(note);
   createNoteElement(note);
   void saveNotes();
+  applySearch(searchInput?.value || '');
 }
 
 function enableDrag(el, note) {
   let offsetX, offsetY;
   function onMouseDown(e) {
-    if (['TEXTAREA', 'INPUT', 'BUTTON'].includes(e.target.tagName)) return;
+    if (
+      ['INPUT', 'BUTTON'].includes(e.target.tagName) ||
+      e.target.classList?.contains('note-content')
+    )
+      return;
     offsetX = e.clientX - el.offsetLeft;
     offsetY = e.clientY - el.offsetTop;
     document.addEventListener('mousemove', onMouseMove);
@@ -166,6 +209,7 @@ async function init() {
     }
 
     notes.forEach(createNoteElement);
+    applySearch(searchInput?.value || '');
 
     const params = new URLSearchParams(location.search);
     const sharedText = params.get('text');
@@ -186,5 +230,71 @@ async function init() {
 
 if (isBrowser && addNoteBtn) {
   addNoteBtn.addEventListener('click', addNote);
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      applySearch(e.target.value);
+    });
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (matches.length === 0) return;
+        currentMatch += e.key === 'ArrowDown' ? 1 : -1;
+        if (currentMatch < 0) currentMatch = matches.length - 1;
+        if (currentMatch >= matches.length) currentMatch = 0;
+        focusMatch(currentMatch);
+      }
+    });
+  }
   void init();
+}
+
+function escapeHTML(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function escapeRegExp(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function highlightText(text, query) {
+  if (!query) return escapeHTML(text);
+  const regex = new RegExp(escapeRegExp(query), 'gi');
+  return escapeHTML(text).replace(
+    regex,
+    (match) => `<mark class="search-match">${match}</mark>`,
+  );
+}
+
+function applySearch(query) {
+  matches.forEach((m) => m.classList.remove('search-current'));
+  matches = [];
+  currentMatch = 0;
+  notes.forEach((note) => {
+    const el = document.querySelector(
+      `.note[data-id="${note.id}"] .note-content`,
+    );
+    if (!el) return;
+    if (!query) {
+      el.textContent = note.content;
+      return;
+    }
+    el.innerHTML = highlightText(note.content, query);
+  });
+  if (query) {
+    matches = Array.from(document.querySelectorAll('.search-match'));
+    if (matches.length) focusMatch(0);
+  }
+}
+
+function focusMatch(idx) {
+  matches.forEach((m) => m.classList.remove('search-current'));
+  const el = matches[idx];
+  if (!el) return;
+  el.classList.add('search-current');
+  el.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
