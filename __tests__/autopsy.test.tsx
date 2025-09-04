@@ -4,6 +4,7 @@ import Autopsy from '../components/apps/autopsy';
 
 describe('Autopsy plugins and timeline', () => {
   beforeEach(() => {
+    (global as any).Worker = undefined;
     (global as any).fetch = jest.fn((url: string) => {
       if (url === '/plugin-marketplace.json') {
         return Promise.resolve({
@@ -29,7 +30,7 @@ describe('Autopsy plugins and timeline', () => {
                   type: 'Log',
                   description: '',
                   size: 456,
-                  plugin: 'metadata',
+                  plugin: 'hash',
                   timestamp: '2023-01-02T00:00:00Z',
                 },
               ],
@@ -63,17 +64,24 @@ describe('Autopsy plugins and timeline', () => {
     );
   });
 
-  it('filters artifacts by type', async () => {
+  it('filters artifacts with unified filter UI', async () => {
     render(<Autopsy />);
     fireEvent.change(screen.getByPlaceholderText('Case name'), {
       target: { value: 'Demo' },
     });
     fireEvent.click(screen.getByText('Create Case'));
-    await screen.findByLabelText('Filter by type');
+    await waitFor(() =>
+      expect(
+        screen.getByLabelText('plugin hash').parentElement
+      ).toHaveTextContent(/hash\s*\(1\)/i)
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByLabelText('artifact Document').parentElement
+      ).toHaveTextContent(/Document\s*\(1\)/i)
+    );
     expect(screen.getByText('resume.docx')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Filter by type'), {
-      target: { value: 'Log' },
-    });
+    fireEvent.click(screen.getByLabelText('plugin hash'));
     expect(screen.queryByText('resume.docx')).toBeNull();
     expect(screen.getByText('system.log')).toBeInTheDocument();
   });
