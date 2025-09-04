@@ -21,7 +21,7 @@
   --color-ubt-gedit-orange: #F39A21;
   --color-ubt-gedit-blue: #50B6C6;
   --color-ubt-gedit-dark: #003B70;
-  --color-ub-border-orange: #1793d1;
+  --color-ub-border-orange: #2a2e36;
   --color-ub-dark-grey: #2a2e36;
   --color-bg: #0f1317;
   --color-text: #F5F5F5;
@@ -71,7 +71,7 @@
   --color-ubt-cool-grey: #ffffff;
   --color-ub-orange: #ffff00;
   --color-ub-lite-abrgn: #00ffff;
-  --color-ub-border-orange: #ffff00;
+  --color-ub-border-orange: #2a2e36;
   --game-color-secondary: #ffff00;
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
@@ -114,6 +114,6 @@
     --color-ubt-cool-grey: #ffffff;
     --color-ub-orange: #ffff00;
     --color-ub-lite-abrgn: #00ffff;
-    --color-ub-border-orange: #ffff00;
+    --color-ub-border-orange: #2a2e36;
   }
 }

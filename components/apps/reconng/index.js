@@ -265,7 +265,7 @@ const ReconNG = () => {
         style: {
           padding: '10px',
           'background-opacity': 0.1,
-          'border-color': '#555',
+          'border-color': '#2a2e36',
         },
       },
     ],

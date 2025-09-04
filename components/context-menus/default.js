@@ -20,7 +20,7 @@ function DefaultMenu(props) {
             aria-hidden={!props.active}
             ref={menuRef}
             onKeyDown={handleKeyDown}
-            className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
+            className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left border-ub-border rounded text-white py-4 absolute z-50 text-sm"}
         >
 
             <Devider />
@@ -71,7 +71,7 @@ function DefaultMenu(props) {
 function Devider() {
     return (
         <div className="flex justify-center w-full">
-            <div className=" border-t border-gray-900 py-1 w-2/5"></div>
+            <div className=" border-t border-ub-border py-1 w-2/5"></div>
         </div>
     );
 }

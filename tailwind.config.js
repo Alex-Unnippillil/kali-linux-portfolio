@@ -34,7 +34,7 @@ module.exports = {
         'ubt-gedit-orange': 'var(--color-ubt-gedit-orange)',
         'ubt-gedit-blue': 'var(--color-ubt-gedit-blue)',
         'ubt-gedit-dark': 'var(--color-ubt-gedit-dark)',
-        'ub-border-orange': 'var(--color-ub-border-orange)',
+        'ub-border': 'var(--color-border)',
         'ub-dark-grey': 'var(--color-ub-dark-grey)',
       },
       fontFamily: {

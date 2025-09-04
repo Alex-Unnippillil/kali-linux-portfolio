@@ -32,7 +32,7 @@ html[data-theme='dark'] {
   --color-muted: #1f1f1f;
   --color-surface: #121212;
   --color-inverse: #ffffff;
-  --color-border: #333333;
+  --color-border: #2a2e36;
   --color-terminal: #00ff00;
   --color-dark: #0a0a0a;
 }
@@ -47,7 +47,7 @@ html[data-theme='neon'] {
   --color-muted: #222222;
   --color-surface: #111111;
   --color-inverse: #ffffff;
-  --color-border: #333333;
+  --color-border: #2a2e36;
   --color-terminal: #39ff14;
   --color-dark: #000000;
 }
@@ -62,7 +62,7 @@ html[data-theme='matrix'] {
   --color-muted: #003300;
   --color-surface: #001100;
   --color-inverse: #ffffff;
-  --color-border: #003300;
+  --color-border: #2a2e36;
   --color-terminal: #00ff00;
   --color-dark: #000000;
 

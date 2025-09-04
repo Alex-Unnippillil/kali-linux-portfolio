@@ -16,7 +16,7 @@ const HexEditor = ({ hex, theme }) => {
     surface: '#374151',
     accent: '#fbbf24',
     text: '#ffffff',
-    border: '#4b5563',
+    border: '#2a2e36',
   });
 
   useEffect(() => {
@@ -26,7 +26,7 @@ const HexEditor = ({ hex, theme }) => {
       surface: style.getPropertyValue('--r2-surface').trim() || '#374151',
       accent: style.getPropertyValue('--r2-accent').trim() || '#fbbf24',
       text: style.getPropertyValue('--r2-text').trim() || '#ffffff',
-      border: style.getPropertyValue('--r2-border').trim() || '#4b5563',
+      border: style.getPropertyValue('--r2-border').trim() || '#2a2e36',
     };
   }, [theme]);
 

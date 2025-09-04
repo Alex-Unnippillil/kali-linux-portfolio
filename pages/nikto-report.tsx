@@ -186,7 +186,7 @@ const NiktoReport: React.FC = () => {
             <tr
               key={f.path}
               className="odd:bg-gray-800 cursor-pointer hover:bg-gray-700 border-l-4"
-              style={{ borderLeftColor: severityColors[f.severity] || '#4b5563' }}
+              style={{ borderLeftColor: severityColors[f.severity] || '#2a2e36' }}
               onClick={() => setSelected(f)}
             >
               <td className="p-2">{f.path}</td>

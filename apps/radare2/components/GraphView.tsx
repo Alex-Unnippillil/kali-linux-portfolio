@@ -27,7 +27,7 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
     surface: "#374151",
     text: "#fff",
     accent: "#fbbf24",
-    border: "#4b5563",
+    border: "#2a2e36",
   });
 
   const graphData = useMemo(() => {
@@ -47,7 +47,7 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
       surface: style.getPropertyValue("--r2-surface").trim() || "#374151",
       text: style.getPropertyValue("--r2-text").trim() || "#fff",
       accent: style.getPropertyValue("--r2-accent").trim() || "#fbbf24",
-      border: style.getPropertyValue("--r2-border").trim() || "#4b5563",
+      border: style.getPropertyValue("--r2-border").trim() || "#2a2e36",
     });
   }, [theme]);
 
