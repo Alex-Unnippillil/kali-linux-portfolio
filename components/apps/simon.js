@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Howl } from "howler";
 import seedrandom from "seedrandom";
 import GameLayout from "./GameLayout";
-import usePersistentState from "../usePersistentState";
+import usePersistentState from "../../hooks/usePersistentState";
 import { vibrate } from "./Games/common/haptics";
 import {
   getAudioContext,

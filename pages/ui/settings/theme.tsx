@@ -1,7 +1,7 @@
 "use client";
 
 import { ChangeEvent } from 'react';
-import usePersistentState from '../../../hooks/usePersistentState.js';
+import usePersistentState from '../../../hooks/usePersistentState';
 import { useSettings } from '../../../hooks/useSettings';
 
 /** Simple Adwaita-like toggle switch */

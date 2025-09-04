@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from 'react';
 
 /**
@@ -56,5 +58,5 @@ export const useSnapSetting = () =>
   usePersistentState<boolean>(
     'snap-enabled',
     true,
-    (value): value is boolean => typeof value === 'boolean',
+    (v): v is boolean => typeof v === 'boolean',
   );

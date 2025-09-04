@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import usePersistentState from "../usePersistentState";
+import usePersistentState from "../../hooks/usePersistentState";
 
 /**
  * Generic game settings panel providing common functionality for browser games.

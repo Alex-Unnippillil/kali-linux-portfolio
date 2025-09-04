@@ -5,7 +5,7 @@ import React, {
   useMemo,
 } from 'react';
 import dynamic from 'next/dynamic';
-import usePersistentState from '../../hooks/usePersistentState';
+import usePersistentState from '../../../hooks/usePersistentState';
 import ReportTemplates from './components/ReportTemplates';
 import { useSettings } from '../../../hooks/useSettings';
 
