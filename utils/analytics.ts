@@ -4,8 +4,9 @@ type EventInput = Parameters<typeof ReactGA.event>[0];
 
 const safeEvent = (...args: Parameters<typeof ReactGA.event>): void => {
   try {
-    if (typeof ReactGA?.event === 'function') {
-      (ReactGA.event as any)(...args);
+    const eventFn = ReactGA.event;
+    if (typeof eventFn === 'function') {
+      eventFn(...args);
     }
   } catch {
     // Ignore analytics errors
@@ -13,7 +14,7 @@ const safeEvent = (...args: Parameters<typeof ReactGA.event>): void => {
 };
 
 export const logEvent = (event: EventInput): void => {
-  safeEvent(event as any);
+  safeEvent(event);
 };
 
 export const logGameStart = (game: string): void => {
