@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { zoomIdentity, type ZoomTransform } from "d3-zoom";
 
 interface Block {
   addr: string;
@@ -11,6 +12,8 @@ interface Block {
 interface GraphViewProps {
   blocks: Block[];
   theme: string;
+  selectedAddr?: string;
+  onSelect?: (addr: string) => void;
 }
 
 const ForceGraph2D = dynamic(
@@ -18,8 +21,14 @@ const ForceGraph2D = dynamic(
   { ssr: false },
 );
 
-const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
+const GraphView: React.FC<GraphViewProps> = ({
+  blocks,
+  theme,
+  selectedAddr,
+  onSelect,
+}) => {
   const fgRef = useRef<any | null>(null);
+  const transformRef = useRef<ZoomTransform>(zoomIdentity);
   const [center, setCenter] = useState({ x: 0, y: 0 });
   const [selected, setSelected] = useState<Block | null>(null);
   const [colors, setColors] = useState({
@@ -58,33 +67,37 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
       const bbox = fg.getGraphBbox();
       const cx = bbox.x + bbox.width / 2;
       const cy = bbox.y + bbox.height / 2;
+      const k = fg.zoom();
+      transformRef.current = zoomIdentity
+        .translate(-cx * k, -cy * k)
+        .scale(k);
       setCenter({ x: cx, y: cy });
     }
   }, [graphData]);
 
-  const zoomIn = () => {
+  const applyTransform = () => {
     const fg = fgRef.current;
     if (!fg) return;
-    const current = fg.zoom();
-    fg.zoom(current * 1.2, 200);
+    const t = transformRef.current;
+    fg.zoom(t.k, 200);
+    fg.centerAt(-t.x / t.k, -t.y / t.k, 200);
+    setCenter({ x: -t.x / t.k, y: -t.y / t.k });
+  };
+
+  const zoomIn = () => {
+    transformRef.current = transformRef.current.scale(1.2);
+    applyTransform();
   };
 
   const zoomOut = () => {
-    const fg = fgRef.current;
-    if (!fg) return;
-    const current = fg.zoom();
-    fg.zoom(current / 1.2, 200);
+    transformRef.current = transformRef.current.scale(1 / 1.2);
+    applyTransform();
   };
 
   const pan = (dx: number, dy: number) => {
-    const fg = fgRef.current;
-    if (!fg) return;
-    setCenter((c) => {
-      const nx = c.x + dx;
-      const ny = c.y + dy;
-      fg.centerAt(nx, ny, 200);
-      return { x: nx, y: ny };
-    });
+    const k = transformRef.current.k;
+    transformRef.current = transformRef.current.translate(-dx * k, -dy * k);
+    applyTransform();
   };
 
   const roundRect = (
@@ -153,9 +166,35 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
     ctx.fill();
   };
 
+  useEffect(() => {
+    if (selectedAddr) {
+      const block = blocks.find((b) => b.addr === selectedAddr) || null;
+      setSelected(block);
+      if (block && fgRef.current) {
+        const node = graphData.nodes.find((n: any) => n.id === block.addr);
+        if (node && typeof node.x === "number" && typeof node.y === "number") {
+          const k = transformRef.current.k;
+          transformRef.current = zoomIdentity
+            .translate(-node.x * k, -node.y * k)
+            .scale(k);
+          applyTransform();
+        }
+      }
+    }
+  }, [selectedAddr, blocks, graphData]);
+
   const handleNodeClick = (node: any) => {
     const block = blocks.find((b) => b.addr === node.id) || null;
+    if (!block) return;
+    if (typeof node.x === "number" && typeof node.y === "number") {
+      const k = transformRef.current.k;
+      transformRef.current = zoomIdentity
+        .translate(-node.x * k, -node.y * k)
+        .scale(k);
+      applyTransform();
+    }
     setSelected(block);
+    onSelect?.(block.addr);
   };
 
   const linkColor = (link: any) => {
