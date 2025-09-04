@@ -13,7 +13,11 @@
       "2wire",
       "xslt-password-reset"
     ],
-    "transcript": "",
+    "transcript": "[*] Running module...\n[*] Scanning target 192.168.0.1\n[*] Exploit completed successfully",
+    "options": {
+      "RHOSTS": { "desc": "Target address range", "default": "192.168.0.1", "required": true },
+      "RPORT": { "desc": "Target port", "default": 80, "required": false }
+    },
     "doc": "2Wire Cross-Site Request Forgery Password Reset Vulnerability",
     "disclosure_date": "2007-08-15",
     "teaches": "Teaches about admin"
