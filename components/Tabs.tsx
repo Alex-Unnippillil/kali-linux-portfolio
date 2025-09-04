@@ -28,9 +28,11 @@ export default function Tabs<T extends string>({
           aria-selected={active === t.id}
           tabIndex={active === t.id ? 0 : -1}
           onClick={() => onChange(t.id)}
-          className={`px-4 py-2 focus:outline-none ${
-            active === t.id ? "bg-ub-orange text-white" : "text-ubt-grey"
-          }`}
+          className={[
+            "px-4 py-2",
+            "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-outline-color)]",
+            active === t.id ? "bg-ub-orange text-white" : "text-ubt-grey",
+          ].join(" ")}
         >
           {t.label}
         </button>

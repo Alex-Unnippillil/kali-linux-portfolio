@@ -20,9 +20,12 @@ export default function ToggleSwitch({
       aria-checked={checked}
       aria-label={ariaLabel}
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex w-10 h-5 rounded-full transition-colors focus:outline-none ${
-        checked ? "bg-ub-orange" : "bg-ubt-cool-grey"
-      } ${className}`.trim()}
+      className={[
+        "relative inline-flex w-10 h-5 rounded-full transition-colors",
+        "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-outline-color)]",
+        checked ? "bg-ub-orange" : "bg-ubt-cool-grey",
+        className,
+      ].join(" ")}
     >
       <span
         className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-ub-cool-grey transition-transform duration-200 ${
