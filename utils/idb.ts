@@ -1,3 +1,5 @@
+"use client";
+
 const DB_NAME = 'kali-games';
 const VERSION = 1;
 const STORE_SEEDS = 'seeds';

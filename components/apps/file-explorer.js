@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect, useRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 
@@ -60,6 +62,10 @@ const STORE_NAME = 'recent';
 
 function openDB() {
   return new Promise((resolve, reject) => {
+    if (typeof indexedDB === 'undefined') {
+      resolve(null);
+      return;
+    }
     const req = indexedDB.open(DB_NAME, 1);
     req.onupgradeneeded = () => {
       req.result.createObjectStore(STORE_NAME, { autoIncrement: true });
@@ -72,6 +78,7 @@ function openDB() {
 async function getRecentDirs() {
   try {
     const db = await openDB();
+    if (!db) return [];
     return await new Promise((resolve) => {
       const tx = db.transaction(STORE_NAME, 'readonly');
       const store = tx.objectStore(STORE_NAME);
@@ -87,6 +94,7 @@ async function getRecentDirs() {
 async function addRecentDir(handle) {
   try {
     const db = await openDB();
+    if (!db) return;
     const entry = { name: handle.name, handle };
     await new Promise((resolve) => {
       const tx = db.transaction(STORE_NAME, 'readwrite');
