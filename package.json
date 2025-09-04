@@ -128,7 +128,7 @@
     "fast-glob": "^3.3.3",
     "jest": "30.0.5",
     "jest-environment-jsdom": "30.0.5",
-    "magic-string": "patch:magic-string@npm:0.30.18#./.yarn/patches/magic-string-0.30.18.patch",
+    "magic-string": "0.30.18",
     "node-mocks-http": "1.17.2",
     "pa11y": "^9.0.0",
     "playwright-core": "^1.55.0",
@@ -136,7 +136,7 @@
     "typescript": "5.8.2",
     "wait-on": "^8.0.4",
     "webpack": "^5.92.0",
-    "workbox-build": "patch:workbox-build@npm:7.1.1#./.yarn/patches/workbox-build-npm-7.1.1-a854f3faae.patch",
+    "workbox-build": "7.1.1",
     "ws": "^8.18.0"
   },
   "resolutions": {
@@ -145,7 +145,6 @@
     "webpack": "^5.92.0",
     "glob@npm:^7.1.6": "npm:glob@^9.3.5",
     "workbox-build@npm:7.1.0": "npm:workbox-build@7.1.1"
-
   },
   "packageManager": "yarn@4.9.2"
 }
