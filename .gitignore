@@ -49,3 +49,7 @@ package-lock.json
 utils/gamepad.js
 tsconfig.gamepad.tsbuildinfo
 tsconfig.tsbuildinfo
+# test reports
+flake-report.json
+jest-results*.json
+jest-rerun-results.json
