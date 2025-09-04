@@ -35,6 +35,7 @@ export default function ThemeSettings() {
   const { theme, setTheme } = useSettings();
   const [panelSize, setPanelSize] = usePersistentState('app:panel-icons', 16);
   const [gridSize, setGridSize] = usePersistentState('app:grid-icons', 64);
+  const [panelRows, setPanelRows] = usePersistentState('app:panel-rows', 1);
 
   const handleChange = (e: ChangeEvent<HTMLSelectElement>) => {
     setTheme(e.target.value);
@@ -89,6 +90,18 @@ export default function ThemeSettings() {
               style={{ width: panelSize, height: panelSize }}
             ></div>
           </div>
+        </div>
+
+        <div className="mt-6">
+          <h2 className="text-lg mb-2">Panel Rows</h2>
+          <input
+            type="number"
+            min={1}
+            max={4}
+            value={panelRows}
+            onChange={(e) => setPanelRows(Number(e.target.value))}
+            className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey w-20"
+          />
         </div>
 
         <div className="mt-6">
