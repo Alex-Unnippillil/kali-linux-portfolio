@@ -80,6 +80,43 @@ describe('Window snapping preview', () => {
     expect(screen.getByTestId('snap-preview')).toBeInTheDocument();
   });
 
+  it('shows maximize preview when dragged near top edge', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    // Simulate being near the top edge
+    winEl.getBoundingClientRect = () => ({
+      left: 200,
+      top: 5,
+      right: 300,
+      bottom: 105,
+      width: 100,
+      height: 100,
+      x: 200,
+      y: 5,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+
+    expect(screen.getByTestId('snap-preview')).toBeInTheDocument();
+  });
+
   it('hides preview when away from edge', () => {
     const ref = React.createRef<Window>();
     render(
@@ -110,6 +147,59 @@ describe('Window snapping preview', () => {
       toJSON: () => {}
     });
 
+    act(() => {
+      ref.current!.handleDrag();
+    });
+
+    expect(screen.queryByTestId('snap-preview')).toBeNull();
+  });
+
+  it('cancels preview when dragging away from edge', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    // Start near the left edge
+    winEl.getBoundingClientRect = () => ({
+      left: 5,
+      top: 10,
+      right: 105,
+      bottom: 110,
+      width: 100,
+      height: 100,
+      x: 5,
+      y: 10,
+      toJSON: () => {}
+    });
+    act(() => {
+      ref.current!.handleDrag();
+    });
+    expect(screen.getByTestId('snap-preview')).toBeInTheDocument();
+
+    // Move away from edges
+    winEl.getBoundingClientRect = () => ({
+      left: 200,
+      top: 200,
+      right: 300,
+      bottom: 300,
+      width: 100,
+      height: 100,
+      x: 200,
+      y: 200,
+      toJSON: () => {}
+    });
     act(() => {
       ref.current!.handleDrag();
     });
@@ -160,6 +250,47 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.height).toBe(96.3);
   });
 
+  it('maximizes window on drag stop near top edge', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 200,
+      top: 5,
+      right: 300,
+      bottom: 105,
+      width: 100,
+      height: 100,
+      x: 200,
+      y: 5,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+    act(() => {
+      ref.current!.handleStop();
+    });
+
+    expect(ref.current!.state.maximized).toBe(true);
+    expect(ref.current!.state.width).toBe(100.2);
+    expect(ref.current!.state.height).toBe(96.3);
+  });
+
   it('releases snap with Alt+ArrowDown restoring size', () => {
     const ref = React.createRef<Window>();
     render(
@@ -199,7 +330,7 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true, preventDefault: () => {}, stopPropagation: () => {} } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
