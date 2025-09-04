@@ -336,7 +336,6 @@ const AsciiArtApp = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
             {samples.map((s, i) => (
               <pre
-                // eslint-disable-next-line react/no-array-index-key
                 key={i}
                 onMouseEnter={() => copy(s)}
                 className="p-2 whitespace-pre cursor-pointer bg-black hover:bg-gray-800 font-mono leading-none"

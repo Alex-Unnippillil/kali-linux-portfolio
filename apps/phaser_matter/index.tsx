@@ -149,7 +149,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
 
       create() {
         const data = this.cache.json.get('level');
-        this.state = new GameState(data.spawn);
+        this.gameState = new GameState(data.spawn);
 
         // Parallax background layers
         data.parallaxLayers?.forEach((l: any) => {
@@ -227,10 +227,10 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
             if (body.label === 'checkpoint') {
               const cp = this.checkpointFlags.find((c) => c.body === body);
               if (cp) cp.flag.setFillStyle(0x00ff00);
-              this.state.setCheckpoint({ x: body.position.x, y: body.position.y });
+              this.gameState.setCheckpoint({ x: body.position.x, y: body.position.y });
             }
             if (body.label === 'hazard') {
-              const s = this.state.getRespawnPoint();
+              const s = this.gameState.getRespawnPoint();
               this.player.setPosition(s.x, s.y);
               this.player.setVelocity(0, 0);
             }
@@ -240,7 +240,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
                 const [coin] = this.coins.splice(idx, 1);
                 coin.sprite.destroy();
                 this.matter.world.remove(body);
-                const count = this.state.addCoin();
+                const count = this.gameState.addCoin();
                 this.coinText.setText(`Coins: ${count}`);
               }
             }
@@ -306,7 +306,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
         }
 
         const data = this.cache.json.get('level');
-        const pos = this.state.respawnIfOutOfBounds({ x: this.player.x, y: this.player.y }, data.bounds.fallY);
+        const pos = this.gameState.respawnIfOutOfBounds({ x: this.player.x, y: this.player.y }, data.bounds.fallY);
         if (pos !== this.player) {
           this.player.setPosition(pos.x, pos.y);
           this.player.setVelocity(0, 0);

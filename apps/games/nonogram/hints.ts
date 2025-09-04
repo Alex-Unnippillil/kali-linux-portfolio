@@ -37,4 +37,5 @@ export const createHintSystem = (maxHints: number) => {
   };
 };
 
-export default { revealRandomCell, createHintSystem };
+const hintsApi = { revealRandomCell, createHintSystem };
+export default hintsApi;

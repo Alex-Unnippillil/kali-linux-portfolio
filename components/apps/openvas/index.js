@@ -28,10 +28,8 @@ const profileTabs = [
 const notify = (title, body) => {
   if (typeof window === 'undefined') return;
   if ('Notification' in window && Notification.permission === 'granted') {
-    // eslint-disable-next-line no-new
     new Notification(title, { body });
   } else {
-    // eslint-disable-next-line no-alert
     alert(`${title}: ${body}`);
   }
 };

@@ -148,4 +148,5 @@ export const isValidPlacement = (
   }
 };
 
-export default { generateSudoku, getCandidates, isValidPlacement, isValid };
+const sudokuApi = { generateSudoku, getCandidates, isValidPlacement, isValid };
+export default sudokuApi;
