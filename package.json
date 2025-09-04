@@ -134,6 +134,7 @@
     "typescript": "^5.6",
     "wait-on": "^8.0.4",
     "webpack": "^5.92.0",
+    "workbox-build": "patch:workbox-build@npm:7.1.1#./.yarn/patches/workbox-build-npm-7.1.1-a854f3faae.patch",
     "ws": "^8.18.0"
   },
   "resolutions": {
@@ -141,8 +142,7 @@
     "source-map": "^0.7.6",
     "test-exclude": "7.0.1",
     "webpack": "^5.92.0",
-    "workbox-build@npm:7.1.1": "patch:workbox-build@npm%3A7.1.1#~/.yarn/patches/workbox-build-npm-7.1.1-a854f3faae.patch",
-    "workbox-build@npm:7.1.0": "patch:workbox-build@npm%3A7.1.1#~/.yarn/patches/workbox-build-npm-7.1.1-a854f3faae.patch",
+    "workbox-build@npm:7.1.0": "npm:workbox-build@7.1.1",
     "glob@npm:^7.1.6": "npm:glob@^9.3.5"
   },
   "packageManager": "yarn@4.9.2"
