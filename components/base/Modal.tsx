@@ -1,9 +1,16 @@
 import React, { useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ModalProps {
     isOpen: boolean;
     onClose: () => void;
     children: React.ReactNode;
+    /**
+     * Root element whose interaction should be disabled when the
+     * modal is open. If a string is provided it is treated as an id.
+     * Defaults to the Next.js root (`__next`).
+     */
+    overlayRoot?: string | HTMLElement;
 }
 
 const FOCUSABLE_SELECTORS = [
@@ -20,9 +27,27 @@ const FOCUSABLE_SELECTORS = [
     '[contenteditable]'
 ].join(',');
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot }) => {
     const modalRef = useRef<HTMLDivElement>(null);
     const triggerRef = useRef<HTMLElement | null>(null);
+    const portalRef = useRef<HTMLDivElement | null>(null);
+    const inertRootRef = useRef<HTMLElement | null>(null);
+
+    if (!portalRef.current && typeof document !== 'undefined') {
+        const el = document.createElement('div');
+        portalRef.current = el;
+        document.body.appendChild(el);
+    }
+
+    const getOverlayRoot = useCallback((): HTMLElement | null => {
+        if (overlayRoot) {
+            if (typeof overlayRoot === 'string') {
+                return document.getElementById(overlayRoot);
+            }
+            return overlayRoot;
+        }
+        return document.getElementById('__next') || document.body;
+    }, [overlayRoot]);
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
         if (e.key === 'Escape') {
@@ -46,8 +71,19 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children }) => {
     }, [onClose]);
 
     useEffect(() => {
+        return () => {
+            if (portalRef.current) {
+                document.body.removeChild(portalRef.current);
+                portalRef.current = null;
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        inertRootRef.current = getOverlayRoot();
         if (isOpen) {
             triggerRef.current = document.activeElement as HTMLElement;
+            inertRootRef.current?.setAttribute('inert', '');
             const elements = modalRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS);
             if (elements && elements.length > 0) {
                 elements[0].focus();
@@ -55,14 +91,18 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children }) => {
                 modalRef.current?.focus();
             }
         } else {
+            inertRootRef.current?.removeAttribute('inert');
             triggerRef.current?.focus();
             triggerRef.current = null;
         }
-    }, [isOpen]);
+        return () => {
+            inertRootRef.current?.removeAttribute('inert');
+        };
+    }, [isOpen, getOverlayRoot]);
 
-    if (!isOpen) return null;
+    if (!isOpen || !portalRef.current) return null;
 
-    return (
+    return createPortal(
         <div
             role="dialog"
             aria-modal="true"
@@ -71,7 +111,8 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children }) => {
             tabIndex={-1}
         >
             {children}
-        </div>
+        </div>,
+        portalRef.current
     );
 };
 
