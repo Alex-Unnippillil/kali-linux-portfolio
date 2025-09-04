@@ -284,6 +284,33 @@ describe('Window keyboard dragging', () => {
   });
 });
 
+describe('Window keyboard resizing', () => {
+  it('resizes window using Shift + Arrow keys', () => {
+    const onPositionChange = jest.fn();
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        onPositionChange={onPositionChange}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    fireEvent.keyDown(winEl, { key: 'ArrowRight', shiftKey: true });
+
+    expect(ref.current!.state.width).toBeGreaterThan(60);
+    expect(onPositionChange).toHaveBeenCalled();
+  });
+});
+
 describe('Window overlay inert behaviour', () => {
   it('sets and removes inert on default __next root restoring focus', () => {
     const ref = React.createRef<Window>();
