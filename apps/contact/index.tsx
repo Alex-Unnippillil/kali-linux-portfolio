@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import FormError from "../../components/ui/FormError";
 import Toast from "../../components/ui/Toast";
 import { processContactForm } from "../../components/apps/contact";
+import { contactSchema } from "../../utils/contactSchema";
 import { copyToClipboard } from "../../utils/clipboard";
 import { openMailto } from "../../utils/mailto";
 import { trackEvent } from "@/lib/analytics-client";
@@ -30,6 +31,9 @@ const ContactApp: React.FC = () => {
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
   const [csrfToken, setCsrfToken] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [messageError, setMessageError] = useState("");
 
   useEffect(() => {
     const saved = localStorage.getItem(DRAFT_KEY);
@@ -54,9 +58,39 @@ const ContactApp: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
     setError("");
+    setEmailError("");
+    setMessageError("");
+
+    const emailResult = contactSchema.shape.email.safeParse(email);
+    const messageResult = contactSchema.shape.message.safeParse(message);
+    let hasValidationError = false;
+    if (!emailResult.success) {
+      setEmailError("Invalid email");
+      hasValidationError = true;
+    }
+    if (!messageResult.success) {
+      setMessageError("1-1000 chars");
+      hasValidationError = true;
+    }
+    if (hasValidationError) {
+      setSubmitting(false);
+      setError("Please fix the errors above and try again.");
+      trackEvent("contact_submit_error", { method: "form" });
+      return;
+    }
+
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
     const recaptchaToken = await getRecaptchaToken(siteKey);
+    if (!recaptchaToken) {
+      setError("Captcha verification failed. Please try again.");
+      setSubmitting(false);
+      trackEvent("contact_submit_error", { method: "form" });
+      return;
+    }
+
     try {
       const result = await processContactForm({
         name,
@@ -76,14 +110,13 @@ const ContactApp: React.FC = () => {
         trackEvent("contact_submit", { method: "form" });
       } else {
         setError(result.error || "Submission failed");
-        setToast("Failed to send");
         trackEvent("contact_submit_error", { method: "form" });
       }
     } catch {
       setError("Submission failed");
-      setToast("Failed to send");
       trackEvent("contact_submit_error", { method: "form" });
     }
+    setSubmitting(false);
   };
 
   return (
@@ -147,6 +180,8 @@ const ContactApp: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              aria-invalid={!!emailError}
+              aria-describedby={emailError ? "contact-email-error" : undefined}
             />
             <svg
               className="pointer-events-none absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 text-gray-400"
@@ -163,6 +198,11 @@ const ContactApp: React.FC = () => {
               />
             </svg>
           </div>
+          {emailError && (
+            <FormError id="contact-email-error" className="mt-2">
+              {emailError}
+            </FormError>
+          )}
         </div>
         <div>
           <label htmlFor="contact-message" className="mb-[6px] block text-sm">
@@ -176,6 +216,8 @@ const ContactApp: React.FC = () => {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               required
+              aria-invalid={!!messageError}
+              aria-describedby={messageError ? "contact-message-error" : undefined}
             />
             <svg
               className="pointer-events-none absolute left-3 top-3 h-6 w-6 text-gray-400"
@@ -192,6 +234,11 @@ const ContactApp: React.FC = () => {
               />
             </svg>
           </div>
+          {messageError && (
+            <FormError id="contact-message-error" className="mt-2">
+              {messageError}
+            </FormError>
+          )}
         </div>
         <input
           type="text"
@@ -204,9 +251,14 @@ const ContactApp: React.FC = () => {
         {error && <FormError>{error}</FormError>}
         <button
           type="submit"
-          className="flex h-12 w-full items-center justify-center rounded bg-blue-600 px-4 sm:w-auto"
+          disabled={submitting}
+          className="flex h-12 w-full items-center justify-center rounded bg-blue-600 px-4 sm:w-auto disabled:opacity-50"
         >
-          Send
+          {submitting ? (
+            <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : (
+            "Send"
+          )}
         </button>
       </form>
       {toast && <Toast message={toast} onClose={() => setToast("")} />}
