@@ -7,6 +7,12 @@ import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
+import useSession from '../hooks/useSession';
+
+function DesktopWithSession(props) {
+        const { session, setSession } = useSession();
+        return <Desktop {...props} session={session} setSession={setSession} />;
+}
 
 export default class Ubuntu extends Component {
 	constructor() {
@@ -126,9 +132,9 @@ export default class Ubuntu extends Component {
 					isShutDown={this.state.shutDownScreen}
 					turnOn={this.turnOn}
 				/>
-				<Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
-				<Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
-			</div>
-		);
-	}
+                                <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
+                                <DesktopWithSession bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
+                        </div>
+                );
+        }
 }

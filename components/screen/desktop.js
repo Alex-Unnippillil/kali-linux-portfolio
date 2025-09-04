@@ -36,6 +36,7 @@ export class Desktop extends Component {
             hideSideBar: false,
             minimized_windows: {},
             window_positions: {},
+            window_sizes: {},
             desktop_apps: [],
             context_menus: {
                 desktop: false,
@@ -55,6 +56,7 @@ export class Desktop extends Component {
         this.fetchAppsData(() => {
             const session = this.props.session || {};
             const positions = {};
+            const sizes = {};
             if (session.dock && session.dock.length) {
                 let favourite_apps = { ...this.state.favourite_apps };
                 session.dock.forEach(id => {
@@ -63,15 +65,21 @@ export class Desktop extends Component {
                 this.setState({ favourite_apps });
             }
 
-            if (session.windows && session.windows.length) {
-                session.windows.forEach(({ id, x, y }) => {
-                    positions[id] = { x, y };
+            if (session.bounds) {
+                Object.entries(session.bounds).forEach(([id, b]) => {
+                    positions[id] = { x: b.x, y: b.y };
+                    sizes[id] = { width: b.width, height: b.height };
                 });
-                this.setState({ window_positions: positions }, () => {
+            }
+
+            if (session.windows && session.windows.length) {
+                this.setState({ window_positions: positions, window_sizes: sizes }, () => {
                     session.windows.forEach(({ id }) => this.openApp(id));
                 });
             } else {
-                this.openApp('about-alex');
+                this.setState({ window_positions: positions, window_sizes: sizes }, () => {
+                    this.openApp('about-alex');
+                });
             }
         });
         this.setContextListeners();
@@ -362,6 +370,7 @@ export class Desktop extends Component {
             if (this.state.closed_windows[app.id] === false) {
 
                 const pos = this.state.window_positions[app.id];
+                const size = this.state.window_sizes[app.id];
                 const props = {
                     title: app.title,
                     id: app.id,
@@ -376,11 +385,12 @@ export class Desktop extends Component {
                     minimized: this.state.minimized_windows[app.id],
                     resizable: app.resizable,
                     allowMaximize: app.allowMaximize,
-                    defaultWidth: app.defaultWidth,
-                    defaultHeight: app.defaultHeight,
+                    defaultWidth: size ? size.width : app.defaultWidth,
+                    defaultHeight: size ? size.height : app.defaultHeight,
                     initialX: pos ? pos.x : undefined,
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
+                    onSizeChange: (w, h) => this.updateWindowSize(app.id, w, h),
                 }
 
                 windowsJsx.push(
@@ -397,16 +407,31 @@ export class Desktop extends Component {
         }), this.saveSession);
     }
 
+    updateWindowSize = (id, width, height) => {
+        this.setState(prev => ({
+            window_sizes: { ...prev.window_sizes, [id]: { width, height } }
+        }), this.saveSession);
+    }
+
     saveSession = () => {
         if (!this.props.setSession) return;
         const openWindows = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
         const windows = openWindows.map(id => ({
             id,
             x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
-            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10
+            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10,
+            width: this.state.window_sizes[id] ? this.state.window_sizes[id].width : (apps.find(a => a.id === id)?.defaultWidth || 60),
+            height: this.state.window_sizes[id] ? this.state.window_sizes[id].height : (apps.find(a => a.id === id)?.defaultHeight || 85)
         }));
+        const bounds = {};
+        const ids = new Set([...Object.keys(this.state.window_positions), ...Object.keys(this.state.window_sizes)]);
+        ids.forEach(id => {
+            const pos = this.state.window_positions[id] || { x: 60, y: 10 };
+            const size = this.state.window_sizes[id] || { width: (apps.find(a => a.id === id)?.defaultWidth || 60), height: (apps.find(a => a.id === id)?.defaultHeight || 85) };
+            bounds[id] = { x: pos.x, y: pos.y, width: size.width, height: size.height };
+        });
         const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
-        this.props.setSession({ ...this.props.session, windows, dock });
+        this.props.setSession({ ...this.props.session, windows, dock, bounds });
     }
 
     hideSideBar = (objId, hide) => {

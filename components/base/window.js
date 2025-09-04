@@ -37,6 +37,10 @@ export class Window extends Component {
     componentDidMount() {
         this.id = this.props.id;
         this.setDefaultWindowDimenstion();
+        if (this.props.onSizeChange) {
+            this.props.onSizeChange(this.state.width, this.state.height);
+        }
+        this.setWinowsPosition();
 
         // google analytics
         ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
@@ -59,6 +63,14 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        if (prevState.width !== this.state.width || prevState.height !== this.state.height) {
+            if (this.props.onSizeChange) {
+                this.props.onSizeChange(this.state.width, this.state.height);
+            }
         }
     }
 
@@ -282,9 +294,9 @@ export class Window extends Component {
 
     handleStop = () => {
         this.changeCursorToDefault();
+        this.setWinowsPosition();
         const snapPos = this.state.snapPosition;
         if (snapPos) {
-            this.setWinowsPosition();
             const { width, height } = this.state;
             let newWidth = width;
             let newHeight = height;
