@@ -1,5 +1,10 @@
 @import './globals.css';
 
+:root {
+    --titlebar-height: 32px;
+    --titlebar-icon-size: 24px;
+}
+
 html {
     font-size: clamp(12px, calc(16px * var(--font-multiplier)), 24px);
 }

@@ -13,6 +13,7 @@ const DEFAULT_SETTINGS = {
   largeHitAreas: false,
   pongSpin: true,
   allowNetwork: false,
+  dprScaling: true,
 };
 
 export async function getAccent() {
@@ -107,6 +108,17 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getDprScaling() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.dprScaling;
+  const val = window.localStorage.getItem('dpr-scaling');
+  return val === null ? DEFAULT_SETTINGS.dprScaling : val === 'true';
+}
+
+export async function setDprScaling(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('dpr-scaling', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -120,6 +132,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('large-hit-areas');
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
+  window.localStorage.removeItem('dpr-scaling');
 }
 
 export async function exportSettings() {
@@ -133,6 +146,7 @@ export async function exportSettings() {
     largeHitAreas,
     pongSpin,
     allowNetwork,
+    dprScaling,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -143,6 +157,7 @@ export async function exportSettings() {
     getLargeHitAreas(),
     getPongSpin(),
     getAllowNetwork(),
+    getDprScaling(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -155,6 +170,7 @@ export async function exportSettings() {
     largeHitAreas,
     pongSpin,
     allowNetwork,
+    dprScaling,
     theme,
   });
 }
@@ -178,6 +194,7 @@ export async function importSettings(json) {
     largeHitAreas,
     pongSpin,
     allowNetwork,
+    dprScaling,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -189,6 +206,7 @@ export async function importSettings(json) {
   if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas);
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
+  if (dprScaling !== undefined) await setDprScaling(dprScaling);
   if (theme !== undefined) setTheme(theme);
 }
 
