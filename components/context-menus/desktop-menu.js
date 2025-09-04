@@ -43,6 +43,12 @@ function DesktopMenu(props) {
         }
     }
 
+    const handleMountToggle = () => {
+        if (props.mounted) props.unmountDevice && props.unmountDevice();
+        else props.mountDevice && props.mountDevice();
+        props.onClose && props.onClose();
+    };
+
     return (
         <div
             id="desktop-menu"
@@ -50,6 +56,16 @@ function DesktopMenu(props) {
             aria-label="Desktop context menu"
             className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
         >
+            <button
+                onClick={handleMountToggle}
+                type="button"
+                role="menuitem"
+                aria-label={props.mounted ? 'Unmount Removable Device' : 'Mount Removable Device'}
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
+                <span className="ml-5">{props.mounted ? 'Unmount Removable Device' : 'Mount Removable Device'}</span>
+            </button>
+            <Devider />
             <button
                 onClick={props.addNewFolder}
                 type="button"
