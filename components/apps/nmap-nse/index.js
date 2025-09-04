@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Toast from '../../ui/Toast';
 import DiscoveryMap from './DiscoveryMap';
+import NmapNSESkeleton from './Skeleton';
 
 // Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
 const scripts = [
@@ -85,19 +86,28 @@ const NmapNSEApp = () => {
   const [activeScript, setActiveScript] = useState(scripts[0].name);
   const [phaseStep, setPhaseStep] = useState(0);
   const [toast, setToast] = useState('');
+  const [loading, setLoading] = useState(true);
   const outputRef = useRef(null);
   const phases = ['prerule', 'hostrule', 'portrule'];
 
-  useEffect(() => {
-    fetch('/demo/nmap-nse.json')
-      .then((r) => r.json())
-      .then(setExamples)
-      .catch(() => setExamples({}));
-    fetch('/demo/nmap-results.json')
-      .then((r) => r.json())
-      .then(setResults)
-      .catch(() => setResults({ hosts: [] }));
+  const fetchData = useCallback(() => {
+    setLoading(true);
+    Promise.all([
+      fetch('/demo/nmap-nse.json').then((r) => r.json()).catch(() => ({})),
+      fetch('/demo/nmap-results.json')
+        .then((r) => r.json())
+        .catch(() => ({ hosts: [] })),
+    ])
+      .then(([ex, res]) => {
+        setExamples(ex);
+        setResults(res);
+      })
+      .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const toggleScript = (name) => {
     setSelectedScripts((prev) => {
@@ -107,6 +117,7 @@ const NmapNSEApp = () => {
     });
     setActiveScript(name);
     setPhaseStep(0);
+    fetchData();
   };
 
   useEffect(() => {
@@ -120,6 +131,11 @@ const NmapNSEApp = () => {
     s.name.toLowerCase().includes(scriptQuery.toLowerCase())
   );
 
+  const handlePortFlagChange = (flag) => {
+    setPortFlag(flag);
+    fetchData();
+  };
+
   const argsString = selectedScripts
     .map((s) => scriptOptions[s])
     .filter(Boolean)
@@ -132,9 +148,9 @@ const NmapNSEApp = () => {
 
   const copyCommand = async () => {
     if (typeof window !== 'undefined') {
+      setToast('Command copied');
       try {
         await navigator.clipboard.writeText(command);
-        setToast('Command copied');
       } catch (e) {
         // ignore
       }
@@ -146,9 +162,9 @@ const NmapNSEApp = () => {
       .map((s) => `# ${s}\n${examples[s] || ''}`)
       .join('\n');
     if (!text.trim()) return;
+    setToast('Output copied');
     try {
       await navigator.clipboard.writeText(text);
-      setToast('Output copied');
     } catch (e) {
       // ignore
     }
@@ -188,6 +204,10 @@ const NmapNSEApp = () => {
     });
   };
 
+  if (loading) {
+    return <NmapNSESkeleton />;
+  }
+
   return (
     <div className="flex flex-col md:flex-row h-full w-full text-white">
       <div className="md:w-1/2 p-4 bg-ub-dark overflow-y-auto">
@@ -198,36 +218,39 @@ const NmapNSEApp = () => {
           </p>
         </div>
         <div className="mb-4">
-          <label className="block text-sm mb-1" htmlFor="target">Target</label>
-          <input
-            id="target"
-            value={target}
-            onChange={(e) => setTarget(e.target.value)}
-            className="w-full p-2 text-black"
-          />
+            <label className="block text-sm mb-1" htmlFor="target">Target</label>
+            <input
+              id="target"
+              value={target}
+              onChange={(e) => setTarget(e.target.value)}
+              className="w-full p-2 text-black"
+              aria-label="target"
+            />
         </div>
         <div className="mb-4">
-          <label className="block text-sm mb-1" htmlFor="scripts">
-            Scripts
-          </label>
-          <input
-            id="scripts"
-            value={scriptQuery}
-            onChange={(e) => setScriptQuery(e.target.value)}
-            placeholder="Search scripts"
-            className="w-full p-2 text-black mb-2"
-          />
+            <label className="block text-sm mb-1" htmlFor="scripts">
+              Scripts
+            </label>
+            <input
+              id="scripts"
+              value={scriptQuery}
+              onChange={(e) => setScriptQuery(e.target.value)}
+              placeholder="Search scripts"
+              className="w-full p-2 text-black mb-2"
+              aria-label="search scripts"
+            />
           <div className="max-h-64 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
             {filteredScripts.map((s) => (
               <div key={s.name} className="bg-white text-black p-2 rounded">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedScripts.includes(s.name)}
-                    onChange={() => toggleScript(s.name)}
-                  />
-                  <span className="font-mono">{s.name}</span>
-                </label>
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedScripts.includes(s.name)}
+                      onChange={() => toggleScript(s.name)}
+                      aria-label={s.name}
+                    />
+                    <span className="font-mono">{s.name}</span>
+                  </label>
                 <p className="text-xs mb-1">{s.description}</p>
                 <div className="flex flex-wrap gap-1 mb-1">
                   {s.tags.map((t) => (
@@ -236,20 +259,21 @@ const NmapNSEApp = () => {
                     </span>
                   ))}
                 </div>
-                {selectedScripts.includes(s.name) && (
-                  <input
-                    type="text"
-                    value={scriptOptions[s.name] || ''}
-                    onChange={(e) =>
-                      setScriptOptions((prev) => ({
-                        ...prev,
-                        [s.name]: e.target.value,
-                      }))
-                    }
-                    placeholder="arg=value"
-                    className="w-full p-1 border rounded text-black"
-                  />
-                )}
+                  {selectedScripts.includes(s.name) && (
+                    <input
+                      type="text"
+                      value={scriptOptions[s.name] || ''}
+                      onChange={(e) =>
+                        setScriptOptions((prev) => ({
+                          ...prev,
+                          [s.name]: e.target.value,
+                        }))
+                      }
+                      placeholder="arg=value"
+                      className="w-full p-1 border rounded text-black"
+                      aria-label={`${s.name} options`}
+                    />
+                  )}
               </div>
             ))}
             {filteredScripts.length === 0 && (
@@ -264,7 +288,7 @@ const NmapNSEApp = () => {
               <button
                 key={p.label}
                 type="button"
-                onClick={() => setPortFlag(p.flag)}
+                onClick={() => handlePortFlagChange(p.flag)}
                 className={`px-2 py-1 rounded text-black focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow ${
                   portFlag === p.flag ? 'bg-ub-yellow' : 'bg-ub-grey'
                 }`}
