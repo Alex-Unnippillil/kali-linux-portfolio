@@ -313,26 +313,42 @@ export class Window extends Component {
         }
     }
 
-    checkSnapPreview = () => {
-        var r = document.querySelector("#" + this.id);
+    checkSnapPreview = (e) => {
+        const r = document.querySelector("#" + this.id);
         if (!r) return;
-        var rect = r.getBoundingClientRect();
+        const rect = r.getBoundingClientRect();
         const threshold = 30;
+        const ctrl = e && e.ctrlKey;
+        const nearLeft = rect.left <= threshold;
+        const nearRight = rect.right >= window.innerWidth - threshold;
+        const nearTop = rect.top <= threshold;
         let snap = null;
-        if (rect.left <= threshold) {
+        let position = null;
+
+        if (ctrl && (nearLeft || nearRight)) {
+            const topHalf = rect.top + rect.height / 2 <= window.innerHeight / 2;
+            if (nearLeft) {
+                position = topHalf ? 'top-left' : 'bottom-left';
+                snap = { left: '0', top: topHalf ? '0' : '50%', width: '50%', height: '50%' };
+            } else if (nearRight) {
+                position = topHalf ? 'top-right' : 'bottom-right';
+                snap = { left: '50%', top: topHalf ? '0' : '50%', width: '50%', height: '50%' };
+            }
+        } else if (nearLeft) {
             snap = { left: '0', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'left' });
-        }
-        else if (rect.right >= window.innerWidth - threshold) {
+            position = 'left';
+        } else if (nearRight) {
             snap = { left: '50%', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'right' });
-        }
-        else if (rect.top <= threshold) {
+            position = 'right';
+        } else if (nearTop) {
             snap = { left: '0', top: '0', width: '100%', height: '50%' };
-            this.setState({ snapPreview: snap, snapPosition: 'top' });
+            position = 'top';
         }
-        else {
-            if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
+
+        if (snap) {
+            this.setState({ snapPreview: snap, snapPosition: position });
+        } else if (this.state.snapPreview) {
+            this.setState({ snapPreview: null, snapPosition: null });
         }
     }
 
@@ -362,7 +378,7 @@ export class Window extends Component {
             this.applyEdgeResistance(data.node, data);
         }
         this.checkOverlap();
-        this.checkSnapPreview();
+        this.checkSnapPreview(e);
     }
 
     handleStop = () => {
@@ -520,7 +536,13 @@ export class Window extends Component {
 
     handleKeyDown = (e) => {
         if (e.key === 'Escape') {
-            this.closeWindow();
+            if (this.state.snapPreview || this.state.snapPosition) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.setState({ snapPreview: null, snapPosition: null });
+            } else {
+                this.closeWindow();
+            }
         } else if (e.key === 'Tab') {
             this.focusWindow();
         } else if (e.altKey) {
@@ -598,6 +620,26 @@ export class Window extends Component {
             newWidth = 50;
             newHeight = 96.3;
             transform = `translate(${window.innerWidth / 2}px,-2pt)`;
+        } else if (pos === 'top') {
+            newWidth = 100.2;
+            newHeight = 50;
+            transform = 'translate(-1pt,-2pt)';
+        } else if (pos === 'top-left') {
+            newWidth = 50;
+            newHeight = 48.15;
+            transform = 'translate(-1pt,-2pt)';
+        } else if (pos === 'top-right') {
+            newWidth = 50;
+            newHeight = 48.15;
+            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
+        } else if (pos === 'bottom-left') {
+            newWidth = 50;
+            newHeight = 48.15;
+            transform = `translate(-1pt,${window.innerHeight / 2 - 2}px)`;
+        } else if (pos === 'bottom-right') {
+            newWidth = 50;
+            newHeight = 48.15;
+            transform = `translate(${window.innerWidth / 2}px,${window.innerHeight / 2 - 2}px)`;
         }
         const node = document.getElementById(this.id);
         if (node && transform) {
@@ -617,7 +659,7 @@ export class Window extends Component {
                 {this.state.snapPreview && (
                     <div
                         data-testid="snap-preview"
-                        className="fixed border-2 border-dashed border-white bg-white bg-opacity-10 pointer-events-none z-40 transition-opacity"
+                        className="fixed border-2 border-dashed border-white bg-white bg-opacity-10 pointer-events-none z-40 transition-all duration-150"
                         style={{ left: this.state.snapPreview.left, top: this.state.snapPreview.top, width: this.state.snapPreview.width, height: this.state.snapPreview.height }}
                     />
                 )}
