@@ -14,7 +14,8 @@ const InstallButton: React.FC = () => {
   }, []);
 
   const handleInstall = async () => {
-    const shown = await showA2HS();
+    const fn = (window as any).showA2HS || showA2HS;
+    const shown = await fn();
     if (shown) {
       trackEvent('cta_click', { location: 'install_button' });
       setVisible(false);
