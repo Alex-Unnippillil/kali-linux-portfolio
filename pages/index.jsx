@@ -1,6 +1,7 @@
 import dynamic from 'next/dynamic';
 import Meta from '../components/SEO/Meta';
 import BetaBadge from '../components/BetaBadge';
+import SiteFooter from '../components/SiteFooter';
 
 const Ubuntu = dynamic(
   () =>
@@ -37,6 +38,7 @@ const App = () => (
     <Ubuntu />
     <BetaBadge />
     <InstallButton />
+    <SiteFooter />
   </>
 );
 
