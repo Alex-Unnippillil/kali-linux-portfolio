@@ -1,5 +1,9 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+
+jest.mock('marked', () => ({ marked: { parse: (md: string) => md } }));
+jest.mock('dompurify', () => ({ sanitize: (html: string) => html }));
+
 import Autopsy from '../components/apps/autopsy';
 
 describe('Autopsy plugins and timeline', () => {
