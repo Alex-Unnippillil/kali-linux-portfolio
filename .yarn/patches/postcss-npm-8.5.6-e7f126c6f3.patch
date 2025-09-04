@@ -1,0 +1,9 @@
+diff --git a/README.md b/README.md
+index 05fed079ca0a5bffcb2c6ebd4cf2a2470fe6eb2b..70282526740dd7ff2372a519b044a81f7a6b286e 100644
+--- a/README.md
++++ b/README.md
+@@ -27,3 +27,4 @@ and JetBrains. The [Autoprefixer] and [Stylelint] PostCSS plugins are some o
+ 
+ ## Docs
+ Read full docs **[here](https://postcss.org/)**.
++

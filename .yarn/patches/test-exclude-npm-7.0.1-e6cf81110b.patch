@@ -1,0 +1,9 @@
+diff --git a/README.md b/README.md
+index 190783dc15c79c65c0d8886e2a7d4094b5fb2f8f..59b86b5ef0061e01f4eb79e3f8db72b2d049605e 100644
+--- a/README.md
++++ b/README.md
+@@ -94,3 +94,4 @@ The maintainers of `test-exclude` and thousands of other packages are working wi
+ [babel-plugin-istanbul]: https://github.com/istanbuljs/babel-plugin-istanbul
+ [@istanbuljs/schema]: https://github.com/istanbuljs/schema
+ [@istanbuljs/schema/default-excludes.js]: https://github.com/istanbuljs/schema/blob/master/default-exclude.js
++
