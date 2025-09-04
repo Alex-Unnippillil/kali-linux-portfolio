@@ -15,7 +15,7 @@ const tabs = [
   { id: 'fixtures', label: 'Fixtures' },
 ];
 
-export default function SecurityTools() {
+export default function SecurityTools({ openApp }) {
   const [active, setActive] = useState('repeater');
   const [query, setQuery] = useState('');
   const [authorized, setAuthorized] = useState(false);
@@ -201,6 +201,7 @@ export default function SecurityTools() {
                 <CommandBuilder
                   doc="Build a curl command. Output is copy-only and not executed."
                   build={({ target = '', opts = '' }) => `curl ${opts} ${target}`.trim()}
+                  openApp={openApp}
                 />
               </div>
             )}
