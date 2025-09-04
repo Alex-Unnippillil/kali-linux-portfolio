@@ -22,7 +22,7 @@ import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
-import { useSnapSetting } from '../../hooks/usePersistentState';
+import { useSnapSetting } from '@/hooks/usePersistentState';
 
 export class Desktop extends Component {
     constructor() {
