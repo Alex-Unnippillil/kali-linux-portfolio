@@ -1,0 +1,42 @@
+html[data-theme='kali-light'] {
+  /* Base colors */
+  --color-bg: #f6f6f5;
+  --color-text: #333333;
+  /* Brand accents */
+  --color-primary: #1793d1;
+  --color-secondary: #e5e5e5;
+  --color-accent: #1793d1;
+  /* Utility colors */
+  --color-muted: #d1d5db;
+  --color-surface: #ffffff;
+  --color-inverse: #000000;
+  --color-border: #cbd5e1;
+  --color-terminal: #006400;
+  --color-dark: #d0d0d0;
+  --color-focus-ring: var(--color-accent);
+  --color-selection: var(--color-accent);
+  --color-control-accent: var(--color-accent);
+  accent-color: var(--color-control-accent);
+  /* Kali specific tokens */
+  --color-ub-grey: #f6f6f5;
+  --color-ub-warm-grey: #aea79f;
+  --color-ub-cool-grey: #ffffff;
+  --color-ub-orange: #1793d1;
+  --color-ub-lite-abrgn: #e5e5e5;
+  --color-ub-med-abrgn: #d5d5d5;
+  --color-ub-drk-abrgn: #c4c4c4;
+  --color-ub-window-title: #e0e0e0;
+  --color-ub-gedit-dark: #ffffff;
+  --color-ub-gedit-light: #f0f0f0;
+  --color-ub-gedit-darker: #d0d0d0;
+  --color-ubt-grey: #f6f6f5;
+  --color-ubt-warm-grey: #aea79f;
+  --color-ubt-cool-grey: #333333;
+  --color-ubt-blue: #62A0EA;
+  --color-ubt-green: #73D216;
+  --color-ubt-gedit-orange: #F39A21;
+  --color-ubt-gedit-blue: #50B6C6;
+  --color-ubt-gedit-dark: #003B70;
+  --color-ub-border-orange: #1793d1;
+  --color-ub-dark-grey: #d0d0d0;
+}
