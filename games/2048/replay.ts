@@ -26,4 +26,6 @@ export async function downloadReplay(): Promise<void> {
   await shareBlob(blob, '2048-replay.json');
 }
 
-export default { startRecording, recordMove, downloadReplay };
+const replay = { startRecording, recordMove, downloadReplay };
+
+export default replay;

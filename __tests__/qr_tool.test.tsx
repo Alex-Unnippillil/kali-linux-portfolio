@@ -12,11 +12,11 @@ describe('QRTool generator', () => {
 
     class MockWorker {
       onmessage: ((e: any) => void) | null = null;
-      // eslint-disable-next-line class-methods-use-this
       postMessage() {
-        this.onmessage?.({ data: { png: 'data:image/png;base64,abc', svg: '<svg></svg>' } });
+        this.onmessage?.({
+          data: { png: 'data:image/png;base64,abc', svg: '<svg></svg>' },
+        });
       }
-      // eslint-disable-next-line class-methods-use-this
       terminate() {}
     }
     // @ts-ignore

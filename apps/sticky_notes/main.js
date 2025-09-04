@@ -1,6 +1,5 @@
 "use client";
 
-/* eslint-disable no-top-level-window/no-top-level-window-or-document */
 import { isBrowser } from '../../utils/env';
 import { getDb } from '../../utils/safeIDB';
 

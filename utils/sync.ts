@@ -38,8 +38,10 @@ export const subscribe = (
   return () => channel.removeEventListener('message', listener);
 };
 
-export default {
+const sync = {
   broadcastState,
   broadcastLeaderboard,
   subscribe,
 };
+
+export default sync;

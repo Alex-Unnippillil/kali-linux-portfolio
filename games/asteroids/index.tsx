@@ -20,7 +20,11 @@ interface Asteroid {
   shape: number[]; // flat array of x,y pairs
 }
 
-const DPR = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+const DPR =
+  typeof globalThis === "object" &&
+  typeof (globalThis as any).devicePixelRatio !== "undefined"
+    ? (globalThis as any).devicePixelRatio || 1
+    : 1;
 
 const AsteroidsGame: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);

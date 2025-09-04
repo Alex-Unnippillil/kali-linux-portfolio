@@ -45,7 +45,7 @@ export const clearReplays = async (): Promise<void> => {
   await set(REPLAYS_KEY, []);
 };
 
-export default {
+const storage = {
   getProgress,
   setProgress,
   getKeybinds,
@@ -54,3 +54,5 @@ export default {
   saveReplay,
   clearReplays,
 };
+
+export default storage;

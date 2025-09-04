@@ -3,7 +3,7 @@ import noTopLevelWindow from './eslint-plugin-no-top-level-window/index.js';
 
 const compat = new FlatCompat();
 
-export default [
+const config = [
   { ignores: ['components/apps/Chrome/index.tsx'] },
   {
     plugins: {
@@ -28,3 +28,5 @@ export default [
     },
   }),
 ];
+
+export default config;
