@@ -3,7 +3,9 @@ import {
   validateContrast,
   contrastRatio,
   defaultPalette,
-  colorBlindPalette,
+  protanopiaPalette,
+  deuteranopiaPalette,
+  tritanopiaPalette,
 } from '../components/apps/Games/common/theme';
 
 describe('game theme accessibility', () => {
@@ -11,8 +13,16 @@ describe('game theme accessibility', () => {
     expect(validateContrast(defaultPalette)).toBe(true);
   });
 
-  test('colorblind palette meets WCAG AA contrast', () => {
-    expect(validateContrast(colorBlindPalette)).toBe(true);
+  test('protanopia palette meets WCAG AA contrast', () => {
+    expect(validateContrast(protanopiaPalette)).toBe(true);
+  });
+
+  test('deuteranopia palette meets WCAG AA contrast', () => {
+    expect(validateContrast(deuteranopiaPalette)).toBe(true);
+  });
+
+  test('tritanopia palette meets WCAG AA contrast', () => {
+    expect(validateContrast(tritanopiaPalette)).toBe(true);
   });
 
   test('high contrast mode exceeds WCAG AAA contrast', () => {
