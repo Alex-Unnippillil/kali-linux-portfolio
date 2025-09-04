@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import Toast from '../../../ui/Toast';
 
 /**
  * Heads up display for games. Provides pause/resume, sound toggle and
@@ -20,6 +21,8 @@ export default function Overlay({
   const [fps, setFps] = useState(0);
   const frame = useRef(performance.now());
   const count = useRef(0);
+  const [toast, setToast] = useState('');
+  const pausedByDisconnect = useRef(false);
 
   // track fps using requestAnimationFrame
   useEffect(() => {
@@ -59,15 +62,47 @@ export default function Overlay({
     }
   }, [externalMuted]);
 
+  useEffect(() => {
+    const handleDisconnect = () => {
+      pausedByDisconnect.current = true;
+      setToast('Controller disconnected. Reconnect to resume.');
+      setPaused(true);
+      onPause?.();
+    };
+    const handleConnect = () => {
+      if (pausedByDisconnect.current) {
+        pausedByDisconnect.current = false;
+        setToast('');
+        setPaused(false);
+        onResume?.();
+      }
+    };
+    window.addEventListener('gamepaddisconnected', handleDisconnect);
+    window.addEventListener('gamepadconnected', handleConnect);
+    return () => {
+      window.removeEventListener('gamepaddisconnected', handleDisconnect);
+      window.removeEventListener('gamepadconnected', handleConnect);
+    };
+  }, [onPause, onResume]);
+
   return (
-    <div className="game-overlay">
-      <button onClick={togglePause} aria-label={paused ? 'Resume' : 'Pause'}>
-        {paused ? 'Resume' : 'Pause'}
-      </button>
-      <button onClick={toggleSound} aria-label={muted ? 'Unmute' : 'Mute'}>
-        {muted ? 'Sound' : 'Mute'}
-      </button>
-      <span className="fps">{fps} FPS</span>
-    </div>
+    <>
+      <div className="game-overlay">
+        <button onClick={togglePause} aria-label={paused ? 'Resume' : 'Pause'}>
+          {paused ? 'Resume' : 'Pause'}
+        </button>
+        <button onClick={toggleSound} aria-label={muted ? 'Unmute' : 'Mute'}>
+          {muted ? 'Sound' : 'Mute'}
+        </button>
+        <span className="fps">{fps} FPS</span>
+      </div>
+      {toast && (
+        <Toast
+          message={toast}
+          onClose={() => setToast('')}
+          duration={1000000}
+        />
+      )}
+    </>
   );
 }
