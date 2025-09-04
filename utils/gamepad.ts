@@ -130,7 +130,12 @@ export interface TwinStickState {
  * Left stick controls movement while the right stick controls aiming.
  * Any face button triggers the `fire` flag.
  */
-export function pollTwinStick(deadzone = 0.25): TwinStickState {
+let lastFire = false;
+
+export function pollTwinStick(
+  deadzone = 0.25,
+  vibrate = false,
+): TwinStickState {
   const state: TwinStickState = { moveX: 0, moveY: 0, aimX: 0, aimY: 0, fire: false };
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   for (const pad of pads) {
@@ -140,7 +145,20 @@ export function pollTwinStick(deadzone = 0.25): TwinStickState {
     state.moveY = Math.abs(ly) > deadzone ? ly : 0;
     state.aimX = Math.abs(rx) > deadzone ? rx : 0;
     state.aimY = Math.abs(ry) > deadzone ? ry : 0;
-    state.fire = pad.buttons.some((b) => b.pressed);
+    const fire = pad.buttons.some((b) => b.pressed);
+    state.fire = fire;
+    if (vibrate && fire && !lastFire && pad.vibrationActuator?.playEffect) {
+      try {
+        pad.vibrationActuator.playEffect('dual-rumble', {
+          duration: 30,
+          strongMagnitude: 1.0,
+          weakMagnitude: 1.0,
+        });
+      } catch {
+        // ignore
+      }
+    }
+    lastFire = fire;
     break; // only use first gamepad
   }
   return state;

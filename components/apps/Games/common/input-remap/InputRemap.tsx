@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
+import gamepad, { ButtonEvent } from '../../../../../utils/gamepad';
 
 interface Props {
   mapping: Record<string, string>;
   setKey: (action: string, key: string) => string | null;
   actions: Record<string, string>;
 }
+
+const formatKey = (key?: string) =>
+  key?.startsWith('gp') ? `GP${key.slice(2)}` : key;
 
 const InputRemap: React.FC<Props> = ({ mapping, setKey, actions }) => {
   const [waiting, setWaiting] = useState<string | null>(null);
@@ -20,8 +24,22 @@ const InputRemap: React.FC<Props> = ({ mapping, setKey, actions }) => {
       else setMessage(null);
       setWaiting(null);
       window.removeEventListener('keydown', handler);
+      gamepad.off('button', gpHandler);
+      gamepad.stop();
+    };
+    const gpHandler = (e: ButtonEvent) => {
+      const key = `gp${e.index}`;
+      const conflict = setKey(action, key);
+      if (conflict) setMessage(`Replaced ${conflict}`);
+      else setMessage(null);
+      setWaiting(null);
+      window.removeEventListener('keydown', handler);
+      gamepad.off('button', gpHandler);
+      gamepad.stop();
     };
     window.addEventListener('keydown', handler);
+    gamepad.on('button', gpHandler);
+    gamepad.start();
   };
 
   return (
@@ -34,7 +52,7 @@ const InputRemap: React.FC<Props> = ({ mapping, setKey, actions }) => {
             onClick={() => capture(action)}
             className="px-2 py-1 bg-gray-700 rounded focus:outline-none focus:ring"
           >
-            {waiting === action ? 'Press key...' : mapping[action]}
+            {waiting === action ? 'Press key...' : formatKey(mapping[action])}
           </button>
         </div>
       ))}

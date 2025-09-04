@@ -40,6 +40,7 @@ const MULTIPLIER_DURATION = 5000;
 const COMBO_WINDOW = 3000;
 const FLIPPER_MAX = 0.5;
 const FLIPPER_SPEED = 0.25;
+const GAMEPAD_DEADZONE = 0.2;
 
 const Pinball = () => {
   const canvasRef = useCanvasResize(WIDTH, HEIGHT);
@@ -335,10 +336,16 @@ const Pinball = () => {
       const gps = navigator.getGamepads ? navigator.getGamepads() : [];
       const gp = gps && gps[0];
       if (!gp) return;
-      const pressed = gp.buttons[5]?.pressed || gp.axes[1] < -0.8;
+      const pressed =
+        gp.buttons[5]?.pressed || gp.axes[1] < -1 + GAMEPAD_DEADZONE;
       if (pressed && performance.now() - lastGamepadNudge.current > 300) {
         handleNudge();
         lastGamepadNudge.current = performance.now();
+        gp.vibrationActuator?.playEffect?.('dual-rumble', {
+          duration: 40,
+          strongMagnitude: 1.0,
+          weakMagnitude: 1.0,
+        });
       }
     };
 
