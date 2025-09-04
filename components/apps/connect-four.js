@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import GameLayout from './GameLayout';
+import GameLayout, { useGameRandom } from './GameLayout';
 
 const ROWS = 6;
 const COLS = 7;
@@ -168,9 +168,12 @@ const minimax = (board, depth, alpha, beta, maximizing) => {
   return { column, score: value };
 };
 
-export default function ConnectFour() {
+function ConnectFourGame() {
+  const { random } = useGameRandom();
   const [board, setBoard] = useState(createEmptyBoard());
-  const [player, setPlayer] = useState('yellow');
+  const [player, setPlayer] = useState(() =>
+    random() < 0.5 ? 'yellow' : 'red',
+  );
   const [winner, setWinner] = useState(null);
   const [game, setGame] = useState({ history: [] });
   const [hoverCol, setHoverCol] = useState(null);
@@ -254,7 +257,7 @@ export default function ConnectFour() {
 
   const reset = () => {
     setBoard(createEmptyBoard());
-    setPlayer('yellow');
+    setPlayer(random() < 0.5 ? 'yellow' : 'red');
     setWinner(null);
     setGame({ history: [] });
     setWinningCells([]);
@@ -264,84 +267,86 @@ export default function ConnectFour() {
   const boardWidth = COLS * SLOT - GAP;
 
   return (
-    <GameLayout gameId="connect-four">
-      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 relative">
-        {winner && (
-          <div className="mb-2 capitalize">
-            {winner === 'draw' ? 'Draw!' : `${COLOR_NAMES[winner]} wins!`}
+    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 relative">
+      {winner && (
+        <div className="mb-2 capitalize">
+          {winner === 'draw' ? 'Draw!' : `${COLOR_NAMES[winner]} wins!`}
+        </div>
+      )}
+      <button
+        className="absolute top-2 right-2 px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+        onClick={reset}
+      >
+        Restart
+      </button>
+      <div
+        className="relative"
+        style={{ width: boardWidth, height: BOARD_HEIGHT }}
+        onMouseLeave={() => setHoverCol(null)}
+      >
+        <div className="grid grid-cols-7 gap-1">
+          {board.map((row, rIdx) =>
+            row.map((cell, cIdx) => (
+              <button
+                key={`${rIdx}-${cIdx}`}
+                aria-label={`cell-${rIdx}-${cIdx}`}
+                className={`w-10 h-10 rounded-full flex items-center justify-center focus:outline-none ${
+                  hoverCol === cIdx && !winner ? 'bg-gray-600' : 'bg-gray-700'
+                }`}
+                onClick={() => handleClick(cIdx)}
+                onMouseEnter={() => setHoverCol(cIdx)}
+              >
+                {cell && (
+                  <div className={`w-8 h-8 rounded-full ${COLORS[cell]}`} />
+                )}
+              </button>
+            )),
+          )}
+        </div>
+        {winningCells.length === 4 && (
+          <svg
+            viewBox={`0 0 ${COLS} ${ROWS}`}
+            className="absolute top-0 left-0 w-full h-full pointer-events-none"
+          >
+            <line
+              x1={winningCells[0].c + 0.5}
+              y1={winningCells[0].r + 0.5}
+              x2={winningCells[3].c + 0.5}
+              y2={winningCells[3].r + 0.5}
+              stroke="white"
+              strokeWidth="0.2"
+              strokeLinecap="round"
+            />
+          </svg>
+        )}
+        {animDisc && (
+          <div
+            className="absolute"
+            style={{
+              transform: `translateX(${animDisc.col * SLOT}px) translateY(${animDisc.y}px)`,
+            }}
+          >
+            <div className={`w-8 h-8 rounded-full ${COLORS[animDisc.color]}`} />
           </div>
         )}
-        <button
-          className="absolute top-2 right-2 px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={reset}
-        >
-          Restart
-        </button>
-        <div
-          className="relative"
-          style={{ width: boardWidth, height: BOARD_HEIGHT }}
-          onMouseLeave={() => setHoverCol(null)}
-        >
-          <div className="grid grid-cols-7 gap-1">
-            {board.map((row, rIdx) =>
-              row.map((cell, cIdx) => (
-                <button
-                  key={`${rIdx}-${cIdx}`}
-                  aria-label={`cell-${rIdx}-${cIdx}`}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center focus:outline-none ${
-                    hoverCol === cIdx && !winner ? 'bg-gray-600' : 'bg-gray-700'
-                  }`}
-                  onClick={() => handleClick(cIdx)}
-                  onMouseEnter={() => setHoverCol(cIdx)}
-                >
-                  {cell && (
-                    <div
-                      className={`w-8 h-8 rounded-full ${COLORS[cell]}`}
-                    />
-                  )}
-                </button>
-              )),
-            )}
-          </div>
-          {winningCells.length === 4 && (
-            <svg
-              viewBox={`0 0 ${COLS} ${ROWS}`}
-              className="absolute top-0 left-0 w-full h-full pointer-events-none"
-            >
-              <line
-                x1={winningCells[0].c + 0.5}
-                y1={winningCells[0].r + 0.5}
-                x2={winningCells[3].c + 0.5}
-                y2={winningCells[3].r + 0.5}
-                stroke="white"
-                strokeWidth="0.2"
-                strokeLinecap="round"
-              />
-            </svg>
-          )}
-          {animDisc && (
-            <div
-              className="absolute"
-              style={{
-                transform: `translateX(${animDisc.col * SLOT}px) translateY(${animDisc.y}px)`,
-              }}
-            >
-              <div
-                className={`w-8 h-8 rounded-full ${COLORS[animDisc.color]}`}
-              />
-            </div>
-          )}
-        </div>
-        <div className="mt-4 flex gap-2">
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={undo}
-            disabled={game.history.length === 0 || animDisc}
-          >
-            Undo
-          </button>
-        </div>
       </div>
+      <div className="mt-4 flex gap-2">
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={undo}
+          disabled={game.history.length === 0 || animDisc}
+        >
+          Undo
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default function ConnectFour() {
+  return (
+    <GameLayout gameId="connect-four">
+      <ConnectFourGame />
     </GameLayout>
   );
 }

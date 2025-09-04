@@ -1,6 +1,14 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  createContext,
+  useContext,
+} from 'react';
+import seedrandom from 'seedrandom';
 import HelpOverlay from './HelpOverlay';
 import PerfOverlay from './Games/common/perf';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
@@ -27,6 +35,23 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   const [showHelp, setShowHelp] = useState(false);
   const [paused, setPaused] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
+
+  const [seed] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const existing = params.get('seed');
+    if (existing) return existing;
+    const newSeed = Math.random().toString(36).slice(2, 10);
+    return newSeed;
+  });
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    params.set('seed', seed);
+    const newUrl = `${window.location.pathname}?${params.toString()}${window.location.hash}`;
+    window.history.replaceState(null, '', newUrl);
+  }, [seed]);
+
+  const rng = useMemo(() => seedrandom(seed), [seed]);
 
   const close = useCallback(() => setShowHelp(false), []);
   const toggle = useCallback(() => setShowHelp((h) => !h), []);
@@ -62,6 +87,8 @@ const GameLayout: React.FC<GameLayoutProps> = ({
       fallbackCopy(`${text} ${url}`);
     }
   }, [fallbackCopy, highScore, gameId]);
+
+  const copySeed = useCallback(() => fallbackCopy(seed), [fallbackCopy, seed]);
 
   // Keyboard shortcut to toggle help overlay
   useEffect(() => {
@@ -126,7 +153,11 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   const resume = useCallback(() => setPaused(false), []);
 
   return (
-    <div className="relative h-full w-full" data-reduced-motion={prefersReducedMotion}>
+    <SeedContext.Provider value={{ seed, random: rng }}>
+      <div
+        className="relative h-full w-full"
+        data-reduced-motion={prefersReducedMotion}
+      >
       {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
       {paused && (
         <div
@@ -171,19 +202,42 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           ?
         </button>
       </div>
-      {children}
       <div className="absolute top-2 left-2 z-10 text-sm space-y-1">
         {stage !== undefined && <div>Stage: {stage}</div>}
         {lives !== undefined && <div>Lives: {lives}</div>}
         {score !== undefined && <div>Score: {score}</div>}
         {highScore !== undefined && <div>High: {highScore}</div>}
       </div>
+      <div className="absolute top-2 left-1/2 -translate-x-1/2 z-40 flex items-center space-x-2 bg-gray-700 text-white px-2 py-1 rounded">
+        <span>Seed: {seed}</span>
+        <button
+          type="button"
+          onClick={copySeed}
+          className="bg-gray-600 px-1 rounded"
+        >
+          Copy Seed
+        </button>
+      </div>
+      {children}
       {!prefersReducedMotion && <PerfOverlay />}
       {editor && (
         <div className="absolute bottom-2 left-2 z-30">{editor}</div>
       )}
     </div>
+    </SeedContext.Provider>
   );
+};
+interface SeedContextValue {
+  seed: string;
+  random: () => number;
+}
+
+const SeedContext = createContext<SeedContextValue | null>(null);
+
+export const useGameRandom = () => {
+  const ctx = useContext(SeedContext);
+  if (!ctx) throw new Error('useGameRandom must be used within GameLayout');
+  return ctx;
 };
 
 export default GameLayout;

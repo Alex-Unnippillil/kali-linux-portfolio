@@ -1,1 +1,1 @@
-export { default } from './GameLayout.tsx';
+export { default, useGameRandom } from './GameLayout.tsx';
