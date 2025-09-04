@@ -25,6 +25,16 @@ import {
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
 
+// Predefined accent palette exposed to settings UI
+export const ACCENT_OPTIONS = [
+  '#1793d1', // kali blue (default)
+  '#e53e3e', // red
+  '#d97706', // orange
+  '#38a169', // green
+  '#805ad5', // purple
+  '#ed64a6', // pink
+];
+
 // Utility to lighten or darken a hex color by a percentage
 const shadeColor = (color: string, percent: number): string => {
   const f = parseInt(color.slice(1), 16);
@@ -132,6 +142,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       '--color-ub-border-orange': border,
       '--color-primary': accent,
       '--color-accent': accent,
+      '--color-focus-ring': accent,
+      '--color-selection': accent,
+      '--color-control-accent': accent,
     };
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);

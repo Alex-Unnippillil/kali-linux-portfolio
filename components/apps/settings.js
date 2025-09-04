@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useSettings } from '../../hooks/useSettings';
+import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 
 export function Settings() {
@@ -74,13 +74,19 @@ export function Settings() {
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Accent:</label>
-                <input
-                    type="color"
-                    aria-label="Accent color picker"
-                    value={accent}
-                    onChange={(e) => setAccent(e.target.value)}
-                    className="w-10 h-10 border border-ubt-cool-grey bg-ub-cool-grey"
-                />
+                <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
+                    {ACCENT_OPTIONS.map((c) => (
+                        <button
+                            key={c}
+                            aria-label={`select-accent-${c}`}
+                            role="radio"
+                            aria-checked={accent === c}
+                            onClick={() => setAccent(c)}
+                            className={`w-8 h-8 rounded-full border-2 ${accent === c ? 'border-white' : 'border-transparent'}`}
+                            style={{ backgroundColor: c }}
+                        />
+                    ))}
+                </div>
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Density:</label>

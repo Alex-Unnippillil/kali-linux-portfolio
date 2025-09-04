@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { getUnlockedThemes } from '../utils/theme';
-import { useSettings } from '../hooks/useSettings';
+import { useSettings, ACCENT_OPTIONS } from '../hooks/useSettings';
 
 interface Props {
   highScore?: number;
@@ -34,12 +34,23 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
           </label>
           <label>
             Accent
-            <input
+            <div
               aria-label="accent-color-picker"
-              type="color"
-              value={accent}
-              onChange={(e) => setAccent(e.target.value)}
-            />
+              role="radiogroup"
+              className="flex gap-2 mt-1"
+            >
+              {ACCENT_OPTIONS.map((c) => (
+                <button
+                  key={c}
+                  aria-label={`select-accent-${c}`}
+                  role="radio"
+                  aria-checked={accent === c}
+                  onClick={() => setAccent(c)}
+                  className={`w-6 h-6 rounded-full border-2 ${accent === c ? 'border-white' : 'border-transparent'}`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
           </label>
         </div>
       )}
