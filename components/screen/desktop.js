@@ -19,6 +19,7 @@ import AppMenu from '../context-menus/app-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import WindowManager from '../../utils/windowManager';
 
 export class Desktop extends Component {
     constructor() {
@@ -26,6 +27,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.windowManager = new WindowManager(20);
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -381,6 +383,7 @@ export class Desktop extends Component {
                     initialX: pos ? pos.x : undefined,
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
+                    zIndex: this.windowManager.getZIndex(app.id),
                 }
 
                 windowsJsx.push(
@@ -532,6 +535,7 @@ export class Desktop extends Component {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
                 this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
+                    this.windowManager.register(objId);
                     this.focus(objId);
                     this.saveSession();
                 });
@@ -573,6 +577,7 @@ export class Desktop extends Component {
 
         // remove app from the app stack
         this.app_stack.splice(this.app_stack.indexOf(objId), 1);
+        this.windowManager.remove(objId);
 
         this.giveFocusToLastApp();
 
@@ -617,8 +622,9 @@ export class Desktop extends Component {
     }
 
     focus = (objId) => {
-        // removes focus from all window and 
+        // removes focus from all window and
         // gives focus to window with 'id = objId'
+        this.windowManager.focus(objId);
         var focused_windows = this.state.focused_windows;
         focused_windows[objId] = true;
         for (let key in focused_windows) {
