@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react'
+import Image from 'next/image';
 import { useSettings } from '../../hooks/useSettings';
 import useDailyQuote from '../../hooks/useDailyQuote';
 
@@ -39,15 +40,15 @@ export default function BackgroundImage() {
     }, [wallpaper]);
 
     return (
-        <div
-            style={{
-                backgroundImage: `url(/wallpapers/${wallpaper}.webp)`,
-                backgroundSize: "cover",
-                backgroundRepeat: "no-repeat",
-                backgroundPositionX: "center"
-            }}
-            className="bg-ubuntu-img absolute -z-10 top-0 right-0 overflow-hidden h-full w-full"
-        >
+        <div className="bg-ubuntu-img absolute -z-10 top-0 right-0 overflow-hidden h-full w-full">
+            <Image
+                src={`/wallpapers/${wallpaper}.webp`}
+                alt=""
+                fill
+                priority
+                sizes="100vw"
+                style={{ objectFit: 'cover', objectPosition: 'center' }}
+            />
             {needsOverlay && (
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 to-transparent" aria-hidden="true"></div>
             )}
