@@ -6,7 +6,9 @@
     "size": 12345,
     "plugin": "metadata",
     "timestamp": "2023-08-01T10:00:00Z",
-    "user": "alice"
+    "user": "alice",
+    "path": "/home/alice/Desktop/resume.docx",
+    "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   },
   {
     "name": "photo.jpg",
@@ -15,7 +17,9 @@
     "size": 23456,
     "plugin": "hash",
     "timestamp": "2023-08-01T12:30:00Z",
-    "user": "bob"
+    "user": "bob",
+    "path": "/home/bob/Pictures/photo.jpg",
+    "hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
   },
   {
     "name": "system.log",
@@ -24,7 +28,9 @@
     "size": 34567,
     "plugin": "metadata",
     "timestamp": "2023-08-01T14:45:00Z",
-    "user": "alice"
+    "user": "alice",
+    "path": "/var/log/system.log",
+    "hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
   },
   {
     "name": "run.exe",
@@ -33,15 +39,19 @@
     "size": 45678,
     "plugin": "hash",
     "timestamp": "2023-08-01T16:15:00Z",
-    "user": "bob"
+    "user": "bob",
+    "path": "/tmp/run.exe",
+    "hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
   },
   {
-    "name": "HKCU\\\\Software\\\\Example",
+    "name": "HKCU\\Software\\Example",
     "type": "Registry",
     "description": "Registry key with suspicious value",
     "size": 0,
     "plugin": "regParser",
     "timestamp": "2023-08-01T18:20:00Z",
-    "user": "system"
+    "user": "system",
+    "path": "HKCU\\Software\\Example",
+    "hash": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
   }
 ]
