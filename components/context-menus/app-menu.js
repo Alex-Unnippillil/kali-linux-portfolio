@@ -21,6 +21,13 @@ function AppMenu(props) {
         }
     }
 
+    const handleMountToggle = () => {
+        props.onToggleMount && props.onToggleMount()
+        props.onClose && props.onClose()
+    }
+
+    const isRemovable = props.appId === 'removable-drive'
+
     return (
         <div
             id="app-menu"
@@ -30,6 +37,17 @@ function AppMenu(props) {
             onKeyDown={handleKeyDown}
             className={(props.active ? ' block ' : ' hidden ') + ' cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm'}
         >
+            {isRemovable && (
+                <button
+                    type="button"
+                    onClick={handleMountToggle}
+                    role="menuitem"
+                    aria-label={props.mounted ? 'Unmount' : 'Mount'}
+                    className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                >
+                    <span className="ml-5">{props.mounted ? 'Unmount' : 'Mount'}</span>
+                </button>
+            )}
             <button
                 type="button"
                 onClick={handlePin}
