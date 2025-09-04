@@ -1,12 +1,25 @@
 'use client';
 
 import Image from 'next/image';
+import { useMemo } from 'react';
 import ExternalFrame from '../../components/ExternalFrame';
 import { CloseIcon, MaximizeIcon, MinimizeIcon } from '../../components/ToolbarIcons';
 import { kaliTheme } from '../../styles/themes/kali';
+import { useSettings } from '../../hooks/useSettings';
+import { isDarkTheme } from '../../utils/theme';
 import { SIDEBAR_WIDTH, ICON_SIZE } from './utils';
 
 export default function VsCode() {
+  const { theme, highContrast } = useSettings();
+
+  const monacoTheme = useMemo(() => {
+    const dark = isDarkTheme(theme);
+    if (highContrast) return dark ? 'hc-black' : 'hc-light';
+    return dark ? 'vs-dark' : 'vs';
+  }, [theme, highContrast]);
+
+  const src = `https://stackblitz.com/github/Alex-Unnippillil/kali-linux-portfolio?embed=1&file=README.md&theme=${monacoTheme}`;
+
   return (
     <div
       className="flex flex-col min-[1366px]:flex-row h-full w-full max-w-full"
@@ -50,7 +63,7 @@ export default function VsCode() {
         </div>
         <div className="relative flex-1" style={{ backgroundColor: kaliTheme.background }}>
           <ExternalFrame
-            src="https://stackblitz.com/github/Alex-Unnippillil/kali-linux-portfolio?embed=1&file=README.md"
+            src={src}
             title="VsCode"
             className="w-full h-full"
             onLoad={() => {}}
