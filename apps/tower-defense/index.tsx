@@ -17,6 +17,70 @@ const GRID_SIZE = 10;
 const CELL_SIZE = 40;
 const CANVAS_SIZE = GRID_SIZE * CELL_SIZE;
 
+type Vec = { x: number; y: number };
+
+const DIRS: Vec[] = [
+  { x: 1, y: 0 },
+  { x: -1, y: 0 },
+  { x: 0, y: 1 },
+  { x: 0, y: -1 },
+];
+
+const computeFlowField = (
+  start: Vec,
+  goal: Vec,
+  towers: Tower[],
+): Vec[][] | null => {
+  const obstacle = new Set(towers.map((t) => `${t.x},${t.y}`));
+  const h = (a: Vec) => Math.abs(a.x - goal.x) + Math.abs(a.y - goal.y);
+  const key = (p: Vec) => `${p.x},${p.y}`;
+  const open: (Vec & { f: number })[] = [{ ...start, f: h(start) }];
+  const came = new Map<string, string>();
+  const g = new Map<string, number>();
+  g.set(key(start), 0);
+  while (open.length) {
+    open.sort((a, b) => a.f - b.f);
+    const current = open.shift()!;
+    if (current.x === goal.x && current.y === goal.y) break;
+    for (const d of DIRS) {
+      const nx = current.x + d.x;
+      const ny = current.y + d.y;
+      if (
+        nx < 0 ||
+        ny < 0 ||
+        nx >= GRID_SIZE ||
+        ny >= GRID_SIZE ||
+        obstacle.has(key({ x: nx, y: ny }))
+      )
+        continue;
+      const nk = key({ x: nx, y: ny });
+      const tentative = (g.get(key(current)) ?? 0) + 1;
+      if (tentative < (g.get(nk) ?? Infinity)) {
+        came.set(nk, key(current));
+        g.set(nk, tentative);
+        const f = tentative + h({ x: nx, y: ny });
+        const existing = open.find((o) => o.x === nx && o.y === ny);
+        if (existing) existing.f = f;
+        else open.push({ x: nx, y: ny, f });
+      }
+    }
+  }
+  if (!came.has(key(goal))) return null;
+  const field: Vec[][] = Array.from({ length: GRID_SIZE }, () =>
+    Array.from({ length: GRID_SIZE }, () => ({ x: 0, y: 0 })),
+  );
+  let cur = key(goal);
+  while (cur !== key(start)) {
+    const prev = came.get(cur);
+    if (!prev) break;
+    const [cx, cy] = cur.split(",").map(Number);
+    const [px, py] = prev.split(",").map(Number);
+    field[px][py] = { x: cx - px, y: cy - py };
+    cur = prev;
+  }
+  return field;
+};
+
 interface EnemyInstance extends Enemy {
   pathIndex: number;
   progress: number;
@@ -48,6 +112,7 @@ const TowerDefense = () => {
     }[]
   >([]);
   const damageTicksRef = useRef<{ x: number; y: number; life: number }[]>([]);
+  const flowFieldRef = useRef<Vec[][] | null>(null);
 
   const togglePath = (x: number, y: number) => {
     const key = `${x},${y}`;
@@ -89,6 +154,16 @@ const TowerDefense = () => {
   };
 
   const handleCanvasLeave = () => setHovered(null);
+
+  useEffect(() => {
+    if (path.length >= 2) {
+      flowFieldRef.current = computeFlowField(
+        path[0],
+        path[path.length - 1],
+        towers,
+      );
+    }
+  }, [path, towers]);
 
   const draw = () => {
     const ctx = canvasRef.current?.getContext("2d");
@@ -215,23 +290,20 @@ const TowerDefense = () => {
         enemiesSpawnedRef.current += 1;
       }
       enemiesRef.current.forEach((en) => {
-        const next = path[en.pathIndex + 1];
-        if (!next) return;
-        const dx = next.x - en.x;
-        const dy = next.y - en.y;
-        const dist = Math.hypot(dx, dy);
+        const field = flowFieldRef.current;
+        if (!field) return;
+        const cellX = Math.floor(en.x);
+        const cellY = Math.floor(en.y);
+        const vec = field[cellX]?.[cellY];
+        if (!vec) return;
         const step = (en.baseSpeed * dt) / CELL_SIZE;
-        if (step >= dist) {
-          en.x = next.x;
-          en.y = next.y;
-          en.pathIndex += 1;
-        } else {
-          en.x += (dx / dist) * step;
-          en.y += (dy / dist) * step;
-        }
+        en.x += vec.x * step;
+        en.y += vec.y * step;
       });
       enemiesRef.current = enemiesRef.current.filter((e) => {
-        const reached = e.pathIndex >= path.length - 1;
+        const goal = path[path.length - 1];
+        const reached =
+          Math.floor(e.x) === goal?.x && Math.floor(e.y) === goal?.y;
         return e.health > 0 && !reached;
       });
       towers.forEach((t) => {
