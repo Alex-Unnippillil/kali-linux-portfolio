@@ -78,6 +78,24 @@ const TypeIcon = () => (
   </svg>
 );
 
+const PlayIcon = () => (
+  <svg
+    className="w-6 h-6"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={1.5}
+    stroke="currentColor"
+    aria-hidden="true"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M5.25 5.25v13.5L18.75 12 5.25 5.25Z"
+    />
+  </svg>
+);
+
 interface Project {
   id: number;
   title: string;
@@ -87,6 +105,7 @@ interface Project {
   year: number;
   type: string;
   thumbnail: string;
+  demo?: string;
 }
 
 export default function ProjectGalleryPage() {
@@ -97,6 +116,8 @@ export default function ProjectGalleryPage() {
   const [year, setYear] = usePersistentState<string>('pg-year', '');
   const [type, setType] = usePersistentState<string>('pg-type', '');
   const [tags, setTags] = usePersistentState<string[]>('pg-tags', []);
+  const [search, setSearch] = usePersistentState<string>('pg-search', '');
+  const [demoOnly, setDemoOnly] = usePersistentState<boolean>('pg-demo', false);
 
   // load projects
   useEffect(() => {
@@ -109,12 +130,30 @@ export default function ProjectGalleryPage() {
   // initialize from query string
   useEffect(() => {
     if (!router.isReady) return;
-    const { tech: qsTech, year: qsYear, type: qsType, tags: qsTags } = router.query;
+    const {
+      tech: qsTech,
+      year: qsYear,
+      type: qsType,
+      tags: qsTags,
+      q: qsSearch,
+      demo: qsDemo,
+    } = router.query;
     if (typeof qsTech === 'string') setTech(qsTech.split(','));
     if (typeof qsYear === 'string') setYear(qsYear);
     if (typeof qsType === 'string') setType(qsType);
     if (typeof qsTags === 'string') setTags(qsTags.split(','));
-  }, [router.isReady, router.query, setTech, setYear, setType, setTags]);
+    if (typeof qsSearch === 'string') setSearch(qsSearch);
+    if (typeof qsDemo === 'string') setDemoOnly(qsDemo === '1');
+  }, [
+    router.isReady,
+    router.query,
+    setTech,
+    setYear,
+    setType,
+    setTags,
+    setSearch,
+    setDemoOnly,
+  ]);
 
   // encode selection in query string
   useEffect(() => {
@@ -123,8 +162,10 @@ export default function ProjectGalleryPage() {
     if (year) query.year = year;
     if (type) query.type = type;
     if (tags.length) query.tags = tags.join(',');
+    if (search) query.q = search;
+    if (demoOnly) query.demo = '1';
     router.replace({ pathname: router.pathname, query }, undefined, { shallow: true });
-  }, [router, tech, year, type, tags]);
+  }, [router, tech, year, type, tags, search, demoOnly]);
 
   const stacks = useMemo(
     () => Array.from(new Set(projects.flatMap((p) => p.stack))),
@@ -150,13 +191,32 @@ export default function ProjectGalleryPage() {
           (!tech.length || tech.every((t) => p.stack.includes(t))) &&
           (!year || String(p.year) === year) &&
           (!type || p.type === type) &&
-          (!tags.length || tags.every((t) => p.tags.includes(t)))
+          (!tags.length || tags.every((t) => p.tags.includes(t))) &&
+          (!search ||
+            p.title.toLowerCase().includes(search.toLowerCase()) ||
+            p.description.toLowerCase().includes(search.toLowerCase())) &&
+          (!demoOnly || Boolean(p.demo))
       ),
-    [projects, tech, year, type, tags]
+    [projects, tech, year, type, tags, search, demoOnly]
   );
 
   return (
     <div className="p-4 space-y-4 text-black">
+      <div className="flex flex-wrap gap-2 items-center">
+        <input
+          type="text"
+          placeholder="Search..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="px-2 py-1 border rounded"
+        />
+        <FilterChip
+          label="Playable"
+          active={demoOnly}
+          onClick={() => setDemoOnly(!demoOnly)}
+          icon={<PlayIcon />}
+        />
+      </div>
       <div className="flex flex-wrap gap-2">
         {tagList.map((t) => (
           <FilterChip
