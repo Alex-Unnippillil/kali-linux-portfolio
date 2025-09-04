@@ -42,6 +42,23 @@ export default function Taskbar(props) {
                     )}
                 </button>
             ))}
+            <button
+                type="button"
+                aria-label="Show Desktop"
+                onClick={props.toggleDesktop}
+                onDragEnter={props.showDesktopDrag}
+                onDragOver={(e) => e.preventDefault()}
+                className="ml-auto mx-1 px-2 py-1 rounded hover:bg-white hover:bg-opacity-10 flex items-center justify-center"
+            >
+                <Image
+                    width={24}
+                    height={24}
+                    className="w-5 h-5"
+                    src="/themes/Yaru/window/window-minimize-symbolic.svg"
+                    alt="Show desktop"
+                    sizes="24px"
+                />
+            </button>
         </div>
     );
 }

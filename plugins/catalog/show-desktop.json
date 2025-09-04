@@ -1,0 +1,5 @@
+{
+  "id": "show-desktop",
+  "sandbox": "window",
+  "code": "if (typeof registerPanelItem === 'function') { registerPanelItem('show-desktop'); }"
+}
