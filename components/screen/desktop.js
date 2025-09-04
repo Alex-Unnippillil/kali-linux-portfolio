@@ -19,6 +19,7 @@ import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import Taskbar from './taskbar';
 import TaskbarMenu from '../context-menus/taskbar-menu';
+import WindowMenu from '../context-menus/window-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
@@ -46,6 +47,7 @@ export class Desktop extends Component {
                 default: false,
                 app: false,
                 taskbar: false,
+                window: false,
             },
             context_app: null,
             showNameBar: false,
@@ -257,6 +259,13 @@ export class Desktop extends Component {
                 });
                 this.setState({ context_app: appId }, () => this.showContextMenu(e, "taskbar"));
                 break;
+            case "window":
+                ReactGA.event({
+                    category: `Context Menu`,
+                    action: `Opened Window Context Menu`
+                });
+                this.setState({ context_app: appId }, () => this.showContextMenu(e, "window"));
+                break;
             default:
                 ReactGA.event({
                     category: `Context Menu`,
@@ -287,6 +296,10 @@ export class Desktop extends Component {
             case "taskbar":
                 ReactGA.event({ category: `Context Menu`, action: `Opened Taskbar Context Menu` });
                 this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "taskbar"));
+                break;
+            case "window":
+                ReactGA.event({ category: `Context Menu`, action: `Opened Window Context Menu` });
+                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "window"));
                 break;
             default:
                 ReactGA.event({ category: `Context Menu`, action: `Opened Default Context Menu` });
@@ -923,6 +936,16 @@ export class Desktop extends Component {
                         this.closeApp(id);
                     }}
                     onCloseMenu={this.hideAllContextMenu}
+                />
+                <WindowMenu
+                    active={this.state.context_menus.window}
+                    shaded={(this.state.context_app ? (document.getElementById(this.state.context_app)?.dataset.shaded === 'true') : false)}
+                    onShade={() => {
+                        const id = this.state.context_app;
+                        if (!id) return;
+                        document.getElementById(id)?.dispatchEvent(new CustomEvent('shade-toggle'));
+                    }}
+                    onClose={this.hideAllContextMenu}
                 />
 
                 {/* Folder Input Name Bar */}
