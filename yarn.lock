@@ -7791,7 +7791,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"glob@npm:^9.3.5":
+"glob@npm:glob@^9.3.5":
   version: 9.3.5
   resolution: "glob@npm:9.3.5"
   dependencies:
@@ -9667,10 +9667,9 @@ __metadata:
 "magic-string@npm:0.30.18":
   version: 0.30.18
   resolution: "magic-string@npm:0.30.18"
-
   dependencies:
     "@jridgewell/sourcemap-codec": "npm:^1.4.15"
-  checksum: 10c0/aa9ca17eae571a19bce92c8221193b6f93ee8511abb10f085e55ffd398db8e4c089a208d9eac559deee96a08b7b24d636ea4ab92f09c6cf42a7d1af51f7fd62b
+  checksum: 10c0/80fba01e13ce1f5c474a0498a5aa462fa158eb56567310747089a0033e432d83a2021ee2c109ac116010cd9dcf90a5231d89fbe3858165f73c00a50a74dbefcd
   languageName: node
   linkType: hard
 
@@ -13862,7 +13861,6 @@ __metadata:
     kaitai-struct: "npm:^0.10.0"
     leaflet: "npm:^1.9.4"
     magic-string: "npm:0.30.18"
-
     mathjs: "npm:^14.6.0"
     matter-js: "npm:0.20.0"
     monaco-editor: "npm:^0.52.2"
