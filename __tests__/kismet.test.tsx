@@ -1,12 +1,10 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import KismetApp from '../components/apps/kismet';
+import KismetApp from '../components/apps/kismet.jsx';
 
 describe('KismetApp', () => {
-  it('renders the placeholder message', () => {
+  it('renders file input', () => {
     render(<KismetApp />);
-    expect(
-      screen.getByText(/kismet app placeholder/i),
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/pcap file/i)).toBeInTheDocument();
   });
 });
