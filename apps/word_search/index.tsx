@@ -57,11 +57,13 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
   const [error, setError] = useState('');
   const startRef = useRef<number>(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const cellRefs = useRef<(HTMLDivElement | null)[][]>([]);
   const { quality, setQuality, highContrast, setHighContrast } = useSettings();
   const [pack, setPack] = useState<PackName | 'random' | 'custom'>('random');
   const [allowBackwards, setAllowBackwards] = useState(true);
   const [allowDiagonal, setAllowDiagonal] = useState(true);
   const [elapsed, setElapsed] = useState(0);
+  const [announce, setAnnounce] = useState('');
 
   // load saved game on mount
   useEffect(() => {
@@ -187,6 +189,13 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
     return () => clearInterval(id);
   }, [seed, words, grid, placements, found, foundCells, hintCells, firstHints, lastHints]);
 
+  useEffect(() => {
+    if (selection.length) {
+      const letters = selection.map((p) => grid[p.row][p.col]).join('');
+      setAnnounce(letters);
+    }
+  }, [selection, grid]);
+
   const handleMouseDown = (r: number, c: number) => {
     setSelecting(true);
     const s = { row: r, col: c };
@@ -200,7 +209,7 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
     setSelection(path);
   };
 
-  const handleMouseUp = () => {
+  const finalizeSelection = () => {
     if (!selecting) return;
     setSelecting(false);
     if (!selection.length) {
@@ -211,33 +220,80 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
     const letters = selection.map((p) => grid[p.row][p.col]).join('');
     const reversed = letters.split('').reverse().join('');
     const match = words.find((w) => w === letters || w === reversed);
-      if (match && !found.has(match)) {
-        const newFound = new Set(found);
-        newFound.add(match);
-        setFound(newFound);
-        const newCells = new Set(foundCells);
-        selection.forEach((p) => newCells.add(key(p)));
-        setFoundCells(newCells);
-        const newHints = new Set(hintCells);
-        selection.forEach((p) => newHints.delete(key(p)));
-        setHintCells(newHints);
-        if (newFound.size === words.length) {
-          const time = Math.floor((Date.now() - startRef.current) / 1000);
-          try {
-            const lb = JSON.parse(localStorage.getItem(LB_KEY) || '[]');
-            lb.push({ seed, time });
-            localStorage.setItem(LB_KEY, JSON.stringify(lb));
-            const dayKey = `game:word_search:daily:${new Date().toISOString().split('T')[0]}`;
-            localStorage.setItem(dayKey, JSON.stringify({ seed, time }));
-          } catch {
-            // ignore
-          }
-          logGameEnd('word_search');
+    setAnnounce(match ? `Found word ${match}` : letters);
+    if (match && !found.has(match)) {
+      const newFound = new Set(found);
+      newFound.add(match);
+      setFound(newFound);
+      const newCells = new Set(foundCells);
+      selection.forEach((p) => newCells.add(key(p)));
+      setFoundCells(newCells);
+      const newHints = new Set(hintCells);
+      selection.forEach((p) => newHints.delete(key(p)));
+      setHintCells(newHints);
+      if (newFound.size === words.length) {
+        const time = Math.floor((Date.now() - startRef.current) / 1000);
+        try {
+          const lb = JSON.parse(localStorage.getItem(LB_KEY) || '[]');
+          lb.push({ seed, time });
+          localStorage.setItem(LB_KEY, JSON.stringify(lb));
+          const dayKey = `game:word_search:daily:${new Date().toISOString().split('T')[0]}`;
+          localStorage.setItem(dayKey, JSON.stringify({ seed, time }));
+        } catch {
+          // ignore
         }
+        logGameEnd('word_search');
       }
+    }
+    setStart(null);
+    setSelection([]);
+  };
+
+  const handleMouseUp = () => {
+    finalizeSelection();
+  };
+
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLDivElement>,
+    r: number,
+    c: number,
+  ) => {
+    if (e.key.startsWith('Arrow')) {
+      e.preventDefault();
+      const dr = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0;
+      const dc = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
+      const nr = r + dr;
+      const nc = c + dc;
+      if (nr < 0 || nr >= GRID_SIZE || nc < 0 || nc >= GRID_SIZE) return;
+      if (e.shiftKey) {
+        const s = start ?? { row: r, col: c };
+        setStart(s);
+        const path = computePath(s, { row: nr, col: nc });
+        setSelection(path);
+        setSelecting(true);
+      } else {
+        setStart(null);
+        setSelection([]);
+        setSelecting(false);
+      }
+      cellRefs.current[nr]?.[nc]?.focus();
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      if (selection.length) {
+        e.preventDefault();
+        finalizeSelection();
+      }
+    } else if (e.key === 'Escape') {
       setStart(null);
       setSelection([]);
-    };
+      setSelecting(false);
+    }
+  };
+
+  const handleKeyUp = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Shift' && selecting) {
+      finalizeSelection();
+    }
+  };
 
   const handleImport = (list: string[]) => {
     if (!list.length) return;
@@ -365,6 +421,9 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
 
   return (
     <div className="p-4 select-none">
+      <div aria-live="polite" role="status" className="sr-only">
+        {announce}
+      </div>
       <div className="flex flex-wrap gap-2 mb-2 print:hidden items-center">
         <svg viewBox="0 0 36 36" className="w-10 h-10">
           <circle
@@ -495,6 +554,8 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
             gridTemplateRows: `repeat(${GRID_SIZE}, ${CELL_SIZE}px)`,
           }}
           className={`grid border w-max ${highContrast ? 'contrast-200' : ''}`}
+          role="grid"
+          aria-label="Word search grid"
         >
           {grid.map((row, r) =>
             row.map((letter, c) => {
@@ -508,9 +569,18 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
                   onMouseDown={() => handleMouseDown(r, c)}
                   onMouseEnter={() => handleMouseEnter(r, c)}
                   onMouseUp={handleMouseUp}
+                  ref={(el) => {
+                    if (!cellRefs.current[r]) cellRefs.current[r] = [];
+                    cellRefs.current[r][c] = el;
+                  }}
+                  tabIndex={0}
+                  role="gridcell"
+                  aria-selected={isSelected}
+                  onKeyDown={(e) => handleKeyDown(e, r, c)}
+                  onKeyUp={handleKeyUp}
                   className={`flex items-center justify-center border font-bold cursor-pointer select-none ${isFound ? 'bg-blue-300' : isSelected ? 'selection' : isHint ? 'bg-purple-200' : 'bg-white'}`}
                   style={{ width: CELL_SIZE, height: CELL_SIZE, fontSize: CELL_SIZE * 0.6 }}
-                  aria-label={`row ${r + 1} column ${c + 1} letter ${letter}`}
+                  aria-label={`row ${r + 1} column ${c + 1} letter ${letter}${isFound ? ' found' : ''}`}
                 >
                   {letter}
                 </div>
