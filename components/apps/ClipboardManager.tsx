@@ -1,9 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
-import type { IDBPDatabase } from 'idb';
-import { makeIdb } from '../../utils/safeIdb';
-import { isBrowser } from '../../utils/env';
+import { getDb } from '../../utils/safeIDB';
 
 interface ClipItem {
   id?: number;
@@ -14,12 +12,10 @@ interface ClipItem {
 const DB_NAME = 'clipboard-manager';
 const STORE_NAME = 'items';
 
-let dbPromise: ReturnType<typeof makeIdb> | null = null;
+let dbPromise: ReturnType<typeof getDb> | null = null;
 function getDB() {
-  if (!isBrowser) return null;
-
   if (!dbPromise) {
-    dbPromise = makeIdb(DB_NAME, 1, {
+    dbPromise = getDb(DB_NAME, 1, {
       upgrade(db) {
         if (!db.objectStoreNames.contains(STORE_NAME)) {
           db.createObjectStore(STORE_NAME, {

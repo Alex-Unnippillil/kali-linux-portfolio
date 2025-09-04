@@ -14,10 +14,10 @@ const getStorage = (): StorageWithDirectory =>
   navigator.storage as StorageWithDirectory;
 
 const hasOpfs =
-  isBrowser() && 'storage' in navigator && Boolean(getStorage().getDirectory);
+  isBrowser && 'storage' in navigator && Boolean(getStorage().getDirectory);
 
 export const loadScans = async (): Promise<string[]> => {
-  if (!isBrowser()) return [];
+  if (!isBrowser) return [];
   if (hasOpfs) {
     try {
       const root = await getStorage().getDirectory();
@@ -36,7 +36,7 @@ export const loadScans = async (): Promise<string[]> => {
 };
 
 export const saveScans = async (scans: string[]): Promise<void> => {
-  if (!isBrowser()) return;
+  if (!isBrowser) return;
   if (hasOpfs) {
     const root = await getStorage().getDirectory();
     const handle = await root.getFileHandle(FILE_NAME, { create: true });
@@ -49,7 +49,7 @@ export const saveScans = async (scans: string[]): Promise<void> => {
 };
 
 export const clearScans = async (): Promise<void> => {
-  if (!isBrowser()) return;
+  if (!isBrowser) return;
   if (hasOpfs) {
     try {
       const root = await getStorage().getDirectory();
@@ -63,21 +63,21 @@ export const clearScans = async (): Promise<void> => {
 };
 
 export const loadLastScan = (): string => {
-  if (!isBrowser()) return '';
+  if (!isBrowser) return '';
   return localStorage.getItem(LAST_SCAN_KEY) || '';
 };
 
 export const saveLastScan = (scan: string): void => {
-  if (!isBrowser()) return;
+  if (!isBrowser) return;
   localStorage.setItem(LAST_SCAN_KEY, scan);
 };
 
 export const loadLastGeneration = (): string => {
-  if (!isBrowser()) return '';
+  if (!isBrowser) return '';
   return localStorage.getItem(LAST_GEN_KEY) || '';
 };
 
 export const saveLastGeneration = (payload: string): void => {
-  if (!isBrowser()) return;
+  if (!isBrowser) return;
   localStorage.setItem(LAST_GEN_KEY, payload);
 };

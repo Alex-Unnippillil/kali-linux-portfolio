@@ -1,10 +1,12 @@
+"use client";
+
 import { isBrowser } from './isBrowser';
 
 type StateMessage = { type: 'state'; state: unknown };
 type LeaderboardMessage = { type: 'leaderboard'; leaderboard: unknown };
 type SyncMessage = StateMessage | LeaderboardMessage;
 
-const channel = isBrowser() && 'BroadcastChannel' in self
+const channel = isBrowser && 'BroadcastChannel' in self
   ? new BroadcastChannel('sync')
   : null;
 
