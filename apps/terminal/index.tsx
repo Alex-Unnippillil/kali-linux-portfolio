@@ -7,6 +7,7 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useCallback,
+  useMemo,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
@@ -105,24 +106,54 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
   const [overflow, setOverflow] = useState({ top: false, bottom: false });
-  const ansiColors = [
-    '#000000',
-    '#AA0000',
-    '#00AA00',
-    '#AA5500',
-    '#0000AA',
-    '#AA00AA',
-    '#00AAAA',
-    '#AAAAAA',
-    '#555555',
-    '#FF5555',
-    '#55FF55',
-    '#FFFF55',
-    '#5555FF',
-    '#FF55FF',
-    '#55FFFF',
-    '#FFFFFF',
-  ];
+  // Kali Linux dark palette ANSI colors
+  const ansiColors = useMemo(
+    () => [
+      '#0f1317', // black
+      '#ef4444', // red
+      '#26a269', // green
+      '#a2734c', // yellow
+      '#3b82f6', // blue
+      '#d946ef', // magenta
+      '#2aa1b3', // cyan
+      '#d0cfcc', // white
+      '#8b949e', // bright black
+      '#f66151', // bright red
+      '#33d17a', // bright green
+      '#e9ad0c', // bright yellow
+      '#60a5fa', // bright blue
+      '#c061cb', // bright magenta
+      '#33c7de', // bright cyan
+      '#ffffff', // bright white
+    ],
+    [],
+  );
+
+  const terminalTheme = useMemo(
+    () => ({
+      foreground: '#d0cfcc',
+      background: '#0f1317',
+      cursor: '#d0cfcc',
+      cursorAccent: '#0f1317',
+      black: ansiColors[0],
+      red: ansiColors[1],
+      green: ansiColors[2],
+      yellow: ansiColors[3],
+      blue: ansiColors[4],
+      magenta: ansiColors[5],
+      cyan: ansiColors[6],
+      white: ansiColors[7],
+      brightBlack: ansiColors[8],
+      brightRed: ansiColors[9],
+      brightGreen: ansiColors[10],
+      brightYellow: ansiColors[11],
+      brightBlue: ansiColors[12],
+      brightMagenta: ansiColors[13],
+      brightCyan: ansiColors[14],
+      brightWhite: ansiColors[15],
+    }),
+    [ansiColors],
+  );
 
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
@@ -304,6 +335,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         scrollback: 1000,
         cols: 80,
         rows: 24,
+        theme: terminalTheme,
       });
       const fit = new FitAddon();
       const search = new SearchAddon();
@@ -368,7 +400,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       disposed = true;
       termRef.current?.dispose();
     };
-    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow]);
+    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow, terminalTheme]);
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();
@@ -407,6 +439,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           <div className="mt-10 w-80 bg-gray-800 p-4 rounded">
             <input
               autoFocus
+              aria-label="Command palette"
               className="w-full mb-2 bg-black text-white p-2"
               value={paletteInput}
               onChange={(e) => setPaletteInput(e.target.value)}
