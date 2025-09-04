@@ -7,82 +7,13 @@ import DecodeTree from './DecodeTree';
 import FlowGraph from '../../../apps/wireshark/components/FlowGraph';
 import FilterHelper from '../../../apps/wireshark/components/FilterHelper';
 import ColorRuleEditor from '../../../apps/wireshark/components/ColorRuleEditor';
-
-const SMALL_CAPTURE_SIZE = 1024 * 1024; // 1MB threshold
+import { parsePcap } from '../../../utils/pcap';
 
 const toHex = (bytes) =>
   Array.from(bytes, (b, i) =>
     `${b.toString(16).padStart(2, '0')}${(i + 1) % 16 === 0 ? '\n' : ' '}`
   ).join('');
 
-const parseEthernetIpv4 = (data) => {
-  if (data.length < 34) return { src: '', dest: '', protocol: 0, info: '' };
-  const etherType = (data[12] << 8) | data[13];
-  if (etherType !== 0x0800) return { src: '', dest: '', protocol: 0, info: '' };
-  const protocol = data[23];
-  const src = Array.from(data.slice(26, 30)).join('.');
-  const dest = Array.from(data.slice(30, 34)).join('.');
-  let info = '';
-  if (protocol === 6 && data.length >= 54) {
-    const sport = (data[34] << 8) | data[35];
-    const dport = (data[36] << 8) | data[37];
-    info = `TCP ${sport} → ${dport}`;
-    return { src, dest, protocol, info, sport, dport };
-  }
-  if (protocol === 17 && data.length >= 42) {
-    const sport = (data[34] << 8) | data[35];
-    const dport = (data[36] << 8) | data[37];
-    info = `UDP ${sport} → ${dport}`;
-    return { src, dest, protocol, info, sport, dport };
-  }
-  return { src, dest, protocol, info };
-};
-
-const parseWithCap = (buf) => {
-  const view = new DataView(buf);
-  const magic = view.getUint32(0, false);
-  let little;
-  if (magic === 0xa1b2c3d4) little = false;
-  else if (magic === 0xd4c3b2a1) little = true;
-  else throw new Error('Unsupported pcap format');
-  let offset = 24;
-  const packets = [];
-  while (offset + 16 <= view.byteLength) {
-    const tsSec = view.getUint32(offset, little);
-    const tsUsec = view.getUint32(offset + 4, little);
-    const capLen = view.getUint32(offset + 8, little);
-    const origLen = view.getUint32(offset + 12, little);
-    offset += 16;
-    if (offset + capLen > view.byteLength) break;
-    const data = new Uint8Array(buf.slice(offset, offset + capLen));
-    const meta = parseEthernetIpv4(data);
-    packets.push({
-      timestamp: `${tsSec}.${tsUsec.toString().padStart(6, '0')}`,
-      src: meta.src,
-      dest: meta.dest,
-      protocol: meta.protocol,
-      info: meta.info || `len=${origLen}`,
-      sport: meta.sport,
-      dport: meta.dport,
-      data,
-      layers: {},
-    });
-    offset += capLen;
-  }
-  return packets;
-};
-
-const parseWithWiregasm = async (buf) => {
-  try {
-    const resp = await fetch(
-      'https://unpkg.com/wiregasm/dist/wiregasm.wasm'
-    );
-    await WebAssembly.instantiate(await resp.arrayBuffer(), {});
-  } catch {
-    // ignore wasm errors and fall back
-  }
-  return parseWithCap(buf);
-};
 
 // Basic BPF-style filtering support
 const matchesBpf = (packet, expr) => {
@@ -198,10 +129,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
   const handleFile = async (file) => {
     try {
       const buffer = await file.arrayBuffer();
-      const parsed =
-        buffer.byteLength < SMALL_CAPTURE_SIZE
-          ? parseWithCap(buffer)
-          : await parseWithWiregasm(buffer);
+      const parsed = parsePcap(buffer);
       setPackets(parsed);
       setTimeline(parsed);
       setError('');
@@ -213,7 +141,10 @@ const WiresharkApp = ({ initialPackets = [] }) => {
   const handleDrop = (e) => {
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
-    if (file && file.name.endsWith('.pcap')) {
+    if (
+      file &&
+      (file.name.endsWith('.pcap') || file.name.endsWith('.pcapng'))
+    ) {
       handleFile(file);
     } else {
       setError('Unsupported file format');
@@ -458,10 +389,8 @@ const WiresharkApp = ({ initialPackets = [] }) => {
               <thead className="bg-gray-800">
                 <tr>
                   <th className="px-2 py-1 text-left">Time</th>
-                  <th className="px-2 py-1 text-left">Source</th>
-                  <th className="px-2 py-1 text-left">Destination</th>
-                  <th className="px-2 py-1 text-left">Protocol</th>
-                  <th className="px-2 py-1 text-left">Info</th>
+                  <th className="px-2 py-1 text-left">Length</th>
+                  <th className="px-2 py-1 text-left">Summary</th>
                   {hasTlsKeys && (
                     <th className="px-2 py-1 text-left">Plaintext</th>
                   )}
@@ -482,14 +411,12 @@ const WiresharkApp = ({ initialPackets = [] }) => {
                       }`}
                     >
                       <td className="px-2 py-1 whitespace-nowrap">{p.timestamp}</td>
-                      <td className="px-2 py-1 whitespace-nowrap">{p.src}</td>
-                      <td className="px-2 py-1 whitespace-nowrap">{p.dest}</td>
-                      <td className="px-2 py-1 whitespace-nowrap">{protocolName(p.protocol)}</td>
+                      <td className="px-2 py-1 whitespace-nowrap">{p.len}</td>
                       <td className="px-2 py-1">{p.info}</td>
                       {hasTlsKeys && (
                         <td className="px-2 py-1">{p.plaintext || p.decrypted}</td>
                       )}
-                </tr>
+                    </tr>
                   );
                 })}
               </tbody>
