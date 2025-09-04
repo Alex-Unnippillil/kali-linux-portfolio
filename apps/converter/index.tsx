@@ -17,6 +17,18 @@ const icons: Record<Domain, string> = {
   weight: '⚖️',
 };
 
+// Simple fuzzy search implementation. Returns true if all characters of
+// `pattern` appear in order within `str`, ignoring case.
+const fuzzyMatch = (pattern: string, str: string) => {
+  pattern = pattern.toLowerCase();
+  str = str.toLowerCase();
+  let p = 0;
+  for (let i = 0; i < str.length && p < pattern.length; i++) {
+    if (str[i] === pattern[p]) p++;
+  }
+  return p === pattern.length;
+};
+
 const formatPreview = (val: string) => {
   const n = parseFloat(val);
   if (isNaN(n)) return '';
@@ -48,6 +60,7 @@ export default function Converter() {
   const [fromValue, setFromValue] = useState('');
   const [toValue, setToValue] = useState('');
   const [focused, setFocused] = useState<'from' | 'to' | null>(null);
+  const [search, setSearch] = useState('');
   const HISTORY_KEY = 'converter-history';
   const [history, setHistory] = useState<
     { fromValue: string; fromUnit: string; toValue: string; toUnit: string }[]
@@ -89,6 +102,7 @@ export default function Converter() {
     }
     setFromValue('');
     setToValue('');
+    setSearch('');
   }, [active, rates]);
 
   const addHistory = (
@@ -141,6 +155,12 @@ export default function Converter() {
   };
 
   const units = Object.keys(rates[active as Domain] || {});
+  const filtered = search
+    ? units.filter((u) => fuzzyMatch(search, u))
+    : units;
+  // Ensure currently selected units remain visible even if they don't match
+  // the search query.
+  const selectUnits = Array.from(new Set([...filtered, fromUnit, toUnit]));
 
   return (
     <div className="p-4 bg-ub-cool-grey text-white h-full overflow-y-auto">
@@ -160,6 +180,16 @@ export default function Converter() {
         ))}
       </div>
       <div className="space-y-4">
+        <label className="block">
+          Search units
+          <input
+            type="text"
+            className="text-black p-1 rounded w-full"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="search units"
+          />
+        </label>
         <div className="flex flex-col sm:flex-row items-center gap-[6px]">
           <div className="flex flex-col sm:flex-row gap-[6px] flex-1">
             <div className="flex flex-col flex-1">
@@ -186,7 +216,7 @@ export default function Converter() {
                 if (fromValue) convertFrom(fromValue);
               }}
             >
-              {units.map((u) => (
+              {selectUnits.map((u) => (
                 <option key={u} value={u}>
                   {u}
                 </option>
@@ -226,7 +256,7 @@ export default function Converter() {
                 if (toValue) convertTo(toValue);
               }}
             >
-              {units.map((u) => (
+              {selectUnits.map((u) => (
                 <option key={u} value={u}>
                   {u}
                 </option>
@@ -235,6 +265,26 @@ export default function Converter() {
             <CopyButton value={formatPreview(toValue) || toValue} />
           </div>
         </div>
+        {filtered.length > 0 && (
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr>
+                <th className="px-2 py-1">Unit</th>
+                <th className="px-2 py-1">Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((u) => (
+                <tr key={u} className="odd:bg-gray-800">
+                  <td className="px-2 py-1">{u}</td>
+                  <td className="px-2 py-1 font-mono">
+                    {rates[active as Domain][u]}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
         {history.length > 0 && (
           <div className="max-h-40 overflow-y-auto space-y-1">
             {history.map((h, i) => (
