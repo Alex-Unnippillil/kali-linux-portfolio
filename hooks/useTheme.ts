@@ -1,33 +1,26 @@
 import { useEffect, useState } from 'react';
-import {
-  getTheme,
-  setTheme as storeTheme,
-  THEME_KEY,
-} from '../utils/theme';
-
-export type Theme = 'default' | 'dark' | 'neon' | 'matrix';
+import { THEME_KEY, getTheme, setTheme as applyTheme } from '../utils/theme';
 
 export const useTheme = () => {
-  const [theme, setThemeState] = useState<Theme>('default');
+  const [theme, setThemeState] = useState<string>(() => getTheme());
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const initial = getTheme() as Theme;
-    setThemeState(initial);
-    storeTheme(initial);
-
     const handleStorage = (e: StorageEvent) => {
-      if (e.key === THEME_KEY && e.newValue) {
-        setThemeState(e.newValue as Theme);
+      if (e.key === THEME_KEY) {
+        const next = getTheme();
+        setThemeState(next);
+        applyTheme(next);
+
       }
     };
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
-  const setTheme = (next: Theme) => {
+  const setTheme = (next: string) => {
     setThemeState(next);
-    storeTheme(next);
+    applyTheme(next);
+
   };
 
   return { theme, setTheme };
