@@ -127,4 +127,12 @@ describe('HashcatApp', () => {
       getByText(/hashcat \(v6\.2\.6\) starting in benchmark mode/)
     ).toBeInTheDocument();
   });
+
+  it('matches snapshot with mask tokens and polite live region', () => {
+    const { container, getByLabelText } = render(<HashcatApp />);
+    fireEvent.change(getByLabelText('Attack Mode:'), { target: { value: '3' } });
+    expect(container).toMatchSnapshot();
+    const liveRegion = container.querySelector('[role="status"]');
+    expect(liveRegion).toHaveAttribute('aria-live', 'polite');
+  });
 });
