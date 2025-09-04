@@ -126,7 +126,8 @@
     "fast-glob": "^3.3.3",
     "jest": "30.0.5",
     "jest-environment-jsdom": "30.0.5",
-    "magic-string": "^0.30.18",
+    "magic-string": "patch:magic-string@npm:0.30.10#./.yarn/patches/magic-string-0.30.10.patch",
+
     "node-mocks-http": "1.17.2",
     "pa11y": "^9.0.0",
     "playwright-core": "^1.55.0",
@@ -137,6 +138,7 @@
     "ws": "^8.18.0"
   },
   "resolutions": {
+
     "magic-string": "^0.30.10",
     "source-map": "^0.7.6",
 
