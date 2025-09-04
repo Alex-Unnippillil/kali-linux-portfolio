@@ -13,9 +13,9 @@
   </div>
   <div id="complete" class="hidden" role="status" aria-live="assertive">Level Complete!</div>
   <div id="controls" class="hidden">
-    <button id="btnLeft">◀</button>
-    <button id="btnRight">▶</button>
-    <button id="btnJump">⮝</button>
+    <button id="btnLeft" aria-label="Move left">◀</button>
+    <button id="btnRight" aria-label="Move right">▶</button>
+    <button id="btnJump" aria-label="Jump">⮝</button>
   </div>
   <div id="settings">
     <div>
@@ -68,13 +68,13 @@
       <label><input type="checkbox" id="buttonsToggle" /> Show Buttons</label>
     </div>
     <div>
-      Pad Left: <button id="padLeft"></button>
+      Pad Left: <button id="padLeft" aria-label="Move left"></button>
     </div>
     <div>
-      Pad Right: <button id="padRight"></button>
+      Pad Right: <button id="padRight" aria-label="Move right"></button>
     </div>
     <div>
-      Pad Jump: <button id="padJump"></button>
+      Pad Jump: <button id="padJump" aria-label="Jump"></button>
     </div>
   </div>
   <a href="editor.html" id="editorLink">Level Editor</a>
