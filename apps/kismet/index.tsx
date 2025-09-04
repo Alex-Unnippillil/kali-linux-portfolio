@@ -3,16 +3,17 @@
 import React, { useCallback } from 'react';
 import KismetApp from '../../components/apps/kismet';
 import DeauthWalkthrough from './components/DeauthWalkthrough';
+import { createLogger } from '../../lib/logger';
 
 const KismetPage: React.FC = () => {
   const handleNetworkDiscovered = useCallback(
     (net?: { ssid: string; bssid: string; discoveredAt: number }) => {
       if (!net) return;
-      console.log(
-        `Network ${net.ssid || net.bssid} discovered at ${new Date(
-          net.discoveredAt,
-        ).toLocaleTimeString()}`,
-      );
+      const logger = createLogger();
+      logger.info('network discovered', {
+        ssid: net.ssid || net.bssid,
+        time: new Date(net.discoveredAt).toISOString(),
+      });
     },
     [],
   );
