@@ -99,6 +99,10 @@ export default function GameSettingsPanel({
 
   // --- Display -----------------------------------------------------------
   const [palette, setPalette] = usePersistentState("game-palette", "default");
+  const [highContrast, setHighContrast] = usePersistentState(
+    "game-high-contrast",
+    false
+  );
   const [screenShake, setScreenShake] = usePersistentState(
     "game-screen-shake",
     true
@@ -177,6 +181,14 @@ export default function GameSettingsPanel({
             <option value="deuteranopia">Deuteranopia</option>
             <option value="tritanopia">Tritanopia</option>
           </select>
+        </label>
+        <label className="flex items-center gap-2 mb-2">
+          <input
+            type="checkbox"
+            checked={highContrast}
+            onChange={(e) => setHighContrast(e.target.checked)}
+          />
+          High Contrast
         </label>
         <label className="flex items-center gap-2">
           <input

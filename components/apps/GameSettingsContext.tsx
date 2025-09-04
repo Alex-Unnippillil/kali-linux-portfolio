@@ -2,14 +2,15 @@ import React, { createContext, useContext } from 'react';
 import usePersistedState from '../../hooks/usePersistedState';
 
 type Difficulty = 'easy' | 'normal' | 'hard';
+type PaletteName = 'default' | 'protanopia' | 'deuteranopia' | 'tritanopia';
 
 interface Settings {
   difficulty: Difficulty;
   setDifficulty: (d: Difficulty) => void;
   assists: boolean;
   setAssists: (v: boolean) => void;
-  colorBlind: boolean;
-  setColorBlind: (v: boolean) => void;
+  palette: PaletteName;
+  setPalette: (v: PaletteName) => void;
   highContrast: boolean;
   setHighContrast: (v: boolean) => void;
   quality: number;
@@ -21,7 +22,10 @@ const SettingsContext = createContext<Settings | undefined>(undefined);
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [difficulty, setDifficulty] = usePersistedState<Difficulty>('settings:difficulty', 'normal');
   const [assists, setAssists] = usePersistedState('settings:assists', true);
-  const [colorBlind, setColorBlind] = usePersistedState('settings:colorBlind', false);
+  const [palette, setPalette] = usePersistedState<PaletteName>(
+    'settings:palette',
+    'default',
+  );
   const [highContrast, setHighContrast] = usePersistedState('settings:highContrast', false);
   const [quality, setQuality] = usePersistedState('settings:quality', 1);
 
@@ -32,8 +36,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setDifficulty,
         assists,
         setAssists,
-        colorBlind,
-        setColorBlind,
+        palette,
+        setPalette,
         highContrast,
         setHighContrast,
         quality,

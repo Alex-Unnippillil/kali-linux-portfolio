@@ -1,4 +1,12 @@
-import { Palette, PaletteColor, defaultPalette, colorBlindPalette } from './palette';
+import {
+  Palette,
+  PaletteColor,
+  defaultPalette,
+  protanopiaPalette,
+  deuteranopiaPalette,
+  tritanopiaPalette,
+  highContrastPalette,
+} from './palette';
 
 // Calculate relative luminance according to WCAG 2.1
 const luminance = (hex: string): number => {
@@ -26,20 +34,29 @@ export const contrastRatio = (fg: string, bg: string): number => {
 export const validateContrast = (palette: Palette, minRatio = 4.5): boolean =>
   Object.values(palette).every(({ fg, bg }) => contrastRatio(fg, bg) >= minRatio);
 
-// Generate a high contrast variant of a palette using black backgrounds and white text
-const toHighContrast = (palette: Palette): Palette =>
-  Object.fromEntries(
-    Object.entries(palette).map(([k, v]) => [k, { ...v, bg: '#000000', fg: '#ffffff' }]),
-  ) as Palette;
+// Retrieve the appropriate palette based on color vision profile and contrast settings
+type ColorProfile = 'default' | 'protanopia' | 'deuteranopia' | 'tritanopia';
 
-// Retrieve the appropriate palette based on color blindness and contrast settings
+const palettes: Record<ColorProfile, Palette> = {
+  default: defaultPalette,
+  protanopia: protanopiaPalette,
+  deuteranopia: deuteranopiaPalette,
+  tritanopia: tritanopiaPalette,
+};
+
 export const getThemePalette = (
-  opts: { colorBlind?: boolean; highContrast?: boolean } = {},
+  opts: { palette?: ColorProfile; highContrast?: boolean } = {},
 ): Palette => {
-  let base: Palette = opts.colorBlind ? colorBlindPalette : defaultPalette;
-  if (opts.highContrast) base = toHighContrast(base);
-  return base;
+  if (opts.highContrast) return highContrastPalette;
+  const name = opts.palette ?? 'default';
+  return palettes[name];
 };
 
 export type { Palette, PaletteColor } from './palette';
-export { defaultPalette, colorBlindPalette } from './palette';
+export {
+  defaultPalette,
+  protanopiaPalette,
+  deuteranopiaPalette,
+  tritanopiaPalette,
+  highContrastPalette,
+} from './palette';
