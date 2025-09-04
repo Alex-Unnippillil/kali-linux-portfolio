@@ -1,12 +1,18 @@
 'use client';
 import { useEffect, useState } from 'react';
 
-interface PluginInfo { id: string; file: string; }
+interface PluginInfo {
+  id: string;
+  file: string;
+  permission: string;
+  sandbox: 'worker' | 'iframe';
+}
 
 interface PluginManifest {
   id: string;
   sandbox: 'worker' | 'iframe';
   code: string;
+  permission?: string;
 }
 
 export default function PluginManager() {
@@ -126,7 +132,15 @@ export default function PluginManager() {
       <ul>
         {plugins.map((p) => (
           <li key={p.id} className="flex items-center mb-2">
-            <span className="flex-grow">{p.id}</span>
+            <div className="flex-grow">
+              <span>{p.id}</span>
+              <span className="ml-2 text-xs bg-ub-cool-grey px-1 py-0.5 rounded">
+                {p.permission}
+              </span>
+              <span className="ml-1 text-xs bg-ub-cool-grey px-1 py-0.5 rounded">
+                {p.sandbox}
+              </span>
+            </div>
             <button
               className="bg-ub-orange px-2 py-1 rounded disabled:opacity-50"
               onClick={() => install(p)}
