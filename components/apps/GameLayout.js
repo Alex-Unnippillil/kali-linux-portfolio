@@ -1,1 +1,1 @@
-export { default } from './GameLayout.tsx';
+export { default, useInputRecorder } from './GameLayout.tsx';
