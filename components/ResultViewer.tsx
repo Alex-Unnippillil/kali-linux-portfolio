@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
+import VirtualList from 'rc-virtual-list';
 
 interface ViewerProps {
   data: any[];
@@ -65,43 +66,55 @@ export default function ResultViewer({ data }: ViewerProps) {
       {tab === 'raw' && <pre className="bg-black text-white p-1 h-40 overflow-auto">{JSON.stringify(data, null, 2)}</pre>}
       {tab === 'parsed' && (
         <div>
-          <div className="mb-2">
-            <label>
-              Filter:
-              <input value={filter} onChange={(e) => setFilter(e.target.value)} className="border p-1 text-black ml-1" />
-            </label>
-            {keys.map((k) => (
-              <button key={k} onClick={() => setSortKey(k)} className="px-2 py-1 bg-ub-cool-grey text-white ml-2">
-                {k}
-              </button>
-            ))}
-            <button onClick={exportCsv} className="px-2 py-1 bg-ub-green text-black ml-2" type="button">
+            <div className="mb-2">
+              <label htmlFor="rv-filter">Filter:</label>
+              <input
+                id="rv-filter"
+                aria-label="Filter"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="border p-1 text-black ml-1"
+              />
+              {keys.map((k) => (
+                <button key={k} onClick={() => setSortKey(k)} className="px-2 py-1 bg-ub-cool-grey text-white ml-2">
+                  {k}
+                </button>
+              ))}
+              <button onClick={exportCsv} className="px-2 py-1 bg-ub-green text-black ml-2" type="button">
               CSV
             </button>
           </div>
-          <div className="overflow-auto max-h-60">
-            <table className="w-full text-left">
-              <thead>
-                <tr>
+          <div className="max-h-60">
+            <div
+              className="grid bg-gray-700"
+              style={{ gridTemplateColumns: `repeat(${keys.length}, minmax(0,1fr))` }}
+            >
+              {keys.map((k) => (
+                <div key={k} className="border px-1">
+                  {k}
+                </div>
+              ))}
+            </div>
+            <VirtualList
+              data={sorted}
+              height={240}
+              itemHeight={24}
+              itemKey={(row, index) => index}
+            >
+              {(row, i) => (
+                <div
+                  key={i}
+                  className="grid"
+                  style={{ gridTemplateColumns: `repeat(${keys.length}, minmax(0,1fr))` }}
+                >
                   {keys.map((k) => (
-                    <th key={k} className="border px-1">
-                      {k}
-                    </th>
+                    <div key={k} className="border px-1">
+                      {String(row[k])}
+                    </div>
                   ))}
-                </tr>
-              </thead>
-              <tbody>
-                {sorted.map((row, i) => (
-                  <tr key={i}>
-                    {keys.map((k) => (
-                      <td key={k} className="border px-1">
-                        {String(row[k])}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                </div>
+              )}
+            </VirtualList>
           </div>
         </div>
       )}
