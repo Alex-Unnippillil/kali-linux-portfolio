@@ -129,7 +129,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
 
     class LevelScene extends Phaser.Scene {
       player!: Phaser.Physics.Matter.Image;
-      state!: GameState;
+      gameState!: GameState;
       lastGrounded = 0;
       coyoteTime = 100; // ms
       jumpBufferTimer = 0;
