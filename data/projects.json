@@ -3,6 +3,7 @@
     "id": 1,
     "title": "Alpha",
     "description": "Example project Alpha",
+    "goals": "Demonstrate Alpha capabilities",
     "stack": ["JS"],
     "tags": ["frontend", "react"],
     "year": 2021,
@@ -11,12 +12,14 @@
     "repo": "https://example.com/alpha",
     "demo": "https://example.com/alpha-demo",
     "snippet": "console.log('Alpha');",
-    "language": "javascript"
+    "language": "javascript",
+    "results": "Delivered Alpha demo"
   },
   {
     "id": 2,
     "title": "Beta",
     "description": "Example project Beta",
+    "goals": "Illustrate Beta workflow",
     "stack": ["TS"],
     "tags": ["backend"],
     "year": 2022,
@@ -25,6 +28,7 @@
     "repo": "https://example.com/beta",
     "demo": "https://example.com/beta-demo",
     "snippet": "console.log('Beta');",
-    "language": "typescript"
+    "language": "typescript",
+    "results": "Released Beta prototype"
   }
 ]
