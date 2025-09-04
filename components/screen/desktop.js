@@ -128,6 +128,13 @@ export class Desktop extends Component {
                 this.openApp("settings");
             });
         }
+        document.addEventListener('open-settings', (e) => {
+            const tab = e.detail && e.detail.tab;
+            if (tab) {
+                window.localStorage.setItem('settings-open-tab', tab);
+            }
+            this.openApp('settings');
+        });
     }
 
     setContextListeners = () => {
