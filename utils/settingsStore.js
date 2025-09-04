@@ -8,7 +8,7 @@ const DEFAULT_SETTINGS = {
   wallpaper: 'wall-2',
   density: 'regular',
   reducedMotion: false,
-  fontScale: 1,
+  scale: 1,
   highContrast: false,
   largeHitAreas: false,
   pongSpin: true,
@@ -60,15 +60,15 @@ export async function setReducedMotion(value) {
   window.localStorage.setItem('reduced-motion', value ? 'true' : 'false');
 }
 
-export async function getFontScale() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.fontScale;
-  const stored = window.localStorage.getItem('font-scale');
-  return stored ? parseFloat(stored) : DEFAULT_SETTINGS.fontScale;
+export async function getScale() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.scale;
+  const stored = window.localStorage.getItem('scale');
+  return stored ? parseFloat(stored) : DEFAULT_SETTINGS.scale;
 }
 
-export async function setFontScale(scale) {
+export async function setScale(scale) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('font-scale', String(scale));
+  window.localStorage.setItem('scale', String(scale));
 }
 
 export async function getHighContrast() {
@@ -131,7 +131,7 @@ export async function resetSettings() {
   ]);
   window.localStorage.removeItem('density');
   window.localStorage.removeItem('reduced-motion');
-  window.localStorage.removeItem('font-scale');
+  window.localStorage.removeItem('scale');
   window.localStorage.removeItem('high-contrast');
   window.localStorage.removeItem('large-hit-areas');
   window.localStorage.removeItem('pong-spin');
@@ -145,7 +145,7 @@ export async function exportSettings() {
     wallpaper,
     density,
     reducedMotion,
-    fontScale,
+    scale,
     highContrast,
     largeHitAreas,
     pongSpin,
@@ -156,7 +156,7 @@ export async function exportSettings() {
     getWallpaper(),
     getDensity(),
     getReducedMotion(),
-    getFontScale(),
+    getScale(),
     getHighContrast(),
     getLargeHitAreas(),
     getPongSpin(),
@@ -169,7 +169,7 @@ export async function exportSettings() {
     wallpaper,
     density,
     reducedMotion,
-    fontScale,
+    scale,
     highContrast,
     largeHitAreas,
     pongSpin,
@@ -193,7 +193,7 @@ export async function importSettings(json) {
     wallpaper,
     density,
     reducedMotion,
-    fontScale,
+    scale,
     highContrast,
     largeHitAreas,
     pongSpin,
@@ -205,7 +205,7 @@ export async function importSettings(json) {
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
   if (density !== undefined) await setDensity(density);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
-  if (fontScale !== undefined) await setFontScale(fontScale);
+  if (scale !== undefined) await setScale(scale);
   if (highContrast !== undefined) await setHighContrast(highContrast);
   if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas);
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
