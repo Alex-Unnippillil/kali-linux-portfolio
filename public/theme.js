@@ -5,5 +5,7 @@
     var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     var theme = stored || (prefersDark ? 'dark' : 'default');
     document.documentElement.dataset.theme = theme;
+    var darkThemes = ['dark', 'neon', 'matrix'];
+    document.documentElement.classList.toggle('dark', darkThemes.indexOf(theme) !== -1);
   } catch (e) {}
 })();

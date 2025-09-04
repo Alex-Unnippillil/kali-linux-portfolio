@@ -2,9 +2,12 @@ import { renderHook, act } from '@testing-library/react';
 import { SettingsProvider, useSettings } from '../hooks/useSettings';
 import { getTheme, getUnlockedThemes } from '../utils/theme';
 
+
 describe('theme persistence and unlocking', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    document.documentElement.dataset.theme = '';
+    document.documentElement.className = '';
   });
 
   test('theme persists across sessions', () => {
@@ -15,12 +18,20 @@ describe('theme persistence and unlocking', () => {
     expect(result.current.theme).toBe('dark');
     expect(getTheme()).toBe('dark');
     expect(window.localStorage.getItem('app:theme')).toBe('dark');
+
   });
 
   test('themes unlock at score milestones', () => {
     const unlocked = getUnlockedThemes(600);
     expect(unlocked).toEqual(expect.arrayContaining(['default', 'neon', 'dark']));
     expect(unlocked).not.toContain('matrix');
+  });
+
+  test('dark class applied for neon and matrix themes', () => {
+    setTheme('neon');
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+    setTheme('matrix');
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
   });
 
   test('defaults to system preference when no stored theme', () => {
