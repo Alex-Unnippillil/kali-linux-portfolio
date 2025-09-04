@@ -8,8 +8,8 @@ import {
   setDensity as saveDensity,
   getReducedMotion as loadReducedMotion,
   setReducedMotion as saveReducedMotion,
-  getFontScale as loadFontScale,
-  setFontScale as saveFontScale,
+  getScale as loadScale,
+  setScale as saveScale,
   getHighContrast as loadHighContrast,
   setHighContrast as saveHighContrast,
   getLargeHitAreas as loadLargeHitAreas,
@@ -56,7 +56,7 @@ interface SettingsContextValue {
   wallpaper: string;
   density: Density;
   reducedMotion: boolean;
-  fontScale: number;
+  scale: number;
   highContrast: boolean;
   largeHitAreas: boolean;
   pongSpin: boolean;
@@ -67,7 +67,7 @@ interface SettingsContextValue {
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
   setReducedMotion: (value: boolean) => void;
-  setFontScale: (value: number) => void;
+  setScale: (value: number) => void;
   setHighContrast: (value: boolean) => void;
   setLargeHitAreas: (value: boolean) => void;
   setPongSpin: (value: boolean) => void;
@@ -81,7 +81,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   wallpaper: defaults.wallpaper,
   density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
-  fontScale: defaults.fontScale,
+  scale: defaults.scale,
   highContrast: defaults.highContrast,
   largeHitAreas: defaults.largeHitAreas,
   pongSpin: defaults.pongSpin,
@@ -92,7 +92,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setWallpaper: () => {},
   setDensity: () => {},
   setReducedMotion: () => {},
-  setFontScale: () => {},
+  setScale: () => {},
   setHighContrast: () => {},
   setLargeHitAreas: () => {},
   setPongSpin: () => {},
@@ -106,7 +106,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
-  const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
+  const [scale, setScale] = useState<number>(defaults.scale);
   const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
@@ -121,7 +121,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setWallpaper(await loadWallpaper());
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
-      setFontScale(await loadFontScale());
+      setScale(await loadScale());
       setHighContrast(await loadHighContrast());
       setLargeHitAreas(await loadLargeHitAreas());
       setPongSpin(await loadPongSpin());
@@ -188,9 +188,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [reducedMotion]);
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--font-multiplier', fontScale.toString());
-    saveFontScale(fontScale);
-  }, [fontScale]);
+    document.documentElement.style.setProperty('--scale', scale.toString());
+    saveScale(scale);
+  }, [scale]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('high-contrast', highContrast);
@@ -243,7 +243,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         wallpaper,
         density,
         reducedMotion,
-        fontScale,
+        scale,
         highContrast,
         largeHitAreas,
         pongSpin,
@@ -254,7 +254,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setWallpaper,
         setDensity,
         setReducedMotion,
-        setFontScale,
+        setScale,
         setHighContrast,
         setLargeHitAreas,
         setPongSpin,

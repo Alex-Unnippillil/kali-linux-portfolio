@@ -23,8 +23,8 @@ export default function Settings() {
     setDensity,
     reducedMotion,
     setReducedMotion,
-    fontScale,
-    setFontScale,
+    scale,
+    setScale,
     highContrast,
     setHighContrast,
     haptics,
@@ -76,7 +76,7 @@ export default function Settings() {
       if (parsed.density !== undefined) setDensity(parsed.density);
       if (parsed.reducedMotion !== undefined)
         setReducedMotion(parsed.reducedMotion);
-      if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
+      if (parsed.scale !== undefined) setScale(parsed.scale);
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
@@ -98,7 +98,7 @@ export default function Settings() {
     setWallpaper(defaults.wallpaper);
     setDensity(defaults.density as any);
     setReducedMotion(defaults.reducedMotion);
-    setFontScale(defaults.fontScale);
+    setScale(defaults.scale);
     setHighContrast(defaults.highContrast);
     setTheme("default");
   };
@@ -212,17 +212,17 @@ export default function Settings() {
       {activeTab === "accessibility" && (
         <>
           <div className="flex justify-center my-4">
-            <label htmlFor="font-scale" className="mr-2 text-ubt-grey">Icon Size:</label>
+            <label htmlFor="scale" className="mr-2 text-ubt-grey">Scale:</label>
             <input
-              id="font-scale"
+              id="scale"
               type="range"
               min="0.75"
               max="1.5"
               step="0.05"
-              value={fontScale}
-              onChange={(e) => setFontScale(parseFloat(e.target.value))}
+              value={scale}
+              onChange={(e) => setScale(parseFloat(e.target.value))}
               className="ubuntu-slider"
-              aria-label="Icon size"
+              aria-label="Scale"
             />
           </div>
           <div className="flex justify-center my-4">
