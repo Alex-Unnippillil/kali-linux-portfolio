@@ -1,0 +1,50 @@
+name: Nightly Flake Detection
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  flake:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - name: Run tests with rerun
+        run: npm run test:flake
+        continue-on-error: true
+      - name: Upload flake report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flake-report
+          path: |
+            flake-report.json
+            tests/quarantine.json
+      - name: Create issue for flakes
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('flake-report.json', 'utf8'));
+            if (report.flaky.length || report.failed.length) {
+              const body = [
+                '### Flaky Tests',
+                report.flaky.join('\n') || 'None',
+                '',
+                '### Failed Tests',
+                report.failed.join('\n') || 'None'
+              ].join('\n');
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `Nightly flake report ${new Date().toISOString().split('T')[0]}`,
+                body,
+              });
+            }
