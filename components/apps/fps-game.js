@@ -10,9 +10,10 @@ const FPSGame = () => {
   useEffect(() => {
     let handlePointerLockChange;
     let handleMouseMove;
+    const canvas = canvasRef.current;
     (async () => {
       const THREE = await import('three');
-      const canvas = canvasRef.current;
+      if (!canvas) return;
       const renderer = new THREE.WebGLRenderer({ canvas });
       renderer.setSize(canvas.clientWidth, canvas.clientHeight);
       rendererRef.current = renderer;
@@ -55,9 +56,9 @@ const FPSGame = () => {
 
     return () => {
       document.removeEventListener('pointerlockchange', handlePointerLockChange);
-      const canvas = canvasRef.current;
-      if (canvas && handleMouseMove)
+      if (canvas && handleMouseMove) {
         canvas.removeEventListener('mousemove', handleMouseMove);
+      }
     };
   }, []);
 

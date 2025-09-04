@@ -47,7 +47,6 @@ const Solitaire = () => {
     <div key={key} className="min-w-[60px] rounded border p-1">
       {pile.map((card, idx) => (
         <div
-          // eslint-disable-next-line react/no-array-index-key
           key={idx}
           className={card.faceDown ? 'text-gray-400' : ''}
         >

@@ -223,7 +223,6 @@ const ResourceMonitor = () => {
       </div>
       {stressWindows.current.map((_, i) => (
         <div
-          // eslint-disable-next-line react/no-array-index-key
           key={i}
           ref={(el) => {
             stressEls.current[i] = el;

@@ -16,4 +16,5 @@ export const deserialize = (state: string) => {
   rng = seedrandom('', { state: JSON.parse(state) });
 };
 
-export default { random, reset, serialize, deserialize };
+const rngApi = { random, reset, serialize, deserialize };
+export default rngApi;
