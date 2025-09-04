@@ -8,6 +8,7 @@ class AllApplications extends React.Component {
             query: '',
             apps: [],
             unfilteredApps: [],
+            categories: [],
         };
     }
 
@@ -18,6 +19,18 @@ class AllApplications extends React.Component {
             if (!combined.some((app) => app.id === game.id)) combined.push(game);
         });
         this.setState({ apps: combined, unfilteredApps: combined });
+
+        fetch('/data/kali/categories.yaml')
+            .then((res) => res.text())
+            .then((txt) => {
+                try {
+                    const categories = JSON.parse(txt);
+                    this.setState({ categories });
+                } catch (e) {
+                    console.error('Failed to load categories', e);
+                }
+            })
+            .catch((e) => console.error('Failed to fetch categories', e));
     }
 
     handleChange = (e) => {
@@ -53,6 +66,16 @@ class AllApplications extends React.Component {
         ));
     };
 
+    renderCategories = () => {
+        const categories = this.state.categories || [];
+        return categories.map((cat) => (
+            <div key={cat.id} className="flex flex-col items-center mx-4 mb-4">
+                <img src={cat.icon} alt="" className="w-8 h-8 mb-1" />
+                <span className="text-xs text-white text-center whitespace-nowrap">{cat.name}</span>
+            </div>
+        ));
+    };
+
     render() {
         return (
             <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim">
@@ -62,6 +85,7 @@ class AllApplications extends React.Component {
                     value={this.state.query}
                     onChange={this.handleChange}
                 />
+                <div className="flex flex-wrap justify-center">{this.renderCategories()}</div>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 pb-10 place-items-center">
                     {this.renderApps()}
                 </div>

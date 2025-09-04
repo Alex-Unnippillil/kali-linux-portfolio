@@ -1,0 +1,18 @@
+[
+  {"id": "information-gathering", "name": "Information Gathering", "icon": "/themes/Kali/categories/information-gathering.svg"},
+  {"id": "vulnerability-analysis", "name": "Vulnerability Analysis", "icon": "/themes/Kali/categories/vulnerability-analysis.svg"},
+  {"id": "web-applications", "name": "Web Applications", "icon": "/themes/Kali/categories/web-applications.svg"},
+  {"id": "password-attacks", "name": "Password Attacks", "icon": "/themes/Kali/categories/password-attacks.svg"},
+  {"id": "wireless-attacks", "name": "Wireless Attacks", "icon": "/themes/Kali/categories/wireless-attacks.svg"},
+  {"id": "reverse-engineering", "name": "Reverse Engineering", "icon": "/themes/Kali/categories/reverse-engineering.svg"},
+  {"id": "exploitation-tools", "name": "Exploitation Tools", "icon": "/themes/Kali/categories/exploitation-tools.svg"},
+  {"id": "sniffing-spoofing", "name": "Sniffing & Spoofing", "icon": "/themes/Kali/categories/sniffing-spoofing.svg"},
+  {"id": "post-exploitation", "name": "Post Exploitation", "icon": "/themes/Kali/categories/post-exploitation.svg"},
+  {"id": "forensics", "name": "Forensics", "icon": "/themes/Kali/categories/forensics.svg"},
+  {"id": "reporting-tools", "name": "Reporting Tools", "icon": "/themes/Kali/categories/reporting-tools.svg"},
+  {"id": "social-engineering", "name": "Social Engineering", "icon": "/themes/Kali/categories/social-engineering.svg"},
+  {"id": "hardware-hacking", "name": "Hardware Hacking", "icon": "/themes/Kali/categories/hardware-hacking.svg"},
+  {"id": "maintaining-access", "name": "Maintaining Access", "icon": "/themes/Kali/categories/maintaining-access.svg"},
+  {"id": "stress-testing", "name": "Stress Testing", "icon": "/themes/Kali/categories/stress-testing.svg"},
+  {"id": "other", "name": "Other", "icon": "/themes/Kali/categories/other.svg"}
+]
