@@ -21,6 +21,16 @@ import {
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import {
+  getSound as loadSound,
+  setSound as saveSound,
+  getHaptics as loadHaptics,
+  setHaptics as saveHaptics,
+  getColorblind as loadColorblind,
+  setColorblind as saveColorblind,
+  defaults as controlDefaults,
+  subscribe as subscribeControls,
+} from '../utils/settings';
 type Density = 'regular' | 'compact';
 
 // Utility to lighten or darken a hex color by a percentage
@@ -49,6 +59,9 @@ interface SettingsContextValue {
   largeHitAreas: boolean;
   pongSpin: boolean;
   allowNetwork: boolean;
+  sound: boolean;
+  haptics: boolean;
+  colorblind: boolean;
   theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
@@ -59,6 +72,9 @@ interface SettingsContextValue {
   setLargeHitAreas: (value: boolean) => void;
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
+  setSound: (value: boolean) => void;
+  setHaptics: (value: boolean) => void;
+  setColorblind: (value: boolean) => void;
   setTheme: (value: string) => void;
 }
 
@@ -72,6 +88,9 @@ export const SettingsContext = createContext<SettingsContextValue>({
   largeHitAreas: defaults.largeHitAreas,
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
+  sound: controlDefaults.sound,
+  haptics: controlDefaults.haptics,
+  colorblind: controlDefaults.colorblind,
   theme: 'default',
   setAccent: () => {},
   setWallpaper: () => {},
@@ -82,6 +101,9 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setLargeHitAreas: () => {},
   setPongSpin: () => {},
   setAllowNetwork: () => {},
+  setSound: () => {},
+  setHaptics: () => {},
+  setColorblind: () => {},
   setTheme: () => {},
 });
 
@@ -95,6 +117,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
+  const [sound, setSound] = useState<boolean>(controlDefaults.sound);
+  const [haptics, setHaptics] = useState<boolean>(controlDefaults.haptics);
+  const [colorblind, setColorblind] = useState<boolean>(controlDefaults.colorblind);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
@@ -109,8 +134,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setLargeHitAreas(await loadLargeHitAreas());
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
+      setSound(loadSound());
+      setHaptics(loadHaptics());
+      setColorblind(loadColorblind());
       setTheme(loadTheme());
     })();
+  }, []);
+
+  useEffect(() => {
+    const unsub = subscribeControls((s) => {
+      setSound(s.sound);
+      setHaptics(s.haptics);
+      setColorblind(s.colorblind);
+    });
+    return unsub;
   }, []);
 
   useEffect(() => {
@@ -211,6 +248,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   }, [allowNetwork]);
 
+  useEffect(() => {
+    saveSound(sound);
+  }, [sound]);
+
+  useEffect(() => {
+    saveHaptics(haptics);
+  }, [haptics]);
+
+  useEffect(() => {
+    saveColorblind(colorblind);
+  }, [colorblind]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -223,6 +272,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         largeHitAreas,
         pongSpin,
         allowNetwork,
+        sound,
+        haptics,
+        colorblind,
         theme,
         setAccent,
         setWallpaper,
@@ -233,6 +285,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setLargeHitAreas,
         setPongSpin,
         setAllowNetwork,
+        setSound,
+        setHaptics,
+        setColorblind,
         setTheme,
       }}
     >

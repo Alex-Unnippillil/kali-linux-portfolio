@@ -4,6 +4,7 @@ import {
   buildResultMosaic,
   dictionaries as wordleDictionaries,
 } from '../../utils/wordle';
+import { useSettings } from '../../hooks/useSettings';
 
 // Determine today's puzzle key for local storage
 const todayKey = new Date().toISOString().split('T')[0];
@@ -97,10 +98,7 @@ const Wordle = () => {
   const [revealMap, setRevealMap] = useState({});
 
   // settings
-  const [colorBlind, setColorBlind] = usePersistentState(
-    'wordle-colorblind',
-    false
-  );
+  const { colorblind: colorBlind, setColorblind: setColorBlind } = useSettings();
   const [hardMode, setHardMode] = usePersistentState('wordle-hardmode', false);
 
   const isSolved = guesses.some((g) => g.guess === solution);

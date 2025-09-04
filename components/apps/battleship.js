@@ -12,6 +12,7 @@ import GameLayout from './battleship/GameLayout';
 import usePersistentState from '../hooks/usePersistentState';
 import useGameControls from './useGameControls';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import { useSettings } from '../../hooks/useSettings';
 
 const CELL = 32; // px
 
@@ -91,10 +92,7 @@ const Battleship = () => {
     losses: 0,
   });
   const [cursor, setCursor] = useState(0);
-  const [colorblind, setColorblind] = usePersistentState(
-    'battleship-colorblind',
-    false,
-  );
+  const { colorblind, setColorblind } = useSettings();
   const [dragHint, setDragHint] = useState(null);
 
   const tryPlace = (shipId, x, y, dir) => {

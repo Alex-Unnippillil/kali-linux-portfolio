@@ -237,7 +237,12 @@ const Game2048 = () => {
   const [best, setBest] = useState(0);
   const [undosLeft, setUndosLeft] = useState(UNDO_LIMIT);
   const moveLock = useRef(false);
-  const { highContrast } = useSettings();
+  const { highContrast, colorblind } = useSettings();
+
+  useEffect(() => {
+    if (colorblind) setSkin('colorblind');
+    else if (skin === 'colorblind') setSkin('classic');
+  }, [colorblind, skin, setSkin]);
 
   useEffect(() => {
     if (animCells.size > 0) {

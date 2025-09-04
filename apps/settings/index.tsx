@@ -27,6 +27,12 @@ export default function Settings() {
     setFontScale,
     highContrast,
     setHighContrast,
+    sound,
+    setSound,
+    haptics,
+    setHaptics,
+    colorblind,
+    setColorblind,
     theme,
     setTheme,
   } = useSettings();
@@ -238,6 +244,30 @@ export default function Settings() {
               checked={highContrast}
               onChange={setHighContrast}
               ariaLabel="High Contrast"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Sound:</span>
+            <ToggleSwitch
+              checked={sound}
+              onChange={setSound}
+              ariaLabel="Sound"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Haptics:</span>
+            <ToggleSwitch
+              checked={haptics}
+              onChange={setHaptics}
+              ariaLabel="Haptics"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Colorblind Mode:</span>
+            <ToggleSwitch
+              checked={colorblind}
+              onChange={setColorblind}
+              ariaLabel="Colorblind Mode"
             />
           </div>
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
