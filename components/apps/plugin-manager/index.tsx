@@ -1,16 +1,25 @@
 'use client';
 import { useEffect, useState } from 'react';
 
-interface PluginInfo { id: string; file: string; }
+interface PluginInfo {
+  id: string;
+  file: string;
+  category?: string;
+  tags?: string[];
+}
 
 interface PluginManifest {
   id: string;
   sandbox: 'worker' | 'iframe';
+  category?: string;
+  tags?: string[];
   code: string;
 }
 
 export default function PluginManager() {
   const [plugins, setPlugins] = useState<PluginInfo[]>([]);
+  const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
+  const [tagFilter, setTagFilter] = useState<string[]>([]);
   const [installed, setInstalled] = useState<Record<string, PluginManifest>>(
     () => {
       if (typeof window !== 'undefined') {
@@ -46,6 +55,35 @@ export default function PluginManager() {
       .then(setPlugins)
       .catch(() => setPlugins([]));
   }, []);
+
+  const categories = Array.from(
+    new Set(plugins.map((p) => p.category).filter(Boolean) as string[])
+  );
+  const tags = Array.from(
+    new Set(plugins.flatMap((p) => p.tags || []))
+  );
+
+  const toggleCategory = (cat: string) => {
+    setCategoryFilter((prev) =>
+      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+    );
+  };
+
+  const toggleTag = (tag: string) => {
+    setTagFilter((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const filteredPlugins = plugins.filter((p) => {
+    const categoryOk =
+      categoryFilter.length === 0 ||
+      (p.category && categoryFilter.includes(p.category));
+    const tagsOk =
+      tagFilter.length === 0 ||
+      (p.tags && p.tags.some((t) => tagFilter.includes(t)));
+    return categoryOk && tagsOk;
+  });
 
   const install = async (plugin: PluginInfo) => {
     const res = await fetch(`/api/plugins/${plugin.file}`);
@@ -123,10 +161,52 @@ export default function PluginManager() {
   return (
     <div className="p-4 text-white">
       <h1 className="text-xl mb-4">Plugin Catalog</h1>
+      <div className="mb-4">
+        <div className="mb-2">
+          <span className="font-bold mr-2">Categories:</span>
+          {categories.map((cat) => (
+            <label key={cat} className="mr-2">
+              <input
+                type="checkbox"
+                className="mr-1"
+                checked={categoryFilter.includes(cat)}
+                onChange={() => toggleCategory(cat)}
+                aria-label={cat}
+              />
+              {cat}
+            </label>
+          ))}
+        </div>
+        <div>
+          <span className="font-bold mr-2">Tags:</span>
+          {tags.map((tag) => (
+            <label key={tag} className="mr-2">
+              <input
+                type="checkbox"
+                className="mr-1"
+                checked={tagFilter.includes(tag)}
+                onChange={() => toggleTag(tag)}
+                aria-label={tag}
+              />
+              {tag}
+            </label>
+          ))}
+        </div>
+      </div>
       <ul>
-        {plugins.map((p) => (
+        {filteredPlugins.map((p) => (
           <li key={p.id} className="flex items-center mb-2">
-            <span className="flex-grow">{p.id}</span>
+            <span className="flex-grow">
+              {p.id}
+              {p.category && (
+                <span className="ml-2 text-xs text-gray-400">{p.category}</span>
+              )}
+              {p.tags && p.tags.length > 0 && (
+                <span className="ml-1 text-xs text-gray-500">
+                  {p.tags.join(', ')}
+                </span>
+              )}
+            </span>
             <button
               className="bg-ub-orange px-2 py-1 rounded disabled:opacity-50"
               onClick={() => install(p)}

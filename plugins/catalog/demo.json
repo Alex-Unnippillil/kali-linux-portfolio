@@ -1,5 +1,7 @@
 {
   "id": "demo",
   "sandbox": "worker",
+  "category": "examples",
+  "tags": ["sample", "demo"],
   "code": "self.postMessage('content');"
 }
