@@ -1,11 +1,11 @@
 "use client";
 
 import React, { Component } from 'react';
-import NextImage from 'next/image';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import { CloseIcon, MaximizeIcon, MinimizeIcon, PinIcon, RestoreIcon } from '../ToolbarIcons';
 
 export class Window extends Component {
     constructor(props) {
@@ -497,7 +497,7 @@ export class Window extends Component {
                 >
                     <div
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window main-window window-shadow window-frame"}
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
@@ -590,38 +590,24 @@ export function WindowEditButtons(props) {
     const { togglePin } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
     return (
-        <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center">
+        <div className="window-toolbar">
             {pipSupported && props.pip && (
                 <button
                     type="button"
                     aria-label="Window pin"
-                    className="mx-1.5 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-11 w-11"
+                    className="window-toolbar-btn window-toolbar-btn-default mx-1.5"
                     onClick={togglePin}
                 >
-                    <NextImage
-                        src="/themes/Yaru/window/window-pin-symbolic.svg"
-                        alt="Kali window pin"
-                        className="h-5 w-5 inline"
-                        width={20}
-                        height={20}
-                        sizes="20px"
-                    />
+                    <PinIcon />
                 </button>
             )}
             <button
                 type="button"
                 aria-label="Window minimize"
-                className="mx-1.5 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-11 w-11"
+                className="window-toolbar-btn window-toolbar-btn-default mx-1.5"
                 onClick={props.minimize}
             >
-                <NextImage
-                    src="/themes/Yaru/window/window-minimize-symbolic.svg"
-                    alt="Kali window minimize"
-                    className="h-5 w-5 inline"
-                    width={20}
-                    height={20}
-                    sizes="20px"
-                />
+                <MinimizeIcon />
             </button>
             {props.allowMaximize && (
                 props.isMaximised
@@ -629,33 +615,19 @@ export function WindowEditButtons(props) {
                         <button
                             type="button"
                             aria-label="Window restore"
-                            className="mx-2 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-11 w-11"
+                            className="window-toolbar-btn window-toolbar-btn-default mx-2"
                             onClick={props.maximize}
                         >
-                            <NextImage
-                                src="/themes/Yaru/window/window-restore-symbolic.svg"
-                                alt="Kali window restore"
-                                className="h-5 w-5 inline"
-                                width={20}
-                                height={20}
-                                sizes="20px"
-                            />
+                            <RestoreIcon />
                         </button>
                     ) : (
                         <button
                             type="button"
                             aria-label="Window maximize"
-                            className="mx-2 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-11 w-11"
+                            className="window-toolbar-btn window-toolbar-btn-default mx-2"
                             onClick={props.maximize}
                         >
-                            <NextImage
-                                src="/themes/Yaru/window/window-maximize-symbolic.svg"
-                                alt="Kali window maximize"
-                                className="h-5 w-5 inline"
-                                width={20}
-                                height={20}
-                                sizes="20px"
-                            />
+                            <MaximizeIcon />
                         </button>
                     )
             )}
@@ -663,17 +635,10 @@ export function WindowEditButtons(props) {
                 type="button"
                 id={`close-${props.id}`}
                 aria-label="Window close"
-                className="mx-1.5 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-11 w-11"
+                className="window-toolbar-btn mx-1.5 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100"
                 onClick={props.close}
             >
-                <NextImage
-                    src="/themes/Yaru/window/window-close-symbolic.svg"
-                    alt="Kali window close"
-                    className="h-5 w-5 inline"
-                    width={20}
-                    height={20}
-                    sizes="20px"
-                />
+                <CloseIcon />
             </button>
         </div>
     )
