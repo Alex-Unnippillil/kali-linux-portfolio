@@ -541,3 +541,9 @@ textarea:focus-visible {
 .gallery-container > * {
     scroll-snap-align: start;
 }
+
+/* High contrast overrides */
+.high-contrast .bg-ub-orange {
+    color: #000 !important;
+}
+
