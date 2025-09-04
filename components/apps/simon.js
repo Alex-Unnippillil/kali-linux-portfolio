@@ -4,6 +4,11 @@ import seedrandom from "seedrandom";
 import GameLayout from "./GameLayout";
 import usePersistentState from "../usePersistentState";
 import { vibrate } from "./Games/common/haptics";
+import {
+  getAudioContext,
+  playColorTone,
+  createToneSchedule,
+} from "../../utils/audio";
 
 const padStyles = [
   {
@@ -44,30 +49,8 @@ const padStyles = [
   },
 ];
 
-const tones = [329.63, 261.63, 220, 164.81];
 const ERROR_SOUND_SRC =
   "data:audio/wav;base64,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";
-
-/**
- * Create a schedule of times using a starting value, step and ramp factor.
- *
- * @param {number} length number of timestamps to generate
- * @param {number} start initial time
- * @param {number} step initial delta between times
- * @param {number} [ramp=1] multiplier applied to the step each iteration
- * @returns {number[]} generated schedule
- */
-export const createToneSchedule = (length, start, step, ramp = 1) => {
-  const times = [];
-  let time = start;
-  let current = step;
-  for (let i = 0; i < length; i += 1) {
-    times.push(time);
-    time += current;
-    current *= ramp;
-  }
-  return times;
-};
 
 /**
  * Generate a sequence of pad indexes.
@@ -138,7 +121,6 @@ const Simon = () => {
     "simon_leaderboard",
     {},
   );
-  const audioCtx = useRef(null);
   const errorSound = useRef(null);
   const rngRef = useRef(Math.random);
   const timeoutRef = useRef(null);
@@ -166,24 +148,6 @@ const Simon = () => {
     [mode, timing, setLeaderboard],
   );
 
-  const scheduleTone = (freq, startTime, duration) => {
-    const ctx =
-      audioCtx.current ||
-      new (window.AudioContext || window.webkitAudioContext)();
-    audioCtx.current = ctx;
-    if (ctx.state === "suspended") ctx.resume();
-    const oscillator = ctx.createOscillator();
-    const gain = ctx.createGain();
-    oscillator.frequency.value = freq;
-    oscillator.connect(gain);
-    gain.connect(ctx.destination);
-    gain.gain.setValueAtTime(0.0001, startTime);
-    gain.gain.exponentialRampToValueAtTime(0.5, startTime + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
-    oscillator.start(startTime);
-    oscillator.stop(startTime + duration + 0.05);
-  };
-
   const flashPad = useCallback(
     (idx, duration) => {
       if (!prefersReducedMotion) vibrate(50);
@@ -201,15 +165,13 @@ const Simon = () => {
     const base = 60 / tempo;
     if (mode === "endless") return base;
     const reduction = mode === "speed" ? 0.03 : 0.015;
-    return Math.max(base - sequence.length * reduction, 0.2);
+    const level = sequence.length;
+    const speedFactor = Math.pow(0.9, Math.floor(level / 5));
+    return Math.max((base - level * reduction) * speedFactor, 0.2);
   }, [tempo, mode, sequence.length]);
 
   const playSequence = useCallback(() => {
-    const ctx =
-      audioCtx.current ||
-      new (window.AudioContext || window.webkitAudioContext)();
-    audioCtx.current = ctx;
-    if (ctx.state === "suspended") ctx.resume();
+    const ctx = getAudioContext();
     setIsPlayerTurn(false);
     setStatus("Listen...");
     const start = ctx.currentTime + 0.1;
@@ -225,7 +187,7 @@ const Simon = () => {
     let finalDelta = baseDelta;
     schedule.forEach((time, i) => {
       const idx = sequence[i];
-      scheduleTone(tones[idx], time, currentDelta);
+      playColorTone(idx, time, currentDelta);
       const delay = (time - ctx.currentTime) * 1000;
       setTimeout(() => flashPad(idx, currentDelta), delay);
       finalDelta = currentDelta;
@@ -320,8 +282,8 @@ const Simon = () => {
       if (!isPlayerTurn) return;
       const duration = stepDuration();
       flashPad(idx, duration);
-      const start = (audioCtx.current?.currentTime || 0) + 0.001;
-      scheduleTone(tones[idx], start, duration);
+      const start = getAudioContext().currentTime + 0.001;
+      playColorTone(idx, start, duration);
 
       if (sequence[step] !== idx) {
         if (!errorSound.current) {
