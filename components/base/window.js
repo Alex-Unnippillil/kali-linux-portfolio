@@ -202,7 +202,7 @@ export class Window extends Component {
         r.style.setProperty('--window-transform-x', x.toFixed(1).toString() + "px");
         r.style.setProperty('--window-transform-y', y.toFixed(1).toString() + "px");
         if (this.props.onPositionChange) {
-            this.props.onPositionChange(x, y);
+            this.props.onPositionChange(x, y, this.state.width, this.state.height);
         }
     }
 
@@ -221,9 +221,9 @@ export class Window extends Component {
                 width: this.state.lastSize.width,
                 height: this.state.lastSize.height,
                 snapped: null
-            }, this.resizeBoundries);
+            }, () => { this.resizeBoundries(); this.setWinowsPosition(); });
         } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            this.setState({ snapped: null }, () => { this.resizeBoundries(); this.setWinowsPosition(); });
         }
     }
 
@@ -313,9 +313,10 @@ export class Window extends Component {
                 lastSize: { width, height },
                 width: newWidth,
                 height: newHeight
-            }, this.resizeBoundries);
+            }, () => { this.resizeBoundries(); this.setWinowsPosition(); });
         }
         else {
+            this.setWinowsPosition();
             this.setState({ snapPreview: null, snapPosition: null });
         }
     }
@@ -470,6 +471,18 @@ export class Window extends Component {
             this.focusWindow();
         } else if (e.key === 'ArrowDown' && e.altKey) {
             this.unsnapWindow();
+        } else if (e.shiftKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+            e.preventDefault();
+            const delta = 1;
+            if (e.key === 'ArrowLeft') {
+                this.setState(prev => ({ width: Math.max(prev.width - delta, 20) }), () => { this.resizeBoundries(); this.setWinowsPosition(); });
+            } else if (e.key === 'ArrowRight') {
+                this.setState(prev => ({ width: prev.width + delta }), () => { this.resizeBoundries(); this.setWinowsPosition(); });
+            } else if (e.key === 'ArrowUp') {
+                this.setState(prev => ({ height: Math.max(prev.height - delta, 20) }), () => { this.resizeBoundries(); this.setWinowsPosition(); });
+            } else if (e.key === 'ArrowDown') {
+                this.setState(prev => ({ height: prev.height + delta }), () => { this.resizeBoundries(); this.setWinowsPosition(); });
+            }
         }
     }
 

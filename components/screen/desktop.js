@@ -64,8 +64,8 @@ export class Desktop extends Component {
             }
 
             if (session.windows && session.windows.length) {
-                session.windows.forEach(({ id, x, y }) => {
-                    positions[id] = { x, y };
+                session.windows.forEach(({ id, x, y, width, height }) => {
+                    positions[id] = { x, y, width, height };
                 });
                 this.setState({ window_positions: positions }, () => {
                     session.windows.forEach(({ id }) => this.openApp(id));
@@ -376,11 +376,11 @@ export class Desktop extends Component {
                     minimized: this.state.minimized_windows[app.id],
                     resizable: app.resizable,
                     allowMaximize: app.allowMaximize,
-                    defaultWidth: app.defaultWidth,
-                    defaultHeight: app.defaultHeight,
+                    defaultWidth: pos && pos.width ? pos.width : app.defaultWidth,
+                    defaultHeight: pos && pos.height ? pos.height : app.defaultHeight,
                     initialX: pos ? pos.x : undefined,
                     initialY: pos ? pos.y : undefined,
-                    onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
+                    onPositionChange: (x, y, width, height) => this.updateWindowPosition(app.id, x, y, width, height),
                 }
 
                 windowsJsx.push(
@@ -391,20 +391,26 @@ export class Desktop extends Component {
         return windowsJsx;
     }
 
-    updateWindowPosition = (id, x, y) => {
+    updateWindowPosition = (id, x, y, width, height) => {
         this.setState(prev => ({
-            window_positions: { ...prev.window_positions, [id]: { x, y } }
+            window_positions: { ...prev.window_positions, [id]: { x, y, width, height } }
         }), this.saveSession);
     }
 
     saveSession = () => {
         if (!this.props.setSession) return;
         const openWindows = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
-        const windows = openWindows.map(id => ({
-            id,
-            x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
-            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10
-        }));
+        const windows = openWindows.map(id => {
+            const pos = this.state.window_positions[id] || {};
+            const app = apps.find(a => a.id === id) || {};
+            return {
+                id,
+                x: typeof pos.x === 'number' ? pos.x : 60,
+                y: typeof pos.y === 'number' ? pos.y : 10,
+                width: typeof pos.width === 'number' ? pos.width : (app.defaultWidth || 60),
+                height: typeof pos.height === 'number' ? pos.height : (app.defaultHeight || 85),
+            };
+        });
         const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
         this.props.setSession({ ...this.props.session, windows, dock });
     }
