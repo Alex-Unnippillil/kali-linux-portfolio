@@ -23,6 +23,7 @@ export const chromeDefaultTiles = [
 const TerminalApp = createDynamicApp('terminal', 'Terminal');
 // VSCode app uses a Stack iframe, so no editor dependencies are required
 const VsCodeApp = createDynamicApp('vscode', 'VsCode');
+const EditorApp = createDynamicApp('editor/EditorApp', 'Editor');
 const YouTubeApp = createDynamicApp('youtube', 'YouTube');
 const CalculatorApp = createDynamicApp('calculator', 'Calculator');
 const ConverterApp = createDynamicApp('converter', 'Converter');
@@ -117,6 +118,7 @@ const ContactApp = createDynamicApp('contact', 'Contact');
 
 const displayTerminal = createDisplay(TerminalApp);
 const displayVsCode = createDisplay(VsCodeApp);
+const displayEditor = createDisplay(EditorApp);
 const displayYouTube = createDisplay(YouTubeApp);
 const displayCalculator = createDisplay(CalculatorApp);
 const displayConverter = createDisplay(ConverterApp);
@@ -637,6 +639,15 @@ const apps = [
     screen: displayVsCode,
     defaultWidth: 85,
     defaultHeight: 85,
+  },
+  {
+    id: 'editor',
+    title: 'Editor',
+    icon: '/themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayEditor,
   },
   {
     id: 'x',
