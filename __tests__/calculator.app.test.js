@@ -8,16 +8,16 @@ function setupDom() {
     `<!DOCTYPE html><html><body>
       <input id="display" />
       <div class="buttons"></div>
-      <button id="toggle-scientific"></button>
-      <button id="toggle-precise"></button>
-      <button id="toggle-programmer"></button>
-      <button id="toggle-history"></button>
+      <button id="toggle-scientific" aria-label="toggle scientific mode"></button>
+      <button id="toggle-precise" aria-label="toggle precise mode"></button>
+      <button id="toggle-programmer" aria-label="toggle programmer mode"></button>
+      <button id="toggle-history" aria-label="toggle history"></button>
       <div id="scientific"></div>
       <div id="programmer"></div>
       <select id="base-select"></select>
       <div id="history"></div>
       <div id="paren-indicator"></div>
-      <button id="print-tape"></button>
+      <button id="print-tape" aria-label="print tape"></button>
     </body></html>`,
     { url: 'https://example.com' }
   );

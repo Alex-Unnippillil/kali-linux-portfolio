@@ -143,8 +143,9 @@ export default function Settings() {
             />
           </div>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey">Wallpaper:</label>
+            <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">Wallpaper:</label>
             <input
+              id="wallpaper-slider"
               type="range"
               min="0"
               max={wallpapers.length - 1}
@@ -154,6 +155,7 @@ export default function Settings() {
                 changeBackground(wallpapers[parseInt(e.target.value, 10)])
               }
               className="ubuntu-slider"
+              aria-label="Wallpaper"
             />
           </div>
           <div className="flex justify-center my-4">
@@ -202,8 +204,9 @@ export default function Settings() {
       {activeTab === "accessibility" && (
         <>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey">Icon Size:</label>
+            <label htmlFor="font-scale" className="mr-2 text-ubt-grey">Icon Size:</label>
             <input
+              id="font-scale"
               type="range"
               min="0.75"
               max="1.5"
@@ -211,6 +214,7 @@ export default function Settings() {
               value={fontScale}
               onChange={(e) => setFontScale(parseFloat(e.target.value))}
               className="ubuntu-slider"
+              aria-label="Icon size"
             />
           </div>
           <div className="flex justify-center my-4">
@@ -268,17 +272,18 @@ export default function Settings() {
           </div>
         </>
       )}
-      <input
-        type="file"
-        accept="application/json"
-        ref={fileInputRef}
-        onChange={(e) => {
-          const file = e.target.files && e.target.files[0];
-          if (file) handleImport(file);
-          e.target.value = "";
-        }}
-        className="hidden"
-      />
+        <input
+          type="file"
+          accept="application/json"
+          ref={fileInputRef}
+          aria-label="Import settings file"
+          onChange={(e) => {
+            const file = e.target.files && e.target.files[0];
+            if (file) handleImport(file);
+            e.target.value = "";
+          }}
+          className="hidden"
+        />
       <KeymapOverlay open={showKeymap} onClose={() => setShowKeymap(false)} />
     </div>
   );

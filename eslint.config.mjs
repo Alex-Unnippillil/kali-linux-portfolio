@@ -24,6 +24,7 @@ export default [
     rules: {
       '@next/next/no-page-custom-font': 'off',
       '@next/next/no-img-element': 'off',
+      'jsx-a11y/control-has-associated-label': 'error',
     },
   }),
 ];

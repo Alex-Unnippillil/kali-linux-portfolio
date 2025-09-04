@@ -5,7 +5,7 @@ interface ToggleSwitchProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
   className?: string;
-  ariaLabel?: string;
+  ariaLabel: string;
 }
 
 export default function ToggleSwitch({
