@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import useGameInput from '../../hooks/useGameInput';
 
@@ -26,8 +26,12 @@ type ControlsProps = {
 };
 
 export default function Controls({ onInput, onContrastChange }: ControlsProps) {
+  const storageKey =
+    typeof window !== 'undefined'
+      ? `game-keymap:${window.location.pathname}`
+      : 'game-keymap';
   const [keymap, setKeymap] = usePersistentState<Record<Action, string>>(
-    'game-keymap',
+    storageKey,
     DEFAULT_MAP,
   );
   const [highContrast, setHighContrast] = usePersistentState<boolean>(
@@ -36,6 +40,7 @@ export default function Controls({ onInput, onContrastChange }: ControlsProps) {
   );
   const [remapping, setRemapping] = useState<Action | null>(null);
   const [message, setMessage] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useGameInput({ onInput });
 
@@ -61,6 +66,35 @@ export default function Controls({ onInput, onContrastChange }: ControlsProps) {
   const handleTouch = (action: Action) => () => {
     onInput && onInput({ action, type: 'touch' });
     setMessage(`${action} activated`);
+  };
+
+  const handleImportClick = () => fileRef.current?.click();
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result as string);
+        const next = { ...DEFAULT_MAP, ...parsed } as Record<Action, string>;
+        setKeymap(next);
+        setMessage('Keymap imported');
+      } catch {
+        setMessage('Invalid keymap file');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const resetMapping = () => {
+    try {
+      window.localStorage.removeItem(storageKey);
+    } catch {
+      /* ignore */
+    }
+    setKeymap(DEFAULT_MAP);
+    setMessage('Keymap reset to defaults');
   };
 
   const toggleContrast = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -106,6 +140,28 @@ export default function Controls({ onInput, onContrastChange }: ControlsProps) {
         />
         <span>High contrast tiles</span>
       </label>
+      <div className="flex gap-2">
+        <button
+          onClick={handleImportClick}
+          className="px-2 py-1 border rounded"
+        >
+          Import Mapping
+        </button>
+        <button
+          onClick={resetMapping}
+          className="px-2 py-1 border rounded"
+        >
+          Reset Mapping
+        </button>
+        <input
+          type="file"
+          accept="application/json"
+          ref={fileRef}
+          onChange={handleImport}
+          className="hidden"
+          data-testid="import-file"
+        />
+      </div>
       <div className="sr-only" aria-live="polite">
         {message}
       </div>

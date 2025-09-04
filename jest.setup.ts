@@ -18,6 +18,13 @@ if (!global.fetch) {
   global.fetch = () => Promise.reject(new Error('fetch not implemented'));
 }
 
+// Node versions used in CI may lack structuredClone; provide a simple polyfill.
+// @ts-ignore
+if (typeof global.structuredClone !== 'function') {
+  // @ts-ignore
+  global.structuredClone = (val: unknown) => JSON.parse(JSON.stringify(val));
+}
+
 // jsdom does not provide a global Image constructor which is used by
 // some components (e.g. window borders). A minimal mock is sufficient
 // for our tests because we only rely on the instance existing.
