@@ -485,27 +485,22 @@ export class Desktop extends Component {
         // if the app is disabled
         if (this.state.disabled_apps[objId]) return;
 
-        if (this.state.minimized_windows[objId]) {
-            // focus this app's window
-            this.focus(objId);
-
-            // set window's last position
-            var r = document.querySelector("#" + objId);
-            r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
-
-            // tell childs that his app has been not minimised
-            let minimized_windows = this.state.minimized_windows;
-            minimized_windows[objId] = false;
-            this.setState({ minimized_windows: minimized_windows }, this.saveSession);
+        // if app is already open, focus it instead of spawning a new window
+        if (this.state.closed_windows[objId] === false) {
+            // if it's minimised, restore its last position
+            if (this.state.minimized_windows[objId]) {
+                this.focus(objId);
+                var r = document.querySelector("#" + objId);
+                r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
+                let minimized_windows = this.state.minimized_windows;
+                minimized_windows[objId] = false;
+                this.setState({ minimized_windows: minimized_windows }, this.saveSession);
+            } else {
+                this.focus(objId);
+                this.saveSession();
+            }
             return;
-        }
-
-        //if app is already opened
-        if (this.app_stack.includes(objId)) {
-            this.focus(objId);
-            this.saveSession();
-        }
-        else {
+        } else {
             let closed_windows = this.state.closed_windows;
             let favourite_apps = this.state.favourite_apps;
             let frequentApps = [];
