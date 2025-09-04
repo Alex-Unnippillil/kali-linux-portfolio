@@ -134,7 +134,6 @@
   },
   "resolutions": {
     "magic-string": "^0.30.10",
-    "postcss": "^8.5.6",
     "test-exclude": "^7.0.1",
     "webpack": "^5.92.0"
   },
