@@ -1,9 +1,13 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react';
+import { render, fireEvent, waitFor, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import Modal from '../components/base/Modal';
 
-test('modal traps focus and restores focus on close', async () => {
+test('modal traps focus, disables background, and restores opener focus', async () => {
+  const root = document.createElement('div');
+  root.setAttribute('id', '__next');
+  document.body.appendChild(root);
+
   const Wrapper: React.FC = () => {
     const [open, setOpen] = React.useState(false);
     return (
@@ -17,14 +21,15 @@ test('modal traps focus and restores focus on close', async () => {
     );
   };
 
-  const { getByText } = render(<Wrapper />);
+  const { getByText, unmount } = render(<Wrapper />, { container: root });
   const openButton = getByText('open');
   openButton.focus();
   fireEvent.click(openButton);
 
-  const first = getByText('first');
-  const second = getByText('second');
+  const first = await screen.findByText('first');
+  const second = await screen.findByText('second');
   expect(first).toHaveFocus();
+  expect(root).toHaveAttribute('inert');
 
   second.focus();
   fireEvent.keyDown(second, { key: 'Tab' });
@@ -35,4 +40,8 @@ test('modal traps focus and restores focus on close', async () => {
 
   fireEvent.keyDown(first, { key: 'Escape' });
   await waitFor(() => expect(openButton).toHaveFocus());
+  expect(root).not.toHaveAttribute('inert');
+
+  unmount();
+  document.body.removeChild(root);
 });
