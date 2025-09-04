@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect } from 'react';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
@@ -11,6 +13,7 @@ import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
+import UseRouteAbortGuard from '../components/UseRouteAbortGuard';
 import { Ubuntu } from 'next/font/google';
 
 const ubuntu = Ubuntu({
@@ -143,6 +146,7 @@ function MyApp(props) {
       <SettingsProvider>
         <PipPortalProvider>
           <div aria-live="polite" id="live-region" />
+          <UseRouteAbortGuard />
           <Component {...pageProps} />
           <ShortcutOverlay />
           <Analytics

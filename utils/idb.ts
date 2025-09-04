@@ -3,10 +3,10 @@ const VERSION = 1;
 const STORE_SEEDS = 'seeds';
 const STORE_REPLAYS = 'replays';
 
-function openDB(): Promise<IDBDatabase> {
+function openDB(): Promise<IDBDatabase | null> {
   return new Promise((resolve, reject) => {
     if (typeof indexedDB === 'undefined') {
-      reject(new Error('IndexedDB not available on server'));
+      resolve(null);
       return;
     }
     const req = indexedDB.open(DB_NAME, VERSION);
@@ -27,6 +27,7 @@ function openDB(): Promise<IDBDatabase> {
 export async function getSeed(game: string, date: string): Promise<string | undefined> {
   try {
     const db = await openDB();
+    if (!db) return undefined;
     return await new Promise((resolve) => {
       const tx = db.transaction(STORE_SEEDS, 'readonly');
       const store = tx.objectStore(STORE_SEEDS);
@@ -42,6 +43,7 @@ export async function getSeed(game: string, date: string): Promise<string | unde
 export async function setSeed(game: string, date: string, seed: string): Promise<void> {
   try {
     const db = await openDB();
+    if (!db) return;
     await new Promise<void>((resolve) => {
       const tx = db.transaction(STORE_SEEDS, 'readwrite');
       tx.objectStore(STORE_SEEDS).put(seed, `${game}-${date}`);
@@ -56,6 +58,7 @@ export async function setSeed(game: string, date: string, seed: string): Promise
 export async function saveReplay(game: string, id: string, data: any): Promise<void> {
   try {
     const db = await openDB();
+    if (!db) return;
     await new Promise<void>((resolve) => {
       const tx = db.transaction(STORE_REPLAYS, 'readwrite');
       tx.objectStore(STORE_REPLAYS).put(data, `${game}-${id}`);
@@ -70,6 +73,7 @@ export async function saveReplay(game: string, id: string, data: any): Promise<v
 export async function getReplay<T = any>(game: string, id: string): Promise<T | undefined> {
   try {
     const db = await openDB();
+    if (!db) return undefined;
     return await new Promise<T | undefined>((resolve) => {
       const tx = db.transaction(STORE_REPLAYS, 'readonly');
       const req = tx.objectStore(STORE_REPLAYS).get(`${game}-${id}`);

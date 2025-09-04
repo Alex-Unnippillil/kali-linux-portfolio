@@ -1,3 +1,6 @@
+import { isBrowser } from '../../utils/env';
+
+if (isBrowser) {
 let mode = 'timer';
 let timerWorker = null;
 let timerRemaining = 30;
@@ -142,3 +145,4 @@ document.getElementById('lapWatch').addEventListener('click', lapWatch);
 // Initialize displays
 updateTimerDisplay();
 updateStopwatchDisplay();
+}

@@ -1,9 +1,12 @@
+"use client";
+
 import React, { Component } from 'react';
 import BootingScreen from './screen/booting_screen';
 import Desktop from './screen/desktop';
 import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import ReactGA from 'react-ga4';
+import { safeLocalStorage } from '../utils/safeStorage';
 
 export default class Ubuntu extends Component {
 	constructor() {
@@ -28,27 +31,27 @@ export default class Ubuntu extends Component {
 
 	getLocalData = () => {
 		// Get Previously selected Background Image
-		let bg_image_name = localStorage.getItem('bg-image');
+                let bg_image_name = safeLocalStorage?.getItem('bg-image');
 		if (bg_image_name !== null && bg_image_name !== undefined) {
 			this.setState({ bg_image_name });
 		}
 
-		let booting_screen = localStorage.getItem('booting_screen');
+                let booting_screen = safeLocalStorage?.getItem('booting_screen');
 		if (booting_screen !== null && booting_screen !== undefined) {
 			// user has visited site before
 			this.setState({ booting_screen: false });
 		} else {
 			// user is visiting site for the first time
-			localStorage.setItem('booting_screen', false);
+                        safeLocalStorage?.setItem('booting_screen', false);
 			this.setTimeOutBootScreen();
 		}
 
 		// get shutdown state
-		let shut_down = localStorage.getItem('shut-down');
+                let shut_down = safeLocalStorage?.getItem('shut-down');
 		if (shut_down !== null && shut_down !== undefined && shut_down === 'true') this.shutDown();
 		else {
 			// Get previous lock screen state
-			let screen_locked = localStorage.getItem('screen-locked');
+                        let screen_locked = safeLocalStorage?.getItem('screen-locked');
 			if (screen_locked !== null && screen_locked !== undefined) {
 				this.setState({ screen_locked: screen_locked === 'true' ? true : false });
 			}
@@ -67,7 +70,7 @@ export default class Ubuntu extends Component {
 		setTimeout(() => {
 			this.setState({ screen_locked: true });
 		}, 100); // waiting for all windows to close (transition-duration)
-		localStorage.setItem('screen-locked', true);
+                safeLocalStorage?.setItem('screen-locked', true);
 	};
 
 	unLockScreen = () => {
@@ -77,12 +80,12 @@ export default class Ubuntu extends Component {
 		window.removeEventListener('keypress', this.unLockScreen);
 
 		this.setState({ screen_locked: false });
-		localStorage.setItem('screen-locked', false);
+                safeLocalStorage?.setItem('screen-locked', false);
 	};
 
 	changeBackgroundImage = (img_name) => {
 		this.setState({ bg_image_name: img_name });
-		localStorage.setItem('bg-image', img_name);
+                safeLocalStorage?.setItem('bg-image', img_name);
 	};
 
 	shutDown = () => {
@@ -95,7 +98,7 @@ export default class Ubuntu extends Component {
 
 		document.getElementById('status-bar').blur();
 		this.setState({ shutDownScreen: true });
-		localStorage.setItem('shut-down', true);
+                safeLocalStorage?.setItem('shut-down', true);
 	};
 
 	turnOn = () => {
@@ -103,7 +106,7 @@ export default class Ubuntu extends Component {
 
 		this.setState({ shutDownScreen: false, booting_screen: true });
 		this.setTimeOutBootScreen();
-		localStorage.setItem('shut-down', false);
+                safeLocalStorage?.setItem('shut-down', false);
 	};
 
 	render() {
