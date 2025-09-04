@@ -2,10 +2,19 @@ import React from 'react';
 import { render, fireEvent, act, waitFor } from '@testing-library/react';
 import Game2048, { setSeed } from '../components/apps/2048';
 
+const mockMatchMedia = (matches: boolean) =>
+  jest.fn().mockImplementation(() => ({
+    matches,
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+  }));
+
 beforeEach(() => {
   window.localStorage.clear();
   setSeed(1);
   window.localStorage.setItem('2048-seed', new Date().toISOString().slice(0, 10));
+  // @ts-ignore
+  window.matchMedia = mockMatchMedia(false);
 });
 
 test.skip('merging two 2s creates one 4', async () => {
@@ -41,6 +50,7 @@ test.skip('merge triggers animation', async () => {
   const firstCell = container.querySelector('.grid div');
   expect(firstCell?.querySelector('.merge-ripple')).toBeTruthy();
 });
+
 
 test.skip('score persists in localStorage', async () => {
   window.localStorage.setItem('2048-board', JSON.stringify([

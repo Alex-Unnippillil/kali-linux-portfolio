@@ -12,6 +12,7 @@ import {
   deserialize as deserializeRng,
 } from '../../apps/games/rng';
 import { useSettings } from '../../hooks/useSettings';
+import useReducedMotion from '../../hooks/useReducedMotion';
 
 // Basic 2048 game logic with tile merging mechanics.
 
@@ -238,6 +239,7 @@ const Game2048 = () => {
   const [undosLeft, setUndosLeft] = useState(UNDO_LIMIT);
   const moveLock = useRef(false);
   const { highContrast } = useSettings();
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
     if (animCells.size > 0) {
@@ -338,11 +340,13 @@ const Game2048 = () => {
           ...h,
           { board: cloneBoard(board), score, moves, rng: rngState },
         ]);
-        setAnimCells(new Set(added));
-        setMergeCells(new Set(mergedCells));
+        if (!reducedMotion) {
+          setAnimCells(new Set(added));
+          setMergeCells(new Set(mergedCells));
+        }
         if (gained > 0) {
           setScore((s) => s + gained);
-          setScorePop(true);
+          if (!reducedMotion) setScorePop(true);
         }
         setBoard(cloneBoard(moved));
         setMoves((m) => m + 1);
@@ -356,7 +360,7 @@ const Game2048 = () => {
         if (merged) vibrate(50);
         if (mergedCells.length > 1) {
           setCombo((c) => c + 1);
-          if (typeof window !== 'undefined') {
+          if (!reducedMotion && typeof window !== 'undefined') {
             import('canvas-confetti').then((m) => {
               try {
                 m.default({ particleCount: 80, spread: 60 });
@@ -567,7 +571,7 @@ const Game2048 = () => {
             className="px-4 py-2 bg-gray-700 rounded ml-auto"
             aria-live="polite" aria-atomic="true"
           >
-            Score: <span className={scorePop ? 'score-pop' : ''}>{score}</span>
+            Score: <span className={!reducedMotion && scorePop ? 'score-pop' : ''}>{score}</span>
           </div>
           <div className="px-4 py-2 bg-gray-700 rounded">Best: {best}</div>
           <div className="px-4 py-2 bg-gray-700 rounded">Moves: {moves}</div>
@@ -593,7 +597,7 @@ const Game2048 = () => {
                     key={key}
                     className={`relative overflow-hidden h-16 w-16 flex items-center justify-center text-2xl font-bold rounded ${
                       cell ? colors[cell] || 'bg-gray-700' : 'bg-gray-800'
-                    } ${animCells.has(key) ? 'tile-pop' : ''}`}
+                    } ${!reducedMotion && animCells.has(key) ? 'tile-pop' : ''}`}
                   >
                     {highContrast && cell !== 0 && (
                       <span
@@ -604,7 +608,9 @@ const Game2048 = () => {
                       </span>
                     )}
                     <span className="relative z-10">{cell !== 0 ? cell : ''}</span>
-                    {mergeCells.has(key) && <span className="merge-ripple" />}
+                    {!reducedMotion && mergeCells.has(key) && (
+                      <span className="merge-ripple" />
+                    )}
                   </div>
                 );
               })
