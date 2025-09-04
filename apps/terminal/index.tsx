@@ -63,6 +63,24 @@ const SettingsIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+const HelpIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    viewBox="0 0 24 24"
+    width={24}
+    height={24}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <circle cx={12} cy={12} r={10} />
+    <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 3-3 3" />
+    <line x1={12} y1={17} x2={12.01} y2={17} />
+  </svg>
+);
+
 export interface TerminalProps {
   openApp?: (id: string) => void;
 }
@@ -123,6 +141,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     '#55FFFF',
     '#FFFFFF',
   ];
+
 
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
@@ -231,20 +250,46 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     return () => workerRef.current?.terminate();
   }, []);
 
+  const transformPrefix = useCallback(
+    (cmd: string) => {
+      if (cmd.startsWith('!')) {
+        const query = cmd.slice(1).trim();
+        if (query) {
+          window.open(
+            `https://duckduckgo.com/?q=${encodeURIComponent(query)}`,
+            '_blank',
+          );
+          writeLine(`Searching the web for "${query}"`);
+        } else {
+          writeLine('Usage: !<query>');
+        }
+        return '';
+      }
+      if (cmd.startsWith('#')) {
+        const app = cmd.slice(1).trim();
+        return app ? `open ${app}` : '';
+      }
+      return cmd;
+    },
+    [writeLine],
+  );
+
     const runCommand = useCallback(
       async (cmd: string) => {
-        const [name, ...rest] = cmd.trim().split(/\s+/);
+        historyRef.current.push(cmd);
+        const transformed = transformPrefix(cmd);
+        if (!transformed) return;
+        const [name, ...rest] = transformed.trim().split(/\s+/);
         const expanded =
           aliasesRef.current[name]
             ? `${aliasesRef.current[name]} ${rest.join(' ')}`.trim()
-            : cmd;
+            : transformed;
         const [cmdName, ...cmdRest] = expanded.split(/\s+/);
         const handler = registryRef.current[cmdName];
-        historyRef.current.push(cmd);
         if (handler) await handler(cmdRest.join(' '), contextRef.current);
         else if (cmdName) await runWorker(expanded);
       },
-      [runWorker],
+      [runWorker, transformPrefix],
     );
 
     const autocomplete = useCallback(() => {
@@ -407,6 +452,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           <div className="mt-10 w-80 bg-gray-800 p-4 rounded">
             <input
               autoFocus
+              aria-label="Command palette input"
               className="w-full mb-2 bg-black text-white p-2"
               value={paletteInput}
               onChange={(e) => setPaletteInput(e.target.value)}
@@ -480,6 +526,12 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           </button>
           <button onClick={() => setSettingsOpen(true)} aria-label="Settings">
             <SettingsIcon />
+          </button>
+          <button
+            aria-label="Help"
+            title="!<query> web search\n#<app> open app"
+          >
+            <HelpIcon />
           </button>
         </div>
         <div className="relative">

@@ -61,6 +61,22 @@ describe('Terminal component', () => {
     expect(openApp).toHaveBeenCalledWith('calculator');
   });
 
+  it('transforms prefixed commands', async () => {
+    const ref = createRef<any>();
+    const open = jest.spyOn(window, 'open').mockImplementation(() => null);
+    render(<Terminal ref={ref} openApp={openApp} />);
+    await act(async () => {});
+    act(() => {
+      ref.current.runCommand('#notes');
+    });
+    expect(openApp).toHaveBeenCalledWith('notes');
+    act(() => {
+      ref.current.runCommand('!kali linux');
+    });
+    expect(open).toHaveBeenCalled();
+    open.mockRestore();
+  });
+
   it('supports tab management shortcuts', async () => {
     const { container } = render(<TerminalTabs openApp={openApp} />);
     await act(async () => {});
