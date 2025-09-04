@@ -40,6 +40,7 @@ export class Desktop extends Component {
             hideSideBar: false,
             minimized_windows: {},
             window_positions: {},
+            icon_positions: {},
             desktop_apps: [],
             context_menus: {
                 desktop: false,
@@ -88,6 +89,12 @@ export class Desktop extends Component {
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
+        const storedIcons = safeLocalStorage?.getItem('desktop:icon-positions');
+        if (storedIcons) {
+            try {
+                this.setState({ icon_positions: JSON.parse(storedIcons) });
+            } catch (e) { }
+        }
     }
 
     componentWillUnmount() {
@@ -435,6 +442,7 @@ export class Desktop extends Component {
         apps.forEach((app, index) => {
             if (this.state.desktop_apps.includes(app.id)) {
 
+                const pos = this.state.icon_positions[app.title];
                 const props = {
                     name: app.title,
                     id: app.id,
@@ -442,11 +450,13 @@ export class Desktop extends Component {
                     openApp: this.openApp,
                     disabled: this.state.disabled_apps[app.id],
                     prefetch: app.screen?.prefetch,
-                }
+                    initialX: pos ? pos.x : undefined,
+                    initialY: pos ? pos.y : undefined,
+                    onPositionChange: this.updateIconPosition,
+                    draggable: true,
+                };
 
-                appsJsx.push(
-                    <UbuntuApp key={app.id} {...props} />
-                );
+                appsJsx.push(<UbuntuApp key={app.id} {...props} />);
             }
         });
         return appsJsx;
@@ -495,6 +505,14 @@ export class Desktop extends Component {
         this.setState(prev => ({
             window_positions: { ...prev.window_positions, [id]: { x: snap(x), y: snap(y) } }
         }), this.saveSession);
+    }
+
+    updateIconPosition = (name, x, y) => {
+        this.setState(prev => {
+            const icon_positions = { ...prev.icon_positions, [name]: { x, y } };
+            safeLocalStorage?.setItem('desktop:icon-positions', JSON.stringify(icon_positions));
+            return { icon_positions };
+        });
     }
 
     saveSession = () => {
@@ -822,8 +840,8 @@ export class Desktop extends Component {
         return (
             <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
                 <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
-                    <span>New folder name</span>
-                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
+                    <label htmlFor="folder-name-input">New folder name</label>
+                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} aria-label="New folder name" />
                 </div>
                 <div className="flex">
                     <button
