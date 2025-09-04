@@ -5,6 +5,7 @@ import KeywordSearchPanel from './KeywordSearchPanel';
 import demoArtifacts from './data/sample-artifacts.json';
 import ReportExport from '../../../apps/autopsy/components/ReportExport';
 import demoCase from '../../../apps/autopsy/data/case.json';
+import HelpPanel from '../../HelpPanel';
 
 const escapeFilename = (str = '') =>
   str
@@ -587,6 +588,7 @@ function Autopsy({ initialArtifacts = null }) {
 
   return (
     <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white p-4 space-y-4">
+      <HelpPanel appId="autopsy" />
       <div
         aria-live="polite"
         className="sr-only"
