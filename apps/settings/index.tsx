@@ -134,6 +134,14 @@ export default function Settings() {
               <option value="matrix">Matrix</option>
             </select>
           </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">High Contrast:</span>
+            <ToggleSwitch
+              checked={highContrast}
+              onChange={setHighContrast}
+              ariaLabel="High Contrast"
+            />
+          </div>
           <div className="flex justify-center my-4">
             <label className="mr-2 text-ubt-grey">Accent:</label>
             <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
@@ -242,14 +250,6 @@ export default function Settings() {
               checked={reducedMotion}
               onChange={setReducedMotion}
               ariaLabel="Reduced Motion"
-            />
-          </div>
-          <div className="flex justify-center my-4 items-center">
-            <span className="mr-2 text-ubt-grey">High Contrast:</span>
-            <ToggleSwitch
-              checked={highContrast}
-              onChange={setHighContrast}
-              ariaLabel="High Contrast"
             />
           </div>
           <div className="flex justify-center my-4 items-center">
