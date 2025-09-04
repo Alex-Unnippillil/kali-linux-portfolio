@@ -1,10 +1,12 @@
 import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import InstallButton from '../components/InstallButton';
+import { initA2HS } from '@/src/pwa/a2hs';
 
 describe('InstallButton', () => {
   test('shows install prompt when beforeinstallprompt fires', async () => {
     render(<InstallButton />);
+    initA2HS();
     expect(screen.queryByText(/install/i)).toBeNull();
 
     let resolveChoice: (value: any) => void = () => {};

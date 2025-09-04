@@ -11,13 +11,15 @@ import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
-import UseRouteAbortGuard from '../components/UseRouteAbortGuard';
+import { initA2HS } from '@/src/pwa/a2hs';
+
 
 function MyApp(props) {
   const { Component, pageProps } = props;
 
 
   useEffect(() => {
+    initA2HS();
     const initAnalytics = async () => {
       const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
       if (trackingId) {
