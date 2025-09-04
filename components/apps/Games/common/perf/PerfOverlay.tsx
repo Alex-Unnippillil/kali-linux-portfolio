@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useRef } from 'react';
 import { publish } from '../../../../../utils/pubsub';
 import { hasOffscreenCanvas } from '../../../../../utils/feature';
