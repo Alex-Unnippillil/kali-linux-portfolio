@@ -22,7 +22,8 @@ const errorMessageEl = document.getElementById('error-message');
 let apiKey = safeLocalStorage?.getItem('weatherApiKey') || '';
 if (apiKey) apiKeyInput.value = apiKey;
 
-let unit = unitToggle.value;
+let unit = safeLocalStorage?.getItem('weatherUnit') || unitToggle.value;
+unitToggle.value = unit;
 
 let savedCities = JSON.parse(safeLocalStorage?.getItem('savedCities') || '[]');
 
@@ -176,6 +177,11 @@ citySearch.addEventListener('input', () => {
 
 unitToggle.addEventListener('change', () => {
   unit = unitToggle.value;
+  try {
+    safeLocalStorage?.setItem('weatherUnit', unit);
+  } catch {
+    // ignore storage errors
+  }
   updateWeather();
 });
 
