@@ -14,6 +14,8 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  compositor: true,
+  panelTransparency: true,
 };
 
 export async function getAccent() {
@@ -123,6 +125,28 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getCompositor() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.compositor;
+  const val = window.localStorage.getItem('compositor');
+  return val === null ? DEFAULT_SETTINGS.compositor : val === 'true';
+}
+
+export async function setCompositor(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('compositor', value ? 'true' : 'false');
+}
+
+export async function getPanelTransparency() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.panelTransparency;
+  const val = window.localStorage.getItem('panel-transparency');
+  return val === null ? DEFAULT_SETTINGS.panelTransparency : val === 'true';
+}
+
+export async function setPanelTransparency(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('panel-transparency', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +161,8 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('compositor');
+  window.localStorage.removeItem('panel-transparency');
 }
 
 export async function exportSettings() {
@@ -151,6 +177,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    compositor,
+    panelTransparency,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +190,8 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getCompositor(),
+    getPanelTransparency(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +205,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    compositor,
+    panelTransparency,
     theme,
   });
 }
@@ -199,6 +231,8 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    compositor,
+    panelTransparency,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +245,9 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (compositor !== undefined) await setCompositor(compositor);
+  if (panelTransparency !== undefined)
+    await setPanelTransparency(panelTransparency);
   if (theme !== undefined) setTheme(theme);
 }
 

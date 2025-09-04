@@ -1,8 +1,10 @@
 import React from 'react';
 import Image from 'next/image';
+import { useSettings } from '../../hooks/useSettings';
 
 export default function Taskbar(props) {
     const runningApps = props.apps.filter(app => props.closed_windows[app.id] === false);
+    const { panelTransparency } = useSettings();
 
     const handleClick = (app) => {
         const id = app.id;
@@ -16,7 +18,12 @@ export default function Taskbar(props) {
     };
 
     return (
-        <div className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center z-40" role="toolbar">
+        <div
+            className={`absolute bottom-0 left-0 w-full h-10 flex items-center z-40 ${
+                panelTransparency ? 'bg-black bg-opacity-50' : 'bg-black'
+            }`}
+            role="toolbar"
+        >
             {runningApps.map(app => (
                 <button
                     key={app.id}

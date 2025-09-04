@@ -29,6 +29,10 @@ export default function Settings() {
     setHighContrast,
     haptics,
     setHaptics,
+    compositor,
+    setCompositor,
+    panelTransparency,
+    setPanelTransparency,
     theme,
     setTheme,
   } = useSettings();
@@ -133,6 +137,23 @@ export default function Settings() {
               <option value="neon">Neon</option>
               <option value="matrix">Matrix</option>
             </select>
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Compositor:</span>
+            <ToggleSwitch
+              checked={compositor}
+              onChange={setCompositor}
+              ariaLabel="Compositor"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Panel Transparency:</span>
+            <ToggleSwitch
+              checked={panelTransparency}
+              onChange={setPanelTransparency}
+              ariaLabel="Panel Transparency"
+              disabled={!compositor}
+            />
           </div>
           <div className="flex justify-center my-4">
             <label className="mr-2 text-ubt-grey">Accent:</label>
