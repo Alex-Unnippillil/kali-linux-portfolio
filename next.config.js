@@ -61,6 +61,11 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 });
 
+const withPWA = require('@ducanh2912/next-pwa').default({
+  dest: 'public',
+  disable: process.env.NODE_ENV === 'development',
+});
+
 const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -97,57 +102,59 @@ try {
   console.warn('Missing env vars; running without validation');
 }
 
-module.exports = withBundleAnalyzer({
-  ...(isStaticExport && { output: 'export' }),
-  webpack: configureWebpack,
+module.exports = withBundleAnalyzer(
+  withPWA({
+    ...(isStaticExport && { output: 'export' }),
+    webpack: configureWebpack,
 
-  // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  images: {
-    unoptimized: true,
-    domains: [
-      'opengraph.githubassets.com',
-      'raw.githubusercontent.com',
-      'avatars.githubusercontent.com',
-      'i.ytimg.com',
-      'yt3.ggpht.com',
-      'i.scdn.co',
-    ],
-    deviceSizes: [640, 750, 828, 1080, 1200, 1280, 1920, 2048, 3840],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256],
-  },
-  // Security headers are skipped outside production; remove !isProd check to restore them for development.
-  ...(isStaticExport || !isProd
-    ? {}
-    : {
-        async headers() {
-          return [
-            {
-              source: '/(.*)',
-              headers: securityHeaders,
-            },
-            {
-              source: '/fonts/(.*)',
-              headers: [
-                {
-                  key: 'Cache-Control',
-                  value: 'public, max-age=31536000, immutable',
-                },
-              ],
-            },
-            {
-              source: '/images/(.*)',
-              headers: [
-                {
-                  key: 'Cache-Control',
-                  value: 'public, max-age=86400',
-                },
-              ],
-            },
-          ];
-        },
-      }),
-});
+    // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
+    eslint: {
+      ignoreDuringBuilds: true,
+    },
+    images: {
+      unoptimized: true,
+      domains: [
+        'opengraph.githubassets.com',
+        'raw.githubusercontent.com',
+        'avatars.githubusercontent.com',
+        'i.ytimg.com',
+        'yt3.ggpht.com',
+        'i.scdn.co',
+      ],
+      deviceSizes: [640, 750, 828, 1080, 1200, 1280, 1920, 2048, 3840],
+      imageSizes: [16, 32, 48, 64, 96, 128, 256],
+    },
+    // Security headers are skipped outside production; remove !isProd check to restore them for development.
+    ...(isStaticExport || !isProd
+      ? {}
+      : {
+          async headers() {
+            return [
+              {
+                source: '/(.*)',
+                headers: securityHeaders,
+              },
+              {
+                source: '/fonts/(.*)',
+                headers: [
+                  {
+                    key: 'Cache-Control',
+                    value: 'public, max-age=31536000, immutable',
+                  },
+                ],
+              },
+              {
+                source: '/images/(.*)',
+                headers: [
+                  {
+                    key: 'Cache-Control',
+                    value: 'public, max-age=86400',
+                  },
+                ],
+              },
+            ];
+          },
+        }),
+  })
+);
 
