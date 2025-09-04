@@ -2320,7 +2320,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@jridgewell/sourcemap-codec@npm:^1.4.14, @jridgewell/sourcemap-codec@npm:^1.5.0, @jridgewell/sourcemap-codec@npm:^1.5.5":
+"@jridgewell/sourcemap-codec@npm:^1.4.14, @jridgewell/sourcemap-codec@npm:^1.4.15, @jridgewell/sourcemap-codec@npm:^1.5.0":
   version: 1.5.5
   resolution: "@jridgewell/sourcemap-codec@npm:1.5.5"
   checksum: 10c0/f9e538f302b63c0ebc06eecb1dd9918dd4289ed36147a0ddce35d6ea4d7ebbda243cda7b2213b6a5e1d8087a298d5cf630fb2bd39329cdecb82017023f6081a0
@@ -9694,12 +9694,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"magic-string@npm:^0.30.10":
-  version: 0.30.18
-  resolution: "magic-string@npm:0.30.18"
+"magic-string@npm:0.30.10":
+  version: 0.30.10
+  resolution: "magic-string@npm:0.30.10"
   dependencies:
-    "@jridgewell/sourcemap-codec": "npm:^1.5.5"
-  checksum: 10c0/80fba01e13ce1f5c474a0498a5aa462fa158eb56567310747089a0033e432d83a2021ee2c109ac116010cd9dcf90a5231d89fbe3858165f73c00a50a74dbefcd
+    "@jridgewell/sourcemap-codec": "npm:^1.4.15"
+  checksum: 10c0/aa9ca17eae571a19bce92c8221193b6f93ee8511abb10f085e55ffd398db8e4c089a208d9eac559deee96a08b7b24d636ea4ab92f09c6cf42a7d1af51f7fd62b
   languageName: node
   linkType: hard
 
@@ -10994,7 +10994,6 @@ __metadata:
   linkType: hard
 
 "postcss@npm:^8.4.47, postcss@npm:^8.5.6":
-
   version: 8.5.6
   resolution: "postcss@npm:8.5.6"
   dependencies:
@@ -13893,7 +13892,7 @@ __metadata:
     jspdf: "npm:^3.0.2"
     kaitai-struct: "npm:^0.10.0"
     leaflet: "npm:^1.9.4"
-    magic-string: "patch:magic-string@npm:0.30.18#./.yarn/patches/magic-string-npm-0.30.18-561c76e200.patch"
+    magic-string: "patch:magic-string@npm:0.30.10#./.yarn/patches/magic-string-0.30.10.patch"
     mathjs: "npm:^14.6.0"
     matter-js: "npm:0.20.0"
     monaco-editor: "npm:^0.52.2"
@@ -13906,7 +13905,6 @@ __metadata:
     playwright-core: "npm:^1.55.0"
     pngjs: "npm:^7.0.0"
     postcss: "npm:^8.5.6"
-
     prettier: "npm:^3.6.2"
     prop-types: "npm:^15.8.1"
     qrcode: "npm:^1.5.4"

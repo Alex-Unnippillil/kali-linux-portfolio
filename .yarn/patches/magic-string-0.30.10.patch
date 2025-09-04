@@ -1,5 +1,4 @@
 diff --git a/README.md b/README.md
-index b2e9f9a19f7d78fbc5748da52486fabd86f21a81..381de15e3c9c15842965583288ee8570b8bcff10 100644
 --- a/README.md
 +++ b/README.md
 @@ -322,3 +322,4 @@ bundle.addSource(source);
@@ -7,3 +6,4 @@ index b2e9f9a19f7d78fbc5748da52486fabd86f21a81..381de15e3c9c15842965583288ee8570
  
  MIT
 +
+
