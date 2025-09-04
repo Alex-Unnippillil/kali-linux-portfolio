@@ -91,6 +91,7 @@ interface Project {
 
 export default function ProjectGalleryPage() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   const [tech, setTech] = usePersistentState<string[]>('pg-tech', []);
@@ -100,10 +101,12 @@ export default function ProjectGalleryPage() {
 
   // load projects
   useEffect(() => {
+    setLoading(true);
     fetch('/projects.json')
       .then((r) => r.json())
       .then((data) => setProjects(data as Project[]))
-      .catch(() => setProjects([]));
+      .catch(() => setProjects([]))
+      .finally(() => setLoading(false));
   }, []);
 
   // initialize from query string
@@ -205,35 +208,48 @@ export default function ProjectGalleryPage() {
           />
         ))}
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-        {filtered.map((p) => (
-          <div
-            key={p.id}
-            tabIndex={0}
-            className="group relative h-72 flex flex-col border rounded overflow-hidden transition-transform transition-opacity duration-300 hover:scale-105 hover:opacity-90 focus:scale-105 focus:opacity-90 focus:outline-none"
-            aria-label={`${p.title}: ${p.description}`}
-          >
-            <div className="w-full aspect-video overflow-hidden">
-              <img src={p.thumbnail} alt={p.title} className="w-full h-full object-cover" />
-            </div>
-            <div className="p-2 flex-1">
-              <h3 className="font-semibold text-base line-clamp-2">{p.title}</h3>
-              <p className="text-sm">{p.description}</p>
-            </div>
-            <div className="absolute inset-0 opacity-0 pointer-events-none group-hover:opacity-100 group-focus-within:opacity-100 group-hover:pointer-events-auto group-focus-within:pointer-events-auto transition-opacity bg-black/60 text-white flex flex-col">
-              <div className="p-2 flex flex-wrap gap-1">
-                {p.tags.map((t) => (
-                  <span key={t} className="bg-white text-black rounded px-1 text-xs">
-                    {t}
-                  </span>
-                ))}
+      <div className="grid gap-3 min-[320px]:grid-cols-2 md:grid-cols-3">
+        {loading
+          ? Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-72 flex flex-col border rounded overflow-hidden animate-pulse"
+              >
+                <div className="w-full h-40 bg-gray-300" />
+                <div className="p-2 space-y-2 flex-1">
+                  <div className="h-4 bg-gray-300 rounded w-3/4" />
+                  <div className="h-3 bg-gray-300 rounded w-1/2" />
+                </div>
               </div>
-              <div className="mt-auto p-2 text-right">
-                <button className="bg-blue-600 text-white px-4 h-10 rounded">Launch</button>
+            ))
+          : filtered.map((p) => (
+              <div
+                key={p.id}
+                tabIndex={0}
+                className="group relative h-72 flex flex-col border rounded overflow-hidden transition-transform transition-opacity duration-300 hover:scale-105 hover:opacity-90 focus:scale-105 focus:opacity-90 focus:outline-none"
+                aria-label={`${p.title}: ${p.description}`}
+              >
+                <div className="w-full aspect-video overflow-hidden">
+                  <img src={p.thumbnail} alt={p.title} className="w-full h-full object-cover" />
+                </div>
+                <div className="p-2 flex-1">
+                  <h3 className="font-semibold text-base line-clamp-2">{p.title}</h3>
+                  <p className="text-sm">{p.description}</p>
+                </div>
+                <div className="absolute inset-0 opacity-0 pointer-events-none group-hover:opacity-100 group-focus-within:opacity-100 group-hover:pointer-events-auto group-focus-within:pointer-events-auto transition-opacity bg-black/60 text-white flex flex-col">
+                  <div className="p-2 flex flex-wrap gap-1">
+                    {p.tags.map((t) => (
+                      <span key={t} className="bg-white text-black rounded px-1 text-xs">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="mt-auto p-2 text-right">
+                    <button className="bg-blue-600 text-white px-4 h-10 rounded">Launch</button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        ))}
+            ))}
       </div>
     </div>
   );
