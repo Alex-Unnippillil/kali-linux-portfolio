@@ -79,6 +79,7 @@ Copy `.env.local.example` to `.env.local` and fill in required API keys:
 - `NEXT_PUBLIC_ENABLE_ANALYTICS` – enable client-side analytics when set to `true`.
 - `FEATURE_TOOL_APIS` – toggle simulated tool APIs (`enabled` or `disabled`).
 - `RECAPTCHA_SECRET` and related `NEXT_PUBLIC_RECAPTCHA_*` keys for contact form spam protection.
+- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` – Supabase credentials. When unset, Supabase-backed APIs and features are disabled.
 
 See `.env.local.example` for the full list.
 
@@ -207,6 +208,11 @@ Copy `.env.local.example` to `.env.local` and fill in required values.
 | `NEXT_PUBLIC_GHIDRA_WASM` | Optional URL for a Ghidra WebAssembly build. |
 | `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | ReCAPTCHA site key used on the client. |
 | `RECAPTCHA_SECRET` | ReCAPTCHA secret key for server-side verification. |
+| `SUPABASE_URL` | Supabase project URL for server-side access. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key for privileged operations. |
+| `SUPABASE_ANON_KEY` | Supabase anonymous key for server-side reads. |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL exposed to the client. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public Supabase anonymous key used on the client. |
 | `ADMIN_READ_KEY` | Secret key required by admin message APIs. Configure this directly as an environment variable (e.g., in the Vercel dashboard). |
 | `NEXT_PUBLIC_UI_EXPERIMENTS` | Enable experimental UI heuristics. |
 | `NEXT_PUBLIC_STATIC_EXPORT` | Set to `'true'` during `yarn export` to disable server APIs. |

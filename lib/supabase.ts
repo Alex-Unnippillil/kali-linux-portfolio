@@ -2,7 +2,10 @@ export function getServiceSupabase() {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) {
-    throw new Error('Supabase environment variables are not set');
+    console.warn(
+      'Supabase service credentials missing; service functionality disabled',
+    );
+    return null;
   }
   return {
     from(table: string) {
@@ -27,7 +30,10 @@ export function getAnonSupabaseServer() {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_ANON_KEY;
   if (!url || !key) {
-    throw new Error('Supabase environment variables are not set');
+    console.warn(
+      'Supabase anonymous credentials missing; related features disabled',
+    );
+    return null;
   }
   return {
     from(table: string) {

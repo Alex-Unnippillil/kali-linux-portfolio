@@ -1,4 +1,4 @@
-import { serviceClient } from '../../../lib/service-client';
+import { getServiceClient } from '../../../lib/service-client';
 import { createLogger } from '../../../lib/logger';
 
 export default async function handler(
@@ -19,8 +19,15 @@ export default async function handler(
     return;
   }
 
+  const client = getServiceClient();
+  if (!client) {
+    logger.warn('supabase client not configured');
+    res.status(503).json({ error: 'Service unavailable' });
+    return;
+  }
+
   try {
-    const { data, error } = await serviceClient
+    const { data, error } = await client
       .from('contact_messages')
       .select('*')
       .order('created_at', { ascending: false })
