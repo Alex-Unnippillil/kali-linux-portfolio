@@ -1,10 +1,12 @@
+
 'use client';
 
 import { useEffect } from 'react';
+import { reportClientError } from '../lib/client-error-reporter';
 
-export default function Error({ error }: { error: Error }) {
+export default function Error({ error, reset }: { error: Error; reset: () => void }) {
   useEffect(() => {
-    console.error(error);
+    reportClientError(error, error.stack);
   }, [error]);
 
   return (
@@ -12,10 +14,10 @@ export default function Error({ error }: { error: Error }) {
       <h2 className="text-xl font-semibold">Something went wrong!</h2>
       <button
         type="button"
-        onClick={() => window.location.reload()}
+        onClick={() => reset()}
         className="rounded bg-slate-100 px-4 py-2 text-sm hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700"
       >
-        Reload
+        Try again
       </button>
     </div>
   );
