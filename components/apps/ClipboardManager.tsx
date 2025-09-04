@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { openDB } from 'idb';
+import { openDB, type IDBPDatabase } from 'idb';
 
 interface ClipItem {
   id?: number;
@@ -10,20 +10,29 @@ interface ClipItem {
 const DB_NAME = 'clipboard-manager';
 const STORE_NAME = 'items';
 
-const dbPromise = openDB(DB_NAME, 1, {
-  upgrade(db) {
-    if (!db.objectStoreNames.contains(STORE_NAME)) {
-      db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
-    }
-  },
-});
+let dbPromise: Promise<IDBPDatabase> | null = null;
+
+function getDb() {
+  if (typeof indexedDB === 'undefined') return null;
+  if (!dbPromise) {
+    dbPromise = openDB(DB_NAME, 1, {
+      upgrade(db) {
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+        }
+      },
+    });
+  }
+  return dbPromise;
+}
 
 const ClipboardManager: React.FC = () => {
   const [items, setItems] = useState<ClipItem[]>([]);
 
   const loadItems = useCallback(async () => {
     try {
-      const db = await dbPromise;
+      const db = await getDb();
+      if (!db) return;
       const all = await db.getAll(STORE_NAME);
       setItems(all.sort((a, b) => (b.id ?? 0) - (a.id ?? 0)));
     } catch {
@@ -35,7 +44,8 @@ const ClipboardManager: React.FC = () => {
     async (text: string) => {
       if (!text) return;
       try {
-        const db = await dbPromise;
+        const db = await getDb();
+        if (!db) return;
         const tx = db.transaction(STORE_NAME, 'readwrite');
         await tx.store.add({ text, created: Date.now() });
         await tx.done;
@@ -85,7 +95,8 @@ const ClipboardManager: React.FC = () => {
 
   const clearHistory = async () => {
     try {
-      const db = await dbPromise;
+      const db = await getDb();
+      if (!db) return;
       await db.clear(STORE_NAME);
       setItems([]);
     } catch {
