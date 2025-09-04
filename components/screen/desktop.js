@@ -30,6 +30,16 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        let autoArrange = true;
+        let icon_positions = {};
+        try {
+            const storedAuto = safeLocalStorage?.getItem('auto_arrange_icons');
+            if (storedAuto !== null) autoArrange = JSON.parse(storedAuto);
+        } catch { }
+        try {
+            const storedPos = safeLocalStorage?.getItem('desktop_icon_positions');
+            if (storedPos) icon_positions = JSON.parse(storedPos);
+        } catch { }
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -52,6 +62,8 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            autoArrange,
+            icon_positions,
         }
     }
 
@@ -429,6 +441,44 @@ export class Desktop extends Component {
         this.initFavourite = { ...favourite_apps };
     }
 
+    handleIconDragEnd = (id, e) => {
+        if (this.state.autoArrange) return;
+        const desktop = document.getElementById('desktop');
+        if (!desktop) return;
+        const rect = desktop.getBoundingClientRect();
+        const x = e.clientX - rect.left - 48;
+        const y = e.clientY - rect.top - 40;
+        this.setState(prev => ({
+            icon_positions: { ...prev.icon_positions, [id]: { x, y } }
+        }), this.saveIconPositions);
+    }
+
+    toggleAutoArrange = () => {
+        if (this.state.autoArrange) {
+            const desktop = document.getElementById('desktop');
+            const positions = {};
+            if (desktop) {
+                const rect = desktop.getBoundingClientRect();
+                desktop.querySelectorAll('[data-context="app"]').forEach(el => {
+                    const r = el.getBoundingClientRect();
+                    positions[el.dataset.appId] = { x: r.left - rect.left, y: r.top - rect.top };
+                });
+            }
+            this.setState({ autoArrange: false, icon_positions: positions }, () => {
+                safeLocalStorage?.setItem('auto_arrange_icons', JSON.stringify(false));
+                this.saveIconPositions();
+            });
+        } else {
+            this.setState({ autoArrange: true }, () => {
+                safeLocalStorage?.setItem('auto_arrange_icons', JSON.stringify(true));
+            });
+        }
+    }
+
+    saveIconPositions = () => {
+        safeLocalStorage?.setItem('desktop_icon_positions', JSON.stringify(this.state.icon_positions));
+    }
+
     renderDesktopApps = () => {
         if (Object.keys(this.state.closed_windows).length === 0) return;
         let appsJsx = [];
@@ -443,9 +493,16 @@ export class Desktop extends Component {
                     disabled: this.state.disabled_apps[app.id],
                     prefetch: app.screen?.prefetch,
                 }
+                const pos = this.state.icon_positions[app.id] || { x: 0, y: 0 };
+                const extra = {
+                    style: this.state.autoArrange ? {} : { position: 'absolute', left: pos.x, top: pos.y },
+                };
+                if (!this.state.autoArrange) {
+                    extra.onDragEnd = (e) => this.handleIconDragEnd(app.id, e);
+                }
 
                 appsJsx.push(
-                    <UbuntuApp key={app.id} {...props} />
+                    <UbuntuApp key={app.id} {...props} {...extra} />
                 );
             }
         });
@@ -895,6 +952,7 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
+                    toggleAutoArrange={this.toggleAutoArrange}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
