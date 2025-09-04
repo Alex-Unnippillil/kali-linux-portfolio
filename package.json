@@ -127,22 +127,18 @@
     "jest": "30.0.5",
     "jest-environment-jsdom": "30.0.5",
     "magic-string": "patch:magic-string@npm:0.30.10#./.yarn/patches/magic-string-0.30.10.patch",
-
     "node-mocks-http": "1.17.2",
     "pa11y": "^9.0.0",
     "playwright-core": "^1.55.0",
-    "test-exclude": "patch:test-exclude@npm:7.0.1#./.yarn/patches/test-exclude-npm-7.0.1-e6cf81110b.patch",
+    "test-exclude": "^7.0.1",
     "typescript": "^5.6",
     "wait-on": "^8.0.4",
     "webpack": "^5.92.0",
     "ws": "^8.18.0"
   },
   "resolutions": {
-
     "magic-string": "^0.30.10",
     "source-map": "^0.7.6",
-
-    "test-exclude": "^7.0.1",
     "webpack": "^5.92.0",
     "workbox-build@npm:7.1.1": "patch:workbox-build@npm%3A7.1.1#~/.yarn/patches/workbox-build-npm-7.1.1-a854f3faae.patch",
     "workbox-build@npm:7.1.0": "patch:workbox-build@npm%3A7.1.1#~/.yarn/patches/workbox-build-npm-7.1.1-a854f3faae.patch",
