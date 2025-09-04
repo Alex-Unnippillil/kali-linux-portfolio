@@ -37,6 +37,9 @@ export class Desktop extends Component {
             minimized_windows: {},
             window_positions: {},
             desktop_apps: [],
+            window_workspaces: {},
+            activeWorkspace: 0,
+            workspace_count: 4,
             context_menus: {
                 desktop: false,
                 default: false,
@@ -142,6 +145,26 @@ export class Desktop extends Component {
             e.preventDefault();
             this.openApp('clipboard-manager');
         }
+        if (e.ctrlKey && e.metaKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+            e.preventDefault();
+            this.switchWorkspace(e.key === 'ArrowLeft' ? -1 : 1);
+        }
+    }
+
+    switchWorkspace = (delta) => {
+        let newWs = this.state.activeWorkspace + delta;
+        const count = this.state.workspace_count;
+        if (newWs < 0) newWs = count - 1;
+        if (newWs >= count) newWs = 0;
+        const focused_windows = { ...this.state.focused_windows };
+        Object.keys(focused_windows).forEach(id => {
+            if (this.state.window_workspaces[id] !== newWs) {
+                focused_windows[id] = false;
+            }
+        });
+        this.setState({ activeWorkspace: newWs, focused_windows }, () => {
+            this.giveFocusToLastApp();
+        });
     }
 
     checkContextMenu = (e) => {
@@ -359,7 +382,7 @@ export class Desktop extends Component {
     renderWindows = () => {
         let windowsJsx = [];
         apps.forEach((app, index) => {
-            if (this.state.closed_windows[app.id] === false) {
+            if (this.state.closed_windows[app.id] === false && this.state.window_workspaces[app.id] === this.state.activeWorkspace) {
 
                 const pos = this.state.window_positions[app.id];
                 const props = {
@@ -456,8 +479,9 @@ export class Desktop extends Component {
         // if there is atleast one app opened, give it focus
         if (!this.checkAllMinimised()) {
             for (const index in this.app_stack) {
-                if (!this.state.minimized_windows[this.app_stack[index]]) {
-                    this.focus(this.app_stack[index]);
+                const id = this.app_stack[index];
+                if (this.state.window_workspaces[id] === this.state.activeWorkspace && !this.state.minimized_windows[id]) {
+                    this.focus(id);
                     break;
                 }
             }
@@ -467,8 +491,8 @@ export class Desktop extends Component {
     checkAllMinimised = () => {
         let result = true;
         for (const key in this.state.minimized_windows) {
-            if (!this.state.closed_windows[key]) { // if app is opened
-                result = result & this.state.minimized_windows[key];
+            if (!this.state.closed_windows[key] && this.state.window_workspaces[key] === this.state.activeWorkspace) {
+                result = result && this.state.minimized_windows[key];
             }
         }
         return result;
@@ -484,6 +508,20 @@ export class Desktop extends Component {
 
         // if the app is disabled
         if (this.state.disabled_apps[objId]) return;
+
+        const currentWs = this.state.activeWorkspace;
+        const windowWs = this.state.window_workspaces[objId];
+        if (windowWs !== undefined && windowWs !== currentWs) {
+            this.setState(prev => ({
+                window_workspaces: { ...prev.window_workspaces, [objId]: currentWs },
+                minimized_windows: { ...prev.minimized_windows, [objId]: false }
+            }), () => {
+                this.focus(objId);
+                this.saveSession();
+            });
+            if (!this.app_stack.includes(objId)) this.app_stack.push(objId);
+            return;
+        }
 
         if (this.state.minimized_windows[objId]) {
             // focus this app's window
@@ -536,7 +574,8 @@ export class Desktop extends Component {
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
-                this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
+                const window_workspaces = { ...this.state.window_workspaces, [objId]: this.state.activeWorkspace };
+                this.setState({ closed_windows, favourite_apps, allAppsView: false, window_workspaces }, () => {
                     this.focus(objId);
                     this.saveSession();
                 });
@@ -586,11 +625,13 @@ export class Desktop extends Component {
         // close window
         let closed_windows = this.state.closed_windows;
         let favourite_apps = this.state.favourite_apps;
+        let window_workspaces = { ...this.state.window_workspaces };
 
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
+        delete window_workspaces[objId];
 
-        this.setState({ closed_windows, favourite_apps }, this.saveSession);
+        this.setState({ closed_windows, favourite_apps, window_workspaces }, this.saveSession);
     }
 
     pinApp = (id) => {
