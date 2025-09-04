@@ -119,10 +119,6 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     cursor: n-resize;
 }
 
-.notFocused {
-    filter: brightness(90%);
-}
-
 .root,
 #root,
 #docs-root {
@@ -131,9 +127,16 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 }
 
 .window-shadow {
-    box-shadow: 1px 4px 12px 4px rgba(0, 0, 0, 0.2);
-    -webkit-box-shadow: 1px 4px 12px 4px rgba(0, 0, 0, 0.2);
-    -moz-box-shadow: 1px 4px 12px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-elevation-3);
+    -webkit-box-shadow: var(--shadow-elevation-3);
+    -moz-box-shadow: var(--shadow-elevation-3);
+}
+
+.notFocused {
+    filter: brightness(90%);
+    box-shadow: var(--shadow-elevation-2);
+    -webkit-box-shadow: var(--shadow-elevation-2);
+    -moz-box-shadow: var(--shadow-elevation-2);
 }
 
 .closed-window {
