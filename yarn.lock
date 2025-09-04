@@ -11773,7 +11773,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rc-virtual-list@npm:^3.14.2, rc-virtual-list@npm:^3.5.1, rc-virtual-list@npm:^3.5.2":
+"rc-virtual-list@npm:3.19.1, rc-virtual-list@npm:^3.14.2, rc-virtual-list@npm:^3.5.1, rc-virtual-list@npm:^3.5.2":
   version: 3.19.1
   resolution: "rc-virtual-list@npm:3.19.1"
   dependencies:
@@ -13908,6 +13908,7 @@ __metadata:
     prettier: "npm:^3.6.2"
     prop-types: "npm:^15.8.1"
     qrcode: "npm:^1.5.4"
+    rc-virtual-list: "npm:3.19.1"
     react: "npm:19.1.1"
     react-activity-calendar: "npm:^2.7.13"
     react-bootstrap: "npm:^2.10.4"
