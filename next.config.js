@@ -14,18 +14,18 @@ const ContentSecurityPolicy = [
   "object-src 'none'",
   // Allow external images and data URIs for badges/icons
   "img-src 'self' https: data:",
-  // Allow inline styles
-  "style-src 'self' 'unsafe-inline'",
-  // Explicitly allow inline style tags
-  "style-src-elem 'self' 'unsafe-inline'",
+  // Allow styles from same origin; inline styles rely on CSP nonces
+  "style-src 'self'",
+  // Allow style elements from same origin (nonce applied at runtime)
+  "style-src-elem 'self'",
   // Restrict fonts to same origin
   "font-src 'self'",
-  // External scripts required for embedded timelines
-  "script-src 'self' 'unsafe-inline' https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
+  // External scripts required for embedded timelines; inline scripts use nonces
+  "script-src 'self' https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
   // Allow outbound connections for embeds and the in-browser Chrome app
   "connect-src 'self' https://example.com https://developer.mozilla.org https://en.wikipedia.org https://www.google.com https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.google.com https://stackblitz.com",
   // Allow iframes from specific providers so the Chrome and StackBlitz apps can load allowed content
-  "frame-src 'self' https://stackblitz.com https://*.google.com https://platform.twitter.com https://syndication.twitter.com https://*.twitter.com https://*.x.com https://www.youtube-nocookie.com https://open.spotify.com https://example.com https://developer.mozilla.org https://en.wikipedia.org",
+  "frame-src 'self' https://stackblitz.com https://*.google.com https://platform.twitter.com https://syndication.twitter.com https://*.twitter.com https://*.x.com https://www.youtube-nocookie.com https://open.spotify.com https://example.com https://developer.mozilla.org https://en.wikipedia.org https://vercel.live",
 
   // Allow this site to embed its own resources (resume PDF)
   "frame-ancestors 'self'",
