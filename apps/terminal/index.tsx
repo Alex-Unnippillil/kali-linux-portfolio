@@ -9,6 +9,7 @@ import React, {
   useCallback,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
+import usePersistentState from '../../hooks/usePersistentState';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
 
@@ -100,6 +101,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   });
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
+  const [runHistory, setRunHistory] = usePersistentState<string[]>('terminal:run-history', []);
+  const runHistIndexRef = useRef(runHistory.length);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
@@ -390,15 +393,19 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         e.preventDefault();
         setPaletteOpen((v) => {
           const next = !v;
-          if (next) termRef.current?.blur();
-          else termRef.current?.focus();
+          if (next) {
+            runHistIndexRef.current = runHistory.length;
+            termRef.current?.blur();
+          } else {
+            termRef.current?.focus();
+          }
           return next;
         });
       }
     };
     window.addEventListener('keydown', listener);
     return () => window.removeEventListener('keydown', listener);
-  }, [paletteOpen]);
+  }, [paletteOpen, runHistory]);
 
   return (
     <div className="relative h-full w-full">
@@ -413,12 +420,33 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   runCommand(paletteInput);
+                  setRunHistory((h) => {
+                    const next = [...h, paletteInput].slice(-50);
+                    runHistIndexRef.current = next.length;
+                    return next;
+                  });
                   setPaletteInput('');
                   setPaletteOpen(false);
                   termRef.current?.focus();
                 } else if (e.key === 'Escape') {
                   setPaletteOpen(false);
                   termRef.current?.focus();
+                } else if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  if (runHistIndexRef.current > 0) {
+                    runHistIndexRef.current -= 1;
+                    setPaletteInput(runHistory[runHistIndexRef.current] || '');
+                  }
+                } else if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  if (runHistIndexRef.current < runHistory.length) {
+                    runHistIndexRef.current += 1;
+                    if (runHistIndexRef.current === runHistory.length) {
+                      setPaletteInput('');
+                    } else {
+                      setPaletteInput(runHistory[runHistIndexRef.current] || '');
+                    }
+                  }
                 }
               }}
             />
