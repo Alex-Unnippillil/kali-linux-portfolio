@@ -246,6 +246,7 @@ These external domains are whitelisted in the default CSP. Update this list when
 | `www.youtube.com` | YouTube IFrame API |
 | `www.youtube-nocookie.com` | YouTube video embeds (privacy-enhanced) |
 | `open.spotify.com` | Spotify embeds |
+| `vercel.live` | Vercel Live feedback script |
 | `https://*` / `http://*` / `ws://*` / `wss://*` | Wide dev allowance for external resources; tighten for production |
 
 **Notes for prod hardening**
