@@ -153,6 +153,12 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
         const data = this.cache.json.get('level');
         this.gameState = new GameState(data.spawn);
 
+        // collision categories for broad-phase filtering
+        // player interacts with scenery + interactive objects only
+        const CAT_PLAYER = 0x0001;
+        const CAT_SCENERY = 0x0002;
+        const CAT_INTERACTIVE = 0x0004;
+
         // Parallax background layers
         data.parallaxLayers?.forEach((l: any) => {
           const color = Phaser.Display.Color.HexStringToColor(l.color).color;
@@ -169,16 +175,20 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
           this.parallax.push(rect);
         });
 
-        // Platforms
+        // Platforms (collide only with player)
         data.platforms.forEach((p: any) => {
-          this.matter.add.rectangle(p.x, p.y, p.width, p.height, { isStatic: true });
+          this.matter.add.rectangle(p.x, p.y, p.width, p.height, {
+            isStatic: true,
+            collisionFilter: { category: CAT_SCENERY, mask: CAT_PLAYER },
+          });
         });
 
-        // Hazards
+        // Hazards and other interactive bodies collide only with player
         data.hazards.forEach((h: any) => {
           this.matter.add.rectangle(h.x, h.y, h.width, h.height, {
             isStatic: true,
             label: 'hazard',
+            collisionFilter: { category: CAT_INTERACTIVE, mask: CAT_PLAYER },
           });
         });
 
@@ -188,6 +198,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
             isStatic: true,
             isSensor: true,
             label: 'coin',
+            collisionFilter: { category: CAT_INTERACTIVE, mask: CAT_PLAYER },
           });
           const sprite = this.add
             .rectangle(c.x, c.y, c.width, c.height, 0xffd700)
@@ -201,6 +212,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
             isStatic: true,
             isSensor: true,
             label: 'checkpoint',
+            collisionFilter: { category: CAT_INTERACTIVE, mask: CAT_PLAYER },
           });
           const flag = this.add
             .rectangle(c.x, c.y - c.height / 2, 10, 30, 0xff0000)
@@ -211,6 +223,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
 
         this.player = this.matter.add.image(data.spawn.x, data.spawn.y, 'player', undefined, {
           shape: { type: 'rectangle', width: 32, height: 32 },
+          collisionFilter: { category: CAT_PLAYER, mask: CAT_SCENERY | CAT_INTERACTIVE },
         });
 
         this.coinText = this.add
@@ -223,31 +236,48 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
         this.cameras.main.startFollow(this.player);
 
         // Collision events (essential for checkpoint/hazard handling)
-        // TODO: evaluate performance if collision complexity increases
-        this.matter.world.on('collisionstart', (_: any, bodyA: MatterJS.BodyType, bodyB: MatterJS.BodyType) => {
-          [bodyA, bodyB].forEach((body) => {
-            if (body.label === 'checkpoint') {
-              const cp = this.checkpointFlags.find((c) => c.body === body);
-              if (cp) cp.flag.setFillStyle(0x00ff00);
-              this.gameState.setCheckpoint({ x: body.position.x, y: body.position.y });
-            }
-            if (body.label === 'hazard') {
-              const s = this.gameState.getRespawnPoint();
-              this.player.setPosition(s.x, s.y);
-              this.player.setVelocity(0, 0);
-            }
-            if (body.label === 'coin') {
-              const idx = this.coins.findIndex((c) => c.body === body);
-              if (idx >= 0) {
-                const [coin] = this.coins.splice(idx, 1);
-                coin.sprite.destroy();
-                this.matter.world.remove(body);
-                const count = this.gameState.addCoin();
-                this.coinText.setText(`Coins: ${count}`);
+        const relevant = new Set(['checkpoint', 'hazard', 'coin']);
+        this.matter.world.on(
+          'collisionstart',
+          (_: any, bodyA: MatterJS.BodyType, bodyB: MatterJS.BodyType) => {
+            // Early exit if neither body is relevant to gameplay
+            if (!relevant.has(bodyA.label) && !relevant.has(bodyB.label)) return;
+
+            const start = performance.now();
+            [bodyA, bodyB].forEach((body) => {
+              if (body.label === 'checkpoint') {
+                const cp = this.checkpointFlags.find((c) => c.body === body);
+                if (cp) cp.flag.setFillStyle(0x00ff00);
+                this.gameState.setCheckpoint({ x: body.position.x, y: body.position.y });
               }
+              if (body.label === 'hazard') {
+                const s = this.gameState.getRespawnPoint();
+                this.player.setPosition(s.x, s.y);
+                this.player.setVelocity(0, 0);
+              }
+              if (body.label === 'coin') {
+                const idx = this.coins.findIndex((c) => c.body === body);
+                if (idx >= 0) {
+                  const [coin] = this.coins.splice(idx, 1);
+                  coin.sprite.destroy();
+                  this.matter.world.remove(body);
+                  const count = this.gameState.addCoin();
+                  this.coinText.setText(`Coins: ${count}`);
+                }
+              }
+            });
+            const duration = performance.now() - start;
+            // accessing Matter's internal world; cast to any to avoid TS limitations
+            const bodyCount = (this.matter.world.engine.world as any).bodies.length;
+            // Log when collision handling becomes expensive (>200 bodies or >1ms)
+            if (bodyCount > 200 || duration > 1) {
+              // Documented threshold to help tune level complexity
+              console.debug(
+                `collision handler: ${duration.toFixed(2)}ms with ${bodyCount} bodies`,
+              );
             }
-          });
-        });
+          },
+        );
       }
 
       update(time: number, delta: number) {
