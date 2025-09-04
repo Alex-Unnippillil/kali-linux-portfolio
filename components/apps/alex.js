@@ -90,10 +90,17 @@ export class AboutAlex extends Component {
                 <div className="md:flex hidden flex-col w-1/4 md:w-1/5 text-sm overflow-y-auto windowMainScreen border-r border-black">
                     {this.renderNavLinks()}
                 </div>
-                <div onClick={this.showNavBar} className="md:hidden flex flex-col items-center justify-center absolute bg-ub-cool-grey rounded w-6 h-6 top-1 left-1">
-                    <div className=" w-3.5 border-t border-white"></div>
-                    <div className=" w-3.5 border-t border-white" style={{ marginTop: "2pt", marginBottom: "2pt" }}></div>
-                    <div className=" w-3.5 border-t border-white"></div>
+                <div className="md:hidden absolute top-1 left-1">
+                    <button
+                        type="button"
+                        aria-label="Toggle navigation"
+                        onClick={this.showNavBar}
+                        className="flex flex-col items-center justify-center bg-ub-cool-grey rounded w-6 h-6 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    >
+                        <div className=" w-3.5 border-t border-white"></div>
+                        <div className=" w-3.5 border-t border-white" style={{ marginTop: "2pt", marginBottom: "2pt" }}></div>
+                        <div className=" w-3.5 border-t border-white"></div>
+                    </button>
                     <div className={(this.state.navbar ? " visible animateShow z-30 " : " invisible ") + " md:hidden text-xs absolute bg-ub-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 shadow border-black border border-opacity-20"}>
                         {this.renderNavLinks()}
                     </div>
