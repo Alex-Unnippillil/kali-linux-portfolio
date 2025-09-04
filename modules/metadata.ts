@@ -11,8 +11,8 @@ export interface ModuleMetadata {
   options: ModuleOption[];
 }
 
-const modules: ModuleMetadata[] = [
-  {
+const MODULES: Record<string, ModuleMetadata> = {
+  getsystem: {
     name: 'getsystem',
     description: 'Attempt to elevate your privilege to that of local system.',
     tags: ['privilege', 'elevation'],
@@ -24,7 +24,7 @@ const modules: ModuleMetadata[] = [
       },
     ],
   },
-  {
+  keyscan_start: {
     name: 'keyscan_start',
     description: 'Start capturing keystrokes.',
     tags: ['keylogging'],
@@ -36,7 +36,7 @@ const modules: ModuleMetadata[] = [
       },
     ],
   },
-  {
+  persistence_service: {
     name: 'persistence_service',
     description: 'Achieve persistence by installing a service.',
     tags: ['persistence', 'service'],
@@ -53,7 +53,7 @@ const modules: ModuleMetadata[] = [
       },
     ],
   },
-  {
+  hashdump: {
     name: 'hashdump',
     description: 'Dump password hashes from the SAM database.',
     tags: ['credentials', 'dump'],
@@ -65,6 +65,11 @@ const modules: ModuleMetadata[] = [
       },
     ],
   },
-];
+};
+
+export const getModuleMetadata = (name: string): ModuleMetadata | undefined =>
+  MODULES[name];
+
+const modules: ModuleMetadata[] = Object.values(MODULES);
 
 export default modules;
