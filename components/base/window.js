@@ -641,6 +641,7 @@ export class Window extends Component {
                         aria-label={this.props.title}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
+                        data-context="window"
                     >
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
