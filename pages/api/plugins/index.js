@@ -6,7 +6,7 @@ export default function handler(_req, res) {
   try {
     const files = fs.readdirSync(catalogDir);
     const plugins = files
-      .filter((f) => !f.startsWith('.'))
+      .filter((f) => !f.startsWith('.') && f.endsWith('.json'))
       .map((f) => ({ id: path.parse(f).name, file: f }));
     res.status(200).json(plugins);
   } catch {

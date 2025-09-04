@@ -3,18 +3,26 @@ import { useEffect, useState } from 'react';
 
 interface PluginInfo { id: string; file: string; }
 
+interface PluginManifest {
+  id: string;
+  sandbox: 'worker' | 'iframe';
+  code: string;
+}
+
 export default function PluginManager() {
   const [plugins, setPlugins] = useState<PluginInfo[]>([]);
-  const [installed, setInstalled] = useState<Record<string, string>>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        return JSON.parse(localStorage.getItem('installedPlugins') || '{}');
-      } catch {
-        return {};
+  const [installed, setInstalled] = useState<Record<string, PluginManifest>>(
+    () => {
+      if (typeof window !== 'undefined') {
+        try {
+          return JSON.parse(localStorage.getItem('installedPlugins') || '{}');
+        } catch {
+          return {};
+        }
       }
+      return {};
     }
-    return {};
-  });
+  );
 
   interface LastRun {
     id: string;
@@ -41,21 +49,62 @@ export default function PluginManager() {
 
   const install = async (plugin: PluginInfo) => {
     const res = await fetch(`/api/plugins/${plugin.file}`);
-    const text = await res.text();
-    const updated = { ...installed, [plugin.id]: text };
+    const manifest: PluginManifest = await res.json();
+    const updated = { ...installed, [plugin.id]: manifest };
     setInstalled(updated);
     localStorage.setItem('installedPlugins', JSON.stringify(updated));
   };
 
   const run = (plugin: PluginInfo) => {
-    const text = installed[plugin.id];
-    if (!text) return;
-    const result = { id: plugin.id, output: text.split(/\r?\n/) };
-    setLastRun(result);
-    try {
-      localStorage.setItem('lastPluginRun', JSON.stringify(result));
-    } catch {
-      /* ignore */
+    const manifest = installed[plugin.id];
+    if (!manifest) return;
+    const output: string[] = [];
+    const finalize = () => {
+      const result = { id: plugin.id, output };
+      setLastRun(result);
+      try {
+        localStorage.setItem('lastPluginRun', JSON.stringify(result));
+      } catch {
+        /* ignore */
+      }
+    };
+
+    if (manifest.sandbox === 'worker') {
+      const blob = new Blob([manifest.code], { type: 'text/javascript' });
+      const url = URL.createObjectURL(blob);
+      const worker = new Worker(url);
+      worker.onmessage = (e) => {
+        output.push(String(e.data));
+      };
+      worker.onerror = () => {
+        output.push('error');
+      };
+      // collect messages briefly then terminate
+      setTimeout(() => {
+        worker.terminate();
+        URL.revokeObjectURL(url);
+        finalize();
+      }, 10);
+    } else {
+      const html = `<!DOCTYPE html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; connect-src 'none';"></head><body><script>${manifest.code}<\/script></body></html>`;
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const iframe = document.createElement('iframe');
+      iframe.sandbox.add('allow-scripts');
+      const listener = (e: MessageEvent) => {
+        if (e.source === iframe.contentWindow) {
+          output.push(String(e.data));
+        }
+      };
+      window.addEventListener('message', listener);
+      iframe.src = url;
+      document.body.appendChild(iframe);
+      setTimeout(() => {
+        window.removeEventListener('message', listener);
+        document.body.removeChild(iframe);
+        URL.revokeObjectURL(url);
+        finalize();
+      }, 10);
     }
   };
 
