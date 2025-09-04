@@ -1,5 +1,7 @@
 import React from 'react';
+import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
+import { safeLocalStorage } from '../../utils/safeStorage';
 
 class AllApplications extends React.Component {
     constructor() {
@@ -8,6 +10,8 @@ class AllApplications extends React.Component {
             query: '',
             apps: [],
             unfilteredApps: [],
+            showPrefs: false,
+            showGenericNames: false,
         };
     }
 
@@ -17,18 +21,38 @@ class AllApplications extends React.Component {
         games.forEach((game) => {
             if (!combined.some((app) => app.id === game.id)) combined.push(game);
         });
-        this.setState({ apps: combined, unfilteredApps: combined });
+
+        let showGenericNames = false;
+        try {
+            const stored = safeLocalStorage?.getItem('whisker-generic-names');
+            if (stored !== null) {
+                showGenericNames = JSON.parse(stored);
+            }
+        } catch {
+            /* ignore */
+        }
+
+        this.setState({
+            apps: combined,
+            unfilteredApps: combined,
+            showGenericNames,
+        });
     }
 
     handleChange = (e) => {
         const value = e.target.value;
         const { unfilteredApps } = this.state;
+        const search = value.toLowerCase();
         const apps =
             value === '' || value === null
                 ? unfilteredApps
-                : unfilteredApps.filter((app) =>
-                      app.title.toLowerCase().includes(value.toLowerCase())
-                  );
+                : unfilteredApps.filter((app) => {
+                      return (
+                          app.title.toLowerCase().includes(search) ||
+                          (app.genericName &&
+                              app.genericName.toLowerCase().includes(search))
+                      );
+                  });
         this.setState({ query: value, apps });
     };
 
@@ -38,12 +62,34 @@ class AllApplications extends React.Component {
         }
     };
 
+    togglePrefs = () => {
+        this.setState({ showPrefs: !this.state.showPrefs });
+    };
+
+    toggleGenericNames = () => {
+        const value = !this.state.showGenericNames;
+        this.setState({ showGenericNames: value });
+        try {
+            safeLocalStorage?.setItem(
+                'whisker-generic-names',
+                JSON.stringify(value)
+            );
+        } catch {
+            /* ignore */
+        }
+    };
+
     renderApps = () => {
         const apps = this.state.apps || [];
         return apps.map((app) => (
             <UbuntuApp
                 key={app.id}
                 name={app.title}
+                displayName={
+                    this.state.showGenericNames
+                        ? app.genericName || app.title
+                        : undefined
+                }
                 id={app.id}
                 icon={app.icon}
                 openApp={() => this.openApp(app.id)}
@@ -56,6 +102,33 @@ class AllApplications extends React.Component {
     render() {
         return (
             <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim">
+                <div className="absolute top-4 right-4">
+                    <button
+                        aria-label="Preferences"
+                        onClick={this.togglePrefs}
+                        className="p-1 rounded hover:bg-white hover:bg-opacity-10 focus:outline-none"
+                    >
+                        <Image
+                            width={24}
+                            height={24}
+                            src="/themes/Yaru/apps/gnome-control-center.png"
+                            alt="Preferences"
+                            className="w-6 h-6"
+                        />
+                    </button>
+                    {this.state.showPrefs && (
+                        <div className="mt-2 bg-ub-grey text-white border border-gray-500 rounded shadow-lg p-4">
+                            <label className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    checked={this.state.showGenericNames}
+                                    onChange={this.toggleGenericNames}
+                                />
+                                <span>Show generic application names</span>
+                            </label>
+                        </div>
+                    )}
+                </div>
                 <input
                     className="mt-10 mb-8 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
                     placeholder="Search"

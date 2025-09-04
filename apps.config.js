@@ -598,6 +598,7 @@ const apps = [
   {
     id: 'chrome',
     title: 'Google Chrome',
+    genericName: 'Web Browser',
     icon: '/themes/Yaru/apps/chrome.png',
     disabled: false,
     favourite: true,
@@ -620,6 +621,7 @@ const apps = [
   {
     id: 'terminal',
     title: 'Terminal',
+    genericName: 'Terminal Emulator',
     icon: '/themes/Yaru/apps/bash.png',
     disabled: false,
     favourite: true,
@@ -630,6 +632,7 @@ const apps = [
     // VSCode app uses a Stack iframe, so no editor dependencies are required
     id: 'vscode',
     title: 'Visual Studio Code',
+    genericName: 'Code Editor',
     icon: '/themes/Yaru/apps/vscode.png',
     disabled: false,
     favourite: true,
