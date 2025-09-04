@@ -19,7 +19,7 @@
     "smoke": "node scripts/smoke-all-apps.mjs",
     "module-report": "node scripts/generate-module-report.mjs",
     "analyze": "ANALYZE=true yarn build",
-    "preinstall": "corepack enable",
+    "preinstall": "corepack enable && corepack prepare yarn@4.9.2 --activate",
     "verify:all": "node scripts/verify.mjs"
   },
   "engines": {
@@ -145,7 +145,6 @@
     "webpack": "^5.92.0",
     "glob@npm:^7.1.6": "npm:glob@^9.3.5",
     "workbox-build@npm:7.1.0": "npm:workbox-build@7.1.1"
-
   },
   "packageManager": "yarn@4.9.2"
 }
