@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import HelpOverlay from './HelpOverlay';
 import PerfOverlay from './Games/common/perf';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import useKeymap from '../../apps/settings/keymapRegistry';
+import formatKeyboardEvent from '../../utils/formatKeyboardEvent';
 
 interface GameLayoutProps {
   gameId?: string;
@@ -64,6 +66,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   }, [fallbackCopy, highScore, gameId]);
 
   // Keyboard shortcut to toggle help overlay
+  const { shortcuts } = useKeymap();
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -72,14 +75,17 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         target.tagName === 'TEXTAREA' ||
         target.isContentEditable;
       if (isInput) return;
-      if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
+      const show =
+        shortcuts.find((s) => s.description === 'Show help overlay')?.keys ||
+        'F1';
+      if (formatKeyboardEvent(e) === show) {
         e.preventDefault();
         setShowHelp((h) => !h);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
+  }, [shortcuts]);
 
   // Show tutorial overlay on first visit
   useEffect(() => {

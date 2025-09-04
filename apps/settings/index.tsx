@@ -248,6 +248,14 @@ export default function Settings() {
               Edit Shortcuts
             </button>
           </div>
+          <div className="flex justify-center mt-4">
+            <a
+              href="/accessibility"
+              className="text-ubt-grey underline"
+            >
+              Accessibility guide
+            </a>
+          </div>
         </>
       )}
       {activeTab === "privacy" && (
