@@ -95,8 +95,9 @@ export function Settings() {
                     onChange={(e) => setDensity(e.target.value)}
                     className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
                 >
-                    <option value="regular">Regular</option>
                     <option value="compact">Compact</option>
+                    <option value="comfortable">Comfortable</option>
+                    <option value="spacious">Spacious</option>
                 </select>
             </div>
             <div className="flex justify-center my-4">

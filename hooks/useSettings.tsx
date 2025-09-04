@@ -23,7 +23,7 @@ import {
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
-type Density = 'regular' | 'compact';
+type Density = 'compact' | 'comfortable' | 'spacious';
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -157,15 +157,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [wallpaper]);
 
   useEffect(() => {
-    const spacing: Record<Density, Record<string, string>> = {
-      regular: {
-        '--space-1': '0.25rem',
-        '--space-2': '0.5rem',
-        '--space-3': '0.75rem',
-        '--space-4': '1rem',
-        '--space-5': '1.5rem',
-        '--space-6': '2rem',
-      },
+    const presets: Record<Density, Record<string, string>> = {
       compact: {
         '--space-1': '0.125rem',
         '--space-2': '0.25rem',
@@ -173,9 +165,34 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         '--space-4': '0.75rem',
         '--space-5': '1rem',
         '--space-6': '1.5rem',
+        '--panel-height': '28px',
+        '--control-padding-y': '0.125rem',
+        '--control-padding-x': '0.25rem',
+      },
+      comfortable: {
+        '--space-1': '0.25rem',
+        '--space-2': '0.5rem',
+        '--space-3': '0.75rem',
+        '--space-4': '1rem',
+        '--space-5': '1.5rem',
+        '--space-6': '2rem',
+        '--panel-height': '40px',
+        '--control-padding-y': '0.25rem',
+        '--control-padding-x': '0.5rem',
+      },
+      spacious: {
+        '--space-1': '0.5rem',
+        '--space-2': '1rem',
+        '--space-3': '1.5rem',
+        '--space-4': '2rem',
+        '--space-5': '3rem',
+        '--space-6': '4rem',
+        '--panel-height': '48px',
+        '--control-padding-y': '0.5rem',
+        '--control-padding-x': '1rem',
       },
     };
-    const vars = spacing[density];
+    const vars = presets[density];
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
