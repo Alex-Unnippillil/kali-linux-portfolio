@@ -34,7 +34,12 @@ const Reversi = () => {
   const [wins, setWins] = useState({ player: 0, ai: 0 });
   const [mobility, setMobility] = useState({ player: 0, ai: 0 });
   const [tip, setTip] = useState('Tip: Control the corners to gain an advantage.');
-  const [depth, setDepth] = useState(3);
+  const DIFFICULTIES = {
+    easy: { depth: 2, weights: { mobility: 1, corners: 10, edges: 5 } },
+    medium: { depth: 3, weights: { mobility: 3, corners: 20, edges: 7 } },
+    hard: { depth: 4, weights: { mobility: 5, corners: 25, edges: 10 } },
+  };
+  const [difficulty, setDifficulty] = useState('medium');
   const [useBook, setUseBook] = useState(true);
   const [history, setHistory] = useState([]);
   const [score, setScore] = useState(() => countPieces(board));
@@ -56,7 +61,7 @@ const Reversi = () => {
       ).matches;
       if (typeof Worker === 'function') {
         workerRef.current = new Worker(
-          new URL('./reversi.worker.js', import.meta.url)
+          new URL('../../workers/reversi.worker.js', import.meta.url)
         );
         workerRef.current.onmessage = (e) => {
           aiThinkingRef.current = false;
@@ -293,12 +298,13 @@ const Reversi = () => {
         } else {
         aiThinkingRef.current = true;
         if (workerRef.current) {
-          workerRef.current.postMessage({ board, player: 'W', depth });
+          const { depth, weights } = DIFFICULTIES[difficulty];
+          workerRef.current.postMessage({ board, player: 'W', depth, weights });
         }
       }
     }
     setMessage(player === 'B' ? 'Your turn' : "AI's turn");
-  }, [board, player, paused, depth, playSound, bookEnabled]);
+  }, [board, player, paused, difficulty, playSound, bookEnabled]);
 
   const handleClick = (e) => {
     if (paused || player !== 'B') return;
@@ -441,12 +447,12 @@ const Reversi = () => {
         </button>
         <select
           className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-          value={depth}
-          onChange={(e) => setDepth(Number(e.target.value))}
+          value={difficulty}
+          onChange={(e) => setDifficulty(e.target.value)}
         >
-          {[1, 2, 3, 4, 5].map((d) => (
+          {Object.keys(DIFFICULTIES).map((d) => (
             <option key={d} value={d}>
-              {`Depth: ${d}`}
+              {`Difficulty: ${d.charAt(0).toUpperCase()}${d.slice(1)}`}
             </option>
           ))}
         </select>
