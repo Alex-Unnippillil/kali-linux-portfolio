@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useState, useRef } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import useOPFS from '../../hooks/useOPFS.js';
-import GameLayout from './GameLayout';
+import GameLayout, { useInputRecorder } from './GameLayout';
 import useGameControls from './useGameControls';
 import { vibrate } from './Games/common/haptics';
 import {
@@ -241,6 +241,7 @@ const Game2048 = () => {
   const moveLock = useRef(false);
   const workerRef = useRef(null);
   const { highContrast } = useSettings();
+  const { record, registerReplay } = useInputRecorder();
 
   useEffect(() => {
     if (animCells.size > 0) {
@@ -342,6 +343,7 @@ const Game2048 = () => {
   const handleDirection = useCallback(
     ({ x, y }) => {
       if (won || lost || moveLock.current) return;
+      record({ x, y });
       let result;
       if (x === -1) result = moveLeft(board);
       else if (x === 1) result = moveRight(board);
@@ -408,6 +410,7 @@ const Game2048 = () => {
       seed,
       bestMap,
       setBestMap,
+      record,
     ],
   );
 
@@ -472,6 +475,13 @@ const Game2048 = () => {
     setScore,
     setUndosLeft,
   ]);
+
+  useEffect(() => {
+    registerReplay((dir, idx) => {
+      if (idx === 0) reset();
+      handleDirection(dir);
+    });
+  }, [registerReplay, handleDirection, reset]);
 
   const close = () => {
     document.getElementById('close-2048')?.click();
