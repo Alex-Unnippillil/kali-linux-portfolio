@@ -7,7 +7,7 @@ const BackgroundImage = dynamic(
     () => import('../util-components/background-image'),
     { ssr: false }
 );
-import SideBar from './side_bar';
+// import SideBar from './side_bar'; // XFCE layout: no left dock
 import apps, { games } from '../../apps.config';
 import Window from '../base/window';
 import UbuntuApp from '../base/ubuntu_app';
@@ -864,17 +864,7 @@ export class Desktop extends Component {
                 {/* Background Image */}
                 <BackgroundImage />
 
-                {/* Ubuntu Side Menu Bar */}
-                <SideBar apps={apps}
-                    hide={this.state.hideSideBar}
-                    hideSideBar={this.hideSideBar}
-                    favourite_apps={this.state.favourite_apps}
-                    showAllApps={this.showAllApps}
-                    allAppsView={this.state.allAppsView}
-                    closed_windows={this.state.closed_windows}
-                    focused_windows={this.state.focused_windows}
-                    isMinimized={this.state.minimized_windows}
-                    openAppByAppId={this.openApp} />
+                {/* XFCE layout hides the left dock */}
 
                 {/* Taskbar */}
                 <Taskbar
@@ -887,7 +877,9 @@ export class Desktop extends Component {
                 />
 
                 {/* Desktop Apps */}
-                {this.renderDesktopApps()}
+                <div className="left-stack-icons">
+                    {this.renderDesktopApps()}
+                </div>
 
                 {/* Context Menus */}
                 <DesktopMenu
