@@ -64,6 +64,10 @@ function wrapAnsi(text: string, fgHex: string, bgHex: string) {
   return `${fgSeq}${bgSeq}${text}${ESC}[0m`;
 }
 
+function escapeHtml(text: string) {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 const AsciiArtApp = () => {
   const router = useRouter();
   const [tab, setTab] = useState<'text' | 'image'>('text');
@@ -229,6 +233,66 @@ const AsciiArtApp = () => {
     link.click();
   };
 
+  const saveSvg = (value: string, filename: string) => {
+    const lines = value.split('\n');
+    const charWidth = fontSize * 0.6;
+    const width = Math.max(...lines.map((l) => l.length)) * charWidth;
+    const height = lines.length * fontSize;
+    const svgLines = lines
+      .map(
+        (line, i) =>
+          `<text x="0" y="${(i + 1) * fontSize}" font-family="monospace" font-size="${fontSize}" fill="${fgColor}">${escapeHtml(line)}</text>`,
+      )
+      .join('');
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" style="background:${bgColor}">${svgLines}</svg>`;
+    const blob = new Blob([svg], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportSession = () => {
+    const data = {
+      tab,
+      text,
+      font,
+      fgColor,
+      bgColor,
+      fontSize,
+      brightness,
+      contrast,
+      imgOutput,
+    };
+    download(JSON.stringify(data, null, 2), 'ascii-session.json');
+  };
+
+  const importSession = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(String(reader.result));
+        if (data.tab === 'text' || data.tab === 'image') setTab(data.tab);
+        if (typeof data.text === 'string') setText(data.text);
+        if (typeof data.font === 'string' && fontList.includes(data.font)) setFont(data.font as figlet.Fonts);
+        if (typeof data.fgColor === 'string') setFgColor(data.fgColor);
+        if (typeof data.bgColor === 'string') setBgColor(data.bgColor);
+        if (typeof data.fontSize === 'number') setFontSize(data.fontSize);
+        if (typeof data.brightness === 'number') setBrightness(data.brightness);
+        if (typeof data.contrast === 'number') setContrast(data.contrast);
+        if (typeof data.imgOutput === 'string') setImgOutput(data.imgOutput);
+      } catch {
+        // ignore
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
   return (
     <div className="p-4 bg-gray-900 text-white h-full overflow-auto font-mono">
       <div className="mb-4 flex gap-2">
@@ -245,9 +309,25 @@ const AsciiArtApp = () => {
           Image
         </button>
       </div>
+      <div className="mb-4 flex gap-2">
+        <button className="px-2 py-1 bg-yellow-700 rounded" onClick={exportSession}>
+          Save Session
+        </button>
+        <label className="px-2 py-1 bg-yellow-700 rounded cursor-pointer">
+          Load Session
+          <input
+            type="file"
+            accept="application/json"
+            className="hidden"
+            onChange={importSession}
+            aria-label="Load Session"
+          />
+        </label>
+      </div>
       {tab === 'text' && (
         <div className="flex flex-col gap-2">
           <textarea
+            aria-label="ASCII text"
             ref={textAreaRef}
             rows={1}
             className="px-2 py-1 text-black rounded resize-none overflow-hidden font-mono leading-none"
@@ -257,6 +337,7 @@ const AsciiArtApp = () => {
             onChange={(e) => setText(e.target.value)}
           />
           <select
+            aria-label="Font"
             value={font}
             onChange={(e) => setFont(e.target.value as figlet.Fonts)}
             className="px-2 py-1 text-black rounded"
@@ -268,6 +349,7 @@ const AsciiArtApp = () => {
             ))}
           </select>
           <select
+            aria-label="Font size"
             value={fontSize}
             onChange={(e) => setFontSize(Number(e.target.value))}
             className="px-2 py-1 text-black rounded"
@@ -286,6 +368,7 @@ const AsciiArtApp = () => {
                 value={fgColor}
                 onChange={(e) => setFgColor(e.target.value)}
                 className="w-10 h-6 p-0 border-0 bg-transparent"
+                aria-label="Foreground color"
               />
             </label>
             <label className="flex items-center gap-1">
@@ -295,6 +378,7 @@ const AsciiArtApp = () => {
                 value={bgColor}
                 onChange={(e) => setBgColor(e.target.value)}
                 className="w-10 h-6 p-0 border-0 bg-transparent"
+                aria-label="Background color"
               />
             </label>
           </div>
@@ -316,7 +400,13 @@ const AsciiArtApp = () => {
               className="px-2 py-1 bg-purple-700 rounded"
               onClick={() => saveCanvas('ascii-art.png')}
             >
-              Save Image
+              Save PNG
+            </button>
+            <button
+              className="px-2 py-1 bg-pink-700 rounded"
+              onClick={() => saveSvg(output, 'ascii-art.svg')}
+            >
+              Save SVG
             </button>
           </div>
           <pre
@@ -329,6 +419,7 @@ const AsciiArtApp = () => {
             ref={displayCanvasRef}
             className="mt-2"
             style={{ imageRendering: 'pixelated' }}
+            aria-label="Preview"
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
             {samples.map((s, i) => (
@@ -346,7 +437,7 @@ const AsciiArtApp = () => {
       )}
       {tab === 'image' && (
         <div className="flex flex-col gap-2">
-          <input type="file" accept="image/*" onChange={handleImage} />
+          <input type="file" accept="image/*" onChange={handleImage} aria-label="Upload image" />
           <div className="flex items-center gap-2">
             <label className="text-sm">Brightness</label>
             <input
@@ -356,6 +447,7 @@ const AsciiArtApp = () => {
               step="0.1"
               value={brightness}
               onChange={(e) => setBrightness(Number(e.target.value))}
+              aria-label="Brightness"
             />
             <label className="text-sm">Contrast</label>
             <input
@@ -365,6 +457,7 @@ const AsciiArtApp = () => {
               step="0.1"
               value={contrast}
               onChange={(e) => setContrast(Number(e.target.value))}
+              aria-label="Contrast"
             />
           </div>
           <div className="flex gap-2">
@@ -375,6 +468,7 @@ const AsciiArtApp = () => {
                 value={fgColor}
                 onChange={(e) => setFgColor(e.target.value)}
                 className="w-10 h-6 p-0 border-0 bg-transparent"
+                aria-label="Foreground color"
               />
             </label>
             <label className="flex items-center gap-1">
@@ -384,6 +478,7 @@ const AsciiArtApp = () => {
                 value={bgColor}
                 onChange={(e) => setBgColor(e.target.value)}
                 className="w-10 h-6 p-0 border-0 bg-transparent"
+                aria-label="Background color"
               />
             </label>
           </div>
@@ -391,6 +486,7 @@ const AsciiArtApp = () => {
             value={fontSize}
             onChange={(e) => setFontSize(Number(e.target.value))}
             className="px-2 py-1 text-black rounded"
+            aria-label="Font size"
           >
             {fontSizes.map((s) => (
               <option key={s} value={s}>
@@ -416,10 +512,16 @@ const AsciiArtApp = () => {
               className="px-2 py-1 bg-purple-700 rounded"
               onClick={() => saveCanvas('image-ascii.png')}
             >
-              Save Image
+              Save PNG
+            </button>
+            <button
+              className="px-2 py-1 bg-pink-700 rounded"
+              onClick={() => saveSvg(imgOutput, 'image-ascii.svg')}
+            >
+              Save SVG
             </button>
           </div>
-          <canvas ref={canvasRef} className="hidden" />
+          <canvas ref={canvasRef} className="hidden" aria-hidden="true" />
           <pre
             className="p-[6px] whitespace-pre overflow-auto font-mono leading-none"
             style={{ imageRendering: 'pixelated', fontSize: `${fontSize}px`, color: fgColor, backgroundColor: bgColor }}
@@ -430,6 +532,7 @@ const AsciiArtApp = () => {
             ref={displayCanvasRef}
             className="mt-2"
             style={{ imageRendering: 'pixelated' }}
+            aria-label="Preview"
           />
         </div>
       )}
