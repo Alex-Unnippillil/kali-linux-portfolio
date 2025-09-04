@@ -14,6 +14,9 @@ beforeEach(() => {
   global.cancelAnimationFrame = jest.fn();
   ({ gamepad, pollTwinStick } = require('../utils/gamepad'));
   (navigator as any).getGamepads = jest.fn(() => []);
+  (navigator as any).vibrationActuator = {};
+  const { features } = require('../utils/features');
+  features.gamepadHaptics = true;
 });
 
 describe('GamepadManager', () => {
