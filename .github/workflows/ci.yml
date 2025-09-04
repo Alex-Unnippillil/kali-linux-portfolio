@@ -24,7 +24,7 @@ jobs:
           node-version: 20
           cache: yarn
       - run: yarn install --immutable --immutable-cache
-      - run: yarn lint
+      - run: npm run lint
 
   typecheck:
     runs-on: ubuntu-latest
@@ -36,7 +36,7 @@ jobs:
           node-version: 20
           cache: yarn
       - run: yarn install --immutable --immutable-cache
-      - run: tsc --noEmit
+      - run: npm run tsc -- --noEmit
 
   test:
     runs-on: ubuntu-latest
