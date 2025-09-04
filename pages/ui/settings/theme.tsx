@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, ChangeEvent } from 'react';
+import { ChangeEvent } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState.js';
-import { getTheme, setTheme } from '../../../utils/theme';
+import { useSettings } from '../../../hooks/useSettings';
 
 /** Simple Adwaita-like toggle switch */
 function Toggle({
@@ -32,26 +32,12 @@ function Toggle({
 }
 
 export default function ThemeSettings() {
-  // Persist theme selection in localStorage so it survives reloads
-  const [theme, setThemeState] = usePersistentState('app:theme', 'default');
+  const { theme, setTheme } = useSettings();
   const [panelSize, setPanelSize] = usePersistentState('app:panel-icons', 16);
   const [gridSize, setGridSize] = usePersistentState('app:grid-icons', 64);
 
-  // Initialize and sync theme with user preference or system settings
-  useEffect(() => {
-    const current = getTheme();
-    setThemeState(current);
-    setTheme(current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Apply theme whenever selection changes
-  useEffect(() => {
-    setTheme(theme);
-  }, [theme]);
-
   const handleChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    setThemeState(e.target.value);
+    setTheme(e.target.value);
   };
 
   return (

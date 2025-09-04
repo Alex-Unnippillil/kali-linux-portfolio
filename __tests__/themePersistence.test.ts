@@ -1,4 +1,6 @@
-import { getTheme, setTheme, getUnlockedThemes } from '../utils/theme';
+import { renderHook, act } from '@testing-library/react';
+import { SettingsProvider, useSettings } from '../hooks/useSettings';
+import { getTheme, getUnlockedThemes } from '../utils/theme';
 
 describe('theme persistence and unlocking', () => {
   beforeEach(() => {
@@ -6,9 +8,12 @@ describe('theme persistence and unlocking', () => {
   });
 
   test('theme persists across sessions', () => {
-    setTheme('dark');
+    const { result } = renderHook(() => useSettings(), {
+      wrapper: SettingsProvider,
+    });
+    act(() => result.current.setTheme('dark'));
+    expect(result.current.theme).toBe('dark');
     expect(getTheme()).toBe('dark');
-    // simulate reload by reading from localStorage again
     expect(window.localStorage.getItem('app:theme')).toBe('dark');
   });
 
