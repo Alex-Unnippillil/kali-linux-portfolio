@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from 'react';
 
 // Simple hook to persist state in localStorage

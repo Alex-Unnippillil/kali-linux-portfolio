@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect } from 'react';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
@@ -12,6 +14,7 @@ import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
+
 import { Ubuntu } from 'next/font/google';
 
 const ubuntu = Ubuntu({
@@ -161,6 +164,7 @@ function MyApp(props) {
         </SettingsProvider>
       </div>
     </ErrorBoundary>
+
 
   );
 }

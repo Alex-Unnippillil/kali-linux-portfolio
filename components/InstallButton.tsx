@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from 'react';
 import { trackEvent } from '@/lib/analytics-client';
 import { showA2HS } from '@/src/pwa/a2hs';
