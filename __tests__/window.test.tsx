@@ -1,6 +1,8 @@
 import React, { act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Window from '../components/base/window';
+import { SettingsContext } from '../hooks/useSettings';
+import { defaults } from '../utils/settingsStore';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('react-draggable', () => ({
@@ -37,6 +39,58 @@ describe('Window lifecycle', () => {
       jest.advanceTimersByTime(300);
     });
 
+    expect(closed).toHaveBeenCalledWith('test-window');
+    jest.useRealTimers();
+  });
+
+  it('closes immediately when reduced motion is enabled', () => {
+    jest.useFakeTimers();
+    const closed = jest.fn();
+    const hideSideBar = jest.fn();
+    const context = {
+      accent: defaults.accent,
+      wallpaper: defaults.wallpaper,
+      density: defaults.density as any,
+      reducedMotion: true,
+      fontScale: defaults.fontScale,
+      highContrast: defaults.highContrast,
+      largeHitAreas: defaults.largeHitAreas,
+      pongSpin: defaults.pongSpin,
+      allowNetwork: defaults.allowNetwork,
+      haptics: defaults.haptics,
+      theme: 'default',
+      setAccent: () => {},
+      setWallpaper: () => {},
+      setDensity: () => {},
+      setReducedMotion: () => {},
+      setFontScale: () => {},
+      setHighContrast: () => {},
+      setLargeHitAreas: () => {},
+      setPongSpin: () => {},
+      setAllowNetwork: () => {},
+      setHaptics: () => {},
+      setTheme: () => {},
+    };
+
+    render(
+      <SettingsContext.Provider value={context}>
+        <Window
+          id="test-window"
+          title="Test"
+          screen={() => <div>content</div>}
+          focus={() => {}}
+          hasMinimised={() => {}}
+          closed={closed}
+          hideSideBar={hideSideBar}
+          openApp={() => {}}
+        />
+      </SettingsContext.Provider>
+    );
+
+    const closeButton = screen.getByRole('button', { name: /window close/i });
+    fireEvent.click(closeButton);
+
+    expect(hideSideBar).toHaveBeenCalledWith('test-window', false);
     expect(closed).toHaveBeenCalledWith('test-window');
     jest.useRealTimers();
   });
@@ -199,7 +253,7 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true, preventDefault: () => {}, stopPropagation: () => {} } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
