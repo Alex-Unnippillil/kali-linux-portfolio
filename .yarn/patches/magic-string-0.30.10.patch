@@ -1,0 +1,9 @@
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -322,3 +322,4 @@ bundle.addSource(source);
+ ## License
+ 
+ MIT
++
+
