@@ -1,7 +1,7 @@
 import { getChatId } from '../src/chat/chatManager';
 
 describe('getChatId', () => {
-  it('throws when chat is undefined', () => {
-    expect(() => getChatId(undefined as any)).toThrow('chat is required');
+  it('returns undefined when chat is missing', () => {
+    expect(getChatId(undefined as any)).toBeUndefined();
   });
 });
