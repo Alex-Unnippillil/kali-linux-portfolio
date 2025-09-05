@@ -25,12 +25,26 @@ export default function SideBar(props) {
         }, 2000);
     }
 
+    const handleDragOver = (e) => {
+        e.preventDefault();
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        const id = e.dataTransfer.getData('app-id');
+        if (id && typeof props.pinApp === 'function') {
+            props.pinApp(id);
+        }
+    };
+
     return (
         <>
             <nav
                 aria-label="Dock"
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
                 className={(props.hide ? " -translate-x-full " : "") +
-                    " absolute transform duration-300 select-none z-40 left-0 top-0 h-full min-h-screen w-16 flex flex-col justify-start items-center pt-7 border-black border-opacity-60 bg-black bg-opacity-50"}
+                    " absolute transform duration-300 select-none z-60 left-0 top-0 h-full min-h-screen w-16 flex flex-col justify-start items-center pt-7 border-black border-opacity-60 bg-black bg-opacity-50"}
             >
                 {
                     (
