@@ -31,12 +31,15 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    hotCorners,
+    setHotCorners,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
+    { id: "hotCorners", label: "Hot Corners" },
     { id: "privacy", label: "Privacy" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
@@ -54,6 +57,18 @@ export default function Settings() {
   ];
 
   const changeBackground = (name: string) => setWallpaper(name);
+
+  const cornerOptions = [
+    { value: "none", label: "None" },
+    { value: "show-desktop", label: "Show Desktop" },
+    { value: "app-finder", label: "App Finder" },
+    { value: "screensaver", label: "Screensaver" },
+  ] as const;
+
+  const updateCorner = (
+    corner: keyof typeof hotCorners,
+    action: (typeof cornerOptions)[number]["value"],
+  ) => setHotCorners({ ...hotCorners, [corner]: action });
 
   const handleExport = async () => {
     const data = await exportSettingsData();
@@ -208,9 +223,9 @@ export default function Settings() {
             </button>
           </div>
         </>
-      )}
-      {activeTab === "accessibility" && (
-        <>
+        )}
+        {activeTab === "accessibility" && (
+          <>
           <div className="flex justify-center my-4">
             <label htmlFor="font-scale" className="mr-2 text-ubt-grey">Icon Size:</label>
             <input
@@ -268,10 +283,41 @@ export default function Settings() {
               Edit Shortcuts
             </button>
           </div>
-        </>
-      )}
-      {activeTab === "privacy" && (
-        <>
+          </>
+        )}
+        {activeTab === "hotCorners" && (
+          <div className="flex justify-center my-4">
+            <div className="grid grid-cols-2 gap-4">
+              {(
+                ["topLeft", "topRight", "bottomLeft", "bottomRight"] as const
+              ).map((corner) => (
+                <div key={corner} className="flex flex-col items-center">
+                  <span className="mb-2 capitalize">
+                    {corner.replace(/([A-Z])/g, " $1")}
+                  </span>
+                  <select
+                    value={hotCorners[corner]}
+                    onChange={(e) =>
+                      updateCorner(
+                        corner,
+                        e.target.value as (typeof cornerOptions)[number]["value"],
+                      )
+                    }
+                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                  >
+                    {cornerOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {activeTab === "privacy" && (
+          <>
           <div className="flex justify-center my-4 space-x-4">
             <button
               onClick={handleExport}
