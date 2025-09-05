@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -12,6 +12,10 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import {
+  clearThumbnailCache,
+  getThumbnailCacheSize,
+} from "../../utils/thumbnailCache";
 
 export default function Settings() {
   const {
@@ -29,15 +33,25 @@ export default function Settings() {
     setHighContrast,
     haptics,
     setHaptics,
+    thumbnailImages,
+    setThumbnailImages,
+    thumbnailVideos,
+    setThumbnailVideos,
+    thumbnailPDFs,
+    setThumbnailPDFs,
+    thumbnailMaxFileSize,
+    setThumbnailMaxFileSize,
     theme,
     setTheme,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [cacheSize, setCacheSize] = useState(0);
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
+    { id: "thumbnails", label: "Thumbnails" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
@@ -54,6 +68,23 @@ export default function Settings() {
   ];
 
   const changeBackground = (name: string) => setWallpaper(name);
+
+  const formatSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  };
+
+  useEffect(() => {
+    if (activeTab === "thumbnails") {
+      getThumbnailCacheSize().then(setCacheSize);
+    }
+  }, [activeTab]);
+
+  const handleClearCache = async () => {
+    await clearThumbnailCache();
+    setCacheSize(0);
+  };
 
   const handleExport = async () => {
     const data = await exportSettingsData();
@@ -266,6 +297,59 @@ export default function Settings() {
               className="px-4 py-2 rounded bg-ub-orange text-white"
             >
               Edit Shortcuts
+            </button>
+          </div>
+        </>
+      )}
+      {activeTab === "thumbnails" && (
+        <>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Images:</span>
+            <ToggleSwitch
+              checked={thumbnailImages}
+              onChange={setThumbnailImages}
+              ariaLabel="Thumbnail Images"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Videos:</span>
+            <ToggleSwitch
+              checked={thumbnailVideos}
+              onChange={setThumbnailVideos}
+              ariaLabel="Thumbnail Videos"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">PDFs:</span>
+            <ToggleSwitch
+              checked={thumbnailPDFs}
+              onChange={setThumbnailPDFs}
+              ariaLabel="Thumbnail PDFs"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <label htmlFor="thumb-max-size" className="mr-2 text-ubt-grey">
+              Max File Size (MB):
+            </label>
+            <input
+              id="thumb-max-size"
+              type="number"
+              min={0}
+              aria-label="Max file size (MB)"
+              value={thumbnailMaxFileSize}
+              onChange={(e) =>
+                setThumbnailMaxFileSize(parseInt(e.target.value, 10) || 0)
+              }
+              className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey w-24 text-right"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center space-x-4">
+            <span className="text-ubt-grey">Cache Size: {formatSize(cacheSize)}</span>
+            <button
+              onClick={handleClearCache}
+              className="px-4 py-2 rounded bg-ub-orange text-white"
+            >
+              Clear Cache
             </button>
           </div>
         </>

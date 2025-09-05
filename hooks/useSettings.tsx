@@ -20,6 +20,14 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getThumbnailImages as loadThumbnailImages,
+  setThumbnailImages as saveThumbnailImages,
+  getThumbnailVideos as loadThumbnailVideos,
+  setThumbnailVideos as saveThumbnailVideos,
+  getThumbnailPDFs as loadThumbnailPDFs,
+  setThumbnailPDFs as saveThumbnailPDFs,
+  getThumbnailMaxFileSize as loadThumbnailMaxFileSize,
+  setThumbnailMaxFileSize as saveThumbnailMaxFileSize,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -62,6 +70,10 @@ interface SettingsContextValue {
   pongSpin: boolean;
   allowNetwork: boolean;
   haptics: boolean;
+  thumbnailImages: boolean;
+  thumbnailVideos: boolean;
+  thumbnailPDFs: boolean;
+  thumbnailMaxFileSize: number;
   theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
@@ -73,6 +85,10 @@ interface SettingsContextValue {
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
+  setThumbnailImages: (value: boolean) => void;
+  setThumbnailVideos: (value: boolean) => void;
+  setThumbnailPDFs: (value: boolean) => void;
+  setThumbnailMaxFileSize: (value: number) => void;
   setTheme: (value: string) => void;
 }
 
@@ -87,6 +103,10 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
+  thumbnailImages: defaults.thumbnailImages,
+  thumbnailVideos: defaults.thumbnailVideos,
+  thumbnailPDFs: defaults.thumbnailPDFs,
+  thumbnailMaxFileSize: defaults.thumbnailMaxFileSize,
   theme: 'default',
   setAccent: () => {},
   setWallpaper: () => {},
@@ -98,6 +118,10 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setPongSpin: () => {},
   setAllowNetwork: () => {},
   setHaptics: () => {},
+  setThumbnailImages: () => {},
+  setThumbnailVideos: () => {},
+  setThumbnailPDFs: () => {},
+  setThumbnailMaxFileSize: () => {},
   setTheme: () => {},
 });
 
@@ -112,6 +136,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
+  const [thumbnailImages, setThumbnailImages] = useState<boolean>(defaults.thumbnailImages);
+  const [thumbnailVideos, setThumbnailVideos] = useState<boolean>(defaults.thumbnailVideos);
+  const [thumbnailPDFs, setThumbnailPDFs] = useState<boolean>(defaults.thumbnailPDFs);
+  const [thumbnailMaxFileSize, setThumbnailMaxFileSize] = useState<number>(
+    defaults.thumbnailMaxFileSize,
+  );
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
@@ -127,6 +157,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setThumbnailImages(await loadThumbnailImages());
+      setThumbnailVideos(await loadThumbnailVideos());
+      setThumbnailPDFs(await loadThumbnailPDFs());
+      setThumbnailMaxFileSize(await loadThumbnailMaxFileSize());
       setTheme(loadTheme());
     })();
   }, []);
@@ -236,6 +270,22 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveThumbnailImages(thumbnailImages);
+  }, [thumbnailImages]);
+
+  useEffect(() => {
+    saveThumbnailVideos(thumbnailVideos);
+  }, [thumbnailVideos]);
+
+  useEffect(() => {
+    saveThumbnailPDFs(thumbnailPDFs);
+  }, [thumbnailPDFs]);
+
+  useEffect(() => {
+    saveThumbnailMaxFileSize(thumbnailMaxFileSize);
+  }, [thumbnailMaxFileSize]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -249,6 +299,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         pongSpin,
         allowNetwork,
         haptics,
+        thumbnailImages,
+        thumbnailVideos,
+        thumbnailPDFs,
+        thumbnailMaxFileSize,
         theme,
         setAccent,
         setWallpaper,
@@ -260,6 +314,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
+        setThumbnailImages,
+        setThumbnailVideos,
+        setThumbnailPDFs,
+        setThumbnailMaxFileSize,
         setTheme,
       }}
     >
