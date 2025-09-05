@@ -12,6 +12,7 @@ import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayScreenRecorder } from './components/apps/screen-recorder';
 import { displayNikto } from './components/apps/nikto';
+import { displayKaliTweaks } from './components/apps/kali-tweaks';
 
 export const chromeDefaultTiles = [
   { title: 'MDN', url: 'https://developer.mozilla.org/' },
@@ -691,6 +692,15 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displaySettings,
+  },
+  {
+    id: 'kali-tweaks',
+    title: 'Kali Tweaks',
+    icon: '/themes/Yaru/apps/gnome-control-center.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayKaliTweaks,
   },
   {
     id: 'files',
