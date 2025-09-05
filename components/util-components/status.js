@@ -1,13 +1,23 @@
 import React, { useEffect, useState } from "react";
 import Image from 'next/image';
 import SmallArrow from "./small_arrow";
-import { useSettings } from '../../hooks/useSettings';
-
-const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
+import { useSettings, settingsBus } from '../../hooks/useSettings';
 
 export default function Status() {
-  const { allowNetwork } = useSettings();
+  const { allowNetwork, theme: initialTheme } = useSettings();
   const [online, setOnline] = useState(true);
+  const [theme, setTheme] = useState(initialTheme);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.detail?.key === 'theme') setTheme(e.detail.value);
+    };
+    settingsBus.addEventListener('change', handler);
+    return () => settingsBus.removeEventListener('change', handler);
+  }, []);
+
+  const iconTheme = theme === 'default' ? 'Yaru' : theme;
+  const volumeIcon = `/themes/${iconTheme}/status/audio-volume-medium-symbolic.svg`;
 
   useEffect(() => {
     const pingServer = async () => {
@@ -47,7 +57,11 @@ export default function Status() {
         <Image
           width={16}
           height={16}
-          src={online ? "/themes/Yaru/status/network-wireless-signal-good-symbolic.svg" : "/themes/Yaru/status/network-wireless-signal-none-symbolic.svg"}
+          src={
+            online
+              ? `/themes/${iconTheme}/status/network-wireless-signal-good-symbolic.svg`
+              : `/themes/${iconTheme}/status/network-wireless-signal-none-symbolic.svg`
+          }
           alt={online ? "online" : "offline"}
           className="inline status-symbol w-4 h-4"
           sizes="16px"
@@ -60,7 +74,7 @@ export default function Status() {
         <Image
           width={16}
           height={16}
-          src={VOLUME_ICON}
+          src={volumeIcon}
           alt="volume"
           className="inline status-symbol w-4 h-4"
           sizes="16px"
@@ -70,7 +84,7 @@ export default function Status() {
         <Image
           width={16}
           height={16}
-          src="/themes/Yaru/status/battery-good-symbolic.svg"
+          src={`/themes/${iconTheme}/status/battery-good-symbolic.svg`}
           alt="ubuntu battry"
           className="inline status-symbol w-4 h-4"
           sizes="16px"

@@ -23,6 +23,15 @@ import {
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+
+// Simple event bus used to notify parts of the UI when a setting changes. It is
+// exported as a singleton so every module receives the same instance.  Using a
+// property on `window` avoids creating multiple emitters during hot reloads in
+// development.
+export const settingsBus: EventTarget =
+  typeof window !== 'undefined'
+    ? (window as any).__settingsBus || ((window as any).__settingsBus = new EventTarget())
+    : new EventTarget();
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -133,6 +142,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     saveTheme(theme);
+    settingsBus.dispatchEvent(
+      new CustomEvent('change', { detail: { key: 'theme', value: theme } })
+    );
   }, [theme]);
 
   useEffect(() => {
@@ -150,6 +162,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       document.documentElement.style.setProperty(key, value);
     });
     saveAccent(accent);
+    settingsBus.dispatchEvent(
+      new CustomEvent('change', { detail: { key: 'accent', value: accent } })
+    );
   }, [accent]);
 
   useEffect(() => {

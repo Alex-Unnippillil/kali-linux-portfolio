@@ -3,26 +3,46 @@ import Image from 'next/image';
 import Clock from '../util-components/clock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
+import { settingsBus, SettingsContext } from '../../hooks/useSettings';
 
 export default class Navbar extends Component {
-	constructor() {
-		super();
-		this.state = {
-			status_card: false
-		};
-	}
+        static contextType = SettingsContext;
 
-	render() {
-		return (
+        constructor() {
+                super();
+                this.state = {
+                        status_card: false,
+                        theme: 'default'
+                };
+        }
+
+        componentDidMount() {
+                this.setState({ theme: this.context.theme });
+                settingsBus.addEventListener('change', this.handleSettings);
+        }
+
+        componentWillUnmount() {
+                settingsBus.removeEventListener('change', this.handleSettings);
+        }
+
+        handleSettings = (e) => {
+                if (e.detail?.key === 'theme') {
+                        this.setState({ theme: e.detail.value });
+                }
+        };
+
+        render() {
+                const iconTheme = this.state.theme === 'default' ? 'Yaru' : this.state.theme;
+                return (
                         <div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
                                 <div className="pl-3 pr-1">
-                                        <Image src="/themes/Yaru/status/network-wireless-signal-good-symbolic.svg" alt="network icon" width={16} height={16} className="w-4 h-4" />
+                                        <Image src={`/themes/${iconTheme}/status/network-wireless-signal-good-symbolic.svg`} alt="network icon" width={16} height={16} className="w-4 h-4" />
                                 </div>
                                 <div
                                         className={'pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1 '}
                                 >
                                         <Image
-                                                src="/themes/Yaru/status/decompiler-symbolic.svg"
+                                                src={`/themes/${iconTheme}/status/decompiler-symbolic.svg`}
                                                 alt="Decompiler"
                                                 width={16}
                                                 height={16}
