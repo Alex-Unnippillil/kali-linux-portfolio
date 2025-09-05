@@ -65,6 +65,7 @@ const SettingsIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export interface TerminalProps {
   openApp?: (id: string) => void;
+  onCommand?: (cmd: string) => void;
 }
 
 export interface TerminalHandle {
@@ -76,7 +77,7 @@ const files: Record<string, string> = {
   'README.md': 'Welcome to the web terminal.\nThis is a fake file used for demos.',
 };
 
-const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref) => {
+const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, onCommand }, ref) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<any>(null);
   const fitRef = useRef<any>(null);
@@ -241,10 +242,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         const [cmdName, ...cmdRest] = expanded.split(/\s+/);
         const handler = registryRef.current[cmdName];
         historyRef.current.push(cmd);
+        onCommand?.(cmd);
         if (handler) await handler(cmdRest.join(' '), contextRef.current);
         else if (cmdName) await runWorker(expanded);
       },
-      [runWorker],
+      [runWorker, onCommand],
     );
 
     const autocomplete = useCallback(() => {
