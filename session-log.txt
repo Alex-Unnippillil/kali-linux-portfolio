@@ -1,0 +1,200 @@
+    1  ls
+    2  cd kali-linux-portfolio
+    3  ls
+    4  find .. -name AGENTS.md -print
+    5  find . -name AGENTS.md -print
+    6  rg "session" -n
+    7  rg panel -n
+    8  ls components/apps
+    9  sed -n '1,160p' components/apps/screen-recorder.tsx
+   10  sed -n '1,200p' components/apps/terminal.tsx
+   11  sed -n '1,200p' components/apps/HelpPanel.tsx
+   12  find components -name 'HelpPanel*'
+   13  sed -n '1,200p' components/HelpPanel.tsx
+   14  ls apps/terminal
+   15  sed -n '1,200p' apps/terminal/index.tsx
+   16  rg "handleInput" -n apps/terminal/index.tsx
+   17  sed -n '260,340p' apps/terminal/index.tsx
+   18  rg "session buffer" -n
+   19  rg "runCommand" -n apps/terminal/index.tsx
+   20  sed -n '234,284p' apps/terminal/index.tsx
+   21  cat package.json
+   22  rg "Terminal" -l __tests__ | head -n 20
+   23  sed -n '1,200p' __tests__/terminal.test.tsx
+   24  sed -n '1,100p' components/apps/terminal.tsx
+   25  ls apps/terminal/tabs
+   26  sed -n '1,200p' apps/terminal/tabs/index.tsx
+   27  sed -n '1,120p' apps/terminal/index.tsx
+   28  sed -n '232,260p' apps/terminal/index.tsx
+   29  apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: apps/terminal/index.tsx
+@@
+-export interface TerminalProps {
+-  openApp?: (id: string) => void;
+-}
++export interface TerminalProps {
++  openApp?: (id: string) => void;
++  onCommand?: (cmd: string) => void;
++}
+@@
+-const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref) => {
++const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, onCommand }, ref) => {
+*** End Patch
+PATCH
+
+   30  apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: apps/terminal/index.tsx
+@@
+-        const handler = registryRef.current[cmdName];
+-        historyRef.current.push(cmd);
+-        if (handler) await handler(cmdRest.join(' '), contextRef.current);
+-        else if (cmdName) await runWorker(expanded);
++        const handler = registryRef.current[cmdName];
++        historyRef.current.push(cmd);
++        onCommand?.(cmd);
++        if (handler) await handler(cmdRest.join(' '), contextRef.current);
++        else if (cmdName) await runWorker(expanded);
+       },
+-      [runWorker],
++      [runWorker, onCommand],
+     );
+*** End Patch
+PATCH
+
+   31  sed -n '232,260p' apps/terminal/index.tsx
+   32  sed -n '1,120p' apps/terminal/tabs/index.tsx
+   33  apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: apps/terminal/tabs/index.tsx
+@@
+-import Terminal, { TerminalProps } from '..';
+-
+-const TerminalTabs: React.FC<TerminalProps> = ({ openApp }) => {
++import Terminal, { TerminalProps } from '..';
++
++const TerminalTabs: React.FC<TerminalProps> = ({ openApp, onCommand }) => {
+@@
+-      content: <Terminal openApp={openApp} />,
++      content: <Terminal openApp={openApp} onCommand={onCommand} />,
+*** End Patch
+PATCH
+
+   34  sed -n '1,120p' components/apps/terminal.tsx
+   35  apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: components/apps/terminal.tsx
+@@
+-import dynamic from 'next/dynamic';
+-import HelpPanel from '../HelpPanel';
+-
+-// Lazily load the heavy terminal app with session tabs on the client only.
+-const TerminalApp = dynamic(() => import('../../apps/terminal/tabs'), {
+-  ssr: false,
+-  loading: () => (
+-    <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+-      Loading Terminal...
+-    </div>
+-  ),
+-});
+-
+-/**
+- * Wrapper component that ensures the terminal area can scroll when content
+- * overflows. The actual indicator/scroll handling lives inside the terminal
+- * app, this wrapper just provides the necessary container styles.
+- */
+-export default function Terminal() {
+-  return (
+-    <div className="h-full w-full overflow-y-auto">
+-      <HelpPanel appId="terminal" />
+-      <TerminalApp />
+-    </div>
+-  );
+-}
++import { useRef, useState } from 'react';
++import dynamic from 'next/dynamic';
++import HelpPanel from '../HelpPanel';
++
++// Lazily load the heavy terminal app with session tabs on the client only.
++const TerminalApp = dynamic(() => import('../../apps/terminal/tabs'), {
++  ssr: false,
++  loading: () => (
++    <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
++      Loading Terminal...
++    </div>
++  ),
++});
++
++/**
++ * Wrapper component that ensures the terminal area can scroll when content
++ * overflows. Adds a recording overlay that logs commands and allows download
++ * of the session log when stopped.
++ */
++export default function Terminal() {
++  const [recording, setRecording] = useState(false);
++  const commandsRef = useRef<string[]>([]);
++
++  const handleCommand = (cmd: string) => {
++    if (recording) commandsRef.current.push(cmd);
++  };
++
++  const downloadLog = () => {
++    const blob = new Blob([commandsRef.current.join('\n')], {
++      type: 'text/plain',
++    });
++    const url = URL.createObjectURL(blob);
++    const a = document.createElement('a');
++    a.href = url;
++    a.download = 'session-log.txt';
++    a.click();
++    URL.revokeObjectURL(url);
++    commandsRef.current = [];
++  };
++
++  const toggleRecording = () => {
++    if (recording) {
++      downloadLog();
++      setRecording(false);
++    } else {
++      commandsRef.current = [];
++      setRecording(true);
++    }
++  };
++
++  return (
++    <div className="h-full w-full overflow-y-auto">
++      <HelpPanel appId="terminal" />
++      <button
++        type="button"
++        aria-label="Toggle recording"
++        onClick={toggleRecording}
++        className="fixed top-2 right-12 z-40 bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
++      >
++        ●
++      </button>
++      {recording && (
++        <div className="fixed inset-0 pointer-events-none z-50">
++          <div className="absolute top-2 left-2 bg-red-600 text-white px-2 py-1 rounded">REC</div>
++        </div>
++      )}
++      <TerminalApp onCommand={handleCommand} />
++    </div>
++  );
++}
+*** End Patch
+PATCH
+
+   36  git status --short
+   37  git checkout -- node_modules/next/dist/build/webpack/loaders/error-loader.js node_modules/next/dist/esm/build/webpack/loaders/error-loader.js
+   38  git status --short
+   39  yarn lint >/tmp/lint.log && tail -n 20 /tmp/lint.log
+   40  corepack yarn lint >/tmp/lint.log && tail -n 20 /tmp/lint.log
+   41  npm run lint >/tmp/lint.log && tail -n 20 /tmp/lint.log
+   42  node -v
+   43  apt-get update >/tmp/apt.log && tail -n 20 /tmp/apt.log
+   44  cat /tmp/apt.log
+   45  apt-get install -y nodejs npm >/tmp/apt-install.log && tail -n 20 /tmp/apt-install.log
+   46  git status --short
+   47  history | tail -n 200
+   48  history | tail -n 200 > session-log.txt
