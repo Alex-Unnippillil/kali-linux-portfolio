@@ -424,6 +424,7 @@ export class Window extends Component {
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
             this.setState({ maximized: false });
+            window.dispatchEvent(new Event('window-restore'));
             this.checkOverlap();
             return;
         }
@@ -432,6 +433,7 @@ export class Window extends Component {
             this._dockAnimation.onfinish = () => {
                 node.style.transform = endTransform;
                 this.setState({ maximized: false });
+                window.dispatchEvent(new Event('window-restore'));
                 this.checkOverlap();
                 this._dockAnimation.onfinish = null;
             };
@@ -444,6 +446,7 @@ export class Window extends Component {
             this._dockAnimation.onfinish = () => {
                 node.style.transform = endTransform;
                 this.setState({ maximized: false });
+                window.dispatchEvent(new Event('window-restore'));
                 this.checkOverlap();
                 this._dockAnimation.onfinish = null;
             };
@@ -461,7 +464,14 @@ export class Window extends Component {
             this.setWinowsPosition();
             // translate window to maximize position
             r.style.transform = `translate(-1pt,-2pt)`;
-            this.setState({ maximized: true, height: 96.3, width: 100.2 });
+            const taskbar = document.getElementById('taskbar');
+            let panelHeight = 0;
+            if (taskbar && taskbar.dataset.visible !== 'false') {
+                panelHeight = taskbar.getBoundingClientRect().height;
+            }
+            const heightPercent = ((window.innerHeight - panelHeight) / window.innerHeight) * 100;
+            this.setState({ maximized: true, height: heightPercent, width: 100.2 });
+            window.dispatchEvent(new Event('window-maximize'));
             this.props.hideSideBar(this.id, true);
         }
     }
@@ -525,40 +535,40 @@ export class Window extends Component {
             this.focusWindow();
         } else if (e.altKey) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('top');
             }
             this.focusWindow();
         } else if (e.shiftKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
             }
             this.focusWindow();
