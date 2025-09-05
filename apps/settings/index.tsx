@@ -12,6 +12,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import SessionManager from "../../src/components/settings/SessionManager";
 
 export default function Settings() {
   const {
@@ -285,6 +286,9 @@ export default function Settings() {
             >
               Import Settings
             </button>
+          </div>
+          <div className="flex justify-center my-4">
+            <SessionManager />
           </div>
         </>
       )}
