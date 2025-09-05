@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Tabs from "../Tabs";
 import ToggleSwitch from "../ToggleSwitch";
+import Appearance from "../settings/Appearance";
 
 const PANEL_PREFIX = "xfce.panel.";
 
@@ -126,9 +127,7 @@ export default function Preferences() {
             </div>
           </div>
         )}
-        {active === "appearance" && (
-          <p className="text-ubt-grey">Appearance settings are not available yet.</p>
-        )}
+        {active === "appearance" && <Appearance />}
         {active === "opacity" && (
           <p className="text-ubt-grey">Opacity settings are not available yet.</p>
         )}
