@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Image from 'next/image';
 import SmallArrow from "./small_arrow";
+import Bluetooth from './bluetooth';
 import { useSettings } from '../../hooks/useSettings';
 
 const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
@@ -76,6 +77,7 @@ export default function Status() {
           sizes="16px"
         />
       </span>
+      <Bluetooth />
       <span className="mx-1">
         <SmallArrow angle="down" className=" status-symbol" />
       </span>
