@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import logger from '../../utils/logger'
+import { getDefaultTerminal } from '../../utils/preferredApps'
 
 function DesktopMenu(props) {
 
@@ -14,7 +15,7 @@ function DesktopMenu(props) {
 
 
     const openTerminal = () => {
-        props.openApp("terminal");
+        props.openApp(getDefaultTerminal());
     }
 
     const openSettings = () => {
