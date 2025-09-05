@@ -29,6 +29,17 @@ function getDB() {
   return dbPromise;
 }
 
+function detectType(text: string): 'url' | 'ip' | 'hash' | null {
+  try {
+    // Treat as valid URL if constructor succeeds
+    new URL(text);
+    return 'url';
+  } catch {}
+  if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(text)) return 'ip';
+  if (/^[a-fA-F0-9]{32}$|^[a-fA-F0-9]{40}$|^[a-fA-F0-9]{64}$/.test(text)) return 'hash';
+  return null;
+}
+
 const ClipboardManager: React.FC = () => {
   const [items, setItems] = useState<ClipItem[]>([]);
 
@@ -39,7 +50,17 @@ const ClipboardManager: React.FC = () => {
       const db = await dbp;
 
       const all = await db.getAll(STORE_NAME);
-      setItems(all.sort((a, b) => (b.id ?? 0) - (a.id ?? 0)));
+      const sorted = all.sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
+      if (sorted.length > 20) {
+        const toKeep = sorted.slice(0, 20);
+        setItems(toKeep);
+        const idsToDelete = sorted.slice(20).map((i) => i.id).filter(Boolean);
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        idsToDelete.forEach((id) => tx.store.delete(id!));
+        await tx.done;
+      } else {
+        setItems(sorted);
+      }
     } catch {
       // ignore errors
     }
@@ -122,15 +143,70 @@ const ClipboardManager: React.FC = () => {
         Clear History
       </button>
       <ul className="space-y-1">
-        {items.map((item) => (
-          <li
-            key={item.id}
-            className="cursor-pointer hover:underline"
-            onClick={() => writeToClipboard(item.text)}
-          >
-            {item.text}
-          </li>
-        ))}
+        {items.map((item) => {
+          const type = detectType(item.text);
+          const openUrl = () => {
+            const url = type === 'ip' ? `http://${item.text}` : item.text;
+            window.open(url, '_blank');
+          };
+          const copyCurl = () => {
+            const url = type === 'ip' ? `http://${item.text}` : item.text;
+            writeToClipboard(`curl ${url}`);
+          };
+          const searchHash = () => {
+            window.open(`https://www.google.com/search?q=${item.text}`, '_blank');
+          };
+          return (
+            <li key={item.id} className="flex items-center justify-between gap-2">
+              <span
+                className="flex-1 cursor-pointer hover:underline"
+                onClick={() => writeToClipboard(item.text)}
+              >
+                {item.text}
+              </span>
+              {type === 'url' && (
+                <>
+                  <button
+                    className="px-1 py-0.5 bg-gray-700 hover:bg-gray-600"
+                    onClick={openUrl}
+                  >
+                    Open
+                  </button>
+                  <button
+                    className="px-1 py-0.5 bg-gray-700 hover:bg-gray-600"
+                    onClick={copyCurl}
+                  >
+                    Copy as cURL
+                  </button>
+                </>
+              )}
+              {type === 'ip' && (
+                <>
+                  <button
+                    className="px-1 py-0.5 bg-gray-700 hover:bg-gray-600"
+                    onClick={openUrl}
+                  >
+                    Open
+                  </button>
+                  <button
+                    className="px-1 py-0.5 bg-gray-700 hover:bg-gray-600"
+                    onClick={copyCurl}
+                  >
+                    Copy as cURL
+                  </button>
+                </>
+              )}
+              {type === 'hash' && (
+                <button
+                  className="px-1 py-0.5 bg-gray-700 hover:bg-gray-600"
+                  onClick={searchHash}
+                >
+                  Search
+                </button>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
