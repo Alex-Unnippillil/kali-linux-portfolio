@@ -39,6 +39,10 @@ export default function Preferences() {
     if (typeof window === "undefined") return false;
     return localStorage.getItem(`${PANEL_PREFIX}autohide`) === "true";
   });
+  const [scrollVolume, setScrollVolume] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem(`${PANEL_PREFIX}scrollVolume`) === "true";
+  });
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -59,6 +63,13 @@ export default function Preferences() {
     if (typeof window === "undefined") return;
     localStorage.setItem(`${PANEL_PREFIX}autohide`, autohide ? "true" : "false");
   }, [autohide]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(
+      `${PANEL_PREFIX}scrollVolume`,
+      scrollVolume ? "true" : "false",
+    );
+  }, [scrollVolume]);
 
   return (
     <div>
@@ -88,6 +99,16 @@ export default function Preferences() {
                 checked={autohide}
                 onChange={setAutohide}
                 ariaLabel="Autohide panel"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-ubt-grey">
+                Adjust volume when scrolling over panel
+              </span>
+              <ToggleSwitch
+                checked={scrollVolume}
+                onChange={setScrollVolume}
+                ariaLabel="Adjust volume when scrolling over panel"
               />
             </div>
           </div>
