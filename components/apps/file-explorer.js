@@ -91,6 +91,15 @@ async function addRecentDir(handle) {
   } catch {}
 }
 
+async function clearRecentDirs() {
+  try {
+    const dbp = openDB();
+    if (!dbp) return;
+    const db = await dbp;
+    await db.clear(STORE_NAME);
+  } catch {}
+}
+
 export default function FileExplorer() {
   const [supported, setSupported] = useState(true);
   const [dirHandle, setDirHandle] = useState(null);
@@ -104,6 +113,7 @@ export default function FileExplorer() {
   const [results, setResults] = useState([]);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
+  const [fontSize, setFontSize] = useState(14);
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -172,6 +182,11 @@ export default function FileExplorer() {
       setPath([{ name: entry.name, handle: entry.handle }]);
       await readDir(entry.handle);
     } catch {}
+  };
+
+  const clearRecent = async () => {
+    await clearRecentDirs();
+    setRecent([]);
   };
 
   const openFile = async (file) => {
@@ -257,6 +272,14 @@ export default function FileExplorer() {
     }
   };
 
+  const handleWheel = (e) => {
+    if (e.ctrlKey) {
+      e.preventDefault();
+      const delta = -e.deltaY / 100;
+      setFontSize((f) => Math.min(32, Math.max(8, f + delta)));
+    }
+  };
+
   useEffect(() => () => workerRef.current?.terminate(), []);
 
   if (!supported) {
@@ -277,6 +300,8 @@ export default function FileExplorer() {
               className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
               value={content}
               onChange={onChange}
+              onWheel={handleWheel}
+              style={{ fontSize }}
             />
             <button
               onClick={async () => {
@@ -315,7 +340,17 @@ export default function FileExplorer() {
       </div>
       <div className="flex flex-1 overflow-hidden">
         <div className="w-40 overflow-auto border-r border-gray-600">
-          <div className="p-2 font-bold">Recent</div>
+          <div className="p-2 font-bold flex justify-between items-center">
+            <span>Recent</span>
+            {recent.length > 0 && (
+              <button
+                onClick={clearRecent}
+                className="text-xs px-1 py-0.5 bg-black bg-opacity-30 rounded"
+              >
+                Clear
+              </button>
+            )}
+          </div>
           {recent.map((r, i) => (
             <div
               key={i}
@@ -348,7 +383,13 @@ export default function FileExplorer() {
         </div>
         <div className="flex-1 flex flex-col">
           {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
+            <textarea
+              className="flex-1 p-2 bg-ub-cool-grey outline-none"
+              value={content}
+              onChange={onChange}
+              onWheel={handleWheel}
+              style={{ fontSize }}
+            />
           )}
           <div className="p-2 border-t border-gray-600">
             <input
