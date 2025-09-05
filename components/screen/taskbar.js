@@ -1,8 +1,22 @@
 import React from 'react';
 import Image from 'next/image';
 
+const PANEL_PREFIX = 'xfce.panel.';
+
 export default function Taskbar(props) {
-    const runningApps = props.apps.filter(app => props.closed_windows[app.id] === false);
+    const showCurrentMonitorOnly = typeof window !== 'undefined' &&
+        localStorage.getItem(`${PANEL_PREFIX}currentMonitorOnly`) === 'true';
+    const currentMonitor = props.monitorId || 0;
+    const runningApps = props.apps.filter(app => {
+        if (props.closed_windows[app.id] === false) {
+            if (showCurrentMonitorOnly) {
+                const appMonitor = app.screenId || 0;
+                return appMonitor === currentMonitor;
+            }
+            return true;
+        }
+        return false;
+    });
 
     const handleClick = (app) => {
         const id = app.id;
