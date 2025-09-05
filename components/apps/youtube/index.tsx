@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import Preferences from './Preferences';
 import useWatchLater, {
   Video as WatchLaterVideo,
 } from '../../../apps/youtube/state/watchLater';
@@ -116,8 +117,12 @@ function Sidebar({
   };
 
   return (
-    <aside className="w-64 overflow-y-auto border-l border-ub-cool-grey bg-ub-cool-grey p-2 text-sm" role="complementary">
-      <h2 className="mb-[6px] text-lg font-semibold">Queue</h2>
+    <aside
+      className="w-64 overflow-y-auto border-l border-ub-cool-grey bg-ub-cool-grey p-2 text-sm"
+      role="complementary"
+      data-testid="playlist-sidebar"
+    >
+      <h2 className="mb-[6px] text-lg font-semibold">Playlist</h2>
       <div data-testid="queue-list">
         {queue.map((v) => (
           <div
@@ -270,6 +275,8 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const [looping, setLooping] = useState(false);
   const [, setPlaybackRate] = useState(1);
   const [solidHeader, setSolidHeader] = useState(false);
+  const [showPrefs, setShowPrefs] = useState(false);
+  const [miniPlayer, setMiniPlayer] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setSolidHeader(window.scrollY > 0);
@@ -374,6 +381,12 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
     } else {
       playerRef.current.playVideo();
     }
+  }, []);
+
+  const seekBy = useCallback((offset: number) => {
+    if (!playerRef.current) return;
+    const cur = playerRef.current.getCurrentTime?.() ?? 0;
+    playerRef.current.seekTo(Math.max(0, cur + offset), true);
   }, []);
 
 
@@ -509,6 +522,15 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
       } else if (e.key === ' ' && current) {
         e.preventDefault();
         togglePlay();
+      } else if (e.key.toLowerCase() === 'k' && current) {
+        e.preventDefault();
+        togglePlay();
+      } else if (e.key.toLowerCase() === 'j' && current) {
+        e.preventDefault();
+        seekBy(-10);
+      } else if (e.key.toLowerCase() === 'l' && current) {
+        e.preventDefault();
+        seekBy(10);
       } else if (e.key.toLowerCase() === 'a') {
         markStart();
       } else if (e.key.toLowerCase() === 'b') {
@@ -517,8 +539,6 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
         toggleLoop();
       } else if (e.key.toLowerCase() === 'q' && current) {
         addQueue(current);
-      } else if (e.key.toLowerCase() === 'l' && current) {
-        addWatchLater(current);
       } else if (e.key.toLowerCase() === 'n') {
         playNext();
       }
@@ -528,9 +548,9 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   }, [
     current,
     addQueue,
-    addWatchLater,
     playNext,
     togglePlay,
+    seekBy,
     markStart,
     markEnd,
     toggleLoop,
@@ -539,29 +559,33 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   return (
     <div className="flex h-full flex-1 bg-ub-dark-grey font-sans text-ubt-cool-grey">
       <div className="flex flex-1 flex-col">
-        <form onSubmit={handleSearch} className="p-4">
-          <input
-            ref={searchRef}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search YouTube"
-            className="w-full rounded bg-ub-cool-grey p-2 text-ubt-cool-grey"
-          />
-        </form>
+          <form onSubmit={handleSearch} className="p-4">
+            <input
+              ref={searchRef}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search YouTube"
+              aria-label="Search YouTube"
+              className="w-full rounded bg-ub-cool-grey p-2 text-ubt-cool-grey"
+            />
+          </form>
         {current && (
-          <div className="relative mx-4 mb-4 bg-black">
+          <div
+            className={`relative mx-4 mb-4 bg-black ${miniPlayer ? 'fixed bottom-4 right-4 z-50 w-64 h-36 shadow-lg' : ''}`}
+            data-testid="player-container"
+          >
             {!playerReady && (
               <iframe
                 title="YouTube video player"
                 src={`https://www.youtube-nocookie.com/embed/${current.id}`}
-                className="aspect-video w-full"
+                className={`${miniPlayer ? 'h-full w-full' : 'aspect-video w-full'}`}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               />
             )}
             <div
               ref={playerDivRef}
-              className={`${playerReady ? '' : 'hidden'} aspect-video w-full`}
+              className={`${playerReady ? '' : 'hidden'} ${miniPlayer ? 'h-full w-full' : 'aspect-video w-full'}`}
             />
             <div
               className={`sticky top-0 z-10 flex items-center gap-[6px] p-[6px] transition-colors ${solidHeader ? 'bg-ub-cool-grey' : 'bg-transparent'}`}
@@ -640,6 +664,14 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
                 <span className="flex h-6 w-6 items-center justify-center">Save</span>
               </button>
               <button
+                onClick={() => setMiniPlayer((m) => !m)}
+                aria-label="Toggle mini player"
+                data-testid="mini-player-toggle"
+                className="text-ubt-cool-grey hover:text-ubt-green"
+              >
+                {miniPlayer ? 'Full' : 'Mini'}
+              </button>
+              <button
                 onClick={downloadCurrent}
                 aria-label="Download video"
                 className="ml-auto text-ubt-cool-grey hover:text-ubt-green"
@@ -651,6 +683,14 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
                     clipRule="evenodd"
                   />
                 </svg>
+              </button>
+              <button
+                onClick={() => setShowPrefs(true)}
+                aria-label="Open preferences"
+                data-testid="prefs-button"
+                className="text-ubt-cool-grey hover:text-ubt-green"
+              >
+                Prefs
               </button>
             </div>
           </div>
@@ -668,6 +708,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
         onPlay={playVideo}
         onReorder={moveWatchLater}
       />
+      <Preferences open={showPrefs} onClose={() => setShowPrefs(false)} />
     </div>
   );
 }
