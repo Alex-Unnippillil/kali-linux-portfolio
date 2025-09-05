@@ -84,6 +84,7 @@ const BleSensorApp = createDynamicApp('ble-sensor', 'BLE Sensor');
 const DsniffApp = createDynamicApp('dsniff', 'dsniff');
 const BeefApp = createDynamicApp('beef', 'BeEF');
 const MetasploitApp = createDynamicApp('metasploit', 'Metasploit');
+const NetworkManagerApp = createDynamicApp('network-manager', 'Network Manager');
 
 const AutopsyApp = createDynamicApp('autopsy', 'Autopsy');
 const PluginManagerApp = createDynamicApp('plugin-manager', 'Plugin Manager');
@@ -175,6 +176,7 @@ const displayWireshark = createDisplay(WiresharkApp);
 const displayBleSensor = createDisplay(BleSensorApp);
 const displayBeef = createDisplay(BeefApp);
 const displayMetasploit = createDisplay(MetasploitApp);
+const displayNetworkManager = createDisplay(NetworkManagerApp);
 const displayDsniff = createDisplay(DsniffApp);
 const displayGomoku = createDisplay(GomokuApp);
 const displayPinball = createDisplay(PinballApp);
@@ -1014,6 +1016,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayDsniff,
+  },
+  {
+    id: 'network-manager',
+    title: 'Network Manager',
+    icon: '/themes/Yaru/apps/resource-monitor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayNetworkManager,
   },
   {
     id: 'john',
