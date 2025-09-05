@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -12,6 +12,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import copyToClipboard from "../../utils/clipboard";
 
 export default function Settings() {
   const {
@@ -41,6 +42,7 @@ export default function Settings() {
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
+  const [dialog, setDialog] = useState<string | null>(null);
 
   const wallpapers = [
     "wall-1",
@@ -54,6 +56,29 @@ export default function Settings() {
   ];
 
   const changeBackground = (name: string) => setWallpaper(name);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash.replace(/^#/, "");
+    const [tab, dlg] = hash.split("/");
+    if (tab === "appearance" || tab === "accessibility" || tab === "privacy") {
+      setActiveTab(tab as TabId);
+    }
+    if (dlg) setDialog(dlg);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const parts = [activeTab];
+    if (dialog) parts.push(dialog);
+    const newHash = `#${parts.join("/")}`;
+    window.location.hash = newHash;
+  }, [activeTab, dialog]);
+
+  const handleCopyLink = async () => {
+    const url = `${window.location.origin}${window.location.pathname}${window.location.hash}`;
+    await copyToClipboard(url);
+  };
 
   const handleExport = async () => {
     const data = await exportSettingsData();
@@ -103,12 +128,19 @@ export default function Settings() {
     setTheme("default");
   };
 
-  const [showKeymap, setShowKeymap] = useState(false);
+  // dialogs are handled via `dialog` state to support deep linking
 
   return (
     <div className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey">
-      <div className="flex justify-center border-b border-gray-900">
+      <div className="flex justify-center border-b border-gray-900 relative">
         <Tabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
+        <button
+          onClick={handleCopyLink}
+          aria-label="Copy settings link"
+          className="absolute right-2 top-1 text-ubt-grey hover:text-white"
+        >
+          Copy Link
+        </button>
       </div>
       {activeTab === "appearance" && (
         <>
@@ -262,7 +294,7 @@ export default function Settings() {
           </div>
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
             <button
-              onClick={() => setShowKeymap(true)}
+              onClick={() => setDialog("keymap")}
               className="px-4 py-2 rounded bg-ub-orange text-white"
             >
               Edit Shortcuts
@@ -300,7 +332,7 @@ export default function Settings() {
           }}
           className="hidden"
         />
-      <KeymapOverlay open={showKeymap} onClose={() => setShowKeymap(false)} />
+      <KeymapOverlay open={dialog === "keymap"} onClose={() => setDialog(null)} />
     </div>
   );
 }

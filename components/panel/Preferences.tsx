@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Tabs from "../Tabs";
 import ToggleSwitch from "../ToggleSwitch";
+import copyToClipboard from "../../utils/clipboard";
 
 const PANEL_PREFIX = "xfce.panel.";
 
@@ -17,6 +18,25 @@ export default function Preferences() {
   ];
 
   const [active, setActive] = useState<TabId>("display");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const [tab] = window.location.hash.replace(/^#/, "").split("/");
+    if (TABS.some((t) => t.id === tab)) {
+      setActive(tab as TabId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.location.hash = `#${active}`;
+  }, [active]);
+
+  const handleCopyLink = async () => {
+    const url = `${window.location.origin}${window.location.pathname}#${active}`;
+    await copyToClipboard(url);
+  };
 
   const [size, setSize] = useState(() => {
     if (typeof window === "undefined") return 24;
@@ -62,7 +82,16 @@ export default function Preferences() {
 
   return (
     <div>
-      <Tabs tabs={TABS} active={active} onChange={setActive} />
+      <div className="relative">
+        <Tabs tabs={TABS} active={active} onChange={setActive} />
+        <button
+          onClick={handleCopyLink}
+          aria-label="Copy preferences link"
+          className="absolute right-0 top-0 mt-1 mr-2 text-ubt-grey hover:text-white"
+        >
+          Copy Link
+        </button>
+      </div>
       <div className="p-4">
         {active === "display" && (
           <div className="space-y-4">
