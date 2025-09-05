@@ -9,15 +9,15 @@ import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
 
 export default class Ubuntu extends Component {
-	constructor() {
-		super();
-		this.state = {
-			screen_locked: false,
-			bg_image_name: 'wall-2',
-			booting_screen: true,
-			shutDownScreen: false
-		};
-	}
+        constructor(props) {
+                super(props);
+                this.state = {
+                        screen_locked: false,
+                        bg_image_name: 'wall-2',
+                        booting_screen: true,
+                        shutDownScreen: false
+                };
+       }
 
 	componentDidMount() {
 		this.getLocalData();
@@ -126,8 +126,8 @@ export default class Ubuntu extends Component {
 					isShutDown={this.state.shutDownScreen}
 					turnOn={this.turnOn}
 				/>
-				<Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
-				<Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
+                                <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
+                                <Desktop session={this.props.session} setSession={this.props.setSession} bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
 			</div>
 		);
 	}
