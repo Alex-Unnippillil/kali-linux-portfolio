@@ -56,12 +56,12 @@ export default function Settings() {
   const changeBackground = (name: string) => setWallpaper(name);
 
   const handleExport = async () => {
-    const data = await exportSettingsData();
-    const blob = new Blob([data], { type: "application/json" });
+    const data = await exportSettingsData("appearance");
+    const blob = new Blob([data], { type: "application/xml" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "settings.json";
+    a.download = "xsettings.xml";
     a.click();
     URL.revokeObjectURL(url);
   };
