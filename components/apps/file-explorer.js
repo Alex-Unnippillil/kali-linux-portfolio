@@ -4,6 +4,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import ContextMenu from '../common/ContextMenu';
+import Modal from '../base/Modal';
+import Toast from '../ui/Toast';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -91,6 +94,28 @@ async function addRecentDir(handle) {
   } catch {}
 }
 
+function FileItem({ file, onOpen, onHash }) {
+  const ref = useRef(null);
+  return (
+    <>
+      <div
+        ref={ref}
+        className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+        onClick={() => onOpen(file)}
+      >
+        {file.name}
+      </div>
+      <ContextMenu
+        targetRef={ref}
+        items={[
+          { label: 'Open', onSelect: () => onOpen(file) },
+          { label: 'SHA256', onSelect: () => onHash(file) },
+        ]}
+      />
+    </>
+  );
+}
+
 export default function FileExplorer() {
   const [supported, setSupported] = useState(true);
   const [dirHandle, setDirHandle] = useState(null);
@@ -104,6 +129,11 @@ export default function FileExplorer() {
   const [results, setResults] = useState([]);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
+  const [hashOpen, setHashOpen] = useState(false);
+  const [hashResult, setHashResult] = useState('');
+  const [hashFileName, setHashFileName] = useState('');
+  const hashWorkerRef = useRef(null);
+  const [toast, setToast] = useState('');
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -188,6 +218,30 @@ export default function FileExplorer() {
     setContent(text);
   };
 
+  const hashFile = async (file) => {
+    setHashFileName(file.name);
+    setHashOpen(true);
+    setHashResult('');
+    if (!hashWorkerRef.current) {
+      hashWorkerRef.current = new Worker(
+        new URL('../../workers/hash-worker.ts', import.meta.url),
+      );
+      hashWorkerRef.current.onmessage = (e) => {
+        const { type, results } = e.data;
+        if (type === 'result') setHashResult(results['SHA-256']);
+      };
+    }
+    const f = await file.handle.getFile();
+    hashWorkerRef.current.postMessage({ file: f, algorithms: ['SHA-256'] });
+  };
+
+  const copyHash = () => {
+    if (hashResult) {
+      navigator.clipboard?.writeText(hashResult);
+      setToast('SHA256 copied');
+    }
+  };
+
   const readDir = async (handle) => {
     const ds = [];
     const fs = [];
@@ -258,11 +312,18 @@ export default function FileExplorer() {
   };
 
   useEffect(() => () => workerRef.current?.terminate(), []);
+  useEffect(() => () => hashWorkerRef.current?.terminate(), []);
 
   if (!supported) {
     return (
       <div className="p-4 flex flex-col h-full">
-        <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
+        <input
+          ref={fallbackInputRef}
+          type="file"
+          onChange={openFallback}
+          className="hidden"
+          aria-label="File picker"
+        />
         {!currentFile && (
           <button
             onClick={() => fallbackInputRef.current?.click()}
@@ -273,11 +334,12 @@ export default function FileExplorer() {
         )}
         {currentFile && (
           <>
-            <textarea
-              className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
-              value={content}
-              onChange={onChange}
-            />
+              <textarea
+                className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
+                value={content}
+                onChange={onChange}
+                aria-label="File contents"
+              />
             <button
               onClick={async () => {
                 const handle = await saveFileDialog({ suggestedName: currentFile.name });
@@ -337,26 +399,26 @@ export default function FileExplorer() {
           ))}
           <div className="p-2 font-bold">Files</div>
           {files.map((f, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openFile(f)}
-            >
-              {f.name}
-            </div>
+            <FileItem key={i} file={f} onOpen={openFile} onHash={hashFile} />
           ))}
         </div>
         <div className="flex-1 flex flex-col">
-          {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
-          )}
+            {currentFile && (
+              <textarea
+                className="flex-1 p-2 bg-ub-cool-grey outline-none"
+                value={content}
+                onChange={onChange}
+                aria-label="File contents"
+              />
+            )}
           <div className="p-2 border-t border-gray-600">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Find in files"
-              className="px-1 py-0.5 text-black"
-            />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Find in files"
+                className="px-1 py-0.5 text-black"
+                aria-label="Search query"
+              />
             <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
               Search
             </button>
@@ -370,6 +432,30 @@ export default function FileExplorer() {
           </div>
         </div>
       </div>
+      <Modal isOpen={hashOpen} onClose={() => setHashOpen(false)}>
+        <div className="bg-gray-700 text-white p-4 rounded w-96">
+          <h2 className="text-xl mb-2">SHA256 {hashFileName && `- ${hashFileName}`}</h2>
+          {hashResult ? (
+            <div className="flex items-center gap-2">
+              <input
+                className="flex-1 p-1 rounded text-black"
+                value={hashResult}
+                readOnly
+                aria-label="SHA256 hash"
+              />
+              <button
+                className="bg-gray-600 px-2 py-1 rounded"
+                onClick={copyHash}
+              >
+                Copy
+              </button>
+            </div>
+          ) : (
+            <div>Calculating...</div>
+          )}
+        </div>
+      </Modal>
+      {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
   );
 }
