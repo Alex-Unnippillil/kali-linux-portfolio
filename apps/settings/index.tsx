@@ -19,6 +19,10 @@ export default function Settings() {
     setAccent,
     wallpaper,
     setWallpaper,
+    loginBackground,
+    setLoginBackground,
+    loginLogo,
+    setLoginLogo,
     density,
     setDensity,
     reducedMotion,
@@ -36,6 +40,7 @@ export default function Settings() {
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
+    { id: "login", label: "Login Screen" },
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
   ] as const;
@@ -51,6 +56,12 @@ export default function Settings() {
     "wall-6",
     "wall-7",
     "wall-8",
+  ];
+
+  const logos = [
+    "logo.png",
+    "logo_1024.png",
+    "logo_1200.png",
   ];
 
   const changeBackground = (name: string) => setWallpaper(name);
@@ -73,6 +84,9 @@ export default function Settings() {
       const parsed = JSON.parse(text);
       if (parsed.accent !== undefined) setAccent(parsed.accent);
       if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
+      if (parsed.loginBackground !== undefined)
+        setLoginBackground(parsed.loginBackground);
+      if (parsed.loginLogo !== undefined) setLoginLogo(parsed.loginLogo);
       if (parsed.density !== undefined) setDensity(parsed.density);
       if (parsed.reducedMotion !== undefined)
         setReducedMotion(parsed.reducedMotion);
@@ -96,6 +110,8 @@ export default function Settings() {
     window.localStorage.clear();
     setAccent(defaults.accent);
     setWallpaper(defaults.wallpaper);
+    setLoginBackground(defaults.loginBackground);
+    setLoginLogo(defaults.loginLogo);
     setDensity(defaults.density as any);
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
@@ -206,6 +222,60 @@ export default function Settings() {
             >
               Reset Desktop
             </button>
+          </div>
+        </>
+      )}
+      {activeTab === "login" && (
+        <>
+          <div
+            className="md:w-2/5 w-2/3 h-1/3 m-auto my-4 flex items-center justify-center"
+            style={{
+              backgroundImage: `url(/wallpapers/${loginBackground}.webp)`,
+              backgroundSize: "cover",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "center center",
+            }}
+          >
+            <img
+              src={`/images/logos/${loginLogo}`}
+              alt="Login Logo"
+              className="w-24 h-24 object-contain"
+            />
+          </div>
+          <div className="flex justify-center my-4">
+            <label htmlFor="login-bg-slider" className="mr-2 text-ubt-grey">
+              Background:
+            </label>
+            <input
+              id="login-bg-slider"
+              type="range"
+              min="0"
+              max={wallpapers.length - 1}
+              step="1"
+              value={wallpapers.indexOf(loginBackground)}
+              onChange={(e) =>
+                setLoginBackground(wallpapers[parseInt(e.target.value, 10)])
+              }
+              className="ubuntu-slider"
+              aria-label="Login background"
+            />
+          </div>
+          <div className="flex justify-center my-4">
+            <label htmlFor="login-logo-select" className="mr-2 text-ubt-grey">
+              Logo:
+            </label>
+            <select
+              id="login-logo-select"
+              value={loginLogo}
+              onChange={(e) => setLoginLogo(e.target.value)}
+              className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+            >
+              {logos.map((l) => (
+                <option key={l} value={l}>
+                  {l}
+                </option>
+              ))}
+            </select>
           </div>
         </>
       )}

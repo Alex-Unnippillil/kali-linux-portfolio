@@ -4,7 +4,7 @@ import { useSettings } from '../../hooks/useSettings';
 
 export default function LockScreen(props) {
 
-    const { wallpaper } = useSettings();
+    const { loginBackground, loginLogo } = useSettings();
 
     if (props.isLocked) {
         window.addEventListener('click', props.unLockScreen);
@@ -17,11 +17,16 @@ export default function LockScreen(props) {
             style={{ zIndex: "100", contentVisibility: 'auto' }}
             className={(props.isLocked ? " visible translate-y-0 " : " invisible -translate-y-full ") + " absolute outline-none bg-black bg-opacity-90 transform duration-500 select-none top-0 right-0 overflow-hidden m-0 p-0 h-screen w-screen"}>
             <img
-                src={`/wallpapers/${wallpaper}.webp`}
+                src={`/wallpapers/${loginBackground}.webp`}
                 alt=""
                 className={`absolute top-0 left-0 w-full h-full object-cover transform z-20 transition duration-500 ${props.isLocked ? 'blur-sm' : 'blur-none'}`}
             />
             <div className="w-full h-full z-50 overflow-hidden relative flex flex-col justify-center items-center text-white">
+                <img
+                    src={`/images/logos/${loginLogo}`}
+                    alt="Login Logo"
+                    className="w-24 h-24 mb-8 object-contain"
+                />
                 <div className=" text-7xl">
                     <Clock onlyTime={true} />
                 </div>

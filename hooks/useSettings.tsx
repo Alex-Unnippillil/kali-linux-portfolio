@@ -4,6 +4,10 @@ import {
   setAccent as saveAccent,
   getWallpaper as loadWallpaper,
   setWallpaper as saveWallpaper,
+  getLoginBackground as loadLoginBackground,
+  setLoginBackground as saveLoginBackground,
+  getLoginLogo as loadLoginLogo,
+  setLoginLogo as saveLoginLogo,
   getDensity as loadDensity,
   setDensity as saveDensity,
   getReducedMotion as loadReducedMotion,
@@ -54,6 +58,8 @@ const shadeColor = (color: string, percent: number): string => {
 interface SettingsContextValue {
   accent: string;
   wallpaper: string;
+  loginBackground: string;
+  loginLogo: string;
   density: Density;
   reducedMotion: boolean;
   fontScale: number;
@@ -65,6 +71,8 @@ interface SettingsContextValue {
   theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
+  setLoginBackground: (bg: string) => void;
+  setLoginLogo: (logo: string) => void;
   setDensity: (density: Density) => void;
   setReducedMotion: (value: boolean) => void;
   setFontScale: (value: number) => void;
@@ -79,6 +87,8 @@ interface SettingsContextValue {
 export const SettingsContext = createContext<SettingsContextValue>({
   accent: defaults.accent,
   wallpaper: defaults.wallpaper,
+  loginBackground: defaults.loginBackground,
+  loginLogo: defaults.loginLogo,
   density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
   fontScale: defaults.fontScale,
@@ -90,6 +100,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   theme: 'default',
   setAccent: () => {},
   setWallpaper: () => {},
+  setLoginBackground: () => {},
+  setLoginLogo: () => {},
   setDensity: () => {},
   setReducedMotion: () => {},
   setFontScale: () => {},
@@ -104,6 +116,10 @@ export const SettingsContext = createContext<SettingsContextValue>({
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [accent, setAccent] = useState<string>(defaults.accent);
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
+  const [loginBackground, setLoginBackground] = useState<string>(
+    defaults.loginBackground
+  );
+  const [loginLogo, setLoginLogo] = useState<string>(defaults.loginLogo);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
@@ -119,6 +135,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     (async () => {
       setAccent(await loadAccent());
       setWallpaper(await loadWallpaper());
+      setLoginBackground(await loadLoginBackground());
+      setLoginLogo(await loadLoginLogo());
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
       setFontScale(await loadFontScale());
@@ -155,6 +173,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveWallpaper(wallpaper);
   }, [wallpaper]);
+
+  useEffect(() => {
+    saveLoginBackground(loginBackground);
+  }, [loginBackground]);
+
+  useEffect(() => {
+    saveLoginLogo(loginLogo);
+  }, [loginLogo]);
 
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {
@@ -241,6 +267,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       value={{
         accent,
         wallpaper,
+        loginBackground,
+        loginLogo,
         density,
         reducedMotion,
         fontScale,
@@ -252,6 +280,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         theme,
         setAccent,
         setWallpaper,
+        setLoginBackground,
+        setLoginLogo,
         setDensity,
         setReducedMotion,
         setFontScale,

@@ -6,6 +6,8 @@ import { getTheme, setTheme } from './theme';
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
   wallpaper: 'wall-2',
+  loginBackground: 'wall-2',
+  loginLogo: 'logo.png',
   density: 'regular',
   reducedMotion: false,
   fontScale: 1,
@@ -34,6 +36,26 @@ export async function getWallpaper() {
 export async function setWallpaper(wallpaper) {
   if (typeof window === 'undefined') return;
   await set('bg-image', wallpaper);
+}
+
+export async function getLoginBackground() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.loginBackground;
+  return (await get('login-bg')) || DEFAULT_SETTINGS.loginBackground;
+}
+
+export async function setLoginBackground(bg) {
+  if (typeof window === 'undefined') return;
+  await set('login-bg', bg);
+}
+
+export async function getLoginLogo() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.loginLogo;
+  return (await get('login-logo')) || DEFAULT_SETTINGS.loginLogo;
+}
+
+export async function setLoginLogo(logo) {
+  if (typeof window === 'undefined') return;
+  await set('login-logo', logo);
 }
 
 export async function getDensity() {
@@ -128,6 +150,8 @@ export async function resetSettings() {
   await Promise.all([
     del('accent'),
     del('bg-image'),
+    del('login-bg'),
+    del('login-logo'),
   ]);
   window.localStorage.removeItem('density');
   window.localStorage.removeItem('reduced-motion');
@@ -143,6 +167,8 @@ export async function exportSettings() {
   const [
     accent,
     wallpaper,
+    loginBackground,
+    loginLogo,
     density,
     reducedMotion,
     fontScale,
@@ -154,6 +180,8 @@ export async function exportSettings() {
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
+    getLoginBackground(),
+    getLoginLogo(),
     getDensity(),
     getReducedMotion(),
     getFontScale(),
@@ -175,6 +203,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    loginBackground,
+    loginLogo,
     theme,
   });
 }
@@ -199,10 +229,14 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    loginBackground,
+    loginLogo,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
+  if (loginBackground !== undefined) await setLoginBackground(loginBackground);
+  if (loginLogo !== undefined) await setLoginLogo(loginLogo);
   if (density !== undefined) await setDensity(density);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
   if (fontScale !== undefined) await setFontScale(fontScale);
