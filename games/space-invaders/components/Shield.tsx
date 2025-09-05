@@ -51,7 +51,12 @@ const Shield: React.FC<ShieldProps> = ({ regenDuration = 3000, maxHp = 6 }) => {
   const widthPercent = (hp / maxHp) * 100;
 
   return (
-    <div className="relative inline-block" onClick={takeDamage} aria-label="shield">
+    <button
+      type="button"
+      className="relative inline-block bg-transparent border-0 p-0"
+      onClick={takeDamage}
+      aria-label="shield"
+    >
       <div
         className="h-4 w-12 bg-green-600"
         style={{ opacity: hp === 0 ? 0.3 : 1 }}
@@ -69,7 +74,7 @@ const Shield: React.FC<ShieldProps> = ({ regenDuration = 3000, maxHp = 6 }) => {
           />
         </div>
       )}
-    </div>
+    </button>
   );
 };
 

@@ -358,18 +358,26 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
       />
       <div className="flex flex-wrap justify-center items-start w-full mt-2">
         {filteredBadges.map((badge) => (
-          <img
+          <button
             key={badge.alt}
-            className="m-1 cursor-pointer"
-            src={badge.src}
-            alt={badge.alt}
-            title={badge.description}
+            type="button"
+            className="m-1 cursor-pointer bg-transparent border-0 p-0"
             onClick={() => setSelected(badge)}
-          />
+          >
+            <img src={badge.src} alt={badge.alt} title={badge.description} />
+          </button>
         ))}
       </div>
       {selected && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50" onClick={() => setSelected(null)}>
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
+          role="button"
+          tabIndex={0}
+          onClick={() => setSelected(null)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') setSelected(null);
+          }}
+        >
           <div className="bg-ub-cool-grey p-4 rounded max-w-xs" onClick={(e) => e.stopPropagation()}>
             <div className="font-bold mb-2 text-center">{selected.alt}</div>
             <p className="text-sm text-center">{selected.description}</p>
