@@ -1,4 +1,6 @@
-import { Component } from 'react'
+import { Component } from 'react';
+import { Calendar } from 'antd';
+import dayjs from 'dayjs';
 
 export default class Clock extends Component {
     constructor() {
@@ -7,12 +9,20 @@ export default class Clock extends Component {
         this.day_list = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         this.state = {
             hour_12: true,
-            current_time: null
+            current_time: null,
+            showCalendar: false
         };
     }
 
     componentDidMount() {
-        const update = () => this.setState({ current_time: new Date() });
+        const update = () => {
+            const now = new Date();
+            const { timezone } = this.props;
+            const current = timezone
+                ? new Date(now.toLocaleString('en-US', { timeZone: timezone }))
+                : now;
+            this.setState({ current_time: current });
+        };
         update();
         if (typeof window !== 'undefined' && typeof Worker === 'function') {
             this.worker = new Worker(new URL('../../workers/timer.worker.ts', import.meta.url));
@@ -31,8 +41,12 @@ export default class Clock extends Component {
         if (this.update_time) clearInterval(this.update_time);
     }
 
+    toggleCalendar = () => {
+        this.setState(prev => ({ showCalendar: !prev.showCalendar }));
+    };
+
     render() {
-        const { current_time } = this.state;
+        const { current_time, showCalendar } = this.state;
         if (!current_time) return <span suppressHydrationWarning></span>;
 
         let day = this.day_list[current_time.getDay()];
@@ -56,6 +70,19 @@ export default class Clock extends Component {
             display_time = day + " " + month + " " + date;
         }
         else display_time = day + " " + month + " " + date + " " + hour + ":" + minute + " " + meridiem;
-        return <span suppressHydrationWarning>{display_time}</span>;
+        return (
+            <div className="relative inline-block" onClick={this.toggleCalendar}>
+                <span suppressHydrationWarning>{display_time}</span>
+                {showCalendar && (
+                    <div className="absolute mt-2 z-50">
+                        <Calendar fullscreen={false} value={dayjs(current_time)} />
+                    </div>
+                )}
+            </div>
+        );
     }
 }
+
+Clock.defaultProps = {
+    timezone: undefined,
+};
