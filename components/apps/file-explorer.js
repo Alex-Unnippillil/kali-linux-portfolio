@@ -91,7 +91,7 @@ async function addRecentDir(handle) {
   } catch {}
 }
 
-export default function FileExplorer() {
+export default function FileExplorer({ openApp }) {
   const [supported, setSupported] = useState(true);
   const [dirHandle, setDirHandle] = useState(null);
   const [files, setFiles] = useState([]);
@@ -186,6 +186,22 @@ export default function FileExplorer() {
       text = await f.text();
     }
     setContent(text);
+  };
+
+  const openArchive = (file) => {
+    (window).__archiveHandle = file.handle;
+    (window).__archiveDirHandle = dirHandle;
+    if (openApp) openApp('archive-manager');
+  };
+
+  const handleFileClick = (f) => {
+    if (f.name.toLowerCase().endsWith('.zip')) return;
+    openFile(f);
+  };
+
+  const handleFileDoubleClick = (f) => {
+    if (f.name.toLowerCase().endsWith('.zip')) openArchive(f);
+    else openFile(f);
   };
 
   const readDir = async (handle) => {
@@ -340,7 +356,8 @@ export default function FileExplorer() {
             <div
               key={i}
               className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openFile(f)}
+              onClick={() => handleFileClick(f)}
+              onDoubleClick={() => handleFileDoubleClick(f)}
             >
               {f.name}
             </div>
