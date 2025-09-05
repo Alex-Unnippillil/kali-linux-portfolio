@@ -20,6 +20,16 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getLockClock as loadLockClock,
+  setLockClock as saveLockClock,
+  getLockDate as loadLockDate,
+  setLockDate as saveLockDate,
+  getLockBlur as loadLockBlur,
+  setLockBlur as saveLockBlur,
+  getLockPasswordFocus as loadLockPasswordFocus,
+  setLockPasswordFocus as saveLockPasswordFocus,
+  getLockCapsLock as loadLockCapsLock,
+  setLockCapsLock as saveLockCapsLock,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -63,6 +73,11 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  lockClock: boolean;
+  lockDate: boolean;
+  lockBlur: boolean;
+  lockPasswordFocus: boolean;
+  lockCapsLock: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +89,11 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setLockClock: (value: boolean) => void;
+  setLockDate: (value: boolean) => void;
+  setLockBlur: (value: boolean) => void;
+  setLockPasswordFocus: (value: boolean) => void;
+  setLockCapsLock: (value: boolean) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +108,11 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  lockClock: defaults.lockClock,
+  lockDate: defaults.lockDate,
+  lockBlur: defaults.lockBlur,
+  lockPasswordFocus: defaults.lockPasswordFocus,
+  lockCapsLock: defaults.lockCapsLock,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +124,11 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setLockClock: () => {},
+  setLockDate: () => {},
+  setLockBlur: () => {},
+  setLockPasswordFocus: () => {},
+  setLockCapsLock: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -112,6 +142,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
+  const [lockClock, setLockClock] = useState<boolean>(defaults.lockClock);
+  const [lockDate, setLockDate] = useState<boolean>(defaults.lockDate);
+  const [lockBlur, setLockBlur] = useState<boolean>(defaults.lockBlur);
+  const [lockPasswordFocus, setLockPasswordFocus] = useState<boolean>(defaults.lockPasswordFocus);
+  const [lockCapsLock, setLockCapsLock] = useState<boolean>(defaults.lockCapsLock);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
@@ -127,6 +162,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setLockClock(await loadLockClock());
+      setLockDate(await loadLockDate());
+      setLockBlur(await loadLockBlur());
+      setLockPasswordFocus(await loadLockPasswordFocus());
+      setLockCapsLock(await loadLockCapsLock());
       setTheme(loadTheme());
     })();
   }, []);
@@ -236,6 +276,26 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveLockClock(lockClock);
+  }, [lockClock]);
+
+  useEffect(() => {
+    saveLockDate(lockDate);
+  }, [lockDate]);
+
+  useEffect(() => {
+    saveLockBlur(lockBlur);
+  }, [lockBlur]);
+
+  useEffect(() => {
+    saveLockPasswordFocus(lockPasswordFocus);
+  }, [lockPasswordFocus]);
+
+  useEffect(() => {
+    saveLockCapsLock(lockCapsLock);
+  }, [lockCapsLock]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -250,6 +310,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        lockClock,
+        lockDate,
+        lockBlur,
+        lockPasswordFocus,
+        lockCapsLock,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +326,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setLockClock,
+        setLockDate,
+        setLockBlur,
+        setLockPasswordFocus,
+        setLockCapsLock,
       }}
     >
       {children}
