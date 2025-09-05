@@ -10,6 +10,8 @@ import {
   setReducedMotion as saveReducedMotion,
   getFontScale as loadFontScale,
   setFontScale as saveFontScale,
+  getFontHinting as loadFontHinting,
+  setFontHinting as saveFontHinting,
   getHighContrast as loadHighContrast,
   setHighContrast as saveHighContrast,
   getLargeHitAreas as loadLargeHitAreas,
@@ -57,6 +59,7 @@ interface SettingsContextValue {
   density: Density;
   reducedMotion: boolean;
   fontScale: number;
+  fontHinting: boolean;
   highContrast: boolean;
   largeHitAreas: boolean;
   pongSpin: boolean;
@@ -68,6 +71,7 @@ interface SettingsContextValue {
   setDensity: (density: Density) => void;
   setReducedMotion: (value: boolean) => void;
   setFontScale: (value: number) => void;
+  setFontHinting: (value: boolean) => void;
   setHighContrast: (value: boolean) => void;
   setLargeHitAreas: (value: boolean) => void;
   setPongSpin: (value: boolean) => void;
@@ -82,6 +86,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
   fontScale: defaults.fontScale,
+  fontHinting: defaults.fontHinting,
   highContrast: defaults.highContrast,
   largeHitAreas: defaults.largeHitAreas,
   pongSpin: defaults.pongSpin,
@@ -93,6 +98,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setDensity: () => {},
   setReducedMotion: () => {},
   setFontScale: () => {},
+  setFontHinting: () => {},
   setHighContrast: () => {},
   setLargeHitAreas: () => {},
   setPongSpin: () => {},
@@ -107,6 +113,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
+  const [fontHinting, setFontHinting] = useState<boolean>(defaults.fontHinting);
   const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
@@ -122,6 +129,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
       setFontScale(await loadFontScale());
+      setFontHinting(await loadFontHinting());
       setHighContrast(await loadHighContrast());
       setLargeHitAreas(await loadLargeHitAreas());
       setPongSpin(await loadPongSpin());
@@ -193,6 +201,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [fontScale]);
 
   useEffect(() => {
+    document.documentElement.style.setProperty(
+      '--font-smoothing',
+      fontHinting ? 'auto' : 'antialiased',
+    );
+    saveFontHinting(fontHinting);
+  }, [fontHinting]);
+
+  useEffect(() => {
     document.documentElement.classList.toggle('high-contrast', highContrast);
     saveHighContrast(highContrast);
   }, [highContrast]);
@@ -244,6 +260,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         density,
         reducedMotion,
         fontScale,
+        fontHinting,
         highContrast,
         largeHitAreas,
         pongSpin,
@@ -255,6 +272,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setDensity,
         setReducedMotion,
         setFontScale,
+        setFontHinting,
         setHighContrast,
         setLargeHitAreas,
         setPongSpin,

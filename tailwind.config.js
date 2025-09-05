@@ -1,4 +1,5 @@
 const plugin = require('tailwindcss/plugin');
+const defaultTheme = require('tailwindcss/defaultTheme');
 
 module.exports = {
   darkMode: 'class',
@@ -39,6 +40,15 @@ module.exports = {
       },
       fontFamily: {
         ubuntu: ['Ubuntu', 'sans-serif'],
+        sans: ['Cantarell', 'Ubuntu', ...defaultTheme.fontFamily.sans],
+        mono: [
+          'Fira Code',
+          'Fira Mono',
+          ...defaultTheme.fontFamily.mono,
+          'Apple Color Emoji',
+          'Segoe UI Emoji',
+          'Noto Color Emoji',
+        ],
       },
       minWidth: {
         '0': '0',

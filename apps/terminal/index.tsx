@@ -304,6 +304,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         scrollback: 1000,
         cols: 80,
         rows: 24,
+        fontFamily:
+          'Fira Code, Fira Mono, Source Code Pro, monospace, Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji',
       });
       const fit = new FitAddon();
       const search = new SearchAddon();

@@ -52,7 +52,9 @@
   --motion-slow: 500ms;
 
   /* Fonts */
-  --font-family-base: 'Ubuntu', sans-serif;
+  --font-family-base: 'Cantarell', 'Ubuntu', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji';
+  --font-family-mono: 'Fira Code', 'Fira Mono', 'Source Code Pro', monospace, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji';
+  --font-smoothing: auto;
   --font-multiplier: 1;
   /* Minimum interactive target size */
   --hit-area: 32px;

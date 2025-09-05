@@ -9,6 +9,7 @@ const DEFAULT_SETTINGS = {
   density: 'regular',
   reducedMotion: false,
   fontScale: 1,
+  fontHinting: true,
   highContrast: false,
   largeHitAreas: false,
   pongSpin: true,
@@ -69,6 +70,17 @@ export async function getFontScale() {
 export async function setFontScale(scale) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem('font-scale', String(scale));
+}
+
+export async function getFontHinting() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.fontHinting;
+  const stored = window.localStorage.getItem('font-hinting');
+  return stored === null ? DEFAULT_SETTINGS.fontHinting : stored === 'true';
+}
+
+export async function setFontHinting(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('font-hinting', value ? 'true' : 'false');
 }
 
 export async function getHighContrast() {
@@ -132,6 +144,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('density');
   window.localStorage.removeItem('reduced-motion');
   window.localStorage.removeItem('font-scale');
+  window.localStorage.removeItem('font-hinting');
   window.localStorage.removeItem('high-contrast');
   window.localStorage.removeItem('large-hit-areas');
   window.localStorage.removeItem('pong-spin');
@@ -146,6 +159,7 @@ export async function exportSettings() {
     density,
     reducedMotion,
     fontScale,
+    fontHinting,
     highContrast,
     largeHitAreas,
     pongSpin,
@@ -157,6 +171,7 @@ export async function exportSettings() {
     getDensity(),
     getReducedMotion(),
     getFontScale(),
+    getFontHinting(),
     getHighContrast(),
     getLargeHitAreas(),
     getPongSpin(),
@@ -170,6 +185,7 @@ export async function exportSettings() {
     density,
     reducedMotion,
     fontScale,
+    fontHinting,
     highContrast,
     largeHitAreas,
     pongSpin,
@@ -194,6 +210,7 @@ export async function importSettings(json) {
     density,
     reducedMotion,
     fontScale,
+    fontHinting,
     highContrast,
     largeHitAreas,
     pongSpin,
@@ -206,6 +223,7 @@ export async function importSettings(json) {
   if (density !== undefined) await setDensity(density);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
   if (fontScale !== undefined) await setFontScale(fontScale);
+  if (fontHinting !== undefined) await setFontHinting(fontHinting);
   if (highContrast !== undefined) await setHighContrast(highContrast);
   if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas);
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
