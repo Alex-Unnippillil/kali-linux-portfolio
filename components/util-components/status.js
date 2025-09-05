@@ -2,12 +2,14 @@ import React, { useEffect, useState } from "react";
 import Image from 'next/image';
 import SmallArrow from "./small_arrow";
 import { useSettings } from '../../hooks/useSettings';
+import usePersistentState from '../../hooks/usePersistentState';
 
 const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
 
 export default function Status() {
   const { allowNetwork } = useSettings();
   const [online, setOnline] = useState(true);
+  const [mode] = usePersistentState('qs-mode', 'balanced');
 
   useEffect(() => {
     const pingServer = async () => {
@@ -38,6 +40,12 @@ export default function Status() {
     };
   }, []);
 
+  const modeIcon = {
+    performance: '/themes/Yaru/status/power-profile-performance-symbolic.svg',
+    balanced: '/themes/Yaru/status/power-profile-balanced-symbolic.svg',
+    powersave: '/themes/Yaru/status/power-profile-power-save-symbolic.svg',
+  }[mode];
+
   return (
     <div className="flex justify-center items-center">
       <span
@@ -55,6 +63,16 @@ export default function Status() {
         {!allowNetwork && (
           <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
         )}
+      </span>
+      <span className="mx-1.5">
+        <Image
+          width={16}
+          height={16}
+          src={modeIcon}
+          alt={mode}
+          className="inline status-symbol w-4 h-4"
+          sizes="16px"
+        />
       </span>
       <span className="mx-1.5">
         <Image
