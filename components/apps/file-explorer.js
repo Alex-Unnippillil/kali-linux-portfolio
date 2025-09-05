@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import usePersistentState from '../../hooks/usePersistentState';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -104,6 +105,13 @@ export default function FileExplorer() {
   const [results, setResults] = useState([]);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
+  const [view, setView] = useState('files');
+  const [remoteInput, setRemoteInput] = useState('');
+  const [connectedRemote, setConnectedRemote] = useState(null);
+  const [remoteBookmarks, setRemoteBookmarks] = usePersistentState(
+    'file-remote-bookmarks',
+    () => []
+  );
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -145,6 +153,27 @@ export default function FileExplorer() {
     if (unsavedDir) await opfsDelete(name, unsavedDir);
   };
 
+  const addBookmark = () => {
+    const url = remoteInput.trim();
+    if (!/^(smb|sftp|ftp):\/\//i.test(url)) return;
+    if (!remoteBookmarks.includes(url)) {
+      setRemoteBookmarks([...remoteBookmarks, url]);
+    }
+    setRemoteInput('');
+    setConnectedRemote(url);
+  };
+
+  const removeBookmark = (index) => {
+    setRemoteBookmarks(remoteBookmarks.filter((_, i) => i !== index));
+    if (connectedRemote && remoteBookmarks[index] === connectedRemote) {
+      setConnectedRemote(null);
+    }
+  };
+
+  const connectRemote = (url) => {
+    setConnectedRemote(url);
+  };
+
   const openFallback = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -161,6 +190,7 @@ export default function FileExplorer() {
       setRecent(await getRecentDirs());
       setPath([{ name: handle.name || '/', handle }]);
       await readDir(handle);
+      setView('files');
     } catch {}
   };
 
@@ -171,6 +201,7 @@ export default function FileExplorer() {
       setDirHandle(entry.handle);
       setPath([{ name: entry.name, handle: entry.handle }]);
       await readDir(entry.handle);
+      setView('files');
     } catch {}
   };
 
@@ -203,6 +234,7 @@ export default function FileExplorer() {
     setDirHandle(dir.handle);
     setPath((p) => [...p, { name: dir.name, handle: dir.handle }]);
     await readDir(dir.handle);
+    setView('files');
   };
 
   const navigateTo = async (index) => {
@@ -211,6 +243,7 @@ export default function FileExplorer() {
     setDirHandle(target.handle);
     setPath(path.slice(0, index + 1));
     await readDir(target.handle);
+    setView('files');
   };
 
   const goBack = async () => {
@@ -220,6 +253,7 @@ export default function FileExplorer() {
     setPath(newPath);
     setDirHandle(prev.handle);
     await readDir(prev.handle);
+    setView('files');
   };
 
   const saveFile = async () => {
@@ -298,19 +332,25 @@ export default function FileExplorer() {
   return (
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
       <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
-        <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
-          Open Folder
-        </button>
-        {path.length > 1 && (
-          <button onClick={goBack} className="px-2 py-1 bg-black bg-opacity-50 rounded">
-            Back
-          </button>
-        )}
-        <Breadcrumbs path={path} onNavigate={navigateTo} />
-        {currentFile && (
-          <button onClick={saveFile} className="px-2 py-1 bg-black bg-opacity-50 rounded">
-            Save
-          </button>
+        {view === 'remote' ? (
+          <span className="font-bold">Remote</span>
+        ) : (
+          <>
+            <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
+              Open Folder
+            </button>
+            {path.length > 1 && (
+              <button onClick={goBack} className="px-2 py-1 bg-black bg-opacity-50 rounded">
+                Back
+              </button>
+            )}
+            <Breadcrumbs path={path} onNavigate={navigateTo} />
+            {currentFile && (
+              <button onClick={saveFile} className="px-2 py-1 bg-black bg-opacity-50 rounded">
+                Save
+              </button>
+            )}
+          </>
         )}
       </div>
       <div className="flex flex-1 overflow-hidden">
@@ -345,29 +385,96 @@ export default function FileExplorer() {
               {f.name}
             </div>
           ))}
+          <div className="p-2 font-bold">Network</div>
+          <div
+            className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+            onClick={() => {
+              setView('remote');
+              setConnectedRemote(null);
+            }}
+          >
+            Remote
+          </div>
+          {remoteBookmarks.map((b, i) => (
+            <div
+              key={i}
+              className="pl-4 pr-2 cursor-pointer hover:bg-black hover:bg-opacity-30 truncate"
+              onClick={() => {
+                setView('remote');
+                connectRemote(b);
+              }}
+            >
+              {b}
+            </div>
+          ))}
         </div>
         <div className="flex-1 flex flex-col">
-          {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
-          )}
-          <div className="p-2 border-t border-gray-600">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Find in files"
-              className="px-1 py-0.5 text-black"
-            />
-            <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
-              Search
-            </button>
-            <div className="max-h-40 overflow-auto mt-2">
-              {results.map((r, i) => (
-                <div key={i}>
-                  <span className="font-bold">{r.file}:{r.line}</span> {r.text}
-                </div>
-              ))}
+          {view === 'remote' ? (
+            <div className="flex-1 flex flex-col p-2 overflow-auto">
+              <input
+                value={remoteInput}
+                onChange={(e) => setRemoteInput(e.target.value)}
+                placeholder="smb://, sftp:// or ftp://"
+                className="px-1 py-0.5 text-black"
+              />
+              <button onClick={addBookmark} className="mt-2 px-2 py-1 bg-black bg-opacity-50 rounded self-start">
+                Add Bookmark
+              </button>
+              <div className="mt-4">
+                {remoteBookmarks.length === 0 && <div>No bookmarks</div>}
+                {remoteBookmarks.map((b, i) => (
+                  <div key={i} className="flex items-center justify-between mb-1">
+                    <span className="cursor-pointer underline" onClick={() => connectRemote(b)}>
+                      {b}
+                    </span>
+                    <button
+                      onClick={() => removeBookmark(i)}
+                      className="px-1 text-xs bg-black bg-opacity-50 rounded"
+                    >
+                      X
+                    </button>
+                  </div>
+                ))}
+                {connectedRemote && (
+                  <div className="mt-4 p-2 bg-black bg-opacity-40 rounded">
+                    Connected to {connectedRemote} (simulated)
+                    <ul className="list-disc ml-5 mt-1">
+                      <li>share</li>
+                      <li>public</li>
+                    </ul>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          ) : (
+            <>
+              {currentFile && (
+                <textarea
+                  className="flex-1 p-2 bg-ub-cool-grey outline-none"
+                  value={content}
+                  onChange={onChange}
+                />
+              )}
+              <div className="p-2 border-t border-gray-600">
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Find in files"
+                  className="px-1 py-0.5 text-black"
+                />
+                <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
+                  Search
+                </button>
+                <div className="max-h-40 overflow-auto mt-2">
+                  {results.map((r, i) => (
+                    <div key={i}>
+                      <span className="font-bold">{r.file}:{r.line}</span> {r.text}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
