@@ -15,8 +15,12 @@ async function man(args: string, ctx: CommandContext) {
     man: () => fetch(new URL('../man/man.txt', import.meta.url)).then((r) => r.text()),
   };
   const loader = loaders[name];
-  if (loader) ctx.writeLine(await loader());
-  else ctx.writeLine(`No manual entry for ${name}`);
+  if (loader) {
+    const text = await loader();
+    const [synopsis, ...rest] = text.split('\n');
+    const description = rest.join('\n').trim();
+    ctx.openManPage(name, { synopsis, description });
+  } else ctx.writeLine(`No manual entry for ${name}`);
 }
 
 function history(_args: string, ctx: CommandContext) {

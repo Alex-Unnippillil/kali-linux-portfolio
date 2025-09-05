@@ -11,6 +11,7 @@ import React, {
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
+import ManDrawer from './components/ManDrawer';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -88,6 +89,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const filesRef = useRef<Record<string, string>>(files);
   const aliasesRef = useRef<Record<string, string>>({});
   const historyRef = useRef<string[]>([]);
+  const [manPage, setManPage] = useState<{
+    name: string;
+    synopsis: string;
+    description: string;
+  } | null>(null);
   const contextRef = useRef<CommandContext>({
     writeLine: () => {},
     files: filesRef.current,
@@ -97,6 +103,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       aliasesRef.current[n] = v;
     },
     runWorker: async () => {},
+    openManPage: (name, sections) => {
+      setManPage({ name, ...sections });
+    },
   });
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
@@ -407,6 +416,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           <div className="mt-10 w-80 bg-gray-800 p-4 rounded">
             <input
               autoFocus
+              aria-label="command-palette"
               className="w-full mb-2 bg-black text-white p-2"
               value={paletteInput}
               onChange={(e) => setPaletteInput(e.target.value)}
@@ -469,6 +479,15 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
             </div>
           </div>
         </div>
+      )}
+      {manPage && (
+        <ManDrawer
+          open={!!manPage}
+          onClose={() => setManPage(null)}
+          name={manPage.name}
+          synopsis={manPage.synopsis}
+          description={manPage.description}
+        />
       )}
       <div className="flex flex-col h-full">
         <div className="flex items-center gap-2 bg-gray-800 p-1">
