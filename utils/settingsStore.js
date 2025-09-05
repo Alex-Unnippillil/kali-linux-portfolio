@@ -14,6 +14,11 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  lockClock: true,
+  lockDate: true,
+  lockBlur: true,
+  lockPasswordFocus: true,
+  lockCapsLock: true,
 };
 
 export async function getAccent() {
@@ -123,6 +128,61 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getLockClock() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.lockClock;
+  const val = window.localStorage.getItem('lock-clock');
+  return val === null ? DEFAULT_SETTINGS.lockClock : val === 'true';
+}
+
+export async function setLockClock(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('lock-clock', value ? 'true' : 'false');
+}
+
+export async function getLockDate() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.lockDate;
+  const val = window.localStorage.getItem('lock-date');
+  return val === null ? DEFAULT_SETTINGS.lockDate : val === 'true';
+}
+
+export async function setLockDate(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('lock-date', value ? 'true' : 'false');
+}
+
+export async function getLockBlur() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.lockBlur;
+  const val = window.localStorage.getItem('lock-blur');
+  return val === null ? DEFAULT_SETTINGS.lockBlur : val === 'true';
+}
+
+export async function setLockBlur(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('lock-blur', value ? 'true' : 'false');
+}
+
+export async function getLockPasswordFocus() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.lockPasswordFocus;
+  const val = window.localStorage.getItem('lock-password-focus');
+  return val === null ? DEFAULT_SETTINGS.lockPasswordFocus : val === 'true';
+}
+
+export async function setLockPasswordFocus(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('lock-password-focus', value ? 'true' : 'false');
+}
+
+export async function getLockCapsLock() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.lockCapsLock;
+  const val = window.localStorage.getItem('lock-capslock');
+  return val === null ? DEFAULT_SETTINGS.lockCapsLock : val === 'true';
+}
+
+export async function setLockCapsLock(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('lock-capslock', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +197,11 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('lock-clock');
+  window.localStorage.removeItem('lock-date');
+  window.localStorage.removeItem('lock-blur');
+  window.localStorage.removeItem('lock-password-focus');
+  window.localStorage.removeItem('lock-capslock');
 }
 
 export async function exportSettings() {
@@ -151,6 +216,11 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    lockClock,
+    lockDate,
+    lockBlur,
+    lockPasswordFocus,
+    lockCapsLock,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +232,11 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getLockClock(),
+    getLockDate(),
+    getLockBlur(),
+    getLockPasswordFocus(),
+    getLockCapsLock(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +250,11 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    lockClock,
+    lockDate,
+    lockBlur,
+    lockPasswordFocus,
+    lockCapsLock,
     theme,
   });
 }
@@ -199,6 +279,11 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    lockClock,
+    lockDate,
+    lockBlur,
+    lockPasswordFocus,
+    lockCapsLock,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +296,12 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (lockClock !== undefined) await setLockClock(lockClock);
+  if (lockDate !== undefined) await setLockDate(lockDate);
+  if (lockBlur !== undefined) await setLockBlur(lockBlur);
+  if (lockPasswordFocus !== undefined)
+    await setLockPasswordFocus(lockPasswordFocus);
+  if (lockCapsLock !== undefined) await setLockCapsLock(lockCapsLock);
   if (theme !== undefined) setTheme(theme);
 }
 

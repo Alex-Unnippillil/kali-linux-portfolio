@@ -31,12 +31,23 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    lockClock,
+    setLockClock,
+    lockDate,
+    setLockDate,
+    lockBlur,
+    setLockBlur,
+    lockPasswordFocus,
+    setLockPasswordFocus,
+    lockCapsLock,
+    setLockCapsLock,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
+    { id: "lock", label: "Lock Screen" },
     { id: "privacy", label: "Privacy" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
@@ -267,6 +278,50 @@ export default function Settings() {
             >
               Edit Shortcuts
             </button>
+          </div>
+        </>
+      )}
+      {activeTab === "lock" && (
+        <>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Show Clock:</span>
+            <ToggleSwitch
+              checked={lockClock}
+              onChange={setLockClock}
+              ariaLabel="Show Clock"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Show Date:</span>
+            <ToggleSwitch
+              checked={lockDate}
+              onChange={setLockDate}
+              ariaLabel="Show Date"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Blur Wallpaper:</span>
+            <ToggleSwitch
+              checked={lockBlur}
+              onChange={setLockBlur}
+              ariaLabel="Blur Wallpaper"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Auto-Focus Password:</span>
+            <ToggleSwitch
+              checked={lockPasswordFocus}
+              onChange={setLockPasswordFocus}
+              ariaLabel="Auto-Focus Password"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Caps Lock Indicator:</span>
+            <ToggleSwitch
+              checked={lockCapsLock}
+              onChange={setLockCapsLock}
+              ariaLabel="Caps Lock Indicator"
+            />
           </div>
         </>
       )}
