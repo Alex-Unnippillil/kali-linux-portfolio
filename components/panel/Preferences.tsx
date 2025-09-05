@@ -40,6 +40,18 @@ export default function Preferences() {
     return localStorage.getItem(`${PANEL_PREFIX}autohide`) === "true";
   });
 
+  const [volumeStep, setVolumeStep] = useState(() => {
+    if (typeof window === "undefined") return 5;
+    const stored = localStorage.getItem(`${PANEL_PREFIX}volume-step`);
+    return stored ? parseInt(stored, 10) : 5;
+  });
+
+  const [brightnessStep, setBrightnessStep] = useState(() => {
+    if (typeof window === "undefined") return 10;
+    const stored = localStorage.getItem(`${PANEL_PREFIX}brightness-step`);
+    return stored ? parseInt(stored, 10) : 10;
+  });
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     localStorage.setItem(`${PANEL_PREFIX}size`, String(size));
@@ -59,6 +71,16 @@ export default function Preferences() {
     if (typeof window === "undefined") return;
     localStorage.setItem(`${PANEL_PREFIX}autohide`, autohide ? "true" : "false");
   }, [autohide]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(`${PANEL_PREFIX}volume-step`, String(volumeStep));
+  }, [volumeStep]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(`${PANEL_PREFIX}brightness-step`, String(brightnessStep));
+  }, [brightnessStep]);
 
   return (
     <div>
@@ -88,6 +110,34 @@ export default function Preferences() {
                 checked={autohide}
                 onChange={setAutohide}
                 ariaLabel="Autohide panel"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <label htmlFor="volume-step" className="text-ubt-grey">
+                Volume step
+              </label>
+              <input
+                id="volume-step"
+                type="number"
+                min="1"
+                max="100"
+                value={volumeStep}
+                onChange={(e) => setVolumeStep(parseInt(e.target.value, 10))}
+                className="bg-ub-cool-grey text-white px-2 py-1 rounded w-16 text-right"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <label htmlFor="brightness-step" className="text-ubt-grey">
+                Brightness step
+              </label>
+              <input
+                id="brightness-step"
+                type="number"
+                min="1"
+                max="100"
+                value={brightnessStep}
+                onChange={(e) => setBrightnessStep(parseInt(e.target.value, 10))}
+                className="bg-ub-cool-grey text-white px-2 py-1 rounded w-16 text-right"
               />
             </div>
           </div>
