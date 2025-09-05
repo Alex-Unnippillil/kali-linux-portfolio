@@ -22,7 +22,8 @@ import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
-import { useSnapSetting } from '../../hooks/usePersistentState';
+import computePlacement from '../../src/wm/placement';
+import { useSnapSetting, usePlacementSetting } from '../../hooks/usePersistentState';
 
 export class Desktop extends Component {
     constructor() {
@@ -603,13 +604,27 @@ export class Desktop extends Component {
         } else {
             let closed_windows = this.state.closed_windows;
             let favourite_apps = this.state.favourite_apps;
+            const window_positions = { ...this.state.window_positions };
+            if (!window_positions[objId]) {
+                const openWindows = Object.keys(closed_windows).filter(id => closed_windows[id] === false);
+                const lastId = openWindows[openWindows.length - 1] || null;
+                const lastPos = lastId ? window_positions[lastId] : null;
+                const appMeta = apps.find(a => a.id === objId) || {};
+                const size = { width: appMeta.defaultWidth || 60, height: appMeta.defaultHeight || 85 };
+                const viewport = { width: window.innerWidth, height: window.innerHeight };
+                const mode = this.props.placement || 'smart';
+                let pos = computePlacement(mode, size, viewport, lastPos);
+                const snap = this.props.snapEnabled ? (v) => Math.round(v / 8) * 8 : (v) => v;
+                pos = { x: snap(pos.x), y: snap(pos.y) };
+                window_positions[objId] = pos;
+            }
             let frequentApps = [];
             try { frequentApps = JSON.parse(safeLocalStorage?.getItem('frequentApps') || '[]'); } catch (e) { frequentApps = []; }
             var currentApp = frequentApps.find(app => app.id === objId);
             if (currentApp) {
                 frequentApps.forEach((app) => {
                     if (app.id === currentApp.id) {
-                        app.frequency += 1; // increase the frequency if app is found 
+                        app.frequency += 1; // increase the frequency if app is found
                     }
                 });
             } else {
@@ -631,7 +646,7 @@ export class Desktop extends Component {
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
-                this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
+                this.setState({ closed_windows, favourite_apps, allAppsView: false, window_positions }, () => {
                     this.focus(objId);
                     this.saveSession();
                 });
@@ -958,5 +973,6 @@ export class Desktop extends Component {
 
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
-    return <Desktop {...props} snapEnabled={snapEnabled} />;
+    const [placement] = usePlacementSetting();
+    return <Desktop {...props} snapEnabled={snapEnabled} placement={placement} />;
 }

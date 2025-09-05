@@ -60,3 +60,10 @@ export const useSnapSetting = () =>
     true,
     (v): v is boolean => typeof v === 'boolean',
   );
+
+export const usePlacementSetting = () =>
+  usePersistentState<'smart' | 'center'>(
+    'window-placement',
+    'smart',
+    (v): v is 'smart' | 'center' => v === 'smart' || v === 'center',
+  );
