@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import usePersistentState from './usePersistentState';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -115,6 +116,28 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
+  const [rotationMode] = usePersistentState<'off' | 'daily' | 'login'>(
+    'bg-slideshow-mode',
+    'off',
+    (v): v is 'off' | 'daily' | 'login' =>
+      v === 'off' || v === 'daily' || v === 'login',
+  );
+  const [rotationSet] = usePersistentState<string[]>(
+    'bg-slideshow-selected',
+    [],
+    (v): v is string[] => Array.isArray(v) && v.every((s) => typeof s === 'string'),
+  );
+  const [rotationIndex, setRotationIndex] = usePersistentState<number>(
+    'bg-slideshow-index',
+    0,
+    (v): v is number => typeof v === 'number',
+  );
+  const [rotationDate, setRotationDate] = usePersistentState<string>(
+    'bg-slideshow-date',
+    '',
+    (v): v is string => typeof v === 'string',
+  );
+
   useEffect(() => {
     (async () => {
       setAccent(await loadAccent());
@@ -155,6 +178,24 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveWallpaper(wallpaper);
   }, [wallpaper]);
+
+  useEffect(() => {
+    if (rotationMode === 'off') return;
+    if (!rotationSet.length) return;
+    const index = rotationIndex % rotationSet.length;
+    const base = rotationSet[index].replace(/\.[^.]+$/, '');
+    if (rotationMode === 'daily') {
+      const today = new Date().toISOString().slice(0, 10);
+      if (rotationDate === today) return;
+      setWallpaper(base);
+      setRotationIndex((index + 1) % rotationSet.length);
+      setRotationDate(today);
+    } else if (rotationMode === 'login') {
+      setWallpaper(base);
+      setRotationIndex((index + 1) % rotationSet.length);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rotationMode, rotationSet]);
 
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {
