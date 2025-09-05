@@ -108,6 +108,7 @@ const NmapNSEApp = createDynamicApp('nmap-nse', 'Nmap NSE');
 const OpenVASApp = createDynamicApp('openvas', 'OpenVAS');
 const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
 const SecurityToolsApp = createDynamicApp('security-tools', 'Security Tools');
+const KaliTweaksApp = createDynamicApp('kali-tweaks', 'Kali Tweaks');
 const SSHApp = createDynamicApp('ssh', 'SSH Command Builder');
 const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
 const HtmlRewriteApp = createDynamicApp('html-rewriter', 'HTML Rewriter');
@@ -193,6 +194,7 @@ const displayNmapNSE = createDisplay(NmapNSEApp);
 const displayOpenVAS = createDisplay(OpenVASApp);
 const displayReconNG = createDisplay(ReconNGApp);
 const displaySecurityTools = createDisplay(SecurityToolsApp);
+const displayKaliTweaks = createDisplay(KaliTweaksApp);
 const displaySSH = createDisplay(SSHApp);
 const displayHTTP = createDisplay(HTTPApp);
 const displayHtmlRewrite = createDisplay(HtmlRewriteApp);
@@ -1050,6 +1052,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displaySecurityTools,
+  },
+  {
+    id: 'kali-tweaks',
+    title: 'Kali Tweaks',
+    icon: '/themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayKaliTweaks,
   },
   // Utilities are grouped separately
   ...utilities,
