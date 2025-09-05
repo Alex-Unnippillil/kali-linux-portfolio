@@ -19,9 +19,14 @@ export default class Ubuntu extends Component {
 		};
 	}
 
-	componentDidMount() {
-		this.getLocalData();
-	}
+        componentDidMount() {
+                this.getLocalData();
+                window.addEventListener('simulate-sleep', this.handleSimulatedSleep);
+        }
+
+        componentWillUnmount() {
+                window.removeEventListener('simulate-sleep', this.handleSimulatedSleep);
+        }
 
 	setTimeOutBootScreen = () => {
 		setTimeout(() => {
@@ -90,7 +95,7 @@ export default class Ubuntu extends Component {
                 safeLocalStorage?.setItem('bg-image', img_name);
 	};
 
-	shutDown = () => {
+        shutDown = () => {
 		ReactGA.send({ hitType: "pageview", page: "/switch-off", title: "Custom Title" });
 
 		ReactGA.event({
@@ -105,13 +110,27 @@ export default class Ubuntu extends Component {
                 safeLocalStorage?.setItem('shut-down', true);
 	};
 
-	turnOn = () => {
+        turnOn = () => {
 		ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
 		this.setState({ shutDownScreen: false, booting_screen: true });
 		this.setTimeOutBootScreen();
                 safeLocalStorage?.setItem('shut-down', false);
-	};
+        };
+
+        handleSimulatedSleep = () => {
+                const lockOnSleep = safeLocalStorage?.getItem('lock-on-sleep') === 'true';
+                const proceed = () => {
+                        // Placeholder for additional sleep handling
+                        console.log('Simulated sleep');
+                };
+                if (lockOnSleep) {
+                        this.lockScreen();
+                        setTimeout(proceed, 100);
+                } else {
+                        proceed();
+                }
+        };
 
 	render() {
 		return (
