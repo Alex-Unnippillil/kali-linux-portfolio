@@ -10,12 +10,13 @@ import '../styles/resume-print.css';
 import '../styles/print.css';
 import '@xterm/xterm/css/xterm.css';
 import 'leaflet/dist/leaflet.css';
-import { SettingsProvider } from '../hooks/useSettings';
+import { SettingsProvider, useSettings } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { useRouter } from 'next/router';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -24,6 +25,55 @@ const ubuntu = Ubuntu({
   weight: ['300', '400', '500', '700'],
 });
 
+function HotCornerWatcher() {
+  const { hotCorners } = useSettings();
+  const router = useRouter();
+  useEffect(() => {
+    const cornerSize = 20;
+    let timeout = null;
+    let active = null;
+    const handle = (e) => {
+      const { innerWidth, innerHeight } = window;
+      const { clientX: x, clientY: y } = e;
+      let corner = null;
+      if (x <= cornerSize && y <= cornerSize) corner = 'topLeft';
+      else if (x >= innerWidth - cornerSize && y <= cornerSize) corner = 'topRight';
+      else if (x <= cornerSize && y >= innerHeight - cornerSize) corner = 'bottomLeft';
+      else if (x >= innerWidth - cornerSize && y >= innerHeight - cornerSize) corner = 'bottomRight';
+      if (corner) {
+        if (corner !== active) {
+          active = corner;
+          clearTimeout(timeout);
+          timeout = setTimeout(() => {
+            const action = hotCorners[corner];
+            switch (action) {
+              case 'show-desktop':
+                router.push('/');
+                break;
+              case 'app-finder':
+                router.push('/apps');
+                break;
+              case 'screensaver':
+                router.push('/screensaver');
+                break;
+              default:
+                break;
+            }
+          }, 200);
+        }
+      } else {
+        active = null;
+        clearTimeout(timeout);
+      }
+    };
+    window.addEventListener('mousemove', handle);
+    return () => {
+      window.removeEventListener('mousemove', handle);
+      clearTimeout(timeout);
+    };
+  }, [hotCorners, router]);
+  return null;
+}
 
 function MyApp(props) {
   const { Component, pageProps } = props;
@@ -158,6 +208,7 @@ function MyApp(props) {
         </a>
         <SettingsProvider>
           <PipPortalProvider>
+            <HotCornerWatcher />
             <div aria-live="polite" id="live-region" />
             <Component {...pageProps} />
             <ShortcutOverlay />
