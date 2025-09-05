@@ -5,12 +5,12 @@ import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
 
 export default class Navbar extends Component {
-	constructor() {
-		super();
-		this.state = {
-			status_card: false
-		};
-	}
+        constructor(props) {
+                super(props);
+                this.state = {
+                        status_card: false
+                };
+        }
 
 	render() {
 		return (
@@ -49,7 +49,7 @@ export default class Navbar extends Component {
                                         }
                                 >
                                         <Status />
-                                        <QuickSettings open={this.state.status_card} />
+                                        <QuickSettings open={this.state.status_card} openApp={this.props.openApp} />
                                 </button>
 			</div>
 		);
