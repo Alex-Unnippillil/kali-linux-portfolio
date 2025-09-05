@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
+import usePanelSettings from '../../hooks/usePanelSettings';
 
 export default function Taskbar(props) {
     const runningApps = props.apps.filter(app => props.closed_windows[app.id] === false);
+    const [panelSettings] = usePanelSettings();
+    const { size, mode, autohide, background } = panelSettings;
+    const [hover, setHover] = useState(false);
 
     const handleClick = (app) => {
         const id = app.id;
@@ -15,8 +19,15 @@ export default function Taskbar(props) {
         }
     };
 
+    const hiddenClass = autohide && !hover ? (mode === 'top' ? '-translate-y-full' : 'translate-y-full') : '';
     return (
-        <div className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center z-40" role="toolbar">
+        <div
+            role="toolbar"
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
+            className={`absolute ${mode === 'top' ? 'top-0' : 'bottom-0'} left-0 w-full flex items-center z-40 transition-transform duration-300 ${hiddenClass}`}
+            style={{ height: size, background }}
+        >
             {runningApps.map(app => (
                 <button
                     key={app.id}
