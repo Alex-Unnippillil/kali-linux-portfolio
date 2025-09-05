@@ -11,6 +11,7 @@ import React, {
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
+import { safeLocalStorage } from '../../utils/safeStorage';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -104,6 +105,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
+  const cwdRef = useRef('');
+  useEffect(() => {
+    const start = safeLocalStorage?.getItem('terminal-start-path');
+    if (start) {
+      cwdRef.current = start;
+      safeLocalStorage?.removeItem('terminal-start-path');
+    }
+  }, []);
   const [overflow, setOverflow] = useState({ top: false, bottom: false });
   const ansiColors = [
     '#000000',
@@ -146,8 +155,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   contextRef.current.writeLine = writeLine;
 
   const prompt = useCallback(() => {
-    if (termRef.current) termRef.current.write('$ ');
-  }, []);
+    const prefix = cwdRef.current ? `${cwdRef.current} $ ` : '$ ';
+    if (termRef.current) termRef.current.write(prefix);
+  }, [cwdRef]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(contentRef.current).catch(() => {});

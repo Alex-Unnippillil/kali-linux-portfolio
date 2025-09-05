@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import { safeLocalStorage } from '../../utils/safeStorage';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -91,7 +92,7 @@ async function addRecentDir(handle) {
   } catch {}
 }
 
-export default function FileExplorer() {
+export default function FileExplorer({ openApp }) {
   const [supported, setSupported] = useState(true);
   const [dirHandle, setDirHandle] = useState(null);
   const [files, setFiles] = useState([]);
@@ -115,6 +116,20 @@ export default function FileExplorer() {
     deleteFile: opfsDelete,
   } = useOPFS();
   const [unsavedDir, setUnsavedDir] = useState(null);
+  const [menu, setMenu] = useState({ show: false, x: 0, y: 0, path: '' });
+
+  useEffect(() => {
+    const handleClick = () => setMenu((m) => ({ ...m, show: false }));
+    const handleKey = (e) => {
+      if (e.key === 'Escape') setMenu((m) => ({ ...m, show: false }));
+    };
+    document.addEventListener('click', handleClick);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('click', handleClick);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, []);
 
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
@@ -172,6 +187,20 @@ export default function FileExplorer() {
       setPath([{ name: entry.name, handle: entry.handle }]);
       await readDir(entry.handle);
     } catch {}
+  };
+
+  const handleDirContext = (e, dir) => {
+    e.preventDefault();
+    const fullPath =
+      '/' +
+      [...path.map((p) => p.name).filter((n) => n && n !== '/'), dir.name].join('/');
+    setMenu({ show: true, x: e.pageX, y: e.pageY, path: fullPath });
+  };
+
+  const openTerminalHere = () => {
+    safeLocalStorage?.setItem('terminal-start-path', menu.path);
+    if (openApp) openApp('terminal');
+    setMenu((m) => ({ ...m, show: false }));
   };
 
   const openFile = async (file) => {
@@ -296,7 +325,21 @@ export default function FileExplorer() {
   }
 
   return (
-    <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
+    <>
+      {menu.show && (
+        <div
+          style={{ left: menu.x, top: menu.y }}
+          className="cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-2 absolute z-50 text-sm"
+        >
+          <button
+            onClick={openTerminalHere}
+            className="w-full text-left cursor-default py-0.5 hover:bg-gray-700"
+          >
+            Open Terminal Here
+          </button>
+        </div>
+      )}
+      <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
       <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
         <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
           Open Folder
@@ -331,6 +374,7 @@ export default function FileExplorer() {
               key={i}
               className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
               onClick={() => openDir(d)}
+              onContextMenu={(e) => handleDirContext(e, d)}
             >
               {d.name}
             </div>
@@ -370,6 +414,7 @@ export default function FileExplorer() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
