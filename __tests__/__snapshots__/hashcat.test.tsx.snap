@@ -1,0 +1,443 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`HashcatApp matches snapshot with mask tokens and polite live region 1`] = `
+<div>
+  <div
+    class="h-full w-full flex flex-col items-center justify-center gap-4 bg-ub-cool-grey text-white"
+  >
+    <div>
+      <label
+        class="mr-2"
+        for="hash-input"
+      >
+        Hash:
+      </label>
+      <input
+        class="text-black px-2 py-1"
+        id="hash-input"
+        value=""
+      />
+    </div>
+    <div>
+      <label
+        class="mr-2"
+        for="hash-filter"
+      >
+        Filter Modes:
+      </label>
+      <input
+        class="text-black px-2 py-1"
+        id="hash-filter"
+        value=""
+      />
+    </div>
+    <div>
+      <label
+        class="mr-2"
+        for="hash-type"
+      >
+        Hash Type:
+      </label>
+      <select
+        class="text-black px-2 py-1"
+        id="hash-type"
+      >
+        <option
+          value="0"
+        >
+          0
+           - 
+          MD5
+           (
+          Fast, legacy 32-character hash
+          )
+        </option>
+        <option
+          value="100"
+        >
+          100
+           - 
+          SHA1
+           (
+          160-bit secure hash algorithm
+          )
+        </option>
+        <option
+          value="1400"
+        >
+          1400
+           - 
+          SHA256
+           (
+          256-bit SHA2 hash
+          )
+        </option>
+        <option
+          value="3200"
+        >
+          3200
+           - 
+          bcrypt
+           (
+          Adaptive hash with salt and cost factor
+          )
+        </option>
+      </select>
+    </div>
+    <div>
+      <label
+        class="mr-2"
+        for="attack-mode"
+      >
+        Attack Mode:
+      </label>
+      <select
+        class="text-black px-2 py-1"
+        id="attack-mode"
+      >
+        <option
+          value="0"
+        >
+          0
+           - 
+          Straight
+        </option>
+        <option
+          value="3"
+        >
+          3
+           - 
+          Brute-force
+        </option>
+        <option
+          value="6"
+        >
+          6
+           - 
+          Hybrid Wordlist + Mask
+        </option>
+        <option
+          value="7"
+        >
+          7
+           - 
+          Hybrid Mask + Wordlist
+        </option>
+      </select>
+    </div>
+    <div>
+      <label
+        class="block"
+        for="mask-input"
+      >
+        Mask
+      </label>
+      <input
+        class="text-black px-2 py-1 w-full"
+        id="mask-input"
+        value=""
+      />
+      <div
+        class="space-x-2 mt-1"
+      >
+        <button>
+          ?l
+        </button>
+        <button>
+          ?u
+        </button>
+        <button>
+          ?d
+        </button>
+        <button>
+          ?s
+        </button>
+        <button>
+          ?a
+        </button>
+      </div>
+    </div>
+    <div>
+      <label
+        class="mr-2"
+        for="rule-set"
+      >
+        Rule Set:
+      </label>
+      <select
+        class="text-black px-2 py-1"
+        id="rule-set"
+      >
+        <option
+          value="none"
+        >
+          None
+        </option>
+        <option
+          value="best64"
+        >
+          best64
+        </option>
+        <option
+          value="quick"
+        >
+          quick
+        </option>
+      </select>
+      <pre
+        class="bg-black p-2 text-xs mt-2 overflow-auto h-24"
+      >
+        (no rules)
+      </pre>
+    </div>
+    <div>
+      Detected: 
+      MD5
+    </div>
+    <div>
+      Description: 
+      Fast, legacy 32-character hash
+    </div>
+    <div>
+      Example hash: 
+      5f4dcc3b5aa765d61d8327deb882cf99
+    </div>
+    <div>
+      Expected output: 
+      password
+    </div>
+    <div>
+      Description: 
+      Fast, legacy 32-character hash
+    </div>
+    <button>
+      Run Benchmark
+    </button>
+    <div>
+      <label
+        class="mr-2"
+        for="wordlist-select"
+      >
+        Wordlist:
+      </label>
+      <select
+        class="text-black px-2 py-1"
+        id="wordlist-select"
+      >
+        <option
+          value=""
+        >
+          Select wordlist (demo)
+        </option>
+        <option
+          value="rockyou"
+        >
+          rockyou.txt
+        </option>
+        <option
+          value="top100"
+        >
+          top-100.txt
+        </option>
+      </select>
+      <div
+        class="text-xs mt-1"
+      >
+        Wordlist selection is simulated. Common files live under
+         
+        <code>
+          /usr/share/wordlists/
+        </code>
+         e.g.
+         
+        <code>
+          /usr/share/wordlists/rockyou.txt
+        </code>
+        . Learn more at
+         
+        <a
+          class="underline"
+          href="https://hashcat.net/wiki/doku.php?id=wordlists"
+          rel="noreferrer"
+          target="_blank"
+        >
+          hashcat.net
+        </a>
+        .
+      </div>
+      <div
+        class="text-xs mt-1"
+      >
+        Sample entries: 
+        <code>
+          password123
+        </code>
+        , 
+        <code>
+          qwerty
+        </code>
+        ,
+         
+        <code>
+          letmein
+        </code>
+      </div>
+    </div>
+    <div>
+      <label
+        class="mr-2"
+        for="word-pattern"
+      >
+        Wordlist Pattern:
+      </label>
+      <input
+        class="text-black px-2 py-1"
+        id="word-pattern"
+        value=""
+      />
+      <button
+        class="ml-2"
+      >
+        Generate
+      </button>
+      <div
+        class="text-xs mt-1"
+      >
+        Uploading wordlists is disabled.
+      </div>
+    </div>
+    <div
+      class="mt-2"
+    >
+      <div
+        class="text-sm"
+      >
+        Demo Command:
+      </div>
+      <div
+        class="flex items-center"
+      >
+        <code
+          class="bg-black px-2 py-1 text-xs"
+          data-testid="demo-command"
+        >
+          hashcat -m 0 -a 3 hash.txt wordlist.txt
+        </code>
+        <button
+          class="ml-2"
+        >
+          Copy
+        </button>
+      </div>
+    </div>
+    <div
+      class="mt-4 w-full max-w-md"
+    >
+      <div
+        class="text-sm"
+      >
+        Sample Output:
+      </div>
+      <pre
+        class="bg-black p-2 text-xs overflow-auto"
+      >
+        hashcat (demo) starting 5f4dcc3b5aa765d61d8327deb882cf99:password Session completed.
+      </pre>
+    </div>
+    <div
+      class="w-48"
+    >
+      <div
+        class="text-sm mb-1"
+      >
+        GPU Usage: 
+        0
+        %
+      </div>
+      <div
+        class="w-full h-4 bg-gray-700 rounded"
+      >
+        <div
+          class="h-4 bg-green-500 rounded"
+          style="width: 0%;"
+        />
+      </div>
+    </div>
+    <div
+      class="text-xs"
+    >
+      Note: real hashcat requires a compatible GPU.
+    </div>
+    <button>
+      Start Cracking
+    </button>
+    <div
+      aria-label="Hash cracking progress"
+      aria-valuemax="100"
+      aria-valuemin="0"
+      aria-valuenow="0"
+      aria-valuetext="0%"
+      class="w-48"
+      role="progressbar"
+    >
+      <div
+        class="text-sm mb-1"
+      >
+        Progress: 
+        0
+        %
+      </div>
+      <div
+        class="w-full h-4 bg-gray-700 rounded"
+      >
+        <div
+          class="h-4 bg-blue-600 rounded"
+          style="width: 0%;"
+        />
+      </div>
+      <div
+        aria-live="polite"
+        class="text-sm mt-2"
+        role="status"
+      >
+        <div>
+          Attempts/sec: 
+          123 H/s
+        </div>
+        <div>
+          ETA: 
+          00:00:42
+        </div>
+        <div>
+          Recovered: 
+          0/1
+        </div>
+        <div>
+          Mode: 
+          Brute-force
+        </div>
+      </div>
+    </div>
+    <pre
+      class="bg-black text-green-400 p-2 rounded text-xs w-full max-w-md overflow-x-auto mt-4"
+    >
+      hashcat (v6.2.6) starting in benchmark mode...
+OpenCL API (OpenCL 3.0) - Platform #1 [MockGPU]
+* Device #1: Mock GPU
+
+Benchmark relevant options:
+===========================
+* --hash-type: 0 (MD5)
+* --wordlist: rockyou.txt
+
+Speed.#1.........: 100.0 H/s (100.00%)
+
+    </pre>
+    <div
+      class="text-xs mt-4"
+    >
+      This tool simulates hash cracking for educational purposes only.
+    </div>
+  </div>
+</div>
+`;
