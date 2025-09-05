@@ -53,6 +53,7 @@ export class Window extends Component {
         window.addEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.addEventListener('super-arrow', this.handleSuperArrow);
+        root?.addEventListener('super-ctrl-arrow', this.handleSuperCtrlArrow);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -66,6 +67,7 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        root?.removeEventListener('super-ctrl-arrow', this.handleSuperCtrlArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
@@ -273,6 +275,10 @@ export class Window extends Component {
             newWidth = 100.2;
             newHeight = 50;
             transform = 'translate(-1pt,-2pt)';
+        } else if (position === 'bottom') {
+            newWidth = 100.2;
+            newHeight = 50;
+            transform = `translate(-1pt, ${window.innerHeight / 2}px)`;
         }
         const r = document.querySelector("#" + this.id);
         if (r && transform) {
@@ -330,6 +336,10 @@ export class Window extends Component {
         else if (rect.top <= threshold) {
             snap = { left: '0', top: '0', width: '100%', height: '50%' };
             this.setState({ snapPreview: snap, snapPosition: 'top' });
+        }
+        else if (rect.bottom >= window.innerHeight - threshold) {
+            snap = { left: '0', top: '50%', width: '100%', height: '50%' };
+            this.setState({ snapPreview: snap, snapPosition: 'bottom' });
         }
         else {
             if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
@@ -584,6 +594,19 @@ export class Window extends Component {
         }
     }
 
+    handleSuperCtrlArrow = (e) => {
+        const key = e.detail;
+        if (key === 'ArrowUp') {
+            this.snapWindow('top');
+        } else if (key === 'ArrowDown') {
+            this.snapWindow('bottom');
+        } else if (key === 'ArrowLeft') {
+            this.snapWindow('left');
+        } else if (key === 'ArrowRight') {
+            this.snapWindow('right');
+        }
+    }
+
     snapWindow = (pos) => {
         this.focusWindow();
         const { width, height } = this.state;
@@ -598,6 +621,14 @@ export class Window extends Component {
             newWidth = 50;
             newHeight = 96.3;
             transform = `translate(${window.innerWidth / 2}px,-2pt)`;
+        } else if (pos === 'top') {
+            newWidth = 100.2;
+            newHeight = 50;
+            transform = 'translate(-1pt,-2pt)';
+        } else if (pos === 'bottom') {
+            newWidth = 100.2;
+            newHeight = 50;
+            transform = `translate(-1pt, ${window.innerHeight / 2}px)`;
         }
         const node = document.getElementById(this.id);
         if (node && transform) {
