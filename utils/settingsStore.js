@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  assistiveTech: false,
 };
 
 export async function getAccent() {
@@ -102,6 +103,16 @@ export async function setHaptics(value) {
   window.localStorage.setItem('haptics', value ? 'true' : 'false');
 }
 
+export async function getAssistiveTech() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.assistiveTech;
+  return window.localStorage.getItem('assistive-tech') === 'true';
+}
+
+export async function setAssistiveTech(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('assistive-tech', value ? 'true' : 'false');
+}
+
 export async function getPongSpin() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
   const val = window.localStorage.getItem('pong-spin');
@@ -137,6 +148,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('assistive-tech');
 }
 
 export async function exportSettings() {
@@ -151,6 +163,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    assistiveTech,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +175,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getAssistiveTech(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +189,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    assistiveTech,
     theme,
   });
 }
@@ -199,6 +214,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    assistiveTech,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +227,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (assistiveTech !== undefined) await setAssistiveTech(assistiveTech);
   if (theme !== undefined) setTheme(theme);
 }
 
