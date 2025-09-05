@@ -11,6 +11,8 @@ import React, {
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
+import KaliToolsModal from './components/KaliToolsModal';
+import kaliTools from '../../data/kali-tools.json';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -88,6 +90,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const filesRef = useRef<Record<string, string>>(files);
   const aliasesRef = useRef<Record<string, string>>({});
   const historyRef = useRef<string[]>([]);
+  const [kaliCategory, setKaliCategory] = useState<string | null>(null);
   const contextRef = useRef<CommandContext>({
     writeLine: () => {},
     files: filesRef.current,
@@ -238,13 +241,26 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           aliasesRef.current[name]
             ? `${aliasesRef.current[name]} ${rest.join(' ')}`.trim()
             : cmd;
+        const kaliMatch = expanded.match(
+          /^sudo\s+apt\s+install\s+kali-tools-([a-z0-9-]+)/i,
+        );
+        if (kaliMatch) {
+          const category = kaliMatch[1];
+          historyRef.current.push(cmd);
+          if ((kaliTools as Record<string, { description: string; tools: string[] }>)[category]) {
+            setKaliCategory(category);
+          } else {
+            writeLine(`E: Unable to locate package kali-tools-${category}`);
+          }
+          return;
+        }
         const [cmdName, ...cmdRest] = expanded.split(/\s+/);
         const handler = registryRef.current[cmdName];
         historyRef.current.push(cmd);
         if (handler) await handler(cmdRest.join(' '), contextRef.current);
         else if (cmdName) await runWorker(expanded);
       },
-      [runWorker],
+      [runWorker, writeLine],
     );
 
     const autocomplete = useCallback(() => {
@@ -402,11 +418,22 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
   return (
     <div className="relative h-full w-full">
+      {kaliCategory && (
+        <KaliToolsModal
+          category={kaliCategory}
+          info={(kaliTools as Record<string, { description: string; tools: string[] }>)[kaliCategory]}
+          onClose={() => {
+            setKaliCategory(null);
+            termRef.current?.focus();
+          }}
+        />
+      )}
       {paletteOpen && (
         <div className="absolute inset-0 bg-black bg-opacity-75 flex items-start justify-center z-10">
           <div className="mt-10 w-80 bg-gray-800 p-4 rounded">
             <input
               autoFocus
+              aria-label="Command palette input"
               className="w-full mb-2 bg-black text-white p-2"
               value={paletteInput}
               onChange={(e) => setPaletteInput(e.target.value)}
