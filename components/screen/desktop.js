@@ -162,6 +162,10 @@ export class Desktop extends Component {
             e.preventDefault();
             this.cycleAppWindows(e.shiftKey ? -1 : 1);
         }
+        else if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 'l') {
+            e.preventDefault();
+            import('../../utils/xflock4').then(m => m.default());
+        }
         else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
             e.preventDefault();
             const id = this.getFocusedWindowId();
