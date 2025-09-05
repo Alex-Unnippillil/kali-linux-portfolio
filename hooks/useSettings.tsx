@@ -20,6 +20,16 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getTapToClick as loadTapToClick,
+  setTapToClick as saveTapToClick,
+  getDisableWhileTyping as loadDisableWhileTyping,
+  setDisableWhileTyping as saveDisableWhileTyping,
+  getNaturalScroll as loadNaturalScroll,
+  setNaturalScroll as saveNaturalScroll,
+  getMouseSpeed as loadMouseSpeed,
+  setMouseSpeed as saveMouseSpeed,
+  getTouchpadSpeed as loadTouchpadSpeed,
+  setTouchpadSpeed as saveTouchpadSpeed,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -63,6 +73,11 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  tapToClick: boolean;
+  disableWhileTyping: boolean;
+  naturalScroll: boolean;
+  mouseSpeed: number;
+  touchpadSpeed: number;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +89,11 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setTapToClick: (value: boolean) => void;
+  setDisableWhileTyping: (value: boolean) => void;
+  setNaturalScroll: (value: boolean) => void;
+  setMouseSpeed: (value: number) => void;
+  setTouchpadSpeed: (value: number) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +108,11 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  tapToClick: defaults.tapToClick,
+  disableWhileTyping: defaults.disableWhileTyping,
+  naturalScroll: defaults.naturalScroll,
+  mouseSpeed: defaults.mouseSpeed,
+  touchpadSpeed: defaults.touchpadSpeed,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +124,11 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setTapToClick: () => {},
+  setDisableWhileTyping: () => {},
+  setNaturalScroll: () => {},
+  setMouseSpeed: () => {},
+  setTouchpadSpeed: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -113,6 +143,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [tapToClick, setTapToClick] = useState<boolean>(defaults.tapToClick);
+  const [disableWhileTyping, setDisableWhileTyping] = useState<boolean>(
+    defaults.disableWhileTyping
+  );
+  const [naturalScroll, setNaturalScroll] = useState<boolean>(
+    defaults.naturalScroll
+  );
+  const [mouseSpeed, setMouseSpeed] = useState<number>(defaults.mouseSpeed);
+  const [touchpadSpeed, setTouchpadSpeed] = useState<number>(
+    defaults.touchpadSpeed
+  );
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -127,6 +168,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setTapToClick(await loadTapToClick());
+      setDisableWhileTyping(await loadDisableWhileTyping());
+      setNaturalScroll(await loadNaturalScroll());
+      setMouseSpeed(await loadMouseSpeed());
+      setTouchpadSpeed(await loadTouchpadSpeed());
       setTheme(loadTheme());
     })();
   }, []);
@@ -236,6 +282,26 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveTapToClick(tapToClick);
+  }, [tapToClick]);
+
+  useEffect(() => {
+    saveDisableWhileTyping(disableWhileTyping);
+  }, [disableWhileTyping]);
+
+  useEffect(() => {
+    saveNaturalScroll(naturalScroll);
+  }, [naturalScroll]);
+
+  useEffect(() => {
+    saveMouseSpeed(mouseSpeed);
+  }, [mouseSpeed]);
+
+  useEffect(() => {
+    saveTouchpadSpeed(touchpadSpeed);
+  }, [touchpadSpeed]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -250,6 +316,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        tapToClick,
+        disableWhileTyping,
+        naturalScroll,
+        mouseSpeed,
+        touchpadSpeed,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +332,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setTapToClick,
+        setDisableWhileTyping,
+        setNaturalScroll,
+        setMouseSpeed,
+        setTouchpadSpeed,
       }}
     >
       {children}
