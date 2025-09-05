@@ -20,6 +20,10 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getCustomDpi as loadCustomDpi,
+  setCustomDpi as saveCustomDpi,
+  getDpi as loadDpi,
+  setDpi as saveDpi,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -63,6 +67,8 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  customDpi: boolean;
+  dpi: number;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +80,8 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setCustomDpi: (value: boolean) => void;
+  setDpi: (value: number) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +96,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  customDpi: defaults.customDpi,
+  dpi: defaults.dpi,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +109,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setCustomDpi: () => {},
+  setDpi: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -112,6 +124,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
+  const [customDpi, setCustomDpi] = useState<boolean>(defaults.customDpi);
+  const [dpi, setDpi] = useState<number>(defaults.dpi);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
@@ -127,6 +141,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setCustomDpi(await loadCustomDpi());
+      setDpi(await loadDpi());
       setTheme(loadTheme());
     })();
   }, []);
@@ -236,6 +252,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveCustomDpi(customDpi);
+    if (customDpi) {
+      const scale = dpi / 96;
+      document.documentElement.style.setProperty('font-size', `${16 * scale}px`);
+    } else {
+      document.documentElement.style.removeProperty('font-size');
+    }
+  }, [customDpi, dpi]);
+
+  useEffect(() => {
+    saveDpi(dpi);
+  }, [dpi]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -249,6 +279,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         pongSpin,
         allowNetwork,
         haptics,
+        customDpi,
+        dpi,
         theme,
         setAccent,
         setWallpaper,
@@ -260,6 +292,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
+        setCustomDpi,
+        setDpi,
         setTheme,
       }}
     >
