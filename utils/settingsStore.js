@@ -14,6 +14,10 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  archiver: 'zip',
+  archiverExtensions: '.zip,.tar,.gz,.7z',
+  openAfterCreation: true,
+  deleteAfterArchiving: false,
 };
 
 export async function getAccent() {
@@ -123,6 +127,51 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getArchiver() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.archiver;
+  return window.localStorage.getItem('archiver') || DEFAULT_SETTINGS.archiver;
+}
+
+export async function setArchiver(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('archiver', value);
+}
+
+export async function getArchiverExtensions() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.archiverExtensions;
+  return (
+    window.localStorage.getItem('archiver-extensions') ||
+    DEFAULT_SETTINGS.archiverExtensions
+  );
+}
+
+export async function setArchiverExtensions(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('archiver-extensions', value);
+}
+
+export async function getOpenAfterCreation() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.openAfterCreation;
+  const val = window.localStorage.getItem('archiver-open-after');
+  return val === null ? DEFAULT_SETTINGS.openAfterCreation : val === 'true';
+}
+
+export async function setOpenAfterCreation(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('archiver-open-after', value ? 'true' : 'false');
+}
+
+export async function getDeleteAfterArchiving() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.deleteAfterArchiving;
+  const val = window.localStorage.getItem('archiver-delete-after');
+  return val === null ? DEFAULT_SETTINGS.deleteAfterArchiving : val === 'true';
+}
+
+export async function setDeleteAfterArchiving(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('archiver-delete-after', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +186,10 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('archiver');
+  window.localStorage.removeItem('archiver-extensions');
+  window.localStorage.removeItem('archiver-open-after');
+  window.localStorage.removeItem('archiver-delete-after');
 }
 
 export async function exportSettings() {
@@ -151,6 +204,10 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    archiver,
+    archiverExtensions,
+    openAfterCreation,
+    deleteAfterArchiving,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +219,10 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getArchiver(),
+    getArchiverExtensions(),
+    getOpenAfterCreation(),
+    getDeleteAfterArchiving(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +236,10 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    archiver,
+    archiverExtensions,
+    openAfterCreation,
+    deleteAfterArchiving,
     theme,
   });
 }
@@ -200,6 +265,10 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    archiver,
+    archiverExtensions,
+    openAfterCreation,
+    deleteAfterArchiving,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -212,6 +281,13 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (archiver !== undefined) await setArchiver(archiver);
+  if (archiverExtensions !== undefined)
+    await setArchiverExtensions(archiverExtensions);
+  if (openAfterCreation !== undefined)
+    await setOpenAfterCreation(openAfterCreation);
+  if (deleteAfterArchiving !== undefined)
+    await setDeleteAfterArchiving(deleteAfterArchiving);
 }
 
 export const defaults = DEFAULT_SETTINGS;

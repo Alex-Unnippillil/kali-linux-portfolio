@@ -20,6 +20,14 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getArchiver as loadArchiver,
+  setArchiver as saveArchiver,
+  getArchiverExtensions as loadArchiverExtensions,
+  setArchiverExtensions as saveArchiverExtensions,
+  getOpenAfterCreation as loadOpenAfterCreation,
+  setOpenAfterCreation as saveOpenAfterCreation,
+  getDeleteAfterArchiving as loadDeleteAfterArchiving,
+  setDeleteAfterArchiving as saveDeleteAfterArchiving,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -63,6 +71,10 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  archiver: string;
+  archiverExtensions: string;
+  openAfterCreation: boolean;
+  deleteAfterArchiving: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +86,10 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setArchiver: (value: string) => void;
+  setArchiverExtensions: (value: string) => void;
+  setOpenAfterCreation: (value: boolean) => void;
+  setDeleteAfterArchiving: (value: boolean) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +104,10 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  archiver: defaults.archiver,
+  archiverExtensions: defaults.archiverExtensions,
+  openAfterCreation: defaults.openAfterCreation,
+  deleteAfterArchiving: defaults.deleteAfterArchiving,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +119,10 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setArchiver: () => {},
+  setArchiverExtensions: () => {},
+  setOpenAfterCreation: () => {},
+  setDeleteAfterArchiving: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -113,6 +137,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [archiver, setArchiver] = useState<string>(defaults.archiver);
+  const [archiverExtensions, setArchiverExtensions] = useState<string>(
+    defaults.archiverExtensions,
+  );
+  const [openAfterCreation, setOpenAfterCreation] = useState<boolean>(
+    defaults.openAfterCreation,
+  );
+  const [deleteAfterArchiving, setDeleteAfterArchiving] = useState<boolean>(
+    defaults.deleteAfterArchiving,
+  );
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -127,6 +161,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setArchiver(await loadArchiver());
+      setArchiverExtensions(await loadArchiverExtensions());
+      setOpenAfterCreation(await loadOpenAfterCreation());
+      setDeleteAfterArchiving(await loadDeleteAfterArchiving());
       setTheme(loadTheme());
     })();
   }, []);
@@ -236,6 +274,22 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveArchiver(archiver);
+  }, [archiver]);
+
+  useEffect(() => {
+    saveArchiverExtensions(archiverExtensions);
+  }, [archiverExtensions]);
+
+  useEffect(() => {
+    saveOpenAfterCreation(openAfterCreation);
+  }, [openAfterCreation]);
+
+  useEffect(() => {
+    saveDeleteAfterArchiving(deleteAfterArchiving);
+  }, [deleteAfterArchiving]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -250,6 +304,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        archiver,
+        archiverExtensions,
+        openAfterCreation,
+        deleteAfterArchiving,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +319,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setArchiver,
+        setArchiverExtensions,
+        setOpenAfterCreation,
+        setDeleteAfterArchiving,
       }}
     >
       {children}
