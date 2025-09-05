@@ -39,6 +39,10 @@ export default function Preferences() {
     if (typeof window === "undefined") return false;
     return localStorage.getItem(`${PANEL_PREFIX}autohide`) === "true";
   });
+  const [volumePlugin, setVolumePlugin] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem(`${PANEL_PREFIX}volume-plugin`) !== "false";
+  });
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -59,6 +63,13 @@ export default function Preferences() {
     if (typeof window === "undefined") return;
     localStorage.setItem(`${PANEL_PREFIX}autohide`, autohide ? "true" : "false");
   }, [autohide]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(
+      `${PANEL_PREFIX}volume-plugin`,
+      volumePlugin ? "true" : "false",
+    );
+  }, [volumePlugin]);
 
   return (
     <div>
@@ -133,7 +144,22 @@ export default function Preferences() {
           <p className="text-ubt-grey">Opacity settings are not available yet.</p>
         )}
         {active === "items" && (
-          <p className="text-ubt-grey">Item settings are not available yet.</p>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-ubt-grey">
+                Volume plugin
+                <span className="block text-xs">
+                  Disable to stop media-key handling and hide the on-screen
+                  overlay.
+                </span>
+              </span>
+              <ToggleSwitch
+                checked={volumePlugin}
+                onChange={setVolumePlugin}
+                ariaLabel="Enable volume plugin"
+              />
+            </div>
+          </div>
         )}
       </div>
     </div>
