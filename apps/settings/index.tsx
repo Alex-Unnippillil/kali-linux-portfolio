@@ -27,6 +27,8 @@ export default function Settings() {
     setFontScale,
     highContrast,
     setHighContrast,
+    assistiveTech,
+    setAssistiveTech,
     haptics,
     setHaptics,
     theme,
@@ -211,6 +213,21 @@ export default function Settings() {
       )}
       {activeTab === "accessibility" && (
         <>
+          <div className="mx-4 my-4 p-4 rounded border border-gray-900 bg-ub-cool-grey">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-white">Assistive technologies</h3>
+                <p className="text-sm text-ubt-grey mt-1">
+                  Enable screen reader support. Try Orca with <kbd>Super</kbd>+<kbd>Alt</kbd>+<kbd>S</kbd>.
+                </p>
+              </div>
+              <ToggleSwitch
+                checked={assistiveTech}
+                onChange={setAssistiveTech}
+                ariaLabel="Enable assistive technologies"
+              />
+            </div>
+          </div>
           <div className="flex justify-center my-4">
             <label htmlFor="font-scale" className="mr-2 text-ubt-grey">Icon Size:</label>
             <input
