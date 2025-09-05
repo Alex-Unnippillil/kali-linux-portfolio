@@ -2,11 +2,11 @@ import React, { useEffect, useState } from "react";
 import Image from 'next/image';
 import SmallArrow from "./small_arrow";
 import { useSettings } from '../../hooks/useSettings';
-
-const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
+import { useIconTheme } from '../../hooks/useIconTheme';
 
 export default function Status() {
   const { allowNetwork } = useSettings();
+  const { iconTheme } = useIconTheme();
   const [online, setOnline] = useState(true);
 
   useEffect(() => {
@@ -47,7 +47,11 @@ export default function Status() {
         <Image
           width={16}
           height={16}
-          src={online ? "/themes/Yaru/status/network-wireless-signal-good-symbolic.svg" : "/themes/Yaru/status/network-wireless-signal-none-symbolic.svg"}
+          src={
+            online
+              ? `/themes/${iconTheme}/status/network-wireless-signal-good-symbolic.svg`
+              : `/themes/${iconTheme}/status/network-wireless-signal-none-symbolic.svg`
+          }
           alt={online ? "online" : "offline"}
           className="inline status-symbol w-4 h-4"
           sizes="16px"
@@ -60,7 +64,7 @@ export default function Status() {
         <Image
           width={16}
           height={16}
-          src={VOLUME_ICON}
+          src={`/themes/${iconTheme}/status/audio-volume-medium-symbolic.svg`}
           alt="volume"
           className="inline status-symbol w-4 h-4"
           sizes="16px"
@@ -70,7 +74,7 @@ export default function Status() {
         <Image
           width={16}
           height={16}
-          src="/themes/Yaru/status/battery-good-symbolic.svg"
+          src={`/themes/${iconTheme}/status/battery-good-symbolic.svg`}
           alt="ubuntu battry"
           className="inline status-symbol w-4 h-4"
           sizes="16px"
@@ -82,3 +86,4 @@ export default function Status() {
     </div>
   );
 }
+
