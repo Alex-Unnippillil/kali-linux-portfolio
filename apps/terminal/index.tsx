@@ -9,6 +9,7 @@ import React, {
   useCallback,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
+import usePersistentState from '../../hooks/usePersistentState';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
 
@@ -76,6 +77,8 @@ const files: Record<string, string> = {
   'README.md': 'Welcome to the web terminal.\nThis is a fake file used for demos.',
 };
 
+type Ps1Preset = 'kali' | 'powerline' | 'classic';
+
 const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<any>(null);
@@ -101,6 +104,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [ps1Preset, setPs1Preset] = usePersistentState<Ps1Preset>(
+    'terminal-ps1-preset',
+    'kali',
+  );
+  const [ps1Draft, setPs1Draft] = useState<Ps1Preset>(ps1Preset);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
@@ -145,9 +153,27 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
   contextRef.current.writeLine = writeLine;
 
+  const buildPrompt = (preset: Ps1Preset) => {
+    const user = 'user';
+    const host = 'kali';
+    const cwd = '~';
+    const esc = String.fromCharCode(27);
+    switch (preset) {
+      case 'powerline':
+        return `${esc}[1;34m${user}@${host}${esc}[0m ${esc}[1;32m${cwd}${esc}[0m ❯ `;
+      case 'classic':
+        return `${user}@${host}:${cwd}$ `;
+      default:
+        return (
+          `${esc}[34m┌──(${esc}[32m${user}@${host}${esc}[34m)-[${cwd}]` +
+          `\n└─$ ${esc}[0m`
+        );
+    }
+  };
+
   const prompt = useCallback(() => {
-    if (termRef.current) termRef.current.write('$ ');
-  }, []);
+    if (termRef.current) termRef.current.write(buildPrompt(ps1Preset));
+  }, [ps1Preset]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(contentRef.current).catch(() => {});
@@ -437,6 +463,18 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       {settingsOpen && (
         <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-10">
           <div className="bg-gray-900 p-4 rounded space-y-4">
+            <label className="block text-sm">
+              Preset
+              <select
+                value={ps1Draft}
+                onChange={(e) => setPs1Draft(e.target.value as Ps1Preset)}
+                className="ml-2 bg-gray-800 border border-gray-700 rounded px-1 py-0.5"
+              >
+                <option value="kali">Kali Minimal</option>
+                <option value="powerline">Powerline</option>
+                <option value="classic">Classic</option>
+              </select>
+            </label>
             <div className="grid grid-cols-8 gap-2">
               {ansiColors.map((c, i) => (
                 <div key={i} className="h-4 w-4 rounded" style={{ backgroundColor: c }} />
@@ -452,6 +490,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
                 className="px-2 py-1 bg-gray-700 rounded"
                 onClick={() => {
                   setSettingsOpen(false);
+                  setPs1Draft(ps1Preset);
                   termRef.current?.focus();
                 }}
               >
@@ -460,6 +499,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               <button
                 className="px-2 py-1 bg-blue-600 rounded"
                 onClick={() => {
+                  setPs1Preset(ps1Draft);
                   setSettingsOpen(false);
                   termRef.current?.focus();
                 }}
@@ -478,7 +518,13 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           <button onClick={handlePaste} aria-label="Paste">
             <PasteIcon />
           </button>
-          <button onClick={() => setSettingsOpen(true)} aria-label="Settings">
+          <button
+            onClick={() => {
+              setPs1Draft(ps1Preset);
+              setSettingsOpen(true);
+            }}
+            aria-label="Settings"
+          >
             <SettingsIcon />
           </button>
         </div>
