@@ -11,6 +11,7 @@ import { displayClipboardManager } from './components/apps/ClipboardManager';
 import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayScreenRecorder } from './components/apps/screen-recorder';
+import { displayScreenshot } from './components/apps/screenshot';
 import { displayNikto } from './components/apps/nikto';
 
 export const chromeDefaultTiles = [
@@ -248,6 +249,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayQuote,
+  },
+  {
+    id: 'screenshot',
+    title: 'Screenshot',
+    icon: '/themes/Yaru/apps/screen-recorder.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayScreenshot,
   },
   {
     id: 'project-gallery',
