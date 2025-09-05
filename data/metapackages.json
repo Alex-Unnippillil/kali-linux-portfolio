@@ -1,0 +1,21 @@
+[
+  {
+    "id": "802-11",
+    "title": "802.11",
+    "description": "Wireless 802.11 assessment tools",
+    "link": "https://www.kali.org/tools/?kali-tools-802-11"
+  },
+  {
+    "id": "bluetooth",
+    "title": "Bluetooth",
+    "description": "Tools for Bluetooth exploration and testing",
+    "link": "https://www.kali.org/tools/?kali-tools-bluetooth"
+  },
+  {
+    "id": "reverse-engineering",
+    "title": "Reverse Engineering",
+    "description": "Utilities for reverse engineering binaries and software",
+    "link": "https://www.kali.org/tools/?kali-tools-reverse-engineering"
+  }
+]
+

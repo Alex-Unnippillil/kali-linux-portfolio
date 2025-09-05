@@ -735,6 +735,7 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+    categories: ['bluetooth'],
     screen: displayBleSensor,
   },
   {
@@ -807,6 +808,7 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+    categories: ['802-11'],
     screen: displayKismet,
   },
   {
@@ -860,6 +862,7 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+    categories: ['reverse-engineering'],
     screen: displayGhidra,
   },
   {
@@ -968,6 +971,7 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+    categories: ['reverse-engineering'],
     screen: displayRadare2,
   },
   {
