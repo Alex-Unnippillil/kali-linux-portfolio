@@ -9,6 +9,9 @@ let stopwatchWorker = null;
 let stopwatchElapsed = 0;
 let stopwatchStartTime = 0;
 let lapNumber = 1;
+let laps = [];
+
+const STORAGE_KEY = 'stopwatchState';
 
 const timerDisplay = document.getElementById('timerDisplay');
 const stopwatchDisplay = document.getElementById('stopwatchDisplay');
@@ -28,13 +31,8 @@ function formatTime(seconds) {
 
 function switchMode(newMode) {
   mode = newMode;
-  if (mode === 'timer') {
-    timerControls.style.display = 'block';
-    stopwatchControls.style.display = 'none';
-  } else {
-    timerControls.style.display = 'none';
-    stopwatchControls.style.display = 'block';
-  }
+  timerControls.hidden = mode !== 'timer';
+  stopwatchControls.hidden = mode !== 'stopwatch';
 }
 
 document.getElementById('modeTimer').addEventListener('click', () => switchMode('timer'));
@@ -83,6 +81,48 @@ function updateStopwatchDisplay() {
   stopwatchDisplay.textContent = formatTime(stopwatchElapsed);
 }
 
+function saveStopwatchState() {
+  try {
+    const state = {
+      elapsed: stopwatchElapsed,
+      laps,
+      running: !!stopwatchWorker,
+      startTime: stopwatchStartTime,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.error('Failed to save stopwatch state', e);
+  }
+}
+
+function loadStopwatchState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const state = JSON.parse(raw);
+    laps = Array.isArray(state.laps) ? state.laps : [];
+    lapNumber = laps.length + 1;
+    if (state.running && state.startTime) {
+      stopwatchElapsed = Math.floor((Date.now() - state.startTime) / 1000);
+    } else {
+      stopwatchElapsed = state.elapsed || 0;
+    }
+    lapsList.innerHTML = '';
+    laps.forEach((t, i) => {
+      const li = document.createElement('li');
+      li.textContent = `Lap ${i + 1}: ${formatTime(t)}`;
+      lapsList.appendChild(li);
+    });
+    switchMode('stopwatch');
+    updateStopwatchDisplay();
+    if (state.running) {
+      startWatch();
+    }
+  } catch (e) {
+    console.error('Failed to load stopwatch state', e);
+  }
+}
+
 function startWatch() {
   if (stopwatchWorker || typeof Worker !== 'function') return;
   stopwatchStartTime = Date.now() - stopwatchElapsed * 1000;
@@ -90,30 +130,37 @@ function startWatch() {
   stopwatchWorker.onmessage = () => {
     stopwatchElapsed = Math.floor((Date.now() - stopwatchStartTime) / 1000);
     updateStopwatchDisplay();
+    saveStopwatchState();
   };
   stopwatchWorker.postMessage({ action: 'start', interval: 1000 });
+  saveStopwatchState();
 }
 
-function stopWatch() {
+function pauseWatch() {
   if (stopwatchWorker) {
     stopwatchWorker.postMessage({ action: 'stop' });
     stopwatchWorker.terminate();
     stopwatchWorker = null;
+    saveStopwatchState();
   }
 }
 
 function resetWatch() {
-  stopWatch();
+  pauseWatch();
   stopwatchElapsed = 0;
   lapNumber = 1;
+  laps = [];
   updateStopwatchDisplay();
   lapsList.innerHTML = '';
+  localStorage.removeItem(STORAGE_KEY);
 }
 
 function lapWatch() {
   const li = document.createElement('li');
   li.textContent = `Lap ${lapNumber++}: ${formatTime(stopwatchElapsed)}`;
   lapsList.appendChild(li);
+  laps.push(stopwatchElapsed);
+  saveStopwatchState();
 }
 
 function playSound() {
@@ -138,11 +185,12 @@ document.getElementById('stopTimer').addEventListener('click', stopTimer);
 document.getElementById('resetTimer').addEventListener('click', resetTimer);
 
 document.getElementById('startWatch').addEventListener('click', startWatch);
-document.getElementById('stopWatch').addEventListener('click', stopWatch);
+document.getElementById('pauseWatch').addEventListener('click', pauseWatch);
 document.getElementById('resetWatch').addEventListener('click', resetWatch);
 document.getElementById('lapWatch').addEventListener('click', lapWatch);
 
 // Initialize displays
+loadStopwatchState();
 updateTimerDisplay();
 updateStopwatchDisplay();
 }
