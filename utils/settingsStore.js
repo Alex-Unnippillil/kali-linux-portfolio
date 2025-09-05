@@ -14,6 +14,8 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  focusModel: 'click',
+  preventFocusSteal: false,
 };
 
 export async function getAccent() {
@@ -123,6 +125,28 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getFocusModel() {
+  if (typeof window === 'undefined' || !window.localStorage)
+    return DEFAULT_SETTINGS.focusModel;
+  return window.localStorage.getItem('focus-model') || DEFAULT_SETTINGS.focusModel;
+}
+
+export async function setFocusModel(value) {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  window.localStorage.setItem('focus-model', value);
+}
+
+export async function getPreventFocusSteal() {
+  if (typeof window === 'undefined' || !window.localStorage)
+    return DEFAULT_SETTINGS.preventFocusSteal;
+  return window.localStorage.getItem('prevent-focus-steal') === 'true';
+}
+
+export async function setPreventFocusSteal(value) {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  window.localStorage.setItem('prevent-focus-steal', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +161,8 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('focus-model');
+  window.localStorage.removeItem('prevent-focus-steal');
 }
 
 export async function exportSettings() {
@@ -151,6 +177,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    focusModel,
+    preventFocusSteal,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +190,8 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getFocusModel(),
+    getPreventFocusSteal(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +205,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    focusModel,
+    preventFocusSteal,
     theme,
   });
 }
@@ -199,6 +231,8 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    focusModel,
+    preventFocusSteal,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +245,8 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (focusModel !== undefined) await setFocusModel(focusModel);
+  if (preventFocusSteal !== undefined) await setPreventFocusSteal(preventFocusSteal);
   if (theme !== undefined) setTheme(theme);
 }
 
