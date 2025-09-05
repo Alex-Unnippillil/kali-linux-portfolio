@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import CommandLauncher from '../common/CommandLauncher';
 
 export class Desktop extends Component {
     constructor() {
@@ -950,6 +951,8 @@ export class Desktop extends Component {
                         windows={this.state.switcherWindows}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
+
+                <CommandLauncher openApp={this.openApp} apps={apps} games={games} />
 
             </main>
         )
