@@ -34,6 +34,7 @@ jest.mock('@xterm/xterm/css/xterm.css', () => ({}), { virtual: true });
 
 import React, { createRef, act } from 'react';
 import { render, fireEvent } from '@testing-library/react';
+import { Terminal as XTerm } from '@xterm/xterm';
 import Terminal from '../apps/terminal';
 import TerminalTabs from '../apps/terminal/tabs';
 
@@ -75,5 +76,14 @@ describe('Terminal component', () => {
 
     fireEvent.keyDown(root, { ctrlKey: true, key: 'w' });
     expect(container.querySelectorAll('.flex.items-center.cursor-pointer').length).toBe(1);
+  });
+
+  it('applies PS1 preset for new sessions', async () => {
+    (XTerm as jest.Mock).mockClear();
+    window.localStorage.setItem('terminal-ps1-preset', JSON.stringify('classic'));
+    render(<Terminal openApp={openApp} />);
+    await act(async () => {});
+    const instance = (XTerm as jest.Mock).mock.results[0].value;
+    expect(instance.write).toHaveBeenCalledWith(expect.stringContaining('user@kali:~$ '));
   });
 });
