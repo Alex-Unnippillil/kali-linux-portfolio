@@ -12,6 +12,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import Toast from "../../components/ui/Toast";
 
 export default function Settings() {
   const {
@@ -33,6 +34,7 @@ export default function Settings() {
     setTheme,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [toast, setToast] = useState("");
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
@@ -100,7 +102,9 @@ export default function Settings() {
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
+    setHaptics(defaults.haptics);
     setTheme("default");
+    setToast("Settings reset to defaults");
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
@@ -301,6 +305,7 @@ export default function Settings() {
           className="hidden"
         />
       <KeymapOverlay open={showKeymap} onClose={() => setShowKeymap(false)} />
+      {toast && <Toast message={toast} onClose={() => setToast("")} />}
     </div>
   );
 }
