@@ -12,6 +12,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import MouseSettings from "./components/MouseSettings";
 
 export default function Settings() {
   const {
@@ -36,6 +37,7 @@ export default function Settings() {
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
+    { id: "mouse", label: "Mouse & Touchpad" },
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
   ] as const;
@@ -88,7 +90,7 @@ export default function Settings() {
   const handleReset = async () => {
     if (
       !window.confirm(
-        "Reset desktop to default settings? This will clear all saved data."
+        "Reset desktop to default settings? This will clear all saved data.",
       )
     )
       return;
@@ -136,7 +138,11 @@ export default function Settings() {
           </div>
           <div className="flex justify-center my-4">
             <label className="mr-2 text-ubt-grey">Accent:</label>
-            <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
+            <div
+              aria-label="Accent color picker"
+              role="radiogroup"
+              className="flex gap-2"
+            >
               {ACCENT_OPTIONS.map((c) => (
                 <button
                   key={c}
@@ -144,14 +150,16 @@ export default function Settings() {
                   role="radio"
                   aria-checked={accent === c}
                   onClick={() => setAccent(c)}
-                  className={`w-8 h-8 rounded-full border-2 ${accent === c ? 'border-white' : 'border-transparent'}`}
+                  className={`w-8 h-8 rounded-full border-2 ${accent === c ? "border-white" : "border-transparent"}`}
                   style={{ backgroundColor: c }}
                 />
               ))}
             </div>
           </div>
           <div className="flex justify-center my-4">
-            <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">Wallpaper:</label>
+            <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">
+              Wallpaper:
+            </label>
             <input
               id="wallpaper-slider"
               type="range"
@@ -209,10 +217,13 @@ export default function Settings() {
           </div>
         </>
       )}
+      {activeTab === "mouse" && <MouseSettings />}
       {activeTab === "accessibility" && (
         <>
           <div className="flex justify-center my-4">
-            <label htmlFor="font-scale" className="mr-2 text-ubt-grey">Icon Size:</label>
+            <label htmlFor="font-scale" className="mr-2 text-ubt-grey">
+              Icon Size:
+            </label>
             <input
               id="font-scale"
               type="range"
@@ -288,18 +299,18 @@ export default function Settings() {
           </div>
         </>
       )}
-        <input
-          type="file"
-          accept="application/json"
-          ref={fileInputRef}
-          aria-label="Import settings file"
-          onChange={(e) => {
-            const file = e.target.files && e.target.files[0];
-            if (file) handleImport(file);
-            e.target.value = "";
-          }}
-          className="hidden"
-        />
+      <input
+        type="file"
+        accept="application/json"
+        ref={fileInputRef}
+        aria-label="Import settings file"
+        onChange={(e) => {
+          const file = e.target.files && e.target.files[0];
+          if (file) handleImport(file);
+          e.target.value = "";
+        }}
+        className="hidden"
+      />
       <KeymapOverlay open={showKeymap} onClose={() => setShowKeymap(false)} />
     </div>
   );

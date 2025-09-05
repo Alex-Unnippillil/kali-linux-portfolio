@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useRef,
+} from "react";
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -20,19 +27,23 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getCursor as loadCursor,
+  setCursor as saveCursor,
+  getCursorSize as loadCursorSize,
+  setCursorSize as saveCursorSize,
   defaults,
-} from '../utils/settingsStore';
-import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
-type Density = 'regular' | 'compact';
+} from "../utils/settingsStore";
+import { getTheme as loadTheme, setTheme as saveTheme } from "../utils/theme";
+type Density = "regular" | "compact";
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
-  '#1793d1', // kali blue (default)
-  '#e53e3e', // red
-  '#d97706', // orange
-  '#38a169', // green
-  '#805ad5', // purple
-  '#ed64a6', // pink
+  "#1793d1", // kali blue (default)
+  "#e53e3e", // red
+  "#d97706", // orange
+  "#38a169", // green
+  "#805ad5", // purple
+  "#ed64a6", // pink
 ];
 
 // Utility to lighten or darken a hex color by a percentage
@@ -63,6 +74,8 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  cursor: string;
+  cursorSize: number;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +87,8 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setCursor: (value: string) => void;
+  setCursorSize: (value: number) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -87,7 +102,9 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
-  theme: 'default',
+  theme: "default",
+  cursor: defaults.cursor,
+  cursorSize: defaults.cursorSize,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,19 +116,31 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setCursor: () => {},
+  setCursorSize: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [accent, setAccent] = useState<string>(defaults.accent);
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
-  const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
+  const [reducedMotion, setReducedMotion] = useState<boolean>(
+    defaults.reducedMotion,
+  );
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
-  const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
-  const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
+  const [highContrast, setHighContrast] = useState<boolean>(
+    defaults.highContrast,
+  );
+  const [largeHitAreas, setLargeHitAreas] = useState<boolean>(
+    defaults.largeHitAreas,
+  );
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
-  const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
+  const [allowNetwork, setAllowNetwork] = useState<boolean>(
+    defaults.allowNetwork,
+  );
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
+  const [cursor, setCursor] = useState<string>(defaults.cursor);
+  const [cursorSize, setCursorSize] = useState<number>(defaults.cursorSize);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
@@ -127,6 +156,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setCursor(await loadCursor());
+      setCursorSize(await loadCursorSize());
       setTheme(loadTheme());
     })();
   }, []);
@@ -138,13 +169,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const border = shadeColor(accent, -0.2);
     const vars: Record<string, string> = {
-      '--color-ub-orange': accent,
-      '--color-ub-border-orange': border,
-      '--color-primary': accent,
-      '--color-accent': accent,
-      '--color-focus-ring': accent,
-      '--color-selection': accent,
-      '--color-control-accent': accent,
+      "--color-ub-orange": accent,
+      "--color-ub-border-orange": border,
+      "--color-primary": accent,
+      "--color-accent": accent,
+      "--color-focus-ring": accent,
+      "--color-selection": accent,
+      "--color-control-accent": accent,
     };
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
@@ -159,20 +190,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {
       regular: {
-        '--space-1': '0.25rem',
-        '--space-2': '0.5rem',
-        '--space-3': '0.75rem',
-        '--space-4': '1rem',
-        '--space-5': '1.5rem',
-        '--space-6': '2rem',
+        "--space-1": "0.25rem",
+        "--space-2": "0.5rem",
+        "--space-3": "0.75rem",
+        "--space-4": "1rem",
+        "--space-5": "1.5rem",
+        "--space-6": "2rem",
       },
       compact: {
-        '--space-1': '0.125rem',
-        '--space-2': '0.25rem',
-        '--space-3': '0.5rem',
-        '--space-4': '0.75rem',
-        '--space-5': '1rem',
-        '--space-6': '1.5rem',
+        "--space-1": "0.125rem",
+        "--space-2": "0.25rem",
+        "--space-3": "0.5rem",
+        "--space-4": "0.75rem",
+        "--space-5": "1rem",
+        "--space-6": "1.5rem",
       },
     };
     const vars = spacing[density];
@@ -183,22 +214,25 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [density]);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('reduced-motion', reducedMotion);
+    document.documentElement.classList.toggle("reduced-motion", reducedMotion);
     saveReducedMotion(reducedMotion);
   }, [reducedMotion]);
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--font-multiplier', fontScale.toString());
+    document.documentElement.style.setProperty(
+      "--font-multiplier",
+      fontScale.toString(),
+    );
     saveFontScale(fontScale);
   }, [fontScale]);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('high-contrast', highContrast);
+    document.documentElement.classList.toggle("high-contrast", highContrast);
     saveHighContrast(highContrast);
   }, [highContrast]);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('large-hit-area', largeHitAreas);
+    document.documentElement.classList.toggle("large-hit-area", largeHitAreas);
     saveLargeHitAreas(largeHitAreas);
   }, [largeHitAreas]);
 
@@ -208,22 +242,22 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     saveAllowNetwork(allowNetwork);
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
     if (!fetchRef.current) fetchRef.current = window.fetch.bind(window);
     if (!allowNetwork) {
       window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
         const url =
-          typeof input === 'string'
+          typeof input === "string"
             ? input
-            : 'url' in input
+            : "url" in input
               ? input.url
               : input.href;
         if (
           /^https?:/i.test(url) &&
           !url.startsWith(window.location.origin) &&
-          !url.startsWith('/')
+          !url.startsWith("/")
         ) {
-          return Promise.reject(new Error('Network requests disabled'));
+          return Promise.reject(new Error("Network requests disabled"));
         }
         return fetchRef.current!(input, init);
       };
@@ -235,6 +269,19 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveHaptics(haptics);
   }, [haptics]);
+
+  useEffect(() => {
+    saveCursor(cursor);
+  }, [cursor]);
+
+  useEffect(() => {
+    saveCursorSize(cursorSize);
+  }, [cursorSize]);
+
+  useEffect(() => {
+    const url = `/cursors/${cursor}/${cursorSize}/left_ptr.png`;
+    document.documentElement.style.cursor = `url(${url}) ${cursorSize / 2} ${cursorSize / 2}, auto`;
+  }, [cursor, cursorSize]);
 
   return (
     <SettingsContext.Provider
@@ -250,6 +297,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        cursor,
+        cursorSize,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +310,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setCursor,
+        setCursorSize,
       }}
     >
       {children}
@@ -269,4 +320,3 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 }
 
 export const useSettings = () => useContext(SettingsContext);
-
