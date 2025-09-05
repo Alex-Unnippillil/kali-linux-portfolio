@@ -14,6 +14,8 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  showVolumeOSD: true,
+  showBrightnessOSD: true,
 };
 
 export async function getAccent() {
@@ -38,7 +40,11 @@ export async function setWallpaper(wallpaper) {
 
 export async function getDensity() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.density;
-  return window.localStorage.getItem('density') || DEFAULT_SETTINGS.density;
+  try {
+    return window.localStorage.getItem('density') || DEFAULT_SETTINGS.density;
+  } catch {
+    return DEFAULT_SETTINGS.density;
+  }
 }
 
 export async function setDensity(density) {
@@ -123,6 +129,45 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getShowVolumeOSD() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.showVolumeOSD;
+  try {
+    const val = window.localStorage.getItem('show-volume-osd');
+    return val === null ? DEFAULT_SETTINGS.showVolumeOSD : val === 'true';
+  } catch {
+    return DEFAULT_SETTINGS.showVolumeOSD;
+  }
+}
+
+export async function setShowVolumeOSD(value) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem('show-volume-osd', value ? 'true' : 'false');
+  } catch {
+    // ignore
+  }
+}
+
+export async function getShowBrightnessOSD() {
+  if (typeof window === 'undefined')
+    return DEFAULT_SETTINGS.showBrightnessOSD;
+  try {
+    const val = window.localStorage.getItem('show-brightness-osd');
+    return val === null ? DEFAULT_SETTINGS.showBrightnessOSD : val === 'true';
+  } catch {
+    return DEFAULT_SETTINGS.showBrightnessOSD;
+  }
+}
+
+export async function setShowBrightnessOSD(value) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem('show-brightness-osd', value ? 'true' : 'false');
+  } catch {
+    // ignore
+  }
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +182,8 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('show-volume-osd');
+  window.localStorage.removeItem('show-brightness-osd');
 }
 
 export async function exportSettings() {
@@ -151,6 +198,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    showVolumeOSD,
+    showBrightnessOSD,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +211,8 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getShowVolumeOSD(),
+    getShowBrightnessOSD(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +226,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    showVolumeOSD,
+    showBrightnessOSD,
     theme,
   });
 }
@@ -199,6 +252,8 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    showVolumeOSD,
+    showBrightnessOSD,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +266,9 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (showVolumeOSD !== undefined) await setShowVolumeOSD(showVolumeOSD);
+  if (showBrightnessOSD !== undefined)
+    await setShowBrightnessOSD(showBrightnessOSD);
   if (theme !== undefined) setTheme(theme);
 }
 
