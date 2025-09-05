@@ -11,6 +11,14 @@ import React, {
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
+import {
+  loadTerminalProfile,
+  saveTerminalProfile,
+  exportTerminalProfile,
+  prepareImportTerminalProfile,
+  defaultTerminalProfile,
+  type TerminalProfile,
+} from '../../utils/terminalProfile';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -88,6 +96,10 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const filesRef = useRef<Record<string, string>>(files);
   const aliasesRef = useRef<Record<string, string>>({});
   const historyRef = useRef<string[]>([]);
+  const profileRef = useRef<TerminalProfile>(defaultTerminalProfile);
+  const originalProfileRef = useRef<TerminalProfile | null>(null);
+  const [previewProfile, setPreviewProfile] = useState<TerminalProfile | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const contextRef = useRef<CommandContext>({
     writeLine: () => {},
     files: filesRef.current,
@@ -105,24 +117,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
   const [overflow, setOverflow] = useState({ top: false, bottom: false });
-  const ansiColors = [
-    '#000000',
-    '#AA0000',
-    '#00AA00',
-    '#AA5500',
-    '#0000AA',
-    '#AA00AA',
-    '#00AAAA',
-    '#AAAAAA',
-    '#555555',
-    '#FF5555',
-    '#55FF55',
-    '#FFFF55',
-    '#5555FF',
-    '#FF55FF',
-    '#55FFFF',
-    '#FFFFFF',
-  ];
+  useEffect(() => {
+    applyProfile(loadTerminalProfile());
+  }, [applyProfile]);
 
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
@@ -146,7 +143,19 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   contextRef.current.writeLine = writeLine;
 
   const prompt = useCallback(() => {
-    if (termRef.current) termRef.current.write('$ ');
+    if (termRef.current) termRef.current.write(`${profileRef.current.prompt} `);
+  }, []);
+
+  const applyProfile = useCallback((p: TerminalProfile) => {
+    profileRef.current = p;
+    if (containerRef.current) {
+      containerRef.current.style.fontFamily = p.font;
+      containerRef.current.style.opacity = String(p.opacity);
+    }
+    if (termRef.current) {
+      termRef.current.options.fontFamily = p.font;
+      termRef.current.options.bellStyle = p.bell ? 'sound' : 'none';
+    }
   }, []);
 
   const handleCopy = () => {
@@ -158,6 +167,54 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       const text = await navigator.clipboard.readText();
       handleInput(text);
     } catch {}
+  };
+
+  const handleExportProfile = () => {
+    const data = exportTerminalProfile();
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'terminal-profile.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportProfile = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    const merged = prepareImportTerminalProfile(text);
+    if (merged) {
+      originalProfileRef.current = profileRef.current;
+      setPreviewProfile(merged);
+      applyProfile(merged);
+    }
+    e.target.value = '';
+  };
+
+  const handleCancelSettings = () => {
+    if (previewProfile && originalProfileRef.current) {
+      applyProfile(originalProfileRef.current);
+      originalProfileRef.current = null;
+    }
+    setPreviewProfile(null);
+    setSettingsOpen(false);
+    termRef.current?.focus();
+  };
+
+  const handleApplyProfile = () => {
+    if (previewProfile) {
+      saveTerminalProfile(previewProfile);
+      setPreviewProfile(null);
+    }
+    originalProfileRef.current = null;
+    setSettingsOpen(false);
+    termRef.current?.focus();
   };
 
   const runWorker = useCallback(
@@ -315,6 +372,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       term.open(containerRef.current!);
       fit.fit();
       term.focus();
+      applyProfile(profileRef.current);
       if (opfsSupported) {
         dirRef.current = await getDir('terminal');
         const existing = await readFile('history.txt', dirRef.current || undefined);
@@ -368,7 +426,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       disposed = true;
       termRef.current?.dispose();
     };
-    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow]);
+    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow, applyProfile]);
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();
@@ -405,12 +463,13 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       {paletteOpen && (
         <div className="absolute inset-0 bg-black bg-opacity-75 flex items-start justify-center z-10">
           <div className="mt-10 w-80 bg-gray-800 p-4 rounded">
-            <input
-              autoFocus
-              className="w-full mb-2 bg-black text-white p-2"
-              value={paletteInput}
-              onChange={(e) => setPaletteInput(e.target.value)}
-              onKeyDown={(e) => {
+              <input
+                autoFocus
+                aria-label="Command palette"
+                className="w-full mb-2 bg-black text-white p-2"
+                value={paletteInput}
+                onChange={(e) => setPaletteInput(e.target.value)}
+                onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   runCommand(paletteInput);
                   setPaletteInput('');
@@ -437,32 +496,43 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       {settingsOpen && (
         <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-10">
           <div className="bg-gray-900 p-4 rounded space-y-4">
-            <div className="grid grid-cols-8 gap-2">
-              {ansiColors.map((c, i) => (
-                <div key={i} className="h-4 w-4 rounded" style={{ backgroundColor: c }} />
-              ))}
+            <div className="flex gap-2">
+              <button
+                className="px-2 py-1 bg-gray-700 rounded"
+                onClick={handleExportProfile}
+              >
+                Export
+              </button>
+              <button
+                className="px-2 py-1 bg-gray-700 rounded"
+                onClick={handleImportProfile}
+              >
+                Import
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/json"
+                className="hidden"
+                onChange={handleFileChange}
+                aria-label="Import profile file"
+              />
             </div>
-            <pre className="text-sm leading-snug">
-              <span className="text-blue-400">bin</span>{' '}
-              <span className="text-green-400">script.sh</span>{' '}
-              <span className="text-gray-300">README.md</span>
-            </pre>
+            {previewProfile && (
+              <pre className="text-xs bg-gray-800 p-2 rounded overflow-auto">
+                {JSON.stringify(previewProfile, null, 2)}
+              </pre>
+            )}
             <div className="flex justify-end gap-2">
               <button
                 className="px-2 py-1 bg-gray-700 rounded"
-                onClick={() => {
-                  setSettingsOpen(false);
-                  termRef.current?.focus();
-                }}
+                onClick={handleCancelSettings}
               >
                 Cancel
               </button>
               <button
                 className="px-2 py-1 bg-blue-600 rounded"
-                onClick={() => {
-                  setSettingsOpen(false);
-                  termRef.current?.focus();
-                }}
+                onClick={handleApplyProfile}
               >
                 Apply
               </button>
@@ -485,12 +555,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         <div className="relative">
           <TerminalContainer
             ref={containerRef}
-            className="resize overflow-hidden font-mono"
+            className="resize overflow-hidden"
             style={{
               width: '80ch',
               height: '24em',
               fontSize: 'clamp(1rem, 0.6vw + 1rem, 1.1rem)',
               lineHeight: 1.4,
+              fontFamily: profileRef.current.font,
+              opacity: profileRef.current.opacity,
             }}
           />
           {overflow.top && (
