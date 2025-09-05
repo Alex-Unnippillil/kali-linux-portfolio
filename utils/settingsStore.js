@@ -14,6 +14,10 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  thumbnailImages: true,
+  thumbnailVideos: true,
+  thumbnailPDFs: true,
+  thumbnailMaxFileSize: 10,
 };
 
 export async function getAccent() {
@@ -123,6 +127,50 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getThumbnailImages() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.thumbnailImages;
+  const val = window.localStorage.getItem('thumb-images');
+  return val === null ? DEFAULT_SETTINGS.thumbnailImages : val === 'true';
+}
+
+export async function setThumbnailImages(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('thumb-images', value ? 'true' : 'false');
+}
+
+export async function getThumbnailVideos() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.thumbnailVideos;
+  const val = window.localStorage.getItem('thumb-videos');
+  return val === null ? DEFAULT_SETTINGS.thumbnailVideos : val === 'true';
+}
+
+export async function setThumbnailVideos(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('thumb-videos', value ? 'true' : 'false');
+}
+
+export async function getThumbnailPDFs() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.thumbnailPDFs;
+  const val = window.localStorage.getItem('thumb-pdfs');
+  return val === null ? DEFAULT_SETTINGS.thumbnailPDFs : val === 'true';
+}
+
+export async function setThumbnailPDFs(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('thumb-pdfs', value ? 'true' : 'false');
+}
+
+export async function getThumbnailMaxFileSize() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.thumbnailMaxFileSize;
+  const val = window.localStorage.getItem('thumb-max-file-size');
+  return val ? parseInt(val, 10) : DEFAULT_SETTINGS.thumbnailMaxFileSize;
+}
+
+export async function setThumbnailMaxFileSize(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('thumb-max-file-size', String(value));
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +185,10 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('thumb-images');
+  window.localStorage.removeItem('thumb-videos');
+  window.localStorage.removeItem('thumb-pdfs');
+  window.localStorage.removeItem('thumb-max-file-size');
 }
 
 export async function exportSettings() {
@@ -162,6 +214,10 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getThumbnailImages(),
+    getThumbnailVideos(),
+    getThumbnailPDFs(),
+    getThumbnailMaxFileSize(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +231,10 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    thumbnailImages,
+    thumbnailVideos,
+    thumbnailPDFs,
+    thumbnailMaxFileSize,
     theme,
   });
 }
@@ -199,6 +259,10 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    thumbnailImages,
+    thumbnailVideos,
+    thumbnailPDFs,
+    thumbnailMaxFileSize,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +275,11 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (thumbnailImages !== undefined) await setThumbnailImages(thumbnailImages);
+  if (thumbnailVideos !== undefined) await setThumbnailVideos(thumbnailVideos);
+  if (thumbnailPDFs !== undefined) await setThumbnailPDFs(thumbnailPDFs);
+  if (thumbnailMaxFileSize !== undefined)
+    await setThumbnailMaxFileSize(thumbnailMaxFileSize);
   if (theme !== undefined) setTheme(theme);
 }
 
