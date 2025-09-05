@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { getDb } from '../../utils/safeIDB';
+import config from '../../apps/clipboard_manager/clipman.json';
 
 interface ClipItem {
   id?: number;
@@ -11,6 +12,8 @@ interface ClipItem {
 
 const DB_NAME = 'clipboard-manager';
 const STORE_NAME = 'items';
+const MAX_ITEMS = config.maxItems ?? 50;
+const CLEAR_LABEL = config.clearLabel ?? 'Clear history';
 
 let dbPromise: ReturnType<typeof getDb> | null = null;
 function getDB() {
@@ -32,18 +35,31 @@ function getDB() {
 const ClipboardManager: React.FC = () => {
   const [items, setItems] = useState<ClipItem[]>([]);
 
+  const truncateItems = useCallback(async (db: any) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    let cursor = await tx.store.openCursor();
+    let count = await tx.store.count();
+    while (cursor && count > MAX_ITEMS) {
+      await cursor.delete();
+      count--;
+      cursor = await cursor.continue();
+    }
+    await tx.done;
+  }, []);
+
   const loadItems = useCallback(async () => {
     try {
       const dbp = getDB();
       if (!dbp) return;
       const db = await dbp;
-
+      await truncateItems(db);
       const all = await db.getAll(STORE_NAME);
-      setItems(all.sort((a, b) => (b.id ?? 0) - (a.id ?? 0)));
+      const sorted = all.sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
+      setItems(sorted.slice(0, MAX_ITEMS));
     } catch {
       // ignore errors
     }
-  }, []);
+  }, [truncateItems]);
 
   const addItem = useCallback(
     async (text: string) => {
@@ -56,12 +72,13 @@ const ClipboardManager: React.FC = () => {
         const tx = db.transaction(STORE_NAME, 'readwrite');
         await tx.store.add({ text, created: Date.now() });
         await tx.done;
+        await truncateItems(db);
         await loadItems();
       } catch {
         // ignore errors
       }
     },
-    [loadItems]
+    [loadItems, truncateItems]
   );
 
   useEffect(() => {
@@ -115,13 +132,13 @@ const ClipboardManager: React.FC = () => {
 
   return (
     <div className="p-4 space-y-2 text-white bg-ub-cool-grey h-full overflow-auto">
-      <button
-        className="px-2 py-1 bg-gray-700 hover:bg-gray-600"
-        onClick={clearHistory}
-      >
-        Clear History
-      </button>
       <ul className="space-y-1">
+        <li
+          className="cursor-pointer text-red-400 hover:underline"
+          onClick={clearHistory}
+        >
+          {CLEAR_LABEL}
+        </li>
         {items.map((item) => (
           <li
             key={item.id}

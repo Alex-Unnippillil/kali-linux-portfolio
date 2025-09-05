@@ -1,18 +1,17 @@
 /* eslint-env browser */
-const historyKey = 'clipboardHistory';
-let history = JSON.parse(localStorage.getItem(historyKey)) || [];
-
 
 if (isBrowser) {
   const historyKey = 'clipboardHistory';
   let history = JSON.parse(safeLocalStorage?.getItem(historyKey) || '[]');
+  let maxItems = 20;
+  let clearLabel = 'Clear history';
 
   const list = document.getElementById('history');
   const clearBtn = document.getElementById('clear');
 
   function render() {
     list.innerHTML = '';
-    history.forEach((item) => {
+    history.slice(0, maxItems).forEach((item) => {
       const li = document.createElement('li');
       li.textContent = item;
       li.addEventListener('click', async () => {
@@ -41,6 +40,9 @@ if (isBrowser) {
       const text = await navigator.clipboard.readText();
       if (text && (history.length === 0 || history[0] !== text)) {
         history.unshift(text);
+        if (history.length > maxItems) {
+          history = history.slice(0, maxItems);
+        }
         save();
         render();
       }
@@ -49,6 +51,16 @@ if (isBrowser) {
     }
   });
 
-  // initial render
-  render();
+  fetch('clipman.json')
+    .then((r) => r.json())
+    .then((cfg) => {
+      if (typeof cfg.maxItems === 'number') maxItems = cfg.maxItems;
+      if (cfg.clearLabel && clearBtn) clearBtn.textContent = cfg.clearLabel;
+    })
+    .catch(() => {})
+    .finally(() => {
+      if (clearBtn && !clearBtn.textContent) clearBtn.textContent = clearLabel;
+      render();
+    });
 }
+
