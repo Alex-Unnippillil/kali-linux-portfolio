@@ -7,7 +7,13 @@ export class UbuntuApp extends Component {
         this.state = { launching: false, dragging: false, prefetched: false };
     }
 
-    handleDragStart = () => {
+    handleDragStart = (e) => {
+        try {
+            e.dataTransfer.setData('app-id', this.props.id);
+            e.dataTransfer.effectAllowed = 'copy';
+        } catch (err) {
+            // ignore drag errors
+        }
         this.setState({ dragging: true });
     }
 
