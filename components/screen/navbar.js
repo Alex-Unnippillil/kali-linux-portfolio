@@ -30,13 +30,15 @@ export default class Navbar extends Component {
                                         />
                                         Activities
                                 </div>
-                                <div
+                                <button
+                                        type="button"
+                                        id="open-orage"
                                         className={
                                                 'pl-2 pr-2 text-xs md:text-sm outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1'
                                         }
                                 >
                                         <Clock />
-                                </div>
+                                </button>
                                 <button
                                         type="button"
                                         id="status-bar"
