@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Clock from '../util-components/clock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
+import KeyboardLayoutIndicator from '../util-components/keyboard-layout';
 
 export default class Navbar extends Component {
 	constructor() {
@@ -36,6 +37,9 @@ export default class Navbar extends Component {
                                         }
                                 >
                                         <Clock />
+                                </div>
+                                <div className="pl-2 pr-2 text-xs md:text-sm outline-none border-b-2 border-transparent py-1">
+                                        <KeyboardLayoutIndicator />
                                 </div>
                                 <button
                                         type="button"
