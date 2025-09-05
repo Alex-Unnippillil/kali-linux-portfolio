@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, fireEvent, screen, waitFor, act } from '@testing-library/react';
 import OpenVASApp from '../components/apps/openvas';
+import NotificationCenter from '../components/common/NotificationCenter';
 
 describe('OpenVASApp', () => {
   beforeEach(() => {
@@ -27,7 +28,11 @@ describe('OpenVASApp', () => {
   });
 
   it('includes group and profile in scan request', async () => {
-    render(<OpenVASApp />);
+    render(
+      <NotificationCenter>
+        <OpenVASApp />
+      </NotificationCenter>
+    );
     fireEvent.change(
       screen.getByPlaceholderText('Target (e.g. 192.168.1.1)'),
       { target: { value: '1.2.3.4' } }
@@ -45,7 +50,11 @@ describe('OpenVASApp', () => {
   });
 
   it('triggers notification on scan completion', async () => {
-    render(<OpenVASApp />);
+    render(
+      <NotificationCenter>
+        <OpenVASApp />
+      </NotificationCenter>
+    );
     fireEvent.change(
       screen.getByPlaceholderText('Target (e.g. 192.168.1.1)'),
       { target: { value: '1.2.3.4' } }
@@ -62,7 +71,11 @@ describe('OpenVASApp', () => {
     (fetch as jest.Mock).mockImplementationOnce(() =>
       Promise.reject(new Error('fail'))
     );
-    render(<OpenVASApp />);
+    render(
+      <NotificationCenter>
+        <OpenVASApp />
+      </NotificationCenter>
+    );
     fireEvent.change(
       screen.getByPlaceholderText('Target (e.g. 192.168.1.1)'),
       { target: { value: '1.2.3.4' } }
@@ -76,13 +89,21 @@ describe('OpenVASApp', () => {
   });
 
   it('displays sample policy settings', () => {
-    render(<OpenVASApp />);
+    render(
+      <NotificationCenter>
+        <OpenVASApp />
+      </NotificationCenter>
+    );
     expect(screen.getByText('Policy Settings')).toBeInTheDocument();
     expect(screen.getByText('PCI DSS')).toBeInTheDocument();
   });
 
   it('allows saving and loading a custom policy', () => {
-    render(<OpenVASApp />);
+    render(
+      <NotificationCenter>
+        <OpenVASApp />
+      </NotificationCenter>
+    );
     fireEvent.change(screen.getByLabelText('Policy Name'), {
       target: { value: 'Custom Policy' },
     });
@@ -95,8 +116,14 @@ describe('OpenVASApp', () => {
   });
 
   it('opens issue detail panel with remediation info', () => {
-    render(<OpenVASApp />);
-    fireEvent.click(screen.getByText('Outdated banner exposes software version'));
+    render(
+      <NotificationCenter>
+        <OpenVASApp />
+      </NotificationCenter>
+    );
+    fireEvent.click(
+      screen.getByText('Outdated banner exposes software version')
+    );
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText(/Remediation/)).toBeInTheDocument();
     fireEvent.click(screen.getByText('Close'));
@@ -114,7 +141,11 @@ describe('OpenVASApp', () => {
         })
     ) as any;
 
-    const { unmount } = render(<OpenVASApp />);
+    const { unmount } = render(
+      <NotificationCenter>
+        <OpenVASApp />
+      </NotificationCenter>
+    );
     fireEvent.change(
       screen.getByPlaceholderText('Target (e.g. 192.168.1.1)'),
       { target: { value: '1.2.3.4' } }
@@ -123,7 +154,11 @@ describe('OpenVASApp', () => {
     expect(localStorage.getItem('openvas/session')).toBeTruthy();
 
     unmount();
-    render(<OpenVASApp />);
+    render(
+      <NotificationCenter>
+        <OpenVASApp />
+      </NotificationCenter>
+    );
 
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
     expect(fetch).toHaveBeenLastCalledWith(

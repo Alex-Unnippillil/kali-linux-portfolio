@@ -10,30 +10,44 @@ interface NotificationsContextValue {
   notifications: Record<string, AppNotification[]>;
   pushNotification: (appId: string, message: string) => void;
   clearNotifications: (appId?: string) => void;
+  doNotDisturb: boolean;
+  toggleDoNotDisturb: () => void;
 }
 
 export const NotificationsContext = createContext<NotificationsContextValue | null>(null);
 
-export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
-  const [notifications, setNotifications] = useState<Record<string, AppNotification[]>>({});
+export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({
+  children,
+}) => {
+  const [notifications, setNotifications] = useState<
+    Record<string, AppNotification[]>
+  >({});
+  const [toasts, setToasts] = useState<
+    (AppNotification & { appId: string })[]
+  >([]);
+  const [doNotDisturb, setDoNotDisturb] = useState(false);
 
-  const pushNotification = useCallback((appId: string, message: string) => {
-    setNotifications(prev => {
-      const list = prev[appId] ?? [];
-      const next = {
-        ...prev,
-        [appId]: [
-          ...list,
-          {
-            id: `${Date.now()}-${Math.random()}`,
-            message,
-            date: Date.now(),
-          },
-        ],
+  const pushNotification = useCallback(
+    (appId: string, message: string) => {
+      const notif: AppNotification = {
+        id: `${Date.now()}-${Math.random()}`,
+        message,
+        date: Date.now(),
       };
-      return next;
-    });
-  }, []);
+      setNotifications(prev => {
+        const list = prev[appId] ?? [];
+        return { ...prev, [appId]: [...list, notif] };
+      });
+      if (!doNotDisturb) {
+        const toast = { ...notif, appId };
+        setToasts(t => [...t, toast]);
+        setTimeout(() => {
+          setToasts(t => t.filter(to => to.id !== toast.id));
+        }, 3000);
+      }
+    },
+    [doNotDisturb]
+  );
 
   const clearNotifications = useCallback((appId?: string) => {
     setNotifications(prev => {
@@ -43,6 +57,11 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
       return next;
     });
   }, []);
+
+  const toggleDoNotDisturb = useCallback(
+    () => setDoNotDisturb(d => !d),
+    []
+  );
 
   const totalCount = Object.values(notifications).reduce(
     (sum, list) => sum + list.length,
@@ -59,19 +78,23 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
 
   return (
     <NotificationsContext.Provider
-      value={{ notifications, pushNotification, clearNotifications }}
+      value={{
+        notifications,
+        pushNotification,
+        clearNotifications,
+        doNotDisturb,
+        toggleDoNotDisturb,
+      }}
     >
       {children}
-      <div className="notification-center">
-        {Object.entries(notifications).map(([appId, list]) => (
-          <section key={appId} className="notification-group">
-            <h3>{appId}</h3>
-            <ul>
-              {list.map(n => (
-                <li key={n.id}>{n.message}</li>
-              ))}
-            </ul>
-          </section>
+      <div className="fixed bottom-4 right-4 space-y-2 z-50 text-sm">
+        {toasts.map(t => (
+          <div
+            key={t.id}
+            className="bg-black bg-opacity-80 text-white px-3 py-2 rounded"
+          >
+            {t.message}
+          </div>
         ))}
       </div>
     </NotificationsContext.Provider>
