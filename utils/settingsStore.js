@@ -14,6 +14,8 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  customDpi: false,
+  dpi: 96,
 };
 
 export async function getAccent() {
@@ -38,12 +40,20 @@ export async function setWallpaper(wallpaper) {
 
 export async function getDensity() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.density;
-  return window.localStorage.getItem('density') || DEFAULT_SETTINGS.density;
+  try {
+    return window.localStorage.getItem('density') || DEFAULT_SETTINGS.density;
+  } catch {
+    return DEFAULT_SETTINGS.density;
+  }
 }
 
 export async function setDensity(density) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('density', density);
+  try {
+    window.localStorage.setItem('density', density);
+  } catch {
+    /* ignore */
+  }
 }
 
 export async function getReducedMotion() {
@@ -123,6 +133,43 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getCustomDpi() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.customDpi;
+  try {
+    return window.localStorage.getItem('custom-dpi') === 'true';
+  } catch {
+    return DEFAULT_SETTINGS.customDpi;
+  }
+}
+
+export async function setCustomDpi(value) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem('custom-dpi', value ? 'true' : 'false');
+  } catch {
+    /* ignore */
+  }
+}
+
+export async function getDpi() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.dpi;
+  try {
+    const val = window.localStorage.getItem('dpi');
+    return val ? parseFloat(val) : DEFAULT_SETTINGS.dpi;
+  } catch {
+    return DEFAULT_SETTINGS.dpi;
+  }
+}
+
+export async function setDpi(value) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem('dpi', String(value));
+  } catch {
+    /* ignore */
+  }
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +184,8 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('custom-dpi');
+  window.localStorage.removeItem('dpi');
 }
 
 export async function exportSettings() {
@@ -151,6 +200,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    customDpi,
+    dpi,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +213,8 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getCustomDpi(),
+    getDpi(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +228,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    customDpi,
+    dpi,
     theme,
   });
 }
@@ -199,6 +254,8 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    customDpi,
+    dpi,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +268,8 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (customDpi !== undefined) await setCustomDpi(customDpi);
+  if (dpi !== undefined) await setDpi(dpi);
   if (theme !== undefined) setTheme(theme);
 }
 
