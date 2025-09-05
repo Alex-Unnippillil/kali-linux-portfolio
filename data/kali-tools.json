@@ -1,0 +1,36 @@
+{
+  "top10": {
+    "description": "Top 10 security tools",
+    "tools": [
+      "nmap",
+      "hydra",
+      "john",
+      "metasploit-framework",
+      "sqlmap",
+      "aircrack-ng",
+      "burpsuite",
+      "wireshark",
+      "maltego",
+      "zenmap"
+    ]
+  },
+  "passwords": {
+    "description": "Password attack tools",
+    "tools": [
+      "hashcat",
+      "john",
+      "hydra",
+      "medusa",
+      "smbmap"
+    ]
+  },
+  "forensics": {
+    "description": "Digital forensics tools",
+    "tools": [
+      "autopsy",
+      "sleuthkit",
+      "volatility",
+      "binwalk"
+    ]
+  }
+}

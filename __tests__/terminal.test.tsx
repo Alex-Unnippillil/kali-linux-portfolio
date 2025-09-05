@@ -33,7 +33,8 @@ jest.mock(
 jest.mock('@xterm/xterm/css/xterm.css', () => ({}), { virtual: true });
 
 import React, { createRef, act } from 'react';
-import { render, fireEvent } from '@testing-library/react';
+import { render, fireEvent, screen, waitFor } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import Terminal from '../apps/terminal';
 import TerminalTabs from '../apps/terminal/tabs';
 
@@ -75,5 +76,24 @@ describe('Terminal component', () => {
 
     fireEvent.keyDown(root, { ctrlKey: true, key: 'w' });
     expect(container.querySelectorAll('.flex.items-center.cursor-pointer').length).toBe(1);
+  });
+
+  it('shows kali tools modal for apt install', async () => {
+    const root = document.createElement('div');
+    root.setAttribute('id', '__next');
+    document.body.appendChild(root);
+    const ref = createRef<any>();
+    render(<Terminal ref={ref} />, { container: root });
+    await act(async () => {});
+    act(() => {
+      ref.current.runCommand('sudo apt install kali-tools-top10');
+    });
+    const heading = await screen.findByText('kali-tools-top10');
+    expect(heading).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Close'));
+    await waitFor(() => {
+      expect(screen.queryByText('kali-tools-top10')).toBeNull();
+    });
+    document.body.removeChild(root);
   });
 });
