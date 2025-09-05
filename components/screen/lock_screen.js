@@ -23,10 +23,10 @@ export default function LockScreen(props) {
             />
             <div className="w-full h-full z-50 overflow-hidden relative flex flex-col justify-center items-center text-white">
                 <div className=" text-7xl">
-                    <Clock onlyTime={true} />
+                    <Clock format="%I:%M %p" />
                 </div>
                 <div className="mt-4 text-xl font-medium">
-                    <Clock onlyDay={true} />
+                    <Clock format="%a %b %d" />
                 </div>
                 <div className=" mt-16 text-base">
                     Click or Press a key to unlock

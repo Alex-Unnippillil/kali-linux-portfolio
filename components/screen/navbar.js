@@ -3,6 +3,18 @@ import Image from 'next/image';
 import Clock from '../util-components/clock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
+import { useClocks } from '../../hooks/useClocks';
+
+function NavbarClockDisplay() {
+        const [clocks] = useClocks();
+        return (
+                <div className="flex gap-2">
+                        {clocks.map((c, i) => (
+                                <Clock key={i} timezone={c.timezone} format={c.format} label={c.label} />
+                        ))}
+                </div>
+        );
+}
 
 export default class Navbar extends Component {
 	constructor() {
@@ -35,7 +47,7 @@ export default class Navbar extends Component {
                                                 'pl-2 pr-2 text-xs md:text-sm outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1'
                                         }
                                 >
-                                        <Clock />
+                                        <NavbarClockDisplay />
                                 </div>
                                 <button
                                         type="button"

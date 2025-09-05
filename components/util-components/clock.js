@@ -1,61 +1,84 @@
-import { Component } from 'react'
+"use client";
 
-export default class Clock extends Component {
-    constructor() {
-        super();
-        this.month_list = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        this.day_list = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-        this.state = {
-            hour_12: true,
-            current_time: null
-        };
-    }
+import { useEffect, useState } from 'react';
 
-    componentDidMount() {
-        const update = () => this.setState({ current_time: new Date() });
-        update();
-        if (typeof window !== 'undefined' && typeof Worker === 'function') {
-            this.worker = new Worker(new URL('../../workers/timer.worker.ts', import.meta.url));
-            this.worker.onmessage = update;
-            this.worker.postMessage({ action: 'start', interval: 10 * 1000 });
-        } else {
-            this.update_time = setInterval(update, 10 * 1000);
-        }
-    }
+const dayList = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const monthList = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
-    componentWillUnmount() {
-        if (this.worker) {
-            this.worker.postMessage({ action: 'stop' });
-            this.worker.terminate();
-        }
-        if (this.update_time) clearInterval(this.update_time);
-    }
-
-    render() {
-        const { current_time } = this.state;
-        if (!current_time) return <span suppressHydrationWarning></span>;
-
-        let day = this.day_list[current_time.getDay()];
-        let hour = current_time.getHours();
-        let minute = current_time.getMinutes();
-        let month = this.month_list[current_time.getMonth()];
-        let date = current_time.getDate().toLocaleString();
-        let meridiem = (hour < 12 ? "AM" : "PM");
-
-        if (minute.toLocaleString().length === 1) {
-            minute = "0" + minute
-        }
-
-        if (this.state.hour_12 && hour > 12) hour -= 12;
-
-        let display_time;
-        if (this.props.onlyTime) {
-            display_time = hour + ":" + minute + " " + meridiem;
-        }
-        else if (this.props.onlyDay) {
-            display_time = day + " " + month + " " + date;
-        }
-        else display_time = day + " " + month + " " + date + " " + hour + ":" + minute + " " + meridiem;
-        return <span suppressHydrationWarning>{display_time}</span>;
-    }
+function formatWithStrftime(date, format, timeZone) {
+  const zoned = new Date(
+    date.toLocaleString('en-US', { timeZone }),
+  );
+  const map = {
+    '%Y': zoned.getFullYear().toString(),
+    '%m': String(zoned.getMonth() + 1).padStart(2, '0'),
+    '%d': String(zoned.getDate()).padStart(2, '0'),
+    '%H': String(zoned.getHours()).padStart(2, '0'),
+    '%M': String(zoned.getMinutes()).padStart(2, '0'),
+    '%S': String(zoned.getSeconds()).padStart(2, '0'),
+    '%a': dayList[zoned.getDay()],
+    '%b': monthList[zoned.getMonth()],
+    '%p': zoned.getHours() < 12 ? 'AM' : 'PM',
+    '%I': String(((zoned.getHours() + 11) % 12) + 1).padStart(2, '0'),
+  };
+  return format.replace(/%[YmdHMSabpI]/g, (token) => map[token] || token);
 }
+
+export default function Clock({
+  timezone = Intl.DateTimeFormat().resolvedOptions().timeZone,
+  format,
+  label,
+  onlyTime,
+  onlyDay,
+}) {
+  const defaultFormat = onlyTime
+    ? '%I:%M %p'
+    : onlyDay
+      ? '%a %b %d'
+      : '%a %b %d %I:%M %p';
+  const fmt = format || defaultFormat;
+
+  const [now, setNow] = useState(null);
+
+  useEffect(() => {
+    const update = () => setNow(new Date());
+    update();
+    let worker;
+    let timer;
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
+      worker = new Worker(new URL('../../workers/timer.worker.ts', import.meta.url));
+      worker.onmessage = update;
+      worker.postMessage({ action: 'start', interval: 1000 });
+    } else {
+      timer = setInterval(update, 1000);
+    }
+    return () => {
+      if (worker) {
+        worker.postMessage({ action: 'stop' });
+        worker.terminate();
+      }
+      if (timer) clearInterval(timer);
+    };
+  }, []);
+
+  if (!now) return <span suppressHydrationWarning></span>;
+
+  const text = formatWithStrftime(now, fmt, timezone);
+  const display = label ? `${label} ${text}` : text;
+
+  return <span suppressHydrationWarning>{display}</span>;
+}
+
