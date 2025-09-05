@@ -128,6 +128,12 @@ export class Desktop extends Component {
                 this.openApp("settings");
             });
         }
+        const openOrage = document.getElementById("open-orage");
+        if (openOrage) {
+            openOrage.addEventListener("click", () => {
+                this.openApp("orage");
+            });
+        }
     }
 
     setContextListeners = () => {
