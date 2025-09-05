@@ -1,0 +1,9 @@
+[
+  { "description": "Copy", "keys": "Ctrl+Shift+C" },
+  { "description": "Paste", "keys": "Ctrl+Shift+V" },
+  { "description": "Find", "keys": "Ctrl+Shift+F" },
+  { "description": "Zoom In", "keys": "Ctrl+Shift+=" },
+  { "description": "Zoom Out", "keys": "Ctrl+Shift+-" },
+  { "description": "New Tab", "keys": "Ctrl+Shift+T" },
+  { "description": "New Window", "keys": "Ctrl+Shift+N" }
+]

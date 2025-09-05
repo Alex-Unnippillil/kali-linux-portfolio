@@ -99,6 +99,12 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     setActiveId(tab.id);
   }, [onNewTab, updateTabs]);
 
+  useEffect(() => {
+    const listener = () => addTab();
+    window.addEventListener('terminal:new-tab', listener);
+    return () => window.removeEventListener('terminal:new-tab', listener);
+  }, [addTab]);
+
   const handleDragStart = (index: number) => (e: React.DragEvent) => {
     dragSrc.current = index;
     e.dataTransfer.effectAllowed = 'move';

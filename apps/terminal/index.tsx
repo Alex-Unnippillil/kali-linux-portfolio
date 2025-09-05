@@ -8,6 +8,8 @@ import React, {
   useImperativeHandle,
   useCallback,
 } from 'react';
+import useTerminalKeymap from './keymap';
+import KeymapOverlay from './components/KeymapOverlay';
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
@@ -76,6 +78,17 @@ const files: Record<string, string> = {
   'README.md': 'Welcome to the web terminal.\nThis is a fake file used for demos.',
 };
 
+const formatEvent = (e: KeyboardEvent) => {
+  const parts = [
+    e.ctrlKey ? 'Ctrl' : '',
+    e.altKey ? 'Alt' : '',
+    e.shiftKey ? 'Shift' : '',
+    e.metaKey ? 'Meta' : '',
+    e.key.length === 1 ? e.key.toUpperCase() : e.key,
+  ];
+  return parts.filter(Boolean).join('+');
+};
+
 const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<any>(null);
@@ -100,29 +113,23 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   });
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [bindingsOpen, setBindingsOpen] = useState(false);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
   const [overflow, setOverflow] = useState({ top: false, bottom: false });
-  const ansiColors = [
-    '#000000',
-    '#AA0000',
-    '#00AA00',
-    '#AA5500',
-    '#0000AA',
-    '#AA00AA',
-    '#00AAAA',
-    '#AAAAAA',
-    '#555555',
-    '#FF5555',
-    '#55FF55',
-    '#FFFF55',
-    '#5555FF',
-    '#FF55FF',
-    '#55FFFF',
-    '#FFFFFF',
-  ];
+  const { shortcuts } = useTerminalKeymap();
+  const [menu, setMenu] = useState<{ x: number; y: number; url: string } | null>(
+    null,
+  );
+  const fontSizeRef = useRef(14);
+  const adjustFont = (delta: number) => {
+    fontSizeRef.current = Math.max(8, fontSizeRef.current + delta);
+    if (termRef.current) {
+      termRef.current.options.fontSize = fontSizeRef.current;
+      fitRef.current?.fit();
+    }
+  };
 
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
@@ -158,6 +165,17 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       const text = await navigator.clipboard.readText();
       handleInput(text);
     } catch {}
+  };
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    const selection =
+      termRef.current?.getSelection?.() ||
+      window.getSelection()?.toString() || '';
+    const match = selection.match(/https?:\/\/\S+/);
+    if (match) {
+      e.preventDefault();
+      setMenu({ x: e.clientX, y: e.clientY, url: match[0] });
+    }
   };
 
   const runWorker = useCallback(
@@ -304,6 +322,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         scrollback: 1000,
         cols: 80,
         rows: 24,
+        fontSize: fontSizeRef.current,
       });
       const fit = new FitAddon();
       const search = new SearchAddon();
@@ -385,6 +404,51 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   }, []);
 
   useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable ||
+        bindingsOpen ||
+        paletteOpen
+      )
+        return;
+      const combo = formatEvent(e);
+      const match = shortcuts.find((s) => s.keys === combo);
+      if (!match) return;
+      e.preventDefault();
+      switch (match.description) {
+        case 'Copy':
+          handleCopy();
+          break;
+        case 'Paste':
+          handlePaste();
+          break;
+        case 'Find': {
+          const q = window.prompt('Search');
+          if (q) searchRef.current?.findNext(q);
+          break;
+        }
+        case 'Zoom In':
+          adjustFont(1);
+          break;
+        case 'Zoom Out':
+          adjustFont(-1);
+          break;
+        case 'New Tab':
+          window.dispatchEvent(new Event('terminal:new-tab'));
+          break;
+        case 'New Window':
+          openApp?.('terminal');
+          break;
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [shortcuts, handleCopy, handlePaste, openApp, bindingsOpen, paletteOpen]);
+
+  useEffect(() => {
     const listener = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') {
         e.preventDefault();
@@ -399,6 +463,13 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     window.addEventListener('keydown', listener);
     return () => window.removeEventListener('keydown', listener);
   }, [paletteOpen]);
+
+  useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(null);
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, [menu]);
 
   return (
     <div className="relative h-full w-full">
@@ -434,42 +505,13 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           </div>
         </div>
       )}
-      {settingsOpen && (
-        <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-10">
-          <div className="bg-gray-900 p-4 rounded space-y-4">
-            <div className="grid grid-cols-8 gap-2">
-              {ansiColors.map((c, i) => (
-                <div key={i} className="h-4 w-4 rounded" style={{ backgroundColor: c }} />
-              ))}
-            </div>
-            <pre className="text-sm leading-snug">
-              <span className="text-blue-400">bin</span>{' '}
-              <span className="text-green-400">script.sh</span>{' '}
-              <span className="text-gray-300">README.md</span>
-            </pre>
-            <div className="flex justify-end gap-2">
-              <button
-                className="px-2 py-1 bg-gray-700 rounded"
-                onClick={() => {
-                  setSettingsOpen(false);
-                  termRef.current?.focus();
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-2 py-1 bg-blue-600 rounded"
-                onClick={() => {
-                  setSettingsOpen(false);
-                  termRef.current?.focus();
-                }}
-              >
-                Apply
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <KeymapOverlay
+        open={bindingsOpen}
+        onClose={() => {
+          setBindingsOpen(false);
+          termRef.current?.focus();
+        }}
+      />
       <div className="flex flex-col h-full">
         <div className="flex items-center gap-2 bg-gray-800 p-1">
           <button onClick={handleCopy} aria-label="Copy">
@@ -478,7 +520,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           <button onClick={handlePaste} aria-label="Paste">
             <PasteIcon />
           </button>
-          <button onClick={() => setSettingsOpen(true)} aria-label="Settings">
+          <button onClick={() => setBindingsOpen(true)} aria-label="Settings">
             <SettingsIcon />
           </button>
         </div>
@@ -486,13 +528,31 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           <TerminalContainer
             ref={containerRef}
             className="resize overflow-hidden font-mono"
+            onContextMenu={handleContextMenu}
             style={{
               width: '80ch',
               height: '24em',
-              fontSize: 'clamp(1rem, 0.6vw + 1rem, 1.1rem)',
               lineHeight: 1.4,
             }}
           />
+          {menu && (
+            <ul
+              className="absolute z-20 bg-gray-800 text-white text-sm rounded shadow"
+              style={{ top: menu.y, left: menu.x }}
+            >
+              <li>
+                <button
+                  className="block w-full text-left px-4 py-2 hover:bg-gray-700"
+                  onClick={() => {
+                    window.open(menu.url, '_blank');
+                    setMenu(null);
+                  }}
+                >
+                  Open link
+                </button>
+              </li>
+            </ul>
+          )}
           {overflow.top && (
             <div className="pointer-events-none absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-black" />
           )}
