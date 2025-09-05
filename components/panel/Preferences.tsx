@@ -1,8 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, ChangeEvent } from "react";
 import Tabs from "../Tabs";
 import ToggleSwitch from "../ToggleSwitch";
+import {
+  PANEL_PROFILES,
+  type PanelProfileName,
+} from "../../utils/panelProfiles";
 
 const PANEL_PREFIX = "xfce.panel.";
 
@@ -17,6 +21,14 @@ export default function Preferences() {
   ];
 
   const [active, setActive] = useState<TabId>("display");
+
+  const [profile, setProfile] = useState<PanelProfileName>(() => {
+    if (typeof window === "undefined") return "default";
+    return (
+      (localStorage.getItem(`${PANEL_PREFIX}profile`) as PanelProfileName) ||
+      "default"
+    );
+  });
 
   const [size, setSize] = useState(() => {
     if (typeof window === "undefined") return 24;
@@ -60,12 +72,43 @@ export default function Preferences() {
     localStorage.setItem(`${PANEL_PREFIX}autohide`, autohide ? "true" : "false");
   }, [autohide]);
 
+  const handleProfileChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const selected = e.target.value as PanelProfileName;
+    const config = PANEL_PROFILES[selected];
+    setProfile(selected);
+    setSize(config.size);
+    setLength(config.length);
+    setOrientation(config.orientation);
+    setAutohide(config.autohide);
+    localStorage.setItem(
+      `${PANEL_PREFIX}items`,
+      JSON.stringify(config.items)
+    );
+    localStorage.setItem(`${PANEL_PREFIX}profile`, selected);
+    window.dispatchEvent(new CustomEvent("xfce.panel.rebuild"));
+  };
+
   return (
     <div>
       <Tabs tabs={TABS} active={active} onChange={setActive} />
       <div className="p-4">
         {active === "display" && (
           <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <label htmlFor="panel-profile" className="text-ubt-grey">
+                Profile
+              </label>
+              <select
+                id="panel-profile"
+                value={profile}
+                onChange={handleProfileChange}
+                className="bg-ub-cool-grey text-white px-2 py-1 rounded"
+              >
+                <option value="default">Default</option>
+                <option value="dev">Dev</option>
+                <option value="minimal">Minimal</option>
+              </select>
+            </div>
             <div className="flex items-center justify-between">
               <label htmlFor="orientation" className="text-ubt-grey">
                 Orientation
