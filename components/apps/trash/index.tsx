@@ -45,6 +45,20 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     localStorage.setItem('window-trash', JSON.stringify(next));
   };
 
+  const notifyChange = () => window.dispatchEvent(new Event('trash-change'));
+
+  const pushHistory = (item: TrashItem | TrashItem[]) => {
+    const arr = Array.isArray(item) ? item : [item];
+    let history: TrashItem[] = [];
+    try {
+      history = JSON.parse(localStorage.getItem('window-trash-history') || '[]');
+    } catch {
+      history = [];
+    }
+    history = [...arr, ...history].slice(0, 20);
+    localStorage.setItem('window-trash-history', JSON.stringify(history));
+  };
+
   const restore = useCallback(() => {
     if (selected === null) return;
     const item = items[selected];
@@ -53,6 +67,7 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     const next = items.filter((_, i) => i !== selected);
     persist(next);
     setSelected(null);
+    notifyChange();
   }, [items, selected, openApp]);
 
   const remove = useCallback(() => {
@@ -60,8 +75,10 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     const item = items[selected];
     if (!window.confirm(`Delete ${item.title}?`)) return;
     const next = items.filter((_, i) => i !== selected);
+    pushHistory(item);
     persist(next);
     setSelected(null);
+    notifyChange();
   }, [items, selected]);
 
   const restoreAll = () => {
@@ -70,13 +87,16 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     items.forEach((item) => openApp(item.id));
     persist([]);
     setSelected(null);
+    notifyChange();
   };
 
   const empty = () => {
     if (items.length === 0) return;
     if (!window.confirm('Empty trash?')) return;
+    pushHistory(items);
     persist([]);
     setSelected(null);
+    notifyChange();
   };
 
   const handleKey = useCallback(

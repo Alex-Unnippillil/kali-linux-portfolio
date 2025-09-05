@@ -777,6 +777,7 @@ const apps = [
     id: 'trash',
     title: 'Trash',
     icon: '/themes/Yaru/status/user-trash-symbolic.svg',
+    notifications: 0,
     disabled: false,
     favourite: false,
     desktop_shortcut: true,

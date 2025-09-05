@@ -779,8 +779,10 @@ export class Desktop extends Component {
             const icon = trash.length
                 ? '/themes/Yaru/status/user-trash-full-symbolic.svg'
                 : '/themes/Yaru/status/user-trash-symbolic.svg';
-            if (apps[appIndex].icon !== icon) {
+            const count = trash.length;
+            if (apps[appIndex].icon !== icon || apps[appIndex].notifications !== count) {
                 apps[appIndex].icon = icon;
+                apps[appIndex].notifications = count;
                 this.forceUpdate();
             }
         }
