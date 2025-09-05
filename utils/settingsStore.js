@@ -14,6 +14,11 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  tapToClick: false,
+  disableWhileTyping: true,
+  naturalScroll: false,
+  mouseSpeed: 50,
+  touchpadSpeed: 50,
 };
 
 export async function getAccent() {
@@ -123,6 +128,61 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getTapToClick() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.tapToClick;
+  const val = window.localStorage.getItem('tap-to-click');
+  return val === null ? DEFAULT_SETTINGS.tapToClick : val === 'true';
+}
+
+export async function setTapToClick(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('tap-to-click', value ? 'true' : 'false');
+}
+
+export async function getDisableWhileTyping() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.disableWhileTyping;
+  const val = window.localStorage.getItem('disable-while-typing');
+  return val === null ? DEFAULT_SETTINGS.disableWhileTyping : val === 'true';
+}
+
+export async function setDisableWhileTyping(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('disable-while-typing', value ? 'true' : 'false');
+}
+
+export async function getNaturalScroll() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.naturalScroll;
+  const val = window.localStorage.getItem('natural-scroll');
+  return val === null ? DEFAULT_SETTINGS.naturalScroll : val === 'true';
+}
+
+export async function setNaturalScroll(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('natural-scroll', value ? 'true' : 'false');
+}
+
+export async function getMouseSpeed() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.mouseSpeed;
+  const val = window.localStorage.getItem('mouse-speed');
+  return val === null ? DEFAULT_SETTINGS.mouseSpeed : parseInt(val, 10);
+}
+
+export async function setMouseSpeed(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('mouse-speed', String(value));
+}
+
+export async function getTouchpadSpeed() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.touchpadSpeed;
+  const val = window.localStorage.getItem('touchpad-speed');
+  return val === null ? DEFAULT_SETTINGS.touchpadSpeed : parseInt(val, 10);
+}
+
+export async function setTouchpadSpeed(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('touchpad-speed', String(value));
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +197,11 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('tap-to-click');
+  window.localStorage.removeItem('disable-while-typing');
+  window.localStorage.removeItem('natural-scroll');
+  window.localStorage.removeItem('mouse-speed');
+  window.localStorage.removeItem('touchpad-speed');
 }
 
 export async function exportSettings() {
@@ -151,6 +216,11 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    tapToClick,
+    disableWhileTyping,
+    naturalScroll,
+    mouseSpeed,
+    touchpadSpeed,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +232,11 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getTapToClick(),
+    getDisableWhileTyping(),
+    getNaturalScroll(),
+    getMouseSpeed(),
+    getTouchpadSpeed(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +250,11 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    tapToClick,
+    disableWhileTyping,
+    naturalScroll,
+    mouseSpeed,
+    touchpadSpeed,
     theme,
   });
 }
@@ -199,6 +279,11 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    tapToClick,
+    disableWhileTyping,
+    naturalScroll,
+    mouseSpeed,
+    touchpadSpeed,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +296,12 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (tapToClick !== undefined) await setTapToClick(tapToClick);
+  if (disableWhileTyping !== undefined)
+    await setDisableWhileTyping(disableWhileTyping);
+  if (naturalScroll !== undefined) await setNaturalScroll(naturalScroll);
+  if (mouseSpeed !== undefined) await setMouseSpeed(mouseSpeed);
+  if (touchpadSpeed !== undefined) await setTouchpadSpeed(touchpadSpeed);
   if (theme !== undefined) setTheme(theme);
 }
 
