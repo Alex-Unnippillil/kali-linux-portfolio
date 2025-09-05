@@ -14,6 +14,8 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  dpi: 96,
+  scale: 1,
 };
 
 export async function getAccent() {
@@ -123,6 +125,46 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getDpi() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.dpi;
+  try {
+    const ls = window.localStorage;
+    if (!ls) return DEFAULT_SETTINGS.dpi;
+    const stored = ls.getItem('custom-dpi');
+    return stored ? parseInt(stored, 10) : DEFAULT_SETTINGS.dpi;
+  } catch {
+    return DEFAULT_SETTINGS.dpi;
+  }
+}
+
+export async function setDpi(value) {
+  if (typeof window === 'undefined') return;
+  try {
+    const ls = window.localStorage;
+    ls && ls.setItem('custom-dpi', String(value));
+  } catch {}
+}
+
+export async function getScale() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.scale;
+  try {
+    const ls = window.localStorage;
+    if (!ls) return DEFAULT_SETTINGS.scale;
+    const stored = ls.getItem('scale-factor');
+    return stored ? parseFloat(stored) : DEFAULT_SETTINGS.scale;
+  } catch {
+    return DEFAULT_SETTINGS.scale;
+  }
+}
+
+export async function setScale(value) {
+  if (typeof window === 'undefined') return;
+  try {
+    const ls = window.localStorage;
+    ls && ls.setItem('scale-factor', String(value));
+  } catch {}
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +179,8 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('custom-dpi');
+  window.localStorage.removeItem('scale-factor');
 }
 
 export async function exportSettings() {
@@ -151,6 +195,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    scale,
+    dpi,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +208,8 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getScale(),
+    getDpi(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +223,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    scale,
+    dpi,
     theme,
   });
 }
@@ -199,6 +249,8 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    scale,
+    dpi,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +263,8 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (scale !== undefined) await setScale(scale);
+  if (dpi !== undefined) await setDpi(dpi);
   if (theme !== undefined) setTheme(theme);
 }
 
