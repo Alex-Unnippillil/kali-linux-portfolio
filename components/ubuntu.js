@@ -7,21 +7,27 @@ import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
+import { getDefaultSession } from '../session/manager';
 
 export default class Ubuntu extends Component {
-	constructor() {
-		super();
-		this.state = {
-			screen_locked: false,
-			bg_image_name: 'wall-2',
-			booting_screen: true,
-			shutDownScreen: false
-		};
-	}
+        constructor() {
+                super();
+                this.state = {
+                        screen_locked: false,
+                        bg_image_name: 'wall-2',
+                        booting_screen: true,
+                        shutDownScreen: false,
+                        session: null
+                };
+        }
 
-	componentDidMount() {
-		this.getLocalData();
-	}
+        componentDidMount() {
+                this.getLocalData();
+                const profile = getDefaultSession();
+                if (profile) {
+                        this.setState({ session: profile.session });
+                }
+        }
 
 	setTimeOutBootScreen = () => {
 		setTimeout(() => {
@@ -127,8 +133,12 @@ export default class Ubuntu extends Component {
 					turnOn={this.turnOn}
 				/>
 				<Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
-				<Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
-			</div>
-		);
-	}
+                                <Desktop
+                                        bg_image_name={this.state.bg_image_name}
+                                        changeBackgroundImage={this.changeBackgroundImage}
+                                        session={this.state.session}
+                                />
+                        </div>
+                );
+        }
 }
