@@ -1,10 +1,22 @@
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
+import kaliMenu from '../../data/kali-menu.json';
 
 const AppsPage = () => {
   const [apps, setApps] = useState([]);
   const [query, setQuery] = useState('');
+  const idToCategory = useMemo(() => {
+    const map = {};
+    Object.entries(kaliMenu).forEach(([cat, tools]) => {
+      tools.forEach((tool) => {
+        map[tool.id] = cat;
+      });
+    });
+    return map;
+  }, []);
+  const categories = ['All', ...Object.keys(kaliMenu)];
+  const [activeCategory, setActiveCategory] = useState('All');
 
   useEffect(() => {
     let isMounted = true;
@@ -18,9 +30,13 @@ const AppsPage = () => {
     };
   }, []);
 
-  const filteredApps = apps.filter(
-    (app) => !app.disabled && app.title.toLowerCase().includes(query.toLowerCase()),
-  );
+  const filteredApps = apps.filter((app) => {
+    if (app.disabled) return false;
+    const matchesQuery = app.title.toLowerCase().includes(query.toLowerCase());
+    const cat = idToCategory[app.id];
+    const matchesCategory = activeCategory === 'All' || cat === activeCategory;
+    return matchesQuery && matchesCategory;
+  });
 
   return (
     <div className="p-4">
@@ -35,6 +51,25 @@ const AppsPage = () => {
         placeholder="Search apps"
         className="mb-4 w-full rounded border p-2"
       />
+      <nav aria-label="Kali categories" className="mb-4">
+        <ul className="flex flex-wrap gap-2">
+          {categories.map((cat) => (
+            <li key={cat}>
+              <button
+                type="button"
+                onClick={() => setActiveCategory(cat)}
+                className={`rounded px-2 py-1 text-sm ${
+                  activeCategory === cat
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-black'
+                }`}
+              >
+                {cat}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </nav>
       <div
         id="app-grid"
         tabIndex="-1"
@@ -58,6 +93,11 @@ const AppsPage = () => {
               />
             )}
             <span className="mt-2">{app.title}</span>
+            {idToCategory[app.id] && (
+              <span className="mt-1 text-xs text-gray-500">
+                {idToCategory[app.id]}
+              </span>
+            )}
           </Link>
         ))}
       </div>
