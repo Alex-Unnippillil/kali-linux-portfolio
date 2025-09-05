@@ -21,6 +21,11 @@ function AppMenu(props) {
         }
     }
 
+    const handleSend = (fn) => {
+        fn && fn()
+        props.onClose && props.onClose()
+    }
+
     return (
         <div
             id="app-menu"
@@ -30,6 +35,46 @@ function AppMenu(props) {
             onKeyDown={handleKeyDown}
             className={(props.active ? ' block ' : ' hidden ') + ' cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm'}
         >
+            <div className="w-full text-left py-0.5 mb-1.5 text-gray-400">
+                <span className="ml-5">Send To</span>
+            </div>
+            <button
+                type="button"
+                onClick={() => handleSend(props.sendToDesktop)}
+                role="menuitem"
+                aria-label="Send to Desktop"
+                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+            >
+                <span className="ml-5">Desktop (Create Link)</span>
+            </button>
+            <button
+                type="button"
+                onClick={() => handleSend(props.sendToEmail)}
+                role="menuitem"
+                aria-label="Send via Email"
+                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+            >
+                <span className="ml-5">Email (mock)</span>
+            </button>
+            <button
+                type="button"
+                onClick={() => handleSend(props.sendToArchive)}
+                role="menuitem"
+                aria-label="Send to Archive"
+                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+            >
+                <span className="ml-5">Archive</span>
+            </button>
+            <button
+                type="button"
+                onClick={() => handleSend(props.sendToTrash)}
+                role="menuitem"
+                aria-label="Send to Trash"
+                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+            >
+                <span className="ml-5">Trash</span>
+            </button>
+            <Devider />
             <button
                 type="button"
                 onClick={handlePin}
@@ -41,6 +86,14 @@ function AppMenu(props) {
             </button>
         </div>
     )
+}
+
+function Devider() {
+    return (
+        <div className="flex justify-center w-full">
+            <div className=" border-t border-gray-900 py-1 w-2/5"></div>
+        </div>
+    );
 }
 
 export default AppMenu
