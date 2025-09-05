@@ -112,6 +112,13 @@ export class SideBarApp extends Component {
                     alt="Ubuntu App Icon"
                     sizes="28px"
                 />
+                {
+                    this.props.notifications > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 min-w-[1rem] px-1 text-xs bg-red-600 text-white rounded-full leading-none text-center">
+                            {this.props.notifications}
+                        </span>
+                    )
+                }
                 <Image
                     width={28}
                     height={28}
