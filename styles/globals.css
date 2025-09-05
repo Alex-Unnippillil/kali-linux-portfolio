@@ -68,6 +68,21 @@ html[data-theme='matrix'] {
 
 }
 
+/* Undercover theme mimicking Windows colors */
+html[data-theme='undercover'] {
+  --color-bg: #f3f3f3;
+  --color-text: #000000;
+  --color-primary: #0078d7;
+  --color-secondary: #e5e5e5;
+  --color-accent: #0078d7;
+  --color-muted: #cccccc;
+  --color-surface: #ffffff;
+  --color-inverse: #ffffff;
+  --color-border: #d0d0d0;
+  --color-terminal: #00ff00;
+  --color-dark: #e5e5e5;
+}
+
 ::selection {
   background: var(--color-selection);
   color: var(--color-inverse);
