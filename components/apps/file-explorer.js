@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
+import JSZip from 'jszip';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
@@ -91,7 +92,7 @@ async function addRecentDir(handle) {
   } catch {}
 }
 
-export default function FileExplorer() {
+export default function FileExplorer({ openApp }) {
   const [supported, setSupported] = useState(true);
   const [dirHandle, setDirHandle] = useState(null);
   const [files, setFiles] = useState([]);
@@ -102,6 +103,7 @@ export default function FileExplorer() {
   const [content, setContent] = useState('');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+  const [contextMenu, setContextMenu] = useState(null);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
 
@@ -256,8 +258,102 @@ export default function FileExplorer() {
       workerRef.current.postMessage({ directoryHandle: dirHandle, query });
     }
   };
+  const openContextMenu = async (e, item) => {
+    e.preventDefault();
+    let type = '';
+    if (item.handle.kind === 'file') {
+      try {
+        const f = await item.handle.getFile();
+        type = f.type;
+      } catch {}
+    }
+    setContextMenu({ x: e.clientX, y: e.clientY, item: { ...item, type }, tab: 'actions' });
+  };
+
+  const closeContextMenu = () => setContextMenu(null);
+
+  useEffect(() => {
+    const handler = () => closeContextMenu();
+    window.addEventListener('click', handler);
+    return () => window.removeEventListener('click', handler);
+  }, []);
 
   useEffect(() => () => workerRef.current?.terminate(), []);
+
+  const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const matchesPattern = (pattern, name) => {
+    const regex = new RegExp('^' + pattern.split('*').map(escapeRegExp).join('.*') + '$', 'i');
+    return regex.test(name);
+  };
+
+  const matches = (action, item) => {
+    if (action.kind && action.kind !== item.handle.kind) return false;
+    if (action.patterns?.length && !action.patterns.some((p) => matchesPattern(p, item.name))) return false;
+    if (action.mimes?.length && !action.mimes.includes(item.type)) return false;
+    return true;
+  };
+
+  const actions = [
+    {
+      id: 'open-terminal',
+      label: 'Open Terminal Here',
+      kind: 'directory',
+      patterns: [],
+      mimes: [],
+      run: () => openApp && openApp('terminal'),
+    },
+    {
+      id: 'sha256',
+      label: 'SHA256 checksum',
+      kind: 'file',
+      patterns: [],
+      mimes: [],
+      run: async (item) => {
+        const file = await item.handle.getFile();
+        const buf = await file.arrayBuffer();
+        const hashBuffer = await crypto.subtle.digest('SHA-256', buf);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+        alert(hashHex);
+      },
+    },
+    {
+      id: 'extract',
+      label: 'Extract Here',
+      kind: 'file',
+      patterns: ['*.zip'],
+      mimes: ['application/zip'],
+      run: async (item) => {
+        const file = await item.handle.getFile();
+        const data = await file.arrayBuffer();
+        const zip = await JSZip.loadAsync(data);
+        for (const [name, entry] of Object.entries(zip.files)) {
+          if (entry.dir) continue;
+          const content = await entry.async('arraybuffer');
+          let current = dirHandle;
+          const parts = name.split('/');
+          const base = parts.pop();
+          for (const part of parts) {
+            current = await current.getDirectoryHandle(part, { create: true });
+          }
+          const fh = await current.getFileHandle(base, { create: true });
+          const writable = await fh.createWritable();
+          await writable.write(content);
+          await writable.close();
+        }
+        await readDir(dirHandle);
+      },
+    },
+  ];
+
+  const availableActions = contextMenu
+    ? actions.filter((a) => matches(a, contextMenu.item))
+    : [];
+
+  const runAction = async (action) => {
+    await action.run(contextMenu.item);
+    closeContextMenu();
+  };
 
   if (!supported) {
     return (
@@ -295,8 +391,8 @@ export default function FileExplorer() {
     );
   }
 
-  return (
-    <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
+    return (
+      <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm relative">
       <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
         <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
           Open Folder
@@ -326,25 +422,27 @@ export default function FileExplorer() {
             </div>
           ))}
           <div className="p-2 font-bold">Directories</div>
-          {dirs.map((d, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openDir(d)}
-            >
-              {d.name}
-            </div>
-          ))}
+            {dirs.map((d, i) => (
+              <div
+                key={i}
+                className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+                onClick={() => openDir(d)}
+                onContextMenu={(e) => openContextMenu(e, d)}
+              >
+                {d.name}
+              </div>
+            ))}
           <div className="p-2 font-bold">Files</div>
-          {files.map((f, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openFile(f)}
-            >
-              {f.name}
-            </div>
-          ))}
+            {files.map((f, i) => (
+              <div
+                key={i}
+                className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+                onClick={() => openFile(f)}
+                onContextMenu={(e) => openContextMenu(e, f)}
+              >
+                {f.name}
+              </div>
+            ))}
         </div>
         <div className="flex-1 flex flex-col">
           {currentFile && (
@@ -370,6 +468,46 @@ export default function FileExplorer() {
           </div>
         </div>
       </div>
+      {contextMenu && (
+        <div
+          className="absolute bg-black bg-opacity-80 text-white rounded shadow-md text-sm z-50"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex border-b border-gray-700">
+            <button
+              className={`px-2 py-1 ${contextMenu.tab === 'actions' ? 'bg-gray-700' : ''}`}
+              onClick={() => setContextMenu({ ...contextMenu, tab: 'actions' })}
+            >
+              Actions
+            </button>
+            <button
+              className={`px-2 py-1 ${contextMenu.tab === 'conditions' ? 'bg-gray-700' : ''}`}
+              onClick={() => setContextMenu({ ...contextMenu, tab: 'conditions' })}
+            >
+              Conditions
+            </button>
+          </div>
+          {contextMenu.tab === 'actions' ? (
+            availableActions.map((a) => (
+              <div
+                key={a.id}
+                className="px-2 py-1 cursor-pointer hover:bg-white hover:bg-opacity-20"
+                onClick={() => runAction(a)}
+              >
+                {a.label}
+              </div>
+            ))
+          ) : (
+            availableActions.map((a) => (
+              <div key={a.id} className="px-2 py-1 border-b border-gray-700 last:border-b-0">
+                {a.patterns.length > 0 && <div>Patterns: {a.patterns.join(', ')}</div>}
+                {a.mimes.length > 0 && <div>MIME: {a.mimes.join(', ')}</div>}
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }
