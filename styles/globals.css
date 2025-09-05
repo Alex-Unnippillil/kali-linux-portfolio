@@ -77,3 +77,34 @@ html[data-theme='matrix'] {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
+
+.notification-center {
+  position: fixed;
+  z-index: 1000;
+  max-width: 20rem;
+  padding: 0.5rem;
+}
+.notification-center.top-left { top: 1rem; left: 1rem; }
+.notification-center.top-right { top: 1rem; right: 1rem; }
+.notification-center.bottom-left { bottom: 1rem; left: 1rem; }
+.notification-center.bottom-right { bottom: 1rem; right: 1rem; }
+
+.notification-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.notification-tabs button.active {
+  font-weight: bold;
+}
+.notification-group ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.notification-group li.fade {
+  animation: fadeOut 0.5s forwards;
+}
+@keyframes fadeOut {
+  to { opacity: 0; }
+}
