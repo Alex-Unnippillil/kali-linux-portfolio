@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -31,6 +31,10 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    customDpi,
+    setCustomDpi,
+    dpi,
+    setDpi,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -54,6 +58,14 @@ export default function Settings() {
   ];
 
   const changeBackground = (name: string) => setWallpaper(name);
+
+  const [systemDpi, setSystemDpi] = useState(96);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setSystemDpi(Math.round(window.devicePixelRatio * 96));
+    }
+  }, []);
+  const effectiveDpi = customDpi ? dpi : systemDpi;
 
   const handleExport = async () => {
     const data = await exportSettingsData();
@@ -79,6 +91,8 @@ export default function Settings() {
       if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
+      if (parsed.customDpi !== undefined) setCustomDpi(parsed.customDpi);
+      if (parsed.dpi !== undefined) setDpi(parsed.dpi);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
     } catch (err) {
       console.error("Invalid settings", err);
@@ -100,6 +114,8 @@ export default function Settings() {
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
+    setCustomDpi(defaults.customDpi);
+    setDpi(defaults.dpi);
     setTheme("default");
   };
 
@@ -150,6 +166,31 @@ export default function Settings() {
               ))}
             </div>
           </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Custom DPI ({effectiveDpi})</span>
+            <ToggleSwitch
+              checked={customDpi}
+              onChange={setCustomDpi}
+              ariaLabel="Custom DPI"
+            />
+          </div>
+          {customDpi && (
+            <div className="flex justify-center my-4 items-center">
+              <label htmlFor="dpi-slider" className="mr-2 text-ubt-grey">DPI:</label>
+              <input
+                id="dpi-slider"
+                type="range"
+                min="72"
+                max="192"
+                step="1"
+                value={dpi}
+                onChange={(e) => setDpi(parseInt(e.target.value, 10))}
+                className="ubuntu-slider"
+                aria-label="DPI"
+              />
+              <span className="ml-2 text-ubt-grey">{dpi}</span>
+            </div>
+          )}
           <div className="flex justify-center my-4">
             <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">Wallpaper:</label>
             <input
