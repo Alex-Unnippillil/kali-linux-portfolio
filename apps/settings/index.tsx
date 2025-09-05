@@ -31,6 +31,10 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    dpi,
+    setDpi,
+    scale,
+    setScale,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -100,6 +104,8 @@ export default function Settings() {
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
+    setDpi(defaults.dpi);
+    setScale(defaults.scale);
     setTheme("default");
   };
 
@@ -149,6 +155,31 @@ export default function Settings() {
                 />
               ))}
             </div>
+          </div>
+          <div className="flex justify-center my-4" title="Dots per inch controls base pixel density.">
+            <label htmlFor="custom-dpi" className="mr-2 text-ubt-grey">Custom DPI:</label>
+            <input
+              id="custom-dpi"
+              type="number"
+              min="50"
+              max="400"
+              value={dpi}
+              onChange={(e) => setDpi(parseInt(e.target.value, 10) || 0)}
+              className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+            />
+          </div>
+          <div className="flex justify-center my-4" title="Scaling factor multiplies UI size based on DPI.">
+            <label htmlFor="scaling-factor" className="mr-2 text-ubt-grey">Scaling factor:</label>
+            <select
+              id="scaling-factor"
+              value={scale}
+              onChange={(e) => setScale(parseFloat(e.target.value))}
+              className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+            >
+              {[1, 1.25, 1.5, 1.75, 2].map((f) => (
+                <option key={f} value={f}>{f}x</option>
+              ))}
+            </select>
           </div>
           <div className="flex justify-center my-4">
             <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">Wallpaper:</label>

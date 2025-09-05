@@ -20,6 +20,10 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getDpi as loadDpi,
+  setDpi as saveDpi,
+  getScale as loadScale,
+  setScale as saveScale,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -63,6 +67,8 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  dpi: number;
+  scale: number;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +80,8 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setDpi: (value: number) => void;
+  setScale: (value: number) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +96,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  dpi: defaults.dpi,
+  scale: defaults.scale,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +109,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setDpi: () => {},
+  setScale: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -113,6 +125,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [dpi, setDpi] = useState<number>(defaults.dpi);
+  const [scale, setScale] = useState<number>(defaults.scale);
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -128,6 +142,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
+      setDpi(await loadDpi());
+      setScale(await loadScale());
     })();
   }, []);
 
@@ -236,6 +252,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    const finalScale = (dpi / 96) * scale;
+    document.documentElement.style.setProperty('--ui-scale', finalScale.toString());
+    saveDpi(dpi);
+    saveScale(scale);
+  }, [dpi, scale]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -250,6 +273,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        dpi,
+        scale,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +286,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setDpi,
+        setScale,
       }}
     >
       {children}
