@@ -222,12 +222,12 @@ export function Settings() {
             <div className="flex justify-center my-4 border-t border-gray-900 pt-4 space-x-4">
                 <button
                     onClick={async () => {
-                        const data = await exportSettingsData();
-                        const blob = new Blob([data], { type: 'application/json' });
+                        const data = await exportSettingsData('appearance');
+                        const blob = new Blob([data], { type: 'application/xml' });
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        a.download = 'settings.json';
+                        a.download = 'xsettings.xml';
                         a.click();
                         URL.revokeObjectURL(url);
                     }}

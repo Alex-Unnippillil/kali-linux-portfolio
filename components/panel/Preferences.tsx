@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Tabs from "../Tabs";
 import ToggleSwitch from "../ToggleSwitch";
+import { exportSettings as exportSettingsData } from "../../utils/settingsStore";
 
 const PANEL_PREFIX = "xfce.panel.";
 
@@ -135,6 +136,24 @@ export default function Preferences() {
         {active === "items" && (
           <p className="text-ubt-grey">Item settings are not available yet.</p>
         )}
+      </div>
+      </div>
+      <div className="border-t border-gray-900 mt-4 pt-4 flex justify-end px-4">
+        <button
+          onClick={async () => {
+            const data = await exportSettingsData("panel");
+            const blob = new Blob([data], { type: "application/xml" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "xfce4-panel.xml";
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+          className="px-4 py-2 rounded bg-ub-orange text-white"
+        >
+          Export
+        </button>
       </div>
     </div>
   );
