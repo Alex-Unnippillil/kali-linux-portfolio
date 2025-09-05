@@ -34,6 +34,41 @@ export default function Settings() {
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [passwordPolicy, setPasswordPolicy] = useState(false);
+  const [autoUpdates, setAutoUpdates] = useState(false);
+  const [firewallPublic, setFirewallPublic] = useState(false);
+
+  const logPreview = (command: string) => {
+    console.log(`[Preview] ${command}`);
+  };
+
+  const handlePasswordPolicyChange = (value: boolean) => {
+    setPasswordPolicy(value);
+    logPreview(
+      value
+        ? "sudo passwd -n 7 -x 90 $(whoami)"
+        : "sudo passwd -n 0 -x 99999 $(whoami)"
+    );
+  };
+
+  const handleAutoUpdatesChange = (value: boolean) => {
+    setAutoUpdates(value);
+    logPreview(
+      value
+        ? "sudo apt update && sudo apt upgrade -y"
+        : "sudo systemctl disable --now unattended-upgrades"
+    );
+  };
+
+  const handleFirewallChange = (value: boolean) => {
+    setFirewallPublic(value);
+    logPreview(
+      value
+        ? "sudo ufw default deny incoming && sudo ufw enable"
+        : "sudo ufw default allow incoming && sudo ufw enable"
+    );
+  };
+
   const tabs = [
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
@@ -272,6 +307,30 @@ export default function Settings() {
       )}
       {activeTab === "privacy" && (
         <>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Password Policy:</span>
+            <ToggleSwitch
+              checked={passwordPolicy}
+              onChange={handlePasswordPolicyChange}
+              ariaLabel="Password Policy"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Auto Updates:</span>
+            <ToggleSwitch
+              checked={autoUpdates}
+              onChange={handleAutoUpdatesChange}
+              ariaLabel="Auto Updates"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Firewall (Public Profile):</span>
+            <ToggleSwitch
+              checked={firewallPublic}
+              onChange={handleFirewallChange}
+              ariaLabel="Firewall Profile"
+            />
+          </div>
           <div className="flex justify-center my-4 space-x-4">
             <button
               onClick={handleExport}
