@@ -3,7 +3,7 @@ import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, scale, setScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -54,6 +54,13 @@ export function Settings() {
         });
         return () => cancelAnimationFrame(raf);
     }, [accent, accentText, contrastRatio]);
+    const initialScale = useRef(scale);
+    const [showRestart, setShowRestart] = useState(false);
+    useEffect(() => {
+        if (scale !== initialScale.current) {
+            setShowRestart(true);
+        }
+    }, [scale]);
 
     return (
         <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"}>
@@ -100,17 +107,29 @@ export function Settings() {
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Font Size:</label>
-                <input
-                    type="range"
-                    min="0.75"
-                    max="1.5"
-                    step="0.05"
-                    value={fontScale}
-                    onChange={(e) => setFontScale(parseFloat(e.target.value))}
-                    className="ubuntu-slider"
-                />
+                <label className="mr-2 text-ubt-grey">Scale:</label>
+                <select
+                    value={scale}
+                    onChange={(e) => setScale(parseFloat(e.target.value))}
+                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                >
+                    <option value={1}>100%</option>
+                    <option value={1.25}>125%</option>
+                    <option value={1.5}>150%</option>
+                    <option value={2}>200%</option>
+                </select>
             </div>
+            {showRestart && (
+                <div className="flex items-center justify-center bg-amber-100 text-amber-900 p-2" role="alert">
+                    <button onClick={() => window.location.reload()} className="px-2 py-1 rounded bg-ub-orange text-white">Apply & Restart shell</button>
+                    <span className="relative group ml-2">
+                        <span aria-label="HiDPI help" tabIndex={0} className="cursor-help">ℹ️</span>
+                        <div role="tooltip" className="absolute hidden group-hover:block group-focus-within:block bg-gray-700 text-white text-xs p-2 rounded bottom-full left-1/2 transform -translate-x-1/2 mb-2 whitespace-nowrap">
+                            <a href="https://www.kali.org/docs/general-use/hidpi/" target="_blank" rel="noopener noreferrer" className="underline">Kali HiDPI docs</a>
+                        </div>
+                    </span>
+                </div>
+            )}
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey flex items-center">
                     <input
@@ -249,7 +268,7 @@ export function Settings() {
                         setDensity(defaults.density);
                         setReducedMotion(defaults.reducedMotion);
                         setLargeHitAreas(defaults.largeHitAreas);
-                        setFontScale(defaults.fontScale);
+                        setScale(defaults.scale);
                         setHighContrast(defaults.highContrast);
                         setTheme('default');
                     }}

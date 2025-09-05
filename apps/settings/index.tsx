@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -23,8 +23,8 @@ export default function Settings() {
     setDensity,
     reducedMotion,
     setReducedMotion,
-    fontScale,
-    setFontScale,
+    scale,
+    setScale,
     highContrast,
     setHighContrast,
     haptics,
@@ -76,7 +76,7 @@ export default function Settings() {
       if (parsed.density !== undefined) setDensity(parsed.density);
       if (parsed.reducedMotion !== undefined)
         setReducedMotion(parsed.reducedMotion);
-      if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
+      if (parsed.scale !== undefined) setScale(parsed.scale);
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
@@ -98,12 +98,20 @@ export default function Settings() {
     setWallpaper(defaults.wallpaper);
     setDensity(defaults.density as any);
     setReducedMotion(defaults.reducedMotion);
-    setFontScale(defaults.fontScale);
+    setScale(defaults.scale);
     setHighContrast(defaults.highContrast);
     setTheme("default");
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
+  const initialScale = useRef(scale);
+  const [showRestart, setShowRestart] = useState(false);
+
+  useEffect(() => {
+    if (scale !== initialScale.current) {
+      setShowRestart(true);
+    }
+  }, [scale]);
 
   return (
     <div className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey">
@@ -134,6 +142,45 @@ export default function Settings() {
               <option value="matrix">Matrix</option>
             </select>
           </div>
+          <div className="flex justify-center my-4">
+            <label className="mr-2 text-ubt-grey">Scale:</label>
+            <select
+              value={scale}
+              onChange={(e) => setScale(parseFloat(e.target.value))}
+              className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+            >
+              <option value={1}>100%</option>
+              <option value={1.25}>125%</option>
+              <option value={1.5}>150%</option>
+              <option value={2}>200%</option>
+            </select>
+          </div>
+          {showRestart && (
+            <div className="flex items-center justify-center bg-amber-100 text-amber-900 p-2" role="alert">
+              <button
+                onClick={() => window.location.reload()}
+                className="px-2 py-1 rounded bg-ub-orange text-white"
+              >
+                Apply & Restart shell
+              </button>
+              <span className="relative group ml-2">
+                <span aria-label="HiDPI help" tabIndex={0} className="cursor-help">ℹ️</span>
+                <div
+                  role="tooltip"
+                  className="absolute hidden group-hover:block group-focus-within:block bg-gray-700 text-white text-xs p-2 rounded bottom-full left-1/2 transform -translate-x-1/2 mb-2 whitespace-nowrap"
+                >
+                  <a
+                    href="https://www.kali.org/docs/general-use/hidpi/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline"
+                  >
+                    Kali HiDPI docs
+                  </a>
+                </div>
+              </span>
+            </div>
+          )}
           <div className="flex justify-center my-4">
             <label className="mr-2 text-ubt-grey">Accent:</label>
             <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
@@ -211,20 +258,6 @@ export default function Settings() {
       )}
       {activeTab === "accessibility" && (
         <>
-          <div className="flex justify-center my-4">
-            <label htmlFor="font-scale" className="mr-2 text-ubt-grey">Icon Size:</label>
-            <input
-              id="font-scale"
-              type="range"
-              min="0.75"
-              max="1.5"
-              step="0.05"
-              value={fontScale}
-              onChange={(e) => setFontScale(parseFloat(e.target.value))}
-              className="ubuntu-slider"
-              aria-label="Icon size"
-            />
-          </div>
           <div className="flex justify-center my-4">
             <label className="mr-2 text-ubt-grey">Density:</label>
             <select

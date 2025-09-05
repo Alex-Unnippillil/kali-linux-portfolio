@@ -53,7 +53,9 @@
 
   /* Fonts */
   --font-family-base: 'Ubuntu', sans-serif;
+  --scale: 1;
   --font-multiplier: 1;
+  --font-size: calc(16px * var(--font-multiplier));
   /* Minimum interactive target size */
   --hit-area: 32px;
   /* Focus outline */
