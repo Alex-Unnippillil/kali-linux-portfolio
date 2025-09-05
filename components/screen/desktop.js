@@ -87,6 +87,7 @@ export class Desktop extends Component {
         this.checkForAppShortcuts();
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
+        window.addEventListener('open-app', this.handleOpenApp);
         document.addEventListener('keydown', this.handleGlobalShortcut);
     }
 
@@ -94,6 +95,7 @@ export class Desktop extends Component {
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
+        window.removeEventListener('open-app', this.handleOpenApp);
     }
 
     checkForNewFolders = () => {
@@ -162,6 +164,10 @@ export class Desktop extends Component {
             e.preventDefault();
             this.cycleAppWindows(e.shiftKey ? -1 : 1);
         }
+        else if (e.key === 'PrintScreen') {
+            e.preventDefault();
+            this.openApp('screenshooter');
+        }
         else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
             e.preventDefault();
             const id = this.getFocusedWindowId();
@@ -169,6 +175,13 @@ export class Desktop extends Component {
                 const event = new CustomEvent('super-arrow', { detail: e.key });
                 document.getElementById(id)?.dispatchEvent(event);
             }
+        }
+    }
+
+    handleOpenApp = (e) => {
+        const id = e.detail;
+        if (id) {
+            this.openApp(id);
         }
     }
 
@@ -822,8 +835,8 @@ export class Desktop extends Component {
         return (
             <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
                 <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
-                    <span>New folder name</span>
-                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
+                    <label htmlFor="folder-name-input">New folder name</label>
+                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} aria-label="Folder name" />
                 </div>
                 <div className="flex">
                     <button

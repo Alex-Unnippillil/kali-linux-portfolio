@@ -12,6 +12,7 @@ import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayScreenRecorder } from './components/apps/screen-recorder';
 import { displayNikto } from './components/apps/nikto';
+import { displayScreenshooter } from './src/apps/screenshooter/Screenshooter';
 
 export const chromeDefaultTiles = [
   { title: 'MDN', url: 'https://developer.mozilla.org/' },
@@ -718,6 +719,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayScreenRecorder,
+  },
+  {
+    id: 'screenshooter',
+    title: 'Screenshooter',
+    icon: '/themes/Yaru/apps/screen-recorder.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayScreenshooter,
   },
   {
     id: 'ettercap',
