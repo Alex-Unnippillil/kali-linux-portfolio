@@ -1,17 +1,21 @@
 "use client";
 
 import usePersistentState from '../../hooks/usePersistentState';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import LogoutDialog, { SessionAction } from '@/src/components/session/LogoutDialog';
 
 interface Props {
   open: boolean;
+  actions?: SessionAction[];
+  saveSession?: () => void;
 }
 
-const QuickSettings = ({ open }: Props) => {
+const QuickSettings = ({ open, actions = [], saveSession }: Props) => {
   const [theme, setTheme] = usePersistentState('qs-theme', 'light');
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
+  const [showLogout, setShowLogout] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -52,6 +56,19 @@ const QuickSettings = ({ open }: Props) => {
           onChange={() => setReduceMotion(!reduceMotion)}
         />
       </div>
+      {actions.length > 0 && (
+        <div className="px-4 pt-2">
+          <button className="w-full" onClick={() => setShowLogout(true)}>
+            Power
+          </button>
+        </div>
+      )}
+      <LogoutDialog
+        open={showLogout}
+        onClose={() => setShowLogout(false)}
+        actions={actions}
+        saveSession={saveSession}
+      />
     </div>
   );
 };

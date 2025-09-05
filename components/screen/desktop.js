@@ -956,7 +956,7 @@ export class Desktop extends Component {
     }
 }
 
-export default function DesktopWithSnap(props) {
+export default React.forwardRef(function DesktopWithSnap(props, ref) {
     const [snapEnabled] = useSnapSetting();
-    return <Desktop {...props} snapEnabled={snapEnabled} />;
-}
+    return <Desktop {...props} snapEnabled={snapEnabled} ref={ref} />;
+});

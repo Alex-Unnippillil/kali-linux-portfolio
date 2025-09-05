@@ -49,9 +49,16 @@ export default class Navbar extends Component {
                                         }
                                 >
                                         <Status />
-                                        <QuickSettings open={this.state.status_card} />
+                                        <QuickSettings
+                                                open={this.state.status_card}
+                                                actions={[
+                                                        { label: 'Lock Screen', onClick: this.props.lockScreen },
+                                                        { label: 'Shut Down', onClick: this.props.shutDown },
+                                                ]}
+                                                saveSession={this.props.saveSession}
+                                        />
                                 </button>
-			</div>
-		);
-	}
+                        </div>
+                );
+        }
 }
