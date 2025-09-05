@@ -23,6 +23,7 @@ export default function Overlay({
   const count = useRef(0);
   const [toast, setToast] = useState('');
   const pausedByDisconnect = useRef(false);
+  const [liveMessage, setLiveMessage] = useState('');
 
   // track fps using requestAnimationFrame
   useEffect(() => {
@@ -43,6 +44,7 @@ export default function Overlay({
   const togglePause = useCallback(() => {
     setPaused((p) => {
       const np = !p;
+      setLiveMessage(np ? 'Paused' : 'Resumed');
       np ? onPause?.() : onResume?.();
       return np;
     });
@@ -52,6 +54,7 @@ export default function Overlay({
     setMuted((m) => {
       const nm = !m;
       onToggleSound?.(nm);
+      setLiveMessage(nm ? 'Muted' : 'Sound on');
       return nm;
     });
   }, [onToggleSound]);
@@ -96,6 +99,9 @@ export default function Overlay({
         </button>
         <span className="fps">{fps} FPS</span>
       </div>
+      <span aria-live="polite" className="sr-only">
+        {liveMessage}
+      </span>
       {toast && (
         <Toast
           message={toast}

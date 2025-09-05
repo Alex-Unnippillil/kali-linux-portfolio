@@ -119,7 +119,7 @@ export function Settings() {
                         onChange={(e) => setReducedMotion(e.target.checked)}
                         className="mr-2"
                     />
-                    Reduced Motion
+                    Reduce Motion
                 </label>
             </div>
             <div className="flex justify-center my-4">

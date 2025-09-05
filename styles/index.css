@@ -222,6 +222,10 @@ dialog {
     animation: allAppsScale 200ms ease-out;
 }
 
+.all-apps-fade {
+    animation: allAppsFade 200ms ease-out;
+}
+
 @keyframes allAppsScale {
     from {
         opacity: 0;
@@ -231,6 +235,15 @@ dialog {
     to {
         opacity: 1;
         transform: scale(1);
+    }
+}
+
+@keyframes allAppsFade {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
     }
 }
 

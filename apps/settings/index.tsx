@@ -237,11 +237,11 @@ export default function Settings() {
             </select>
           </div>
           <div className="flex justify-center my-4 items-center">
-            <span className="mr-2 text-ubt-grey">Reduced Motion:</span>
+            <span className="mr-2 text-ubt-grey">Reduce Motion:</span>
             <ToggleSwitch
               checked={reducedMotion}
               onChange={setReducedMotion}
-              ariaLabel="Reduced Motion"
+              ariaLabel="Reduce Motion"
             />
           </div>
           <div className="flex justify-center my-4 items-center">
