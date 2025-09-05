@@ -3,17 +3,25 @@
 import React, { useState, useEffect } from "react";
 import Tabs from "../Tabs";
 import ToggleSwitch from "../ToggleSwitch";
+import { useSettings } from "../../hooks/useSettings";
 
 const PANEL_PREFIX = "xfce.panel.";
 
 export default function Preferences() {
-  type TabId = "display" | "measurements" | "appearance" | "opacity" | "items";
+  type TabId =
+    | "display"
+    | "measurements"
+    | "appearance"
+    | "opacity"
+    | "items"
+    | "power";
   const TABS: readonly { id: TabId; label: string }[] = [
     { id: "display", label: "Display" },
     { id: "measurements", label: "Measurements" },
     { id: "appearance", label: "Appearance" },
     { id: "opacity", label: "Opacity" },
     { id: "items", label: "Items" },
+    { id: "power", label: "Power" },
   ];
 
   const [active, setActive] = useState<TabId>("display");
@@ -39,6 +47,9 @@ export default function Preferences() {
     if (typeof window === "undefined") return false;
     return localStorage.getItem(`${PANEL_PREFIX}autohide`) === "true";
   });
+
+  const { powerSource, setPowerSource, doNotDisturb, setDoNotDisturb } =
+    useSettings();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -134,6 +145,32 @@ export default function Preferences() {
         )}
         {active === "items" && (
           <p className="text-ubt-grey">Item settings are not available yet.</p>
+        )}
+        {active === "power" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <label htmlFor="power-source" className="text-ubt-grey">
+                Power Source
+              </label>
+              <select
+                id="power-source"
+                value={powerSource}
+                onChange={(e) => setPowerSource(e.target.value as any)}
+                className="bg-ub-cool-grey text-white px-2 py-1 rounded"
+              >
+                <option value="ac">AC</option>
+                <option value="battery">Battery</option>
+              </select>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-ubt-grey">Do Not Disturb</span>
+              <ToggleSwitch
+                checked={doNotDisturb}
+                onChange={setDoNotDisturb}
+                ariaLabel="Toggle Do Not Disturb"
+              />
+            </div>
+          </div>
         )}
       </div>
     </div>

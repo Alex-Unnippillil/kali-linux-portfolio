@@ -14,6 +14,8 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  powerSource: 'ac',
+  doNotDisturb: false,
 };
 
 export async function getAccent() {
@@ -102,6 +104,26 @@ export async function setHaptics(value) {
   window.localStorage.setItem('haptics', value ? 'true' : 'false');
 }
 
+export async function getPowerSource() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.powerSource;
+  return window.localStorage.getItem('power-source') || DEFAULT_SETTINGS.powerSource;
+}
+
+export async function setPowerSource(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('power-source', value);
+}
+
+export async function getDoNotDisturb() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.doNotDisturb;
+  return window.localStorage.getItem('dnd') === 'true';
+}
+
+export async function setDoNotDisturb(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('dnd', value ? 'true' : 'false');
+}
+
 export async function getPongSpin() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
   const val = window.localStorage.getItem('pong-spin');
@@ -137,6 +159,8 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('power-source');
+  window.localStorage.removeItem('dnd');
 }
 
 export async function exportSettings() {
@@ -151,6 +175,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    powerSource,
+    doNotDisturb,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +188,8 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getPowerSource(),
+    getDoNotDisturb(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +203,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    powerSource,
+    doNotDisturb,
     theme,
   });
 }
@@ -199,6 +229,8 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    powerSource,
+    doNotDisturb,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +243,8 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (powerSource !== undefined) await setPowerSource(powerSource);
+  if (doNotDisturb !== undefined) await setDoNotDisturb(doNotDisturb);
   if (theme !== undefined) setTheme(theme);
 }
 

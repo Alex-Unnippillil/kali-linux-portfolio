@@ -20,10 +20,16 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getPowerSource as loadPowerSource,
+  setPowerSource as savePowerSource,
+  getDoNotDisturb as loadDoNotDisturb,
+  setDoNotDisturb as saveDoNotDisturb,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import PowerProfileBanner from '../components/osd/PowerProfileBanner';
 type Density = 'regular' | 'compact';
+type PowerSource = 'ac' | 'battery';
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -63,6 +69,8 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  powerSource: PowerSource;
+  doNotDisturb: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +82,8 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setPowerSource: (src: PowerSource) => void;
+  setDoNotDisturb: (value: boolean) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +98,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  powerSource: defaults.powerSource as PowerSource,
+  doNotDisturb: defaults.doNotDisturb,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +111,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setPowerSource: () => {},
+  setDoNotDisturb: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -113,6 +127,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [powerSource, setPowerSource] = useState<PowerSource>(
+    defaults.powerSource as PowerSource
+  );
+  const [doNotDisturb, setDoNotDisturb] = useState<boolean>(
+    defaults.doNotDisturb
+  );
+  const [showPowerBanner, setShowPowerBanner] = useState(false);
+  const prevPowerSource = useRef<PowerSource | null>(null);
+  const bannerTimeout = useRef<NodeJS.Timeout>();
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -127,6 +150,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setPowerSource((await loadPowerSource()) as PowerSource);
+      setDoNotDisturb(await loadDoNotDisturb());
       setTheme(loadTheme());
     })();
   }, []);
@@ -236,6 +261,38 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    savePowerSource(powerSource);
+  }, [powerSource]);
+
+  useEffect(() => {
+    saveDoNotDisturb(doNotDisturb);
+  }, [doNotDisturb]);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const src = (e as CustomEvent<PowerSource>).detail;
+      setPowerSource(src);
+    };
+    window.addEventListener('power-source-change', handler as EventListener);
+    return () =>
+      window.removeEventListener('power-source-change', handler as EventListener);
+  }, []);
+
+  useEffect(() => {
+    if (prevPowerSource.current && prevPowerSource.current !== powerSource) {
+      if (!doNotDisturb) {
+        setShowPowerBanner(true);
+        if (bannerTimeout.current) clearTimeout(bannerTimeout.current);
+        bannerTimeout.current = setTimeout(
+          () => setShowPowerBanner(false),
+          3000
+        );
+      }
+    }
+    prevPowerSource.current = powerSource;
+  }, [powerSource, doNotDisturb]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -250,6 +307,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        powerSource,
+        doNotDisturb,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,9 +320,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setPowerSource,
+        setDoNotDisturb,
       }}
     >
       {children}
+      {showPowerBanner && <PowerProfileBanner source={powerSource} />}
     </SettingsContext.Provider>
   );
 }
