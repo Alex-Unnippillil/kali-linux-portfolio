@@ -1,0 +1,52 @@
+{
+  "Information Gathering": [
+    { "id": "nmap-nse", "name": "Nmap NSE" },
+    { "id": "recon-ng", "name": "Recon-ng" }
+  ],
+  "Vulnerability Analysis": [
+    { "id": "nessus", "name": "Nessus" },
+    { "id": "openvas", "name": "OpenVAS" }
+  ],
+  "Web Applications": [
+    { "id": "nikto", "name": "Nikto" },
+    { "id": "beef", "name": "BeEF" }
+  ],
+  "Password Attacks": [
+    { "id": "hydra", "name": "Hydra" },
+    { "id": "john", "name": "John the Ripper" },
+    { "id": "hashcat", "name": "Hashcat" }
+  ],
+  "Wireless Attacks": [
+    { "id": "kismet", "name": "Kismet" },
+    { "id": "reaver", "name": "Reaver" }
+  ],
+  "Reverse Engineering": [
+    { "id": "ghidra", "name": "Ghidra" },
+    { "id": "radare2", "name": "Radare2" }
+  ],
+  "Exploitation Tools": [
+    { "id": "metasploit", "name": "Metasploit" },
+    { "id": "msf-post", "name": "Metasploit Post" }
+  ],
+  "Sniffing & Spoofing": [
+    { "id": "wireshark", "name": "Wireshark" },
+    { "id": "dsniff", "name": "dsniff" },
+    { "id": "ettercap", "name": "Ettercap" }
+  ],
+  "Maintaining Access": [
+    { "id": "mimikatz", "name": "Mimikatz" },
+    { "id": "mimikatz/offline", "name": "Mimikatz Offline" }
+  ],
+  "Forensics": [
+    { "id": "autopsy", "name": "Autopsy" },
+    { "id": "volatility", "name": "Volatility" },
+    { "id": "evidence-vault", "name": "Evidence Vault" }
+  ],
+  "Reporting Tools": [
+    { "id": "plugin-manager", "name": "Plugin Manager" },
+    { "id": "security-tools", "name": "Security Tools" }
+  ],
+  "Hardware Hacking": [
+    { "id": "ble-sensor", "name": "BLE Sensor" }
+  ]
+}
