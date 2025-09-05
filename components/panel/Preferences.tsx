@@ -39,6 +39,12 @@ export default function Preferences() {
     if (typeof window === "undefined") return false;
     return localStorage.getItem(`${PANEL_PREFIX}autohide`) === "true";
   });
+  const [currentMonitorOnly, setCurrentMonitorOnly] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return (
+      localStorage.getItem(`${PANEL_PREFIX}currentMonitorOnly`) === "true"
+    );
+  });
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -59,6 +65,13 @@ export default function Preferences() {
     if (typeof window === "undefined") return;
     localStorage.setItem(`${PANEL_PREFIX}autohide`, autohide ? "true" : "false");
   }, [autohide]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(
+      `${PANEL_PREFIX}currentMonitorOnly`,
+      currentMonitorOnly ? "true" : "false"
+    );
+  }, [currentMonitorOnly]);
 
   return (
     <div>
@@ -88,6 +101,16 @@ export default function Preferences() {
                 checked={autohide}
                 onChange={setAutohide}
                 ariaLabel="Autohide panel"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-ubt-grey">
+                Show windows from current monitor only
+              </span>
+              <ToggleSwitch
+                checked={currentMonitorOnly}
+                onChange={setCurrentMonitorOnly}
+                ariaLabel="Show windows from current monitor only"
               />
             </div>
           </div>
