@@ -15,6 +15,7 @@ import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
 import WindowSwitcher from '../screen/window-switcher'
 import DesktopMenu from '../context-menus/desktop-menu';
+import { autoArrange, refreshIcons } from '../DesktopIcons';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import Taskbar from './taskbar';
@@ -161,6 +162,14 @@ export class Desktop extends Component {
         else if (e.altKey && (e.key === '`' || e.key === '~')) {
             e.preventDefault();
             this.cycleAppWindows(e.shiftKey ? -1 : 1);
+        }
+        else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'a') {
+            e.preventDefault();
+            autoArrange();
+        }
+        else if ((e.key === 'F5') || (e.ctrlKey && e.key.toLowerCase() === 'r')) {
+            e.preventDefault();
+            refreshIcons();
         }
         else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
             e.preventDefault();
@@ -896,6 +905,8 @@ export class Desktop extends Component {
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                    autoArrange={autoArrange}
+                    refreshIcons={refreshIcons}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
                 <AppMenu
