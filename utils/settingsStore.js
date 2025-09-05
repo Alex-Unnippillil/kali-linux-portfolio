@@ -6,6 +6,7 @@ import { getTheme, setTheme } from './theme';
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
   wallpaper: 'wall-2',
+  wallpaperMode: 'fill',
   density: 'regular',
   reducedMotion: false,
   fontScale: 1,
@@ -26,14 +27,24 @@ export async function setAccent(accent) {
   await set('accent', accent);
 }
 
-export async function getWallpaper() {
+export async function getWallpaper(workspace = 0) {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.wallpaper;
-  return (await get('bg-image')) || DEFAULT_SETTINGS.wallpaper;
+  return (await get(`bg-image-${workspace}`)) || DEFAULT_SETTINGS.wallpaper;
 }
 
-export async function setWallpaper(wallpaper) {
+export async function setWallpaper(workspace, wallpaper) {
   if (typeof window === 'undefined') return;
-  await set('bg-image', wallpaper);
+  await set(`bg-image-${workspace}`, wallpaper);
+}
+
+export async function getWallpaperMode(workspace = 0) {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.wallpaperMode;
+  return (await get(`bg-image-mode-${workspace}`)) || DEFAULT_SETTINGS.wallpaperMode;
+}
+
+export async function setWallpaperMode(workspace, mode) {
+  if (typeof window === 'undefined') return;
+  await set(`bg-image-mode-${workspace}`, mode);
 }
 
 export async function getDensity() {
@@ -127,7 +138,12 @@ export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
     del('accent'),
-    del('bg-image'),
+    del('bg-image-0'),
+    del('bg-image-1'),
+    del('bg-image-2'),
+    del('bg-image-mode-0'),
+    del('bg-image-mode-1'),
+    del('bg-image-mode-2'),
   ]);
   window.localStorage.removeItem('density');
   window.localStorage.removeItem('reduced-motion');
@@ -142,7 +158,6 @@ export async function resetSettings() {
 export async function exportSettings() {
   const [
     accent,
-    wallpaper,
     density,
     reducedMotion,
     fontScale,
@@ -153,7 +168,6 @@ export async function exportSettings() {
     haptics,
   ] = await Promise.all([
     getAccent(),
-    getWallpaper(),
     getDensity(),
     getReducedMotion(),
     getFontScale(),
@@ -163,10 +177,21 @@ export async function exportSettings() {
     getAllowNetwork(),
     getHaptics(),
   ]);
+  const wallpapers = {
+    0: await getWallpaper(0),
+    1: await getWallpaper(1),
+    2: await getWallpaper(2),
+  };
+  const wallpaperModes = {
+    0: await getWallpaperMode(0),
+    1: await getWallpaperMode(1),
+    2: await getWallpaperMode(2),
+  };
   const theme = getTheme();
   return JSON.stringify({
     accent,
-    wallpaper,
+    wallpapers,
+    wallpaperModes,
     density,
     reducedMotion,
     fontScale,
@@ -190,6 +215,8 @@ export async function importSettings(json) {
   }
   const {
     accent,
+    wallpapers,
+    wallpaperModes,
     wallpaper,
     density,
     reducedMotion,
@@ -202,7 +229,18 @@ export async function importSettings(json) {
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
-  if (wallpaper !== undefined) await setWallpaper(wallpaper);
+  if (wallpapers !== undefined) {
+    for (const [ws, path] of Object.entries(wallpapers)) {
+      await setWallpaper(Number(ws), path);
+    }
+  } else if (wallpaper !== undefined) {
+    await setWallpaper(0, wallpaper);
+  }
+  if (wallpaperModes !== undefined) {
+    for (const [ws, mode] of Object.entries(wallpaperModes)) {
+      await setWallpaperMode(Number(ws), mode);
+    }
+  }
   if (density !== undefined) await setDensity(density);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
   if (fontScale !== undefined) await setFontScale(fontScale);

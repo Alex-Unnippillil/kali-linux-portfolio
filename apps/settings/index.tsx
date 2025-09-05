@@ -19,6 +19,10 @@ export default function Settings() {
     setAccent,
     wallpaper,
     setWallpaper,
+    wallpaperMode,
+    setWallpaperMode,
+    workspace,
+    setWorkspace,
     density,
     setDensity,
     reducedMotion,
@@ -42,16 +46,25 @@ export default function Settings() {
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
 
-  const wallpapers = [
-    "wall-1",
-    "wall-2",
-    "wall-3",
-    "wall-4",
-    "wall-5",
-    "wall-6",
-    "wall-7",
-    "wall-8",
-  ];
+  const collections = {
+    all: [
+      "wall-1",
+      "wall-2",
+      "wall-3",
+      "wall-4",
+      "wall-5",
+      "wall-6",
+      "wall-7",
+      "wall-8",
+    ],
+    "2022": ["wall-1", "wall-2"],
+    "2023": ["wall-3", "wall-4"],
+    "2024": ["wall-5", "wall-6"],
+    "2025": ["wall-7", "wall-8"],
+  } as const;
+  type CollectionId = keyof typeof collections;
+  const [collection, setCollection] = useState<CollectionId>("all");
+  const wallpapers = collections[collection];
 
   const changeBackground = (name: string) => setWallpaper(name);
 
@@ -72,7 +85,11 @@ export default function Settings() {
     try {
       const parsed = JSON.parse(text);
       if (parsed.accent !== undefined) setAccent(parsed.accent);
-      if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
+      if (parsed.wallpapers && parsed.wallpapers[workspace] !== undefined)
+        setWallpaper(parsed.wallpapers[workspace]);
+      else if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
+      if (parsed.wallpaperModes && parsed.wallpaperModes[workspace] !== undefined)
+        setWallpaperMode(parsed.wallpaperModes[workspace]);
       if (parsed.density !== undefined) setDensity(parsed.density);
       if (parsed.reducedMotion !== undefined)
         setReducedMotion(parsed.reducedMotion);
@@ -96,6 +113,7 @@ export default function Settings() {
     window.localStorage.clear();
     setAccent(defaults.accent);
     setWallpaper(defaults.wallpaper);
+    setWallpaperMode(defaults.wallpaperMode as any);
     setDensity(defaults.density as any);
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
@@ -116,11 +134,30 @@ export default function Settings() {
             className="md:w-2/5 w-2/3 h-1/3 m-auto my-4"
             style={{
               backgroundImage: `url(/wallpapers/${wallpaper}.webp)`,
-              backgroundSize: "cover",
+              backgroundSize:
+                wallpaperMode === "fit"
+                  ? "contain"
+                  : wallpaperMode === "center"
+                    ? "auto"
+                    : "cover",
               backgroundRepeat: "no-repeat",
               backgroundPosition: "center center",
             }}
           ></div>
+          <div className="flex justify-center my-4">
+            <label className="mr-2 text-ubt-grey">Workspace:</label>
+            <select
+              value={workspace}
+              onChange={(e) => setWorkspace(parseInt(e.target.value, 10))}
+              className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+            >
+              {[0, 1, 2].map((w) => (
+                <option key={w} value={w}>
+                  {w + 1}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="flex justify-center my-4">
             <label className="mr-2 text-ubt-grey">Theme:</label>
             <select
@@ -149,6 +186,32 @@ export default function Settings() {
                 />
               ))}
             </div>
+          </div>
+          <div className="flex justify-center my-4">
+            <label className="mr-2 text-ubt-grey">Wallpaper Mode:</label>
+            <select
+              value={wallpaperMode}
+              onChange={(e) => setWallpaperMode(e.target.value as any)}
+              className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+            >
+              <option value="fill">Fill</option>
+              <option value="fit">Fit</option>
+              <option value="center">Center</option>
+            </select>
+          </div>
+          <div className="flex justify-center my-4">
+            <label className="mr-2 text-ubt-grey">Collection:</label>
+            <select
+              value={collection}
+              onChange={(e) => setCollection(e.target.value as CollectionId)}
+              className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+            >
+              <option value="all">All wallpapers</option>
+              <option value="2022">2022</option>
+              <option value="2023">2023</option>
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+            </select>
           </div>
           <div className="flex justify-center my-4">
             <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">Wallpaper:</label>

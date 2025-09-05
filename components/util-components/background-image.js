@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { useSettings } from '../../hooks/useSettings';
 
 export default function BackgroundImage() {
-    const { wallpaper } = useSettings();
+    const { wallpaper, wallpaperMode } = useSettings();
     const [needsOverlay, setNeedsOverlay] = useState(false);
 
     useEffect(() => {
@@ -41,7 +41,7 @@ export default function BackgroundImage() {
             <img
                 src={`/wallpapers/${wallpaper}.webp`}
                 alt=""
-                className="w-full h-full object-cover"
+                className={`w-full h-full ${wallpaperMode === 'fit' ? 'object-contain' : wallpaperMode === 'center' ? 'object-none' : 'object-cover'} object-center`}
             />
             {needsOverlay && (
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 to-transparent" aria-hidden="true"></div>
