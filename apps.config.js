@@ -63,6 +63,7 @@ const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const FileExplorerApp = createDynamicApp('file-explorer', 'Files');
+const FileSearchApp = createDynamicApp('file-search', 'File Search');
 const Radare2App = createDynamicApp('radare2', 'Radare2');
 const AboutAlexApp = createDynamicApp('alex', 'About Alex');
 
@@ -153,6 +154,7 @@ const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayFileExplorer = createDisplay(FileExplorerApp);
+const displayFileSearch = createDisplay(FileSearchApp);
 const displayRadare2 = createDisplay(Radare2App);
 const displayAboutAlex = createDisplay(AboutAlexApp);
 
@@ -700,6 +702,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayFileExplorer,
+  },
+  {
+    id: 'file-search',
+    title: 'File Search',
+    icon: '/images/logos/search.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayFileSearch,
   },
   {
     id: 'resource-monitor',
