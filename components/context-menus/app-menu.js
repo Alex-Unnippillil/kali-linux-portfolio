@@ -21,6 +21,11 @@ function AppMenu(props) {
         }
     }
 
+    const handleEdit = () => {
+        props.editLauncher && props.editLauncher()
+        props.onClose && props.onClose()
+    }
+
     return (
         <div
             id="app-menu"
@@ -38,6 +43,15 @@ function AppMenu(props) {
                 className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
                 <span className="ml-5">{props.pinned ? 'Unpin from Favorites' : 'Pin to Favorites'}</span>
+            </button>
+            <button
+                type="button"
+                onClick={handleEdit}
+                role="menuitem"
+                aria-label="Edit Launcher"
+                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+            >
+                <span className="ml-5">Edit Launcher</span>
             </button>
         </div>
     )

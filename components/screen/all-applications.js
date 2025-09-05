@@ -12,24 +12,30 @@ class AllApplications extends React.Component {
     }
 
     componentDidMount() {
+        this.refreshApps();
+        window.addEventListener('launcher-updated', this.refreshApps);
+    }
+
+    componentWillUnmount() {
+        window.removeEventListener('launcher-updated', this.refreshApps);
+    }
+
+    refreshApps = () => {
         const { apps = [], games = [] } = this.props;
-        const combined = [...apps];
+        const combined = [...apps.filter(app => !app.hidden)];
         games.forEach((game) => {
-            if (!combined.some((app) => app.id === game.id)) combined.push(game);
+            if (!game.hidden && !combined.some((app) => app.id === game.id)) combined.push(game);
         });
-        this.setState({ apps: combined, unfilteredApps: combined });
+        const { query } = this.state;
+        const filtered = query === ''
+            ? combined
+            : combined.filter((app) => app.title.toLowerCase().includes(query.toLowerCase()));
+        this.setState({ apps: filtered, unfilteredApps: combined });
     }
 
     handleChange = (e) => {
         const value = e.target.value;
-        const { unfilteredApps } = this.state;
-        const apps =
-            value === '' || value === null
-                ? unfilteredApps
-                : unfilteredApps.filter((app) =>
-                      app.title.toLowerCase().includes(value.toLowerCase())
-                  );
-        this.setState({ query: value, apps });
+        this.setState({ query: value }, this.refreshApps);
     };
 
     openApp = (id) => {

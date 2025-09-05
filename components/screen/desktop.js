@@ -88,12 +88,14 @@ export class Desktop extends Component {
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
+        window.addEventListener('launcher-updated', this.handleLauncherUpdate);
     }
 
     componentWillUnmount() {
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
+        window.removeEventListener('launcher-updated', this.handleLauncherUpdate);
     }
 
     checkForNewFolders = () => {
@@ -142,6 +144,10 @@ export class Desktop extends Component {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
         document.removeEventListener('keydown', this.handleContextKey);
+    }
+
+    handleLauncherUpdate = () => {
+        this.updateAppsData();
     }
 
     handleGlobalShortcut = (e) => {
@@ -318,6 +324,13 @@ export class Desktop extends Component {
             menus[key] = false;
         });
         this.setState({ context_menus: menus, context_app: null });
+    }
+
+    editLauncher = (id) => {
+        if (!id) return;
+        window.launcherEditorTarget = id;
+        this.hideAllContextMenu();
+        this.openApp('launcher-editor');
     }
 
     getMenuPosition = (e) => {
@@ -904,6 +917,7 @@ export class Desktop extends Component {
                     pinApp={() => this.pinApp(this.state.context_app)}
                     unpinApp={() => this.unpinApp(this.state.context_app)}
                     onClose={this.hideAllContextMenu}
+                    editLauncher={() => this.editLauncher(this.state.context_app)}
                 />
                 <TaskbarMenu
                     active={this.state.context_menus.taskbar}
