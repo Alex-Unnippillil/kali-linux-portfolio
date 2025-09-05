@@ -3,20 +3,39 @@ import Image from 'next/image';
 import Clock from '../util-components/clock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
+import NetworkEditor from '../apps/NetworkEditor';
 
 export default class Navbar extends Component {
 	constructor() {
 		super();
-		this.state = {
-			status_card: false
-		};
+                this.state = {
+                        status_card: false,
+                        network_menu: false,
+                        show_network_editor: false
+                };
 	}
 
 	render() {
 		return (
                         <div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
-                                <div className="pl-3 pr-1">
-                                        <Image src="/themes/Yaru/status/network-wireless-signal-good-symbolic.svg" alt="network icon" width={16} height={16} className="w-4 h-4" />
+                                <div className="pl-3 pr-1 relative">
+                                        <button
+                                                type="button"
+                                                aria-label="Network"
+                                                onClick={() => this.setState({ network_menu: !this.state.network_menu })}
+                                        >
+                                                <Image src="/themes/Yaru/status/network-wireless-signal-good-symbolic.svg" alt="network icon" width={16} height={16} className="w-4 h-4" />
+                                        </button>
+                                        {this.state.network_menu ? (
+                                                <div className="absolute bg-ub-cool-grey rounded-md py-1 top-8 left-0 shadow border-black border border-opacity-20 text-white">
+                                                        <button
+                                                                className="px-4 py-1 text-left hover:bg-gray-50 hover:bg-opacity-5 w-full"
+                                                                onClick={() => this.setState({ show_network_editor: true, network_menu: false })}
+                                                        >
+                                                                Edit Connections...
+                                                        </button>
+                                                </div>
+                                        ) : null}
                                 </div>
                                 <div
                                         className={'pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1 '}
@@ -51,7 +70,13 @@ export default class Navbar extends Component {
                                         <Status />
                                         <QuickSettings open={this.state.status_card} />
                                 </button>
-			</div>
-		);
-	}
+                                {this.state.show_network_editor ? (
+                                        <NetworkEditor
+                                                open={this.state.show_network_editor}
+                                                onClose={() => this.setState({ show_network_editor: false })}
+                                        />
+                                ) : null}
+                        </div>
+                );
+        }
 }
