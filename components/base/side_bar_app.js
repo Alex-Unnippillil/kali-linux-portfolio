@@ -100,10 +100,18 @@ export class SideBarApp extends Component {
                 onMouseLeave={() => {
                     this.setState({ showTitle: false, thumbnail: null });
                 }}
+                draggable={this.props.draggable}
+                onDragStart={this.props.onDragStart}
+                onDragOver={this.props.onDragOver}
+                onDrop={this.props.onDrop}
                 className={(this.props.isClose[this.id] === false && this.props.isFocus[this.id] ? "bg-white bg-opacity-10 " : "") +
+                    (this.props.draggable ? " cursor-move pl-4 " : " ") +
                     " w-auto p-2 outline-none relative hover:bg-white hover:bg-opacity-10 rounded m-1 transition-hover transition-active"}
                 id={"sidebar-" + this.props.id}
             >
+                {this.props.editMode && (
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 text-ubt-grey select-none">☰</span>
+                )}
                 <Image
                     width={28}
                     height={28}
