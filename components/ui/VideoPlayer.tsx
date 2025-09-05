@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import PipPortalProvider, { usePipPortal } from "../common/PipPortal";
+import useWakeLockOnFullscreen from "../../hooks/useWakeLockOnFullscreen";
 
 interface VideoPlayerProps {
   src: string;
@@ -19,6 +20,8 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
   const [pipSupported, setPipSupported] = useState(false);
   const [docPipSupported, setDocPipSupported] = useState(false);
   const [isPip, setIsPip] = useState(false);
+
+  useWakeLockOnFullscreen(videoRef);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -119,6 +122,7 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
               setVol(v);
               send({ type: "volume", value: v });
             }}
+            aria-label="Volume"
           />
         </div>
       );
@@ -129,7 +133,14 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
 
   return (
     <div className={`relative ${className}`.trim()}>
-      <video ref={videoRef} src={src} poster={poster} controls className="w-full h-auto" />
+      <video
+        ref={videoRef}
+        src={src}
+        poster={poster}
+        controls
+        className="w-full h-auto"
+        aria-label="Video player"
+      />
       {pipSupported && (
         <button
           type="button"
