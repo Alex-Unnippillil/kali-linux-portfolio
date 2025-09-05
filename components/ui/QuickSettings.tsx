@@ -2,6 +2,7 @@
 
 import usePersistentState from '../../hooks/usePersistentState';
 import { useEffect } from 'react';
+import { useNetworkManager } from '../../hooks/useNetworkManager';
 
 interface Props {
   open: boolean;
@@ -12,6 +13,7 @@ const QuickSettings = ({ open }: Props) => {
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
+  const { running } = useNetworkManager();
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -40,10 +42,17 @@ const QuickSettings = ({ open }: Props) => {
         <span>Sound</span>
         <input type="checkbox" checked={sound} onChange={() => setSound(!sound)} />
       </div>
-      <div className="px-4 pb-2 flex justify-between">
-        <span>Network</span>
-        <input type="checkbox" checked={online} onChange={() => setOnline(!online)} />
-      </div>
+        <div
+          className={`px-4 pb-2 flex justify-between ${running ? '' : 'opacity-50 pointer-events-none'}`}
+        >
+          <span>Network</span>
+          <input
+            type="checkbox"
+            checked={online}
+            onChange={() => setOnline(!online)}
+            disabled={!running}
+          />
+        </div>
       <div className="px-4 flex justify-between">
         <span>Reduced motion</span>
         <input
