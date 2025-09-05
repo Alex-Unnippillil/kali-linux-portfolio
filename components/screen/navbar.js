@@ -3,6 +3,32 @@ import Image from 'next/image';
 import Clock from '../util-components/clock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
+import useNotifications from '../../hooks/useNotifications';
+import SettingsDialog from '../../src/components/notifications/SettingsDialog';
+
+function NotificationsButton() {
+  const { dnd, toggleDnd } = useNotifications();
+  const [open, setOpen] = React.useState(false);
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        aria-label="Notifications"
+        onClick={toggleDnd}
+        onContextMenu={e => {
+          e.preventDefault();
+          setOpen(true);
+        }}
+        className="relative pr-3 pl-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent focus:border-ubb-orange py-1"
+      >
+        <span role="img" aria-label={dnd ? 'Do not disturb' : 'Notifications'}>
+          {dnd ? '🔕' : '🔔'}
+        </span>
+      </button>
+      <SettingsDialog open={open} onClose={() => setOpen(false)} />
+    </div>
+  );
+}
 
 export default class Navbar extends Component {
 	constructor() {
@@ -37,6 +63,7 @@ export default class Navbar extends Component {
                                 >
                                         <Clock />
                                 </div>
+                                <NotificationsButton />
                                 <button
                                         type="button"
                                         id="status-bar"
