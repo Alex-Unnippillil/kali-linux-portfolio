@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import { safeLocalStorage } from '../../utils/safeStorage';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -61,6 +62,7 @@ export async function saveFileDialog(options = {}) {
 
 const DB_NAME = 'file-explorer';
 const STORE_NAME = 'recent';
+const SETTINGS_KEY = 'file-explorer-settings';
 
 function openDB() {
   return getDb(DB_NAME, 1, {
@@ -104,6 +106,20 @@ export default function FileExplorer() {
   const [results, setResults] = useState([]);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
+  const [showHidden, setShowHidden] = useState(
+    safeLocalStorage?.getItem('file-explorer-showHidden') !== 'false'
+  );
+  const [settings, setSettings] = useState(() => {
+    try {
+      return JSON.parse(
+        safeLocalStorage?.getItem(SETTINGS_KEY) || '{}'
+      );
+    } catch {
+      return {};
+    }
+  });
+  const [viewMode, setViewMode] = useState('list');
+  const [zoom, setZoom] = useState(1);
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -115,6 +131,32 @@ export default function FileExplorer() {
     deleteFile: opfsDelete,
   } = useOPFS();
   const [unsavedDir, setUnsavedDir] = useState(null);
+  const currentKey = path.map((p) => p.name).join('/') || '/';
+
+  const updateSettings = (update) => {
+    setSettings((prev) => {
+      const updated = {
+        ...prev,
+        [currentKey]: { ...prev[currentKey], ...update },
+      };
+      safeLocalStorage?.setItem(SETTINGS_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  useEffect(() => {
+    const s = settings[currentKey] || {};
+    setViewMode(s.viewMode || 'list');
+    setZoom(s.zoom || 1);
+  }, [currentKey, settings]);
+
+  useEffect(() => {
+    safeLocalStorage?.setItem(
+      'file-explorer-showHidden',
+      showHidden ? 'true' : 'false'
+    );
+    if (dirHandle) readDir(dirHandle);
+  }, [showHidden]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
@@ -130,7 +172,7 @@ export default function FileExplorer() {
       setPath([{ name: root.name || '/', handle: root }]);
       await readDir(root);
     })();
-  }, [opfsSupported, root, getDir]);
+  }, [opfsSupported, root, getDir]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveBuffer = async (name, data) => {
     if (unsavedDir) await opfsWrite(name, data, unsavedDir);
@@ -143,6 +185,17 @@ export default function FileExplorer() {
 
   const removeBuffer = async (name) => {
     if (unsavedDir) await opfsDelete(name, unsavedDir);
+  };
+
+  const changeViewMode = (mode) => {
+    setViewMode(mode);
+    updateSettings({ viewMode: mode });
+  };
+
+  const changeZoom = (delta) => {
+    const z = Math.min(2, Math.max(0.5, zoom + delta));
+    setZoom(z);
+    updateSettings({ zoom: z });
   };
 
   const openFallback = async (e) => {
@@ -192,6 +245,7 @@ export default function FileExplorer() {
     const ds = [];
     const fs = [];
     for await (const [name, h] of handle.entries()) {
+      if (!showHidden && name.startsWith('.')) continue;
       if (h.kind === 'file') fs.push({ name, handle: h });
       else if (h.kind === 'directory') ds.push({ name, handle: h });
     }
@@ -262,7 +316,13 @@ export default function FileExplorer() {
   if (!supported) {
     return (
       <div className="p-4 flex flex-col h-full">
-        <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
+        <input
+          ref={fallbackInputRef}
+          type="file"
+          onChange={openFallback}
+          className="hidden"
+          aria-label="fallback file input"
+        />
         {!currentFile && (
           <button
             onClick={() => fallbackInputRef.current?.click()}
@@ -277,6 +337,7 @@ export default function FileExplorer() {
               className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
               value={content}
               onChange={onChange}
+              aria-label="file contents"
             />
             <button
               onClick={async () => {
@@ -307,6 +368,36 @@ export default function FileExplorer() {
           </button>
         )}
         <Breadcrumbs path={path} onNavigate={navigateTo} />
+        <select
+          value={viewMode}
+          onChange={(e) => changeViewMode(e.target.value)}
+          className="px-2 py-1 bg-black bg-opacity-50 rounded"
+        >
+          <option value="icons">Icons</option>
+          <option value="compact">Compact</option>
+          <option value="list">List</option>
+        </select>
+        <div className="flex items-center">
+          <button
+            onClick={() => changeZoom(-0.1)}
+            className="px-2 py-1 bg-black bg-opacity-50 rounded-l"
+          >
+            -
+          </button>
+          <div className="px-2 py-1 bg-black bg-opacity-50">{Math.round(zoom * 100)}%</div>
+          <button
+            onClick={() => changeZoom(0.1)}
+            className="px-2 py-1 bg-black bg-opacity-50 rounded-r"
+          >
+            +
+          </button>
+        </div>
+        <button
+          onClick={() => setShowHidden((s) => !s)}
+          className="px-2 py-1 bg-black bg-opacity-50 rounded"
+        >
+          {showHidden ? 'Hide' : 'Show'} Hidden
+        </button>
         {currentFile && (
           <button onClick={saveFile} className="px-2 py-1 bg-black bg-opacity-50 rounded">
             Save
@@ -326,29 +417,92 @@ export default function FileExplorer() {
             </div>
           ))}
           <div className="p-2 font-bold">Directories</div>
-          {dirs.map((d, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openDir(d)}
-            >
-              {d.name}
-            </div>
-          ))}
+          <div
+            className={
+              viewMode === 'icons'
+                ? 'grid gap-2 p-2'
+                : ''
+            }
+            style={
+              viewMode === 'icons'
+                ? { fontSize: `${zoom}em`, gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))' }
+                : { fontSize: `${zoom}em` }
+            }
+          >
+            {dirs.map((d, i) => (
+              <div
+                key={i}
+                className={
+                  viewMode === 'icons'
+                    ? 'flex flex-col items-center cursor-pointer hover:bg-black hover:bg-opacity-30 p-2 rounded'
+                    : `cursor-pointer hover:bg-black hover:bg-opacity-30 flex ${
+                        viewMode === 'compact' ? 'px-1' : 'px-2 py-1'
+                      }`
+                }
+                onClick={() => openDir(d)}
+              >
+                {viewMode === 'icons' ? (
+                  <>
+                    <span className="text-2xl">📁</span>
+                    <span className="truncate w-full text-center">{d.name}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="mr-1">📁</span>
+                    <span className="truncate">{d.name}</span>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
           <div className="p-2 font-bold">Files</div>
-          {files.map((f, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openFile(f)}
-            >
-              {f.name}
-            </div>
-          ))}
+          <div
+            className={
+              viewMode === 'icons'
+                ? 'grid gap-2 p-2'
+                : ''
+            }
+            style={
+              viewMode === 'icons'
+                ? { fontSize: `${zoom}em`, gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))' }
+                : { fontSize: `${zoom}em` }
+            }
+          >
+            {files.map((f, i) => (
+              <div
+                key={i}
+                className={
+                  viewMode === 'icons'
+                    ? 'flex flex-col items-center cursor-pointer hover:bg-black hover:bg-opacity-30 p-2 rounded'
+                    : `cursor-pointer hover:bg-black hover:bg-opacity-30 flex ${
+                        viewMode === 'compact' ? 'px-1' : 'px-2 py-1'
+                      }`
+                }
+                onClick={() => openFile(f)}
+              >
+                {viewMode === 'icons' ? (
+                  <>
+                    <span className="text-2xl">📄</span>
+                    <span className="truncate w-full text-center">{f.name}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="mr-1">📄</span>
+                    <span className="truncate">{f.name}</span>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
         <div className="flex-1 flex flex-col">
           {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
+            <textarea
+              className="flex-1 p-2 bg-ub-cool-grey outline-none"
+              value={content}
+              onChange={onChange}
+              aria-label="file contents"
+            />
           )}
           <div className="p-2 border-t border-gray-600">
             <input
@@ -356,6 +510,7 @@ export default function FileExplorer() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Find in files"
               className="px-1 py-0.5 text-black"
+              aria-label="find in files"
             />
             <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
               Search
