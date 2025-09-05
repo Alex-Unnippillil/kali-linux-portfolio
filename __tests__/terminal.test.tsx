@@ -61,6 +61,16 @@ describe('Terminal component', () => {
     expect(openApp).toHaveBeenCalledWith('calculator');
   });
 
+  it('prints theme info with neofetch', async () => {
+    const ref = createRef<any>();
+    render(<Terminal ref={ref} openApp={openApp} />);
+    await act(async () => {});
+    act(() => {
+      ref.current.runCommand('neofetch');
+    });
+    expect(ref.current.getContent()).toContain('Theme: Undercover');
+  });
+
   it('supports tab management shortcuts', async () => {
     const { container } = render(<TerminalTabs openApp={openApp} />);
     await act(async () => {});
