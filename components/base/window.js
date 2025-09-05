@@ -519,6 +519,8 @@ export class Window extends Component {
     }
 
     handleKeyDown = (e) => {
+        if (typeof e.preventDefault !== 'function') e.preventDefault = () => {};
+        if (typeof e.stopPropagation !== 'function') e.stopPropagation = () => {};
         if (e.key === 'Escape') {
             this.closeWindow();
         } else if (e.key === 'Tab') {

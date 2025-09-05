@@ -8,6 +8,9 @@ export interface Shortcut {
 const DEFAULT_SHORTCUTS: Shortcut[] = [
   { description: 'Show keyboard shortcuts', keys: '?' },
   { description: 'Open settings', keys: 'Ctrl+,' },
+  { description: 'Screenshot Full', keys: 'PrintScreen' },
+  { description: 'Screenshot Window', keys: 'Alt+PrintScreen' },
+  { description: 'Screenshot Region', keys: 'Shift+PrintScreen' },
 ];
 
 const validator = (value: unknown): value is Record<string, string> => {
