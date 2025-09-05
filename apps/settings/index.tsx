@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
+import { handleLidAction, LidAction } from "@/src/lib/power/lid";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
   resetSettings,
@@ -31,6 +32,8 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    lidAction,
+    setLidAction,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -38,6 +41,7 @@ export default function Settings() {
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
+    { id: "system", label: "System" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
@@ -80,6 +84,8 @@ export default function Settings() {
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
+      if (parsed.lidAction !== undefined)
+        setLidAction(parsed.lidAction as LidAction);
     } catch (err) {
       console.error("Invalid settings", err);
     }
@@ -101,6 +107,7 @@ export default function Settings() {
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
     setTheme("default");
+    setLidAction(defaults.lidAction as LidAction);
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
@@ -267,6 +274,28 @@ export default function Settings() {
             >
               Edit Shortcuts
             </button>
+          </div>
+        </>
+      )}
+      {activeTab === "system" && (
+        <>
+          <div className="flex justify-center my-4">
+            <label className="mr-2 text-ubt-grey">Lid close action:</label>
+            <select
+              value={lidAction}
+              onChange={(e) => {
+                const action = e.target.value as LidAction;
+                setLidAction(action);
+                handleLidAction(action);
+              }}
+              className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+            >
+              <option value="nothing">Nothing</option>
+              <option value="turn-off-display">Turn off display</option>
+              <option value="suspend">Suspend</option>
+              <option value="hibernate">Hibernate</option>
+              <option value="lock-screen">Lock screen</option>
+            </select>
           </div>
         </>
       )}
