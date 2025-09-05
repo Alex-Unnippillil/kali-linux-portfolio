@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { getDb } from '../../utils/safeIDB';
+import Toast from '../ui/Toast';
 
 interface ClipItem {
   id?: number;
@@ -29,8 +30,11 @@ function getDB() {
   return dbPromise;
 }
 
+const isUrl = (text: string) => /^https?:\/\//i.test(text);
+
 const ClipboardManager: React.FC = () => {
   const [items, setItems] = useState<ClipItem[]>([]);
+  const [toast, setToast] = useState('');
 
   const loadItems = useCallback(async () => {
     try {
@@ -100,6 +104,15 @@ const ClipboardManager: React.FC = () => {
     }
   };
 
+  const copyAsCurl = async (url: string) => {
+    try {
+      await writeToClipboard(`curl -sL ${url}`);
+      setToast('cURL command copied');
+    } catch {
+      // ignore errors
+    }
+  };
+
   const clearHistory = async () => {
     try {
       const dbp = getDB();
@@ -125,13 +138,29 @@ const ClipboardManager: React.FC = () => {
         {items.map((item) => (
           <li
             key={item.id}
-            className="cursor-pointer hover:underline"
-            onClick={() => writeToClipboard(item.text)}
+            className="flex items-center"
           >
-            {item.text}
+            <span
+              className="cursor-pointer hover:underline flex-1"
+              onClick={() => writeToClipboard(item.text)}
+            >
+              {item.text}
+            </span>
+            {isUrl(item.text) && (
+              <button
+                className="ml-2 px-2 py-1 bg-gray-700 hover:bg-gray-600"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  copyAsCurl(item.text);
+                }}
+              >
+                Copy as cURL
+              </button>
+            )}
           </li>
         ))}
       </ul>
+      {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
   );
 };
