@@ -1,4 +1,5 @@
 import type { CommandHandler, CommandContext } from './types';
+import { getExtraRepos } from '../../../utils/settingsStore';
 
 async function man(args: string, ctx: CommandContext) {
   const name = args.trim();
@@ -37,10 +38,27 @@ function alias(args: string, ctx: CommandContext) {
   }
 }
 
+async function apt(args: string, ctx: CommandContext) {
+  const sub = args.trim();
+  if (sub === 'update') {
+    ctx.writeLine('Hit:1 https://http.kali.org/kali kali-rolling InRelease');
+    const extra = await getExtraRepos();
+    if (extra) {
+      ctx.writeLine(
+        'WARNING: Extra repositories are enabled. Manage them in the APT sources panel: /apps/apt-sources',
+      );
+    }
+    ctx.writeLine('Reading package lists... Done');
+  } else {
+    ctx.writeLine('usage: apt update');
+  }
+}
+
 const registry: Record<string, CommandHandler> = {
   man,
   history,
   alias,
+  apt,
   cat: (args, ctx) => ctx.runWorker(`cat ${args}`),
   grep: (args, ctx) => ctx.runWorker(`grep ${args}`),
   jq: (args, ctx) => ctx.runWorker(`jq ${args}`),
