@@ -129,10 +129,27 @@ export default function Settings() {
               className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
             >
               <option value="default">Default</option>
+              <option value="windows">Windows</option>
               <option value="dark">Dark</option>
               <option value="neon">Neon</option>
               <option value="matrix">Matrix</option>
             </select>
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Windows Theme:</span>
+            <ToggleSwitch
+              checked={theme === "windows"}
+              onChange={(val) => setTheme(val ? "windows" : "default")}
+              ariaLabel="Windows Theme"
+            />
+            {theme === "windows" && (
+              <button
+                onClick={() => setTheme("default")}
+                className="ml-4 px-4 py-2 rounded bg-ub-orange text-white"
+              >
+                Revert
+              </button>
+            )}
           </div>
           <div className="flex justify-center my-4">
             <label className="mr-2 text-ubt-grey">Accent:</label>
