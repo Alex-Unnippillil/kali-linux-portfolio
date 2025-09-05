@@ -1,8 +1,16 @@
-import React from 'react';
+"use client";
+
+import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import usePersistentState from '../../hooks/usePersistentState';
+
+const HIDE_DELAY = 800;
 
 export default function Taskbar(props) {
     const runningApps = props.apps.filter(app => props.closed_windows[app.id] === false);
+    const [mode] = usePersistentState('app:panel-mode', 'never');
+    const [visible, setVisible] = useState(mode !== 'always');
+    const hideTimeout = useRef(null);
 
     const handleClick = (app) => {
         const id = app.id;
@@ -15,8 +23,70 @@ export default function Taskbar(props) {
         }
     };
 
+    useEffect(() => {
+        setVisible(mode !== 'always');
+    }, [mode]);
+
+    useEffect(() => {
+        if (mode === 'always') {
+            const handleMove = (e) => {
+                if (e.clientY >= window.innerHeight - 2) {
+                    setVisible(true);
+                }
+            };
+            window.addEventListener('mousemove', handleMove);
+            return () => window.removeEventListener('mousemove', handleMove);
+        }
+    }, [mode]);
+
+    useEffect(() => {
+        if (mode === 'always') {
+            const bar = document.getElementById('taskbar');
+            if (!bar) return;
+            const scheduleHide = () => {
+                if (hideTimeout.current) clearTimeout(hideTimeout.current);
+                hideTimeout.current = setTimeout(() => setVisible(false), HIDE_DELAY);
+            };
+            const handleEnter = () => {
+                if (hideTimeout.current) clearTimeout(hideTimeout.current);
+            };
+            bar.addEventListener('mouseleave', scheduleHide);
+            bar.addEventListener('mouseenter', handleEnter);
+            scheduleHide();
+            return () => {
+                bar.removeEventListener('mouseleave', scheduleHide);
+                bar.removeEventListener('mouseenter', handleEnter);
+                if (hideTimeout.current) clearTimeout(hideTimeout.current);
+            };
+        }
+    }, [mode]);
+
+    useEffect(() => {
+        if (mode === 'intelligent') {
+            const handleMax = () => {
+                if (hideTimeout.current) clearTimeout(hideTimeout.current);
+                hideTimeout.current = setTimeout(() => setVisible(false), 200);
+            };
+            const handleRest = () => {
+                if (hideTimeout.current) clearTimeout(hideTimeout.current);
+                hideTimeout.current = setTimeout(() => setVisible(true), 100);
+            };
+            window.addEventListener('window-maximize', handleMax);
+            window.addEventListener('window-restore', handleRest);
+            return () => {
+                window.removeEventListener('window-maximize', handleMax);
+                window.removeEventListener('window-restore', handleRest);
+            };
+        }
+    }, [mode]);
+
     return (
-        <div className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center z-40" role="toolbar">
+        <div
+            id="taskbar"
+            data-visible={visible}
+            className={`absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center z-40 transform transition-transform duration-300 ${visible ? 'translate-y-0' : 'translate-y-full'}`}
+            role="toolbar"
+        >
             {runningApps.map(app => (
                 <button
                     key={app.id}
