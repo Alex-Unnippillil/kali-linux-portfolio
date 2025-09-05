@@ -1,5 +1,6 @@
 import React from 'react';
 import UbuntuApp from '../base/ubuntu_app';
+import { onRecentFilesChange } from '../../utils/recentFiles';
 
 class AllApplications extends React.Component {
     constructor() {
@@ -8,7 +9,9 @@ class AllApplications extends React.Component {
             query: '',
             apps: [],
             unfilteredApps: [],
+            recentFiles: [],
         };
+        this.unsubscribeRecent = null;
     }
 
     componentDidMount() {
@@ -18,6 +21,13 @@ class AllApplications extends React.Component {
             if (!combined.some((app) => app.id === game.id)) combined.push(game);
         });
         this.setState({ apps: combined, unfilteredApps: combined });
+        this.unsubscribeRecent = onRecentFilesChange((files) =>
+            this.setState({ recentFiles: files }),
+        );
+    }
+
+    componentWillUnmount() {
+        if (this.unsubscribeRecent) this.unsubscribeRecent();
     }
 
     handleChange = (e) => {
@@ -53,6 +63,23 @@ class AllApplications extends React.Component {
         ));
     };
 
+    renderRecent = () => {
+        const recent = this.state.recentFiles || [];
+        if (!recent.length) return null;
+        return (
+            <div className="mb-8 w-2/3 md:w-1/3">
+                <h2 className="mb-2 text-center text-white">Recently Used</h2>
+                <ul className="max-h-40 overflow-y-auto rounded bg-black bg-opacity-20 p-2 text-white">
+                    {recent.map((f) => (
+                        <li key={f.path} className="truncate py-1 text-sm">
+                            {f.name}
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        );
+    };
+
     render() {
         return (
             <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim">
@@ -62,6 +89,7 @@ class AllApplications extends React.Component {
                     value={this.state.query}
                     onChange={this.handleChange}
                 />
+                {this.renderRecent()}
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 pb-10 place-items-center">
                     {this.renderApps()}
                 </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
+import { addRecentFile } from '../../utils/recentFiles';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
@@ -185,6 +186,8 @@ export default function FileExplorer() {
       const f = await file.handle.getFile();
       text = await f.text();
     }
+    const filePath = `${path.map((p) => p.name).join('/')}/${file.name}`;
+    addRecentFile({ path: filePath, name: file.name });
     setContent(text);
   };
 
