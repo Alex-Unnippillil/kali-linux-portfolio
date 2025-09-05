@@ -2,12 +2,18 @@ import React, { useEffect, useState } from "react";
 import Image from 'next/image';
 import SmallArrow from "./small_arrow";
 import { useSettings } from '../../hooks/useSettings';
+import NotificationCenter from '../common/NotificationCenter';
+import VolumeOverlay from '../osd/VolumeOverlay';
+import usePersistentState from '../../hooks/usePersistentState';
+import { useMediaKeys } from '../../hooks/useMediaKeys';
 
 const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
 
 export default function Status() {
   const { allowNetwork } = useSettings();
   const [online, setOnline] = useState(true);
+  const [showNotifications] = usePersistentState('qs-show-notifications', false);
+  const { volume, visible, enabled } = useMediaKeys();
 
   useEffect(() => {
     const pingServer = async () => {
@@ -79,6 +85,8 @@ export default function Status() {
       <span className="mx-1">
         <SmallArrow angle="down" className=" status-symbol" />
       </span>
+      {showNotifications && <NotificationCenter />}
+      <VolumeOverlay volume={volume} visible={enabled && visible} />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Clock from '../util-components/clock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
+import { MediaKeysProvider } from '../../hooks/useMediaKeys';
 
 export default class Navbar extends Component {
 	constructor() {
@@ -48,8 +49,10 @@ export default class Navbar extends Component {
                                                 'relative pr-3 pl-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent focus:border-ubb-orange py-1 '
                                         }
                                 >
-                                        <Status />
-                                        <QuickSettings open={this.state.status_card} />
+                                        <MediaKeysProvider>
+                                                <Status />
+                                                <QuickSettings open={this.state.status_card} />
+                                        </MediaKeysProvider>
                                 </button>
 			</div>
 		);
