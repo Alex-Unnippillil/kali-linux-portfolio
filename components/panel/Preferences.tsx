@@ -39,6 +39,25 @@ export default function Preferences() {
     if (typeof window === "undefined") return false;
     return localStorage.getItem(`${PANEL_PREFIX}autohide`) === "true";
   });
+  const [group, setGroup] = useState<"never" | "auto" | "always">(() => {
+    if (typeof window === "undefined") return "auto";
+    return (
+      (localStorage.getItem(`${PANEL_PREFIX}group`) as
+        | "never"
+        | "auto"
+        | "always"
+        | null) || "auto"
+    );
+  });
+  const [sort, setSort] = useState<"timestamp" | "alphabetical">(() => {
+    if (typeof window === "undefined") return "timestamp";
+    return (
+      (localStorage.getItem(`${PANEL_PREFIX}sort`) as
+        | "timestamp"
+        | "alphabetical"
+        | null) || "timestamp"
+    );
+  });
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -59,6 +78,14 @@ export default function Preferences() {
     if (typeof window === "undefined") return;
     localStorage.setItem(`${PANEL_PREFIX}autohide`, autohide ? "true" : "false");
   }, [autohide]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(`${PANEL_PREFIX}group`, group);
+  }, [group]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(`${PANEL_PREFIX}sort`, sort);
+  }, [sort]);
 
   return (
     <div>
@@ -89,6 +116,41 @@ export default function Preferences() {
                 onChange={setAutohide}
                 ariaLabel="Autohide panel"
               />
+            </div>
+            <div className="flex items-center justify-between">
+              <label htmlFor="group-windows" className="text-ubt-grey">
+                Group windows
+              </label>
+              <select
+                id="group-windows"
+                value={group}
+                onChange={(e) =>
+                  setGroup(e.target.value as "never" | "auto" | "always")
+                }
+                className="bg-ub-cool-grey text-white px-2 py-1 rounded"
+              >
+                <option value="never">Never</option>
+                <option value="auto">Auto</option>
+                <option value="always">Always</option>
+              </select>
+            </div>
+            <div className="flex items-center justify-between">
+              <label htmlFor="sort-windows" className="text-ubt-grey">
+                Sorting
+              </label>
+              <select
+                id="sort-windows"
+                value={sort}
+                onChange={(e) =>
+                  setSort(
+                    e.target.value as "timestamp" | "alphabetical"
+                  )
+                }
+                className="bg-ub-cool-grey text-white px-2 py-1 rounded"
+              >
+                <option value="timestamp">Timestamp</option>
+                <option value="alphabetical">Alphabetical</option>
+              </select>
             </div>
           </div>
         )}
