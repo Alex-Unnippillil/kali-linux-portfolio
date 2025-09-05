@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import { safeLocalStorage } from '../../utils/safeStorage';
+import apps from '../../apps.config';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -91,6 +93,48 @@ async function addRecentDir(handle) {
   } catch {}
 }
 
+const DEFAULT_MIME_APPS = {
+  'text/plain': ['gedit'],
+  'text/html': ['gedit', 'chrome'],
+};
+
+function loadMimeAssociations() {
+  try {
+    const stored = safeLocalStorage?.getItem('mime-associations');
+    return stored ? { ...DEFAULT_MIME_APPS, ...JSON.parse(stored) } : DEFAULT_MIME_APPS;
+  } catch {
+    return DEFAULT_MIME_APPS;
+  }
+}
+
+function loadPreferredApps() {
+  try {
+    return JSON.parse(safeLocalStorage?.getItem('preferred-apps') || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function getMimeType(name, file) {
+  if (file && file.type) return file.type || 'text/plain';
+  const ext = name.split('.').pop()?.toLowerCase();
+  switch (ext) {
+    case 'html':
+      return 'text/html';
+    case 'json':
+      return 'application/json';
+    case 'js':
+    case 'ts':
+    case 'tsx':
+    case 'jsx':
+      return 'text/javascript';
+    case 'md':
+      return 'text/markdown';
+    default:
+      return 'text/plain';
+  }
+}
+
 export default function FileExplorer() {
   const [supported, setSupported] = useState(true);
   const [dirHandle, setDirHandle] = useState(null);
@@ -102,6 +146,8 @@ export default function FileExplorer() {
   const [content, setContent] = useState('');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+  const [mimeApps, setMimeApps] = useState(DEFAULT_MIME_APPS);
+  const [preferredApps, setPreferredApps] = useState({});
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
 
@@ -131,6 +177,11 @@ export default function FileExplorer() {
       await readDir(root);
     })();
   }, [opfsSupported, root, getDir]);
+
+  useEffect(() => {
+    setMimeApps(loadMimeAssociations());
+    setPreferredApps(loadPreferredApps());
+  }, []);
 
   const saveBuffer = async (name, data) => {
     if (unsavedDir) await opfsWrite(name, data, unsavedDir);
@@ -175,16 +226,18 @@ export default function FileExplorer() {
   };
 
   const openFile = async (file) => {
-    setCurrentFile(file);
     let text = '';
+    let mime = 'text/plain';
     if (opfsSupported) {
       const unsaved = await loadBuffer(file.name);
       if (unsaved !== null) text = unsaved;
     }
-    if (!text) {
+    try {
       const f = await file.handle.getFile();
-      text = await f.text();
-    }
+      mime = getMimeType(file.name, f);
+      if (!text) text = await f.text();
+    } catch {}
+    setCurrentFile({ ...file, mime });
     setContent(text);
   };
 
@@ -262,7 +315,13 @@ export default function FileExplorer() {
   if (!supported) {
     return (
       <div className="p-4 flex flex-col h-full">
-        <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
+          <input
+            ref={fallbackInputRef}
+            type="file"
+            onChange={openFallback}
+            className="hidden"
+            aria-label="file upload"
+          />
         {!currentFile && (
           <button
             onClick={() => fallbackInputRef.current?.click()}
@@ -277,6 +336,7 @@ export default function FileExplorer() {
               className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
               value={content}
               onChange={onChange}
+              aria-label="file contents"
             />
             <button
               onClick={async () => {
@@ -348,15 +408,48 @@ export default function FileExplorer() {
         </div>
         <div className="flex-1 flex flex-col">
           {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
+            <textarea
+              className="flex-1 p-2 bg-ub-cool-grey outline-none"
+              value={content}
+              onChange={onChange}
+              aria-label="file contents"
+            />
+          )}
+          {currentFile && (mimeApps[currentFile.mime] || []).length > 0 && (
+            <div className="p-2 border-t border-gray-600">
+              <div className="font-bold mb-1">Open with</div>
+              {(mimeApps[currentFile.mime] || []).map((id) => {
+                const app = apps.find((a) => a.id === id);
+                const title = app?.title || id;
+                const isDefault = preferredApps[currentFile.mime] === id;
+                return (
+                  <div key={id} className="flex items-center justify-between">
+                    <span>{isDefault ? '⭐ ' : ''}{title}</span>
+                    {!isDefault && (
+                      <button
+                        onClick={() => {
+                          const updated = { ...preferredApps, [currentFile.mime]: id };
+                          setPreferredApps(updated);
+                          safeLocalStorage?.setItem('preferred-apps', JSON.stringify(updated));
+                        }}
+                        className="px-1 py-0.5 bg-black bg-opacity-50 rounded"
+                      >
+                        Use as default
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           )}
           <div className="p-2 border-t border-gray-600">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Find in files"
-              className="px-1 py-0.5 text-black"
-            />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Find in files"
+                className="px-1 py-0.5 text-black"
+                aria-label="search files"
+              />
             <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
               Search
             </button>
