@@ -269,7 +269,10 @@ const utilityList = [
   },
 ];
 
-export const utilities = utilityList;
+export const utilities = utilityList.map((app) => ({
+  ...app,
+  category: 'Utilities',
+}));
 
 // Default window sizing for games to prevent oversized frames
 export const gameDefaults = {
@@ -592,9 +595,13 @@ const gameList = [
   },
 ];
 
-export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
+export const games = gameList.map((game) => ({
+  ...gameDefaults,
+  ...game,
+  category: 'Games',
+}));
 
-const apps = [
+const mainApps = [
   {
     id: 'chrome',
     title: 'Google Chrome',
@@ -1051,9 +1058,11 @@ const apps = [
     desktop_shortcut: false,
     screen: displaySecurityTools,
   },
-  // Utilities are grouped separately
+];
+
+const apps = [
+  ...mainApps.map((app) => ({ ...app, category: 'Applications' })),
   ...utilities,
-  // Games are included so they appear alongside apps
   ...games,
 ];
 
