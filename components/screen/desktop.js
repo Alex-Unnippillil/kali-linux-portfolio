@@ -903,6 +903,9 @@ export class Desktop extends Component {
                     pinned={this.initFavourite[this.state.context_app]}
                     pinApp={() => this.pinApp(this.state.context_app)}
                     unpinApp={() => this.unpinApp(this.state.context_app)}
+                    openMenuEditor={() => this.openApp('settings')}
+                    addToPanel={() => { const id = this.state.context_app; if (id) console.log('Add to panel', id); }}
+                    addToDesktop={() => { const id = this.state.context_app; if (id) this.addShortcutToDesktop(id); }}
                     onClose={this.hideAllContextMenu}
                 />
                 <TaskbarMenu
