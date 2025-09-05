@@ -73,6 +73,7 @@ const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery')
 const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
 const InputLabApp = createDynamicApp('input-lab', 'Input Lab');
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
+const PowerApp = createDynamicApp('power', 'Power');
 
 const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
 const TrashApp = createDynamicApp('trash', 'Trash');
@@ -165,6 +166,7 @@ const displayStickyNotes = createDisplay(StickyNotesApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);
 const displayWeatherWidget = createDisplay(WeatherWidgetApp);
 const displayInputLab = createDisplay(InputLabApp);
+const displayPower = createDisplay(PowerApp);
 
 const displayGhidra = createDisplay(GhidraApp);
 
@@ -691,6 +693,15 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displaySettings,
+  },
+  {
+    id: 'power',
+    title: 'Power',
+    icon: '/themes/Yaru/status/power-button.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPower,
   },
   {
     id: 'files',
