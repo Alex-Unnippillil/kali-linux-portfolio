@@ -8,6 +8,10 @@ export interface Shortcut {
 const DEFAULT_SHORTCUTS: Shortcut[] = [
   { description: 'Show keyboard shortcuts', keys: '?' },
   { description: 'Open settings', keys: 'Ctrl+,' },
+  { description: 'Tile window left', keys: 'Meta+ArrowLeft' },
+  { description: 'Tile window right', keys: 'Meta+ArrowRight' },
+  { description: 'Tile window top', keys: 'Ctrl+Meta+ArrowUp' },
+  { description: 'Tile window bottom', keys: 'Ctrl+Meta+ArrowDown' },
 ];
 
 const validator = (value: unknown): value is Record<string, string> => {
