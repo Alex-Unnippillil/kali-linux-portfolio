@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { getUnlockedThemes } from '../utils/theme';
 import { useSettings, ACCENT_OPTIONS } from '../hooks/useSettings';
+import { resetSettings, defaults } from '../utils/settingsStore';
+import Toast from './ui/Toast';
 
 interface Props {
   highScore?: number;
@@ -8,8 +10,16 @@ interface Props {
 
 const SettingsDrawer = ({ highScore = 0 }: Props) => {
   const [open, setOpen] = useState(false);
+  const [toast, setToast] = useState('');
   const unlocked = getUnlockedThemes(highScore);
   const { accent, setAccent, theme, setTheme } = useSettings();
+
+  const handleReset = async () => {
+    await resetSettings();
+    setAccent(defaults.accent);
+    setTheme('default');
+    setToast('Settings reset to defaults');
+  };
 
   return (
     <div>
@@ -52,8 +62,10 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
               ))}
             </div>
           </label>
+          <button onClick={handleReset}>Reset</button>
         </div>
       )}
+      {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
   );
 };
