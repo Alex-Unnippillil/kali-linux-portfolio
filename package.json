@@ -64,6 +64,7 @@
     "idb": "7.1.1",
     "idb-keyval": "^6.2.1",
     "jspdf": "^3.0.2",
+    "jszip": "^3.10.1",
     "kaitai-struct": "^0.10.0",
     "leaflet": "^1.9.4",
     "marked": "^16.2.1",
