@@ -20,6 +20,10 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getShowVolumeOSD as loadShowVolumeOSD,
+  setShowVolumeOSD as saveShowVolumeOSD,
+  getShowBrightnessOSD as loadShowBrightnessOSD,
+  setShowBrightnessOSD as saveShowBrightnessOSD,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -63,6 +67,8 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  showVolumeOSD: boolean;
+  showBrightnessOSD: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +80,8 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setShowVolumeOSD: (value: boolean) => void;
+  setShowBrightnessOSD: (value: boolean) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +96,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  showVolumeOSD: defaults.showVolumeOSD,
+  showBrightnessOSD: defaults.showBrightnessOSD,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +109,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setShowVolumeOSD: () => {},
+  setShowBrightnessOSD: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -112,6 +124,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
+  const [showVolumeOSD, setShowVolumeOSD] = useState<boolean>(defaults.showVolumeOSD);
+  const [showBrightnessOSD, setShowBrightnessOSD] = useState<boolean>(
+    defaults.showBrightnessOSD,
+  );
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
@@ -127,6 +143,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setShowVolumeOSD(await loadShowVolumeOSD());
+      setShowBrightnessOSD(await loadShowBrightnessOSD());
       setTheme(loadTheme());
     })();
   }, []);
@@ -236,6 +254,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveShowVolumeOSD(showVolumeOSD);
+  }, [showVolumeOSD]);
+
+  useEffect(() => {
+    saveShowBrightnessOSD(showBrightnessOSD);
+  }, [showBrightnessOSD]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -249,6 +275,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         pongSpin,
         allowNetwork,
         haptics,
+        showVolumeOSD,
+        showBrightnessOSD,
         theme,
         setAccent,
         setWallpaper,
@@ -260,6 +288,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
+        setShowVolumeOSD,
+        setShowBrightnessOSD,
         setTheme,
       }}
     >

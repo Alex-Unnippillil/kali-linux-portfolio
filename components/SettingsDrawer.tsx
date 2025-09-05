@@ -9,7 +9,16 @@ interface Props {
 const SettingsDrawer = ({ highScore = 0 }: Props) => {
   const [open, setOpen] = useState(false);
   const unlocked = getUnlockedThemes(highScore);
-  const { accent, setAccent, theme, setTheme } = useSettings();
+  const {
+    accent,
+    setAccent,
+    theme,
+    setTheme,
+    showVolumeOSD,
+    setShowVolumeOSD,
+    showBrightnessOSD,
+    setShowBrightnessOSD,
+  } = useSettings();
 
   return (
     <div>
@@ -51,6 +60,24 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
                 />
               ))}
             </div>
+          </label>
+          <label className="flex items-center gap-2 mt-2">
+            <input
+              type="checkbox"
+              aria-label="toggle-volume-osd"
+              checked={showVolumeOSD}
+              onChange={(e) => setShowVolumeOSD(e.target.checked)}
+            />
+            <span>Show volume OSD</span>
+          </label>
+          <label className="flex items-center gap-2 mt-2">
+            <input
+              type="checkbox"
+              aria-label="toggle-brightness-osd"
+              checked={showBrightnessOSD}
+              onChange={(e) => setShowBrightnessOSD(e.target.checked)}
+            />
+            <span>Show brightness OSD</span>
           </label>
         </div>
       )}
