@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
+import ClockSettings from "./components/ClockSettings";
 import {
   resetSettings,
   defaults,
@@ -38,6 +39,7 @@ export default function Settings() {
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
+    { id: "clocks", label: "Clocks" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
@@ -288,6 +290,7 @@ export default function Settings() {
           </div>
         </>
       )}
+      {activeTab === "clocks" && <ClockSettings />}
         <input
           type="file"
           accept="application/json"
