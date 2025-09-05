@@ -102,6 +102,7 @@ export default function FileExplorer() {
   const [content, setContent] = useState('');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+  const [requestedPath, setRequestedPath] = useState(null);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
 
@@ -131,6 +132,15 @@ export default function FileExplorer() {
       await readDir(root);
     })();
   }, [opfsSupported, root, getDir]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const p = sessionStorage.getItem('file-explorer-path');
+    if (p) {
+      setRequestedPath(p);
+      sessionStorage.removeItem('file-explorer-path');
+    }
+  }, []);
 
   const saveBuffer = async (name, data) => {
     if (unsavedDir) await opfsWrite(name, data, unsavedDir);
@@ -307,6 +317,9 @@ export default function FileExplorer() {
           </button>
         )}
         <Breadcrumbs path={path} onNavigate={navigateTo} />
+        {requestedPath && (
+          <span className="ml-2 text-ubt-grey" title={requestedPath}>{requestedPath}</span>
+        )}
         {currentFile && (
           <button onClick={saveFile} className="px-2 py-1 bg-black bg-opacity-50 rounded">
             Save
