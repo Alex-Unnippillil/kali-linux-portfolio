@@ -40,6 +40,11 @@ export default function Preferences() {
     return localStorage.getItem(`${PANEL_PREFIX}autohide`) === "true";
   });
 
+  const [keepUrgent, setKeepUrgent] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem(`${PANEL_PREFIX}keep-urgent`) === "true";
+  });
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     localStorage.setItem(`${PANEL_PREFIX}size`, String(size));
@@ -59,6 +64,14 @@ export default function Preferences() {
     if (typeof window === "undefined") return;
     localStorage.setItem(`${PANEL_PREFIX}autohide`, autohide ? "true" : "false");
   }, [autohide]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(
+      `${PANEL_PREFIX}keep-urgent`,
+      keepUrgent ? "true" : "false"
+    );
+  }, [keepUrgent]);
 
   return (
     <div>
@@ -88,6 +101,14 @@ export default function Preferences() {
                 checked={autohide}
                 onChange={setAutohide}
                 ariaLabel="Autohide panel"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-ubt-grey">Keep urgent windows blinking</span>
+              <ToggleSwitch
+                checked={keepUrgent}
+                onChange={setKeepUrgent}
+                ariaLabel="Keep urgent windows blinking"
               />
             </div>
           </div>

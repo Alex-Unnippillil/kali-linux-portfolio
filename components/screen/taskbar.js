@@ -1,8 +1,19 @@
 import React from 'react';
 import Image from 'next/image';
 
+const PANEL_PREFIX = 'xfce.panel.';
+
 export default function Taskbar(props) {
     const runningApps = props.apps.filter(app => props.closed_windows[app.id] === false);
+
+    const keepBlinking = typeof window !== 'undefined' &&
+        localStorage.getItem(`${PANEL_PREFIX}keep-urgent`) === 'true';
+
+    const isUrgent = (id) => {
+        if (!props.window_data) return false;
+        const win = props.window_data[id];
+        return win && win.urgent;
+    };
 
     const handleClick = (app) => {
         const id = app.id;
@@ -26,6 +37,7 @@ export default function Taskbar(props) {
                     data-app-id={app.id}
                     onClick={() => handleClick(app)}
                     className={(props.focused_windows[app.id] && !props.minimized_windows[app.id] ? ' bg-white bg-opacity-20 ' : ' ') +
+                        (isUrgent(app.id) && (!props.focused_windows[app.id] || keepBlinking) ? ' animate-pulse ' : '') +
                         'relative flex items-center mx-1 px-2 py-1 rounded hover:bg-white hover:bg-opacity-10'}
                 >
                     <Image
