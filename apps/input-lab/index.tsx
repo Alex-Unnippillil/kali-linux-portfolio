@@ -1,13 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { z } from 'zod';
+import { evaluate } from 'mathjs';
 
 const SAVE_KEY = 'input-lab:text';
-
-const schema = z.object({
-  text: z.string().min(1, 'Text is required'),
-});
 
 export default function InputLab() {
   const [text, setText] = useState('');
@@ -51,23 +47,29 @@ export default function InputLab() {
     if (saved) setText(saved);
   }, []);
 
-  // Validate and autosave
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const handle = setTimeout(() => {
-      const result = schema.safeParse({ text });
-      if (!result.success) {
-        const msg = result.error.issues[0].message;
-        setError(msg);
-        setStatus(`Error: ${msg}`);
-        return;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setText(val);
+    setError('');
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(SAVE_KEY, val);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      try {
+        const result = evaluate(text);
+        setText(String(result));
+        setStatus(`Result: ${result}`);
+        setError('');
+      } catch {
+        setError('Invalid expression');
+        setStatus('');
       }
-      setError('');
-      window.localStorage.setItem(SAVE_KEY, text);
-      setStatus('Saved');
-    }, 500);
-    return () => clearTimeout(handle);
-  }, [text]);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-900 p-4 text-white">
@@ -81,7 +83,9 @@ export default function InputLab() {
             id="input-lab-text"
             type="text"
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            aria-label="Text"
             onCompositionStart={(e) =>
               logEvent('compositionstart', { data: e.data })
             }
