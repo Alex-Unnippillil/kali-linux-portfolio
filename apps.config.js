@@ -65,6 +65,7 @@ const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const FileExplorerApp = createDynamicApp('file-explorer', 'Files');
 const Radare2App = createDynamicApp('radare2', 'Radare2');
 const AboutAlexApp = createDynamicApp('alex', 'About Alex');
+const PowerApp = createDynamicApp('power', 'Power Settings');
 
 const QrApp = createDynamicApp('qr', 'QR Tool');
 const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
@@ -155,6 +156,7 @@ const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayFileExplorer = createDisplay(FileExplorerApp);
 const displayRadare2 = createDisplay(Radare2App);
 const displayAboutAlex = createDisplay(AboutAlexApp);
+const displayPower = createDisplay(PowerApp);
 
 const displayQr = createDisplay(QrApp);
 const displayAsciiArt = createDisplay(AsciiArtApp);
@@ -691,6 +693,15 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displaySettings,
+  },
+  {
+    id: 'power',
+    title: 'Power',
+    icon: '/themes/Yaru/status/power-button.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPower,
   },
   {
     id: 'files',
