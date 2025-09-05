@@ -1,0 +1,5 @@
+[
+  { "id": "plugin-a", "title": "Plugin A" },
+  { "id": "plugin-b", "title": "Plugin B" },
+  { "id": "plugin-c", "title": "Plugin C" }
+]
