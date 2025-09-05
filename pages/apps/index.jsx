@@ -1,10 +1,22 @@
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 
 const AppsPage = () => {
   const [apps, setApps] = useState([]);
   const [query, setQuery] = useState('');
+  const [category, setCategory] = useState('');
+
+  const CATEGORY_LABELS = {
+    '802-11': '802.11',
+    bluetooth: 'Bluetooth',
+    'reverse-engineering': 'Reverse Engineering',
+  };
+
+  const categories = useMemo(
+    () => Array.from(new Set(apps.flatMap((a) => a.categories || []))),
+    [apps],
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -19,7 +31,10 @@ const AppsPage = () => {
   }, []);
 
   const filteredApps = apps.filter(
-    (app) => !app.disabled && app.title.toLowerCase().includes(query.toLowerCase()),
+    (app) =>
+      !app.disabled &&
+      app.title.toLowerCase().includes(query.toLowerCase()) &&
+      (!category || (app.categories || []).includes(category)),
   );
 
   return (
@@ -35,6 +50,27 @@ const AppsPage = () => {
         placeholder="Search apps"
         className="mb-4 w-full rounded border p-2"
       />
+      <div className="mb-4 flex flex-wrap gap-2">
+        <button
+          onClick={() => setCategory('')}
+          className={`px-2 py-1 rounded ${
+            category === '' ? 'bg-blue-600 text-white' : 'bg-gray-200'
+          }`}
+        >
+          All
+        </button>
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => setCategory(cat)}
+            className={`px-2 py-1 rounded ${
+              category === cat ? 'bg-blue-600 text-white' : 'bg-gray-200'
+            }`}
+          >
+            {CATEGORY_LABELS[cat] || cat}
+          </button>
+        ))}
+      </div>
       <div
         id="app-grid"
         tabIndex="-1"
@@ -58,6 +94,21 @@ const AppsPage = () => {
               />
             )}
             <span className="mt-2">{app.title}</span>
+            {app.categories && (
+              <div className="mt-2 flex flex-wrap justify-center gap-1">
+                {app.categories.map((cat) => (
+                  <Link
+                    key={cat}
+                    href={`/metapackages/${cat}`}
+                    className={`px-2 py-0.5 text-xs rounded ${
+                      category === cat ? 'bg-blue-600 text-white' : 'bg-gray-200'
+                    }`}
+                  >
+                    {CATEGORY_LABELS[cat] || cat}
+                  </Link>
+                ))}
+              </div>
+            )}
           </Link>
         ))}
       </div>
