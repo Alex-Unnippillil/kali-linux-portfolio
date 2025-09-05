@@ -2,12 +2,15 @@ import React, { useEffect, useState } from "react";
 import Image from 'next/image';
 import SmallArrow from "./small_arrow";
 import { useSettings } from '../../hooks/useSettings';
+import usePersistentState from '../../hooks/usePersistentState';
 
 const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
 
 export default function Status() {
   const { allowNetwork } = useSettings();
   const [online, setOnline] = useState(true);
+  const [muted] = usePersistentState('qs-muted', false);
+  const [volume] = usePersistentState('qs-volume', 1);
 
   useEffect(() => {
     const pingServer = async () => {
@@ -56,15 +59,20 @@ export default function Status() {
           <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
         )}
       </span>
-      <span className="mx-1.5">
+      <span className="mx-1.5 relative" title={muted ? 'Muted' : `Volume ${(volume * 100).toFixed(0)}%`}>
         <Image
           width={16}
           height={16}
           src={VOLUME_ICON}
-          alt="volume"
+          alt={muted ? 'muted' : 'volume'}
           className="inline status-symbol w-4 h-4"
           sizes="16px"
         />
+        {muted && (
+          <span className="absolute inset-0 flex items-center justify-center">
+            <span className="block w-full h-px bg-red-500 rotate-45" />
+          </span>
+        )}
       </span>
       <span className="mx-1.5">
         <Image
