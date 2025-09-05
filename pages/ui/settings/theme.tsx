@@ -16,6 +16,7 @@ function Toggle({
     <button
       type="button"
       role="switch"
+      aria-label="toggle"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
       className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
@@ -55,11 +56,13 @@ export default function ThemeSettings() {
       <div className="flex-1 p-4 overflow-y-auto">
         <h1 className="text-xl mb-4">Theme</h1>
         <select
+          aria-label="Theme"
           value={theme}
           onChange={handleChange}
           className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
         >
           <option value="default">Default</option>
+          <option value="undercover">Undercover</option>
           <option value="dark">Dark</option>
           <option value="neon">Neon</option>
           <option value="matrix">Matrix</option>

@@ -3,6 +3,7 @@ export const THEME_KEY = 'app:theme';
 // Score required to unlock each theme
 export const THEME_UNLOCKS: Record<string, number> = {
   default: 0,
+  undercover: 0,
   neon: 100,
   dark: 500,
   matrix: 1000,
@@ -33,6 +34,13 @@ export const setTheme = (theme: string): void => {
     window.localStorage.setItem(THEME_KEY, theme);
     document.documentElement.dataset.theme = theme;
     document.documentElement.classList.toggle('dark', isDarkTheme(theme));
+    const link = document.querySelector("link[rel='icon']");
+    if (link) {
+      link.setAttribute(
+        'href',
+        theme === 'undercover' ? '/favicon-undercover.svg' : '/favicon.svg'
+      );
+    }
   } catch {
     /* ignore storage errors */
   }
