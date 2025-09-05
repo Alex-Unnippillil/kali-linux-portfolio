@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 interface ToastProps {
   message: string;
@@ -17,6 +18,7 @@ const Toast: React.FC<ToastProps> = ({
 }) => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [visible, setVisible] = useState(false);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
     setVisible(true);
@@ -32,7 +34,11 @@ const Toast: React.FC<ToastProps> = ({
     <div
       role="status"
       aria-live="polite"
-      className={`fixed top-4 left-1/2 -translate-x-1/2 transform bg-gray-900 text-white border border-gray-700 px-4 py-3 rounded-md shadow-md flex items-center transition-transform duration-150 ease-in-out ${visible ? 'translate-y-0' : '-translate-y-full'}`}
+      className={`fixed top-4 left-1/2 -translate-x-1/2 transform bg-gray-900 text-white border border-gray-700 px-4 py-3 rounded-md shadow-md flex items-center ${
+        prefersReducedMotion
+          ? `transition-opacity duration-150 ease-in-out ${visible ? 'opacity-100' : 'opacity-0'}`
+          : `transition-transform duration-150 ease-in-out ${visible ? 'translate-y-0' : '-translate-y-full'}`
+      }`}
     >
       <span>{message}</span>
       {onAction && actionLabel && (
