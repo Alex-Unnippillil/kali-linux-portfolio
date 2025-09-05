@@ -3,7 +3,7 @@ import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme, archiver, setArchiver, archiverExtensions, setArchiverExtensions, openAfterCreation, setOpenAfterCreation, deleteAfterArchiving, setDeleteAfterArchiving } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -175,6 +175,49 @@ export function Settings() {
                         className="mr-2"
                     />
                     Pong Spin
+                </label>
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey">Default Archiver:</label>
+                <select
+                    value={archiver}
+                    onChange={(e) => setArchiver(e.target.value)}
+                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                >
+                    <option value="zip">zip</option>
+                    <option value="tar">tar</option>
+                    <option value="7z">7z</option>
+                </select>
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey">Supported Extensions:</label>
+                <input
+                    type="text"
+                    value={archiverExtensions}
+                    onChange={(e) => setArchiverExtensions(e.target.value)}
+                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                    placeholder=".zip,.tar,.gz"
+                />
+            </div>
+            <div className="flex flex-col items-center my-4">
+                <h2 className="text-ubt-grey mb-2">Other Options</h2>
+                <label className="text-ubt-grey flex items-center mb-2">
+                    <input
+                        type="checkbox"
+                        checked={openAfterCreation}
+                        onChange={(e) => setOpenAfterCreation(e.target.checked)}
+                        className="mr-2"
+                    />
+                    Open after creation
+                </label>
+                <label className="text-ubt-grey flex items-center">
+                    <input
+                        type="checkbox"
+                        checked={deleteAfterArchiving}
+                        onChange={(e) => setDeleteAfterArchiving(e.target.checked)}
+                        className="mr-2"
+                    />
+                    Delete source files
                 </label>
             </div>
             <div className="flex justify-center my-4">
