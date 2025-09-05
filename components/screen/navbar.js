@@ -49,7 +49,7 @@ export default class Navbar extends Component {
                                         }
                                 >
                                         <Status />
-                                        <QuickSettings open={this.state.status_card} />
+                                        <QuickSettings open={this.state.status_card} onLogout={this.props.lockScreen} />
                                 </button>
 			</div>
 		);
