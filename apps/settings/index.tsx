@@ -25,6 +25,8 @@ export default function Settings() {
     setReducedMotion,
     fontScale,
     setFontScale,
+    fontHinting,
+    setFontHinting,
     highContrast,
     setHighContrast,
     haptics,
@@ -151,6 +153,28 @@ export default function Settings() {
             </div>
           </div>
           <div className="flex justify-center my-4">
+            <label htmlFor="font-scale" className="mr-2 text-ubt-grey">Font Size:</label>
+            <input
+              id="font-scale"
+              type="range"
+              min="0.75"
+              max="1.5"
+              step="0.05"
+              value={fontScale}
+              onChange={(e) => setFontScale(parseFloat(e.target.value))}
+              className="ubuntu-slider"
+              aria-label="Font size"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Hinting:</span>
+            <ToggleSwitch
+              checked={fontHinting}
+              onChange={setFontHinting}
+              ariaLabel="Font hinting"
+            />
+          </div>
+          <div className="flex justify-center my-4">
             <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">Wallpaper:</label>
             <input
               id="wallpaper-slider"
@@ -211,20 +235,6 @@ export default function Settings() {
       )}
       {activeTab === "accessibility" && (
         <>
-          <div className="flex justify-center my-4">
-            <label htmlFor="font-scale" className="mr-2 text-ubt-grey">Icon Size:</label>
-            <input
-              id="font-scale"
-              type="range"
-              min="0.75"
-              max="1.5"
-              step="0.05"
-              value={fontScale}
-              onChange={(e) => setFontScale(parseFloat(e.target.value))}
-              className="ubuntu-slider"
-              aria-label="Icon size"
-            />
-          </div>
           <div className="flex justify-center my-4">
             <label className="mr-2 text-ubt-grey">Density:</label>
             <select
