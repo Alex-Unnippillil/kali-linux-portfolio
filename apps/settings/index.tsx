@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -104,6 +104,37 @@ export default function Settings() {
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
+
+  const [thumbSize, setThumbSize] = useState<number | null>(null);
+
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
+  };
+
+  const fetchThumbSize = async () => {
+    try {
+      const res = await fetch("/api/thumbnails");
+      if (res.ok) {
+        const data = await res.json();
+        setThumbSize(data.size);
+      }
+    } catch {
+      setThumbSize(0);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "privacy") void fetchThumbSize();
+  }, [activeTab]);
+
+  const handleClearThumbnails = async () => {
+    await fetch("/api/thumbnails", { method: "DELETE" });
+    void fetchThumbSize();
+  };
 
   return (
     <div className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey">
@@ -272,6 +303,17 @@ export default function Settings() {
       )}
       {activeTab === "privacy" && (
         <>
+          <div className="flex justify-center my-4 items-center space-x-4">
+            <span className="text-ubt-grey">
+              Thumbnail cache: {thumbSize === null ? "—" : formatBytes(thumbSize)}
+            </span>
+            <button
+              onClick={handleClearThumbnails}
+              className="px-4 py-2 rounded bg-ub-orange text-white"
+            >
+              Clear Thumbnails
+            </button>
+          </div>
           <div className="flex justify-center my-4 space-x-4">
             <button
               onClick={handleExport}
