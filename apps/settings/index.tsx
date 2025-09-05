@@ -36,6 +36,7 @@ export default function Settings() {
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
+    { id: "keyboard", label: "Keyboard" },
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
   ] as const;
@@ -260,7 +261,17 @@ export default function Settings() {
               ariaLabel="Haptics"
             />
           </div>
-          <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
+        </>
+      )}
+      {activeTab === "keyboard" && (
+        <>
+          <ul className="list-disc pl-6 my-4 text-ubt-grey">
+            <li>Tile window left: Meta+ArrowLeft</li>
+            <li>Tile window right: Meta+ArrowRight</li>
+            <li>Tile window top: Ctrl+Meta+ArrowUp</li>
+            <li>Tile window bottom: Ctrl+Meta+ArrowDown</li>
+          </ul>
+          <div className="flex justify-center mt-4">
             <button
               onClick={() => setShowKeymap(true)}
               className="px-4 py-2 rounded bg-ub-orange text-white"

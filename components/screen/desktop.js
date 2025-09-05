@@ -162,6 +162,14 @@ export class Desktop extends Component {
             e.preventDefault();
             this.cycleAppWindows(e.shiftKey ? -1 : 1);
         }
+        else if (e.metaKey && e.ctrlKey && ['ArrowUp', 'ArrowDown'].includes(e.key)) {
+            e.preventDefault();
+            const id = this.getFocusedWindowId();
+            if (id) {
+                const event = new CustomEvent('super-ctrl-arrow', { detail: e.key });
+                document.getElementById(id)?.dispatchEvent(event);
+            }
+        }
         else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
             e.preventDefault();
             const id = this.getFocusedWindowId();
