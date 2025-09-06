@@ -48,7 +48,9 @@ describe('Terminal component', () => {
     act(() => {
       ref.current.runCommand('help');
     });
-    expect(ref.current.getContent()).toContain('help');
+    expect(ref.current.getContent()).toContain('Available commands');
+    const buffer = ref.current.getBuffer();
+    expect(buffer.some((e: any) => e.text.includes('Available commands'))).toBe(true);
   });
 
   it('invokes openApp for open command', async () => {

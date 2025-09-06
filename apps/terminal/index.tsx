@@ -63,6 +63,24 @@ const SettingsIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+const DownloadIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    viewBox="0 0 24 24"
+    width={24}
+    height={24}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="7 10 12 15 17 10" />
+    <line x1="12" y1="15" x2="12" y2="3" />
+  </svg>
+);
+
 export interface TerminalProps {
   openApp?: (id: string) => void;
 }
@@ -70,6 +88,11 @@ export interface TerminalProps {
 export interface TerminalHandle {
   runCommand: (cmd: string) => void;
   getContent: () => string;
+  getBuffer: () => {
+    type: 'command' | 'output';
+    text: string;
+    timestamp: string;
+  }[];
 }
 
 const files: Record<string, string> = {
@@ -83,6 +106,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const searchRef = useRef<any>(null);
   const commandRef = useRef('');
   const contentRef = useRef('');
+  const bufferRef = useRef<
+    { type: 'command' | 'output'; text: string; timestamp: string }[]
+  >([]);
   const registryRef = useRef(commandRegistry);
   const workerRef = useRef<Worker | null>(null);
   const filesRef = useRef<Record<string, string>>(files);
@@ -101,10 +127,12 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [downloadOpen, setDownloadOpen] = useState(false);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
   const [overflow, setOverflow] = useState({ top: false, bottom: false });
+  const PROMPT = '$ ';
   const ansiColors = [
     '#000000',
     '#AA0000',
@@ -134,6 +162,12 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const writeLine = useCallback(
     (text: string) => {
       if (termRef.current) termRef.current.writeln(text);
+      const entry = {
+        type: 'output' as const,
+        text,
+        timestamp: new Date().toISOString(),
+      };
+      bufferRef.current.push(entry);
       contentRef.current += `${text}\n`;
       if (opfsSupported && dirRef.current) {
         writeFile('history.txt', contentRef.current, dirRef.current);
@@ -146,8 +180,25 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   contextRef.current.writeLine = writeLine;
 
   const prompt = useCallback(() => {
-    if (termRef.current) termRef.current.write('$ ');
-  }, []);
+    if (termRef.current) termRef.current.write(PROMPT);
+  }, [PROMPT]);
+
+  const recordCommand = useCallback(
+    (cmd: string) => {
+      const entry = {
+        type: 'command' as const,
+        text: cmd,
+        timestamp: new Date().toISOString(),
+      };
+      bufferRef.current.push(entry);
+      contentRef.current += `${PROMPT}${cmd}\n`;
+      if (opfsSupported && dirRef.current) {
+        writeFile('history.txt', contentRef.current, dirRef.current);
+      }
+      updateOverflow();
+    },
+    [opfsSupported, updateOverflow, writeFile, PROMPT],
+  );
 
   const handleCopy = () => {
     navigator.clipboard.writeText(contentRef.current).catch(() => {});
@@ -159,6 +210,32 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       handleInput(text);
     } catch {}
   };
+
+  const downloadBuffer = useCallback(
+    (format: 'txt' | 'json') => {
+      let blob: Blob;
+      if (format === 'txt') {
+        blob = new Blob([contentRef.current], { type: 'text/plain' });
+      } else {
+        const data = {
+          metadata: { prompt: PROMPT },
+          entries: bufferRef.current,
+        };
+        blob = new Blob([JSON.stringify(data, null, 2)], {
+          type: 'application/json',
+        });
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `terminal-${Date.now()}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    },
+    [PROMPT],
+  );
 
   const runWorker = useCallback(
     async (command: string) => {
@@ -204,6 +281,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       clear: () => {
         termRef.current?.clear();
         contentRef.current = '';
+        bufferRef.current = [];
         if (opfsSupported && dirRef.current) {
           deleteFile('history.txt', dirRef.current);
         }
@@ -262,12 +340,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       }
     }, [prompt, writeLine]);
 
-    const handleInput = useCallback(
-      (data: string) => {
+      const handleInput = useCallback(
+        (data: string) => {
         for (const ch of data) {
           if (ch === '\r') {
             termRef.current?.writeln('');
-            runCommand(commandRef.current.trim());
+            const cmd = commandRef.current;
+            recordCommand(cmd);
+            runCommand(cmd.trim());
             commandRef.current = '';
             prompt();
           } else if (ch === '\u007F') {
@@ -275,18 +355,19 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               termRef.current?.write('\b \b');
               commandRef.current = commandRef.current.slice(0, -1);
             }
-          } else {
-            commandRef.current += ch;
-            termRef.current?.write(ch);
+            } else {
+              commandRef.current += ch;
+              termRef.current?.write(ch);
+            }
           }
-        }
-      },
-      [runCommand, prompt],
-    );
+        },
+        [runCommand, prompt, recordCommand],
+      );
 
   useImperativeHandle(ref, () => ({
     runCommand: (c: string) => runCommand(c),
     getContent: () => contentRef.current,
+    getBuffer: () => bufferRef.current,
   }));
 
   useEffect(() => {
@@ -407,6 +488,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           <div className="mt-10 w-80 bg-gray-800 p-4 rounded">
             <input
               autoFocus
+              aria-label="command palette"
               className="w-full mb-2 bg-black text-white p-2"
               value={paletteInput}
               onChange={(e) => setPaletteInput(e.target.value)}
@@ -478,6 +560,38 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           <button onClick={handlePaste} aria-label="Paste">
             <PasteIcon />
           </button>
+          <div className="relative">
+            <button
+              onClick={() => setDownloadOpen((v) => !v)}
+              aria-label="Download"
+            >
+              <DownloadIcon />
+            </button>
+            {downloadOpen && (
+              <div className="absolute right-0 mt-1 bg-gray-900 border border-gray-700 rounded shadow-md z-10">
+                <button
+                  className="block w-full px-2 py-1 text-left hover:bg-gray-700"
+                  onClick={() => {
+                    downloadBuffer('txt');
+                    setDownloadOpen(false);
+                    termRef.current?.focus();
+                  }}
+                >
+                  .txt
+                </button>
+                <button
+                  className="block w-full px-2 py-1 text-left hover:bg-gray-700"
+                  onClick={() => {
+                    downloadBuffer('json');
+                    setDownloadOpen(false);
+                    termRef.current?.focus();
+                  }}
+                >
+                  .json
+                </button>
+              </div>
+            )}
+          </div>
           <button onClick={() => setSettingsOpen(true)} aria-label="Settings">
             <SettingsIcon />
           </button>
