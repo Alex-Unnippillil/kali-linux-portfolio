@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import projectsData from '../../data/projects.json';
+import WindowedList from './windowed-list';
 
 interface Project {
   id: number;
@@ -155,7 +156,7 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
   };
 
   return (
-    <div className="p-4 h-full overflow-auto bg-ub-cool-grey text-white">
+    <div className="p-4 h-full flex flex-col bg-ub-cool-grey text-white">
       <div className="flex flex-wrap gap-2 mb-4">
         <input
           aria-label="Search"
@@ -230,7 +231,7 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
           <table className="w-full text-sm text-left" role="table">
             <thead>
               <tr>
-                <th />
+                <th aria-hidden="true" />
                 {selected.map((p) => (
                   <th key={p.id}>{p.title}</th>
                 ))}
@@ -253,11 +254,15 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
           </table>
         </div>
       )}
-      <div className="columns-1 sm:columns-2 md:columns-3 gap-4">
-        {filtered.map((project) => (
+      <WindowedList
+        className="flex-1 mt-4"
+        items={filtered}
+        itemHeight={400}
+        itemKey={(index, project) => project.id}
+        renderItem={(project) => (
           <div
             key={project.id}
-            className="mb-4 break-inside-avoid bg-gray-800 rounded shadow overflow-hidden"
+            className="mb-4 bg-gray-800 rounded shadow overflow-hidden"
           >
             <div className="flex flex-col md:flex-row h-48">
               <img
@@ -346,8 +351,8 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
               </div>
             </div>
           </div>
-        ))}
-      </div>
+        )}
+      />
       <div aria-live="polite" className="sr-only">
         {ariaMessage}
       </div>
