@@ -23,13 +23,17 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { SettingsContext } from '../../hooks/useSettings';
 
 export class Desktop extends Component {
+    static contextType = SettingsContext;
     constructor() {
         super();
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.cornerTimers = {};
+        this.cornerTriggered = {};
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -88,12 +92,17 @@ export class Desktop extends Component {
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
+        window.addEventListener('mousemove', this.handleMouseMove);
     }
 
     componentWillUnmount() {
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
+        window.removeEventListener('mousemove', this.handleMouseMove);
+        for (const key in this.cornerTimers) {
+            clearTimeout(this.cornerTimers[key]);
+        }
     }
 
     checkForNewFolders = () => {
@@ -808,6 +817,73 @@ export class Desktop extends Component {
     }
 
     showAllApps = () => { this.setState({ allAppsView: !this.state.allAppsView }) }
+
+    showDesktop = () => {
+        const minimized_windows = { ...this.state.minimized_windows };
+        const focused_windows = { ...this.state.focused_windows };
+        this.app_stack.forEach(id => {
+            minimized_windows[id] = true;
+            focused_windows[id] = false;
+        });
+        this.setState({ minimized_windows, focused_windows });
+    }
+
+    handleMouseMove = (e) => {
+        const threshold = 10;
+        const x = e.clientX;
+        const y = e.clientY;
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        if (x <= threshold && y <= threshold) this.scheduleCorner('cornerTL');
+        else this.cancelCorner('cornerTL');
+        if (x >= w - threshold && y <= threshold) this.scheduleCorner('cornerTR');
+        else this.cancelCorner('cornerTR');
+        if (x <= threshold && y >= h - threshold) this.scheduleCorner('cornerBL');
+        else this.cancelCorner('cornerBL');
+        if (x >= w - threshold && y >= h - threshold) this.scheduleCorner('cornerBR');
+        else this.cancelCorner('cornerBR');
+    }
+
+    scheduleCorner = (corner) => {
+        if (this.cornerTriggered[corner] || this.cornerTimers[corner]) return;
+        this.cornerTimers[corner] = setTimeout(() => this.triggerCorner(corner), 200);
+    }
+
+    cancelCorner = (corner) => {
+        if (this.cornerTimers[corner]) {
+            clearTimeout(this.cornerTimers[corner]);
+            delete this.cornerTimers[corner];
+        }
+        this.cornerTriggered[corner] = false;
+    }
+
+    triggerCorner = (corner) => {
+        if (document.fullscreenElement) return;
+        const actionMap = {
+            cornerTL: this.context.cornerTL,
+            cornerTR: this.context.cornerTR,
+            cornerBL: this.context.cornerBL,
+            cornerBR: this.context.cornerBR,
+        };
+        const action = actionMap[corner];
+        this.cornerTriggered[corner] = true;
+        switch (action) {
+            case 'show-desktop':
+                this.showDesktop();
+                break;
+            case 'app-finder':
+                this.showAllApps();
+                break;
+            case 'start-screensaver':
+                window.dispatchEvent(new Event('start-screensaver'));
+                break;
+            case 'run-command':
+                this.openApp('terminal');
+                break;
+            default:
+                break;
+        }
+    }
 
     renderNameBar = () => {
         let addFolder = () => {

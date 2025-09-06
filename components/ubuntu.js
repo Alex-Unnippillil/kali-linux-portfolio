@@ -19,9 +19,14 @@ export default class Ubuntu extends Component {
 		};
 	}
 
-	componentDidMount() {
-		this.getLocalData();
-	}
+        componentDidMount() {
+                this.getLocalData();
+                window.addEventListener('start-screensaver', this.lockScreen);
+        }
+
+        componentWillUnmount() {
+                window.removeEventListener('start-screensaver', this.lockScreen);
+        }
 
 	setTimeOutBootScreen = () => {
 		setTimeout(() => {

@@ -3,12 +3,20 @@ import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme, cornerTL, setCornerTL, cornerTR, setCornerTR, cornerBL, setCornerBL, cornerBR, setCornerBR } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
+
+    const cornerOptions = [
+        { value: 'none', label: 'Disabled' },
+        { value: 'show-desktop', label: 'Show Desktop' },
+        { value: 'app-finder', label: 'App Finder' },
+        { value: 'start-screensaver', label: 'Start Screensaver' },
+        { value: 'run-command', label: 'Run Command' },
+    ];
 
     const changeBackgroundImage = (e) => {
         const name = e.currentTarget.dataset.path;
@@ -110,6 +118,61 @@ export function Settings() {
                     onChange={(e) => setFontScale(parseFloat(e.target.value))}
                     className="ubuntu-slider"
                 />
+            </div>
+            <div className="flex justify-center my-4">
+                <div>
+                    <p className="mb-2 text-ubt-grey text-center">Hot Corners</p>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="text-ubt-grey">Top Left</label>
+                            <select
+                                value={cornerTL}
+                                onChange={(e) => setCornerTL(e.target.value)}
+                                className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                            >
+                                {cornerOptions.map((o) => (
+                                    <option key={o.value} value={o.value}>{o.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="text-ubt-grey">Top Right</label>
+                            <select
+                                value={cornerTR}
+                                onChange={(e) => setCornerTR(e.target.value)}
+                                className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                            >
+                                {cornerOptions.map((o) => (
+                                    <option key={o.value} value={o.value}>{o.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="text-ubt-grey">Bottom Left</label>
+                            <select
+                                value={cornerBL}
+                                onChange={(e) => setCornerBL(e.target.value)}
+                                className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                            >
+                                {cornerOptions.map((o) => (
+                                    <option key={o.value} value={o.value}>{o.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="text-ubt-grey">Bottom Right</label>
+                            <select
+                                value={cornerBR}
+                                onChange={(e) => setCornerBR(e.target.value)}
+                                className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                            >
+                                {cornerOptions.map((o) => (
+                                    <option key={o.value} value={o.value}>{o.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey flex items-center">
