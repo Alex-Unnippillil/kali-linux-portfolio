@@ -192,7 +192,7 @@ export default function GraphPanel({
   width = 500,
   height = 500,
 }: GraphPanelProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const origin = useRef({ x: width / 2, y: height / 2 });
   const scale = useRef(40); // pixels per unit
   const compiled = useRef<(x: number) => number>(() => 0);

@@ -7,7 +7,7 @@ interface Props {
 }
 
 export default function Visualizer({ analyser }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     if (!analyser) return;

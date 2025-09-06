@@ -3,8 +3,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 const CameraApp: React.FC = () => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const overlayRef = useRef<HTMLCanvasElement>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const overlayRef = useRef<HTMLCanvasElement | null>(null);
   const [snapshot, setSnapshot] = useState<string>('');
   const [drawing, setDrawing] = useState(false);
 
@@ -38,14 +38,18 @@ const CameraApp: React.FC = () => {
   };
 
   const getPos = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const rect = overlayRef.current!.getBoundingClientRect();
+    const overlay = overlayRef.current;
+    if (!overlay) return { x: 0, y: 0 };
+    const rect = overlay.getBoundingClientRect();
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   };
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const overlay = overlayRef.current;
+    if (!overlay) return;
     setDrawing(true);
     const { x, y } = getPos(e);
-    const ctx = overlayRef.current!.getContext('2d');
+    const ctx = overlay.getContext('2d');
     if (!ctx) return;
     ctx.strokeStyle = 'red';
     ctx.lineWidth = 2;
@@ -55,8 +59,10 @@ const CameraApp: React.FC = () => {
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!drawing) return;
+    const overlay = overlayRef.current;
+    if (!overlay) return;
     const { x, y } = getPos(e);
-    const ctx = overlayRef.current!.getContext('2d');
+    const ctx = overlay.getContext('2d');
     if (!ctx) return;
     ctx.lineTo(x, y);
     ctx.stroke();

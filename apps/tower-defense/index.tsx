@@ -87,7 +87,7 @@ interface EnemyInstance extends Enemy {
 }
 
 const TowerDefense = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [editing, setEditing] = useState(true);
   const [path, setPath] = useState<{ x: number; y: number }[]>([]);
   const pathSetRef = useRef<Set<string>>(new Set());
@@ -162,7 +162,9 @@ const TowerDefense = () => {
   };
 
   const handleCanvasClick = (e: React.MouseEvent) => {
-    const rect = canvasRef.current!.getBoundingClientRect();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
     const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
     const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
     const key = `${x},${y}`;
@@ -180,7 +182,9 @@ const TowerDefense = () => {
   };
 
   const handleCanvasMove = (e: React.MouseEvent) => {
-    const rect = canvasRef.current!.getBoundingClientRect();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
     const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
     const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
     const idx = towers.findIndex((t) => t.x === x && t.y === y);

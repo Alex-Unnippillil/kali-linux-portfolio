@@ -76,8 +76,8 @@ const AsciiArtApp = () => {
   const [bgColor, setBgColor] = useState('#000000');
   const [fontSize, setFontSize] = useState<number>(12);
 
-  const canvasRef = useRef<HTMLCanvasElement>(null); // for image processing
-  const displayCanvasRef = useRef<HTMLCanvasElement>(null); // for final rendering
+  const canvasRef = useRef<HTMLCanvasElement | null>(null); // for image processing
+  const displayCanvasRef = useRef<HTMLCanvasElement | null>(null); // for final rendering
   const [imgOutput, setImgOutput] = useState('');
   const [brightness, setBrightness] = useState(0); // -1 to 1
   const [contrast, setContrast] = useState(1); // 0 to 2

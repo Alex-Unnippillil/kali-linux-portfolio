@@ -14,7 +14,7 @@ interface PhaserMatterProps {
 
 const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
   void getDailySeed;
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
   const prefersReducedMotion = usePrefersReducedMotion();
   const prefersRef = useRef(prefersReducedMotion);

@@ -25,7 +25,7 @@ export default function CpuGraph({
   width = 100,
   height = 30,
 }: CpuGraphProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const dataRef = useRef<number[][]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 

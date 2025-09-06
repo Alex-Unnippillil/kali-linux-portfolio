@@ -38,7 +38,7 @@ const STYLES = [
 ];
 
 export default function Posterizer({ quote }: { quote: Quote | null }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [styleIndex, setStyleIndex] = useState(0);
   const [bg, setBg] = useState(STYLES[0].bg);
   const [fg, setFg] = useState(STYLES[0].fg);

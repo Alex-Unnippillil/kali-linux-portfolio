@@ -70,7 +70,7 @@ const Game2048 = () => {
   const [merged, setMerged] = useState<Array<[number, number]>>([]);
   const [paused, setPaused] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const boardRef = useRef<HTMLDivElement>(null);
+  const boardRef = useRef<HTMLDivElement | null>(null);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const { scores, addScore } = useOPFSLeaderboard('game_2048');
 
