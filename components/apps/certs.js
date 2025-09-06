@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import Image from 'next/image';
 
 const certBadges = [
   {
@@ -262,13 +261,13 @@ const Certs = () => {
         {filtered.map((badge) => (
           <div key={badge.href} className="m-2 text-center w-28">
             <a href={badge.href} target="_blank" rel="noopener noreferrer">
-              <Image
+              <img
                 src={badge.src}
                 alt={badge.alt}
                 className="mx-auto"
                 width={badge.width || 112}
                 height={badge.height || 112}
-                sizes="(max-width: 768px) 96px, 112px"
+                loading="lazy"
               />
             </a>
             <div className="mt-1 text-xs leading-tight">
