@@ -2,11 +2,12 @@ export type KeyComboHandler = (event: KeyboardEvent) => void;
 
 class KeybindingManager {
   private bindings = new Map<string, Set<KeyComboHandler>>();
+  private initialized = false;
 
-  constructor() {
-    if (typeof window !== 'undefined') {
-      window.addEventListener('keydown', this.handleKeyDown);
-    }
+  init(): void {
+    if (this.initialized || typeof window === 'undefined') return;
+    window.addEventListener('keydown', this.handleKeyDown);
+    this.initialized = true;
   }
 
   register(combo: string, handler: KeyComboHandler): void {

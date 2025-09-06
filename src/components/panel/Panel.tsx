@@ -95,6 +95,7 @@ export default function Panel() {
   const [focusedIndex, setFocusedIndex] = useState(-1);
 
   useEffect(() => {
+    keybindingManager.init();
     const focusPanel = () => {
       if (plugins.length === 0) return;
       setFocusedIndex(0);

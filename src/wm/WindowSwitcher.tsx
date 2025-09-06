@@ -19,6 +19,7 @@ export default function WindowSwitcher({ windows, onSelect }: Props) {
   const [cycleAll, setCycleAll] = useState(false);
 
   useEffect(() => {
+    keybindingManager.init();
     const handleAltTab = () => {
       setVisible(true);
       setIndex((i) => (i + 1) % windows.length);
