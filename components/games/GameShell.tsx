@@ -1,9 +1,16 @@
 "use client";
 
-import React, { useState, useCallback, ReactNode, useRef } from 'react';
+import React, {
+  useState,
+  useCallback,
+  ReactNode,
+  useRef,
+  useEffect,
+} from 'react';
 import useOrientationGuard from '../../hooks/useOrientationGuard';
 import useGameInput from '../../hooks/useGameInput';
 import usePersistentState from '../../hooks/usePersistentState';
+import useIntersection from '../../hooks/useIntersection';
 import { exportGameSettings, importGameSettings } from '../../utils/gameSettings';
 
 interface GameShellProps {
@@ -34,6 +41,9 @@ export default function GameShell({
   const [showSettings, setShowSettings] = useState(false);
   const [speed, setSpeed] = usePersistentState('game-speed', 1);
   const [muted, setMuted] = usePersistentState('game-muted', false);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const isVisible = useIntersection(contentRef);
+  const autoPaused = useRef(false);
 
   const pause = useCallback(() => {
     setPaused(true);
@@ -74,10 +84,24 @@ export default function GameShell({
     importGameSettings(game, text);
   };
 
+  useEffect(() => {
+    if (!isVisible && !paused) {
+      pause();
+      autoPaused.current = true;
+    } else if (isVisible && autoPaused.current) {
+      resume();
+      autoPaused.current = false;
+    }
+  }, [isVisible, paused, pause, resume]);
+
   return (
-    <div className={`game-shell${paused ? ' paused' : ''}${muted ? ' muted' : ''}`}
-         data-speed={speed}>
-      <div className="game-content">{children}</div>
+    <div
+      className={`game-shell${paused ? ' paused' : ''}${muted ? ' muted' : ''}`}
+      data-speed={speed}
+    >
+      <div className="game-content" ref={contentRef}>
+        {children}
+      </div>
       {controls && <div className="game-controls">{controls}</div>}
       {showSettings && settings && (
         <div className="game-settings">{settings}</div>
@@ -114,16 +138,17 @@ export default function GameShell({
       >
         Import
       </button>
-      <input
-        type="file"
-        accept="application/json"
-        ref={fileRef}
-        style={{ display: 'none' }}
-        onChange={(e) => {
-          const file = e.target.files && e.target.files[0];
-          if (file) handleImport(file);
-          if (e.target) e.target.value = '';
-        }}
+        <input
+          type="file"
+          accept="application/json"
+          ref={fileRef}
+          style={{ display: 'none' }}
+          aria-label="Import Settings File"
+          onChange={(e) => {
+            const file = e.target.files && e.target.files[0];
+            if (file) handleImport(file);
+            if (e.target) e.target.value = '';
+          }}
       />
     </div>
   );

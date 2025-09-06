@@ -15,12 +15,12 @@ function HookTester({ hook }) {
 
 describe('game utilities', () => {
   it('mounts and unmounts GameShell', () => {
-    const { unmount, getByRole } = render(
-      <GameShell game="test" controls={<div />} settings={<div />}>child</GameShell>
-    );
-    getByRole('button', { name: /pause/i });
-    unmount();
-  });
+      const { unmount, getByRole } = render(
+        <GameShell game="test" controls={<div />} settings={<div />}>child</GameShell>
+      );
+      getByRole('button', { name: /pause|resume/i });
+      unmount();
+    });
 
   it('mounts and unmounts VirtualControls', () => {
     const { unmount } = render(

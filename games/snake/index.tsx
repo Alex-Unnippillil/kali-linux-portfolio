@@ -8,19 +8,20 @@ import { DEFAULT_GRID_SIZE, createState, step, GameState } from "./logic";
 
 const CELL_SIZE = 16;
 
-const Snake = () => {
+  const Snake = () => {
   const [wrap, setWrap] = usePersistentState<boolean>("snake:wrap", false);
   const [speed, setSpeed] = usePersistentState<number>("snake:speed", 150);
   const [gridSize, setGridSize] = usePersistentState<number>(
     "snake:gridSize",
     DEFAULT_GRID_SIZE,
   );
-  const [state, setState] = useState<GameState>(() =>
-    createState(wrap, gridSize),
-  );
-  const [score, setScore] = useState(0);
-  const [foodAnim, setFoodAnim] = useState(1);
-  const runningRef = useRef(true);
+    const [state, setState] = useState<GameState>(() =>
+      createState(wrap, gridSize),
+    );
+    const [score, setScore] = useState(0);
+    const [foodAnim, setFoodAnim] = useState(1);
+    const runningRef = useRef(true);
+    const pausedRef = useRef(false);
   const width = state.gridSize * CELL_SIZE;
   const canvasRef = useCanvasResize(width, width);
 
@@ -33,32 +34,32 @@ const Snake = () => {
 
   // game loop
   useEffect(() => {
-    const id = setInterval(() => {
-      setState((s) => {
-        if (!runningRef.current) return s;
-        const result = step(s);
-        if (result.gameOver) {
-          runningRef.current = false;
-        }
-        if (result.ate) {
-          setScore((sc) => sc + 1);
-          setFoodAnim(0);
-        }
-        return result.state;
-      });
-    }, speed);
-    return () => clearInterval(id);
-  }, [speed]);
+      const id = setInterval(() => {
+        setState((s) => {
+          if (!runningRef.current || pausedRef.current) return s;
+          const result = step(s);
+          if (result.gameOver) {
+            runningRef.current = false;
+          }
+          if (result.ate) {
+            setScore((sc) => sc + 1);
+            setFoodAnim(0);
+          }
+          return result.state;
+        });
+      }, speed);
+      return () => clearInterval(id);
+    }, [speed]);
 
   // food spawn animation
   useEffect(() => {
-    if (foodAnim < 1) {
-      const id = requestAnimationFrame(() =>
-        setFoodAnim((f) => Math.min(f + 0.1, 1)),
-      );
-      return () => cancelAnimationFrame(id);
-    }
-  }, [foodAnim]);
+      if (foodAnim < 1 && !pausedRef.current) {
+        const id = requestAnimationFrame(() =>
+          setFoodAnim((f) => Math.min(f + 0.1, 1)),
+        );
+        return () => cancelAnimationFrame(id);
+      }
+    }, [foodAnim]);
 
   // draw
   useEffect(() => {
@@ -137,9 +138,18 @@ const Snake = () => {
     { label: "Fast", value: 100 },
   ];
 
-  return (
-    <GameShell game="snake" settings={settings}>
-      <div className="flex flex-col items-center">
+    return (
+      <GameShell
+        game="snake"
+        settings={settings}
+        onPause={() => {
+          pausedRef.current = true;
+        }}
+        onResume={() => {
+          pausedRef.current = false;
+        }}
+      >
+        <div className="flex flex-col items-center">
         <div className="flex justify-between mb-2 text-white" style={{ width }}>
           <div className="flex space-x-2">
             {speeds.map((s) => (
@@ -158,10 +168,10 @@ const Snake = () => {
           </div>
           <div>Score: {score}</div>
         </div>
-          <canvas ref={canvasRef} aria-label="Snake game canvas" />
-      </div>
-    </GameShell>
-  );
-};
+            <canvas ref={canvasRef} aria-label="Snake game canvas" />
+        </div>
+      </GameShell>
+    );
+  };
 
 export default Snake;
