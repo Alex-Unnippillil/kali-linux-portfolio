@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { validateCsrfToken } from '../../../lib/csrf';
 
 export default async function handler(
   req,
@@ -7,6 +8,11 @@ export default async function handler(
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     res.status(405).end('Method Not Allowed');
+    return;
+  }
+
+  if (!validateCsrfToken(req)) {
+    res.status(403).json({ error: 'invalid_csrf' });
     return;
   }
 

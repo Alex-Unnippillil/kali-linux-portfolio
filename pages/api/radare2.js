@@ -3,6 +3,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { promisify } from 'util';
+import { validateCsrfToken } from '../../lib/csrf';
 
 const execFileAsync = promisify(execFile);
 
@@ -16,6 +17,10 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (!validateCsrfToken(req)) {
+    return res.status(403).json({ error: 'invalid_csrf' });
   }
 
   const { action, hex, file } = req.body || {};

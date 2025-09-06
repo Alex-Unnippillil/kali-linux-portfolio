@@ -1,6 +1,13 @@
+import { validateCsrfToken } from '../../lib/csrf';
+
 export default function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).end();
+    return;
+  }
+
+  if (!validateCsrfToken(req)) {
+    res.status(403).json({ ok: false, code: 'invalid_csrf' });
     return;
   }
 

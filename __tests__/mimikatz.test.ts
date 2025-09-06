@@ -26,7 +26,12 @@ describe('mimikatz api', () => {
   });
 
   test('executes script template', async () => {
-    const req: any = { method: 'POST', body: { script: 'test' } };
+    const req: any = {
+      method: 'POST',
+      headers: { 'x-csrf-token': 'token' },
+      cookies: { csrfToken: 'token' },
+      body: { script: 'test' },
+    };
     const res: Res = mockRes();
     await handler(req, res);
     expect(res.status).toHaveBeenCalledWith(200);
