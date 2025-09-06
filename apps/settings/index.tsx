@@ -12,6 +12,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import WindowManagerTweaks from "./components/WindowManagerTweaks";
 
 export default function Settings() {
   const {
@@ -260,6 +261,7 @@ export default function Settings() {
               ariaLabel="Haptics"
             />
           </div>
+          <WindowManagerTweaks />
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
             <button
               onClick={() => setShowKeymap(true)}
