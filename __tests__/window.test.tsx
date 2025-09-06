@@ -9,9 +9,16 @@ jest.mock('react-draggable', () => ({
 }));
 jest.mock('../components/apps/terminal', () => ({ displayTerminal: jest.fn() }));
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('Window lifecycle', () => {
   it('invokes callbacks on close', () => {
-    jest.useFakeTimers();
     const closed = jest.fn();
     const hideSideBar = jest.fn();
 
@@ -38,7 +45,6 @@ describe('Window lifecycle', () => {
     });
 
     expect(closed).toHaveBeenCalledWith('test-window');
-    jest.useRealTimers();
   });
 });
 
@@ -74,7 +80,10 @@ describe('Window snapping preview', () => {
     });
 
     act(() => {
-      ref.current!.handleDrag();
+      ref.current!.handleDrag({}, { node: winEl, x: 0, y: 0 } as any);
+    });
+    act(() => {
+      jest.runAllTimers();
     });
 
     expect(screen.getByTestId('snap-preview')).toBeInTheDocument();
@@ -111,7 +120,10 @@ describe('Window snapping preview', () => {
     });
 
     act(() => {
-      ref.current!.handleDrag();
+      ref.current!.handleDrag({}, { node: winEl, x: 0, y: 0 } as any);
+    });
+    act(() => {
+      jest.runAllTimers();
     });
 
     const preview = screen.getByTestId('snap-preview');
@@ -149,7 +161,10 @@ describe('Window snapping preview', () => {
     });
 
     act(() => {
-      ref.current!.handleDrag();
+      ref.current!.handleDrag({}, { node: winEl, x: 0, y: 0 } as any);
+    });
+    act(() => {
+      jest.runAllTimers();
     });
 
     expect(screen.queryByTestId('snap-preview')).toBeNull();
@@ -187,7 +202,10 @@ describe('Window snapping finalize and release', () => {
     });
 
     act(() => {
-      ref.current!.handleDrag();
+      ref.current!.handleDrag({}, { node: winEl, x: 0, y: 0 } as any);
+    });
+    act(() => {
+      jest.runAllTimers();
     });
     act(() => {
       ref.current!.handleStop();
@@ -228,7 +246,10 @@ describe('Window snapping finalize and release', () => {
     });
 
     act(() => {
-      ref.current!.handleDrag();
+      ref.current!.handleDrag({}, { node: winEl, x: 0, y: 0 } as any);
+    });
+    act(() => {
+      jest.runAllTimers();
     });
     expect(ref.current!.state.snapPosition).toBe('top');
     act(() => {
@@ -268,7 +289,10 @@ describe('Window snapping finalize and release', () => {
     });
 
     act(() => {
-      ref.current!.handleDrag();
+      ref.current!.handleDrag({}, { node: winEl, x: 0, y: 0 } as any);
+    });
+    act(() => {
+      jest.runAllTimers();
     });
     act(() => {
       ref.current!.handleStop();
@@ -315,7 +339,10 @@ describe('Window snapping finalize and release', () => {
     });
 
     act(() => {
-      ref.current!.handleDrag();
+      ref.current!.handleDrag({}, { node: winEl, x: 0, y: 0 } as any);
+    });
+    act(() => {
+      jest.runAllTimers();
     });
     act(() => {
       ref.current!.handleStop();
@@ -362,7 +389,10 @@ describe('Window snapping finalize and release', () => {
     });
 
     act(() => {
-      ref.current!.handleDrag();
+      ref.current!.handleDrag({}, { node: winEl, x: 0, y: 0 } as any);
+    });
+    act(() => {
+      jest.runAllTimers();
     });
     act(() => {
       ref.current!.handleStop();
@@ -442,8 +472,11 @@ describe('Edge resistance', () => {
     act(() => {
       ref.current!.handleDrag({}, { node: winEl, x: -100, y: -50 } as any);
     });
-
-    expect(winEl.style.transform).toBe('translate(0px, 0px)');
+    act(() => {
+      jest.runAllTimers();
+    });
+    expect(winEl.style.getPropertyValue('--window-transform-x')).toBe('0px');
+    expect(winEl.style.getPropertyValue('--window-transform-y')).toBe('0px');
   });
 });
 
