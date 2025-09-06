@@ -18,12 +18,12 @@ const DpsCharts = ({ towers }: DpsChartsProps) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const dpsMap: Partial<Record<TowerType, number>> = {};
-    towers.forEach((t) => {
-      const type = ((t as any).type || 'single') as TowerType;
+      const dpsMap: Partial<Record<TowerType, number>> = {};
+      towers.forEach((t) => {
+        const type = t.type ?? 'single';
 
-      dpsMap[type] = (dpsMap[type] || 0) + getTowerDPS(type, t.level);
-    });
+        dpsMap[type] = (dpsMap[type] || 0) + getTowerDPS(type, t.level);
+      });
 
     const entries = Object.entries(dpsMap) as [TowerType, number][];
     const w = canvas.width;
