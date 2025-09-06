@@ -11,6 +11,7 @@ import React, {
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
+import { exoOpen } from '../../src/lib/exo-open';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -64,7 +65,7 @@ const SettingsIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 export interface TerminalProps {
-  openApp?: (id: string) => void;
+  openApp?: (id: string, arg?: string) => void;
   scheme?: string;
   opacity?: number;
   onSettingsChange?: (scheme: string, opacity: number) => void;
@@ -101,6 +102,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
   const termRef = useRef<any>(null);
   const fitRef = useRef<any>(null);
   const searchRef = useRef<any>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const commandRef = useRef('');
   const contentRef = useRef('');
   const registryRef = useRef(commandRegistry);
@@ -124,6 +126,13 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsScheme, setSettingsScheme] = useState(scheme);
   const [settingsOpacity, setSettingsOpacity] = useState(opacity);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [linkMenu, setLinkMenu] = useState<{
+    x: number;
+    y: number;
+    uri: string;
+  } | null>(null);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
@@ -189,6 +198,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
+      const lines = text.split(/\r?\n/).length;
+      if (lines > 1 && !window.confirm(`Paste ${lines} lines?`)) return;
       handleInput(text);
     } catch {}
   };
@@ -342,11 +353,39 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
 
   useEffect(() => {
     let disposed = false;
+    const handlePasteEvent = (e: ClipboardEvent) => {
+      const text = e.clipboardData?.getData('text') || '';
+      const lines = text.split(/\r?\n/).length;
+      if (lines > 1 && !window.confirm(`Paste ${lines} lines?`)) {
+        e.preventDefault();
+        return;
+      }
+      e.preventDefault();
+      handleInput(text);
+    };
+    const handleLinkContext = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.tagName === 'A' && target.getAttribute('data-uri')) {
+        e.preventDefault();
+        setLinkMenu({
+          x: e.pageX,
+          y: e.pageY,
+          uri: target.getAttribute('data-uri')!,
+        });
+      }
+    };
+    const container = containerRef.current;
     (async () => {
-      const [{ Terminal: XTerm }, { FitAddon }, { SearchAddon }] = await Promise.all([
+      const [
+        { Terminal: XTerm },
+        { FitAddon },
+        { SearchAddon },
+        { WebLinksAddon },
+      ] = await Promise.all([
         import('@xterm/xterm'),
         import('@xterm/addon-fit'),
         import('@xterm/addon-search'),
+        import('@xterm/addon-web-links'),
       ]);
       await import('@xterm/xterm/css/xterm.css');
       if (disposed) return;
@@ -358,14 +397,22 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
       });
       const fit = new FitAddon();
       const search = new SearchAddon();
+      const webLinks = new WebLinksAddon((e: MouseEvent, uri: string) => {
+        e.preventDefault();
+        void exoOpen('WebBrowser', openApp ?? (() => {}), uri);
+      });
       termRef.current = term;
       fitRef.current = fit;
       searchRef.current = search;
       term.loadAddon(fit);
       term.loadAddon(search);
-      term.open(containerRef.current!);
+      term.loadAddon(webLinks);
+      term.open(container!);
       fit.fit();
       term.focus();
+      const textarea = term.textarea;
+      textarea?.addEventListener('paste', handlePasteEvent);
+      container?.addEventListener('contextmenu', handleLinkContext);
       const preset = THEME_PRESETS[scheme as keyof typeof THEME_PRESETS];
       const bg = hexToRgba(preset.background, opacity);
       term.setOption?.('theme', {
@@ -373,8 +420,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
         foreground: preset.foreground,
         cursor: preset.foreground,
       });
-      containerRef.current!.style.backgroundColor = bg;
-      containerRef.current!.style.color = preset.foreground;
+      container.style.backgroundColor = bg;
+      container.style.color = preset.foreground;
       if (opfsSupported) {
         dirRef.current = await getDir('terminal');
         const existing = await readFile('history.txt', dirRef.current || undefined);
@@ -400,8 +447,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
           autocomplete();
         } else if (domEvent.ctrlKey && domEvent.key === 'f') {
           domEvent.preventDefault();
-          const q = window.prompt('Search');
-          if (q) searchRef.current?.findNext(q);
+          setSearchOpen(true);
+          setTimeout(() => searchInputRef.current?.focus(), 0);
         } else if (domEvent.ctrlKey && domEvent.key === 'r') {
           domEvent.preventDefault();
           const q = window.prompt('Search history');
@@ -427,8 +474,23 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
     return () => {
       disposed = true;
       termRef.current?.dispose();
+      const textarea = termRef.current?.textarea;
+      textarea?.removeEventListener('paste', handlePasteEvent);
+      container?.removeEventListener('contextmenu', handleLinkContext);
     };
-    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow]);
+    }, [
+      opfsSupported,
+      getDir,
+      readFile,
+      writeLine,
+      prompt,
+      handleInput,
+      autocomplete,
+      updateOverflow,
+      openApp,
+      scheme,
+      opacity,
+    ]);
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();
@@ -459,6 +521,13 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
     window.addEventListener('keydown', listener);
     return () => window.removeEventListener('keydown', listener);
   }, [paletteOpen]);
+
+  useEffect(() => {
+    if (!linkMenu) return;
+    const handleClick = () => setLinkMenu(null);
+    window.addEventListener('click', handleClick);
+    return () => window.removeEventListener('click', handleClick);
+  }, [linkMenu]);
 
   return (
     <div className="relative h-full w-full">
@@ -525,6 +594,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
                 onChange={(e) =>
                   setSettingsOpacity(parseFloat(e.target.value))
                 }
+                aria-label="background opacity"
               />
             </label>
             <div className="flex justify-end gap-2">
@@ -581,6 +651,54 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
               lineHeight: 1.4,
             }}
           />
+          {searchOpen && (
+            <div className="absolute bottom-1 left-1 right-1 z-20">
+              <input
+                ref={searchInputRef}
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  searchRef.current?.findNext(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    searchRef.current?.findNext(searchQuery);
+                  } else if (e.key === 'Escape') {
+                    setSearchOpen(false);
+                    setSearchQuery('');
+                    termRef.current?.focus();
+                  }
+                }}
+                className="w-full bg-black text-white p-1"
+                aria-label="search terminal"
+              />
+            </div>
+          )}
+          {linkMenu && (
+            <div
+              className="absolute z-20 bg-gray-800 text-white border border-gray-900 rounded"
+              style={{ left: linkMenu.x, top: linkMenu.y }}
+            >
+              <button
+                className="block w-full text-left px-2 py-1 hover:bg-gray-700"
+                onClick={() => {
+                  void exoOpen('WebBrowser', openApp ?? (() => {}), linkMenu.uri);
+                  setLinkMenu(null);
+                }}
+              >
+                Open
+              </button>
+              <button
+                className="block w-full text-left px-2 py-1 hover:bg-gray-700"
+                onClick={() => {
+                  navigator.clipboard.writeText(`curl ${linkMenu.uri}`);
+                  setLinkMenu(null);
+                }}
+              >
+                Copy as cURL
+              </button>
+            </div>
+          )}
           {overflow.top && (
             <div className="pointer-events-none absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-black" />
           )}
