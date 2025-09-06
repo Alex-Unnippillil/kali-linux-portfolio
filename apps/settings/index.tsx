@@ -31,6 +31,10 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    quietHoursStart,
+    setQuietHoursStart,
+    quietHoursEnd,
+    setQuietHoursEnd,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -38,6 +42,7 @@ export default function Settings() {
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
+    { id: "notifications", label: "Notifications" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
@@ -287,6 +292,34 @@ export default function Settings() {
             </button>
           </div>
         </>
+      )}
+      {activeTab === "notifications" && (
+        <div className="flex flex-col items-center my-4 gap-4">
+          <div className="flex items-center gap-2">
+            <label htmlFor="quiet-start" className="text-ubt-grey">
+              Quiet Hours Start:
+            </label>
+            <input
+              id="quiet-start"
+              type="time"
+              value={quietHoursStart}
+              onChange={(e) => setQuietHoursStart(e.target.value)}
+              className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <label htmlFor="quiet-end" className="text-ubt-grey">
+              Quiet Hours End:
+            </label>
+            <input
+              id="quiet-end"
+              type="time"
+              value={quietHoursEnd}
+              onChange={(e) => setQuietHoursEnd(e.target.value)}
+              className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+            />
+          </div>
+        </div>
       )}
         <input
           type="file"

@@ -14,6 +14,8 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  quietHoursStart: '',
+  quietHoursEnd: '',
 };
 
 export async function getAccent() {
@@ -123,20 +125,61 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getQuietHoursStart() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.quietHoursStart;
+  try {
+    return (
+      window.localStorage?.getItem('quiet-hours-start') ||
+      DEFAULT_SETTINGS.quietHoursStart
+    );
+  } catch {
+    return DEFAULT_SETTINGS.quietHoursStart;
+  }
+}
+
+export async function setQuietHoursStart(value) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage?.setItem('quiet-hours-start', value);
+  } catch {}
+}
+
+export async function getQuietHoursEnd() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.quietHoursEnd;
+  try {
+    return (
+      window.localStorage?.getItem('quiet-hours-end') ||
+      DEFAULT_SETTINGS.quietHoursEnd
+    );
+  } catch {
+    return DEFAULT_SETTINGS.quietHoursEnd;
+  }
+}
+
+export async function setQuietHoursEnd(value) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage?.setItem('quiet-hours-end', value);
+  } catch {}
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
     del('accent'),
     del('bg-image'),
   ]);
-  window.localStorage.removeItem('density');
-  window.localStorage.removeItem('reduced-motion');
-  window.localStorage.removeItem('font-scale');
-  window.localStorage.removeItem('high-contrast');
-  window.localStorage.removeItem('large-hit-areas');
-  window.localStorage.removeItem('pong-spin');
-  window.localStorage.removeItem('allow-network');
-  window.localStorage.removeItem('haptics');
+  const ls = window.localStorage;
+  ls?.removeItem('density');
+  ls?.removeItem('reduced-motion');
+  ls?.removeItem('font-scale');
+  ls?.removeItem('high-contrast');
+  ls?.removeItem('large-hit-areas');
+  ls?.removeItem('pong-spin');
+  ls?.removeItem('allow-network');
+  ls?.removeItem('haptics');
+  ls?.removeItem('quiet-hours-start');
+  ls?.removeItem('quiet-hours-end');
 }
 
 export async function exportSettings() {
@@ -151,6 +194,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    quietHoursStart,
+    quietHoursEnd,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +207,8 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getQuietHoursStart(),
+    getQuietHoursEnd(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +222,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    quietHoursStart,
+    quietHoursEnd,
     theme,
   });
 }
@@ -199,6 +248,8 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    quietHoursStart,
+    quietHoursEnd,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +262,8 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (quietHoursStart !== undefined) await setQuietHoursStart(quietHoursStart);
+  if (quietHoursEnd !== undefined) await setQuietHoursEnd(quietHoursEnd);
   if (theme !== undefined) setTheme(theme);
 }
 

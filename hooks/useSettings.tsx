@@ -20,6 +20,10 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getQuietHoursStart as loadQuietHoursStart,
+  setQuietHoursStart as saveQuietHoursStart,
+  getQuietHoursEnd as loadQuietHoursEnd,
+  setQuietHoursEnd as saveQuietHoursEnd,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -63,6 +67,8 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  quietHoursStart: string;
+  quietHoursEnd: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +80,8 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setQuietHoursStart: (value: string) => void;
+  setQuietHoursEnd: (value: string) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +96,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  quietHoursStart: defaults.quietHoursStart,
+  quietHoursEnd: defaults.quietHoursEnd,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +109,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setQuietHoursStart: () => {},
+  setQuietHoursEnd: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -113,6 +125,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [quietHoursStart, setQuietHoursStart] = useState<string>(
+    defaults.quietHoursStart
+  );
+  const [quietHoursEnd, setQuietHoursEnd] = useState<string>(
+    defaults.quietHoursEnd
+  );
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -127,6 +145,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setQuietHoursStart(await loadQuietHoursStart());
+      setQuietHoursEnd(await loadQuietHoursEnd());
       setTheme(loadTheme());
     })();
   }, []);
@@ -236,6 +256,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveQuietHoursStart(quietHoursStart);
+  }, [quietHoursStart]);
+
+  useEffect(() => {
+    saveQuietHoursEnd(quietHoursEnd);
+  }, [quietHoursEnd]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -250,6 +278,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        quietHoursStart,
+        quietHoursEnd,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +291,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setQuietHoursStart,
+        setQuietHoursEnd,
       }}
     >
       {children}
