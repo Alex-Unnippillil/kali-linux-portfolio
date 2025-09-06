@@ -2,6 +2,8 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import { logEvent } from './analytics';
 
+const APP_DIR = '../apps';
+
 export const createDynamicApp = (id, title) =>
   dynamic(
     async () => {
@@ -9,22 +11,23 @@ export const createDynamicApp = (id, title) =>
         let mod;
         try {
           mod = await import(
-            /* webpackChunkName: "[request]", webpackPrefetch: true */ `../apps/${id}`
+            /* webpackChunkName: "[request]", webpackPrefetch: true */ `${APP_DIR}/${id}`
           );
         } catch {
           try {
             mod = await import(
-              /* webpackChunkName: "[request]", webpackPrefetch: true */ `../apps/${id}/index`
+              /* webpackChunkName: "[request]", webpackPrefetch: true */ `${APP_DIR}/${id}/index`
             );
           } catch {
             try {
               mod = await import(
-                /* webpackChunkName: "[request]", webpackPrefetch: true */ `../apps/${id.replace('_', '-')}`
+                /* webpackChunkName: "[request]", webpackPrefetch: true */ `${APP_DIR}/${id.replace('_', '-')}`
               );
             } catch {
-              mod = await import(
-                /* webpackChunkName: "[request]", webpackPrefetch: true */ `../components/apps/${id}`
+              console.warn(
+                `App "${id}" could not be found in ${APP_DIR}. The fallback to components/apps has been removed; please migrate the app to ${APP_DIR}.`
               );
+              throw new Error(`App "${id}" not found in ${APP_DIR}`);
             }
           }
         }
@@ -32,11 +35,13 @@ export const createDynamicApp = (id, title) =>
         return mod.default;
       } catch (err) {
         console.error(`Failed to load ${title}`, err);
-        return () => (
+        const Fallback = () => (
           <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
             {`Unable to load ${title}`}
           </div>
         );
+        Fallback.displayName = 'DynamicAppError';
+        return Fallback;
       }
     },
     {

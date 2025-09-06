@@ -1,5 +1,7 @@
 "use client";
 
+/* global clients */
+
 import { isBrowser } from '@/utils/env';
 import { useEffect } from 'react';
 import { Analytics } from '@vercel/analytics/next';
@@ -17,12 +19,6 @@ import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 
-import { Ubuntu } from 'next/font/google';
-
-const ubuntu = Ubuntu({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '700'],
-});
 
 let SpeedInsights = () => null;
 if (process.env.NODE_ENV === 'production') {
@@ -66,17 +62,27 @@ function MyApp(props) {
         try {
           const registration = await navigator.serviceWorker.register('/sw.js');
 
-          window.manualRefresh = () => registration.update();
+          window.manualRefresh = () => {
+            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+            clients.claim();
+          };
 
           if ('periodicSync' in registration) {
             try {
-              const status = await navigator.permissions.query({
-                name: 'periodic-background-sync',
-              });
-              if (status.state === 'granted') {
-                await registration.periodicSync.register('content-sync', {
-                  minInterval: 24 * 60 * 60 * 1000,
+              if (
+                'permissions' in navigator &&
+                typeof navigator.permissions.query === 'function'
+              ) {
+                const status = await navigator.permissions.query({
+                  name: 'periodic-background-sync',
                 });
+                if (status.state === 'granted') {
+                  await registration.periodicSync.register('content-sync', {
+                    minInterval: 24 * 60 * 60 * 1000,
+                  });
+                } else {
+                  registration.update();
+                }
               } else {
                 registration.update();
               }
@@ -200,7 +206,7 @@ function MyApp(props) {
   return (
     <ErrorBoundary>
       <Script src="/a2hs.js" strategy="beforeInteractive" />
-      <div className={ubuntu.className}>
+      <div>
         <a
           href="#app-grid"
           className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"

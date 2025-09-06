@@ -49,7 +49,7 @@ const securityHeaders = [
   },
   {
     key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=*',
+    value: 'camera=(), microphone=(), geolocation=*, interest-cohort=()',
   },
   {
     // Allow same-origin framing so the PDF resume renders in an <object>
@@ -60,6 +60,8 @@ const securityHeaders = [
 
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
+  openAnalyzer: false,
+  analyzerMode: 'json',
 });
 
 const withPWA = require('@ducanh2912/next-pwa').default({
@@ -67,26 +69,17 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   sw: 'sw.js',
   disable: process.env.VERCEL_ENV !== 'production',
   buildExcludes: [/dynamic-css-manifest\.json$/],
+  fallbacks: {
+    document: '/offline.html',
+  },
   workboxOptions: {
-    navigateFallback: '/offline.html',
     additionalManifestEntries: [
-      { url: '/', revision: null },
-      { url: '/feeds', revision: null },
-      { url: '/about', revision: null },
-      { url: '/projects', revision: null },
-      { url: '/projects.json', revision: null },
-      { url: '/apps', revision: null },
-      { url: '/apps/weather', revision: null },
-      { url: '/apps/terminal', revision: null },
-      { url: '/apps/checkers', revision: null },
-      { url: '/offline.html', revision: null },
-      { url: '/manifest.webmanifest', revision: null },
       { url: '/favicon.ico', revision: null },
       { url: '/favicon.svg', revision: null },
       { url: '/images/logos/fevicon.png', revision: null },
       { url: '/images/logos/logo_1024.png', revision: null },
     ],
-    // Cache only images and fonts to ensure app shell updates while assets work offline
+    // Cache only images and fonts; avoid HTML caching so the app shell always updates
     runtimeCaching: require('./cache.js'),
   },
 });
@@ -129,6 +122,8 @@ function configureWebpack(config, { isServer }) {
   return config;
 }
 
+
+
 module.exports = withBundleAnalyzer(
   withPWA({
     ...(isStaticExport && { output: 'export' }),
@@ -140,24 +135,11 @@ module.exports = withBundleAnalyzer(
     },
     images: {
       unoptimized: true,
-      domains: [
-        'opengraph.githubassets.com',
-        'raw.githubusercontent.com',
-        'avatars.githubusercontent.com',
-        'i.ytimg.com',
-        'yt3.ggpht.com',
-        'i.scdn.co',
-        'www.google.com',
-        'example.com',
-        'developer.mozilla.org',
-        'en.wikipedia.org',
-        'ghchart.rshah.org',
-        'openweathermap.org',
-        'staticmap.openstreetmap.de',
-        'data.typeracer.com',
-        'img.shields.io',
-        'images.credly.com',
-      ],
+      domains: imageDomains,
+      remotePatterns: imageDomains.map((hostname) => ({
+        protocol: 'https',
+        hostname,
+      })),
       localPatterns: [
         { pathname: '/themes/Yaru/apps/**' },
         { pathname: '/icons/**' },
@@ -197,7 +179,7 @@ module.exports = withBundleAnalyzer(
                 ],
               },
               {
-                source: '/fonts/(.*)',
+                source: '/fonts/:path*',
                 headers: [
                   {
                     key: 'Cache-Control',
@@ -206,11 +188,11 @@ module.exports = withBundleAnalyzer(
                 ],
               },
               {
-                source: '/images/(.*)',
+                source: '/images/:path*',
                 headers: [
                   {
                     key: 'Cache-Control',
-                    value: 'public, max-age=86400',
+                    value: 'public, max-age=86400, immutable',
                   },
                 ],
               },
