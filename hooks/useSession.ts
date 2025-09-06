@@ -10,12 +10,14 @@ export interface SessionWindow {
 export interface DesktopSession {
   windows: SessionWindow[];
   wallpaper: string;
+  wallpaperStyle?: string;
   dock: string[];
 }
 
 const initialSession: DesktopSession = {
   windows: [],
   wallpaper: defaults.wallpaper,
+  wallpaperStyle: defaults.wallpaperStyle,
   dock: [],
 };
 
@@ -25,6 +27,7 @@ function isSession(value: unknown): value is DesktopSession {
   return (
     Array.isArray(s.windows) &&
     typeof s.wallpaper === 'string' &&
+    (typeof s.wallpaperStyle === 'string' || s.wallpaperStyle === undefined) &&
     Array.isArray(s.dock)
   );
 }
