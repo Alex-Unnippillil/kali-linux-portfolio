@@ -92,7 +92,9 @@ async function addRecentDir(handle) {
   } catch {}
 }
 
-export default function FileExplorer() {
+const imageRegex = /\.(png|jpe?g|gif|webp|bmp)$/i;
+
+export default function FileExplorer({ openApp }) {
   const [supported, setSupported] = useState(true);
   const [dirHandle, setDirHandle] = useState(null);
   const [files, setFiles] = useState([]);
@@ -178,6 +180,14 @@ export default function FileExplorer() {
   };
 
   const openFile = async (file) => {
+    if (imageRegex.test(file.name)) {
+      const imageFiles = files.filter(f => imageRegex.test(f.name));
+      if (typeof window !== 'undefined') {
+        window.__ristretto = { files: imageFiles, index: imageFiles.findIndex(f => f.name === file.name) };
+      }
+      openApp && openApp('ristretto');
+      return;
+    }
     setCurrentFile(file);
     let text = '';
     if (opfsSupported) {

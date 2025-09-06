@@ -63,6 +63,7 @@ const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const FileExplorerApp = createDynamicApp('file-explorer', 'Files');
+const RistrettoApp = createDynamicApp('ristretto', 'Image Viewer');
 const Radare2App = createDynamicApp('radare2', 'Radare2');
 const AboutAlexApp = createDynamicApp('alex', 'About Alex');
 const PowerApp = createDynamicApp('power', 'Power Settings');
@@ -154,6 +155,7 @@ const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayFileExplorer = createDisplay(FileExplorerApp);
+const displayRistretto = createDisplay(RistrettoApp);
 const displayRadare2 = createDisplay(Radare2App);
 const displayAboutAlex = createDisplay(AboutAlexApp);
 const displayPower = createDisplay(PowerApp);
@@ -711,6 +713,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayFileExplorer,
+  },
+  {
+    id: 'ristretto',
+    title: 'Image Viewer',
+    icon: '/themes/Yaru/apps/ristretto.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayRistretto,
   },
   {
     id: 'resource-monitor',
