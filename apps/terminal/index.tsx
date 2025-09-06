@@ -496,15 +496,23 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
     ]);
 
   useEffect(() => {
-    const handleResize = () => fitRef.current?.fit();
+    const handleFit = () => fitRef.current?.fit();
     let observer: ResizeObserver | undefined;
+    const root = containerRef.current?.closest('[data-app-id]') as HTMLElement | null;
+
+    const handleTiling = () => requestAnimationFrame(handleFit);
+
     if (typeof ResizeObserver !== 'undefined') {
-      observer = new ResizeObserver(handleResize);
+      observer = new ResizeObserver(handleFit);
       if (containerRef.current) observer.observe(containerRef.current);
     }
-    window.addEventListener('resize', handleResize);
+    window.addEventListener('resize', handleFit);
+    root?.addEventListener('super-arrow', handleTiling);
+    root?.addEventListener('transitionend', handleFit);
     return () => {
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('resize', handleFit);
+      root?.removeEventListener('super-arrow', handleTiling);
+      root?.removeEventListener('transitionend', handleFit);
       observer?.disconnect();
     };
   }, []);
