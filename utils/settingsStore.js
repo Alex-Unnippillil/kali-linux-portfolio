@@ -14,6 +14,8 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  toastPlacement: 'primary',
+  toastFadeOut: true,
 };
 
 export async function getAccent() {
@@ -123,6 +125,30 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getToastPlacement() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.toastPlacement;
+  return (
+    window.localStorage.getItem('toast-placement') ||
+    DEFAULT_SETTINGS.toastPlacement
+  );
+}
+
+export async function setToastPlacement(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('toast-placement', value);
+}
+
+export async function getToastFadeOut() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.toastFadeOut;
+  const val = window.localStorage.getItem('toast-fade-out');
+  return val === null ? DEFAULT_SETTINGS.toastFadeOut : val === 'true';
+}
+
+export async function setToastFadeOut(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('toast-fade-out', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +163,8 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('toast-placement');
+  window.localStorage.removeItem('toast-fade-out');
 }
 
 export async function exportSettings() {
@@ -151,6 +179,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    toastPlacement,
+    toastFadeOut,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +192,8 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getToastPlacement(),
+    getToastFadeOut(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +207,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    toastPlacement,
+    toastFadeOut,
     theme,
   });
 }
@@ -199,6 +233,8 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    toastPlacement,
+    toastFadeOut,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +247,8 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (toastPlacement !== undefined) await setToastPlacement(toastPlacement);
+  if (toastFadeOut !== undefined) await setToastFadeOut(toastFadeOut);
   if (theme !== undefined) setTheme(theme);
 }
 
