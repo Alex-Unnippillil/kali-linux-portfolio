@@ -63,8 +63,9 @@ export const Desktop: React.FC = () => {
       {icons.map((icon) => (
         <div
           key={icon.id}
-          className="absolute text-center text-xs text-white"
+          className="absolute text-center text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]"
           style={{ left: icon.x, top: icon.y, width: 80 }}
+          tabIndex={0}
         >
           <div className="h-16 w-16 rounded bg-black bg-opacity-20" />
           <div>{icon.title}</div>
