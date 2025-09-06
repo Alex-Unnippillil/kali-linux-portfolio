@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import Icon from '@/components/common/Icon';
 
 interface AppDefinition {
   id: string;
@@ -64,8 +65,7 @@ const TaskList: React.FC<TaskListProps> = ({ apps, onMinimizeWindow }) => {
           }`}
         >
           {app.icon ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={app.icon} alt="" className="w-5 h-5" />
+            <Icon src={app.icon} alt="" size={20} className="w-5 h-5" />
           ) : (
             <span>{app.title}</span>
           )}

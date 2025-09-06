@@ -28,6 +28,8 @@ export default function LockScreen(props) {
             <img
                 src={`/wallpapers/${wallpaper}.webp`}
                 alt=""
+                width={1920}
+                height={1080}
                 className={`absolute top-0 left-0 w-full h-full object-cover transform z-20 transition duration-500 ${props.isLocked ? 'blur-md' : 'blur-none'}`}
             />
             <div className="w-full h-full z-50 relative flex flex-col items-center justify-center text-white">
@@ -40,7 +42,7 @@ export default function LockScreen(props) {
                     </div>
                 </div>
                 <form onSubmit={handleSubmit} className="bg-black bg-opacity-50 p-8 rounded flex flex-col items-center">
-                    <img src="/images/logos/bitmoji.png" alt="avatar" className="w-24 h-24 rounded-full mb-4 border-2 border-white" />
+                    <img src="/images/logos/bitmoji.png" alt="avatar" width={96} height={96} className="w-24 h-24 rounded-full mb-4 border-2 border-white" />
                     <div className="text-2xl mb-4">kali</div>
                     <input
                         ref={inputRef}

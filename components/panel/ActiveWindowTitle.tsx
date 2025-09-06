@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Icon from "@/components/common/Icon";
 
 const PANEL_PREFIX = "xfce.panel.";
 
@@ -66,9 +67,11 @@ export default function ActiveWindowTitle({
           className="h-5 w-5 flex items-center justify-center rounded hover:bg-white hover:bg-opacity-10"
           onClick={() => minimize(activeId)}
         >
-          <img
+          <Icon
             src="/themes/Yaru/window/window-minimize-symbolic.svg"
             alt="Kali window minimize"
+            width={12}
+            height={12}
             className="h-3 w-3"
           />
         </button>
@@ -80,9 +83,11 @@ export default function ActiveWindowTitle({
           className="h-5 w-5 flex items-center justify-center rounded hover:bg-white hover:bg-opacity-10"
           onClick={() => maximize(activeId)}
         >
-          <img
+          <Icon
             src="/themes/Yaru/window/window-maximize-symbolic.svg"
             alt="Kali window maximize"
+            width={12}
+            height={12}
             className="h-3 w-3"
           />
         </button>
@@ -94,9 +99,11 @@ export default function ActiveWindowTitle({
           className="h-5 w-5 flex items-center justify-center rounded hover:bg-white hover:bg-opacity-10"
           onClick={() => close(activeId)}
         >
-          <img
+          <Icon
             src="/themes/Yaru/window/window-close-symbolic.svg"
             alt="Kali window close"
+            width={12}
+            height={12}
             className="h-3 w-3"
           />
         </button>
