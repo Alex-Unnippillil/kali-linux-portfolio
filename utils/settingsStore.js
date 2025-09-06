@@ -13,6 +13,7 @@ const DEFAULT_SETTINGS = {
   largeHitAreas: false,
   pongSpin: true,
   allowNetwork: false,
+  wifiEnabled: true,
   haptics: true,
 };
 
@@ -123,6 +124,17 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getWifiEnabled() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.wifiEnabled;
+  const val = window.localStorage.getItem('wifi-enabled');
+  return val === null ? DEFAULT_SETTINGS.wifiEnabled : val === 'true';
+}
+
+export async function setWifiEnabled(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('wifi-enabled', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -136,6 +148,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('large-hit-areas');
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
+  window.localStorage.removeItem('wifi-enabled');
   window.localStorage.removeItem('haptics');
 }
 
@@ -150,6 +163,7 @@ export async function exportSettings() {
     largeHitAreas,
     pongSpin,
     allowNetwork,
+    wifiEnabled,
     haptics,
   ] = await Promise.all([
     getAccent(),
@@ -161,6 +175,7 @@ export async function exportSettings() {
     getLargeHitAreas(),
     getPongSpin(),
     getAllowNetwork(),
+    getWifiEnabled(),
     getHaptics(),
   ]);
   const theme = getTheme();
@@ -174,6 +189,7 @@ export async function exportSettings() {
     largeHitAreas,
     pongSpin,
     allowNetwork,
+    wifiEnabled,
     haptics,
     theme,
   });
@@ -198,6 +214,7 @@ export async function importSettings(json) {
     largeHitAreas,
     pongSpin,
     allowNetwork,
+    wifiEnabled,
     haptics,
     theme,
   } = settings;
@@ -210,6 +227,7 @@ export async function importSettings(json) {
   if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas);
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
+  if (wifiEnabled !== undefined) await setWifiEnabled(wifiEnabled);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
 }
