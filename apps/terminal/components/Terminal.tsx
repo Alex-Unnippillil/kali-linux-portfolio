@@ -15,6 +15,7 @@ const Terminal = forwardRef<HTMLDivElement, TerminalContainerProps>(
         fontFamily: 'monospace',
         fontSize: 'clamp(1rem, 0.6vw + 1rem, 1.1rem)',
         lineHeight: 1.4,
+        whiteSpace: 'pre',
         ...style,
       }}
       {...props}
