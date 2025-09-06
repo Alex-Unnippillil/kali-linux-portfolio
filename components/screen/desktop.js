@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { registerAltWheelWindowCycle } from '../../utils/keyboardShortcuts';
 
 export class Desktop extends Component {
     constructor() {
@@ -30,6 +31,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.removeAltWheelShortcut = null;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -88,12 +90,14 @@ export class Desktop extends Component {
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
+        this.removeAltWheelShortcut = registerAltWheelWindowCycle(this.cycleAppWindows);
     }
 
     componentWillUnmount() {
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
+        if (this.removeAltWheelShortcut) this.removeAltWheelShortcut();
     }
 
     checkForNewFolders = () => {
