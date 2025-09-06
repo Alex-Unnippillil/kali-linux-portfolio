@@ -101,6 +101,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [pasteDialog, setPasteDialog] = useState<
+    { text: string; lines: number; always: boolean } | null
+  >(null);
+  const [alwaysAllowPaste, setAlwaysAllowPaste] = useState(false);
+  const alwaysAllowRef = useRef(false);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
@@ -123,6 +128,18 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     '#55FFFF',
     '#FFFFFF',
   ];
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem('alwaysAllowPaste');
+    if (stored === 'true') setAlwaysAllowPaste(true);
+  }, []);
+
+  useEffect(() => {
+    alwaysAllowRef.current = alwaysAllowPaste;
+  }, [alwaysAllowPaste]);
+
+  const BRACKET_PASTE_START = `${String.fromCharCode(27)}[200~`;
+  const BRACKET_PASTE_END = `${String.fromCharCode(27)}[201~`;
 
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
@@ -156,7 +173,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
-      handleInput(text);
+      confirmAndHandle(text);
     } catch {}
   };
 
@@ -284,6 +301,18 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       [runCommand, prompt],
     );
 
+    const confirmAndHandle = useCallback(
+      (text: string) => {
+        const lines = text.split(/\r?\n/).length;
+        if (!alwaysAllowRef.current && lines > 1) {
+          setPasteDialog({ text, lines, always: false });
+        } else {
+          handleInput(text);
+        }
+      },
+      [handleInput],
+    );
+
   useImperativeHandle(ref, () => ({
     runCommand: (c: string) => runCommand(c),
     getContent: () => contentRef.current,
@@ -304,6 +333,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         scrollback: 1000,
         cols: 80,
         rows: 24,
+        bracketedPasteMode: true,
       });
       const fit = new FitAddon();
       const search = new SearchAddon();
@@ -333,7 +363,17 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       writeLine('Welcome to the web terminal!');
       writeLine('Type "help" to see available commands.');
       prompt();
-      term.onData((d: string) => handleInput(d));
+      term.onData((d: string) => {
+        if (d.includes(BRACKET_PASTE_START)) {
+          const text = d
+            .replaceAll(BRACKET_PASTE_START, '')
+            .replaceAll(BRACKET_PASTE_END, '');
+          confirmAndHandle(text);
+        } else {
+          handleInput(d);
+        }
+      });
+      term.onPaste?.((d: string) => confirmAndHandle(d));
       term.onKey(({ domEvent }: any) => {
         if (domEvent.key === 'Tab') {
           domEvent.preventDefault();
@@ -368,7 +408,19 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       disposed = true;
       termRef.current?.dispose();
     };
-    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow]);
+      }, [
+        opfsSupported,
+        getDir,
+        readFile,
+        writeLine,
+        prompt,
+        handleInput,
+        confirmAndHandle,
+        autocomplete,
+        updateOverflow,
+        BRACKET_PASTE_START,
+        BRACKET_PASTE_END,
+      ]);
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();
@@ -402,15 +454,57 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
   return (
     <div className="relative h-full w-full">
+      {pasteDialog && (
+        <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-20">
+          <div className="bg-gray-900 p-4 rounded space-y-2">
+            <p className="text-white">Paste {pasteDialog.lines} lines?</p>
+            <label className="flex items-center gap-2 text-white">
+                <input
+                  type="checkbox"
+                  aria-label="Always allow"
+                  checked={pasteDialog.always}
+                  onChange={(e) =>
+                    setPasteDialog((pd) =>
+                      pd ? { ...pd, always: e.target.checked } : pd,
+                    )
+                  }
+                />
+              Always allow
+            </label>
+            <div className="flex gap-2 justify-end">
+              <button
+                className="px-2 py-1 bg-blue-600 rounded"
+                onClick={() => {
+                  if (pasteDialog.always) {
+                    setAlwaysAllowPaste(true);
+                    window.localStorage.setItem('alwaysAllowPaste', 'true');
+                  }
+                  handleInput(pasteDialog.text);
+                  setPasteDialog(null);
+                }}
+              >
+                Paste
+              </button>
+              <button
+                className="px-2 py-1 bg-gray-600 rounded"
+                onClick={() => setPasteDialog(null)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {paletteOpen && (
         <div className="absolute inset-0 bg-black bg-opacity-75 flex items-start justify-center z-10">
           <div className="mt-10 w-80 bg-gray-800 p-4 rounded">
-            <input
-              autoFocus
-              className="w-full mb-2 bg-black text-white p-2"
-              value={paletteInput}
-              onChange={(e) => setPaletteInput(e.target.value)}
-              onKeyDown={(e) => {
+              <input
+                autoFocus
+                aria-label="Command"
+                className="w-full mb-2 bg-black text-white p-2"
+                value={paletteInput}
+                onChange={(e) => setPaletteInput(e.target.value)}
+                onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   runCommand(paletteInput);
                   setPaletteInput('');

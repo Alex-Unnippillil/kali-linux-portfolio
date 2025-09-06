@@ -36,9 +36,15 @@ import React, { createRef, act } from 'react';
 import { render, fireEvent } from '@testing-library/react';
 import Terminal from '../apps/terminal';
 import TerminalTabs from '../apps/terminal/tabs';
+import { Terminal as XTermTerminal } from '@xterm/xterm';
 
 describe('Terminal component', () => {
   const openApp = jest.fn();
+
+  beforeEach(() => {
+    localStorage.clear();
+    (XTermTerminal as any).mockClear();
+  });
 
   it('renders container and exposes runCommand', async () => {
     const ref = createRef<any>();
@@ -75,5 +81,31 @@ describe('Terminal component', () => {
 
     fireEvent.keyDown(root, { ctrlKey: true, key: 'w' });
     expect(container.querySelectorAll('.flex.items-center.cursor-pointer').length).toBe(1);
+  });
+
+  it('prompts before multi-line paste and can always allow', async () => {
+    const { getByText, queryByText, getByLabelText } = render(
+      <Terminal openApp={openApp} />,
+    );
+    await act(async () => {});
+    const instance = (XTermTerminal as any).mock.results[0].value;
+    const dataCb = instance.onData.mock.calls[0][0];
+    const ESC = String.fromCharCode(27);
+    act(() => {
+      dataCb(`${ESC}[200~line1\nline2${ESC}[201~`);
+    });
+    expect(getByText('Paste 2 lines?')).toBeInTheDocument();
+    const checkbox = getByLabelText('Always allow') as HTMLInputElement;
+    act(() => fireEvent.click(checkbox));
+    await act(async () => {});
+    await act(async () => {
+      fireEvent.click(getByText('Paste'));
+    });
+    expect(localStorage.getItem('alwaysAllowPaste')).toBe('true');
+    expect(queryByText('Paste 2 lines?')).toBeNull();
+    act(() => {
+      dataCb(`${ESC}[200~a\nb${ESC}[201~`);
+    });
+    expect(queryByText('Paste 2 lines?')).toBeNull();
   });
 });
