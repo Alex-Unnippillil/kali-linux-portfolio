@@ -1,4 +1,4 @@
-import usePersistentState from '@/hooks/usePersistentState';
+import usePersistentState from '../../hooks/usePersistentState';
 
 export interface WorkspaceMargins {
   top: number;
