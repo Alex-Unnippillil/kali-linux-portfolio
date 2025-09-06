@@ -52,6 +52,7 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            dockFocusIndex: null,
         }
     }
 
@@ -144,25 +145,58 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleContextKey);
     }
 
+    getDockButtons = () => {
+        const nav = document.querySelector('nav[aria-label="Dock"]');
+        return nav ? Array.from(nav.querySelectorAll('button')) : [];
+    }
+
     handleGlobalShortcut = (e) => {
-        if (e.altKey && e.key === 'Tab') {
+        if (this.state.dockFocusIndex !== null) {
+            const buttons = this.getDockButtons();
+            if (['ArrowDown', 'ArrowRight'].includes(e.key)) {
+                e.preventDefault();
+                const next = (this.state.dockFocusIndex + 1) % buttons.length;
+                buttons[next]?.focus();
+                this.setState({ dockFocusIndex: next });
+            } else if (['ArrowUp', 'ArrowLeft'].includes(e.key)) {
+                e.preventDefault();
+                const next = (this.state.dockFocusIndex - 1 + buttons.length) % buttons.length;
+                buttons[next]?.focus();
+                this.setState({ dockFocusIndex: next });
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                buttons[this.state.dockFocusIndex]?.click();
+                buttons[this.state.dockFocusIndex]?.blur();
+                this.setState({ dockFocusIndex: null });
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                buttons[this.state.dockFocusIndex]?.blur();
+                this.setState({ dockFocusIndex: null });
+            }
+            return;
+        }
+
+        if (e.ctrlKey && e.altKey && e.key === 'Tab') {
+            e.preventDefault();
+            const buttons = this.getDockButtons();
+            if (buttons.length) {
+                buttons[0].focus();
+                this.setState({ dockFocusIndex: 0 });
+            }
+        } else if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
             if (!this.state.showWindowSwitcher) {
                 this.openWindowSwitcher();
+            } else {
+                this.cycleApps(e.shiftKey ? -1 : 1);
             }
         } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
             e.preventDefault();
             this.openApp('clipboard-manager');
-        }
-        else if (e.altKey && e.key === 'Tab') {
-            e.preventDefault();
-            this.cycleApps(e.shiftKey ? -1 : 1);
-        }
-        else if (e.altKey && (e.key === '`' || e.key === '~')) {
+        } else if (e.altKey && (e.key === '`' || e.key === '~')) {
             e.preventDefault();
             this.cycleAppWindows(e.shiftKey ? -1 : 1);
-        }
-        else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+        } else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
             e.preventDefault();
             const id = this.getFocusedWindowId();
             if (id) {

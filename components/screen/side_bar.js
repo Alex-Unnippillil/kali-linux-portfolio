@@ -51,13 +51,21 @@ export function AllApps(props) {
     const [title, setTitle] = useState(false);
 
     return (
-        <div
-            className={`w-10 h-10 rounded m-1 hover:bg-white hover:bg-opacity-10 flex items-center justify-center transition-hover transition-active`}
+        <button
+            type="button"
+            aria-label="Show Applications"
+            className={`w-10 h-10 rounded m-1 hover:bg-white hover:bg-opacity-10 focus:bg-white focus:bg-opacity-20 focus:ring-2 focus:ring-white flex items-center justify-center transition-hover transition-active outline-none`}
             style={{ marginTop: 'auto' }}
             onMouseEnter={() => {
                 setTitle(true);
             }}
             onMouseLeave={() => {
+                setTitle(false);
+            }}
+            onFocus={() => {
+                setTitle(true);
+            }}
+            onBlur={() => {
                 setTitle(false);
             }}
             onClick={props.showApps}
@@ -80,6 +88,6 @@ export function AllApps(props) {
                     Show Applications
                 </div>
             </div>
-        </div>
+        </button>
     );
 }
