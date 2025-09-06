@@ -17,6 +17,7 @@ function Toggle({
       type="button"
       role="switch"
       aria-checked={checked}
+      aria-label="toggle"
       onClick={() => onChange(!checked)}
       className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
         checked ? 'bg-ubt-blue' : 'bg-ubt-grey'
@@ -35,6 +36,7 @@ export default function ThemeSettings() {
   const { theme, setTheme } = useSettings();
   const [panelSize, setPanelSize] = usePersistentState('app:panel-icons', 16);
   const [gridSize, setGridSize] = usePersistentState('app:grid-icons', 64);
+  const [showPower, setShowPower] = usePersistentState('qs-power-menu', false);
 
   const handleChange = (e: ChangeEvent<HTMLSelectElement>) => {
     setTheme(e.target.value);
@@ -110,6 +112,20 @@ export default function ThemeSettings() {
               ></div>
             ))}
           </div>
+
+        <div className="mt-6">
+          <h2 className="text-lg mb-2">Panel</h2>
+          <label className="flex items-center gap-2">
+            <input
+              aria-label="Show power actions"
+              type="checkbox"
+              checked={showPower}
+              onChange={(e) => setShowPower(e.target.checked)}
+            />
+            <span>Show power actions</span>
+          </label>
+        </div>
+
         </div>
       </div>
     </div>
