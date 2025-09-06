@@ -6,7 +6,7 @@ import { useSettings } from '../../hooks/useSettings';
 const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
 
 export default function Status() {
-  const { allowNetwork } = useSettings();
+  const { allowNetwork, wifiEnabled } = useSettings();
   const [online, setOnline] = useState(true);
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export default function Status() {
     };
 
     const updateStatus = () => {
-      const isOnline = navigator.onLine;
+      const isOnline = navigator.onLine && wifiEnabled;
       setOnline(isOnline);
       if (isOnline) {
         pingServer();
@@ -36,18 +36,30 @@ export default function Status() {
       window.removeEventListener('online', updateStatus);
       window.removeEventListener('offline', updateStatus);
     };
-  }, []);
+  }, [wifiEnabled]);
 
   return (
     <div className="flex justify-center items-center">
       <span
         className="mx-1.5 relative"
-        title={online ? (allowNetwork ? 'Online' : 'Online (requests blocked)') : 'Offline'}
+        title={
+          !wifiEnabled
+            ? 'Wi-Fi disabled'
+            : online
+            ? allowNetwork
+              ? 'Online'
+              : 'Online (requests blocked)'
+            : 'Offline'
+        }
       >
         <Image
           width={16}
           height={16}
-          src={online ? "/themes/Yaru/status/network-wireless-signal-good-symbolic.svg" : "/themes/Yaru/status/network-wireless-signal-none-symbolic.svg"}
+          src={
+            online
+              ? "/themes/Yaru/status/network-wireless-signal-good-symbolic.svg"
+              : "/themes/Yaru/status/network-wireless-signal-none-symbolic.svg"
+          }
           alt={online ? "online" : "offline"}
           className="inline status-symbol w-4 h-4"
           sizes="16px"

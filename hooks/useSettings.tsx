@@ -18,6 +18,8 @@ import {
   setPongSpin as savePongSpin,
   getAllowNetwork as loadAllowNetwork,
   setAllowNetwork as saveAllowNetwork,
+  getWifiEnabled as loadWifiEnabled,
+  setWifiEnabled as saveWifiEnabled,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
   defaults,
@@ -61,6 +63,7 @@ interface SettingsContextValue {
   largeHitAreas: boolean;
   pongSpin: boolean;
   allowNetwork: boolean;
+  wifiEnabled: boolean;
   haptics: boolean;
   theme: string;
   setAccent: (accent: string) => void;
@@ -72,6 +75,7 @@ interface SettingsContextValue {
   setLargeHitAreas: (value: boolean) => void;
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
+  setWifiEnabled: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
 }
@@ -86,6 +90,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   largeHitAreas: defaults.largeHitAreas,
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
+  wifiEnabled: defaults.wifiEnabled,
   haptics: defaults.haptics,
   theme: 'default',
   setAccent: () => {},
@@ -97,6 +102,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setLargeHitAreas: () => {},
   setPongSpin: () => {},
   setAllowNetwork: () => {},
+  setWifiEnabled: () => {},
   setHaptics: () => {},
   setTheme: () => {},
 });
@@ -111,6 +117,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
+  const [wifiEnabled, setWifiEnabled] = useState<boolean>(defaults.wifiEnabled);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
@@ -126,6 +133,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setLargeHitAreas(await loadLargeHitAreas());
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
+      setWifiEnabled(await loadWifiEnabled());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
     })();
@@ -233,6 +241,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [allowNetwork]);
 
   useEffect(() => {
+    saveWifiEnabled(wifiEnabled);
+  }, [wifiEnabled]);
+
+  useEffect(() => {
     saveHaptics(haptics);
   }, [haptics]);
 
@@ -248,6 +260,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         largeHitAreas,
         pongSpin,
         allowNetwork,
+        wifiEnabled,
         haptics,
         theme,
         setAccent,
@@ -259,6 +272,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setLargeHitAreas,
         setPongSpin,
         setAllowNetwork,
+        setWifiEnabled,
         setHaptics,
         setTheme,
       }}

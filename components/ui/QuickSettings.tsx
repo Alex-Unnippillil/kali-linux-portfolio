@@ -2,6 +2,7 @@
 
 import usePersistentState from '../../hooks/usePersistentState';
 import { useEffect } from 'react';
+import { useSettings } from '../../hooks/useSettings';
 
 interface Props {
   open: boolean;
@@ -10,8 +11,8 @@ interface Props {
 const QuickSettings = ({ open }: Props) => {
   const [theme, setTheme] = usePersistentState('qs-theme', 'light');
   const [sound, setSound] = usePersistentState('qs-sound', true);
-  const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
+  const { wifiEnabled, setWifiEnabled, allowNetwork, setAllowNetwork } = useSettings();
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -41,8 +42,20 @@ const QuickSettings = ({ open }: Props) => {
         <input type="checkbox" checked={sound} onChange={() => setSound(!sound)} />
       </div>
       <div className="px-4 pb-2 flex justify-between">
-        <span>Network</span>
-        <input type="checkbox" checked={online} onChange={() => setOnline(!online)} />
+        <span>Wi-Fi</span>
+        <input
+          type="checkbox"
+          checked={wifiEnabled}
+          onChange={() => setWifiEnabled(!wifiEnabled)}
+        />
+      </div>
+      <div className="px-4 pb-2 flex justify-between">
+        <span>Networking</span>
+        <input
+          type="checkbox"
+          checked={allowNetwork}
+          onChange={() => setAllowNetwork(!allowNetwork)}
+        />
       </div>
       <div className="px-4 flex justify-between">
         <span>Reduced motion</span>
