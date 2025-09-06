@@ -7,7 +7,7 @@ export const createDynamicApp = (id, title) =>
     async () => {
       try {
         const mod = await import(
-          /* webpackPrefetch: true */ `../components/apps/${id}`
+          /* webpackChunkName: "[request]", webpackPrefetch: true */ `../components/apps/${id}`
         );
         logEvent({ category: 'Application', action: `Loaded ${title}` });
         return mod.default;

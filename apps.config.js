@@ -1,18 +1,5 @@
 import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
 
-import { displayX } from './components/apps/x';
-import { displaySpotify } from './components/apps/spotify';
-import { displaySettings } from './components/apps/settings';
-import { displayChrome } from './components/apps/chrome';
-import { displayGedit } from './components/apps/gedit';
-import { displayTodoist } from './components/apps/todoist';
-import { displayWeather } from './components/apps/weather';
-import { displayClipboardManager } from './components/apps/ClipboardManager';
-import { displayFiglet } from './components/apps/figlet';
-import { displayResourceMonitor } from './components/apps/resource_monitor';
-import { displayScreenRecorder } from './components/apps/screen-recorder';
-import { displayTaskManager } from './components/apps/task_manager';
-import { displayNikto } from './components/apps/nikto';
 
 export const chromeDefaultTiles = [
   { title: 'MDN', url: 'https://developer.mozilla.org/' },
@@ -68,6 +55,20 @@ const RistrettoApp = createDynamicApp('ristretto', 'Image Viewer');
 const Radare2App = createDynamicApp('radare2', 'Radare2');
 const AboutAlexApp = createDynamicApp('alex', 'About Alex');
 const PowerApp = createDynamicApp('power', 'Power Settings');
+
+const XApp = createDynamicApp('x', 'X');
+const SpotifyApp = createDynamicApp('spotify', 'Spotify');
+const SettingsApp = createDynamicApp('settings', 'Settings');
+const ChromeApp = createDynamicApp('chrome', 'Chrome');
+const GeditApp = createDynamicApp('gedit', 'Gedit');
+const TodoistApp = createDynamicApp('todoist', 'Todoist');
+const WeatherApp = createDynamicApp('weather', 'Weather');
+const ClipboardManagerApp = createDynamicApp('ClipboardManager', 'Clipboard Manager');
+const FigletApp = createDynamicApp('figlet', 'Figlet');
+const ResourceMonitorApp = createDynamicApp('resource_monitor', 'Resource Monitor');
+const ScreenRecorderApp = createDynamicApp('screen-recorder', 'Screen Recorder');
+const TaskManagerApp = createDynamicApp('task_manager', 'Task Manager');
+const NiktoApp = createDynamicApp('nikto', 'Nikto');
 
 const QrApp = createDynamicApp('qr', 'QR Tool');
 const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
@@ -167,6 +168,20 @@ const displayRistretto = createDisplay(RistrettoApp);
 const displayRadare2 = createDisplay(Radare2App);
 const displayAboutAlex = createDisplay(AboutAlexApp);
 const displayPower = createDisplay(PowerApp);
+
+const displayX = createDisplay(XApp);
+const displaySpotify = createDisplay(SpotifyApp);
+const displaySettings = createDisplay(SettingsApp);
+const displayChrome = createDisplay(ChromeApp);
+const displayGedit = createDisplay(GeditApp);
+const displayTodoist = createDisplay(TodoistApp);
+const displayWeather = createDisplay(WeatherApp);
+const displayClipboardManager = createDisplay(ClipboardManagerApp);
+const displayFiglet = createDisplay(FigletApp);
+const displayResourceMonitor = createDisplay(ResourceMonitorApp);
+const displayScreenRecorder = createDisplay(ScreenRecorderApp);
+const displayTaskManager = createDisplay(TaskManagerApp);
+const displayNikto = createDisplay(NiktoApp);
 
 const displayQr = createDisplay(QrApp);
 const displayAsciiArt = createDisplay(AsciiArtApp);
