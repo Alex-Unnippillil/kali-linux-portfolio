@@ -190,7 +190,9 @@ __tests__/
 ```ts
 import dynamic from 'next/dynamic';
 
-const SudokuApp = dynamic(() => import('./components/apps/sudoku'));
+const SudokuApp = dynamic(() => import('./components/apps/sudoku'), {
+  ssr: false,
+});
 export const displaySudoku = () => <SudokuApp />;
 ```
 Heavy apps are wrapped with **dynamic import** and most games share a `GameLayout` with a help overlay.
