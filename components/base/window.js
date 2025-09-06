@@ -33,6 +33,8 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            shaded: false,
+            unshadeHeight: null,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
@@ -53,6 +55,7 @@ export class Window extends Component {
         window.addEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.addEventListener('super-arrow', this.handleSuperArrow);
+        root?.addEventListener('shade-toggle', this.toggleShade);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -66,6 +69,7 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        root?.removeEventListener('shade-toggle', this.toggleShade);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
@@ -411,6 +415,18 @@ export class Window extends Component {
         };
     }
 
+    toggleShade = () => {
+        const titlebarPx = 44; // Tailwind h-11 => 44px
+        const collapsed = (titlebarPx / window.innerHeight) * 100;
+        if (this.state.shaded) {
+            const height = this.state.unshadeHeight ?? this.state.height;
+            this.setState({ shaded: false, height, unshadeHeight: null }, this.resizeBoundries);
+        } else {
+            const prev = this.state.height;
+            this.setState({ shaded: true, unshadeHeight: prev, height: collapsed }, this.resizeBoundries);
+        }
+    }
+
     restoreWindow = () => {
         const node = document.querySelector("#" + this.id);
         this.setDefaultWindowDimenstion();
@@ -634,9 +650,10 @@ export class Window extends Component {
                     bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
                 >
                     <div
-                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%`, transition: 'height 0.3s ease-in-out' }}
+                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 " + (this.state.shaded ? "" : " min-h-1/4 ") + " main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                         id={this.id}
+                        data-shaded={this.state.shaded}
                         role="dialog"
                         aria-label={this.props.title}
                         tabIndex={0}
@@ -649,6 +666,8 @@ export class Window extends Component {
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
+                            onDoubleClick={this.toggleShade}
+                            id={this.id}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -674,7 +693,7 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onDoubleClick, id }) {
     return (
         <div
             className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
@@ -683,6 +702,9 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
+            onDoubleClick={onDoubleClick}
+            data-context="window"
+            data-app-id={id}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>
