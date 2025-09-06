@@ -7,6 +7,11 @@ test.describe('Service worker recovery', () => {
     await page.goto('/apps/power');
 
     await page.evaluate(async () => {
+      try {
+        await navigator.serviceWorker.register('/service-worker.js');
+      } catch {
+        /* ignore registration errors in test env */
+      }
       await caches.open('KLP_stale-cache');
       await caches.open('unrelated-cache');
     });

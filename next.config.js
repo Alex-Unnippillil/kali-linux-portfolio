@@ -72,7 +72,7 @@ const buildId =
 
 const withPWA = require('@ducanh2912/next-pwa').default({
   dest: 'public',
-  sw: 'sw.js',
+  sw: 'service-worker.js',
   disable: process.env.VERCEL_ENV !== 'production',
   buildExcludes: [/dynamic-css-manifest\.json$/],
   fallbacks: {
@@ -243,7 +243,7 @@ module.exports = withBundleAnalyzer(
                 ],
               },
               {
-                source: '/sw.js',
+                source: '/service-worker.js',
                 headers: [
                   {
                     key: 'Cache-Control',

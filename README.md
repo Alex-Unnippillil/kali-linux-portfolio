@@ -65,7 +65,7 @@ To send text or links directly into the Sticky Notes app:
 
 ### Service Worker (SW)
 
-- Generated via [`@ducanh2912/next-pwa`](https://github.com/DuCanhGH/next-pwa); output is `public/sw.js`.
+- Generated via [`@ducanh2912/next-pwa`](https://github.com/DuCanhGH/next-pwa); output is `public/service-worker.js`.
 - Only assets under `public/` are precached.
 - Dynamic routes or API responses are not cached.
 - Future work may use `injectManifest` for finer control.
