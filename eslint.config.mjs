@@ -1,5 +1,6 @@
 import { FlatCompat } from '@eslint/eslintrc';
 import noTopLevelWindow from './eslint-plugin-no-top-level-window/index.js';
+import noDupeAppImports from './eslint-plugin-no-dupe-app-imports/index.js';
 
 const compat = new FlatCompat();
 
@@ -9,6 +10,7 @@ const config = [
       'components/apps/Chrome/index.tsx',
       'public/**/*',
       'chrome-extension/**/*',
+      'src/**/*',
     ],
   },
   {
@@ -19,9 +21,11 @@ const config = [
   {
     plugins: {
       'no-top-level-window': noTopLevelWindow,
+      'no-dupe-app-imports': noDupeAppImports,
     },
     rules: {
       'no-top-level-window/no-top-level-window-or-document': 'error',
+      'no-dupe-app-imports/no-dupe-app-imports': 'error',
     },
   },
   {
