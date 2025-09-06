@@ -3,12 +3,14 @@ export const THEME_KEY = 'app:theme';
 // Score required to unlock each theme
 export const THEME_UNLOCKS: Record<string, number> = {
   default: 0,
+  'kali-light': 0,
+  'kali-dark': 0,
   neon: 100,
   dark: 500,
   matrix: 1000,
 };
 
-const DARK_THEMES = ['dark', 'neon', 'matrix'] as const;
+const DARK_THEMES = ['dark', 'neon', 'matrix', 'kali-dark'] as const;
 
 export const isDarkTheme = (theme: string): boolean =>
   DARK_THEMES.includes(theme as (typeof DARK_THEMES)[number]);

@@ -24,6 +24,10 @@
   --toast-text: var(--color-text);
   --toast-border: var(--color-border);
   accent-color: var(--color-control-accent);
+  /* Kali theme helpers */
+  --kali-bg: var(--color-bg);
+  --kali-panel: var(--color-surface);
+  --icon-spacing: var(--space-2);
 }
 
 /* Dark theme */
@@ -54,6 +58,36 @@ html[data-theme='neon'] {
   --color-border: #333333;
   --color-terminal: #39ff14;
   --color-dark: #000000;
+}
+
+/* Kali dark theme */
+html[data-theme='kali-dark'] {
+  --color-bg: var(--color-ub-grey);
+  --color-text: var(--color-ubt-grey);
+  --color-primary: var(--color-ub-orange);
+  --color-secondary: var(--color-ub-cool-grey);
+  --color-accent: var(--color-ub-orange);
+  --color-muted: var(--color-ub-dark-grey);
+  --color-surface: var(--color-ub-lite-abrgn);
+  --color-inverse: var(--color-ubt-grey);
+  --color-border: var(--color-ub-dark-grey);
+  --color-terminal: #00ff00;
+  --color-dark: var(--color-ub-window-title);
+}
+
+/* Kali light theme */
+html[data-theme='kali-light'] {
+  --color-bg: var(--color-ubt-grey);
+  --color-text: var(--color-ub-grey);
+  --color-primary: var(--color-ubt-blue);
+  --color-secondary: var(--color-ubt-cool-grey);
+  --color-accent: var(--color-ubt-blue);
+  --color-muted: var(--color-ubt-warm-grey);
+  --color-surface: var(--color-ubt-grey);
+  --color-inverse: var(--color-ub-grey);
+  --color-border: var(--color-ubt-cool-grey);
+  --color-terminal: #00ff00;
+  --color-dark: var(--color-ubt-gedit-dark);
 }
 
 /* Matrix theme */
