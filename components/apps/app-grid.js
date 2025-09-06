@@ -3,6 +3,7 @@ import UbuntuApp from '../base/ubuntu_app';
 import apps, { games, utilities } from '../../apps.config';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { Grid } from 'react-window';
+import useIntersection from '../../hooks/useIntersection';
 
 function fuzzyHighlight(text, query) {
   const q = query.toLowerCase();
@@ -25,6 +26,7 @@ export default function AppGrid({ openApp }) {
   const [category, setCategory] = useState('All');
   const gridRef = useRef(null);
   const columnCountRef = useRef(1);
+  const prefetchedRef = useRef(new Set());
   const [focusedIndex, setFocusedIndex] = useState(0);
 
   const baseSet = useMemo(
@@ -97,14 +99,41 @@ export default function AppGrid({ openApp }) {
     const index = rowIndex * data.columnCount + columnIndex;
     if (index >= data.items.length) return null;
     const app = data.items[index];
+    const ref = useRef(null);
+    const isVisible = useIntersection(ref);
+
+    useEffect(() => {
+      if (
+        isVisible &&
+        app.screen?.prefetch &&
+        !prefetchedRef.current.has(app.id)
+      ) {
+        const timer = setTimeout(() => {
+          app.screen.prefetch();
+          prefetchedRef.current.add(app.id);
+        }, 200);
+        return () => clearTimeout(timer);
+      }
+    }, [isVisible, app]);
+
     return (
-      <div style={{ ...style, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 12 }}>
+      <div
+        ref={ref}
+        style={{
+          ...style,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 12,
+        }}
+      >
         <UbuntuApp
           id={app.id}
           icon={app.icon}
           name={app.title}
           displayName={<>{app.nodes}</>}
           openApp={() => openApp && openApp(app.id)}
+          prefetch={app.screen?.prefetch}
         />
       </div>
     );
