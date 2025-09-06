@@ -5,7 +5,7 @@ const expression = process.argv[2];
 const count = Number(process.argv[3] ?? 5);
 
 if (!expression) {
-  console.error('Usage: node scripts/cron-next-run.mjs "<cron expression>" [count]');
+  console.error('Usage: node --import tsx/esm scripts/cron-next-run.mjs "<cron expression>" [count]');
   process.exit(1);
 }
 
