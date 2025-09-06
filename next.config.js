@@ -110,10 +110,8 @@ if (isProd) {
 // Merge experiment settings and production optimizations into a single function.
 function configureWebpack(config, { isServer }) {
   // Enable WebAssembly loading and avoid JSON destructuring bug
-  config.experiments = {
-    ...(config.experiments || {}),
-    asyncWebAssembly: true,
-  };
+  config.experiments ??= {};
+  config.experiments.asyncWebAssembly = true;
   // Prevent bundling of server-only modules in the browser
   config.resolve = config.resolve || {};
   config.resolve.fallback = {
