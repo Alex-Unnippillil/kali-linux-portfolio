@@ -52,6 +52,7 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            debugPanel: false,
         }
     }
 
@@ -145,7 +146,10 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcut = (e) => {
-        if (e.altKey && e.key === 'Tab') {
+        if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'd') {
+            e.preventDefault();
+            this.setState(prev => ({ debugPanel: !prev.debugPanel }));
+        } else if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
             if (!this.state.showWindowSwitcher) {
                 this.openWindowSwitcher();
@@ -822,8 +826,16 @@ export class Desktop extends Component {
         return (
             <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
                 <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
-                    <span>New folder name</span>
-                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
+                    <label htmlFor="folder-name-input">New folder name</label>
+                    <input
+                        className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5"
+                        id="folder-name-input"
+                        type="text"
+                        autoComplete="off"
+                        spellCheck="false"
+                        autoFocus={true}
+                        aria-label="Folder name"
+                    />
                 </div>
                 <div className="flex">
                     <button
@@ -874,7 +886,8 @@ export class Desktop extends Component {
                     closed_windows={this.state.closed_windows}
                     focused_windows={this.state.focused_windows}
                     isMinimized={this.state.minimized_windows}
-                    openAppByAppId={this.openApp} />
+                    openAppByAppId={this.openApp}
+                    debug={this.state.debugPanel} />
 
                 {/* Taskbar */}
                 <Taskbar
@@ -884,6 +897,7 @@ export class Desktop extends Component {
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    debug={this.state.debugPanel}
                 />
 
                 {/* Desktop Apps */}
