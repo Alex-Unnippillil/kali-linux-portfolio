@@ -79,7 +79,7 @@ Copy `.env.local.example` to `.env.local` and fill in required API keys:
 - `NEXT_PUBLIC_ENABLE_ANALYTICS` – enable client-side analytics when set to `true`.
 - `FEATURE_TOOL_APIS` – toggle simulated tool APIs (`enabled` or `disabled`).
 - `RECAPTCHA_SECRET` and related `NEXT_PUBLIC_RECAPTCHA_*` keys for contact form spam protection.
-- `RATE_LIMIT_SECRET` – secret used to sign rate limit cookies.
+- `RATE_LIMIT_SECRET` – secret used to sign rate limit cookies (configure this in Vercel environment variables).
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` – Supabase credentials. When unset, Supabase-backed APIs and features are disabled.
 
 See `.env.local.example` for the full list.

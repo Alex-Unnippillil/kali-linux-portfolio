@@ -12,12 +12,15 @@ export default async function handler(req, res) {
   const missingRecaptchaSiteKey = !process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
   const missingSupabase =
     !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const missingRateLimit = !process.env.RATE_LIMIT_SECRET;
 
-  if (missingRecaptchaSecret || missingRecaptchaSiteKey || missingSupabase) {
+  if (missingRecaptcha || missingSupabase || missingRateLimit) {
+
     console.warn('Contact API running in demo mode', {
       missingRecaptchaSecret,
       missingRecaptchaSiteKey,
       missingSupabase,
+      missingRateLimit,
     });
   }
   if (req.method === 'GET') {
