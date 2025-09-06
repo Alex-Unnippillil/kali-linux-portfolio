@@ -12,8 +12,18 @@
     }
   },
   "urls": [
-    "http://localhost:3000",
-    "http://localhost:3000/apps"
+    "http://localhost:3000/",
+    "http://localhost:3000/apps",
+    "http://localhost:3000/apps/chess",
+    "http://localhost:3000/apps/sudoku",
+    "http://localhost:3000/apps/youtube",
+    "http://localhost:3000/apps/vscode",
+    "http://localhost:3000/apps/spotify",
+    "http://localhost:3000/apps/x",
+    "http://localhost:3000/apps/chrome",
+    "http://localhost:3000/apps/trash",
+    "http://localhost:3000/apps/gedit",
+    "http://localhost:3000/apps/todoist"
   ],
   "scenarios": [
     {},
