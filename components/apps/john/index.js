@@ -7,7 +7,7 @@ import {
   generateIncrementalCandidates,
   parsePotfile,
 } from './utils';
-import FormError from '../../ui/FormError';
+import FormError from '@/components/ui/FormError';
 import StatsChart from '../../StatsChart';
 
 // Enhanced John the Ripper interface that supports rule uploads,

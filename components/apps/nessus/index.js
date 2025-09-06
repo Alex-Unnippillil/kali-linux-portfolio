@@ -4,7 +4,7 @@ import HostBubbleChart from './HostBubbleChart';
 import PluginFeedViewer from './PluginFeedViewer';
 import ScanComparison from './ScanComparison';
 import PluginScoreHeatmap from './PluginScoreHeatmap';
-import FormError from '../../ui/FormError';
+import FormError from '@/components/ui/FormError';
 
 // helpers for persistent storage of jobs and false positives
 export const loadJobDefinitions = () => {

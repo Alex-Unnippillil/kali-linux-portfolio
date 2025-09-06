@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import FormError from '../../ui/FormError';
+import FormError from '@/components/ui/FormError';
 import { copyToClipboard } from '../../../utils/clipboard';
 import { openMailto } from '../../../utils/mailto';
 import { contactSchema } from '../../../utils/contactSchema';
