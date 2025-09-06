@@ -199,7 +199,12 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault: () => {},
+        stopPropagation: () => {},
+      } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
@@ -252,6 +257,36 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBeNull();
     expect(ref.current!.state.width).toBe(60);
     expect(ref.current!.state.height).toBe(85);
+  });
+});
+
+describe('Window system menu', () => {
+  it('toggles always on top with Alt+Space menu', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+
+    fireEvent.keyDown(winEl, { altKey: true, code: 'Space', key: ' ' });
+    const menuItem = screen.getByRole('menuitemcheckbox', { name: /Always on Top/i });
+    expect(menuItem).toHaveAttribute('aria-checked', 'false');
+    fireEvent.click(menuItem);
+
+    fireEvent.keyDown(winEl, { altKey: true, code: 'Space', key: ' ' });
+    const menuItem2 = screen.getByRole('menuitemcheckbox', { name: /Always on Top/i });
+    expect(menuItem2).toHaveAttribute('aria-checked', 'true');
   });
 });
 
