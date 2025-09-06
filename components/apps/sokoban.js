@@ -5,11 +5,6 @@ import levelPack from './sokoban_levels.json';
 
 const TILE = 32;
 
-// Provide a lightweight structuredClone polyfill for browsers that lack support
-if (typeof globalThis.structuredClone !== 'function') {
-  globalThis.structuredClone = (val) => JSON.parse(JSON.stringify(val));
-}
-
 const parseLevel = (level) => {
   const board = level.map((r) => r.split(''));
   let player = { x: 0, y: 0 };

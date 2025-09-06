@@ -3,12 +3,7 @@ self.onmessage = async (e) => {
   const chars = charSet.split('');
   const width = Math.floor(bitmap.width / cellSize);
   const height = Math.floor(bitmap.height / cellSize);
-  let canvas;
-  if (typeof OffscreenCanvas !== 'undefined') {
-    canvas = new OffscreenCanvas(width, height);
-  } else {
-    canvas = new OffscreenCanvas(width, height); // rely on polyfill? fallback
-  }
+  const canvas = new OffscreenCanvas(width, height);
   const ctx = canvas.getContext('2d');
   ctx.drawImage(bitmap, 0, 0, width, height);
   const imageData = ctx.getImageData(0, 0, width, height);
