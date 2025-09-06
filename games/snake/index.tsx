@@ -4,6 +4,7 @@ import React, { useRef, useEffect, useState } from "react";
 import GameShell from "../../components/games/GameShell";
 import usePersistentState from "../../hooks/usePersistentState";
 import useCanvasResize from "../../hooks/useCanvasResize";
+import useRafInterval from "../../hooks/useRafInterval";
 import { DEFAULT_GRID_SIZE, createState, step, GameState } from "./logic";
 
 const CELL_SIZE = 16;
@@ -31,9 +32,9 @@ const Snake = () => {
     runningRef.current = true;
   }, [wrap, gridSize]);
 
-  // game loop
-  useEffect(() => {
-    const id = setInterval(() => {
+  // game loop using requestAnimationFrame
+  useRafInterval(
+    () => {
       setState((s) => {
         if (!runningRef.current) return s;
         const result = step(s);
@@ -46,9 +47,9 @@ const Snake = () => {
         }
         return result.state;
       });
-    }, speed);
-    return () => clearInterval(id);
-  }, [speed]);
+    },
+    speed,
+  );
 
   // food spawn animation
   useEffect(() => {
