@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useSettings } from './useSettings';
+import { isBrowser } from '../utils/env';
 
 export default function usePrefersReducedMotion() {
   const { reducedMotion } = useSettings();
   const [prefersReduced, setPrefersReduced] = useState(false);
 
   useEffect(() => {
+    if (!isBrowser()) return;
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     const update = () => setPrefersReduced(mq.matches);
     update();

@@ -1,4 +1,7 @@
 (function () {
+  function isBrowser() {
+    return typeof window !== 'undefined';
+  }
   var THEME_KEY = 'app:theme';
   try {
     var stored = null;
@@ -7,7 +10,7 @@
     }
 
     var prefersDark = false;
-    if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+    if (isBrowser() && typeof window.matchMedia === 'function') {
       prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
 

@@ -3,6 +3,7 @@
 import { get, set, del } from 'idb-keyval';
 import { getTheme, setTheme } from './theme';
 import { safeLocalStorage } from './safeStorage';
+import { isBrowser } from './env';
 
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
@@ -50,7 +51,7 @@ export async function setDensity(density) {
 }
 
 export async function getReducedMotion() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.reducedMotion;
+  if (!isBrowser()) return DEFAULT_SETTINGS.reducedMotion;
   const stored = window.localStorage.getItem('reduced-motion');
   if (stored !== null) {
     return stored === 'true';
