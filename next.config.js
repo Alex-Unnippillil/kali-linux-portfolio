@@ -67,8 +67,10 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   sw: 'sw.js',
   disable: process.env.VERCEL_ENV !== 'production',
   buildExcludes: [/dynamic-css-manifest\.json$/],
+  fallbacks: {
+    document: '/offline.html',
+  },
   workboxOptions: {
-    navigateFallback: '/offline.html',
     additionalManifestEntries: [
       { url: '/', revision: null },
       { url: '/feeds', revision: null },
