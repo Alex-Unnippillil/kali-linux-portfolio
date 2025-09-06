@@ -81,6 +81,8 @@ const withPWA = require('@ducanh2912/next-pwa').default({
       { url: '/offline.html', revision: null },
       { url: '/manifest.webmanifest', revision: null },
     ],
+    // Cache only images and fonts to ensure app shell updates while assets work offline
+    runtimeCaching: require('./cache.js'),
   },
 });
 
