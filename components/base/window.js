@@ -6,9 +6,11 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import { SettingsContext } from '../../hooks/useSettings';
 import styles from './window.module.css';
 
 export class Window extends Component {
+    static contextType = SettingsContext;
     constructor(props) {
         super(props);
         this.id = null;
@@ -468,12 +470,21 @@ export class Window extends Component {
 
     closeWindow = () => {
         this.setWinowsPosition();
-        this.setState({ closed: true }, () => {
+        const reduced = this.context?.reducedMotion;
+        const cleanup = () => {
             this.deactivateOverlay();
             this.props.hideSideBar(this.id, false);
+        };
+        if (reduced) {
+            cleanup();
+            this.props.closed(this.id);
+            return;
+        }
+        this.setState({ closed: true }, () => {
+            cleanup();
             setTimeout(() => {
                 this.props.closed(this.id)
-            }, 300) // after 300ms this window will be unmounted from parent (Desktop)
+            }, 300); // after 300ms this window will be unmounted from parent (Desktop)
         });
     }
 

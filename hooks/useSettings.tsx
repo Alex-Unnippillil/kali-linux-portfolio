@@ -156,6 +156,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveWallpaper(wallpaper);
   }, [wallpaper]);
 
+  // Update reduced motion setting when system preference changes
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    // Skip if user has explicitly chosen a preference
+    if (window.localStorage.getItem('reduced-motion') !== null) return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setReducedMotion(mq.matches);
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {
       regular: {
