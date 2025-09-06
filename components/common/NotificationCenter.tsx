@@ -4,6 +4,7 @@ import React, {
   useEffect,
   useState,
 } from 'react';
+import usePersistentState from '../../hooks/usePersistentState';
 
 export interface AppNotification {
   id: string;
@@ -37,15 +38,52 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({
   >({});
   const [log, setLog] = useState<LogEntry[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>('general');
-  const [doNotDisturb, setDoNotDisturb] = useState(false);
+  const [doNotDisturb, setDoNotDisturb] = usePersistentState<boolean>(
+    'notifications-dnd',
+    false,
+  );
   const [position, setPosition] = useState<Position>('top-right');
+  const [appSettings, setAppSettings] = usePersistentState<
+    Record<string, { enabled: boolean; urgency: string }>
+  >('notification-app-settings', {});
+  const [quietStart, setQuietStart] = usePersistentState<string>(
+    'notification-quiet-start',
+    '22:00',
+  );
+  const [quietEnd, setQuietEnd] = usePersistentState<string>(
+    'notification-quiet-end',
+    '07:00',
+  );
+
+  const isQuietHours = useCallback(() => {
+    if (!quietStart || !quietEnd) return false;
+    const now = new Date();
+    const [sH, sM] = quietStart.split(':').map(Number);
+    const [eH, eM] = quietEnd.split(':').map(Number);
+    const start = new Date();
+    start.setHours(sH, sM, 0, 0);
+    const end = new Date();
+    end.setHours(eH, eM, 0, 0);
+    if (start <= end) {
+      return now >= start && now <= end;
+    }
+    return now >= start || now <= end;
+  }, [quietStart, quietEnd]);
 
   const pushNotification = useCallback(
     (appId: string, message: string) => {
       const id = `${Date.now()}-${Math.random()}`;
       const entry: LogEntry = { id, message, date: Date.now(), appId };
       setLog(prev => [...prev, entry]);
-      if (doNotDisturb) return;
+      setAppSettings(prev => {
+        if (prev[appId]) return prev;
+        return { ...prev, [appId]: { enabled: true, urgency: 'normal' } };
+      });
+      const settings = appSettings[appId] ?? {
+        enabled: true,
+        urgency: 'normal',
+      };
+      if (doNotDisturb || isQuietHours() || !settings.enabled) return;
       setNotifications(prev => {
         const list = prev[appId] ?? [];
         const next = {
@@ -78,7 +116,7 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({
         });
       }, 5000);
     },
-    [doNotDisturb]
+    [doNotDisturb, appSettings, isQuietHours, setAppSettings]
   );
 
   const clearNotifications = useCallback((appId?: string) => {
@@ -121,20 +159,41 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({
     if (activeTab === 'applications') {
       return (
         <>
-          {Object.entries(notifications)
-            .filter(([id]) => id !== 'general')
-            .map(([appId, list]) => (
-              <section key={appId} className="notification-group">
-                <h3>{appId}</h3>
-                <ul>
-                  {list.map(n => (
-                    <li key={n.id} className={n.closing ? 'fade' : ''}>
-                      {n.message}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ))}
+          {Object.entries(appSettings).map(([appId, settings]) => (
+            <section key={appId} className="notification-group">
+              <h3>{appId}</h3>
+              <label>
+                <input
+                  type="checkbox"
+                  aria-label="Enable"
+                  checked={settings.enabled}
+                  onChange={e =>
+                    setAppSettings(prev => ({
+                      ...prev,
+                      [appId]: { ...settings, enabled: e.target.checked },
+                    }))
+                  }
+                />
+                Enabled
+              </label>
+              <label>
+                Urgency
+                <select
+                  value={settings.urgency}
+                  onChange={e =>
+                    setAppSettings(prev => ({
+                      ...prev,
+                      [appId]: { ...settings, urgency: e.target.value },
+                    }))
+                  }
+                >
+                  <option value="low">Low</option>
+                  <option value="normal">Normal</option>
+                  <option value="high">High</option>
+                </select>
+              </label>
+            </section>
+          ))}
         </>
       );
     }
@@ -183,14 +242,29 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({
               Log
             </button>
           </div>
-          <label>
+          <button
+            type="button"
+            onClick={() => setDoNotDisturb(v => !v)}
+            aria-label="Toggle Do Not Disturb"
+            className="notification-bell"
+          >
+            {doNotDisturb ? '🔕' : '🔔'}
+          </button>
+          <div className="quiet-hours">
+            <span>Quiet Hours</span>
             <input
-              type="checkbox"
-              checked={doNotDisturb}
-              onChange={e => setDoNotDisturb(e.target.checked)}
+              type="time"
+              aria-label="Quiet hours start"
+              value={quietStart}
+              onChange={e => setQuietStart(e.target.value)}
             />
-            Do Not Disturb
-          </label>
+            <input
+              type="time"
+              aria-label="Quiet hours end"
+              value={quietEnd}
+              onChange={e => setQuietEnd(e.target.value)}
+            />
+          </div>
           <select
             value={position}
             onChange={e => setPosition(e.target.value as Position)}
