@@ -20,7 +20,7 @@ function fuzzyHighlight(text, query) {
   return { matched: qi === q.length, nodes: result };
 }
 
-export default function AppGrid({ openApp }) {
+export default function AppGrid({ openApp, onFocusSidebar }) {
   const [query, setQuery] = useState('');
   const gridRef = useRef(null);
   const columnCountRef = useRef(1);
@@ -51,12 +51,24 @@ export default function AppGrid({ openApp }) {
 
   const handleKeyDown = useCallback(
     (e) => {
+      if (e.key === 'Tab' && e.shiftKey) {
+        e.preventDefault();
+        onFocusSidebar && onFocusSidebar();
+        return;
+      }
       if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
       e.preventDefault();
       const colCount = columnCountRef.current;
       let idx = focusedIndex;
       if (e.key === 'ArrowRight') idx = Math.min(idx + 1, filtered.length - 1);
-      if (e.key === 'ArrowLeft') idx = Math.max(idx - 1, 0);
+      if (e.key === 'ArrowLeft') {
+        const col = idx % colCount;
+        if (col === 0) {
+          onFocusSidebar && onFocusSidebar();
+          return;
+        }
+        idx = Math.max(idx - 1, 0);
+      }
       if (e.key === 'ArrowDown') idx = Math.min(idx + colCount, filtered.length - 1);
       if (e.key === 'ArrowUp') idx = Math.max(idx - colCount, 0);
       setFocusedIndex(idx);
@@ -68,7 +80,7 @@ export default function AppGrid({ openApp }) {
         el?.focus();
       }, 0);
     },
-    [filtered, focusedIndex]
+    [filtered, focusedIndex, onFocusSidebar]
   );
 
   const Cell = ({ columnIndex, rowIndex, style, data }) => {
@@ -96,7 +108,7 @@ export default function AppGrid({ openApp }) {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
-      <div className="w-full flex-1 h-[70vh] outline-none" onKeyDown={handleKeyDown}>
+      <div id="app-grid" className="w-full flex-1 h-[70vh] outline-none" onKeyDown={handleKeyDown}>
         <AutoSizer>
           {({ height, width }) => {
             const columnCount = getColumnCount(width);

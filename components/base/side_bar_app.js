@@ -90,6 +90,7 @@ export class SideBarApp extends Component {
             <button
                 type="button"
                 aria-label={this.props.title}
+                role="menuitem"
                 data-context="app"
                 data-app-id={this.props.id}
                 onClick={this.openApp}
