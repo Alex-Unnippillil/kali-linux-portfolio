@@ -1,5 +1,6 @@
 import React, { Component } from 'react'
 import Image from 'next/image'
+import prefetchDynamicImport from '../../utils/prefetchDynamicImport'
 
 export class UbuntuApp extends Component {
     constructor() {
@@ -26,7 +27,7 @@ export class UbuntuApp extends Component {
 
     handlePrefetch = () => {
         if (!this.state.prefetched && typeof this.props.prefetch === 'function') {
-            this.props.prefetch();
+            prefetchDynamicImport(this.props.prefetch, `/apps/${this.props.id}.js`);
             this.setState({ prefetched: true });
         }
     }

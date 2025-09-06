@@ -12,12 +12,27 @@ import { useSettings } from '../../../hooks/useSettings';
 
 const CytoscapeComponent = dynamic(
   async () => {
-    const cytoscape = (await import('cytoscape')).default;
-    const coseBilkent = (await import('cytoscape-cose-bilkent')).default;
+    const cytoscape = (
+      await import(
+        /* webpackChunkName: "cytoscape-core" */ 'cytoscape'
+      )
+    ).default;
+    const coseBilkent = (
+      await import(
+        /* webpackChunkName: "cytoscape-cose" */ 'cytoscape-cose-bilkent'
+      )
+    ).default;
     cytoscape.use(coseBilkent);
-    return (await import('react-cytoscapejs')).default;
+    return (
+      await import(
+        /* webpackChunkName: "react-cytoscapejs" */ 'react-cytoscapejs'
+      )
+    ).default;
   },
-  { ssr: false },
+  {
+    ssr: false,
+    loading: () => <p>Loading graph...</p>,
+  },
 );
 
 // Built-in modules with simple schemas and canned demo data. Each schema defines
