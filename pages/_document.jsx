@@ -1,4 +1,10 @@
 import Document, { Html, Head, Main, NextScript } from 'next/document';
+import { Ubuntu } from 'next/font/google';
+
+const ubuntu = Ubuntu({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '700'],
+});
 
 class MyDocument extends Document {
   /**
@@ -20,7 +26,7 @@ class MyDocument extends Document {
           <meta name="theme-color" content="#0f1317" />
           <script nonce={nonce} src="/theme.js" />
         </Head>
-        <body>
+        <body className={ubuntu.className}>
           <Main />
           <NextScript nonce={nonce} />
         </body>

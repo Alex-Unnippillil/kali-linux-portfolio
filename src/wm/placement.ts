@@ -1,4 +1,4 @@
-import type { WorkspaceMargins } from '@/src/state/workspace';
+import type { WorkspaceMargins } from '../state/workspace';
 
 export interface Rect {
   x: number;

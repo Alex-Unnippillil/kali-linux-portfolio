@@ -3,7 +3,7 @@
 // Allows external badges and same-origin PDF embedding.
 // Update README (section "CSP External Domains") when editing domains below.
 
-const { validateServerEnv: validateEnv } = require('./lib/validate.js');
+const { validateServerEnv } = require('./lib/validate.js');
 
 const ContentSecurityPolicy = [
   "default-src 'self'",
@@ -49,7 +49,7 @@ const securityHeaders = [
   },
   {
     key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=*',
+    value: 'camera=(), microphone=(), geolocation=*, interest-cohort=()',
   },
   {
     // Allow same-origin framing so the PDF resume renders in an <object>
@@ -60,39 +60,50 @@ const securityHeaders = [
 
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
+  openAnalyzer: false,
+  analyzerMode: 'json',
 });
+
+// Prefix all PWA caches with the current build ID so that each deployment
+// uses its own set of caches and outdated entries are naturally discarded.
+const buildId =
+  process.env.NEXT_BUILD_ID || process.env.BUILD_ID || 'dev';
 
 const withPWA = require('@ducanh2912/next-pwa').default({
   dest: 'public',
   sw: 'sw.js',
   disable: process.env.VERCEL_ENV !== 'production',
   buildExcludes: [/dynamic-css-manifest\.json$/],
+  fallbacks: {
+    document: '/offline.html',
+  },
   workboxOptions: {
+    cacheId: buildId,
     navigateFallback: '/offline.html',
+
     additionalManifestEntries: [
-      { url: '/', revision: null },
-      { url: '/feeds', revision: null },
-      { url: '/about', revision: null },
-      { url: '/projects', revision: null },
-      { url: '/projects.json', revision: null },
-      { url: '/apps', revision: null },
-      { url: '/apps/weather', revision: null },
-      { url: '/apps/terminal', revision: null },
-      { url: '/apps/checkers', revision: null },
-      { url: '/offline.html', revision: null },
-      { url: '/manifest.webmanifest', revision: null },
       { url: '/favicon.ico', revision: null },
       { url: '/favicon.svg', revision: null },
       { url: '/images/logos/fevicon.png', revision: null },
       { url: '/images/logos/logo_1024.png', revision: null },
     ],
+
     // Cache only images and fonts to ensure app shell updates while assets work offline
-    runtimeCaching: require('./cache.js'),
+    runtimeCaching: require('./cache.js')(buildId),
+
   },
 });
 
 const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 const isProd = process.env.NODE_ENV === 'production';
+
+if (isProd) {
+  try {
+    validateServerEnv(process.env);
+  } catch {
+    console.warn('Missing env vars; running without validation');
+  }
+}
 
 // Merge experiment settings and production optimizations into a single function.
 function configureWebpack(config, { isServer }) {
@@ -121,11 +132,7 @@ function configureWebpack(config, { isServer }) {
   return config;
 }
 
-try {
-  validateEnv?.(process.env);
-} catch {
-  console.warn('Missing env vars; running without validation');
-}
+
 
 module.exports = withBundleAnalyzer(
   withPWA({
@@ -138,6 +145,9 @@ module.exports = withBundleAnalyzer(
     },
     images: {
       unoptimized: true,
+
+      
+      
       remotePatterns: [
         {
           protocol: 'https',
@@ -180,6 +190,7 @@ module.exports = withBundleAnalyzer(
           pathname: '/**',
         },
       ],
+
       localPatterns: [
         { pathname: '/themes/Yaru/apps/**' },
         { pathname: '/icons/**' },
@@ -219,7 +230,7 @@ module.exports = withBundleAnalyzer(
                 ],
               },
               {
-                source: '/fonts/(.*)',
+                source: '/fonts/:path*',
                 headers: [
                   {
                     key: 'Cache-Control',
@@ -228,11 +239,11 @@ module.exports = withBundleAnalyzer(
                 ],
               },
               {
-                source: '/images/(.*)',
+                source: '/images/:path*',
                 headers: [
                   {
                     key: 'Cache-Control',
-                    value: 'public, max-age=86400',
+                    value: 'public, max-age=86400, immutable',
                   },
                 ],
               },

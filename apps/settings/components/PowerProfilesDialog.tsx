@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Modal from '../../../components/base/Modal';
-import type { PowerSettings, PowerProfile } from '@/src/lib/power/schema';
+import type { PowerSettings, PowerProfile } from '../../../src/lib/power/schema';
 
 interface Props {
   open: boolean;
