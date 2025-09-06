@@ -1,5 +1,6 @@
 "use client";
 
+import { isBrowser } from '@/utils/env';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -43,7 +44,7 @@ const PipPortalProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
   const open = useCallback(
     async (node: React.ReactNode) => {
-      if (typeof window === 'undefined' || !window.documentPictureInPicture) return null;
+      if (!isBrowser() || !window.documentPictureInPicture) return null;
 
       let win = pipWindowRef.current;
       if (!win || win.closed) {

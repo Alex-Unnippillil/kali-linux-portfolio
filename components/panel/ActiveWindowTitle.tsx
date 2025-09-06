@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { isBrowser } from '@/utils/env';
 
 const PANEL_PREFIX = "xfce.panel.";
 
@@ -31,7 +32,7 @@ export default function ActiveWindowTitle({
   close,
 }: Props) {
   const [buttons] = useState<ButtonSettings>(() => {
-    if (typeof window === "undefined") {
+    if (!isBrowser()) {
       return { minimize: false, maximize: false, close: false };
     }
     try {

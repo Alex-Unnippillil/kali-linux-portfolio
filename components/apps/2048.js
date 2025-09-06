@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import { useEffect, useCallback, useState, useRef } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import useOPFS from '../../hooks/useOPFS.js';
@@ -288,7 +289,7 @@ const Game2048 = () => {
     }
   }, [animCells, mergeCells]);
 
-  const today = typeof window !== 'undefined' ? new Date().toISOString().slice(0, 10) : '';
+  const today = isBrowser() ? new Date().toISOString().slice(0, 10) : '';
 
   useEffect(() => {
     if (typeof Worker !== 'function') return;
@@ -377,7 +378,7 @@ const Game2048 = () => {
         if (merged) vibrate(50);
         if (mergedCells.length > 1) {
           setCombo((c) => c + 1);
-          if (typeof window !== 'undefined') {
+          if (isBrowser()) {
             import('canvas-confetti').then((m) => {
               try {
                 m.default({ particleCount: 80, spread: 60 });

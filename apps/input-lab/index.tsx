@@ -1,5 +1,6 @@
 'use client';
 
+import { isBrowser } from '@/utils/env';
 import React, { useEffect, useState } from 'react';
 import { evaluate } from 'mathjs';
 
@@ -42,7 +43,7 @@ export default function InputLab() {
 
   // Load saved text on mount
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     const saved = window.localStorage.getItem(SAVE_KEY);
     if (saved) setText(saved);
   }, []);
@@ -51,7 +52,7 @@ export default function InputLab() {
     const val = e.target.value;
     setText(val);
     setError('');
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       window.localStorage.setItem(SAVE_KEY, val);
     }
   };

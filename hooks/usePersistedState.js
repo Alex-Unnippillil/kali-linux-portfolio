@@ -1,11 +1,12 @@
 "use client";
 
+import { isBrowser } from '@/utils/env';
 import { useState, useEffect } from 'react';
 
 // Stores state in localStorage, falling back when unavailable.
 export default function usePersistedState(key, defaultValue) {
   const [value, setValue] = useState(() => {
-    if (typeof window === 'undefined') return defaultValue;
+    if (!isBrowser()) return defaultValue;
     try {
       const item = window.localStorage.getItem(key);
       return item ? JSON.parse(item) : defaultValue;

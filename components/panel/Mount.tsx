@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useState } from 'react';
 import volumesData from '../../data/fstab.json';
 
@@ -18,7 +19,7 @@ const MountPanel: React.FC = () => {
       const updated = [...volumes];
       updated[index] = { ...volume, mounted: true };
       setVolumes(updated);
-      if (typeof window !== 'undefined') {
+      if (isBrowser()) {
         try {
           window.open(`thunar://${volume.mountPoint}`);
         } catch (err) {

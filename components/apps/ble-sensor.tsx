@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useState, useEffect, useRef } from 'react';
 import FormError from '../ui/FormError';
 import {
@@ -31,7 +32,7 @@ const BleSensor: React.FC = () => {
 
   useEffect(() => {
     refreshProfiles();
-    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+    if (isBrowser() && 'BroadcastChannel' in window) {
       const bc = new BroadcastChannel('ble-profiles');
       bc.onmessage = () => refreshProfiles();
       bcRef.current = bc;

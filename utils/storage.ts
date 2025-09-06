@@ -1,5 +1,6 @@
 "use client";
 
+import { isBrowser } from '@/utils/env';
 import { get, set, update } from 'idb-keyval';
 
 const PROGRESS_KEY = 'progress';
@@ -11,37 +12,37 @@ export type Keybinds = Record<string, string>;
 export type Replay = { id: string; data: unknown };
 
 export const getProgress = async (): Promise<ProgressData> =>
-  (typeof window === 'undefined'
+  (!isBrowser()
     ? {}
     : (await get<ProgressData>(PROGRESS_KEY)) || {});
 
 export const setProgress = async (progress: ProgressData): Promise<void> => {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   await set(PROGRESS_KEY, progress);
 };
 
 export const getKeybinds = async (): Promise<Keybinds> =>
-  (typeof window === 'undefined'
+  (!isBrowser()
     ? {}
     : (await get<Keybinds>(KEYBINDS_KEY)) || {});
 
 export const setKeybinds = async (keybinds: Keybinds): Promise<void> => {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   await set(KEYBINDS_KEY, keybinds);
 };
 
 export const getReplays = async (): Promise<Replay[]> =>
-  (typeof window === 'undefined'
+  (!isBrowser()
     ? []
     : (await get<Replay[]>(REPLAYS_KEY)) || []);
 
 export const saveReplay = async (replay: Replay): Promise<void> => {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   await update<Replay[]>(REPLAYS_KEY, (replays = []) => [...replays, replay]);
 };
 
 export const clearReplays = async (): Promise<void> => {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   await set(REPLAYS_KEY, []);
 };
 

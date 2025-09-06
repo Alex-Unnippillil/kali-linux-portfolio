@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useState, useEffect, useRef } from 'react';
 import TaskOverview from './task-overview';
 import PolicySettings from './policy-settings';
@@ -26,7 +27,7 @@ const profileTabs = [
 
 // Simple helper for notifications that falls back to alert()
 const notify = (title, body) => {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   if ('Notification' in window && Notification.permission === 'granted') {
     new Notification(title, { body });
   } else {
@@ -169,7 +170,7 @@ const hostReports = [
 
 // Persist in-progress scans so they can resume after reload
 const loadSession = () => {
-  if (typeof window === 'undefined') return null;
+  if (!isBrowser()) return null;
   try {
     return JSON.parse(localStorage.getItem('openvas/session') || 'null');
   } catch {
@@ -178,12 +179,12 @@ const loadSession = () => {
 };
 
 const saveSession = (session) => {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   localStorage.setItem('openvas/session', JSON.stringify(session));
 };
 
 const clearSession = () => {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   localStorage.removeItem('openvas/session');
 };
 
@@ -206,7 +207,7 @@ const OpenVASApp = () => {
   const sessionRef = useRef({});
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       const media = window.matchMedia('(prefers-reduced-motion: reduce)');
       reduceMotion.current = media.matches;
       if (typeof Worker === 'function') {

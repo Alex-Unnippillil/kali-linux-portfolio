@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import PseudoDisasmViewer from './PseudoDisasmViewer';
 import FunctionTree from './FunctionTree';
@@ -9,7 +10,7 @@ import { Capstone, Const, loadCapstone } from 'capstone-wasm';
 const DEFAULT_WASM = '/wasm/ghidra.wasm';
 
 async function loadCapstoneModule() {
-  if (typeof window === 'undefined') return null;
+  if (!isBrowser()) return null;
   await loadCapstone();
   return { Capstone, Const };
 }
@@ -191,7 +192,7 @@ export default function GhidraApp() {
 
   // S3: Offload hex generation to worker only when needed
   useEffect(() => {
-    if (typeof window !== 'undefined' && typeof Worker === 'function') {
+    if (isBrowser() && typeof Worker === 'function') {
       hexWorkerRef.current = new Worker(new URL('./hexWorker.js', import.meta.url));
       hexWorkerRef.current.onmessage = (e) => {
         setHexMap((m) => ({ ...m, [e.data.id]: e.data.hex }));

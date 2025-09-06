@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import fs from 'fs';
 import path from 'path';
 import { GetStaticPaths, GetStaticProps } from 'next';
@@ -17,7 +18,7 @@ interface DocProps {
 
 export default function DocPage({ html, toc }: DocProps) {
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.location.hash) {
+    if (isBrowser() && window.location.hash) {
       const el = document.getElementById(window.location.hash.slice(1));
       el?.scrollIntoView();
     }

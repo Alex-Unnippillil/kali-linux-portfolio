@@ -7,7 +7,7 @@ let notesContainer = null;
 let addNoteBtn = null;
 
 function initDom() {
-  if (!isBrowser) return;
+  if (!isBrowser()) return;
   notesContainer = document.getElementById('notes');
   addNoteBtn = document.getElementById('add-note');
 }
@@ -183,7 +183,7 @@ async function init() {
   }
 }
 
-if (isBrowser && addNoteBtn) {
+if (isBrowser() && addNoteBtn) {
   addNoteBtn.addEventListener('click', addNote);
   void init();
 }

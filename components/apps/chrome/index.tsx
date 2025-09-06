@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, {
   useEffect,
   useRef,
@@ -50,7 +51,7 @@ const formatUrl = (value: string) => {
 };
 
 const readTabs = (): { tabs: TabData[]; active: number } => {
-  if (typeof window === 'undefined') return { tabs: [], active: 0 };
+  if (!isBrowser()) return { tabs: [], active: 0 };
   try {
     const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '');
     return data || { tabs: [], active: 0 };
@@ -66,7 +67,7 @@ const saveTabs = (tabs: TabData[], active: number) => {
 const Chrome: React.FC = () => {
   const { tabs: storedTabs, active: storedActive } = readTabs();
   const sessionUrl =
-    typeof window !== 'undefined' ? sessionStorage.getItem('chrome-last-url') : null;
+    isBrowser() ? sessionStorage.getItem('chrome-last-url') : null;
   const [tabs, setTabs] = useState<TabData[]>(
     storedTabs.length
       ? storedTabs.map((t) => ({ blocked: false, muted: false, ...t }))

@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 export interface ScheduledScan {
   id: string;
   schedule: string;
@@ -12,7 +13,7 @@ const STORAGE_KEY = 'scanSchedules';
 const runningScans: RunningScan[] = [];
 
 export const loadScheduledScans = (): ScheduledScan[] => {
-  if (typeof window === 'undefined') return [];
+  if (!isBrowser()) return [];
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
   } catch {
@@ -21,7 +22,7 @@ export const loadScheduledScans = (): ScheduledScan[] => {
 };
 
 const persistSchedules = (jobs: ScheduledScan[]) => {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(jobs));
 };
 

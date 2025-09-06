@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import { create, all } from 'mathjs';
 
 const math = create(all);
@@ -28,7 +29,7 @@ export function evaluate(expression: string, opts: EvalOptions = {}) {
   const prepared = preprocess(expression, base);
   let scope: Record<string, any> = {};
   try {
-    const raw = typeof window === 'undefined' ? null : localStorage.getItem('calc-vars');
+    const raw = !isBrowser() ? null : localStorage.getItem('calc-vars');
     scope = raw ? JSON.parse(raw) : {};
     Object.keys(scope).forEach((k) => {
       const v = scope[k];

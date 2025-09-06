@@ -1,5 +1,6 @@
 "use client";
 
+import { isBrowser } from '@/utils/env';
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
@@ -62,7 +63,7 @@ export default function YouTubePlayer({ videoId }) {
       });
     };
 
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       // Load the IFrame Player API script only after user interaction
       if (!window.YT) {
         const tag = document.createElement('script');

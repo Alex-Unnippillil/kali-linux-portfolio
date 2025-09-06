@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import { useEffect, useState } from 'react';
 import fs from 'fs';
 import path from 'path';
@@ -62,10 +63,10 @@ export default function Clipman({
   const [settings, setSettings] = useState<ClipmanSettings>(() => loadData().settings);
 
   const handleUrl = onUrl || ((url: string) => {
-    if (typeof window !== 'undefined') window.open(url, '_blank');
+    if (isBrowser()) window.open(url, '_blank');
   });
   const handleEmail = onEmail || ((email: string) => {
-    if (typeof window !== 'undefined') window.location.href = `mailto:${email}`;
+    if (isBrowser()) window.location.href = `mailto:${email}`;
   });
   const handleHex = onHex || ((hex: string) => {
     // default handler just logs

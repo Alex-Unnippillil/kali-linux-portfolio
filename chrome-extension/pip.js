@@ -1,17 +1,18 @@
+import { isBrowser } from '@/utils/env';
 const omnibox = (() => {
-  if (typeof window !== 'undefined') {
+  if (isBrowser()) {
     return document.getElementById('omnibox');
   }
   return null;
 })();
 const playBtn = (() => {
-  if (typeof window !== 'undefined') {
+  if (isBrowser()) {
     return document.getElementById('play');
   }
   return null;
 })();
 const pauseBtn = (() => {
-  if (typeof window !== 'undefined') {
+  if (isBrowser()) {
     return document.getElementById('pause');
   }
   return null;

@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import GameLayout from './GameLayout';
 import { createDeck, PATTERN_THEMES, fisherYatesShuffle } from './memory_utils';
@@ -82,7 +83,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
   useEffect(() => () => clearTimeout(previewTimeout.current), []);
 
   const beep = useCallback(() => {
-    if (!sound || typeof window === 'undefined') return;
+    if (!sound || !isBrowser()) return;
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = ctx.createOscillator();

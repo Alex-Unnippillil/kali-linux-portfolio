@@ -1,5 +1,6 @@
 'use client';
 
+import { isBrowser } from '@/utils/env';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { pointerHandlers } from '../../utils/pointer';
 import usePersistentState from '../../hooks/usePersistentState';
@@ -105,7 +106,7 @@ export default function CheckersPage() {
   );
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && typeof Worker === 'function') {
+    if (isBrowser() && typeof Worker === 'function') {
       workerRef.current = new Worker('/checkers-worker.js');
       workerRef.current.onmessage = (e: MessageEvent<Move>) => {
         const move = e.data;

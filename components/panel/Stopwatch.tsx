@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { isBrowser } from '@/utils/env';
 
 const STORAGE_KEY = "panel.stopwatch";
 
@@ -12,7 +13,7 @@ export default function Stopwatch() {
 
   // Load persisted state on mount
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (!isBrowser()) return;
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       try {
@@ -36,7 +37,7 @@ export default function Stopwatch() {
 
   // Persist state whenever it changes
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (!isBrowser()) return;
     const data = {
       elapsed,
       running,

@@ -1,5 +1,6 @@
 "use client";
 
+import { isBrowser } from '@/utils/env';
 import { get, set, del } from 'idb-keyval';
 import { getTheme, setTheme } from './theme';
 import { safeLocalStorage } from './safeStorage';
@@ -20,37 +21,37 @@ const DEFAULT_SETTINGS = {
 };
 
 export async function getAccent() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.accent;
+  if (!isBrowser()) return DEFAULT_SETTINGS.accent;
   return (await get('accent')) || DEFAULT_SETTINGS.accent;
 }
 
 export async function setAccent(accent) {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   await set('accent', accent);
 }
 
 export async function getWallpaper() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.wallpaper;
+  if (!isBrowser()) return DEFAULT_SETTINGS.wallpaper;
   return (await get('bg-image')) || DEFAULT_SETTINGS.wallpaper;
 }
 
 export async function setWallpaper(wallpaper) {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   await set('bg-image', wallpaper);
 }
 
 export async function getDensity() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.density;
+  if (!isBrowser()) return DEFAULT_SETTINGS.density;
   return window.localStorage.getItem('density') || DEFAULT_SETTINGS.density;
 }
 
 export async function setDensity(density) {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   window.localStorage.setItem('density', density);
 }
 
 export async function getReducedMotion() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.reducedMotion;
+  if (!isBrowser()) return DEFAULT_SETTINGS.reducedMotion;
   const stored = window.localStorage.getItem('reduced-motion');
   if (stored !== null) {
     return stored === 'true';
@@ -59,95 +60,95 @@ export async function getReducedMotion() {
 }
 
 export async function setReducedMotion(value) {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   window.localStorage.setItem('reduced-motion', value ? 'true' : 'false');
 }
 
 export async function getFontScale() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.fontScale;
+  if (!isBrowser()) return DEFAULT_SETTINGS.fontScale;
   const stored = window.localStorage.getItem('font-scale');
   return stored ? parseFloat(stored) : DEFAULT_SETTINGS.fontScale;
 }
 
 export async function setFontScale(scale) {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   window.localStorage.setItem('font-scale', String(scale));
 }
 
 export async function getHighContrast() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.highContrast;
+  if (!isBrowser()) return DEFAULT_SETTINGS.highContrast;
   return window.localStorage.getItem('high-contrast') === 'true';
 }
 
 export async function setHighContrast(value) {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   window.localStorage.setItem('high-contrast', value ? 'true' : 'false');
 }
 
 export async function getLargeHitAreas() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.largeHitAreas;
+  if (!isBrowser()) return DEFAULT_SETTINGS.largeHitAreas;
   return window.localStorage.getItem('large-hit-areas') === 'true';
 }
 
 export async function setLargeHitAreas(value) {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   window.localStorage.setItem('large-hit-areas', value ? 'true' : 'false');
 }
 
 export async function getHaptics() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.haptics;
+  if (!isBrowser()) return DEFAULT_SETTINGS.haptics;
   const val = window.localStorage.getItem('haptics');
   return val === null ? DEFAULT_SETTINGS.haptics : val === 'true';
 }
 
 export async function setHaptics(value) {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   window.localStorage.setItem('haptics', value ? 'true' : 'false');
 }
 
 export async function getPongSpin() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
+  if (!isBrowser()) return DEFAULT_SETTINGS.pongSpin;
   const val = window.localStorage.getItem('pong-spin');
   return val === null ? DEFAULT_SETTINGS.pongSpin : val === 'true';
 }
 
 export async function setPongSpin(value) {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   window.localStorage.setItem('pong-spin', value ? 'true' : 'false');
 }
 
 export async function getAllowNetwork() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.allowNetwork;
+  if (!isBrowser()) return DEFAULT_SETTINGS.allowNetwork;
   return window.localStorage.getItem('allow-network') === 'true';
 }
 
 export async function setAllowNetwork(value) {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
 export async function getNetworkTime() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.networkTime;
+  if (!isBrowser()) return DEFAULT_SETTINGS.networkTime;
   return window.localStorage.getItem('network-time') === 'true';
 }
 
 export async function setNetworkTime(value) {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   window.localStorage.setItem('network-time', value ? 'true' : 'false');
 }
 
 export async function getSymbolicTrayIcons() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.symbolicTrayIcons;
+  if (!isBrowser()) return DEFAULT_SETTINGS.symbolicTrayIcons;
   return window.localStorage.getItem('symbolic-tray-icons') === 'true';
 }
 
 export async function setSymbolicTrayIcons(value) {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   window.localStorage.setItem('symbolic-tray-icons', value ? 'true' : 'false');
 }
 
 export async function resetSettings() {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   await Promise.all([
     del('accent'),
     del('bg-image'),
@@ -211,7 +212,7 @@ export async function exportSettings() {
 }
 
 export async function importSettings(json) {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   let settings;
   try {
     settings = typeof json === 'string' ? JSON.parse(json) : json;
@@ -250,7 +251,7 @@ export async function importSettings(json) {
 }
 
 export async function exportPanel() {
-  if (typeof window === 'undefined') return JSON.stringify({ pinnedApps: [], panelSize: 16 });
+  if (!isBrowser()) return JSON.stringify({ pinnedApps: [], panelSize: 16 });
   let pinnedApps = [];
   try {
     pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]');
@@ -268,7 +269,7 @@ export async function exportPanel() {
 }
 
 export async function importPanel(json) {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   let data;
   try {
     data = typeof json === 'string' ? JSON.parse(json) : json;

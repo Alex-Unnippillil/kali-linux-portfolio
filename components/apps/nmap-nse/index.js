@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useEffect, useRef, useState } from 'react';
 import Toast from '../../ui/Toast';
 import DiscoveryMap from './DiscoveryMap';
@@ -131,7 +132,7 @@ const NmapNSEApp = () => {
     .trim();
 
   const copyCommand = async () => {
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       try {
         await navigator.clipboard.writeText(command);
         setToast('Command copied');
@@ -156,7 +157,7 @@ const NmapNSEApp = () => {
 
   const selectOutput = () => {
     const el = outputRef.current;
-    if (!el || typeof window === 'undefined') return;
+    if (!el || !isBrowser()) return;
     const range = document.createRange();
     range.selectNodeContents(el);
     const sel = window.getSelection();

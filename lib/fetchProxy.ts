@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 export interface FetchLog {
   id: number;
   url: string;
@@ -37,7 +38,7 @@ export function onFetchProxy(
   handler: (e: CustomEvent<FetchLog>) => void,
 ) {
   const event = `fetchproxy-${type}`;
-  if (typeof window !== 'undefined') {
+  if (isBrowser()) {
     window.addEventListener(event, handler as EventListener);
     return () => window.removeEventListener(event, handler as EventListener);
   }
@@ -45,7 +46,7 @@ export function onFetchProxy(
 }
 
 function notify(type: 'start' | 'end', record: FetchLog) {
-  if (typeof window !== 'undefined') {
+  if (isBrowser()) {
     window.dispatchEvent(new CustomEvent(`fetchproxy-${type}`, { detail: record }));
   }
 }

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { isBrowser } from '@/utils/env';
 
 interface ModalProps {
     isOpen: boolean;
@@ -33,7 +34,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot })
     const portalRef = useRef<HTMLDivElement | null>(null);
     const inertRootRef = useRef<HTMLElement | null>(null);
 
-    if (!portalRef.current && typeof document !== 'undefined') {
+    if (!portalRef.current && isBrowser()) {
         const el = document.createElement('div');
         portalRef.current = el;
         document.body.appendChild(el);

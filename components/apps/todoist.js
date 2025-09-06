@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as chrono from 'chrono-node';
 import { RRule } from 'rrule';
@@ -52,12 +53,12 @@ export default function Todoist() {
   const workerRef = useRef(null);
   const quickRef = useRef(null);
   const prefersReducedMotion = useRef(
-    typeof window !== 'undefined' &&
+    isBrowser() &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
   );
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       const data = localStorage.getItem(STORAGE_KEY);
       if (data) {
         try {
@@ -85,7 +86,7 @@ export default function Todoist() {
   }, []);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && typeof Worker === 'function') {
+    if (isBrowser() && typeof Worker === 'function') {
       workerRef.current = new Worker(new URL('./todoist.worker.js', import.meta.url));
       workerRef.current.onmessage = (e) => {
         const { groups: newGroups, taskTitle, to } = e.data || {};
@@ -106,7 +107,7 @@ export default function Todoist() {
   const finalizeMove = useCallback(
     (newGroups, taskTitle, to) => {
       setGroups(newGroups);
-      if (typeof window !== 'undefined') {
+      if (isBrowser()) {
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
         } catch {
@@ -160,7 +161,7 @@ export default function Todoist() {
 
   const updateGroups = (newGroups) => {
     setGroups(newGroups);
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
       } catch {
@@ -180,7 +181,7 @@ export default function Todoist() {
       ),
     };
     setGroups(newGroups);
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
       } catch {
@@ -306,7 +307,7 @@ export default function Todoist() {
       }),
     };
     setGroups(newGroups);
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
       } catch {
@@ -428,7 +429,7 @@ export default function Todoist() {
         const parsed = JSON.parse(reader.result);
         const newGroups = { ...initialGroups, ...parsed };
         setGroups(newGroups);
-        if (typeof window !== 'undefined') {
+        if (isBrowser()) {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
         }
       } catch {
@@ -552,7 +553,7 @@ export default function Todoist() {
           Today: [...groups.Today, ...imported],
         };
         setGroups(newGroups);
-        if (typeof window !== 'undefined') {
+        if (isBrowser()) {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
         }
       } catch {

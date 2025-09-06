@@ -1,5 +1,6 @@
 "use client";
 
+import { isBrowser } from '@/utils/env';
 import React, {
   useState,
   useEffect,
@@ -168,7 +169,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   useEffect(() => {
     try {
       const key = `seen_tutorial_${gameId}`;
-      if (typeof window !== 'undefined' && !window.localStorage.getItem(key)) {
+      if (isBrowser() && !window.localStorage.getItem(key)) {
         setShowHelp(true);
         window.localStorage.setItem(key, '1');
       }

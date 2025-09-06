@@ -1,4 +1,5 @@
 'use client';
+import { isBrowser } from '@/utils/env';
 import { useEffect, useState, useRef, RefObject } from 'react';
 import useIntersection from '../../hooks/useIntersection';
 
@@ -7,7 +8,7 @@ export default function TimerStopwatch() {
   const containerRef = useRef<HTMLDivElement>(null);
   const isVisible = useIntersection(containerRef as RefObject<Element>);
   useEffect(() => {
-    if (isVisible && typeof window !== 'undefined') {
+    if (isVisible && isBrowser()) {
       import('./main');
     }
   }, [isVisible]);

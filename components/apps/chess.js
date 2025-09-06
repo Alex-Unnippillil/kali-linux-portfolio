@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import { Chess } from "chess.js";
 import { suggestMoves } from "../../games/chess/engine/wasmEngine";
+import { isBrowser } from '@/utils/env';
 
 // 0x88 board representation utilities
 const EMPTY = 0;
@@ -306,9 +307,9 @@ const ChessGame = () => {
   const [showHints, setShowHints] = useState(false);
   const [mateSquares, setMateSquares] = useState([]);
   const [elo, setElo] = useState(() =>
-    typeof window === "undefined"
-      ? 1200
-      : Number(localStorage.getItem("chessElo") || 1200),
+    isBrowser()
+      ? Number(localStorage.getItem("chessElo") || 1200)
+      : 1200,
   );
   const animRef = useRef(null);
   const trailsRef = useRef([]);
@@ -324,7 +325,7 @@ const ChessGame = () => {
   const evalPercent = (1 / (1 + Math.exp(-displayEval / 200))) * 100;
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (!isBrowser()) return;
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
     reduceMotionRef.current = mq.matches;
     const handler = () => (reduceMotionRef.current = mq.matches);
@@ -546,7 +547,7 @@ const ChessGame = () => {
     const k = 32;
     const newElo = Math.round(elo + k * (score - expected));
     setElo(newElo);
-    if (typeof window !== "undefined")
+    if (isBrowser())
       localStorage.setItem("chessElo", String(newElo));
   };
 

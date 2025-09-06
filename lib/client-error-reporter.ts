@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 export interface ClientErrorPayload {
   message: string;
   stack?: string;
@@ -11,8 +12,8 @@ export async function reportClientError(error: Error, componentStack?: string) {
     message: error.message,
     stack: error.stack,
     componentStack,
-    url: typeof window !== 'undefined' ? window.location.href : '',
-    segment: typeof window !== 'undefined' ? window.location.pathname : '',
+    url: isBrowser() ? window.location.href : '',
+    segment: isBrowser() ? window.location.pathname : '',
   };
 
   if (process.env.NODE_ENV === 'development') {

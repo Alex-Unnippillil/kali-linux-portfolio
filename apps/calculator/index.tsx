@@ -1,4 +1,5 @@
 'use client';
+import { isBrowser } from '@/utils/env';
 import { useEffect } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import ModeSwitcher from './components/ModeSwitcher';
@@ -35,7 +36,7 @@ export default function Calculator() {
     let setBase: any;
 
     const load = async () => {
-      if (typeof window !== 'undefined' && !(window as any).math) {
+      if (isBrowser() && !(window as any).math) {
         await new Promise((resolve) => {
           const script = document.createElement('script');
           script.src =

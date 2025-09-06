@@ -1,13 +1,14 @@
+import { isBrowser } from '@/utils/env';
 (function () {
   var THEME_KEY = 'app:theme';
   try {
     var stored = null;
-    if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+    if (isBrowser() && typeof window.localStorage !== 'undefined') {
       stored = window.localStorage.getItem(THEME_KEY);
     }
 
     var prefersDark = false;
-    if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+    if (isBrowser() && typeof window.matchMedia === 'function') {
       prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
 

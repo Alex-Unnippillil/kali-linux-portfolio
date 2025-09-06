@@ -1,5 +1,6 @@
 "use client";
 
+import { isBrowser } from '@/utils/env';
 import React, { useState, useEffect } from 'react';
 import FormError from '../components/ui/FormError';
 
@@ -14,7 +15,7 @@ const DummyForm: React.FC = () => {
   const [recovered, setRecovered] = useState(false);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) {
@@ -36,7 +37,7 @@ const DummyForm: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     const handle = setTimeout(() => {
       const hasContent = name || email || message;
       try {

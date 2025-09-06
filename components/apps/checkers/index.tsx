@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactGA from 'react-ga4';
 import { pointerHandlers } from '../../../utils/pointer';
@@ -86,7 +87,7 @@ const Checkers = () => {
   };
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && typeof Worker === 'function') {
+    if (isBrowser() && typeof Worker === 'function') {
       workerRef.current = new Worker('/checkers-worker.js');
       workerRef.current.onmessage = (e: MessageEvent<Move>) => {
         const move = e.data;

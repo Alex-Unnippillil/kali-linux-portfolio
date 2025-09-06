@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useEffect, useState, useRef } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -62,7 +63,7 @@ function DraggablePlugin({ plugin, index, move, innerRef }: DraggableProps) {
 
 export default function Panel() {
   const [plugins, setPlugins] = useState<PluginItem[]>(() => {
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       try {
         const stored = localStorage.getItem('panel-layout');
         if (stored) return JSON.parse(stored) as PluginItem[];

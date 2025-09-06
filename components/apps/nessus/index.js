@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import HostBubbleChart from './HostBubbleChart';
 import PluginFeedViewer from './PluginFeedViewer';
@@ -7,7 +8,7 @@ import FormError from '../../ui/FormError';
 
 // helpers for persistent storage of jobs and false positives
 export const loadJobDefinitions = () => {
-  if (typeof window === 'undefined') return [];
+  if (!isBrowser()) return [];
   try {
     return JSON.parse(localStorage.getItem('nessusJobs') || '[]');
   } catch {
@@ -16,7 +17,7 @@ export const loadJobDefinitions = () => {
 };
 
 export const saveJobDefinition = (job) => {
-  if (typeof window === 'undefined') return [];
+  if (!isBrowser()) return [];
   const jobs = loadJobDefinitions();
   const updated = [...jobs, job];
   localStorage.setItem('nessusJobs', JSON.stringify(updated));
@@ -24,7 +25,7 @@ export const saveJobDefinition = (job) => {
 };
 
 export const loadFalsePositives = () => {
-  if (typeof window === 'undefined') return [];
+  if (!isBrowser()) return [];
   try {
     return JSON.parse(localStorage.getItem('nessusFalsePositives') || '[]');
   } catch {
@@ -33,7 +34,7 @@ export const loadFalsePositives = () => {
 };
 
 export const recordFalsePositive = (findingId, reason) => {
-  if (typeof window === 'undefined') return [];
+  if (!isBrowser()) return [];
   const fps = loadFalsePositives();
   const updated = [...fps, { findingId, reason }];
   localStorage.setItem('nessusFalsePositives', JSON.stringify(updated));

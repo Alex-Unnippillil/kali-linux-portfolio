@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 export interface ButtonEvent {
   gamepad: Gamepad;
   index: number;
@@ -35,7 +36,7 @@ export const GAMEPAD_PRESETS: Record<string, CalibrationData> = {
 };
 
 export function loadCalibration(id: string): CalibrationData | null {
-  if (typeof window === 'undefined') return null;
+  if (!isBrowser()) return null;
   try {
     const raw = window.localStorage.getItem(CAL_PREFIX + id);
     return raw ? (JSON.parse(raw) as CalibrationData) : null;
@@ -45,7 +46,7 @@ export function loadCalibration(id: string): CalibrationData | null {
 }
 
 export function saveCalibration(id: string, data: CalibrationData) {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   try {
     window.localStorage.setItem(CAL_PREFIX + id, JSON.stringify(data));
   } catch {
@@ -85,7 +86,7 @@ class GamepadManager {
   constructor(deadzone = 0.1) {
     this.deadzone = deadzone;
 
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       window.addEventListener('gamepadconnected', (e) =>
         this.emit('connected', (e as GamepadEvent).gamepad)
       );

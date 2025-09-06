@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React from 'react';
 import ToggleSwitch from '../../../components/ToggleSwitch';
 import useDoNotDisturb from '../../../hooks/useDoNotDisturb';
@@ -6,7 +7,7 @@ export default function NotificationsSettings() {
   const [dnd, setDnd] = useDoNotDisturb();
 
   const sendTest = async () => {
-    if (dnd || typeof window === 'undefined') return;
+    if (dnd || !isBrowser()) return;
     if ('Notification' in window) {
       if (Notification.permission === 'granted') {
         new Notification('This is a test notification');

@@ -1,4 +1,5 @@
 'use client';
+import { isBrowser } from '@/utils/env';
 import { useEffect, useState } from 'react';
 
 interface PluginInfo { id: string; file: string; }
@@ -13,7 +14,7 @@ export default function PluginManager() {
   const [plugins, setPlugins] = useState<PluginInfo[]>([]);
   const [installed, setInstalled] = useState<Record<string, PluginManifest>>(
     () => {
-      if (typeof window !== 'undefined') {
+      if (isBrowser()) {
         try {
           return JSON.parse(localStorage.getItem('installedPlugins') || '{}');
         } catch {
@@ -30,7 +31,7 @@ export default function PluginManager() {
   }
 
   const [lastRun, setLastRun] = useState<LastRun | null>(() => {
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       try {
         return JSON.parse(localStorage.getItem('lastPluginRun') || 'null');
       } catch {

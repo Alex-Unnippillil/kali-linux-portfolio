@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   getWordOfTheDay,
@@ -16,7 +17,7 @@ function usePersistentState(key, defaultValue) {
   const [state, setState] = useState(defaultValue);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     try {
       const stored = localStorage.getItem(key);
       setState(stored ? JSON.parse(stored) : defaultValue);
@@ -26,7 +27,7 @@ function usePersistentState(key, defaultValue) {
   }, [key, defaultValue]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       localStorage.setItem(key, JSON.stringify(state));
     }
   }, [key, state]);
@@ -322,7 +323,7 @@ const Wordle = () => {
       return updated;
     });
 
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     const prefersReduce = window.matchMedia(
       '(prefers-reduced-motion: reduce)'
     ).matches;

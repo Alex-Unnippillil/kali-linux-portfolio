@@ -1,5 +1,6 @@
 'use client';
 
+import { isBrowser } from '@/utils/env';
 import { useState, useEffect, useRef, useCallback, ChangeEvent } from 'react';
 import figlet from 'figlet';
 import Standard from 'figlet/importable-fonts/Standard.js';
@@ -106,7 +107,7 @@ const AsciiArtApp = () => {
 
   // update query string permalink
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     const params = new URLSearchParams();
     if (text) params.set('t', text);
     if (font && font !== 'Standard') params.set('f', font);

@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactGA from 'react-ga4';
 import usePrefersReducedMotion from '../../../hooks/usePrefersReducedMotion';
@@ -92,7 +93,7 @@ const Solitaire = () => {
   const foundationCountRef = useRef(0);
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
+    if (!isBrowser()) {
       setBankrollReady(true);
       return;
     }
@@ -102,7 +103,7 @@ const Solitaire = () => {
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     const saved = JSON.parse(
       localStorage.getItem(getStatsKey(variant, drawMode, passLimit)) || '{}',
     );
@@ -174,7 +175,7 @@ const Solitaire = () => {
       setIsDaily(daily);
       setBankroll((b) => {
         const nb = b - 52;
-        if (typeof window !== 'undefined') {
+        if (isBrowser()) {
           localStorage.setItem('solitaireBankroll', String(nb));
         }
         return nb;
@@ -182,7 +183,7 @@ const Solitaire = () => {
       foundationCountRef.current = 0;
       setStats((s) => {
         const ns = { ...s, gamesPlayed: s.gamesPlayed + 1 };
-        if (typeof window !== 'undefined') {
+        if (isBrowser()) {
           localStorage.setItem(
             getStatsKey(v, mode, passLimit),
             JSON.stringify(ns),
@@ -230,7 +231,7 @@ const Solitaire = () => {
           dailyStreak,
           lastDaily,
         };
-        if (typeof window !== 'undefined') {
+        if (isBrowser()) {
           localStorage.setItem(
             getStatsKey(variant, drawMode, passLimit),
             JSON.stringify(ns),
@@ -263,7 +264,7 @@ const Solitaire = () => {
       const diff = count - foundationCountRef.current;
       setBankroll((b) => {
         const nb = b + diff * 5;
-        if (typeof window !== 'undefined') {
+        if (isBrowser()) {
           localStorage.setItem('solitaireBankroll', String(nb));
         }
         return nb;

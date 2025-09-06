@@ -1,10 +1,11 @@
+import { isBrowser } from '@/utils/env';
 export type KeyComboHandler = (event: KeyboardEvent) => void;
 
 class KeybindingManager {
   private bindings = new Map<string, Set<KeyComboHandler>>();
 
   constructor() {
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       window.addEventListener('keydown', this.handleKeyDown);
     }
   }

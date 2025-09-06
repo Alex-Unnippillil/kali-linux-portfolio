@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useState, useEffect, useMemo } from 'react';
 
 const apiBase = process.env.NEXT_PUBLIC_CURRENCY_API_URL || 'https://api.exchangerate.host/latest';
@@ -15,7 +16,7 @@ const CurrencyConverter = () => {
   useEffect(() => {
     const cacheKey = `currencyRates_${base}`;
     const historyKey = `currencyHistory_${base}`;
-    const cached = typeof window !== 'undefined' ? localStorage.getItem(cacheKey) : null;
+    const cached = isBrowser() ? localStorage.getItem(cacheKey) : null;
     if (cached) {
       try {
         const { rates, timestamp } = JSON.parse(cached);
@@ -32,7 +33,7 @@ const CurrencyConverter = () => {
           setRates(data.rates);
           const ts = new Date().toISOString();
           setLastUpdated(ts);
-          if (typeof window !== 'undefined') {
+          if (isBrowser()) {
             localStorage.setItem(cacheKey, JSON.stringify({ rates: data.rates, timestamp: ts }));
             try {
               const raw = localStorage.getItem(historyKey);
@@ -49,7 +50,7 @@ const CurrencyConverter = () => {
   }, [base]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     const historyKey = `currencyHistory_${base}`;
     try {
       const raw = localStorage.getItem(historyKey);

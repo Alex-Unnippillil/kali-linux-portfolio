@@ -1,6 +1,6 @@
 import { isBrowser } from '../../utils/env';
 
-if (isBrowser) {
+if (isBrowser()) {
 const WORK_DURATION = 25 * 60;
 const BREAK_DURATION = 5 * 60;
 const POSTPONE_DURATION = 5 * 60;

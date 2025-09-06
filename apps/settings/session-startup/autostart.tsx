@@ -1,5 +1,6 @@
 'use client';
 
+import { isBrowser } from '@/utils/env';
 import { useEffect, useState } from 'react';
 
 interface Entry {
@@ -19,7 +20,7 @@ export default function AutostartSettings() {
   useEffect(() => {
     async function load() {
       let user: Entry[] = [];
-      if (typeof window !== 'undefined') {
+      if (isBrowser()) {
         const stored = window.localStorage.getItem(STORAGE_KEY);
         if (stored) {
           try {
@@ -47,7 +48,7 @@ export default function AutostartSettings() {
   }, []);
 
   const persist = (next: Entry[]) => {
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     }
   };

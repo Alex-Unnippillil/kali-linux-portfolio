@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { isBrowser } from '@/utils/env';
 
 // Persist state in localStorage with validation and helpers.
 export default function usePersistentState(key, initial, validator) {
   const getInitial = () => (typeof initial === "function" ? initial() : initial);
 
   const [state, setState] = useState(() => {
-    if (typeof window === "undefined") return getInitial();
+    if (!isBrowser()) return getInitial();
     try {
       const stored = window.localStorage.getItem(key);
       if (stored !== null) {

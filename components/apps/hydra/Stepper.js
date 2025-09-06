@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useEffect, useRef, useState } from 'react';
 
 const Stepper = ({
@@ -36,7 +37,7 @@ const Stepper = ({
     setDelayMs(delay);
 
     const prefersReducedMotion =
-      typeof window !== 'undefined' &&
+      isBrowser() &&
       window.matchMedia &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 

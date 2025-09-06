@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
   readonly userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
@@ -7,7 +8,7 @@ interface BeforeInstallPromptEvent extends Event {
 let deferredPrompt: BeforeInstallPromptEvent | null = null;
 
 export function initA2HS() {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   window.addEventListener('beforeinstallprompt', (e: Event) => {
     const event = e as BeforeInstallPromptEvent;
     event.preventDefault();

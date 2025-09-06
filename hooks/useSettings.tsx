@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
 import usePersistentState from './usePersistentState';
 import {
@@ -265,7 +266,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     saveAllowNetwork(allowNetwork);
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     if (!fetchRef.current) fetchRef.current = window.fetch.bind(window);
     if (!allowNetwork) {
       window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {

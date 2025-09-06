@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React from 'react';
 
 interface WorkspaceWindow {
@@ -50,7 +51,7 @@ const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
   showOnlyOnPrimary = false,
   onMoveWindow,
 }) => {
-  if (showOnlyOnPrimary && typeof window !== 'undefined') {
+  if (showOnlyOnPrimary && isBrowser()) {
     if (window.screenX !== 0 && window.screenLeft !== 0) {
       return null;
     }

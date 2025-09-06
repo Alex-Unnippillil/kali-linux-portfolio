@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import PipPortalProvider, { usePipPortal } from "../common/PipPortal";
 import useWakeLockOnFullscreen from "../../hooks/useWakeLockOnFullscreen";
+import { isBrowser } from '@/utils/env';
 
 interface VideoPlayerProps {
   src: string;
@@ -26,13 +27,13 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
   useEffect(() => {
     const video = videoRef.current;
     setPipSupported(
-      typeof document !== "undefined" &&
+      isBrowser() &&
         !!document.pictureInPictureEnabled &&
         !!video &&
         typeof video.requestPictureInPicture === "function"
     );
     setDocPipSupported(
-      typeof window !== "undefined" &&
+      isBrowser() &&
         !!(window as any).documentPictureInPicture
     );
 
