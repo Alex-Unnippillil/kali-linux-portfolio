@@ -1,4 +1,11 @@
-import Document, { Html, Head, Main, NextScript } from 'next/document';
+import Document, {
+  Html,
+  Head,
+  Main,
+  NextScript,
+  type DocumentContext,
+  type DocumentInitialProps,
+} from 'next/document';
 import { Ubuntu } from 'next/font/google';
 
 const ubuntu = Ubuntu({
@@ -6,13 +13,14 @@ const ubuntu = Ubuntu({
   weight: ['300', '400', '500', '700'],
 });
 
-class MyDocument extends Document {
-  /**
-   * @param {import('next/document').DocumentContext} ctx
-   */
-  static async getInitialProps(ctx) {
+interface Props extends DocumentInitialProps {
+  nonce?: string;
+}
+
+class MyDocument extends Document<Props> {
+  static async getInitialProps(ctx: DocumentContext): Promise<Props> {
     const initial = await Document.getInitialProps(ctx);
-    const nonce = ctx?.res?.getHeader?.('x-csp-nonce');
+    const nonce = ctx.req.headers['x-csp-nonce'] as string | undefined;
     return { ...initial, nonce };
   }
 
@@ -24,7 +32,7 @@ class MyDocument extends Document {
           <link rel="icon" href="/favicon.ico" />
           <link rel="manifest" href="/manifest.webmanifest" />
           <meta name="theme-color" content="#0f1317" />
-          <script nonce={nonce} src="/theme.js" />
+          <script nonce={nonce} src="/theme.js" async />
         </Head>
         <body className={ubuntu.className}>
           <Main />

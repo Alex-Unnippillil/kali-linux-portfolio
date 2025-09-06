@@ -25,7 +25,13 @@ export function middleware(req: NextRequest) {
     "form-action 'self'"
   ].join('; ');
 
-  const res = NextResponse.next();
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set('x-csp-nonce', n);
+  const res = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
   res.headers.set('x-csp-nonce', n);
   res.headers.set('Content-Security-Policy', csp);
   if (req.headers.get('accept')?.includes('text/html')) {
