@@ -19,6 +19,7 @@ import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import Taskbar from './taskbar';
 import TaskbarMenu from '../context-menus/taskbar-menu';
+import WindowMenu from '../context-menus/window-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
@@ -31,6 +32,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.windowRefs = {};
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -48,6 +50,7 @@ export class Desktop extends Component {
                 default: false,
                 app: false,
                 taskbar: false,
+                window: false,
             },
             context_app: null,
             showNameBar: false,
@@ -166,6 +169,18 @@ export class Desktop extends Component {
             e.preventDefault();
             this.cycleAppWindows(e.shiftKey ? -1 : 1);
         }
+        else if (e.altKey && e.code === 'Space') {
+            e.preventDefault();
+            const id = this.getFocusedWindowId();
+            if (id) {
+                const node = document.getElementById(id);
+                if (node) {
+                    const rect = node.getBoundingClientRect();
+                    const fakeEvent = { pageX: rect.left, pageY: rect.top + rect.height };
+                    this.setState({ context_app: id }, () => this.showContextMenu(fakeEvent, 'window'));
+                }
+            }
+        }
         else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
             e.preventDefault();
             const id = this.getFocusedWindowId();
@@ -261,6 +276,13 @@ export class Desktop extends Component {
                 });
                 this.setState({ context_app: appId }, () => this.showContextMenu(e, "taskbar"));
                 break;
+            case "window":
+                ReactGA.event({
+                    category: `Context Menu`,
+                    action: `Opened Window Context Menu`
+                });
+                this.setState({ context_app: appId }, () => this.showContextMenu(e, "window"));
+                break;
             default:
                 ReactGA.event({
                     category: `Context Menu`,
@@ -291,6 +313,10 @@ export class Desktop extends Component {
             case "taskbar":
                 ReactGA.event({ category: `Context Menu`, action: `Opened Taskbar Context Menu` });
                 this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "taskbar"));
+                break;
+            case "window":
+                ReactGA.event({ category: `Context Menu`, action: `Opened Window Context Menu` });
+                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "window"));
                 break;
             default:
                 ReactGA.event({ category: `Context Menu`, action: `Opened Default Context Menu` });
@@ -485,7 +511,11 @@ export class Desktop extends Component {
                 }
 
                 windowsJsx.push(
-                    <Window key={app.id} {...props} />
+                    <Window
+                        key={app.id}
+                        ref={ref => { if (ref) this.windowRefs[app.id] = ref; }}
+                        {...props}
+                    />
                 )
             }
         });
@@ -843,7 +873,7 @@ export class Desktop extends Component {
             <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
                 <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
                     <span>New folder name</span>
-                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
+                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} aria-label="Folder name" />
                 </div>
                 <div className="flex">
                     <button
@@ -942,6 +972,17 @@ export class Desktop extends Component {
                         if (!id) return;
                         this.closeApp(id);
                     }}
+                    onCloseMenu={this.hideAllContextMenu}
+                />
+                <WindowMenu
+                    active={this.state.context_menus.window}
+                    onMove={() => { const id = this.state.context_app; if (id) this.windowRefs[id]?.changeCursorToMove(); }}
+                    onResize={() => { const id = this.state.context_app; if (id) this.windowRefs[id]?.startResize(); }}
+                    onTop={() => { const id = this.state.context_app; if (id) this.windowRefs[id]?.toggleAlwaysOnTop(); }}
+                    onShade={() => { const id = this.state.context_app; if (id) this.windowRefs[id]?.toggleShade(); }}
+                    onStick={() => { const id = this.state.context_app; if (id) this.windowRefs[id]?.toggleStick(); }}
+                    onMaximize={() => { const id = this.state.context_app; if (id) this.windowRefs[id]?.maximizeWindow(); }}
+                    onClose={() => { const id = this.state.context_app; if (id) this.closeApp(id); }}
                     onCloseMenu={this.hideAllContextMenu}
                 />
 
