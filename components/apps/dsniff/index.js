@@ -224,10 +224,16 @@ const Dsniff = () => {
   const [timeline, setTimeline] = useState([]);
   const [protocolFilter, setProtocolFilter] = useState([]);
 
-  const { summary: pcapSummary, remediation } = pcapFixture;
+  const urlsnarfLines = Array.isArray(urlsnarfFixture)
+    ? urlsnarfFixture
+    : [];
+  const arpspoofLines = Array.isArray(arpspoofFixture)
+    ? arpspoofFixture
+    : [];
+  const { summary: pcapSummary = [], remediation = [] } = pcapFixture || {};
 
   const sampleCommand = 'urlsnarf -i eth0';
-  const sampleOutput = urlsnarfFixture.slice(0, 1).join('\n');
+  const sampleOutput = urlsnarfLines.slice(0, 1).join('\n');
 
   const copySampleCommand = () => {
     if (navigator.clipboard) {
@@ -252,8 +258,8 @@ const Dsniff = () => {
   }, []);
 
   useEffect(() => {
-    const urlsnarfData = parseLines(urlsnarfFixture.join('\n'));
-    const arpspoofData = parseLines(arpspoofFixture.join('\n'));
+    const urlsnarfData = parseLines(urlsnarfLines.join('\n'));
+    const arpspoofData = parseLines(arpspoofLines.join('\n'));
     setUrlsnarfLogs(urlsnarfData);
     setArpspoofLogs(arpspoofData);
   }, []);
