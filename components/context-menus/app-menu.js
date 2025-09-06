@@ -13,6 +13,21 @@ function AppMenu(props) {
         }
     }
 
+    const handleOpenMenuEditor = () => {
+        props.openMenuEditor && props.openMenuEditor()
+        props.onClose && props.onClose()
+    }
+
+    const handleAddToPanel = () => {
+        props.addToPanel && props.addToPanel()
+        props.onClose && props.onClose()
+    }
+
+    const handleAddToDesktop = () => {
+        props.addToDesktop && props.addToDesktop()
+        props.onClose && props.onClose()
+    }
+
     const handlePin = () => {
         if (props.pinned) {
             props.unpinApp && props.unpinApp()
@@ -32,6 +47,34 @@ function AppMenu(props) {
         >
             <button
                 type="button"
+                onClick={handleOpenMenuEditor}
+                role="menuitem"
+                aria-label="Open Menu Editor"
+                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+            >
+                <span className="ml-5">Open Menu Editor</span>
+            </button>
+            <button
+                type="button"
+                onClick={handleAddToPanel}
+                role="menuitem"
+                aria-label="Add to Panel"
+                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+            >
+                <span className="ml-5">Add to Panel</span>
+            </button>
+            <button
+                type="button"
+                onClick={handleAddToDesktop}
+                role="menuitem"
+                aria-label="Add to Desktop"
+                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+            >
+                <span className="ml-5">Add to Desktop</span>
+            </button>
+            <Devider />
+            <button
+                type="button"
                 onClick={handlePin}
                 role="menuitem"
                 aria-label={props.pinned ? 'Unpin from Favorites' : 'Pin to Favorites'}
@@ -42,6 +85,14 @@ function AppMenu(props) {
             </button>
         </div>
     )
+}
+
+function Devider() {
+    return (
+        <div className="flex justify-center w-full">
+            <div className=" border-t border-gray-900 py-1 w-2/5"></div>
+        </div>
+    );
 }
 
 export default AppMenu
