@@ -26,16 +26,6 @@ jest.mock('../components/apps/memory_utils', () => ({
 
 beforeEach(() => {
   jest.useFakeTimers();
-  // minimal matchMedia polyfill
-  window.matchMedia = window.matchMedia || ((query: string) => ({
-    matches: false,
-    media: query,
-    addListener: jest.fn(),
-    removeListener: jest.fn(),
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
-  }));
   // requestAnimationFrame using timers
   window.requestAnimationFrame = (cb: FrameRequestCallback) => {
     return setTimeout(() => cb(performance.now()), 0) as unknown as number;

@@ -1,13 +1,4 @@
 import 'fake-indexeddb/auto';
-
-// Provide a lightweight structuredClone polyfill for fake-indexeddb
-// in environments where it is missing.
-// @ts-ignore
-if (typeof globalThis.structuredClone !== 'function') {
-  // @ts-ignore
-  globalThis.structuredClone = (val: any) => JSON.parse(JSON.stringify(val));
-}
-
 import { renderHook, act } from '@testing-library/react';
 import useGameSaves from '../components/apps/Games/common/save';
 

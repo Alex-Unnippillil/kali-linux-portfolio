@@ -124,6 +124,24 @@ function configureWebpack(config, { isServer }) {
     ...(config.resolve.alias || {}),
     'react-dom$': require('path').resolve(__dirname, 'lib/react-dom-shim.js'),
   };
+  if (!isServer) {
+    config.optimization = {
+      ...(config.optimization || {}),
+      splitChunks: {
+        ...(config.optimization?.splitChunks || {}),
+        chunks: 'async',
+        cacheGroups: {
+          ...(config.optimization?.splitChunks?.cacheGroups || {}),
+          commons: {
+            test: /[\\/]node_modules[\\/]/,
+            minChunks: 2,
+            name: 'commons',
+            chunks: 'async',
+          },
+        },
+      },
+    };
+  }
   if (isProd) {
     config.optimization = {
       ...(config.optimization || {}),
