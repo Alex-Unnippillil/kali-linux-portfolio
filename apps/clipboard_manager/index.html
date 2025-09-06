@@ -9,7 +9,16 @@
 </head>
 <body>
   <h1>Clipboard Manager</h1>
-  <button id="clear">Clear History</button>
+  <div class="controls">
+    <button id="clear">Clear History</button>
+    <input id="search" placeholder="Search" />
+    <select id="type-filter">
+      <option value="all">All</option>
+      <option value="text">Text</option>
+      <option value="url">URL</option>
+      <option value="hash">Hash</option>
+    </select>
+  </div>
   <ul id="history"></ul>
   <script src="main.js"></script>
 </body>
