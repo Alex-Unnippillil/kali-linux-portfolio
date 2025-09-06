@@ -1,9 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "env": {
-    "RATE_LIMIT_SECRET": "@rate-limit-secret"
-  },
   "functions": {
     "pages/api/**/*.{js,ts}": { "runtime": "nodejs20.x" },
     "app/api/**/route.{js,ts}": { "runtime": "nodejs20.x" }
