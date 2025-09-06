@@ -17,7 +17,7 @@ export function middleware(req: NextRequest) {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     `script-src 'self' 'unsafe-inline' 'nonce-${n}' https://vercel.live https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://sdk.scdn.co https://cdn.jsdelivr.net https://cdnjs.cloudflare.com`,
-    "connect-src 'self' https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://stackblitz.com",
+    "connect-src 'self' https://cdn.syndication.twimg.com https://*.twitter.com *.x.com https://sdk.scdn.co",
     "frame-src 'self' https://vercel.live https://stackblitz.com https://ghbtns.com https://platform.twitter.com https://open.spotify.com https://todoist.com https://www.youtube.com https://www.youtube-nocookie.com",
     "frame-ancestors 'self'",
     "object-src 'none'",
