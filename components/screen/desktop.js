@@ -41,6 +41,7 @@ export class Desktop extends Component {
             minimized_windows: {},
             window_positions: {},
             desktop_apps: [],
+            trashCount: 0,
             context_menus: {
                 desktop: false,
                 default: false,
@@ -430,26 +431,76 @@ export class Desktop extends Component {
     }
 
     renderDesktopApps = () => {
-        if (Object.keys(this.state.closed_windows).length === 0) return;
-        let appsJsx = [];
-        apps.forEach((app, index) => {
-            if (this.state.desktop_apps.includes(app.id)) {
+        const icons = [];
 
-                const props = {
-                    name: app.title,
-                    id: app.id,
-                    icon: app.icon,
-                    openApp: this.openApp,
-                    disabled: this.state.disabled_apps[app.id],
-                    prefetch: app.screen?.prefetch,
-                }
+        const systemIcons = [
+            {
+                id: 'home',
+                title: 'Home',
+                icon: '/themes/Yaru/system/user-home.png',
+                onOpen: () => this.openApp('files'),
+            },
+            {
+                id: 'filesystem',
+                title: 'Filesystem',
+                icon: '/themes/Yaru/system/folder.png',
+                onOpen: () => this.openApp('files'),
+            },
+            {
+                id: 'trash',
+                title: 'Trash',
+                displayName: this.state.trashCount ? `Trash (${this.state.trashCount})` : 'Trash',
+                icon: this.state.trashCount
+                    ? '/themes/Yaru/status/user-trash-full-symbolic.svg'
+                    : '/themes/Yaru/status/user-trash-symbolic.svg',
+                onOpen: () => this.openApp('trash'),
+            },
+            {
+                id: 'removable',
+                title: 'Removable',
+                icon: '/themes/Yaru/system/folder.png',
+                onOpen: () => this.openApp('files'),
+                disabled: true,
+            },
+        ];
 
-                appsJsx.push(
-                    <UbuntuApp key={app.id} {...props} />
-                );
-            }
+        systemIcons.forEach(icon => {
+            icons.push(
+                <UbuntuApp
+                    key={icon.id}
+                    id={icon.id}
+                    name={icon.title}
+                    displayName={icon.displayName}
+                    icon={icon.icon}
+                    openApp={() => icon.onOpen()}
+                    disabled={icon.disabled}
+                />
+            );
         });
-        return appsJsx;
+
+        if (Object.keys(this.state.closed_windows).length !== 0) {
+            apps.forEach(app => {
+                if (this.state.desktop_apps.includes(app.id) && app.id !== 'trash') {
+                    const props = {
+                        name: app.title,
+                        id: app.id,
+                        icon: app.icon,
+                        openApp: this.openApp,
+                        disabled: this.state.disabled_apps[app.id],
+                        prefetch: app.screen?.prefetch,
+                        displayName: app.displayName,
+                    };
+
+                    icons.push(<UbuntuApp key={app.id} {...props} />);
+                }
+            });
+        }
+
+        return (
+            <div className="absolute top-0 left-0 p-2 grid grid-cols-[repeat(auto-fill,6rem)] auto-rows-[5rem] gap-2">
+                {icons}
+            </div>
+        );
     }
 
     renderWindows = () => {
@@ -774,16 +825,7 @@ export class Desktop extends Component {
     updateTrashIcon = () => {
         let trash = [];
         try { trash = JSON.parse(safeLocalStorage?.getItem('window-trash') || '[]'); } catch (e) { trash = []; }
-        const appIndex = apps.findIndex(app => app.id === 'trash');
-        if (appIndex !== -1) {
-            const icon = trash.length
-                ? '/themes/Yaru/status/user-trash-full-symbolic.svg'
-                : '/themes/Yaru/status/user-trash-symbolic.svg';
-            if (apps[appIndex].icon !== icon) {
-                apps[appIndex].icon = icon;
-                this.forceUpdate();
-            }
-        }
+        this.setState({ trashCount: trash.length });
     }
 
     addToDesktop = (folder_name) => {
@@ -823,7 +865,7 @@ export class Desktop extends Component {
             <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
                 <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
                     <span>New folder name</span>
-                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
+                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} aria-label="Folder name" />
                 </div>
                 <div className="flex">
                     <button
