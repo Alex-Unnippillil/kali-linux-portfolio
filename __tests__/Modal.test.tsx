@@ -3,6 +3,16 @@ import { render, fireEvent, waitFor, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import Modal from '../components/base/Modal';
 
+beforeAll(() => {
+  Object.defineProperty(window, 'localStorage', {
+    value: {
+      getItem: () => null,
+      setItem: () => null,
+    },
+    configurable: true,
+  });
+});
+
 test('modal traps focus, disables background, and restores opener focus', async () => {
   const root = document.createElement('div');
   root.setAttribute('id', '__next');

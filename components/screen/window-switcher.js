@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 
-export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
+export default function WindowSwitcher({ windows = [], workspaces = [], onSelect, onClose }) {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(0);
   const inputRef = useRef(null);
@@ -8,6 +8,11 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
   const filtered = windows.filter((w) =>
     w.title.toLowerCase().includes(query.toLowerCase())
   );
+  const grouped = workspaces.map((name, idx) => ({
+    name,
+    windows: filtered.filter((w) => (w.workspace ?? 0) === idx),
+  }));
+  const flat = grouped.reduce((arr, g) => arr.concat(g.windows), []);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -16,7 +21,7 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
   useEffect(() => {
     const handleKeyUp = (e) => {
       if (e.key === 'Alt') {
-        const win = filtered[selected];
+        const win = flat[selected];
         if (win && typeof onSelect === 'function') {
           onSelect(win.id);
         } else if (typeof onClose === 'function') {
@@ -26,23 +31,23 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
     };
     window.addEventListener('keyup', handleKeyUp);
     return () => window.removeEventListener('keyup', handleKeyUp);
-  }, [filtered, selected, onSelect, onClose]);
+  }, [flat, selected, onSelect, onClose]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Tab') {
       e.preventDefault();
-      const len = filtered.length;
+      const len = flat.length;
       if (!len) return;
       const dir = e.shiftKey ? -1 : 1;
       setSelected((selected + dir + len) % len);
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
-      const len = filtered.length;
+      const len = flat.length;
       if (!len) return;
       setSelected((selected + 1) % len);
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      const len = filtered.length;
+      const len = flat.length;
       if (!len) return;
       setSelected((selected - 1 + len) % len);
     } else if (e.key === 'Escape') {
@@ -67,16 +72,26 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
           className="w-full mb-4 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
           placeholder="Search windows"
         />
-        <ul>
-          {filtered.map((w, i) => (
-            <li
-              key={w.id}
-              className={`px-2 py-1 rounded ${i === selected ? 'bg-ub-orange text-black' : ''}`}
-            >
-              {w.title}
-            </li>
-          ))}
-        </ul>
+        {grouped.map((g) => (
+          g.windows.length > 0 && (
+            <div key={g.name} className="mb-2">
+              <div className="font-semibold px-2">{g.name}</div>
+              <ul>
+                {g.windows.map((w) => {
+                  const i = flat.indexOf(w);
+                  return (
+                    <li
+                      key={w.id}
+                      className={`px-2 py-1 rounded ${i === selected ? 'bg-ub-orange text-black' : ''}`}
+                    >
+                      {w.title}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )
+        ))}
       </div>
     </div>
   );
