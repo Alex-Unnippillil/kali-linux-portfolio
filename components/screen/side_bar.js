@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import Image from 'next/image'
 import SideBarApp from '../base/side_bar_app';
+import { useSettings } from '../../hooks/useSettings';
 
 let renderApps = (props) => {
     let sideBarAppsJsx = [];
@@ -14,7 +15,7 @@ let renderApps = (props) => {
 }
 
 export default function SideBar(props) {
-
+    const { panelTransparency } = useSettings();
     function showSideBar() {
         props.hideSideBar(null, false);
     }
@@ -30,7 +31,7 @@ export default function SideBar(props) {
             <nav
                 aria-label="Dock"
                 className={(props.hide ? " -translate-x-full " : "") +
-                    " absolute transform duration-300 select-none z-40 left-0 top-0 h-full min-h-screen w-16 flex flex-col justify-start items-center pt-7 border-black border-opacity-60 bg-black bg-opacity-50"}
+                    ` absolute transform duration-300 select-none z-40 left-0 top-0 h-full min-h-screen w-16 flex flex-col justify-start items-center pt-7 border-black border-opacity-60 ${panelTransparency ? 'bg-black bg-opacity-50' : 'bg-black'}`}
             >
                 {
                     (

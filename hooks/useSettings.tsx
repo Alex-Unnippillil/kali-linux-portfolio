@@ -20,6 +20,10 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getCompositor as loadCompositor,
+  setCompositor as saveCompositor,
+  getPanelTransparency as loadPanelTransparency,
+  setPanelTransparency as savePanelTransparency,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -62,6 +66,8 @@ interface SettingsContextValue {
   pongSpin: boolean;
   allowNetwork: boolean;
   haptics: boolean;
+  compositor: boolean;
+  panelTransparency: boolean;
   theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
@@ -73,6 +79,8 @@ interface SettingsContextValue {
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
+  setCompositor: (value: boolean) => void;
+  setPanelTransparency: (value: boolean) => void;
   setTheme: (value: string) => void;
 }
 
@@ -87,6 +95,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
+  compositor: defaults.compositor,
+  panelTransparency: defaults.panelTransparency,
   theme: 'default',
   setAccent: () => {},
   setWallpaper: () => {},
@@ -98,6 +108,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setPongSpin: () => {},
   setAllowNetwork: () => {},
   setHaptics: () => {},
+  setCompositor: () => {},
+  setPanelTransparency: () => {},
   setTheme: () => {},
 });
 
@@ -112,6 +124,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
+  const [compositor, setCompositor] = useState<boolean>(defaults.compositor);
+  const [panelTransparency, setPanelTransparency] = useState<boolean>(
+    defaults.panelTransparency,
+  );
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
@@ -127,6 +143,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setCompositor(await loadCompositor());
+      setPanelTransparency(await loadPanelTransparency());
       setTheme(loadTheme());
     })();
   }, []);
@@ -236,6 +254,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    document.documentElement.classList.toggle('no-compositor', !compositor);
+    saveCompositor(compositor);
+    if (!compositor) setPanelTransparency(false);
+  }, [compositor]);
+
+  useEffect(() => {
+    savePanelTransparency(panelTransparency);
+  }, [panelTransparency]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -249,6 +277,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         pongSpin,
         allowNetwork,
         haptics,
+        compositor,
+        panelTransparency,
         theme,
         setAccent,
         setWallpaper,
@@ -260,6 +290,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
+        setCompositor,
+        setPanelTransparency,
         setTheme,
       }}
     >
