@@ -9,6 +9,15 @@ import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
 
+// Simple debounce helper to limit how frequently handlers run
+const debounce = (fn, delay) => {
+    let timeout;
+    return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => fn(...args), delay);
+    };
+};
+
 export class Window extends Component {
     constructor(props) {
         super(props);
@@ -53,7 +62,7 @@ export class Window extends Component {
         ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
 
         // on window resize, resize boundary
-        window.addEventListener('resize', this.resizeBoundries);
+        window.addEventListener('resize', this.debouncedResizeBoundries);
         // Listen for context menu events to toggle inert background
         window.addEventListener('context-menu-open', this.setInertBackground);
         window.addEventListener('context-menu-close', this.removeInertBackground);
@@ -70,7 +79,7 @@ export class Window extends Component {
     componentWillUnmount() {
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
-        window.removeEventListener('resize', this.resizeBoundries);
+        window.removeEventListener('resize', this.debouncedResizeBoundries);
         window.removeEventListener('context-menu-open', this.setInertBackground);
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
@@ -116,6 +125,8 @@ export class Window extends Component {
             }
         });
     }
+
+    debouncedResizeBoundries = debounce(this.resizeBoundries, 50);
 
     computeContentUsage = () => {
         const root = document.getElementById(this.id);
@@ -254,6 +265,8 @@ export class Window extends Component {
         this.setState({ height: heightPercent }, this.resizeBoundries);
     }
 
+    debouncedHandleVerticleResize = debounce(this.handleVerticleResize, 50);
+
     handleHorizontalResize = () => {
         if (this.props.resizable === false) return;
         const px = (this.state.width / 100) * window.innerWidth + 1;
@@ -261,6 +274,8 @@ export class Window extends Component {
         const widthPercent = snapped / window.innerWidth * 100;
         this.setState({ width: widthPercent }, this.resizeBoundries);
     }
+
+    debouncedHandleHorizontalResize = debounce(this.handleHorizontalResize, 50);
 
     setWinowsPosition = () => {
         var r = document.querySelector("#" + this.id);
@@ -428,6 +443,8 @@ export class Window extends Component {
         this.checkOverlap();
         this.checkSnapPreview();
     }
+
+    debouncedHandleDrag = debounce(this.handleDrag, 50);
 
     handleStop = () => {
         this.changeCursorToDefault();
@@ -691,7 +708,7 @@ export class Window extends Component {
                     scale={1}
                     onStart={this.changeCursorToMove}
                     onStop={this.handleStop}
-                    onDrag={this.handleDrag}
+                    onDrag={this.debouncedHandleDrag}
                     allowAnyClick={false}
                     defaultPosition={{ x: this.startX, y: this.startY }}
                     bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
@@ -717,8 +734,8 @@ export class Window extends Component {
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                        {this.props.resizable !== false && <WindowYBorder resize={this.debouncedHandleHorizontalResize} />}
+                        {this.props.resizable !== false && <WindowXBorder resize={this.debouncedHandleVerticleResize} />}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}

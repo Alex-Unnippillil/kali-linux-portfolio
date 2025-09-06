@@ -41,6 +41,12 @@ const DragSnapHandler: React.FC<DragSnapHandlerProps> = ({ children }) => {
     }
   };
 
+  const dragTimeout = useRef<number>();
+  const handleDrag: DraggableEventHandler = (...args) => {
+    if (dragTimeout.current) window.clearTimeout(dragTimeout.current);
+    dragTimeout.current = window.setTimeout(() => checkSnapPreview(...args), 50);
+  };
+
   const handleStop: DraggableEventHandler = () => {
     const node = nodeRef.current;
     if (!node) return;
@@ -72,11 +78,7 @@ const DragSnapHandler: React.FC<DragSnapHandlerProps> = ({ children }) => {
           style={snapPreview}
         />
       )}
-      <Draggable
-        onDrag={checkSnapPreview}
-        onStop={handleStop}
-        nodeRef={nodeRef}
-      >
+      <Draggable onDrag={handleDrag} onStop={handleStop} nodeRef={nodeRef}>
         <div ref={nodeRef}>{children}</div>
       </Draggable>
     </>
