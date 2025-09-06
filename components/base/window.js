@@ -7,6 +7,7 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import WindowMenu from '../context-menus/window-menu';
 
 export class Window extends Component {
     constructor(props) {
@@ -33,6 +34,12 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            movable: true,
+            resizable: props.resizable !== false,
+            alwaysOnTop: false,
+            sticky: false,
+            fullscreen: false,
+            menuOpen: false,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
@@ -183,6 +190,36 @@ export class Window extends Component {
             this._menuOpener.focus();
         }
         this._menuOpener = null;
+    }
+
+    openMenu = () => {
+        this.activateOverlay();
+        this.setState({ menuOpen: true });
+    }
+
+    closeMenu = () => {
+        this.setState({ menuOpen: false }, this.deactivateOverlay);
+    }
+
+    toggleFlag = (flag) => {
+        this.setState(prev => {
+            const next = { [flag]: !prev[flag] };
+            return next;
+        }, () => {
+            if (flag === 'fullscreen') {
+                if (this.state.fullscreen) {
+                    this.maximizeWindow();
+                } else {
+                    this.restoreWindow();
+                }
+            }
+        });
+    }
+
+    moveToWorkspace = () => {
+        if (this.props.moveToWorkspace) {
+            this.props.moveToWorkspace(this.id);
+        }
     }
 
     changeCursorToMove = () => {
@@ -523,7 +560,11 @@ export class Window extends Component {
             this.closeWindow();
         } else if (e.key === 'Tab') {
             this.focusWindow();
-        } else if (e.altKey) {
+        } else if (e.altKey && e.code === 'Space') {
+            e.preventDefault();
+            e.stopPropagation();
+            this.openMenu();
+        } else if (e.altKey && this.state.movable) {
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 e.stopPropagation();
@@ -542,7 +583,7 @@ export class Window extends Component {
                 this.snapWindow('top');
             }
             this.focusWindow();
-        } else if (e.shiftKey) {
+        } else if (e.shiftKey && this.state.resizable) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
                 e.preventDefault();
@@ -632,9 +673,10 @@ export class Window extends Component {
                     allowAnyClick={false}
                     defaultPosition={{ x: this.startX, y: this.startY }}
                     bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
+                    disabled={!this.state.movable}
                 >
                     <div
-                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
+                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%`, zIndex: this.state.alwaysOnTop ? 9999 : undefined }}
                         className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                         id={this.id}
                         role="dialog"
@@ -642,8 +684,8 @@ export class Window extends Component {
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                        {this.props.resizable !== false && this.state.resizable && <WindowYBorder resize={this.handleHorizontalResize} />}
+                        {this.props.resizable !== false && this.state.resizable && <WindowXBorder resize={this.handleVerticleResize} />}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
@@ -664,6 +706,19 @@ export class Window extends Component {
                             : <WindowMainScreen screen={this.props.screen} title={this.props.title}
                                 addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
                                 openApp={this.props.openApp} />)}
+                        <WindowMenu
+                            active={this.state.menuOpen}
+                            flags={{
+                                movable: this.state.movable,
+                                resizable: this.state.resizable,
+                                alwaysOnTop: this.state.alwaysOnTop,
+                                sticky: this.state.sticky,
+                                fullscreen: this.state.fullscreen,
+                            }}
+                            onToggle={this.toggleFlag}
+                            onClose={this.closeMenu}
+                            onMoveWorkspace={this.moveToWorkspace}
+                        />
                     </div>
                 </Draggable >
             </>
