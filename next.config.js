@@ -75,6 +75,8 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 const buildId =
   process.env.NEXT_BUILD_ID || process.env.BUILD_ID || 'dev';
 
+const precacheManifest = require('./precache-manifest.json');
+
 const withPWA = require('@ducanh2912/next-pwa').default({
   dest: 'public',
   sw: 'sw.js',
@@ -86,13 +88,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   workboxOptions: {
     cacheId: buildId,
     navigateFallback: '/offline.html',
-
-    additionalManifestEntries: [
-      { url: '/favicon.ico', revision: null },
-      { url: '/favicon.svg', revision: null },
-      { url: '/images/logos/fevicon.png', revision: null },
-      { url: '/images/logos/logo_1024.png', revision: null },
-    ],
+    additionalManifestEntries: precacheManifest,
 
     // Cache only images and fonts to ensure app shell updates while assets work offline
     runtimeCaching: require('./cache.js')(buildId),
@@ -182,6 +178,15 @@ module.exports = withBundleAnalyzer(
                 source: '/(.*)',
                 headers: securityHeaders,
               },
+              ...precacheManifest.map(({ url }) => ({
+                source: url,
+                headers: [
+                  {
+                    key: 'Cache-Control',
+                    value: 'public, max-age=31536000, immutable',
+                  },
+                ],
+              })),
               {
                 source: '/manifest.webmanifest',
                 headers: [
