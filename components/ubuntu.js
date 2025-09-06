@@ -111,10 +111,15 @@ export default class Ubuntu extends Component {
                 this.maybeShowSessionChooser();
         };
 
-	changeBackgroundImage = (img_name) => {
-		this.setState({ bg_image_name: img_name });
+        changeBackgroundImage = (img_name) => {
+                this.setState({ bg_image_name: img_name });
                 safeLocalStorage?.setItem('bg-image', img_name);
-	};
+        };
+
+        logOut = () => {
+                this.props.resetSession && this.props.resetSession();
+                this.lockScreen();
+        };
 
         shutDown = () => {
                 const autoSave = safeLocalStorage?.getItem(AUTO_SAVE_KEY) === 'true';
@@ -156,7 +161,7 @@ export default class Ubuntu extends Component {
 					isShutDown={this.state.shutDownScreen}
 					turnOn={this.turnOn}
 				/>
-				<Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
+                                <Navbar lockScreen={this.lockScreen} logOut={this.logOut} />
                                 <Desktop
                                         ref={this.desktopRef}
                                         bg_image_name={this.state.bg_image_name}
