@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -12,6 +12,11 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import {
+  getUserSendToTargets,
+  addUserSendToTarget,
+  removeUserSendToTarget,
+} from "../../utils/sendTo";
 
 export default function Settings() {
   const {
@@ -38,9 +43,17 @@ export default function Settings() {
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
+    { id: "sendto", label: "Send To" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
+
+  const [customTargets, setCustomTargets] = useState<Array<{ label: string }>>([]);
+  const [newTarget, setNewTarget] = useState("");
+
+  useEffect(() => {
+    setCustomTargets(getUserSendToTargets());
+  }, []);
 
   const wallpapers = [
     "wall-1",
@@ -104,6 +117,19 @@ export default function Settings() {
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
+
+  const handleAddTarget = () => {
+    const label = newTarget.trim();
+    if (!label) return;
+    addUserSendToTarget({ label });
+    setCustomTargets(getUserSendToTargets());
+    setNewTarget("");
+  };
+
+  const handleRemoveTarget = (label: string) => {
+    removeUserSendToTarget(label);
+    setCustomTargets(getUserSendToTargets());
+  };
 
   return (
     <div className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey">
@@ -267,6 +293,41 @@ export default function Settings() {
             >
               Edit Shortcuts
             </button>
+          </div>
+        </>
+      )}
+      {activeTab === "sendto" && (
+        <>
+          <div className="flex flex-col items-center my-4">
+            <div className="flex">
+              <input
+                type="text"
+                value={newTarget}
+                onChange={(e) => setNewTarget(e.target.value)}
+                className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey mr-2"
+                aria-label="New Send To target"
+              />
+              <button
+                onClick={handleAddTarget}
+                className="px-4 py-1 rounded bg-ub-orange text-white"
+              >
+                Add
+              </button>
+            </div>
+            <ul className="mt-4 w-64">
+              {customTargets.map((t, i) => (
+                <li key={i} className="flex justify-between my-1">
+                  <span>{t.label}</span>
+                  <button
+                    onClick={() => handleRemoveTarget(t.label)}
+                    aria-label={`Remove ${t.label}`}
+                    className="text-red-400"
+                  >
+                    ✕
+                  </button>
+                </li>
+              ))}
+            </ul>
           </div>
         </>
       )}
