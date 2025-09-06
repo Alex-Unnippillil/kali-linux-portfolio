@@ -1,69 +1,126 @@
 import { useEffect, useRef, useState } from 'react';
-import CalendarPopup from './calendar-popup';
+import Link from 'next/link';
 import { useClickOutside } from '../../hooks/useClickOutside';
+import usePersistentState from '../../hooks/usePersistentState';
 
+const pad = (n) => n.toString().padStart(2, '0');
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function Clock({ onlyTime, onlyDay }) {
-  const [currentTime, setCurrentTime] = useState(null);
+  const [now, setNow] = useState(new Date());
+  const [timezone, setTimezone] = usePersistentState(
+    'clock:timezone',
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+  );
+  const [twentyFourHour, setTwentyFourHour] = usePersistentState('clock:24h', true);
+  const [showSeconds, setShowSeconds] = usePersistentState('clock:seconds', false);
+  const menuRef = useRef(null);
   const [open, setOpen] = useState(false);
-  const ref = useRef(null);
 
-  useClickOutside(ref, () => setOpen(false));
+  useClickOutside(menuRef, () => setOpen(false));
 
+  // update time
   useEffect(() => {
-    const update = () => setCurrentTime(new Date());
+    const update = () => setNow(new Date());
     update();
-    let worker;
-    let interval;
-    if (typeof window !== 'undefined' && typeof Worker === 'function') {
-      worker = new Worker(new URL('../../workers/timer.worker.ts', import.meta.url));
-      worker.onmessage = update;
-      worker.postMessage({ action: 'start', interval: 10 * 1000 });
-    } else {
-      interval = setInterval(update, 10 * 1000);
-    }
+    const interval = setInterval(update, showSeconds ? 1000 : 10000);
+    return () => clearInterval(interval);
+  }, [showSeconds]);
+
+  // sync with settings page
+  useEffect(() => {
+    const onTz = (e) => setTimezone(e.detail);
+    const on24 = (e) => setTwentyFourHour(e.detail);
+    const onSec = (e) => setShowSeconds(e.detail);
+    window.addEventListener('clock-timezone', onTz);
+    window.addEventListener('clock-24h', on24);
+    window.addEventListener('clock-seconds', onSec);
     return () => {
-      if (worker) {
-        worker.postMessage({ action: 'stop' });
-        worker.terminate();
-      }
-      if (interval) clearInterval(interval);
+      window.removeEventListener('clock-timezone', onTz);
+      window.removeEventListener('clock-24h', on24);
+      window.removeEventListener('clock-seconds', onSec);
     };
-  }, []);
+  }, [setTimezone, setTwentyFourHour, setShowSeconds]);
 
-  if (!currentTime) return <span suppressHydrationWarning></span>;
-
-  let day = DAYS[currentTime.getDay()];
-  let hour = currentTime.getHours();
-  let minute = currentTime.getMinutes();
-  let month = MONTHS[currentTime.getMonth()];
-  let date = currentTime.getDate().toLocaleString();
+  const tzNow = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
+  let hour = tzNow.getHours();
+  let minute = tzNow.getMinutes();
+  let second = tzNow.getSeconds();
   let meridiem = hour < 12 ? 'AM' : 'PM';
-
-  if (minute.toLocaleString().length === 1) minute = '0' + minute;
-  if (hour > 12) hour -= 12;
-
-  let display;
-  if (onlyTime) {
-    display = `${hour}:${minute} ${meridiem}`;
-  } else if (onlyDay) {
-    display = `${day} ${month} ${date}`;
-  } else {
-    display = `${day} ${month} ${date} ${hour}:${minute} ${meridiem}`;
+  if (!twentyFourHour) {
+    hour = hour % 12 || 12;
   }
+  const timeString =
+    (twentyFourHour ? pad(hour) : hour) +
+    ':' +
+    pad(minute) +
+    (showSeconds ? ':' + pad(second) : '') +
+    (twentyFourHour ? '' : ` ${meridiem}`);
+
+  const day = DAYS[tzNow.getDay()];
+  const month = MONTHS[tzNow.getMonth()];
+  const date = tzNow.getDate().toLocaleString();
+
+  const display = onlyTime
+    ? timeString
+    : onlyDay
+    ? `${day} ${month} ${date}`
+    : `${day} ${month} ${date} ${timeString}`;
+
+  const toggle24 = () => {
+    const val = !twentyFourHour;
+    setTwentyFourHour(val);
+    window.dispatchEvent(new CustomEvent('clock-24h', { detail: val }));
+  };
+  const toggleSeconds = () => {
+    const val = !showSeconds;
+    setShowSeconds(val);
+    window.dispatchEvent(new CustomEvent('clock-seconds', { detail: val }));
+  };
 
   return (
-    <div
-      ref={ref}
-      tabIndex={0}
-      onBlur={() => setOpen(false)}
-      className="relative inline-block"
-    >
-      <span suppressHydrationWarning onClick={() => setOpen(!open)}>{display}</span>
-      {open && <CalendarPopup />}
+    <div ref={menuRef} className="relative inline-block">
+      <span
+        data-testid="panel-clock"
+        suppressHydrationWarning
+        onClick={() => setOpen((o) => !o)}
+        className="cursor-pointer"
+      >
+        {display}
+      </span>
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 mt-2 w-48 bg-neutral-900 text-white rounded shadow-lg z-50"
+        >
+          <button
+            role="menuitemcheckbox"
+            aria-checked={twentyFourHour}
+            onClick={toggle24}
+            className="flex justify-between w-full px-2 py-1 text-left hover:bg-neutral-700"
+          >
+            <span>24-hour</span>
+            {twentyFourHour && <span>✓</span>}
+          </button>
+          <button
+            role="menuitemcheckbox"
+            aria-checked={showSeconds}
+            onClick={toggleSeconds}
+            className="flex justify-between w-full px-2 py-1 text-left hover:bg-neutral-700"
+          >
+            <span>Show seconds</span>
+            {showSeconds && <span>✓</span>}
+          </button>
+          <Link
+            role="menuitem"
+            href="/apps/settings/date-time"
+            className="block px-2 py-1 hover:bg-neutral-700 text-left"
+          >
+            Date/Time settings
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
-

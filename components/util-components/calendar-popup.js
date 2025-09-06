@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { listEvents } from '../../utils/orage';
+import usePersistentState from '../../hooks/usePersistentState';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -10,6 +11,7 @@ export default function CalendarPopup() {
   const [month, setMonth] = useState(today.getMonth());
   const [eventsMap, setEventsMap] = useState({});
   const [selected, setSelected] = useState(null);
+  const [firstDayOfWeek, setFirstDayOfWeek] = usePersistentState('clock:first-day', 0);
 
   useEffect(() => {
     listEvents(year, month).then(evts => {
@@ -26,9 +28,16 @@ export default function CalendarPopup() {
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDay = new Date(year, month, 1).getDay();
+  const offset = (firstDay - firstDayOfWeek + 7) % 7;
+
+  useEffect(() => {
+    const onFirstDay = (e) => setFirstDayOfWeek(e.detail);
+    window.addEventListener('clock-first-day', onFirstDay);
+    return () => window.removeEventListener('clock-first-day', onFirstDay);
+  }, [setFirstDayOfWeek]);
 
   const weeks = [];
-  let day = 1 - firstDay;
+  let day = 1 - offset;
   for (let w = 0; w < 6; w++) {
     const wk = [];
     for (let d = 0; d < 7; d++, day++) {
@@ -48,7 +57,9 @@ export default function CalendarPopup() {
         <button onClick={() => setMonth(m => (m === 11 ? 0 : m + 1))}>▶</button>
       </div>
       <div className="grid grid-cols-7 gap-1 text-xs text-center">
-        {DAYS.map(d => <div key={d} className="font-bold">{d}</div>)}
+        {DAYS.slice(firstDayOfWeek).concat(DAYS.slice(0, firstDayOfWeek)).map(d => (
+          <div key={d} className="font-bold">{d}</div>
+        ))}
         {weeks.map((wk,i) => wk.map((d,j) => {
           const date = d ? new Date(year, month, d) : null;
           const key = date ? date.toISOString().slice(0,10) : null;
