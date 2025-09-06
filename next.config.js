@@ -17,13 +17,13 @@ const ContentSecurityPolicy = [
   // Allow external images and data URIs for badges/icons
   "img-src 'self' https: data:",
   // Allow inline styles
-  "style-src 'self' 'unsafe-inline'",
-  // Explicitly allow inline style tags
-  "style-src-elem 'self' 'unsafe-inline'",
+  "style-src 'self'",
+  // Explicitly allow style tags
+  "style-src-elem 'self'",
   // Restrict fonts to same origin
   "font-src 'self'",
   // External scripts required for embedded timelines
-  "script-src 'self' 'unsafe-inline' https://vercel.live https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://sdk.scdn.co",
+  "script-src 'self' https://vercel.live https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://sdk.scdn.co",
   // Allow outbound connections for embeds and the in-browser Chrome app
   "connect-src 'self' https://example.com https://developer.mozilla.org https://en.wikipedia.org https://www.google.com https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.google.com https://stackblitz.com",
   // Allow iframes from specific providers so the Chrome and StackBlitz apps can load allowed content

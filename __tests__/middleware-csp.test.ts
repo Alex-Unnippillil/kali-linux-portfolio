@@ -2,6 +2,7 @@
 
 import http from 'node:http';
 import request from 'supertest';
+import type { AddressInfo } from 'node:net';
 import { NextRequest } from 'next/server';
 import { middleware } from '../middleware';
 
@@ -27,5 +28,18 @@ describe('middleware CSP header', () => {
     expect(csp).toContain('nonce-');
     expect(csp).toContain('https://platform.twitter.com');
     expect(csp).toContain('https://cdn.jsdelivr.net');
+  });
+
+  it('omits unsafe-inline and sets a single nonce', async () => {
+    const server = createServer();
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const { port } = server.address() as AddressInfo;
+    const res = await fetch(`http://localhost:${port}/`);
+    await new Promise<void>((resolve) => server.close(resolve));
+
+    const csp = res.headers.get('content-security-policy') ?? '';
+    const nonces = csp.match(/nonce-/g) || [];
+    expect(nonces).toHaveLength(1);
+    expect(csp).not.toContain("'unsafe-inline'");
   });
 });
