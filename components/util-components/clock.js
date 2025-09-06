@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useClickOutside } from '../../hooks/useClickOutside';
+import useRovingTabIndex from '../../hooks/useRovingTabIndex';
 import usePersistentState from '../../hooks/usePersistentState';
 
 const pad = (n) => n.toString().padStart(2, '0');
@@ -19,6 +20,7 @@ export default function Clock({ onlyTime, onlyDay }) {
   const [open, setOpen] = useState(false);
 
   useClickOutside(menuRef, () => setOpen(false));
+  useRovingTabIndex(menuRef, open, 'vertical');
 
   // update time
   useEffect(() => {
@@ -79,8 +81,19 @@ export default function Clock({ onlyTime, onlyDay }) {
     window.dispatchEvent(new CustomEvent('clock-seconds', { detail: val }));
   };
 
+  useEffect(() => {
+    if (open && menuRef.current) {
+      const first = menuRef.current.querySelector('[role="menuitem"], [role="menuitemcheckbox"]');
+      first && first.focus();
+    }
+  }, [open]);
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') setOpen(false);
+  };
+
   return (
-    <div ref={menuRef} className="relative inline-block">
+    <div ref={menuRef} className="relative inline-block" onKeyDown={handleKeyDown}>
       <span
         data-testid="panel-clock"
         suppressHydrationWarning
