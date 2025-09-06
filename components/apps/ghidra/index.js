@@ -1,5 +1,6 @@
 import { isBrowser } from '@/utils/env';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import Head from 'next/head';
 import PseudoDisasmViewer from './PseudoDisasmViewer';
 import FunctionTree from './FunctionTree';
 import CallGraph from './CallGraph';
@@ -249,6 +250,9 @@ export default function GhidraApp() {
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
       >
+        <Head>
+          <link rel="prefetch" href="/wasm/ghidra.wasm" />
+        </Head>
         <div className="p-2 flex space-x-2">
           <button
             onClick={switchEngine}
@@ -295,6 +299,9 @@ export default function GhidraApp() {
 
   return (
     <div className="w-full h-full flex flex-col bg-gray-900 text-gray-100">
+      <Head>
+        <link rel="prefetch" href="/wasm/ghidra.wasm" />
+      </Head>
       <div className="p-2">
         <button
           onClick={switchEngine}
