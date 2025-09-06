@@ -6,9 +6,28 @@ export const createDynamicApp = (id, title) =>
   dynamic(
     async () => {
       try {
-        const mod = await import(
-          /* webpackChunkName: "[request]", webpackPrefetch: true */ `../components/apps/${id}`
-        );
+        let mod;
+        try {
+          mod = await import(
+            /* webpackChunkName: "[request]", webpackPrefetch: true */ `../apps/${id}`
+          );
+        } catch {
+          try {
+            mod = await import(
+              /* webpackChunkName: "[request]", webpackPrefetch: true */ `../apps/${id}/index`
+            );
+          } catch {
+            try {
+              mod = await import(
+                /* webpackChunkName: "[request]", webpackPrefetch: true */ `../apps/${id.replace('_', '-')}`
+              );
+            } catch {
+              mod = await import(
+                /* webpackChunkName: "[request]", webpackPrefetch: true */ `../components/apps/${id}`
+              );
+            }
+          }
+        }
         logEvent({ category: 'Application', action: `Loaded ${title}` });
         return mod.default;
       } catch (err) {
