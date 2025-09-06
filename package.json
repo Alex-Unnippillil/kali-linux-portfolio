@@ -20,6 +20,8 @@
     "smoke": "node scripts/smoke-all-apps.mjs",
     "module-report": "node scripts/generate-module-report.mjs",
     "analyze": "ANALYZE=true yarn build",
+    "analyze:unused": "depcheck --skip-missing --ignores='@supabase/ssr,@vercel/toolbar,aframe,antd,autoprefixer,kaitai-struct,pcap-parser,postcss,prop-types,react-bootstrap,react-github-calendar,react-leaflet,react-transition-group,stockfish,swr,@types/canvas-confetti,@types/howler,@types/jest,@types/leaflet,@types/react-transition-group,@types/three,@types/web-bluetooth,@types/wicg-file-system-access,jest-environment-jsdom,magic-string,test-exclude,workbox-build'",
+    "analyze:images": "node scripts/list-duplicate-images.mjs",
     "preinstall": "corepack enable && corepack prepare yarn@4.9.2 --activate",
     "verify:all": "node scripts/verify.mjs"
   },
@@ -130,6 +132,7 @@
     "@types/three": "^0.179.0",
     "@types/web-bluetooth": "^0.0.21",
     "@types/wicg-file-system-access": "^2023.10.6",
+    "depcheck": "^1.4.7",
     "eslint": "^9.13.0",
     "eslint-config-next": "15.5.2",
     "fake-indexeddb": "^6.1.0",

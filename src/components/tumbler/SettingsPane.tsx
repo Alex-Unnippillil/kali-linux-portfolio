@@ -1,12 +1,12 @@
 'use client';
 import React from 'react';
 
-export interface TumblerSettings {
+interface TumblerSettings {
   maxSize: number;
   disabledPlugins: Record<string, boolean>;
 }
 
-export interface SettingsPaneProps {
+interface SettingsPaneProps {
   availablePlugins: string[];
   settings: TumblerSettings;
   onChange: (settings: TumblerSettings) => void;

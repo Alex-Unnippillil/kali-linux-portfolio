@@ -36,7 +36,7 @@ export default function Meta() {
                 content="Alex Unnippillil Personal Portfolio Website" />
             <meta name="twitter:site" content="alexunnippillil" />
             <meta name="twitter:creator" content="unnippillil" />
-            <meta name="twitter:image:src" content="images/logos/logo_1024.png" />
+            <meta name="twitter:image:src" content="images/logos/logo_1200.png" />
             {/* Open Graph general (Facebook, Pinterest & Google+) */}
             <meta name="og:title" content="Alex Unnippillil Personal Portfolio Website " />
             <meta name="og:description"
