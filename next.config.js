@@ -3,7 +3,7 @@
 // Allows external badges and same-origin PDF embedding.
 // Update README (section "CSP External Domains") when editing domains below.
 
-const { validateServerEnv: validateEnv } = require('./lib/validate.js');
+const { validateServerEnv } = require('./lib/validate.js');
 
 const ContentSecurityPolicy = [
   "default-src 'self'",
@@ -87,6 +87,14 @@ const withPWA = require('@ducanh2912/next-pwa').default({
 const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 const isProd = process.env.NODE_ENV === 'production';
 
+if (isProd) {
+  try {
+    validateServerEnv(process.env);
+  } catch {
+    console.warn('Missing env vars; running without validation');
+  }
+}
+
 // Merge experiment settings and production optimizations into a single function.
 function configureWebpack(config, { isServer }) {
   // Enable WebAssembly loading and avoid JSON destructuring bug
@@ -114,30 +122,7 @@ function configureWebpack(config, { isServer }) {
   return config;
 }
 
-try {
-  validateEnv?.(process.env);
-} catch {
-  console.warn('Missing env vars; running without validation');
-}
 
-const imageDomains = [
-  'opengraph.githubassets.com',
-  'raw.githubusercontent.com',
-  'avatars.githubusercontent.com',
-  'i.ytimg.com',
-  'yt3.ggpht.com',
-  'i.scdn.co',
-  'www.google.com',
-  'example.com',
-  'developer.mozilla.org',
-  'en.wikipedia.org',
-  'ghchart.rshah.org',
-  'openweathermap.org',
-  'staticmap.openstreetmap.de',
-  'data.typeracer.com',
-  'img.shields.io',
-  'images.credly.com',
-];
 
 module.exports = withBundleAnalyzer(
   withPWA({
