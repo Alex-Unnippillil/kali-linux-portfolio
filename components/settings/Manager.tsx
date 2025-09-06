@@ -2,33 +2,28 @@
 
 import { useState, useRef } from 'react';
 import { diffJson, Change } from 'diff';
-import { exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
-import { getAll as getModules, clearStore, setValue as setModuleValue } from '../../utils/moduleStore';
+import {
+  exportBackupZip,
+  parseBackupZip,
+  getBackupData,
+  applyBackup,
+  BackupChannels,
+} from '../../utils/backup';
 import { useSettings } from '../../hooks/useSettings';
-
-interface BackupData {
-  settings: any;
-  modules: Record<string, string>;
-}
 
 export default function Manager() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [diff, setDiff] = useState<Change[] | null>(null);
-  const [pending, setPending] = useState<BackupData | null>(null);
+  const [pending, setPending] = useState<BackupChannels | null>(null);
 
   const settingsCtx = useSettings();
 
   const handleExportAll = async () => {
-    const settings = JSON.parse(await exportSettingsData());
-    const modules = getModules();
-    const blob = new Blob(
-      [JSON.stringify({ settings, modules }, null, 2)],
-      { type: 'application/json' },
-    );
+    const blob = await exportBackupZip();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'backup.json';
+    a.download = 'backup.zip';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -36,25 +31,15 @@ export default function Manager() {
   const openFile = () => fileRef.current?.click();
 
   const handleFile = async (file: File) => {
-    const text = await file.text();
-    let data: BackupData;
-    try {
-      data = JSON.parse(text);
-    } catch (e) {
-      console.error('Invalid backup', e);
-      return;
-    }
-    const current: BackupData = {
-      settings: JSON.parse(await exportSettingsData()),
-      modules: getModules(),
-    };
+    const data = await parseBackupZip(file);
+    const current = await getBackupData();
     setDiff(diffJson(current, data));
     setPending(data);
   };
 
   const applyRestore = async () => {
     if (!pending) return;
-    await importSettingsData(pending.settings);
+    await applyBackup(pending);
     const map: Record<string, (v: any) => void> = {
       accent: settingsCtx.setAccent,
       wallpaper: settingsCtx.setWallpaper,
@@ -69,14 +54,10 @@ export default function Manager() {
       theme: settingsCtx.setTheme,
     };
     Object.entries(map).forEach(([key, setter]) => {
-      if (pending.settings && pending.settings[key] !== undefined) {
-        setter(pending.settings[key]);
+      if (pending.appearance && (pending.appearance as any)[key] !== undefined) {
+        setter((pending.appearance as any)[key]);
       }
     });
-    clearStore();
-    if (pending.modules) {
-      Object.entries(pending.modules).forEach(([k, v]) => setModuleValue(k, v));
-    }
     setDiff(null);
     setPending(null);
   };
@@ -99,7 +80,7 @@ export default function Manager() {
         <input
           ref={fileRef}
           type="file"
-          accept="application/json"
+          accept="application/zip"
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];
