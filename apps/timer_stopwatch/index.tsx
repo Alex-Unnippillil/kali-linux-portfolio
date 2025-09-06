@@ -42,15 +42,31 @@ export default function TimerStopwatch() {
         style={{ contentVisibility: 'auto' }}
       >
         <div>
-          <input type="number" id="minutes" min="0" defaultValue="0" /> :
-          <input type="number" id="seconds" min="0" max="59" defaultValue="30" />
+          <input
+            id="timerName"
+            placeholder="Name"
+            className="w-24 mr-2"
+            aria-label="Timer name"
+          />
+          <input
+            type="number"
+            id="minutes"
+            min="0"
+            defaultValue="0"
+            aria-label="Minutes"
+          />
+          :
+          <input
+            type="number"
+            id="seconds"
+            min="0"
+            max="59"
+            defaultValue="30"
+            aria-label="Seconds"
+          />
+          <button id="addTimer">Add Timer</button>
         </div>
-        <div className="display" id="timerDisplay">00:30</div>
-        <div>
-          <button id="startTimer">Start</button>
-          <button id="stopTimer">Stop</button>
-          <button id="resetTimer">Reset</button>
-        </div>
+        <ul id="timersList" />
       </div>
       <div
         id="stopwatchControls"

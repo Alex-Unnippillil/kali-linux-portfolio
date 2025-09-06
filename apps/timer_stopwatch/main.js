@@ -2,20 +2,20 @@ import { isBrowser } from '../../utils/env';
 
 if (isBrowser) {
 let mode = 'timer';
-let timerWorker = null;
-let timerRemaining = 30;
-let timerEndTime = 0;
+const timers = {};
 let stopwatchWorker = null;
 let stopwatchElapsed = 0;
 let stopwatchStartTime = 0;
 let lapNumber = 1;
 
-const timerDisplay = document.getElementById('timerDisplay');
 const stopwatchDisplay = document.getElementById('stopwatchDisplay');
 const timerControls = document.getElementById('timerControls');
 const stopwatchControls = document.getElementById('stopwatchControls');
+const nameInput = document.getElementById('timerName');
 const minutesInput = document.getElementById('minutes');
 const secondsInput = document.getElementById('seconds');
+const addTimerBtn = document.getElementById('addTimer');
+const timersList = document.getElementById('timersList');
 const lapsList = document.getElementById('laps');
 
 function formatTime(seconds) {
@@ -40,43 +40,69 @@ function switchMode(newMode) {
 document.getElementById('modeTimer').addEventListener('click', () => switchMode('timer'));
 document.getElementById('modeStopwatch').addEventListener('click', () => switchMode('stopwatch'));
 
-function updateTimerDisplay() {
-  timerDisplay.textContent = formatTime(timerRemaining);
-}
-
-function startTimer() {
-  if (timerWorker || typeof Worker !== 'function') return;
+function addTimer() {
+  if (typeof Worker !== 'function') return;
+  const name = (nameInput.value || '').trim() || 'Timer';
   const mins = parseInt(minutesInput.value, 10) || 0;
   const secs = parseInt(secondsInput.value, 10) || 0;
-  timerRemaining = mins * 60 + secs;
-  timerEndTime = Date.now() + timerRemaining * 1000;
-  updateTimerDisplay();
-  timerWorker = new Worker(new URL('../../workers/timer.worker.ts', import.meta.url));
-  timerWorker.onmessage = () => {
-    timerRemaining = Math.max(0, Math.ceil((timerEndTime - Date.now()) / 1000));
-    updateTimerDisplay();
-    if (timerRemaining <= 0) {
-      stopTimer();
-      playSound();
+  const total = mins * 60 + secs;
+  if (total <= 0) return;
+  const id = Date.now().toString();
+  const endTime = Date.now() + total * 1000;
+  const li = document.createElement('li');
+  const label = document.createElement('span');
+  label.textContent = `${name}: `;
+  const timeSpan = document.createElement('span');
+  timeSpan.textContent = formatTime(total);
+  const stopBtn = document.createElement('button');
+  stopBtn.textContent = '✖';
+  stopBtn.style.marginLeft = '10px';
+  stopBtn.addEventListener('click', () => stopTimer(id));
+  li.appendChild(label);
+  li.appendChild(timeSpan);
+  li.appendChild(stopBtn);
+  timersList.appendChild(li);
+  const worker = new Worker(new URL('../../workers/timer.worker.ts', import.meta.url));
+  worker.onmessage = () => {
+    const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+    timeSpan.textContent = formatTime(remaining);
+    if (remaining <= 0) {
+      stopTimer(id, true);
     }
   };
-  timerWorker.postMessage({ action: 'start', interval: 1000 });
+  worker.postMessage({ action: 'start', interval: 1000 });
+  timers[id] = { name, worker, li };
+  nameInput.value = '';
 }
 
-function stopTimer() {
-  if (timerWorker) {
-    timerWorker.postMessage({ action: 'stop' });
-    timerWorker.terminate();
-    timerWorker = null;
+function stopTimer(id, completed = false) {
+  const t = timers[id];
+  if (!t) return;
+  t.worker.postMessage({ action: 'stop' });
+  t.worker.terminate();
+  t.li.remove();
+  delete timers[id];
+  if (completed) {
+    playSound();
+    showToast(`${t.name} done`);
   }
 }
 
-function resetTimer() {
-  stopTimer();
-  const mins = parseInt(minutesInput.value, 10) || 0;
-  const secs = parseInt(secondsInput.value, 10) || 0;
-  timerRemaining = mins * 60 + secs;
-  updateTimerDisplay();
+function showToast(message) {
+  const toast = document.createElement('div');
+  toast.textContent = message;
+  toast.style.position = 'fixed';
+  toast.style.top = '1rem';
+  toast.style.left = '50%';
+  toast.style.transform = 'translateX(-50%)';
+  toast.style.background = '#1f2937';
+  toast.style.color = '#fff';
+  toast.style.border = '1px solid #374151';
+  toast.style.padding = '0.75rem 1rem';
+  toast.style.borderRadius = '0.375rem';
+  toast.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 6000);
 }
 
 function updateStopwatchDisplay() {
@@ -133,16 +159,13 @@ function playSound() {
   }
 }
 
-document.getElementById('startTimer').addEventListener('click', startTimer);
-document.getElementById('stopTimer').addEventListener('click', stopTimer);
-document.getElementById('resetTimer').addEventListener('click', resetTimer);
+addTimerBtn.addEventListener('click', addTimer);
 
 document.getElementById('startWatch').addEventListener('click', startWatch);
 document.getElementById('stopWatch').addEventListener('click', stopWatch);
 document.getElementById('resetWatch').addEventListener('click', resetWatch);
 document.getElementById('lapWatch').addEventListener('click', lapWatch);
 
-// Initialize displays
-updateTimerDisplay();
+// Initialize display
 updateStopwatchDisplay();
 }
