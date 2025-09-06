@@ -9,12 +9,6 @@ import { Capstone, Const, loadCapstone } from 'capstone-wasm';
 // Applies S1–S8 guidelines for responsive and accessible binary analysis UI
 const DEFAULT_WASM = '/wasm/ghidra.wasm';
 
-async function loadCapstoneModule() {
-  if (!isBrowser()) return null;
-  await loadCapstone();
-  return { Capstone, Const };
-}
-
 // Disassembly data is now loaded from pre-generated JSON
 
 // S6: Interactive control flow graph with accessible labelling
@@ -94,7 +88,9 @@ export default function GhidraApp() {
   // S1: Detect GHIDRA web support and fall back to Capstone
   const ensureCapstone = useCallback(async () => {
     if (capstoneRef.current) return capstoneRef.current;
-    const mod = await loadCapstoneModule();
+    if (!isBrowser()) return null;
+    await loadCapstone();
+    const mod = { Capstone, Const };
     capstoneRef.current = mod;
     return mod;
   }, []);
