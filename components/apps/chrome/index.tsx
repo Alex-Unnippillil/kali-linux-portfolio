@@ -550,6 +550,8 @@ const Chrome: React.FC = () => {
                     src={`https://www.google.com/s2/favicons?sz=64&domain_url=${origin}`}
                     alt=""
                     className="w-8 h-8 mb-1"
+                    width={32}
+                    height={32}
                   />
                 );
               } catch {
@@ -736,6 +738,8 @@ const Chrome: React.FC = () => {
                     src={src}
                     alt=""
                     className="w-4 h-4 mr-1 flex-shrink-0"
+                    width={16}
+                    height={16}
                   />
                 ) : null;
               } catch {

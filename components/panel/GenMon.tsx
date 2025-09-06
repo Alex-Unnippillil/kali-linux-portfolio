@@ -108,7 +108,9 @@ export default function GenMon({ code, interval = 60 }: GenMonProps) {
 
   return (
     <div className="flex items-center gap-2">
-      {icon && <img src={icon} alt="" className="w-4 h-4" />}
+      {icon && (
+        <img src={icon} alt="" className="w-4 h-4" width={16} height={16} />
+      )}
       {text && <span>{text}</span>}
       {bar !== null && (
         <div className="w-16 h-2 bg-gray-700 rounded overflow-hidden">
