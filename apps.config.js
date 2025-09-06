@@ -11,6 +11,7 @@ import { displayClipboardManager } from './components/apps/ClipboardManager';
 import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayScreenRecorder } from './components/apps/screen-recorder';
+import { displayTaskManager } from './components/apps/task_manager';
 import { displayNikto } from './components/apps/nikto';
 
 export const chromeDefaultTiles = [
@@ -742,6 +743,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayResourceMonitor,
+  },
+  {
+    id: 'task-manager',
+    title: 'Task Manager',
+    icon: '/themes/Yaru/apps/resource-monitor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTaskManager,
   },
   {
     id: 'screen-recorder',
