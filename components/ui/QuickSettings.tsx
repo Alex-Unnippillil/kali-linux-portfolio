@@ -2,20 +2,17 @@
 
 import usePersistentState from '../../hooks/usePersistentState';
 import { useEffect } from 'react';
+import { useSettings } from '../../hooks/useSettings';
 
 interface Props {
   open: boolean;
 }
 
 const QuickSettings = ({ open }: Props) => {
-  const [theme, setTheme] = usePersistentState('qs-theme', 'light');
+  const { theme, setTheme } = useSettings();
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-  }, [theme]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('reduce-motion', reduceMotion);
@@ -30,10 +27,10 @@ const QuickSettings = ({ open }: Props) => {
       <div className="px-4 pb-2">
         <button
           className="w-full flex justify-between"
-          onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+          onClick={() => setTheme(theme === 'undercover' ? 'default' : 'undercover')}
         >
-          <span>Theme</span>
-          <span>{theme === 'light' ? 'Light' : 'Dark'}</span>
+          <span>Undercover</span>
+          <span>{theme === 'undercover' ? 'On' : 'Off'}</span>
         </button>
       </div>
       <div className="px-4 pb-2 flex justify-between">

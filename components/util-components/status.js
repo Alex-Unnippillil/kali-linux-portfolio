@@ -3,10 +3,10 @@ import Image from 'next/image';
 import SmallArrow from "./small_arrow";
 import { useSettings } from '../../hooks/useSettings';
 
-const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
-
 export default function Status() {
-  const { allowNetwork } = useSettings();
+  const { allowNetwork, theme } = useSettings();
+  const iconBase = theme === 'undercover' ? '/themes/Windows/status' : '/themes/Yaru/status';
+  const VOLUME_ICON = `${iconBase}/audio-volume-medium-symbolic.svg`;
   const [online, setOnline] = useState(true);
 
   useEffect(() => {
@@ -47,7 +47,7 @@ export default function Status() {
         <Image
           width={16}
           height={16}
-          src={online ? "/themes/Yaru/status/network-wireless-signal-good-symbolic.svg" : "/themes/Yaru/status/network-wireless-signal-none-symbolic.svg"}
+          src={online ? `${iconBase}/network-wireless-signal-good-symbolic.svg` : `${iconBase}/network-wireless-signal-none-symbolic.svg`}
           alt={online ? "online" : "offline"}
           className="inline status-symbol w-4 h-4"
           sizes="16px"
@@ -70,8 +70,8 @@ export default function Status() {
         <Image
           width={16}
           height={16}
-          src="/themes/Yaru/status/battery-good-symbolic.svg"
-          alt="ubuntu battry"
+          src={`${iconBase}/battery-good-symbolic.svg`}
+          alt="battery"
           className="inline status-symbol w-4 h-4"
           sizes="16px"
         />

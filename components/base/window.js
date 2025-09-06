@@ -6,9 +6,11 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import { useSettings, SettingsContext } from '../../hooks/useSettings';
 import styles from './window.module.css';
 
 export class Window extends Component {
+    static contextType = SettingsContext;
     constructor(props) {
         super(props);
         this.id = null;
@@ -732,6 +734,8 @@ export class WindowXBorder extends Component {
 // Window's Edit Buttons
 export function WindowEditButtons(props) {
     const { togglePin } = useDocPiP(props.pip || (() => null));
+    const { theme } = useSettings();
+    const iconBase = theme === 'undercover' ? '/themes/Windows/window' : '/themes/Yaru/window';
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
     return (
         <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center h-11 min-w-[8.25rem]">
@@ -743,8 +747,8 @@ export function WindowEditButtons(props) {
                     onClick={togglePin}
                 >
                     <NextImage
-                        src="/themes/Yaru/window/window-pin-symbolic.svg"
-                        alt="Kali window pin"
+                        src={`${iconBase}/window-pin-symbolic.svg`}
+                        alt="window pin"
                         className="h-4 w-4 inline"
                         width={16}
                         height={16}
@@ -759,8 +763,8 @@ export function WindowEditButtons(props) {
                 onClick={props.minimize}
             >
                 <NextImage
-                    src="/themes/Yaru/window/window-minimize-symbolic.svg"
-                    alt="Kali window minimize"
+                    src={`${iconBase}/window-minimize-symbolic.svg`}
+                    alt="window minimize"
                     className="h-4 w-4 inline"
                     width={16}
                     height={16}
@@ -776,14 +780,14 @@ export function WindowEditButtons(props) {
                             className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
                             onClick={props.maximize}
                         >
-                            <NextImage
-                                src="/themes/Yaru/window/window-restore-symbolic.svg"
-                                alt="Kali window restore"
-                                className="h-4 w-4 inline"
-                                width={16}
-                                height={16}
-                                sizes="16px"
-                            />
+                              <NextImage
+                                  src={`${iconBase}/window-restore-symbolic.svg`}
+                                  alt="window restore"
+                                  className="h-4 w-4 inline"
+                                  width={16}
+                                  height={16}
+                                  sizes="16px"
+                              />
                         </button>
                     ) : (
                         <button
@@ -792,14 +796,14 @@ export function WindowEditButtons(props) {
                             className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
                             onClick={props.maximize}
                         >
-                            <NextImage
-                                src="/themes/Yaru/window/window-maximize-symbolic.svg"
-                                alt="Kali window maximize"
-                                className="h-4 w-4 inline"
-                                width={16}
-                                height={16}
-                                sizes="16px"
-                            />
+                              <NextImage
+                                  src={`${iconBase}/window-maximize-symbolic.svg`}
+                                  alt="window maximize"
+                                  className="h-4 w-4 inline"
+                                  width={16}
+                                  height={16}
+                                  sizes="16px"
+                              />
                         </button>
                     )
             )}
@@ -810,14 +814,14 @@ export function WindowEditButtons(props) {
                 className="mx-1 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6"
                 onClick={props.close}
             >
-                <NextImage
-                    src="/themes/Yaru/window/window-close-symbolic.svg"
-                    alt="Kali window close"
-                    className="h-4 w-4 inline"
-                    width={16}
-                    height={16}
-                    sizes="16px"
-                />
+            <NextImage
+                src={`${iconBase}/window-close-symbolic.svg`}
+                alt="window close"
+                className="h-4 w-4 inline"
+                width={16}
+                height={16}
+                sizes="16px"
+            />
             </button>
         </div>
     )

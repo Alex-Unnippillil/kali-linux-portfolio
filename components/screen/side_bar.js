@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import Image from 'next/image'
 import SideBarApp from '../base/side_bar_app';
+import { useSettings } from '../../hooks/useSettings';
 
 let renderApps = (props) => {
     let sideBarAppsJsx = [];
@@ -49,6 +50,11 @@ export default function SideBar(props) {
 export function AllApps(props) {
 
     const [title, setTitle] = useState(false);
+    const { theme } = useSettings();
+    const icon = theme === 'undercover'
+        ? '/themes/Windows/status/decompiler-symbolic.svg'
+        : '/themes/Yaru/system/view-app-grid-symbolic.svg';
+    const label = theme === 'undercover' ? 'Start' : 'Show Applications';
 
     return (
         <div
@@ -67,8 +73,8 @@ export function AllApps(props) {
                     width={28}
                     height={28}
                     className="w-7"
-                    src="/themes/Yaru/system/view-app-grid-symbolic.svg"
-                    alt="Ubuntu view app"
+                    src={icon}
+                    alt={label}
                     sizes="28px"
                 />
                 <div
@@ -77,7 +83,7 @@ export function AllApps(props) {
                         " w-max py-0.5 px-1.5 absolute top-1 left-full ml-5 text-ubt-grey text-opacity-90 text-sm bg-ub-grey bg-opacity-70 border-gray-400 border border-opacity-40 rounded-md"
                     }
                 >
-                    Show Applications
+                    {label}
                 </div>
             </div>
         </div>
