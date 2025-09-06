@@ -257,6 +257,9 @@ export class Desktop extends Component {
                 });
                 this.setState({ context_app: appId }, () => this.showContextMenu(e, "taskbar"));
                 break;
+            case "window":
+                // Do not show desktop menu when right-clicking a window
+                break;
             default:
                 ReactGA.event({
                     category: `Context Menu`,
@@ -287,6 +290,9 @@ export class Desktop extends Component {
             case "taskbar":
                 ReactGA.event({ category: `Context Menu`, action: `Opened Taskbar Context Menu` });
                 this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "taskbar"));
+                break;
+            case "window":
+                // no menu for window context
                 break;
             default:
                 ReactGA.event({ category: `Context Menu`, action: `Opened Default Context Menu` });
@@ -739,6 +745,12 @@ export class Desktop extends Component {
         this.setState({ showShortcutSelector: true });
     }
 
+    handleDesktopPaste = () => {
+        // Stub for paste functionality
+        // In the future this could drop files or text onto the desktop
+        console.log('Paste action triggered')
+    }
+
     addShortcutToDesktop = (app_id) => {
         const appIndex = apps.findIndex(app => app.id === app_id);
         if (appIndex === -1) return;
@@ -895,7 +907,7 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
-                    clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                    onPaste={this.handleDesktopPaste}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
                 <AppMenu
