@@ -82,6 +82,22 @@ function MyApp(props) {
   }, []);
 
   useEffect(() => {
+    let active = true;
+    import('web-vitals/attribution')
+      .then(({ onTTI }) => {
+        onTTI(({ value, id }) => {
+          if (active) {
+            reportWebVitalsUtil({ id, name: 'TTI', value });
+          }
+        });
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
     const liveRegion = document.getElementById('live-region');
     if (!liveRegion) return;
 

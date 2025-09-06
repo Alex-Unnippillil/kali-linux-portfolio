@@ -5,6 +5,7 @@ export class UbuntuApp extends Component {
     constructor() {
         super();
         this.state = { launching: false, dragging: false, prefetched: false };
+        this.prefetchTimer = null;
     }
 
     handleDragStart = () => {
@@ -30,6 +31,25 @@ export class UbuntuApp extends Component {
         }
     }
 
+    startPrefetchTimer = () => {
+        if (this.state.prefetched || this.prefetchTimer) return;
+        this.prefetchTimer = setTimeout(() => {
+            this.prefetchTimer = null;
+            this.handlePrefetch();
+        }, 150);
+    }
+
+    clearPrefetchTimer = () => {
+        if (this.prefetchTimer) {
+            clearTimeout(this.prefetchTimer);
+            this.prefetchTimer = null;
+        }
+    }
+
+    componentWillUnmount() {
+        this.clearPrefetchTimer();
+    }
+
     render() {
         return (
             <div
@@ -47,8 +67,10 @@ export class UbuntuApp extends Component {
                 onDoubleClick={this.openApp}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openApp(); } }}
                 tabIndex={this.props.disabled ? -1 : 0}
-                onMouseEnter={this.handlePrefetch}
-                onFocus={this.handlePrefetch}
+                onMouseEnter={this.startPrefetchTimer}
+                onMouseLeave={this.clearPrefetchTimer}
+                onFocus={this.startPrefetchTimer}
+                onBlur={this.clearPrefetchTimer}
             >
                 <Image
                     width={40}
