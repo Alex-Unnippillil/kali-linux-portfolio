@@ -1,7 +1,7 @@
 import { isBrowser } from '@/utils/env';
 import { useEffect, useCallback, useState, useRef } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
-import useOPFS from '../../hooks/useOPFS.js';
+import useOPFS from '../../hooks/useOPFS';
 import GameLayout, { useInputRecorder } from './GameLayout';
 import useGameControls from './useGameControls';
 import { vibrate } from './Games/common/haptics';
