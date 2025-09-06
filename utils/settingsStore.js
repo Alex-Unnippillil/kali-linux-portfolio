@@ -6,6 +6,7 @@ import { getTheme, setTheme } from './theme';
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
   wallpaper: 'wall-2',
+  wallpaperStyle: 'fill',
   density: 'regular',
   reducedMotion: false,
   fontScale: 1,
@@ -34,6 +35,16 @@ export async function getWallpaper() {
 export async function setWallpaper(wallpaper) {
   if (typeof window === 'undefined') return;
   await set('bg-image', wallpaper);
+}
+
+export async function getWallpaperStyle() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.wallpaperStyle;
+  return (await get('bg-style')) || DEFAULT_SETTINGS.wallpaperStyle;
+}
+
+export async function setWallpaperStyle(style) {
+  if (typeof window === 'undefined') return;
+  await set('bg-style', style);
 }
 
 export async function getDensity() {
@@ -128,6 +139,7 @@ export async function resetSettings() {
   await Promise.all([
     del('accent'),
     del('bg-image'),
+    del('bg-style'),
   ]);
   window.localStorage.removeItem('density');
   window.localStorage.removeItem('reduced-motion');
@@ -143,6 +155,7 @@ export async function exportSettings() {
   const [
     accent,
     wallpaper,
+    wallpaperStyle,
     density,
     reducedMotion,
     fontScale,
@@ -154,6 +167,7 @@ export async function exportSettings() {
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
+    getWallpaperStyle(),
     getDensity(),
     getReducedMotion(),
     getFontScale(),
@@ -167,6 +181,7 @@ export async function exportSettings() {
   return JSON.stringify({
     accent,
     wallpaper,
+    wallpaperStyle,
     density,
     reducedMotion,
     fontScale,
@@ -191,6 +206,7 @@ export async function importSettings(json) {
   const {
     accent,
     wallpaper,
+    wallpaperStyle,
     density,
     reducedMotion,
     fontScale,
@@ -203,6 +219,7 @@ export async function importSettings(json) {
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
+  if (wallpaperStyle !== undefined) await setWallpaperStyle(wallpaperStyle);
   if (density !== undefined) await setDensity(density);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
   if (fontScale !== undefined) await setFontScale(fontScale);

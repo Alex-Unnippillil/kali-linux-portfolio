@@ -4,6 +4,8 @@ import {
   setAccent as saveAccent,
   getWallpaper as loadWallpaper,
   setWallpaper as saveWallpaper,
+  getWallpaperStyle as loadWallpaperStyle,
+  setWallpaperStyle as saveWallpaperStyle,
   getDensity as loadDensity,
   setDensity as saveDensity,
   getReducedMotion as loadReducedMotion,
@@ -54,6 +56,7 @@ const shadeColor = (color: string, percent: number): string => {
 interface SettingsContextValue {
   accent: string;
   wallpaper: string;
+  wallpaperStyle: string;
   density: Density;
   reducedMotion: boolean;
   fontScale: number;
@@ -65,6 +68,7 @@ interface SettingsContextValue {
   theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
+  setWallpaperStyle: (style: string) => void;
   setDensity: (density: Density) => void;
   setReducedMotion: (value: boolean) => void;
   setFontScale: (value: number) => void;
@@ -79,6 +83,7 @@ interface SettingsContextValue {
 export const SettingsContext = createContext<SettingsContextValue>({
   accent: defaults.accent,
   wallpaper: defaults.wallpaper,
+  wallpaperStyle: defaults.wallpaperStyle,
   density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
   fontScale: defaults.fontScale,
@@ -90,6 +95,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   theme: 'default',
   setAccent: () => {},
   setWallpaper: () => {},
+  setWallpaperStyle: () => {},
   setDensity: () => {},
   setReducedMotion: () => {},
   setFontScale: () => {},
@@ -104,6 +110,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [accent, setAccent] = useState<string>(defaults.accent);
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
+  const [wallpaperStyle, setWallpaperStyle] = useState<string>(defaults.wallpaperStyle);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
@@ -119,6 +126,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     (async () => {
       setAccent(await loadAccent());
       setWallpaper(await loadWallpaper());
+      setWallpaperStyle(await loadWallpaperStyle());
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
       setFontScale(await loadFontScale());
@@ -155,6 +163,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveWallpaper(wallpaper);
   }, [wallpaper]);
+
+  useEffect(() => {
+    saveWallpaperStyle(wallpaperStyle);
+  }, [wallpaperStyle]);
 
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {
@@ -241,6 +253,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       value={{
         accent,
         wallpaper,
+        wallpaperStyle,
         density,
         reducedMotion,
         fontScale,
@@ -252,6 +265,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         theme,
         setAccent,
         setWallpaper,
+        setWallpaperStyle,
         setDensity,
         setReducedMotion,
         setFontScale,

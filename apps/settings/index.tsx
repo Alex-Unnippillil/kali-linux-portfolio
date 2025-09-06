@@ -19,6 +19,8 @@ export default function Settings() {
     setAccent,
     wallpaper,
     setWallpaper,
+    wallpaperStyle,
+    setWallpaperStyle,
     density,
     setDensity,
     reducedMotion,
@@ -52,6 +54,13 @@ export default function Settings() {
     "wall-7",
     "wall-8",
   ];
+  const wallpaperStyles: Record<string, any> = {
+    fill: { backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" },
+    fit: { backgroundSize: "contain", backgroundRepeat: "no-repeat", backgroundPosition: "center center" },
+    stretch: { backgroundSize: "100% 100%", backgroundRepeat: "no-repeat", backgroundPosition: "center center" },
+    center: { backgroundSize: "auto", backgroundRepeat: "no-repeat", backgroundPosition: "center center" },
+    tile: { backgroundSize: "auto", backgroundRepeat: "repeat", backgroundPosition: "top left" },
+  };
 
   const changeBackground = (name: string) => setWallpaper(name);
 
@@ -73,6 +82,7 @@ export default function Settings() {
       const parsed = JSON.parse(text);
       if (parsed.accent !== undefined) setAccent(parsed.accent);
       if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
+      if (parsed.wallpaperStyle !== undefined) setWallpaperStyle(parsed.wallpaperStyle);
       if (parsed.density !== undefined) setDensity(parsed.density);
       if (parsed.reducedMotion !== undefined)
         setReducedMotion(parsed.reducedMotion);
@@ -96,6 +106,7 @@ export default function Settings() {
     window.localStorage.clear();
     setAccent(defaults.accent);
     setWallpaper(defaults.wallpaper);
+    setWallpaperStyle(defaults.wallpaperStyle);
     setDensity(defaults.density as any);
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
@@ -116,9 +127,7 @@ export default function Settings() {
             className="md:w-2/5 w-2/3 h-1/3 m-auto my-4"
             style={{
               backgroundImage: `url(/wallpapers/${wallpaper}.webp)`,
-              backgroundSize: "cover",
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "center center",
+              ...wallpaperStyles[wallpaperStyle],
             }}
           ></div>
           <div className="flex justify-center my-4">
@@ -132,6 +141,20 @@ export default function Settings() {
               <option value="dark">Dark</option>
               <option value="neon">Neon</option>
               <option value="matrix">Matrix</option>
+            </select>
+          </div>
+          <div className="flex justify-center my-4">
+            <label className="mr-2 text-ubt-grey">Style:</label>
+            <select
+              value={wallpaperStyle}
+              onChange={(e) => setWallpaperStyle(e.target.value)}
+              className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+            >
+              <option value="fill">Fill</option>
+              <option value="fit">Fit</option>
+              <option value="stretch">Stretch</option>
+              <option value="center">Center</option>
+              <option value="tile">Tile</option>
             </select>
           </div>
           <div className="flex justify-center my-4">

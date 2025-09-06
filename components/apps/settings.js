@@ -3,12 +3,19 @@ import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, wallpaperStyle, setWallpaperStyle, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
+    const wallpaperStyles = {
+        fill: { backgroundSize: 'cover', backgroundRepeat: 'no-repeat', backgroundPosition: 'center center' },
+        fit: { backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center center' },
+        stretch: { backgroundSize: '100% 100%', backgroundRepeat: 'no-repeat', backgroundPosition: 'center center' },
+        center: { backgroundSize: 'auto', backgroundRepeat: 'no-repeat', backgroundPosition: 'center center' },
+        tile: { backgroundSize: 'auto', backgroundRepeat: 'repeat', backgroundPosition: 'top left' },
+    };
 
     const changeBackgroundImage = (e) => {
         const name = e.currentTarget.dataset.path;
@@ -57,7 +64,7 @@ export function Settings() {
 
     return (
         <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"}>
-            <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4" style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}>
+            <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4" style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)`, ...wallpaperStyles[wallpaperStyle] }}>
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Theme:</label>
@@ -70,6 +77,20 @@ export function Settings() {
                     <option value="dark">Dark</option>
                     <option value="neon">Neon</option>
                     <option value="matrix">Matrix</option>
+                </select>
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey">Style:</label>
+                <select
+                    value={wallpaperStyle}
+                    onChange={(e) => setWallpaperStyle(e.target.value)}
+                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                >
+                    <option value="fill">Fill</option>
+                    <option value="fit">Fit</option>
+                    <option value="stretch">Stretch</option>
+                    <option value="center">Center</option>
+                    <option value="tile">Tile</option>
                 </select>
             </div>
             <div className="flex justify-center my-4">
@@ -246,6 +267,7 @@ export function Settings() {
                         await resetSettings();
                         setAccent(defaults.accent);
                         setWallpaper(defaults.wallpaper);
+                        setWallpaperStyle(defaults.wallpaperStyle);
                         setDensity(defaults.density);
                         setReducedMotion(defaults.reducedMotion);
                         setLargeHitAreas(defaults.largeHitAreas);
@@ -271,6 +293,7 @@ export function Settings() {
                         const parsed = JSON.parse(text);
                         if (parsed.accent !== undefined) setAccent(parsed.accent);
                         if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
+                        if (parsed.wallpaperStyle !== undefined) setWallpaperStyle(parsed.wallpaperStyle);
                         if (parsed.density !== undefined) setDensity(parsed.density);
                         if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
                         if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);

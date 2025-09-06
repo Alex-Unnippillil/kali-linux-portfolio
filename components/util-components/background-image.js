@@ -4,8 +4,15 @@ import React, { useEffect, useState } from 'react'
 import { useSettings } from '../../hooks/useSettings';
 
 export default function BackgroundImage() {
-    const { wallpaper } = useSettings();
+    const { wallpaper, wallpaperStyle } = useSettings();
     const [needsOverlay, setNeedsOverlay] = useState(false);
+    const styleMap = {
+        fill: { backgroundSize: 'cover', backgroundRepeat: 'no-repeat', backgroundPosition: 'center center' },
+        fit: { backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center center' },
+        stretch: { backgroundSize: '100% 100%', backgroundRepeat: 'no-repeat', backgroundPosition: 'center center' },
+        center: { backgroundSize: 'auto', backgroundRepeat: 'no-repeat', backgroundPosition: 'center center' },
+        tile: { backgroundSize: 'auto', backgroundRepeat: 'repeat', backgroundPosition: 'top left' },
+    };
 
     useEffect(() => {
         const img = new Image();
@@ -37,12 +44,10 @@ export default function BackgroundImage() {
     }, [wallpaper]);
 
     return (
-        <div className="bg-ubuntu-img absolute -z-10 top-0 right-0 overflow-hidden h-full w-full">
-            <img
-                src={`/wallpapers/${wallpaper}.webp`}
-                alt=""
-                className="w-full h-full object-cover"
-            />
+        <div
+            className="bg-ubuntu-img absolute -z-10 top-0 right-0 overflow-hidden h-full w-full"
+            style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)`, ...styleMap[wallpaperStyle] }}
+        >
             {needsOverlay && (
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 to-transparent" aria-hidden="true"></div>
             )}
