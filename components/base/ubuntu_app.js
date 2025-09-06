@@ -7,12 +7,18 @@ export class UbuntuApp extends Component {
         this.state = { launching: false, dragging: false, prefetched: false };
     }
 
-    handleDragStart = () => {
+    handleDragStart = (e) => {
         this.setState({ dragging: true });
+        if (this.props.onDragStart) {
+            this.props.onDragStart(e);
+        }
     }
 
-    handleDragEnd = () => {
+    handleDragEnd = (e) => {
         this.setState({ dragging: false });
+        if (this.props.onDragEnd) {
+            this.props.onDragEnd(e);
+        }
     }
 
     openApp = () => {
@@ -41,8 +47,10 @@ export class UbuntuApp extends Component {
                 draggable
                 onDragStart={this.handleDragStart}
                 onDragEnd={this.handleDragEnd}
+                onDragOver={this.props.onDragOver}
+                onDrop={this.props.onDrop}
                 className={(this.state.launching ? " app-icon-launch " : "") + (this.state.dragging ? " opacity-70 " : "") +
-                    " p-1 m-px z-10 bg-white bg-opacity-0 hover:bg-opacity-20 focus:bg-white focus:bg-opacity-50 focus:border-yellow-700 focus:border-opacity-100 border border-transparent outline-none rounded select-none w-24 h-20 flex flex-col justify-start items-center text-center text-xs font-normal text-white transition-hover transition-active "}
+                    " relative p-1 m-px z-10 bg-white bg-opacity-0 hover:bg-opacity-20 focus:bg-white focus:bg-opacity-50 focus:border-yellow-700 focus:border-opacity-100 border border-transparent outline-none rounded select-none w-24 h-20 flex flex-col justify-start items-center text-center text-xs font-normal text-white transition-hover transition-active "}
                 id={"app-" + this.props.id}
                 onDoubleClick={this.openApp}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openApp(); } }}
@@ -59,6 +67,11 @@ export class UbuntuApp extends Component {
                     sizes="40px"
                 />
                 {this.props.displayName || this.props.name}
+                {this.props.badge ? (
+                    <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full px-1">
+                        {this.props.badge}
+                    </span>
+                ) : null}
 
             </div>
         )
