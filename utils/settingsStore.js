@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  windowButtons: ['menu', 'minimize', 'maximize', 'close'],
 };
 
 export async function getAccent() {
@@ -123,6 +124,25 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getWindowButtons() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.windowButtons;
+  try {
+    const stored = window.localStorage.getItem('window-buttons');
+    return stored ? JSON.parse(stored) : DEFAULT_SETTINGS.windowButtons;
+  } catch (e) {
+    return DEFAULT_SETTINGS.windowButtons;
+  }
+}
+
+export async function setWindowButtons(value) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem('window-buttons', JSON.stringify(value));
+  } catch (e) {
+    // ignore
+  }
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +157,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('window-buttons');
 }
 
 export async function exportSettings() {
@@ -151,6 +172,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    windowButtons,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +184,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getWindowButtons(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +198,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    windowButtons,
     theme,
   });
 }
@@ -200,6 +224,7 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    windowButtons,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -211,6 +236,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (windowButtons !== undefined) await setWindowButtons(windowButtons);
   if (theme !== undefined) setTheme(theme);
 }
 

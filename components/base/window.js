@@ -6,6 +6,7 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import { useSettings } from '../../hooks/useSettings';
 import styles from './window.module.css';
 
 export class Window extends Component {
@@ -477,6 +478,10 @@ export class Window extends Component {
         });
     }
 
+    menuWindow = () => {
+        window.dispatchEvent(new CustomEvent('window-menu', { detail: { id: this.id } }));
+    }
+
     handleTitleBarKeyDown = (e) => {
         if (e.key === ' ' || e.key === 'Space' || e.key === 'Enter') {
             e.preventDefault();
@@ -519,46 +524,42 @@ export class Window extends Component {
     }
 
     handleKeyDown = (e) => {
+        const halt = () => {
+            if (e.preventDefault) e.preventDefault();
+            if (e.stopPropagation) e.stopPropagation();
+        };
         if (e.key === 'Escape') {
             this.closeWindow();
         } else if (e.key === 'Tab') {
             this.focusWindow();
         } else if (e.altKey) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                halt();
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                halt();
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                halt();
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                halt();
                 this.snapWindow('top');
             }
             this.focusWindow();
         } else if (e.shiftKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                halt();
                 this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                halt();
                 this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                halt();
                 this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                halt();
                 this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
             }
             this.focusWindow();
@@ -651,6 +652,7 @@ export class Window extends Component {
                             grabbed={this.state.grabbed}
                         />
                         <WindowEditButtons
+                            menu={this.menuWindow}
                             minimize={this.minimizeWindow}
                             maximize={this.maximizeWindow}
                             isMaximised={this.state.maximized}
@@ -731,10 +733,120 @@ export class WindowXBorder extends Component {
 
 // Window's Edit Buttons
 export function WindowEditButtons(props) {
+    const { windowButtons } = useSettings();
     const { togglePin } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
+
+    const renderButton = (btn) => {
+        switch (btn) {
+            case 'menu':
+                return (
+                    <button
+                        key="menu"
+                        type="button"
+                        aria-label="Window menu"
+                        className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                        onClick={props.menu}
+                    >
+                        <NextImage
+                            src="/themes/Yaru/window/window-menu-symbolic.svg"
+                            alt="Kali window menu"
+                            className="h-4 w-4 inline"
+                            width={16}
+                            height={16}
+                            sizes="16px"
+                        />
+                    </button>
+                );
+            case 'minimize':
+                return (
+                    <button
+                        key="minimize"
+                        type="button"
+                        aria-label="Window minimize"
+                        className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                        onClick={props.minimize}
+                    >
+                        <NextImage
+                            src="/themes/Yaru/window/window-minimize-symbolic.svg"
+                            alt="Kali window minimize"
+                            className="h-4 w-4 inline"
+                            width={16}
+                            height={16}
+                            sizes="16px"
+                        />
+                    </button>
+                );
+            case 'maximize':
+                if (!props.allowMaximize) return null;
+                return props.isMaximised ? (
+                    <button
+                        key="restore"
+                        type="button"
+                        aria-label="Window restore"
+                        className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                        onClick={props.maximize}
+                    >
+                        <NextImage
+                            src="/themes/Yaru/window/window-restore-symbolic.svg"
+                            alt="Kali window restore"
+                            className="h-4 w-4 inline"
+                            width={16}
+                            height={16}
+                            sizes="16px"
+                        />
+                    </button>
+                ) : (
+                    <button
+                        key="maximize"
+                        type="button"
+                        aria-label="Window maximize"
+                        className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                        onClick={props.maximize}
+                    >
+                        <NextImage
+                            src="/themes/Yaru/window/window-maximize-symbolic.svg"
+                            alt="Kali window maximize"
+                            className="h-4 w-4 inline"
+                            width={16}
+                            height={16}
+                            sizes="16px"
+                        />
+                    </button>
+                );
+            case 'close':
+                return (
+                    <button
+                        key="close"
+                        type="button"
+                        id={`close-${props.id}`}
+                        aria-label="Window close"
+                        className="mx-1 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6"
+                        onClick={props.close}
+                    >
+                        <NextImage
+                            src="/themes/Yaru/window/window-close-symbolic.svg"
+                            alt="Kali window close"
+                            className="h-4 w-4 inline"
+                            width={16}
+                            height={16}
+                            sizes="16px"
+                        />
+                    </button>
+                );
+            default:
+                return null;
+        }
+    };
+
+    const buttons = windowButtons.map(renderButton).filter(Boolean);
+    const total = buttons.length + (pipSupported && props.pip ? 1 : 0);
+
     return (
-        <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center h-11 min-w-[8.25rem]">
+        <div
+            className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center h-11"
+            style={{ minWidth: `${total * 2.25}rem` }}
+        >
             {pipSupported && props.pip && (
                 <button
                     type="button"
@@ -752,75 +864,9 @@ export function WindowEditButtons(props) {
                     />
                 </button>
             )}
-            <button
-                type="button"
-                aria-label="Window minimize"
-                className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
-                onClick={props.minimize}
-            >
-                <NextImage
-                    src="/themes/Yaru/window/window-minimize-symbolic.svg"
-                    alt="Kali window minimize"
-                    className="h-4 w-4 inline"
-                    width={16}
-                    height={16}
-                    sizes="16px"
-                />
-            </button>
-            {props.allowMaximize && (
-                props.isMaximised
-                    ? (
-                        <button
-                            type="button"
-                            aria-label="Window restore"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
-                            onClick={props.maximize}
-                        >
-                            <NextImage
-                                src="/themes/Yaru/window/window-restore-symbolic.svg"
-                                alt="Kali window restore"
-                                className="h-4 w-4 inline"
-                                width={16}
-                                height={16}
-                                sizes="16px"
-                            />
-                        </button>
-                    ) : (
-                        <button
-                            type="button"
-                            aria-label="Window maximize"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
-                            onClick={props.maximize}
-                        >
-                            <NextImage
-                                src="/themes/Yaru/window/window-maximize-symbolic.svg"
-                                alt="Kali window maximize"
-                                className="h-4 w-4 inline"
-                                width={16}
-                                height={16}
-                                sizes="16px"
-                            />
-                        </button>
-                    )
-            )}
-            <button
-                type="button"
-                id={`close-${props.id}`}
-                aria-label="Window close"
-                className="mx-1 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6"
-                onClick={props.close}
-            >
-                <NextImage
-                    src="/themes/Yaru/window/window-close-symbolic.svg"
-                    alt="Kali window close"
-                    className="h-4 w-4 inline"
-                    width={16}
-                    height={16}
-                    sizes="16px"
-                />
-            </button>
+            {buttons}
         </div>
-    )
+    );
 }
 
 // Window's Main Screen
