@@ -39,6 +39,7 @@ const config = [
       'jsx-a11y/role-supports-aria-props': 'off',
       'react-hooks/exhaustive-deps': 'off',
       'import/no-anonymous-default-export': 'off',
+      'import/no-cycle': 'warn',
     },
   }),
 ];
