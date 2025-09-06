@@ -574,6 +574,52 @@ export class Desktop extends Component {
         return result;
     }
 
+    showDesktop = () => {
+        const minimized_windows = { ...this.state.minimized_windows };
+        const focused_windows = { ...this.state.focused_windows };
+        this._desktopMinimized = new Set();
+        for (const id in this.state.closed_windows) {
+            if (!this.state.closed_windows[id] && !minimized_windows[id]) {
+                minimized_windows[id] = true;
+                focused_windows[id] = false;
+                this._desktopMinimized.add(id);
+            }
+        }
+        this.setState({ minimized_windows, focused_windows });
+    }
+
+    restoreDesktop = () => {
+        if (!this._desktopMinimized) return;
+        const minimized_windows = { ...this.state.minimized_windows };
+        const focused_windows = { ...this.state.focused_windows };
+        this._desktopMinimized.forEach(id => {
+            minimized_windows[id] = false;
+            focused_windows[id] = false;
+        });
+        this._desktopMinimized = null;
+        this.setState({ minimized_windows, focused_windows });
+    }
+
+    toggleDesktop = () => {
+        if (this._desktopMinimized) {
+            this.restoreDesktop();
+        } else {
+            this.showDesktop();
+        }
+    }
+
+    showDesktopDrag = () => {
+        if (this._desktopMinimized) return;
+        this.showDesktop();
+        const restore = () => {
+            this.restoreDesktop();
+            document.removeEventListener('drop', restore);
+            document.removeEventListener('dragend', restore);
+        };
+        document.addEventListener('drop', restore, { once: true });
+        document.addEventListener('dragend', restore, { once: true });
+    }
+
     openApp = (objId) => {
 
         // google analytics
@@ -884,6 +930,8 @@ export class Desktop extends Component {
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    toggleDesktop={this.toggleDesktop}
+                    showDesktopDrag={this.showDesktopDrag}
                 />
 
                 {/* Desktop Apps */}
