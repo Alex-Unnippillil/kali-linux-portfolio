@@ -6,6 +6,7 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import WindowMenu from '../context-menus/window-menu';
 import styles from './window.module.css';
 
 export class Window extends Component {
@@ -33,6 +34,12 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            menuOpen: false,
+            menuPos: { x: 0, y: 0 },
+            alwaysOnTop: false,
+            shaded: false,
+            sticked: false,
+            resizeMode: false,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
@@ -53,6 +60,7 @@ export class Window extends Component {
         window.addEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.addEventListener('super-arrow', this.handleSuperArrow);
+        root?.addEventListener('open-window-menu', this.openWindowMenu);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -66,6 +74,7 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        root?.removeEventListener('open-window-menu', this.openWindowMenu);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
@@ -119,6 +128,46 @@ export class Window extends Component {
         const area = containerRect.width * containerRect.height;
         if (area === 0) return 100;
         return (innerRect.width * innerRect.height) / area * 100;
+    }
+
+    openWindowMenu = () => {
+        const node = document.getElementById(this.id);
+        if (!node) return;
+        const rect = node.getBoundingClientRect();
+        this.activateOverlay();
+        this.setState({ menuOpen: true, menuPos: { x: rect.left, y: rect.top } });
+    }
+
+    closeWindowMenu = () => {
+        this.deactivateOverlay();
+        this.setState({ menuOpen: false });
+    }
+
+    toggleAlwaysOnTop = () => {
+        this.setState(prev => ({ alwaysOnTop: !prev.alwaysOnTop }));
+    }
+
+    toggleShade = () => {
+        this.setState(prev => {
+            if (prev.shaded) {
+                return { shaded: false, height: prev.lastHeight || prev.height, lastHeight: null };
+            }
+            const titleBarPercent = (11 / window.innerHeight) * 100;
+            return { shaded: true, lastHeight: prev.height, height: titleBarPercent };
+        }, this.resizeBoundries);
+    }
+
+    toggleStick = () => {
+        this.setState(prev => ({ sticked: !prev.sticked }));
+    }
+
+    startResize = () => {
+        this.focusWindow();
+        this.setState({ resizeMode: true, cursorType: 'cursor-nwse-resize' });
+    }
+
+    finishResize = () => {
+        this.setState({ resizeMode: false, cursorType: 'cursor-default' });
     }
 
     scheduleUsageCheck = () => {
@@ -516,49 +565,73 @@ export class Window extends Component {
         if (this.state.grabbed) {
             this.handleStop();
         }
+        if (this.state.resizeMode) {
+            this.finishResize();
+        }
     }
 
     handleKeyDown = (e) => {
-        if (e.key === 'Escape') {
+        if (e.altKey && e.key === ' ') {
+            e.preventDefault?.();
+            this.openWindowMenu();
+        } else if (this.state.resizeMode) {
+            const step = 1;
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault?.();
+                this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault?.();
+                this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault?.();
+                this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault?.();
+                this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
+            } else if (e.key === 'Enter' || e.key === 'Escape') {
+                e.preventDefault?.();
+                this.finishResize();
+            }
+        } else if (e.key === 'Escape') {
             this.closeWindow();
         } else if (e.key === 'Tab') {
             this.focusWindow();
         } else if (e.altKey) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('top');
             }
             this.focusWindow();
         } else if (e.shiftKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
             }
             this.focusWindow();
@@ -635,7 +708,7 @@ export class Window extends Component {
                 >
                     <div
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.state.alwaysOnTop ? " z-40 " : (this.props.isFocused ? " z-30 " : " z-20 notFocused")) + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
@@ -659,13 +732,30 @@ export class Window extends Component {
                             allowMaximize={this.props.allowMaximize !== false}
                             pip={() => this.props.screen(this.props.addFolder, this.props.openApp)}
                         />
-                        {(this.id === "settings"
-                            ? <Settings />
-                            : <WindowMainScreen screen={this.props.screen} title={this.props.title}
-                                addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
-                                openApp={this.props.openApp} />)}
+                        {!this.state.shaded && (
+                            this.id === "settings"
+                                ? <Settings />
+                                : <WindowMainScreen
+                                    screen={this.props.screen}
+                                    title={this.props.title}
+                                    addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
+                                    openApp={this.props.openApp}
+                                />
+                        )}
                     </div>
                 </Draggable >
+                <WindowMenu
+                    active={this.state.menuOpen}
+                    pos={this.state.menuPos}
+                    onCloseMenu={this.closeWindowMenu}
+                    onMove={this.changeCursorToMove}
+                    onResize={this.startResize}
+                    onTop={this.toggleAlwaysOnTop}
+                    onShade={this.toggleShade}
+                    onStick={this.toggleStick}
+                    onMaximize={this.maximizeWindow}
+                    onClose={this.closeWindow}
+                />
             </>
         )
     }
