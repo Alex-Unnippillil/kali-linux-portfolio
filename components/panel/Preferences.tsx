@@ -5,6 +5,7 @@ import Tabs from "../Tabs";
 import ToggleSwitch from "../ToggleSwitch";
 
 const PANEL_PREFIX = "xfce.panel.";
+const PLUGIN_PREFIX = "xfce.panel.plugin.";
 
 export default function Preferences() {
   type TabId = "display" | "measurements" | "appearance" | "opacity" | "items";
@@ -39,6 +40,11 @@ export default function Preferences() {
     if (typeof window === "undefined") return false;
     return localStorage.getItem(`${PANEL_PREFIX}autohide`) === "true";
   });
+  const [actionButtonsPos, setActionButtonsPos] = useState(() => {
+    if (typeof window === "undefined") return 0;
+    const stored = localStorage.getItem(`${PLUGIN_PREFIX}actionButtons`);
+    return stored ? parseInt(stored, 10) : 0;
+  });
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -59,6 +65,14 @@ export default function Preferences() {
     if (typeof window === "undefined") return;
     localStorage.setItem(`${PANEL_PREFIX}autohide`, autohide ? "true" : "false");
   }, [autohide]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(
+      `${PLUGIN_PREFIX}actionButtons`,
+      String(actionButtonsPos),
+    );
+  }, [actionButtonsPos]);
 
   return (
     <div>
@@ -133,7 +147,28 @@ export default function Preferences() {
           <p className="text-ubt-grey">Opacity settings are not available yet.</p>
         )}
         {active === "items" && (
-          <p className="text-ubt-grey">Item settings are not available yet.</p>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <label
+                htmlFor="action-buttons-pos"
+                className="text-ubt-grey"
+              >
+                Action Buttons position
+              </label>
+              <input
+                id="action-buttons-pos"
+                type="number"
+                min="0"
+                max="20"
+                value={actionButtonsPos}
+                onChange={(e) =>
+                  setActionButtonsPos(parseInt(e.target.value, 10))
+                }
+                className="bg-ub-cool-grey text-white px-2 py-1 rounded w-20"
+                aria-label="Action Buttons position"
+              />
+            </div>
+          </div>
         )}
       </div>
     </div>
