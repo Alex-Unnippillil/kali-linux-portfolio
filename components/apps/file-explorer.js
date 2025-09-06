@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import ContextMenu from '../common/ContextMenu';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -61,6 +62,8 @@ export async function saveFileDialog(options = {}) {
 
 const DB_NAME = 'file-explorer';
 const STORE_NAME = 'recent';
+const SORT_KEY = 'file-explorer-sort';
+const DEFAULT_SORT = { field: 'name', direction: 'asc' };
 
 function openDB() {
   return getDb(DB_NAME, 1, {
@@ -104,6 +107,8 @@ export default function FileExplorer() {
   const [results, setResults] = useState([]);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
+  const listRef = useRef(null);
+  const [sort, setSort] = useState(DEFAULT_SORT);
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -123,6 +128,21 @@ export default function FileExplorer() {
   }, []);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const saved = localStorage.getItem(SORT_KEY);
+      if (saved) setSort(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(SORT_KEY, JSON.stringify(sort));
+    } catch {}
+  }, [sort]);
+
+  useEffect(() => {
     if (!opfsSupported || !root) return;
     (async () => {
       setUnsavedDir(await getDir('unsaved'));
@@ -130,7 +150,22 @@ export default function FileExplorer() {
       setPath([{ name: root.name || '/', handle: root }]);
       await readDir(root);
     })();
-  }, [opfsSupported, root, getDir]);
+    }, [opfsSupported, root, getDir, readDir]);
+
+  useEffect(() => {
+    if (!dirHandle || !dirHandle.addEventListener) return;
+    const handler = () => readDir(dirHandle);
+    try {
+      dirHandle.addEventListener('change', handler);
+    } catch {
+      return;
+    }
+    return () => {
+      try {
+        dirHandle.removeEventListener('change', handler);
+      } catch {}
+    };
+  }, [dirHandle, readDir]);
 
   const saveBuffer = async (name, data) => {
     if (unsavedDir) await opfsWrite(name, data, unsavedDir);
@@ -144,6 +179,53 @@ export default function FileExplorer() {
   const removeBuffer = async (name) => {
     if (unsavedDir) await opfsDelete(name, unsavedDir);
   };
+
+  const sortEntries = useCallback(
+    (arr) => {
+      return [...arr].sort((a, b) => {
+        let av;
+        let bv;
+        switch (sort.field) {
+          case 'type':
+            av = (a.type || '').toLowerCase();
+            bv = (b.type || '').toLowerCase();
+            break;
+          case 'size':
+            av = a.size || 0;
+            bv = b.size || 0;
+            break;
+          case 'modified':
+            av = a.modified || 0;
+            bv = b.modified || 0;
+            break;
+          case 'name':
+          default:
+            av = (a.name || '').toLowerCase();
+            bv = (b.name || '').toLowerCase();
+        }
+        if (av < bv) return sort.direction === 'asc' ? -1 : 1;
+        if (av > bv) return sort.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    },
+    [sort],
+  );
+
+  useEffect(() => {
+    setDirs((d) => sortEntries(d));
+    setFiles((f) => sortEntries(f));
+  }, [sortEntries]);
+
+  const menuItems = [
+    { label: 'Name (A → Z)', onSelect: () => setSort({ field: 'name', direction: 'asc' }) },
+    { label: 'Name (Z → A)', onSelect: () => setSort({ field: 'name', direction: 'desc' }) },
+    { label: 'Type (A → Z)', onSelect: () => setSort({ field: 'type', direction: 'asc' }) },
+    { label: 'Type (Z → A)', onSelect: () => setSort({ field: 'type', direction: 'desc' }) },
+    { label: 'Size (Asc)', onSelect: () => setSort({ field: 'size', direction: 'asc' }) },
+    { label: 'Size (Desc)', onSelect: () => setSort({ field: 'size', direction: 'desc' }) },
+    { label: 'Modified (Asc)', onSelect: () => setSort({ field: 'modified', direction: 'asc' }) },
+    { label: 'Modified (Desc)', onSelect: () => setSort({ field: 'modified', direction: 'desc' }) },
+  ];
 
   const openFallback = async (e) => {
     const file = e.target.files[0];
@@ -188,16 +270,31 @@ export default function FileExplorer() {
     setContent(text);
   };
 
-  const readDir = async (handle) => {
-    const ds = [];
-    const fs = [];
-    for await (const [name, h] of handle.entries()) {
-      if (h.kind === 'file') fs.push({ name, handle: h });
-      else if (h.kind === 'directory') ds.push({ name, handle: h });
-    }
-    setDirs(ds);
-    setFiles(fs);
-  };
+  const readDir = useCallback(
+    async (handle) => {
+      const ds = [];
+      const fs = [];
+      for await (const [name, h] of handle.entries()) {
+        if (h.kind === 'file') {
+          let size = 0;
+          let modified = 0;
+          let type = '';
+          try {
+            const file = await h.getFile();
+            size = file.size;
+            modified = file.lastModified;
+            type = file.type || name.split('.').pop()?.toLowerCase() || '';
+          } catch {}
+          fs.push({ name, handle: h, size, modified, type });
+        } else if (h.kind === 'directory') {
+          ds.push({ name, handle: h, type: 'directory' });
+        }
+      }
+      setDirs(sortEntries(ds));
+      setFiles(sortEntries(fs));
+    },
+    [sortEntries],
+  );
 
   const openDir = async (dir) => {
     setDirHandle(dir.handle);
@@ -229,6 +326,7 @@ export default function FileExplorer() {
       await writable.write(content);
       await writable.close();
       if (opfsSupported) await removeBuffer(currentFile.name);
+      if (dirHandle) await readDir(dirHandle);
     } catch {}
   };
 
@@ -262,7 +360,13 @@ export default function FileExplorer() {
   if (!supported) {
     return (
       <div className="p-4 flex flex-col h-full">
-        <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
+        <input
+          ref={fallbackInputRef}
+          type="file"
+          onChange={openFallback}
+          aria-label="Open file"
+          className="hidden"
+        />
         {!currentFile && (
           <button
             onClick={() => fallbackInputRef.current?.click()}
@@ -273,11 +377,12 @@ export default function FileExplorer() {
         )}
         {currentFile && (
           <>
-            <textarea
-              className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
-              value={content}
-              onChange={onChange}
-            />
+              <textarea
+                className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
+                value={content}
+                onChange={onChange}
+                aria-label="File contents"
+              />
             <button
               onClick={async () => {
                 const handle = await saveFileDialog({ suggestedName: currentFile.name });
@@ -296,80 +401,89 @@ export default function FileExplorer() {
   }
 
   return (
-    <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
-      <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
-        <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
-          Open Folder
-        </button>
-        {path.length > 1 && (
-          <button onClick={goBack} className="px-2 py-1 bg-black bg-opacity-50 rounded">
-            Back
+    <>
+      <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
+        <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
+          <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
+            Open Folder
           </button>
-        )}
-        <Breadcrumbs path={path} onNavigate={navigateTo} />
-        {currentFile && (
-          <button onClick={saveFile} className="px-2 py-1 bg-black bg-opacity-50 rounded">
-            Save
-          </button>
-        )}
-      </div>
-      <div className="flex flex-1 overflow-hidden">
-        <div className="w-40 overflow-auto border-r border-gray-600">
-          <div className="p-2 font-bold">Recent</div>
-          {recent.map((r, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openRecent(r)}
-            >
-              {r.name}
-            </div>
-          ))}
-          <div className="p-2 font-bold">Directories</div>
-          {dirs.map((d, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openDir(d)}
-            >
-              {d.name}
-            </div>
-          ))}
-          <div className="p-2 font-bold">Files</div>
-          {files.map((f, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openFile(f)}
-            >
-              {f.name}
-            </div>
-          ))}
-        </div>
-        <div className="flex-1 flex flex-col">
-          {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
-          )}
-          <div className="p-2 border-t border-gray-600">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Find in files"
-              className="px-1 py-0.5 text-black"
-            />
-            <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
-              Search
+          {path.length > 1 && (
+            <button onClick={goBack} className="px-2 py-1 bg-black bg-opacity-50 rounded">
+              Back
             </button>
-            <div className="max-h-40 overflow-auto mt-2">
-              {results.map((r, i) => (
-                <div key={i}>
-                  <span className="font-bold">{r.file}:{r.line}</span> {r.text}
-                </div>
-              ))}
+          )}
+          <Breadcrumbs path={path} onNavigate={navigateTo} />
+          {currentFile && (
+            <button onClick={saveFile} className="px-2 py-1 bg-black bg-opacity-50 rounded">
+              Save
+            </button>
+          )}
+        </div>
+        <div className="flex flex-1 overflow-hidden">
+          <div ref={listRef} className="w-40 overflow-auto border-r border-gray-600">
+            <div className="p-2 font-bold">Recent</div>
+            {recent.map((r, i) => (
+              <div
+                key={i}
+                className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+                onClick={() => openRecent(r)}
+              >
+                {r.name}
+              </div>
+            ))}
+            <div className="p-2 font-bold">Directories</div>
+            {dirs.map((d, i) => (
+              <div
+                key={i}
+                className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+                onClick={() => openDir(d)}
+              >
+                {d.name}
+              </div>
+            ))}
+            <div className="p-2 font-bold">Files</div>
+            {files.map((f, i) => (
+              <div
+                key={i}
+                className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+                onClick={() => openFile(f)}
+              >
+                {f.name}
+              </div>
+            ))}
+          </div>
+          <div className="flex-1 flex flex-col">
+            {currentFile && (
+              <textarea
+                className="flex-1 p-2 bg-ub-cool-grey outline-none"
+                value={content}
+                onChange={onChange}
+                aria-label="File contents"
+              />
+            )}
+            <div className="p-2 border-t border-gray-600">
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Find in files"
+                aria-label="Find in files"
+                className="px-1 py-0.5 text-black"
+              />
+              <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
+                Search
+              </button>
+              <div className="max-h-40 overflow-auto mt-2">
+                {results.map((r, i) => (
+                  <div key={i}>
+                    <span className="font-bold">{r.file}:{r.line}</span> {r.text}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    <ContextMenu targetRef={listRef} items={menuItems} />
+    </>
   );
 }
