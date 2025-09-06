@@ -34,10 +34,19 @@ function AppMenu(props) {
                 type="button"
                 onClick={handlePin}
                 role="menuitem"
-                aria-label={props.pinned ? 'Unpin from Favorites' : 'Pin to Favorites'}
+                aria-label={props.pinned ? 'Remove from Panel' : 'Add to Panel'}
                 className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
-                <span className="ml-5">{props.pinned ? 'Unpin from Favorites' : 'Pin to Favorites'}</span>
+                <span className="ml-5">{props.pinned ? 'Remove from Panel' : 'Add to Panel'}</span>
+            </button>
+            <button
+                type="button"
+                onClick={props.addToDesktop}
+                role="menuitem"
+                aria-label="Add to Desktop"
+                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700"
+            >
+                <span className="ml-5">Add to Desktop</span>
             </button>
         </div>
     )
