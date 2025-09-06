@@ -60,6 +60,8 @@ const securityHeaders = [
 
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
+  openAnalyzer: false,
+  analyzerMode: 'json',
 });
 
 const withPWA = require('@ducanh2912/next-pwa').default({
