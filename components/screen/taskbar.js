@@ -1,8 +1,12 @@
 import React from 'react';
 import Image from 'next/image';
+import { useSettings } from '../../hooks/useSettings';
 
 export default function Taskbar(props) {
+    const { rows } = useSettings();
     const runningApps = props.apps.filter(app => props.closed_windows[app.id] === false);
+    const columns = Math.ceil(runningApps.length / rows) || 1;
+    const rowHeight = 2.5; // rem, matches h-10
 
     const handleClick = (app) => {
         const id = app.id;
@@ -16,7 +20,15 @@ export default function Taskbar(props) {
     };
 
     return (
-        <div className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center z-40" role="toolbar">
+        <div
+            className="absolute bottom-0 left-0 w-full bg-black bg-opacity-50 grid items-center z-40"
+            role="toolbar"
+            style={{
+                gridTemplateRows: `repeat(${rows}, ${rowHeight}rem)`,
+                gridTemplateColumns: `repeat(${columns}, max-content)`,
+                height: `${rowHeight * rows}rem`
+            }}
+        >
             {runningApps.map(app => (
                 <button
                     key={app.id}
