@@ -639,7 +639,13 @@ const OpenVASApp = () => {
           aria-label="Download summary"
           className="inline-flex items-center mt-2 p-2 bg-blue-600 rounded"
         >
-          <img src="/themes/Yaru/status/download.svg" alt="" className="w-4 h-4" />
+          <img
+            src="/themes/Yaru/status/download.svg"
+            alt=""
+            className="w-4 h-4"
+            width={16}
+            height={16}
+          />
         </a>
       )}
       <footer className="mt-4 text-xs text-gray-400">
