@@ -321,6 +321,7 @@ const ChessGame = () => {
   const [pieceSet, setPieceSet] = useState("sprites");
   const [analysisMoves, setAnalysisMoves] = useState([]);
   const [analysisDepth, setAnalysisDepth] = useState(2);
+  const [hasStockfish, setHasStockfish] = useState(false);
   const pgnInputRef = useRef(null);
   const evalPercent = (1 / (1 + Math.exp(-displayEval / 200))) * 100;
 
@@ -331,6 +332,13 @@ const ChessGame = () => {
     const handler = () => (reduceMotionRef.current = mq.matches);
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  useEffect(() => {
+    if (!isBrowser()) return;
+    import("stockfish")
+      .then(() => setHasStockfish(true))
+      .catch(() => setHasStockfish(false));
   }, []);
 
   useEffect(() => {
@@ -847,18 +855,27 @@ const ChessGame = () => {
             <button className="px-2 py-1 bg-gray-700" onClick={toggleHints}>
               {showHints ? "Hide Hints" : "Mate in 1"}
             </button>
-            <select
-              className="px-2 py-1 bg-gray-700"
-              value={analysisDepth}
-              onChange={(e) => setAnalysisDepth(parseInt(e.target.value))}
-              aria-label="Stockfish depth"
-            >
-              {[1, 2, 3, 4, 5].map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
+            {hasStockfish ? (
+              <select
+                className="px-2 py-1 bg-gray-700"
+                value={analysisDepth}
+                onChange={(e) => setAnalysisDepth(parseInt(e.target.value))}
+                aria-label="Stockfish depth"
+              >
+                {[1, 2, 3, 4, 5].map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span
+                className="px-2 py-1 bg-gray-700"
+                aria-label="Simple AI mode"
+              >
+                Simple AI
+              </span>
+            )}
             <button className="px-2 py-1 bg-gray-700" onClick={runAnalysis}>
               Analyze
             </button>
@@ -878,6 +895,7 @@ const ChessGame = () => {
             <div
               className="h-4 bg-gray-700"
               role="progressbar"
+              aria-label="Evaluation progress"
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={evalPercent.toFixed(0)}
