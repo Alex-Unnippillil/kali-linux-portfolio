@@ -9,6 +9,7 @@ import React, {
   useCallback,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
+import { useSettings } from '../../hooks/useSettings';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
 
@@ -98,6 +99,12 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     },
     runWorker: async () => {},
   });
+  const { preferredBrowser } = useSettings();
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const [linkMenu, setLinkMenu] = useState<{ x: number; y: number; text: string } | null>(null);
+  const linkMenuRef = useRef<HTMLDivElement | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -123,6 +130,42 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     '#55FFFF',
     '#FFFFFF',
   ];
+
+  const normalizeUrl = useCallback((text: string) => {
+    return /^https?:\/\//i.test(text) ? text : `http://${text}`;
+  }, []);
+
+  const openLink = useCallback(
+    (text: string) => {
+      const url = /^[a-fA-F0-9]{32,64}$/.test(text)
+        ? `https://www.virustotal.com/gui/search/${text}`
+        : normalizeUrl(text);
+      if (preferredBrowser === 'chrome') {
+        try {
+          sessionStorage.setItem('chrome-last-url', url);
+        } catch {}
+        openApp?.('chrome');
+      } else {
+        window.open(url, '_blank');
+      }
+    },
+    [openApp, preferredBrowser, normalizeUrl],
+  );
+
+  const handleLinkAction = useCallback(
+    (action: 'copy' | 'open' | 'curl' | 'wget') => {
+      if (!linkMenu) return;
+      const text = linkMenu.text;
+      if (action === 'copy') navigator.clipboard.writeText(text);
+      else if (action === 'open') openLink(text);
+      else if (action === 'curl')
+        navigator.clipboard.writeText(`curl ${normalizeUrl(text)}`);
+      else if (action === 'wget')
+        navigator.clipboard.writeText(`wget ${normalizeUrl(text)}`);
+      setLinkMenu(null);
+    },
+    [linkMenu, openLink, normalizeUrl],
+  );
 
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
@@ -291,11 +334,18 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
   useEffect(() => {
     let disposed = false;
+    let cmHandler: ((e: MouseEvent) => void) | null = null;
     (async () => {
-      const [{ Terminal: XTerm }, { FitAddon }, { SearchAddon }] = await Promise.all([
+      const [
+        { Terminal: XTerm },
+        { FitAddon },
+        { SearchAddon },
+        { WebLinksAddon },
+      ] = await Promise.all([
         import('@xterm/xterm'),
         import('@xterm/addon-fit'),
         import('@xterm/addon-search'),
+        import('@xterm/addon-web-links'),
       ]);
       await import('@xterm/xterm/css/xterm.css');
       if (disposed) return;
@@ -307,11 +357,25 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       });
       const fit = new FitAddon();
       const search = new SearchAddon();
+      const linkHandler = (ev: MouseEvent, text: string) => {
+        ev.preventDefault();
+        openLink(text);
+      };
+      const webLinks = new WebLinksAddon(linkHandler);
+      const ipLinks = new WebLinksAddon(linkHandler, {
+        regex: /\b(?:\d{1,3}\.){3}\d{1,3}\b/,
+      });
+      const hashLinks = new WebLinksAddon(linkHandler, {
+        regex: /\b[a-fA-F0-9]{32,64}\b/,
+      });
       termRef.current = term;
       fitRef.current = fit;
       searchRef.current = search;
       term.loadAddon(fit);
       term.loadAddon(search);
+      term.loadAddon(webLinks);
+      term.loadAddon(ipLinks);
+      term.loadAddon(hashLinks);
       term.open(containerRef.current!);
       fit.fit();
       term.focus();
@@ -333,6 +397,21 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       writeLine('Welcome to the web terminal!');
       writeLine('Type "help" to see available commands.');
       prompt();
+      cmHandler = (e: MouseEvent) => {
+        const target = e.target as HTMLElement;
+        const anchor = target.closest('a');
+        if (anchor && anchor.classList.contains('xterm-link')) {
+          e.preventDefault();
+          const text = anchor.textContent || '';
+          const rect = term.element?.getBoundingClientRect();
+          setLinkMenu({
+            x: e.clientX - (rect?.left || 0),
+            y: e.clientY - (rect?.top || 0),
+            text,
+          });
+        }
+      };
+      term.element?.addEventListener('contextmenu', cmHandler);
       term.onData((d: string) => handleInput(d));
       term.onKey(({ domEvent }: any) => {
         if (domEvent.key === 'Tab') {
@@ -340,8 +419,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           autocomplete();
         } else if (domEvent.ctrlKey && domEvent.key === 'f') {
           domEvent.preventDefault();
-          const q = window.prompt('Search');
-          if (q) searchRef.current?.findNext(q);
+          setSearchOpen(true);
+          setTimeout(() => searchInputRef.current?.focus(), 0);
         } else if (domEvent.ctrlKey && domEvent.key === 'r') {
           domEvent.preventDefault();
           const q = window.prompt('Search history');
@@ -366,9 +445,10 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     })();
     return () => {
       disposed = true;
+      if (cmHandler) termRef.current?.element?.removeEventListener('contextmenu', cmHandler);
       termRef.current?.dispose();
     };
-    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow]);
+    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow, openLink]);
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();
@@ -399,6 +479,16 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     window.addEventListener('keydown', listener);
     return () => window.removeEventListener('keydown', listener);
   }, [paletteOpen]);
+
+  useEffect(() => {
+    const closeMenu = (e: MouseEvent) => {
+      if (linkMenu && !linkMenuRef.current?.contains(e.target as Node)) {
+        setLinkMenu(null);
+      }
+    };
+    window.addEventListener('click', closeMenu);
+    return () => window.removeEventListener('click', closeMenu);
+  }, [linkMenu]);
 
   return (
     <div className="relative h-full w-full">
@@ -432,6 +522,58 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
                 ))}
             </ul>
           </div>
+        </div>
+      )}
+      {searchOpen && (
+        <div className="absolute top-2 right-2 bg-gray-800 p-1 rounded z-20 flex items-center gap-1">
+          <input
+            ref={searchInputRef}
+            value={searchQuery}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSearchQuery(value);
+              searchRef.current?.clearDecorations();
+              if (value) searchRef.current?.findNext(value);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                if (e.shiftKey) searchRef.current?.findPrevious(searchQuery);
+                else searchRef.current?.findNext(searchQuery);
+              } else if (e.key === 'Escape') {
+                e.preventDefault();
+                setSearchOpen(false);
+                searchRef.current?.clearDecorations();
+                termRef.current?.focus();
+              }
+            }}
+            className="bg-black text-white p-1"
+          />
+          <button
+            onClick={() => searchRef.current?.findPrevious(searchQuery)}
+            aria-label="Previous"
+            className="px-1"
+          >
+            ↑
+          </button>
+          <button
+            onClick={() => searchRef.current?.findNext(searchQuery)}
+            aria-label="Next"
+            className="px-1"
+          >
+            ↓
+          </button>
+          <button
+            onClick={() => {
+              setSearchOpen(false);
+              searchRef.current?.clearDecorations();
+              termRef.current?.focus();
+            }}
+            aria-label="Close"
+            className="px-1"
+          >
+            ×
+          </button>
         </div>
       )}
       {settingsOpen && (
@@ -468,6 +610,38 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {linkMenu && (
+        <div
+          ref={linkMenuRef}
+          className="absolute bg-gray-800 text-white rounded z-30 text-sm"
+          style={{ top: linkMenu.y, left: linkMenu.x }}
+        >
+          <button
+            className="block w-full text-left px-2 py-1 hover:bg-gray-700"
+            onClick={() => handleLinkAction('copy')}
+          >
+            Copy
+          </button>
+          <button
+            className="block w-full text-left px-2 py-1 hover:bg-gray-700"
+            onClick={() => handleLinkAction('open')}
+          >
+            Open
+          </button>
+          <button
+            className="block w-full text-left px-2 py-1 hover:bg-gray-700"
+            onClick={() => handleLinkAction('curl')}
+          >
+            Copy as cURL
+          </button>
+          <button
+            className="block w-full text-left px-2 py-1 hover:bg-gray-700"
+            onClick={() => handleLinkAction('wget')}
+          >
+            Copy as wget
+          </button>
         </div>
       )}
       <div className="flex flex-col h-full">
