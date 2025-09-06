@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import ReactGA from 'react-ga4';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 import { getDailySeed } from '../../utils/dailySeed';
+import { isBrowser } from '@/utils/env';
 
 const SIZE = 4;
 
@@ -246,7 +247,7 @@ const Page2048 = () => {
   }, [handleMove, restart, handleUndo]);
 
   const close = () => {
-    if (typeof document !== 'undefined') {
+    if (isBrowser()) {
       document.getElementById('close-2048')?.click();
     }
   };

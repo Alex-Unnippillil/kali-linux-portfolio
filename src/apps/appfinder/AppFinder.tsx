@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useEffect, useState } from 'react';
 import logger from '../../../utils/logger';
 
@@ -16,7 +17,7 @@ const HISTORY_LIMIT = 20;
 async function loadApplications(): Promise<DesktopEntry[]> {
   // When executed in a browser environment there is no access to the
   // file system. In that case just return an empty list.
-  if (typeof window !== 'undefined') return [];
+  if (isBrowser()) return [];
 
   const fg = (await import('fast-glob')).default as typeof import('fast-glob');
   const fs = await import('fs/promises');
@@ -76,7 +77,7 @@ function parseDesktopFile(contents: string): DesktopEntry | null {
 // FILE_MANAGER_KEY. Fallback is `xdg-open` which works on most systems.
 function buildFileManagerCommand(path: string): string {
   let manager = 'xdg-open';
-  if (typeof window !== 'undefined') {
+  if (isBrowser()) {
     manager = localStorage.getItem(FILE_MANAGER_KEY) || manager;
   }
   return `${manager} "${path}"`;
@@ -91,7 +92,7 @@ export default function AppFinder() {
   // Load applications and history on first render
   useEffect(() => {
     loadApplications().then(setApps);
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       try {
         const stored = localStorage.getItem(HISTORY_KEY);
         if (stored) setHistory(JSON.parse(stored));
@@ -103,7 +104,7 @@ export default function AppFinder() {
 
   // Persist history whenever it changes
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       try {
         localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
       } catch {
@@ -116,7 +117,7 @@ export default function AppFinder() {
     // Browser environments cannot execute programs. We expose the intended
     // command using a custom URL scheme so integrations can handle it if
     // desired. Fallback is simply logging to the console.
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       try {
         window.open(`command:${command}`);
       } catch {

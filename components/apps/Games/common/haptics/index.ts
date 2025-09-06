@@ -1,10 +1,11 @@
+import { isBrowser } from '@/utils/env';
 export type HapticPattern = number | number[];
 
 export const supportsVibration = () =>
   typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
 
 const hapticsEnabled = () =>
-  typeof window === 'undefined' ||
+  !isBrowser() ||
   window.localStorage.getItem('haptics') !== 'false';
 
 const supportsGamepadVibration = () => {

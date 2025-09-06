@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import useGameControls from './useGameControls';
@@ -49,7 +50,7 @@ const PongInner = () => {
   const [speedMultiplier, setSpeedMultiplier] = useState(1);
   const speedRef = useRef(1);
   const [history, setHistory] = useState(() => {
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       try {
         return JSON.parse(localStorage.getItem('pongHistory')) || [];
       } catch {

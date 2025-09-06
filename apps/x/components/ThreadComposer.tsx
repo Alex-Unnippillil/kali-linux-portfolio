@@ -1,5 +1,6 @@
 'use client';
 
+import { isBrowser } from '@/utils/env';
 import { useEffect, useRef } from 'react';
 import { toPng } from 'html-to-image';
 import usePersistentState from '../../../hooks/usePersistentState';
@@ -40,7 +41,7 @@ export default function ThreadComposer() {
   const workerRef = useRef<Worker | null>(null);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     const worker = new Worker(
       new URL('../../../workers/postPublisher.ts', import.meta.url),
     );

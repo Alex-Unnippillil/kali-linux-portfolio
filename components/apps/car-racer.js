@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useRef, useEffect, useState } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import { CAR_SKINS, loadSkinAssets } from '../../apps/games/car-racer/customization';
@@ -52,7 +53,7 @@ const CarRacer = () => {
   const pausedRef = useRef(true);
   const [showCustomization, setShowCustomization] = useState(true);
   const [skin, setSkin] = useState(() =>
-    typeof window !== 'undefined'
+    isBrowser()
       ? localStorage.getItem('car_racer_skin') || CAR_SKINS[0].key
       : CAR_SKINS[0].key,
   );
@@ -88,7 +89,7 @@ const CarRacer = () => {
 
   const audioCtxRef = useRef(null);
   const playBeep = React.useCallback(() => {
-    if (!soundRef.current || typeof window === 'undefined') return;
+    if (!soundRef.current || !isBrowser()) return;
     if (!audioCtxRef.current)
       audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
     const ctx = audioCtxRef.current;
@@ -122,7 +123,7 @@ const CarRacer = () => {
       ghostDataRef.current = [];
       ghostBestScoreRef.current = 0;
     }
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       const media = window.matchMedia('(prefers-reduced-motion: reduce)');
       const updateMotion = () => {
         reduceMotionRef.current = media.matches;
@@ -141,14 +142,14 @@ const CarRacer = () => {
   }, []);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       localStorage.setItem('car_racer_skin', skin);
     }
   }, [skin]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || typeof window === 'undefined') return;
+    if (!canvas || !isBrowser()) return;
 
     const supportsWorker = typeof Worker === 'function' && hasOffscreenCanvas();
     let worker;

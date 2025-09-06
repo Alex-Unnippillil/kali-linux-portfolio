@@ -1,10 +1,11 @@
 'use client';
 
+import { isBrowser } from '@/utils/env';
 import { useEffect, useState } from 'react';
 
 export default function PulseAudio() {
   const [volume, setVolume] = useState(() => {
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       const stored = localStorage.getItem('pulse-audio-volume');
       if (stored !== null) {
         const num = Number(stored);

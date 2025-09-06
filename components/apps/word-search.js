@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import seedrandom from "seedrandom";
 import useOPFS from "../../hooks/useOPFS.js";
+import { isBrowser } from '@/utils/env';
 
 // Approximate pixel size of each grid cell for SVG overlay calculations
 const CELL_SIZE = 32;
@@ -67,7 +68,7 @@ const DIFFICULTIES = {
 
 const usePersistentState = (key, initial) => {
   const [state, setState] = useState(() => {
-    if (typeof window !== "undefined") {
+    if (isBrowser()) {
       const stored = window.localStorage.getItem(key);
       if (stored) {
         try {
@@ -81,7 +82,7 @@ const usePersistentState = (key, initial) => {
   });
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (isBrowser()) {
       window.localStorage.setItem(key, JSON.stringify(state));
     }
   }, [key, state]);
@@ -263,7 +264,7 @@ const WordSearch = () => {
   const gridRef = useRef(null);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (isBrowser()) {
       prefersReducedMotion.current = window.matchMedia(
         "(prefers-reduced-motion: reduce)",
       ).matches;
@@ -272,7 +273,7 @@ const WordSearch = () => {
 
   useEffect(() => {
     if (!listsReady) return;
-    if (typeof window !== "undefined") {
+    if (isBrowser()) {
       const params = new URLSearchParams(window.location.search);
       const urlSeed = params.get("seed");
       if (urlSeed) {
@@ -460,7 +461,7 @@ const WordSearch = () => {
   };
 
   const share = () => {
-    if (typeof window === "undefined") return;
+    if (!isBrowser()) return;
     const url = new URL(window.location.href);
     url.searchParams.set("seed", seed);
     url.searchParams.set("list", listName);

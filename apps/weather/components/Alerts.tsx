@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import usePersistentState from "../../../hooks/usePersistentState";
+import { isBrowser } from '@/utils/env';
 
 interface AlertsProps {
   latitude: number;
@@ -29,7 +30,7 @@ const Alerts = ({ latitude, longitude }: AlertsProps) => {
   );
 
   useEffect(() => {
-    if (!enabled || typeof window === "undefined") return;
+    if (!enabled || !isBrowser()) return;
     if ("Notification" in window && Notification.permission === "default") {
       void Notification.requestPermission();
     }

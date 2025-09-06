@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useRef, useEffect, useState } from 'react';
 import GameLayout from './GameLayout';
 import useAssetLoader from '../../hooks/useAssetLoader';
@@ -81,7 +82,7 @@ const SpaceInvaders = () => {
 
   useEffect(() => {
     prefersReducedMotion.current =
-      typeof window !== 'undefined' &&
+      isBrowser() &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }, []);
 

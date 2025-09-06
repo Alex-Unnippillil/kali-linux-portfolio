@@ -10,6 +10,7 @@ import {
 import GraphView from "../../../apps/radare2/components/GraphView";
 import GuideOverlay from "./GuideOverlay";
 import { useTheme } from "../../../hooks/useTheme";
+import { isBrowser } from '@/utils/env';
 
 const Radare2 = ({ initialData = {} }) => {
   const {
@@ -32,7 +33,7 @@ const Radare2 = ({ initialData = {} }) => {
   const { theme } = useTheme();
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (isBrowser()) {
       setNotes(loadNotes(file));
       setBookmarks(loadBookmarks(file));
     }
@@ -41,7 +42,7 @@ const Radare2 = ({ initialData = {} }) => {
   useEffect(() => {
     try {
       if (
-        typeof window !== "undefined" &&
+        isBrowser() &&
         !localStorage.getItem("r2HelpDismissed")
       ) {
         setShowGuide(true);

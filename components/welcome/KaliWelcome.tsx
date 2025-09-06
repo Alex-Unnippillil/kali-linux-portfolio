@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Modal from "../base/Modal";
+import { isBrowser } from '@/utils/env';
 
 export default function KaliWelcome() {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (!isBrowser()) return;
     const seen = window.localStorage.getItem("kaliWelcomeSeen");
     if (!seen) {
       setOpen(true);
@@ -17,7 +18,7 @@ export default function KaliWelcome() {
 
   const close = () => {
     setOpen(false);
-    if (typeof window !== "undefined") {
+    if (isBrowser()) {
       window.localStorage.setItem("kaliWelcomeSeen", "true");
     }
   };

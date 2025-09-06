@@ -1,5 +1,6 @@
 "use client";
 
+import { isBrowser } from '@/utils/env';
 import React, { Component } from 'react';
 import NextImage from 'next/image';
 import Draggable from 'react-draggable';
@@ -13,7 +14,7 @@ export class Window extends Component {
         super(props);
         this.id = null;
         const isPortrait =
-            typeof window !== "undefined" && window.innerHeight > window.innerWidth;
+            isBrowser() && window.innerHeight > window.innerWidth;
         this.startX =
             props.initialX ??
             (isPortrait ? window.innerWidth * 0.05 : 60);
@@ -796,7 +797,7 @@ export class WindowXBorder extends Component {
 // Window's Edit Buttons
 export function WindowEditButtons(props) {
     const { togglePin } = useDocPiP(props.pip || (() => null));
-    const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
+    const pipSupported = isBrowser() && !!window.documentPictureInPicture;
     return (
         <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center h-11 min-w-[8.25rem]">
             {pipSupported && props.pip && (

@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 // Number of samples to keep in the timeline
@@ -28,7 +29,7 @@ const ResourceMonitor = () => {
 
   // Spawn worker for network speed tests
   useEffect(() => {
-    if (typeof window === 'undefined' || typeof Worker !== 'function') return;
+    if (!isBrowser() || typeof Worker !== 'function') return;
     workerRef.current = new Worker(
       new URL('./speedtest.worker.js', import.meta.url),
     );

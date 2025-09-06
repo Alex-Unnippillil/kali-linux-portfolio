@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import DOMPurify from 'dompurify';
 
@@ -61,7 +62,7 @@ export default function AsciiArt() {
 
   // Load saved preferences
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     const savedSet = window.localStorage.getItem('ascii_char_set');
     const savedPalette = window.localStorage.getItem('ascii_palette');
     setCharSet(savedSet || presetCharSets.standard);
@@ -73,7 +74,7 @@ export default function AsciiArt() {
 
   // Persist preferences
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       window.localStorage.setItem('ascii_char_set', charSet);
       window.localStorage.setItem('ascii_palette', paletteName);
     }

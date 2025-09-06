@@ -1,10 +1,11 @@
+import { isBrowser } from '@/utils/env';
 export async function recordCanvas(
   canvas: HTMLCanvasElement,
   duration = 1000,
   options: MediaRecorderOptions = { mimeType: 'video/webm' }
 ): Promise<Blob> {
   // Fallback to PNG snapshot when MediaRecorder is unavailable
-  if (typeof window === 'undefined' || typeof MediaRecorder === 'undefined') {
+  if (!isBrowser() || typeof MediaRecorder === 'undefined') {
     return new Promise((resolve, reject) =>
       canvas.toBlob(
         (blob) => (blob ? resolve(blob) : reject(new Error('Snapshot failed'))),

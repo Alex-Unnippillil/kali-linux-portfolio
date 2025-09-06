@@ -1,15 +1,16 @@
+import { isBrowser } from '@/utils/env';
 import { useEffect, useState } from 'react';
 
 const STORAGE_KEY = 'do-not-disturb';
 
 export function useDoNotDisturb() {
   const [enabled, setEnabled] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
+    if (!isBrowser()) return false;
     return localStorage.getItem(STORAGE_KEY) === 'true';
   });
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     localStorage.setItem(STORAGE_KEY, enabled ? 'true' : 'false');
   }, [enabled]);
 

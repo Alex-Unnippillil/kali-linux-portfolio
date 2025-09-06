@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import { useEffect, useRef, useState } from 'react';
 
 const SAMPLE_TRACKS = [
@@ -13,7 +14,7 @@ export default function SpotifyApp() {
   const audioRef = useRef(null);
 
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('spotify-token') : null;
+    const token = isBrowser() ? localStorage.getItem('spotify-token') : null;
     if (!token) return;
 
     const script = document.createElement('script');

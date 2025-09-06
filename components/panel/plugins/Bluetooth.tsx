@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
 
@@ -10,7 +11,7 @@ export default function Bluetooth() {
 
   // Load state from local storage
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     const storedEnabled = localStorage.getItem('bluetoothEnabled');
     const storedDevices = localStorage.getItem('bluetoothDevices');
     if (storedEnabled !== null) {
@@ -27,13 +28,13 @@ export default function Bluetooth() {
 
   // Persist enabled state
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     localStorage.setItem('bluetoothEnabled', String(enabled));
   }, [enabled]);
 
   // Persist devices list
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     localStorage.setItem('bluetoothDevices', JSON.stringify(devices));
   }, [devices]);
 

@@ -1,4 +1,5 @@
 'use client';
+import { isBrowser } from '@/utils/env';
 import {
   useEffect,
   useRef,
@@ -100,7 +101,7 @@ export default function XTimeline() {
   const [scriptError, setScriptError] = useState(false);
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>(() =>
-    typeof document !== 'undefined' &&
+    isBrowser() &&
     document.documentElement.classList.contains('dark')
       ? 'dark'
       : 'light'
@@ -121,7 +122,7 @@ export default function XTimeline() {
 
   useEffect(() => {
     if (
-      typeof window !== 'undefined' &&
+      isBrowser() &&
       'Notification' in window &&
       Notification.permission === 'default'
     ) {

@@ -1,9 +1,10 @@
 'use client';
+import { isBrowser } from '@/utils/env';
 import { useEffect } from 'react';
 
 export default function StickyNotes() {
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       import('./main');
     }
   }, []);

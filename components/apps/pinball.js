@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useEffect, useRef, useState } from 'react';
 import Matter from 'matter-js';
 import useCanvasResize from '../../hooks/useCanvasResize';
@@ -82,7 +83,7 @@ const Pinball = () => {
   }, [table]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       setPrefersReducedMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     }
   }, []);

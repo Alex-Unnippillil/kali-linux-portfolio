@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   SIZE,
@@ -55,7 +56,7 @@ const Reversi = () => {
   useEffect(() => { setScore(countPieces(board)); }, [board]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       reduceMotionRef.current = window.matchMedia(
         '(prefers-reduced-motion: reduce)'
       ).matches;
@@ -88,7 +89,7 @@ const Reversi = () => {
 
   // load wins from storage
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     const saved = window.localStorage.getItem('reversiWins');
     if (saved) {
       try { setWins(JSON.parse(saved)); } catch { /* ignore */ }
@@ -97,7 +98,7 @@ const Reversi = () => {
 
   // persist wins
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     window.localStorage.setItem('reversiWins', JSON.stringify(wins));
   }, [wins]);
 

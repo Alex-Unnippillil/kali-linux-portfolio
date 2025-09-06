@@ -1,5 +1,6 @@
 "use client";
 
+import { isBrowser } from '@/utils/env';
 import React, { Component } from 'react';
 import dynamic from 'next/dynamic';
 import logger from '../../utils/logger';
@@ -106,7 +107,7 @@ export class Desktop extends Component {
         // interaction is snappy even on a cold cache. Falling back to
         // setTimeout ensures compatibility with environments lacking
         // requestIdleCallback.
-        if (typeof window !== 'undefined') {
+        if (isBrowser()) {
             const warmModules = () => {
                 import('../apps/terminal');
                 import('../../apps/terminal/tabs');

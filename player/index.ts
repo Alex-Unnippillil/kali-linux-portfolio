@@ -1,8 +1,9 @@
+import { isBrowser } from '@/utils/env';
 let ctx: AudioContext | null = null;
 const players = new Map<string, HTMLAudioElement>();
 
 export function getAudioContext(): AudioContext {
-  if (typeof window === 'undefined') {
+  if (!isBrowser()) {
     throw new Error('AudioContext unavailable');
   }
   if (!ctx) {

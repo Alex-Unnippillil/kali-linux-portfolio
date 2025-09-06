@@ -1,5 +1,6 @@
 'use client';
 
+import { isBrowser } from '@/utils/env';
 import { useEffect, useState } from 'react';
 
 const STORAGE_KEY = 'gigolo-bookmarks';
@@ -12,7 +13,7 @@ const GigoloApp = () => {
   const [networkEntries, setNetworkEntries] = useState([]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (stored) setBookmarks(JSON.parse(stored));
     const net = window.localStorage.getItem(NETWORK_KEY);
@@ -20,12 +21,12 @@ const GigoloApp = () => {
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(bookmarks));
   }, [bookmarks]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     window.localStorage.setItem(NETWORK_KEY, JSON.stringify(networkEntries));
   }, [networkEntries]);
 

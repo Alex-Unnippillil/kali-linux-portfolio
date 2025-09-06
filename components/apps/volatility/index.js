@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useEffect, useRef, useState } from 'react';
 import MemoryHeatmap from './MemoryHeatmap';
 import PluginBrowser from './PluginBrowser';
@@ -127,7 +128,7 @@ const VolatilityApp = () => {
   const workerRef = useRef(null);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && typeof Worker === 'function') {
+    if (isBrowser() && typeof Worker === 'function') {
       workerRef.current = new Worker(new URL('./heatmap.worker.js', import.meta.url));
       workerRef.current.onmessage = (e) => setHeatmapData(e.data);
       workerRef.current.postMessage({ segments: memoryDemo.segments });

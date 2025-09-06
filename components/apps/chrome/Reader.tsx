@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useEffect, useState } from 'react';
 import { Readability } from '@mozilla/readability';
 import TurndownService from 'turndown';
@@ -52,7 +53,7 @@ const Reader: React.FC<ReaderProps> = ({ url }) => {
   }, [url]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     const saved = localStorage.getItem('readerView');
     if (saved === 'rendered' || saved === 'markdown' || saved === 'split') {
       setViewMode(saved);
@@ -61,7 +62,7 @@ const Reader: React.FC<ReaderProps> = ({ url }) => {
 
   const changeView = (mode: 'rendered' | 'markdown' | 'split') => {
     setViewMode(mode);
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       localStorage.setItem('readerView', mode);
     }
   };

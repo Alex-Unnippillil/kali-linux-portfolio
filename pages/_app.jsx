@@ -1,5 +1,6 @@
 "use client";
 
+import { isBrowser } from '@/utils/env';
 import { useEffect } from 'react';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
@@ -31,7 +32,7 @@ function MyApp(props) {
 
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && typeof window.initA2HS === 'function') {
+    if (isBrowser() && typeof window.initA2HS === 'function') {
       window.initA2HS();
     }
     const initAnalytics = async () => {

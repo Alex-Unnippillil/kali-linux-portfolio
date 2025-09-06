@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import GameLayout from './GameLayout';
 import { checkWinner, minimax, createBoard } from '../../apps/games/tictactoe/logic';
@@ -20,7 +21,7 @@ const TicTacToe = () => {
   const [status, setStatus] = useState('Choose X or O');
   const [winLine, setWinLine] = useState(null);
   const [stats, setStats] = useState(() => {
-    if (typeof window === 'undefined') return {};
+    if (!isBrowser()) return {};
     try {
       return JSON.parse(localStorage.getItem('tictactoeStats') || '{}');
     } catch {
@@ -43,7 +44,7 @@ const TicTacToe = () => {
             draws: res === 'draw' ? cur.draws + 1 : cur.draws,
           },
         };
-        if (typeof window !== 'undefined') {
+        if (isBrowser()) {
           localStorage.setItem('tictactoeStats', JSON.stringify(updated));
         }
         return updated;

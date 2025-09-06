@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 export interface GhostRun {
   /** Final score of the run */
   score: number;
@@ -9,7 +10,7 @@ const ghostKey = (gravity: string) => `flappy-bird-ghosts-${gravity}`;
 const bestKey = (gravity: string) => `flappy-bird-best-${gravity}`;
 
 function read<T>(key: string): T | null {
-  if (typeof window === 'undefined') return null;
+  if (!isBrowser()) return null;
   try {
     return JSON.parse(window.localStorage.getItem(key) || 'null') as T | null;
   } catch {
@@ -18,7 +19,7 @@ function read<T>(key: string): T | null {
 }
 
 function write(key: string, value: unknown): void {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   window.localStorage.setItem(key, JSON.stringify(value));
 }
 

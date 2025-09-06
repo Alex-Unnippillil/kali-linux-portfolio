@@ -1,4 +1,5 @@
 'use client';
+import { isBrowser } from '@/utils/env';
 import { useState, useMemo, useEffect } from 'react';
 
 interface Quote {
@@ -19,7 +20,7 @@ export default function PlaylistBuilder({ quotes, playlist, setPlaylist }: Playl
   const [saved, setSaved] = useState<Record<string, number[]>>({});
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     const stored = localStorage.getItem('quote-playlists');
     if (stored) {
       try {
@@ -31,7 +32,7 @@ export default function PlaylistBuilder({ quotes, playlist, setPlaylist }: Playl
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     localStorage.setItem('quote-playlists', JSON.stringify(saved));
   }, [saved]);
 
@@ -75,7 +76,7 @@ export default function PlaylistBuilder({ quotes, playlist, setPlaylist }: Playl
   };
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     const url = new URL(window.location.href);
     if (playlist.length) url.searchParams.set('playlist', playlist.join(','));
     else url.searchParams.delete('playlist');

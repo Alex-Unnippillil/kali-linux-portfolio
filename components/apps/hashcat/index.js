@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useState, useEffect, useRef } from 'react';
 import progressInfo from './progress.json';
 import StatsChart from '../../StatsChart';
@@ -219,7 +220,7 @@ function HashcatApp() {
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     const handleChange = () => setPrefersReducedMotion(mediaQuery.matches);
     handleChange();
@@ -233,7 +234,7 @@ function HashcatApp() {
     setIsCracking(true);
     setProgress(0);
     setResult('');
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     if (typeof Worker === 'function') {
       workerRef.current = new Worker(
         new URL('./progress.worker.js', import.meta.url)

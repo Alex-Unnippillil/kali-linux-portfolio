@@ -1,5 +1,6 @@
 "use client";
 
+import { isBrowser } from '@/utils/env';
 import React, { useState, useEffect, useRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
@@ -9,7 +10,7 @@ import Sidebar from '../filemanager/Sidebar';
 import Toast from '../ui/Toast';
 
 export async function openFileDialog(options = {}) {
-  if (typeof window !== 'undefined' && window.showOpenFilePicker) {
+  if (isBrowser() && window.showOpenFilePicker) {
     const [handle] = await window.showOpenFilePicker(options);
     return handle;
   }
@@ -39,7 +40,7 @@ export async function openFileDialog(options = {}) {
 }
 
 export async function saveFileDialog(options = {}) {
-  if (typeof window !== 'undefined' && window.showSaveFilePicker) {
+  if (isBrowser() && window.showSaveFilePicker) {
     return await window.showSaveFilePicker(options);
   }
 
@@ -206,7 +207,7 @@ export default function FileExplorer({ openApp }) {
   const openFile = async (file) => {
     if (imageRegex.test(file.name)) {
       const imageFiles = files.filter(f => imageRegex.test(f.name));
-      if (typeof window !== 'undefined') {
+      if (isBrowser()) {
         window.__ristretto = { files: imageFiles, index: imageFiles.findIndex(f => f.name === file.name) };
       }
       openApp && openApp('ristretto');
@@ -307,7 +308,7 @@ export default function FileExplorer({ openApp }) {
     if (!dirHandle || !hasWorker) return;
     setResults([]);
     if (workerRef.current) workerRef.current.terminate();
-    if (typeof window !== 'undefined' && typeof Worker === 'function') {
+    if (isBrowser() && typeof Worker === 'function') {
       workerRef.current = new Worker(new URL('./find.worker.js', import.meta.url));
       workerRef.current.onmessage = (e) => {
         const { file, line, text, done } = e.data;
@@ -389,7 +390,7 @@ export default function FileExplorer({ openApp }) {
         <div className="flex flex-1 overflow-hidden">
           <Sidebar devices={devices} onEject={(id) => {
             setDevices((d) => d.filter((dev) => dev.id !== id));
-            if (typeof window !== 'undefined') {
+            if (isBrowser()) {
               window.localStorage.setItem(
                 'volume-event',
                 JSON.stringify({ type: 'eject', id }),

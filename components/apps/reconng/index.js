@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, {
   useState,
   useEffect,
@@ -156,7 +157,7 @@ const ReconNG = () => {
   const currentWorkspace = workspaces[activeWs];
 
   useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
+    if (!isBrowser()) return undefined;
     if (allowNetwork) return undefined;
     const originalFetch = window.fetch.bind(window);
     window.fetch = (input, init) => {
@@ -188,7 +189,7 @@ const ReconNG = () => {
   }, [view, chainData]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
       setPrefersReducedMotion(mediaQuery.matches);
       const handler = (e) => setPrefersReducedMotion(e.matches);

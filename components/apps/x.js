@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React, { useEffect, useRef, useState } from 'react';
 
 const sanitizeHandle = (handle) =>
@@ -16,7 +17,7 @@ export default function XApp() {
 
   // Load presets from localStorage
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       const presets = JSON.parse(
         localStorage.getItem('x-feed-presets') || '[]'
       );
@@ -31,7 +32,7 @@ export default function XApp() {
 
   // Persist selected feed
   useEffect(() => {
-    if (typeof window !== 'undefined' && feedUser) {
+    if (isBrowser() && feedUser) {
       localStorage.setItem('x-feed-user', feedUser);
     }
   }, [feedUser]);
@@ -44,7 +45,7 @@ export default function XApp() {
     const updated = Array.from(new Set([sanitized, ...feedPresets]));
     setFeedPresets(updated);
     setFeedUser(sanitized);
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       localStorage.setItem('x-feed-presets', JSON.stringify(updated));
     }
     setFeedInput('');
@@ -52,7 +53,7 @@ export default function XApp() {
 
   // Sync theme with system preference
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       const mq = window.matchMedia('(prefers-color-scheme: dark)');
       const update = () => setTheme(mq.matches ? 'dark' : 'light');
       update();

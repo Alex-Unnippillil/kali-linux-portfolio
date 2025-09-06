@@ -1,5 +1,6 @@
 'use client';
 
+import { isBrowser } from '@/utils/env';
 import React, { useEffect, useState } from 'react';
 import { protocolName } from '../../../components/apps/wireshark/utils';
 import FilterHelper from './FilterHelper';
@@ -258,14 +259,14 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
   }, [filter]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     const params = new URLSearchParams(window.location.search);
     const f = params.get('filter');
     if (f) setFilter(f);
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     const url = new URL(window.location.href);
     if (filter) url.searchParams.set('filter', filter);
     else url.searchParams.delete('filter');

@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 import React from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import presets, { FilterPreset } from '../../../filters/presets';
@@ -65,7 +66,7 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
   };
 
   const handleShare = () => {
-    if (typeof window === 'undefined') return;
+    if (!isBrowser()) return;
     const url = new URL(window.location.href);
     if (value) url.searchParams.set('filter', value);
     else url.searchParams.delete('filter');

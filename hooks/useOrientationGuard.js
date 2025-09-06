@@ -1,11 +1,12 @@
 "use client";
 
+import { isBrowser } from '@/utils/env';
 import { useState, useEffect } from 'react';
 
 // Tracks the device orientation. Useful for games that require landscape mode.
 export default function useOrientationGuard() {
   const getOrientation = () =>
-    (typeof window !== 'undefined' && window.screen?.orientation?.type) || 'landscape-primary';
+    (isBrowser() && window.screen?.orientation?.type) || 'landscape-primary';
 
   const [orientation, setOrientation] = useState(getOrientation);
 

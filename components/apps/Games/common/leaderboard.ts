@@ -1,3 +1,4 @@
+import { isBrowser } from '@/utils/env';
 export interface LeaderboardEntry {
   name: string;
   score: number;
@@ -10,7 +11,7 @@ const isValidScore = (score: number): boolean =>
   typeof score === 'number' && Number.isFinite(score) && score >= 0 && score <= MAX_SCORE;
 
 export const getLeaderboard = (gameId: string): LeaderboardEntry[] => {
-  if (typeof window === 'undefined') return [];
+  if (!isBrowser()) return [];
   try {
     const raw = window.localStorage.getItem(`${PREFIX}${gameId}`);
     if (!raw) return [];

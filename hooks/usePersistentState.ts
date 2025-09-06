@@ -1,5 +1,6 @@
 "use client";
 
+import { isBrowser } from '@/utils/env';
 import { useState, useEffect } from 'react';
 import { migrate, settings } from '../lib/migrations';
 import { logEvent } from '../utils/analytics';
@@ -20,7 +21,7 @@ export default function usePersistentState<T>(
     typeof initial === 'function' ? (initial as () => T)() : initial;
 
   const [state, setState] = useState<T>(() => {
-    if (typeof window === 'undefined') return getInitial();
+    if (!isBrowser()) return getInitial();
     try {
       const prev = window.localStorage.getItem('settings.version');
       if (prev !== String(settings.version)) {

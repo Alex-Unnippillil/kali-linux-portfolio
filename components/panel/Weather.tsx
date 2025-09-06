@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import WeatherPopover from "./WeatherPopover";
 import WeatherIcon from "@/apps/weather/components/WeatherIcon";
+import { isBrowser } from '@/utils/env';
 
 const WEATHER_PREFIX = "xfce.weather.";
 
@@ -25,22 +26,22 @@ const MOCK_DATA: Record<string, {
 export default function Weather() {
   const [open, setOpen] = useState(false);
   const [location, setLocation] = useState(() => {
-    if (typeof window === "undefined") return "New York";
+    if (!isBrowser()) return "New York";
     return localStorage.getItem(`${WEATHER_PREFIX}location`) || "New York";
   });
   const [unit, setUnit] = useState<Unit>(() => {
-    if (typeof window === "undefined") return "metric";
+    if (!isBrowser()) return "metric";
     return (localStorage.getItem(`${WEATHER_PREFIX}unit`) as Unit) || "metric";
   });
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (isBrowser()) {
       localStorage.setItem(`${WEATHER_PREFIX}location`, location);
     }
   }, [location]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (isBrowser()) {
       localStorage.setItem(`${WEATHER_PREFIX}unit`, unit);
     }
   }, [unit]);

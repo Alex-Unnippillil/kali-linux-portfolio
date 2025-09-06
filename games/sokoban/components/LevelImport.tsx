@@ -2,12 +2,13 @@
 
 import React, { useCallback, useState } from "react";
 import { LevelPack, parseLevels } from "../../../apps/sokoban/levels";
+import { isBrowser } from '@/utils/env';
 
 const STORAGE_KEY = "sokoban_packs";
 const FILE_NAME = "sokoban-packs.json";
 
 const hasOpfs = (() => {
-  if (typeof window === "undefined") return false;
+  if (!isBrowser()) return false;
   return (
     "storage" in navigator &&
     Boolean((navigator.storage as any).getDirectory)
@@ -15,7 +16,7 @@ const hasOpfs = (() => {
 })();
 
 export const loadLocalPacks = async (): Promise<LevelPack[]> => {
-  if (typeof window === "undefined") return [];
+  if (!isBrowser()) return [];
   if (hasOpfs) {
     try {
       const root = await (navigator.storage as any).getDirectory();
@@ -34,7 +35,7 @@ export const loadLocalPacks = async (): Promise<LevelPack[]> => {
 };
 
 export const saveLocalPacks = async (packs: LevelPack[]): Promise<void> => {
-  if (typeof window === "undefined") return;
+  if (!isBrowser()) return;
   if (hasOpfs) {
     const root = await (navigator.storage as any).getDirectory();
     const handle = await root.getFileHandle(FILE_NAME, { create: true });
