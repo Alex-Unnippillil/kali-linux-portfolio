@@ -64,6 +64,11 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
   analyzerMode: 'json',
 });
 
+// Prefix all PWA caches with the current build ID so that each deployment
+// uses its own set of caches and outdated entries are naturally discarded.
+const buildId =
+  process.env.NEXT_BUILD_ID || process.env.BUILD_ID || 'dev';
+
 const withPWA = require('@ducanh2912/next-pwa').default({
   dest: 'public',
   sw: 'sw.js',
@@ -73,14 +78,19 @@ const withPWA = require('@ducanh2912/next-pwa').default({
     document: '/offline.html',
   },
   workboxOptions: {
+    cacheId: buildId,
+    navigateFallback: '/offline.html',
+
     additionalManifestEntries: [
       { url: '/favicon.ico', revision: null },
       { url: '/favicon.svg', revision: null },
       { url: '/images/logos/fevicon.png', revision: null },
       { url: '/images/logos/logo_1024.png', revision: null },
     ],
-    // Cache only images and fonts; avoid HTML caching so the app shell always updates
-    runtimeCaching: require('./cache.js'),
+
+    // Cache only images and fonts to ensure app shell updates while assets work offline
+    runtimeCaching: require('./cache.js')(buildId),
+
   },
 });
 
