@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
-import Image from 'next/image';
+import Image from "next/image";
 import SmallArrow from "./small_arrow";
-import { useSettings } from '../../hooks/useSettings';
-import { useTray } from '../../hooks/useTray';
+import { useSettings } from "../../hooks/useSettings";
+import { useTray } from "../../hooks/useTray";
 
 const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
 
-export default function Status() {
+export default function Status({ mode = "status" }) {
   const { allowNetwork } = useSettings();
   const { icons, register, unregister } = useTray();
   const [online, setOnline] = useState(true);
@@ -15,8 +15,8 @@ export default function Status() {
     const pingServer = async () => {
       if (!window?.location) return;
       try {
-        const url = new URL('/favicon.ico', window.location.href).toString();
-        await fetch(url, { method: 'HEAD', cache: 'no-store' });
+        const url = new URL("/favicon.ico", window.location.href).toString();
+        await fetch(url, { method: "HEAD", cache: "no-store" });
         setOnline(true);
       } catch (e) {
         setOnline(false);
@@ -32,19 +32,23 @@ export default function Status() {
     };
 
     updateStatus();
-    window.addEventListener('online', updateStatus);
-    window.addEventListener('offline', updateStatus);
+    window.addEventListener("online", updateStatus);
+    window.addEventListener("offline", updateStatus);
     return () => {
-      window.removeEventListener('online', updateStatus);
-      window.removeEventListener('offline', updateStatus);
+      window.removeEventListener("online", updateStatus);
+      window.removeEventListener("offline", updateStatus);
     };
   }, []);
 
   useEffect(() => {
-    const id = 'network';
+    const id = "network";
     register({
       id,
-      tooltip: online ? (allowNetwork ? 'Online' : 'Online (requests blocked)') : 'Offline',
+      tooltip: online
+        ? allowNetwork
+          ? "Online"
+          : "Online (requests blocked)"
+        : "Offline",
       sni: online
         ? "/themes/Yaru/status/network-wireless-signal-good-symbolic.svg"
         : "/themes/Yaru/status/network-wireless-signal-none-symbolic.svg",
@@ -56,35 +60,39 @@ export default function Status() {
   }, [online, allowNetwork, register, unregister]);
 
   useEffect(() => {
-    const id = 'volume';
-    register({ id, tooltip: 'Volume', sni: VOLUME_ICON, legacy: VOLUME_ICON });
+    const id = "volume";
+    register({ id, tooltip: "Volume", sni: VOLUME_ICON, legacy: VOLUME_ICON });
     return () => unregister(id);
   }, [register, unregister]);
 
   useEffect(() => {
-    const id = 'battery';
+    const id = "battery";
     register({
       id,
-      tooltip: 'Battery',
-      sni: '/themes/Yaru/status/battery-good-symbolic.svg',
-      legacy: '/themes/Yaru/status/battery-good-symbolic.svg',
+      tooltip: "Battery",
+      sni: "/themes/Yaru/status/battery-good-symbolic.svg",
+      legacy: "/themes/Yaru/status/battery-good-symbolic.svg",
     });
     return () => unregister(id);
   }, [register, unregister]);
 
   return (
-    <div className="flex justify-center items-center" role="group" aria-label="System tray">
+    <div
+      className="flex justify-center items-center"
+      role="group"
+      aria-label="System tray"
+    >
       {icons.map((icon) => (
         <span key={icon.id} className="mx-1.5 relative" title={icon.tooltip}>
           <Image
             width={16}
             height={16}
-            src={icon.sni || icon.legacy}
+            src={mode === "legacy" ? icon.legacy : icon.sni || icon.legacy}
             alt={icon.tooltip || icon.id}
             className="inline status-symbol w-4 h-4"
             sizes="16px"
           />
-          {icon.id === 'network' && !allowNetwork && (
+          {icon.id === "network" && !allowNetwork && (
             <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
           )}
         </span>

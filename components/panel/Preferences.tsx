@@ -28,8 +28,9 @@ export default function Preferences() {
 
   const [profileId, setProfileId] = useState(() => {
     if (typeof window === "undefined") return PANEL_PROFILES[0].id;
-    return localStorage.getItem(`${PANEL_PREFIX}profile`) ||
-      PANEL_PROFILES[0].id;
+    return (
+      localStorage.getItem(`${PANEL_PREFIX}profile`) || PANEL_PROFILES[0].id
+    );
   });
 
   const [confirming, setConfirming] = useState<PanelProfile | null>(null);
@@ -44,16 +45,29 @@ export default function Preferences() {
     const stored = localStorage.getItem(`${PANEL_PREFIX}length`);
     return stored ? parseInt(stored, 10) : 100;
   });
-  const [orientation, setOrientation] = useState<"horizontal" | "vertical">(() => {
-    if (typeof window === "undefined") return "horizontal";
-    return (localStorage.getItem(`${PANEL_PREFIX}orientation`) as
-      | "horizontal"
-      | "vertical"
-      | null) || "horizontal";
-  });
+  const [orientation, setOrientation] = useState<"horizontal" | "vertical">(
+    () => {
+      if (typeof window === "undefined") return "horizontal";
+      return (
+        (localStorage.getItem(`${PANEL_PREFIX}orientation`) as
+          | "horizontal"
+          | "vertical"
+          | null) || "horizontal"
+      );
+    },
+  );
   const [autohide, setAutohide] = useState(() => {
     if (typeof window === "undefined") return false;
     return localStorage.getItem(`${PANEL_PREFIX}autohide`) === "true";
+  });
+  const [tray, setTray] = useState<"status" | "legacy">(() => {
+    if (typeof window === "undefined") return "status";
+    return (
+      (localStorage.getItem(`${PANEL_PREFIX}tray`) as
+        | "status"
+        | "legacy"
+        | null) || "status"
+    );
   });
 
   useEffect(() => {
@@ -73,8 +87,16 @@ export default function Preferences() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    localStorage.setItem(`${PANEL_PREFIX}autohide`, autohide ? "true" : "false");
+    localStorage.setItem(
+      `${PANEL_PREFIX}autohide`,
+      autohide ? "true" : "false",
+    );
   }, [autohide]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(`${PANEL_PREFIX}tray`, tray);
+  }, [tray]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -129,6 +151,20 @@ export default function Preferences() {
               </select>
             </div>
             <div className="flex items-center justify-between">
+              <label htmlFor="tray" className="text-ubt-grey">
+                System Tray
+              </label>
+              <select
+                id="tray"
+                value={tray}
+                onChange={(e) => setTray(e.target.value as "status" | "legacy")}
+                className="bg-ub-cool-grey text-white px-2 py-1 rounded"
+              >
+                <option value="status">Status Tray</option>
+                <option value="legacy">Legacy Tray</option>
+              </select>
+            </div>
+            <div className="flex items-center justify-between">
               <span className="text-ubt-grey">Autohide</span>
               <ToggleSwitch
                 checked={autohide}
@@ -173,10 +209,14 @@ export default function Preferences() {
           </div>
         )}
         {active === "appearance" && (
-          <p className="text-ubt-grey">Appearance settings are not available yet.</p>
+          <p className="text-ubt-grey">
+            Appearance settings are not available yet.
+          </p>
         )}
         {active === "opacity" && (
-          <p className="text-ubt-grey">Opacity settings are not available yet.</p>
+          <p className="text-ubt-grey">
+            Opacity settings are not available yet.
+          </p>
         )}
         {active === "items" && (
           <p className="text-ubt-grey">Item settings are not available yet.</p>
@@ -210,4 +250,3 @@ export default function Preferences() {
     </div>
   );
 }
-

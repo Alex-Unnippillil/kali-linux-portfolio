@@ -4,16 +4,16 @@ import React, { useState } from "react";
 import Status from "../util-components/status";
 
 export default function StatusNotifier() {
-  const [mounted, setMounted] = useState(true);
+  const [key, setKey] = useState(0);
 
-  const reload = () => {
-    setMounted(false);
-    setTimeout(() => setMounted(true), 0);
+  const reload = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setKey((k) => k + 1);
   };
 
   return (
     <div className="flex items-center gap-2">
-      {mounted && <Status />}
+      <Status key={key} />
       <button
         type="button"
         onClick={reload}
@@ -24,4 +24,3 @@ export default function StatusNotifier() {
     </div>
   );
 }
-
