@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import Window from '../base/window';
+import Window from '../base/Window';
 
 interface SensorInfo {
   id: string;

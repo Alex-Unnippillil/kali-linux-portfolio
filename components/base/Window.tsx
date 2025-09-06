@@ -7,6 +7,9 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import { createLogger } from '../../lib/logger';
+
+const log = createLogger();
 
 export class Window extends Component {
     constructor(props) {
@@ -897,24 +900,63 @@ export function WindowEditButtons(props) {
     )
 }
 
+class WindowAppBoundary extends Component {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false };
+    }
+    static getDerivedStateFromError() {
+        return { hasError: true };
+    }
+    componentDidCatch(error, errorInfo) {
+        log.error('Window app crashed', { error, errorInfo });
+    }
+    handleRelaunch = () => {
+        this.setState({ hasError: false }, this.props.onRelaunch);
+    };
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="flex h-full w-full flex-col items-center justify-center p-4 text-center text-white" role="alert">
+                    <p className="mb-2 font-bold">App crashed</p>
+                    <button
+                        type="button"
+                        onClick={this.handleRelaunch}
+                        className="underline"
+                    >
+                        Relaunch
+                    </button>
+                </div>
+            );
+        }
+        return this.props.children;
+    }
+}
+
 // Window's Main Screen
 export class WindowMainScreen extends Component {
     constructor() {
         super();
         this.state = {
             setDarkBg: false,
-        }
+            restartKey: 0,
+        };
     }
     componentDidMount() {
         setTimeout(() => {
             this.setState({ setDarkBg: true });
         }, 3000);
     }
+    relaunch = () => {
+        this.setState(prev => ({ restartKey: prev.restartKey + 1 }));
+    };
     render() {
         return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
-                {this.props.screen(this.props.addFolder, this.props.openApp)}
+            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}> 
+                <WindowAppBoundary key={this.state.restartKey} onRelaunch={this.relaunch}>
+                    {this.props.screen(this.props.addFolder, this.props.openApp)}
+                </WindowAppBoundary>
             </div>
-        )
+        );
     }
 }
