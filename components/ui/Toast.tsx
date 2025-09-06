@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
+import { NotificationsContext } from '../common/NotificationCenter';
 
 interface ToastProps {
   message: string;
@@ -17,8 +18,14 @@ const Toast: React.FC<ToastProps> = ({
 }) => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [visible, setVisible] = useState(false);
+  const ctx = useContext(NotificationsContext);
 
   useEffect(() => {
+    ctx?.pushNotification(message);
+  }, [ctx, message]);
+
+  useEffect(() => {
+    if (ctx?.doNotDisturb) return;
     setVisible(true);
     timeoutRef.current = setTimeout(() => {
       onClose && onClose();
@@ -26,7 +33,9 @@ const Toast: React.FC<ToastProps> = ({
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [duration, onClose]);
+  }, [duration, onClose, ctx?.doNotDisturb]);
+
+  if (ctx?.doNotDisturb) return null;
 
   return (
     <div
