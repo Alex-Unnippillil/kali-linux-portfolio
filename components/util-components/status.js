@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import Image from 'next/image';
 import SmallArrow from "./small_arrow";
 import { useSettings } from '../../hooks/useSettings';
+import Microphone from './Microphone';
 
 const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
 
@@ -56,6 +57,7 @@ export default function Status() {
           <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
         )}
       </span>
+      <Microphone />
       <span className="mx-1.5">
         <Image
           width={16}
