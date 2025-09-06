@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
+import usePersistentState from "../../hooks/usePersistentState";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
   resetSettings,
@@ -38,9 +39,27 @@ export default function Settings() {
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
+    { id: "power", label: "Power" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  const [blankAfter, setBlankAfter] = usePersistentState<number>(
+    "power-blank-after",
+    5
+  );
+  const [sleepAfter, setSleepAfter] = usePersistentState<number>(
+    "power-sleep-after",
+    30
+  );
+
+  useEffect(() => {
+    const id = rootRef.current?.closest(".window")?.id;
+    if (id && id.includes("#power")) {
+      setActiveTab("power");
+    }
+  }, []);
 
   const wallpapers = [
     "wall-1",
@@ -106,7 +125,10 @@ export default function Settings() {
   const [showKeymap, setShowKeymap] = useState(false);
 
   return (
-    <div className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey">
+    <div
+      ref={rootRef}
+      className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"
+    >
       <div className="flex justify-center border-b border-gray-900">
         <Tabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
       </div>
@@ -285,6 +307,40 @@ export default function Settings() {
             >
               Import Settings
             </button>
+          </div>
+        </>
+      )}
+      {activeTab === "power" && (
+        <>
+          <div className="flex flex-col p-4 space-y-4">
+            <div className="flex items-center justify-center">
+              <label className="mr-2 text-ubt-grey">Blank screen after:</label>
+              <select
+                value={blankAfter}
+                onChange={(e) => setBlankAfter(parseInt(e.target.value))}
+                className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+              >
+                <option value={1}>1 min</option>
+                <option value={5}>5 min</option>
+                <option value={15}>15 min</option>
+                <option value={30}>30 min</option>
+                <option value={0}>Never</option>
+              </select>
+            </div>
+            <div className="flex items-center justify-center">
+              <label className="mr-2 text-ubt-grey">Automatic suspend:</label>
+              <select
+                value={sleepAfter}
+                onChange={(e) => setSleepAfter(parseInt(e.target.value))}
+                className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+              >
+                <option value={15}>15 min</option>
+                <option value={30}>30 min</option>
+                <option value={60}>1 hour</option>
+                <option value={120}>2 hours</option>
+                <option value={0}>Never</option>
+              </select>
+            </div>
           </div>
         </>
       )}
