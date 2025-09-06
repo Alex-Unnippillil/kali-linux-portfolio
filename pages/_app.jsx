@@ -3,7 +3,7 @@
 import { isBrowser } from '@/utils/env';
 import { useEffect } from 'react';
 import { Analytics } from '@vercel/analytics/next';
-import { SpeedInsights } from '@vercel/speed-insights/next';
+import dynamic from 'next/dynamic';
 import '../styles/tailwind.css';
 import '../styles/globals.css';
 import '../styles/index.css';
@@ -25,6 +25,14 @@ const ubuntu = Ubuntu({
   subsets: ['latin'],
   weight: ['300', '400', '500', '700'],
 });
+
+let SpeedInsights = () => null;
+if (process.env.NODE_ENV === 'production') {
+  SpeedInsights = dynamic(
+    () => import('@vercel/speed-insights/next').then((m) => m.SpeedInsights),
+    { ssr: false },
+  );
+}
 
 
 function MyApp(props) {
