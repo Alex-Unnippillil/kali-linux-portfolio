@@ -68,6 +68,24 @@ function DesktopMenu(props) {
             >
                 <span className="ml-5">Create Shortcut...</span>
             </button>
+            <button
+                onClick={props.arrangeIcons}
+                type="button"
+                role="menuitem"
+                aria-label="Arrange Desktop Icons"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
+                <span className="ml-5">Arrange Desktop Icons</span>
+            </button>
+            <button
+                onClick={props.toggleAutoArrange}
+                type="button"
+                role="menuitem"
+                aria-label="Toggle Auto Arrange"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
+                <span className="ml-5">{props.autoArrange ? "Disable" : "Enable"} Auto Arrange</span>
+            </button>
             <Devider />
             <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
                 <span className="ml-5">Paste</span>

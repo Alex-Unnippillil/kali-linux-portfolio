@@ -41,6 +41,8 @@ export class Desktop extends Component {
             minimized_windows: {},
             window_positions: {},
             desktop_apps: [],
+            icon_positions: {},
+            autoArrange: true,
             context_menus: {
                 desktop: false,
                 default: false,
@@ -59,35 +61,48 @@ export class Desktop extends Component {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
-        this.fetchAppsData(() => {
-            const session = this.props.session || {};
-            const positions = {};
-            if (session.dock && session.dock.length) {
-                let favourite_apps = { ...this.state.favourite_apps };
-                session.dock.forEach(id => {
-                    favourite_apps[id] = true;
-                });
-                this.setState({ favourite_apps });
-            }
+        let autoArrange = true;
+        const storedArrange = safeLocalStorage?.getItem('auto_arrange_icons');
+        if (storedArrange === 'false') autoArrange = false;
+        let icon_positions = {};
+        const storedPositions = safeLocalStorage?.getItem('desktop_icon_positions');
+        if (storedPositions) {
+            try { icon_positions = JSON.parse(storedPositions); } catch (e) { icon_positions = {}; }
+        }
 
-            if (session.windows && session.windows.length) {
-                session.windows.forEach(({ id, x, y }) => {
-                    positions[id] = { x, y };
-                });
-                this.setState({ window_positions: positions }, () => {
-                    session.windows.forEach(({ id }) => this.openApp(id));
-                });
-            } else {
-                this.openApp('about-alex');
-            }
+        this.setState({ autoArrange, icon_positions }, () => {
+            this.fetchAppsData(() => {
+                const session = this.props.session || {};
+                const positions = {};
+                if (session.dock && session.dock.length) {
+                    let favourite_apps = { ...this.state.favourite_apps };
+                    session.dock.forEach(id => {
+                        favourite_apps[id] = true;
+                    });
+                    this.setState({ favourite_apps });
+                }
+
+                if (session.windows && session.windows.length) {
+                    session.windows.forEach(({ id, x, y }) => {
+                        positions[id] = { x, y };
+                    });
+                    this.setState({ window_positions: positions }, () => {
+                        session.windows.forEach(({ id }) => this.openApp(id));
+                    });
+                } else {
+                    this.openApp('about-alex');
+                }
+
+                if (autoArrange) this.arrangeIcons();
+            });
+            this.setContextListeners();
+            this.setEventListeners();
+            this.checkForNewFolders();
+            this.checkForAppShortcuts();
+            this.updateTrashIcon();
+            window.addEventListener('trash-change', this.updateTrashIcon);
+            document.addEventListener('keydown', this.handleGlobalShortcut);
         });
-        this.setContextListeners();
-        this.setEventListeners();
-        this.checkForNewFolders();
-        this.checkForAppShortcuts();
-        this.updateTrashIcon();
-        window.addEventListener('trash-change', this.updateTrashIcon);
-        document.addEventListener('keydown', this.handleGlobalShortcut);
     }
 
     componentWillUnmount() {
@@ -425,6 +440,8 @@ export class Desktop extends Component {
             minimized_windows,
             favourite_apps,
             desktop_apps
+        }, () => {
+            this.arrangeIcons(this.state.autoArrange);
         });
         this.initFavourite = { ...favourite_apps };
     }
@@ -442,6 +459,9 @@ export class Desktop extends Component {
                     openApp: this.openApp,
                     disabled: this.state.disabled_apps[app.id],
                     prefetch: app.screen?.prefetch,
+                    position: this.state.icon_positions[app.id],
+                    onMove: this.updateIconPosition,
+                    autoArrange: this.state.autoArrange,
                 }
 
                 appsJsx.push(
@@ -495,6 +515,49 @@ export class Desktop extends Component {
         this.setState(prev => ({
             window_positions: { ...prev.window_positions, [id]: { x: snap(x), y: snap(y) } }
         }), this.saveSession);
+    }
+
+    arrangeIcons = (rearrangeAll = true) => {
+        if (typeof window === 'undefined') return;
+        const gapX = 96;
+        const gapY = 80;
+        const startX = 20;
+        const startY = 20;
+        let x = startX, y = startY;
+        const maxY = window.innerHeight - 120;
+        const positions = rearrangeAll ? {} : { ...this.state.icon_positions };
+        this.state.desktop_apps.forEach(id => {
+            if (!rearrangeAll && positions[id]) return;
+            positions[id] = { x, y };
+            y += gapY;
+            if (y > maxY) {
+                y = startY;
+                x += gapX;
+            }
+        });
+        this.setState({ icon_positions: positions }, () => {
+            safeLocalStorage?.setItem('desktop_icon_positions', JSON.stringify(this.state.icon_positions));
+        });
+    }
+
+    updateIconPosition = (id, x, y) => {
+        if (this.state.autoArrange) return;
+        const gapX = 96;
+        const gapY = 80;
+        const snap = (v, g) => Math.round(v / g) * g;
+        const pos = { x: snap(x, gapX), y: snap(y, gapY) };
+        this.setState(prev => ({
+            icon_positions: { ...prev.icon_positions, [id]: pos }
+        }), () => {
+            safeLocalStorage?.setItem('desktop_icon_positions', JSON.stringify(this.state.icon_positions));
+        });
+    }
+
+    toggleAutoArrange = () => {
+        this.setState(prev => ({ autoArrange: !prev.autoArrange }), () => {
+            safeLocalStorage?.setItem('auto_arrange_icons', this.state.autoArrange ? 'true' : 'false');
+            if (this.state.autoArrange) this.arrangeIcons(true);
+        });
     }
 
     saveSession = () => {
@@ -895,6 +958,9 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
+                    arrangeIcons={() => this.arrangeIcons(true)}
+                    toggleAutoArrange={this.toggleAutoArrange}
+                    autoArrange={this.state.autoArrange}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
