@@ -7,6 +7,7 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import wmEvents from '@/src/wm/eventLayer';
 
 export class Window extends Component {
     constructor(props) {
@@ -412,7 +413,8 @@ export class Window extends Component {
     }
 
     focusWindow = () => {
-        this.props.focus(this.id);
+        wmEvents.raise({ id: this.id });
+        wmEvents.focus({ id: this.id, source: 'mouse' });
     }
 
     minimizeWindow = () => {

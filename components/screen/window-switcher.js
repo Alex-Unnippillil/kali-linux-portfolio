@@ -4,6 +4,7 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(0);
   const inputRef = useRef(null);
+  const cancelRef = useRef(false);
 
   const filtered = windows.filter((w) =>
     w.title.toLowerCase().includes(query.toLowerCase())
@@ -15,7 +16,7 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
 
   useEffect(() => {
     const handleKeyUp = (e) => {
-      if (e.key === 'Alt') {
+      if (e.key === 'Alt' && !cancelRef.current) {
         const win = filtered[selected];
         if (win && typeof onSelect === 'function') {
           onSelect(win.id);
@@ -23,9 +24,18 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
           onClose();
         }
       }
+      cancelRef.current = false;
+    };
+    const handleMouseDown = () => {
+      cancelRef.current = true;
+      if (typeof onClose === 'function') onClose();
     };
     window.addEventListener('keyup', handleKeyUp);
-    return () => window.removeEventListener('keyup', handleKeyUp);
+    window.addEventListener('mousedown', handleMouseDown);
+    return () => {
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('mousedown', handleMouseDown);
+    };
   }, [filtered, selected, onSelect, onClose]);
 
   const handleKeyDown = (e) => {
