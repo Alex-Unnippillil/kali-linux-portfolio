@@ -25,5 +25,6 @@ export function middleware(req: NextRequest) {
   const res = NextResponse.next();
   res.headers.set('x-csp-nonce', n);
   res.headers.set('Content-Security-Policy', csp);
+  res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   return res;
 }
