@@ -62,7 +62,7 @@ export default function TimerStopwatch() {
         <div className="display" id="stopwatchDisplay">00:00</div>
         <div>
           <button id="startWatch">Start</button>
-          <button id="stopWatch">Stop</button>
+          <button id="pauseWatch">Pause</button>
           <button id="resetWatch">Reset</button>
           <button id="lapWatch">Lap</button>
         </div>
