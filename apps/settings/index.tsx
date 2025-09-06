@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
+import WindowManagerTweaks from "../../src/components/settings/WindowManagerTweaks";
 import {
   resetSettings,
   defaults,
@@ -260,6 +261,7 @@ export default function Settings() {
               ariaLabel="Haptics"
             />
           </div>
+          <WindowManagerTweaks />
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
             <button
               onClick={() => setShowKeymap(true)}
