@@ -6,21 +6,48 @@ export class SideBarApp extends Component {
     constructor() {
         super();
         this.id = null;
+        this.ref = React.createRef();
         this.state = {
             showTitle: false,
             scaleImage: false,
             thumbnail: null,
+            width: 0,
         };
+        this._resizeObserver = null;
+        this.updateWidth = this.updateWidth.bind(this);
     }
 
     componentDidMount() {
         this.id = this.props.id;
         this.updateBadge();
+        this.updateWidth();
+        if (typeof ResizeObserver !== 'undefined' && this.ref.current) {
+            this._resizeObserver = new ResizeObserver(this.updateWidth);
+            this._resizeObserver.observe(this.ref.current);
+        }
+        window.addEventListener('resize', this.updateWidth);
     }
 
     componentDidUpdate(prevProps) {
         if (prevProps.notifications !== this.props.notifications || prevProps.tasks !== this.props.tasks) {
             this.updateBadge();
+        }
+        if (prevProps.debug !== this.props.debug) {
+            this.updateWidth();
+        }
+    }
+
+    componentWillUnmount() {
+        if (this._resizeObserver) {
+            this._resizeObserver.disconnect();
+        }
+        window.removeEventListener('resize', this.updateWidth);
+    }
+
+    updateWidth() {
+        const el = this.ref.current;
+        if (el) {
+            this.setState({ width: el.getBoundingClientRect().width });
         }
     }
 
@@ -103,6 +130,7 @@ export class SideBarApp extends Component {
                 className={(this.props.isClose[this.id] === false && this.props.isFocus[this.id] ? "bg-white bg-opacity-10 " : "") +
                     " w-auto p-2 outline-none relative hover:bg-white hover:bg-opacity-10 rounded m-1 transition-hover transition-active"}
                 id={"sidebar-" + this.props.id}
+                ref={this.ref}
             >
                 <Image
                     width={28}
@@ -153,6 +181,15 @@ export class SideBarApp extends Component {
                 >
                     {this.props.title}
                 </div>
+                {this.props.debug && (
+                    <div className="absolute inset-0 pointer-events-none border-2 border-red-500 text-red-500 text-[10px] flex flex-col">
+                        <span className="m-auto text-center">
+                            {this.props.title} ({Math.round(this.state.width)}px)
+                        </span>
+                        <div className="absolute left-0 top-0 bottom-0 border-l-2 border-red-500" />
+                        <div className="absolute right-0 top-0 bottom-0 border-r-2 border-red-500" />
+                    </div>
+                )}
             </button>
         );
     }
