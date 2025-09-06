@@ -2,22 +2,28 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import { logEvent } from './analytics';
 
+const slugMap = {
+  solitaire: 'apps/solitaire',
+};
+
 export const createDynamicApp = (id, title) =>
   dynamic(
     async () => {
       try {
+        const resolved = slugMap[id] || `components/apps/${id}`;
         const mod = await import(
-          /* webpackChunkName: "[request]", webpackPrefetch: true */ `../components/apps/${id}`
+          /* webpackChunkName: "[request]", webpackPrefetch: true */ `../${resolved}`
         );
         logEvent({ category: 'Application', action: `Loaded ${title}` });
         return mod.default;
       } catch (err) {
         console.error(`Failed to load ${title}`, err);
-        return () => (
+        const ErrorComponent = () => (
           <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
             {`Unable to load ${title}`}
           </div>
         );
+        return ErrorComponent;
       }
     },
     {
