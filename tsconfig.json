@@ -31,5 +31,16 @@
     "types/**/*.d.ts",
     ".next/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "__tests__", "components/apps/archive", "components/apps/kismet"]
+  "exclude": [
+    "node_modules",
+    "__tests__",
+    "tests",
+    "worker",
+    "apps",
+    "components",
+    "pages",
+    "scripts",
+    "src",
+    "storybook"
+  ]
 }

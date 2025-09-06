@@ -75,9 +75,9 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   sw: 'sw.js',
   disable: process.env.VERCEL_ENV !== 'production',
   buildExcludes: [/dynamic-css-manifest\.json$/],
-  fallbacks: {
-    document: '/offline.html',
-  },
+    fallbacks: {
+      'document': '/offline.html',
+    },
   workboxOptions: {
     cacheId: buildId,
     navigateFallback: '/offline.html',
@@ -140,10 +140,6 @@ module.exports = withBundleAnalyzer(
     ...(isStaticExport && { output: 'export' }),
     webpack: configureWebpack,
 
-    // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
-    eslint: {
-      ignoreDuringBuilds: true,
-    },
     images: {
       unoptimized: true,
 

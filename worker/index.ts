@@ -1,3 +1,6 @@
+/// <reference lib="webworker" />
+declare const self: ServiceWorkerGlobalScope;
+
 const BUILD_ID = (self as any).BUILD_ID || "0";
 const CACHE_NAME = `KLP_v${BUILD_ID}-periodic-cache-v1`;
 

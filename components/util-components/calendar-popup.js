@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { listEvents } from '../../utils/orage';
 import usePersistentState from '../../hooks/usePersistentState';
@@ -86,12 +87,12 @@ export default function CalendarPopup() {
         )) : <div>No events</div>}
       </div>
       <div className="mt-2 text-xs">
-        <a
+        <Link
           href="/apps/settings#datetime"
           className="text-blue-400 hover:underline"
         >
           Time & Date Settings
-        </a>
+        </Link>
       </div>
     </div>
   );

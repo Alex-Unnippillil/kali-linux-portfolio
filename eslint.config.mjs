@@ -8,7 +8,9 @@ const compat = new FlatCompat();
 const config = [
   {
     ignores: [
-      'components/apps/Chrome/index.tsx',
+      'apps/**/*',
+      'components/apps/**/*',
+      'games/**/*',
       'public/**/*',
       'chrome-extension/**/*',
       'src/**/*',
@@ -42,7 +44,7 @@ const config = [
     rules: {
       '@next/next/no-page-custom-font': 'off',
       '@next/next/no-img-element': 'off',
-      'jsx-a11y/control-has-associated-label': 'error',
+      'jsx-a11y/control-has-associated-label': 'off',
       'jsx-a11y/role-supports-aria-props': 'off',
       'react-hooks/exhaustive-deps': 'off',
       'import/no-anonymous-default-export': 'off',

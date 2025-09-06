@@ -141,51 +141,52 @@ export default function useOPFS<T>(
   initialValue?: T,
 ): OPFSHook | [T, (v: T) => Promise<void>, boolean] {
   const core = useOPFSCore();
-  if (name !== undefined) {
-    const { supported, getDir, readFile, writeFile } = core;
-    const [value, setValue] = useState<T>(initialValue as T);
-    const [ready, setReady] = useState(false);
+  const { supported, getDir, readFile, writeFile } = core;
+  const [value, setValue] = useState<T>(initialValue as T);
+  const [ready, setReady] = useState(name === undefined);
 
-    useEffect(() => {
-      let active = true;
-      if (!supported) {
-        setReady(true);
+  useEffect(() => {
+    if (name === undefined) return;
+    let active = true;
+    if (!supported) {
+      setReady(true);
+      return;
+    }
+    (async () => {
+      const dir = await getDir();
+      if (!dir) {
+        if (active) setReady(true);
         return;
       }
-      (async () => {
-        const dir = await getDir();
-        if (!dir) {
-          if (active) setReady(true);
-          return;
-        }
-        try {
-          const text = await readFile(name, dir);
-          if (text && active) setValue(JSON.parse(text));
-        } catch {
-          await writeFile(name, JSON.stringify(initialValue), dir);
-        }
-        if (active) setReady(true);
-      })();
-      return () => {
-        active = false;
-      };
-    }, [supported, name, initialValue, getDir, readFile, writeFile]);
+      try {
+        const text = await readFile(name, dir);
+        if (text && active) setValue(JSON.parse(text));
+      } catch {
+        await writeFile(name, JSON.stringify(initialValue), dir);
+      }
+      if (active) setReady(true);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [supported, name, initialValue, getDir, readFile, writeFile]);
 
-    const save = useCallback(
-      async (v: T) => {
-        setValue(v);
-        if (!supported) return;
-        const dir = await getDir();
-        if (!dir) return;
-        try {
-          await writeFile(name, JSON.stringify(v), dir);
-        } catch {}
-      },
-      [supported, name, getDir, writeFile],
-    );
+  const save = useCallback(
+    async (v: T) => {
+      setValue(v);
+      if (!supported || name === undefined) return;
+      const dir = await getDir();
+      if (!dir) return;
+      try {
+        await writeFile(name, JSON.stringify(v), dir);
+      } catch {}
+    },
+    [supported, name, getDir, writeFile],
+  );
 
-    return [value, save, ready];
+  if (name === undefined) {
+    return core;
   }
-  return core;
+  return [value, save, ready];
 }
 
