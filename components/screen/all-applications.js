@@ -1,13 +1,15 @@
 import React from 'react';
 import UbuntuApp from '../base/ubuntu_app';
+import { parseDesktopEntry } from '../../lib/xdg/desktop';
+import { buildMenu } from '../../lib/xdg/menu';
 
 class AllApplications extends React.Component {
     constructor() {
         super();
         this.state = {
             query: '',
-            apps: [],
-            unfilteredApps: [],
+            menu: {},
+            unfilteredMenu: {},
         };
     }
 
@@ -17,19 +19,32 @@ class AllApplications extends React.Component {
         games.forEach((game) => {
             if (!combined.some((app) => app.id === game.id)) combined.push(game);
         });
-        this.setState({ apps: combined, unfilteredApps: combined });
+        const entries = combined.map((app) => ({
+            ...parseDesktopEntry({
+                Name: app.title,
+                Exec: app.id,
+                Icon: app.icon,
+                Categories: app.categories || [],
+            }),
+            disabled: app.disabled,
+            prefetch: app.screen?.prefetch,
+        }));
+        const menu = buildMenu(entries);
+        this.setState({ menu, unfilteredMenu: menu });
     }
 
     handleChange = (e) => {
         const value = e.target.value;
-        const { unfilteredApps } = this.state;
-        const apps =
+        const { unfilteredMenu } = this.state;
+        const allEntries = Object.values(unfilteredMenu).flat();
+        const filtered =
             value === '' || value === null
-                ? unfilteredApps
-                : unfilteredApps.filter((app) =>
-                      app.title.toLowerCase().includes(value.toLowerCase())
+                ? allEntries
+                : allEntries.filter((app) =>
+                      app.name.toLowerCase().includes(value.toLowerCase())
                   );
-        this.setState({ query: value, apps });
+        const menu = buildMenu(filtered);
+        this.setState({ query: value, menu });
     };
 
     openApp = (id) => {
@@ -39,17 +54,24 @@ class AllApplications extends React.Component {
     };
 
     renderApps = () => {
-        const apps = this.state.apps || [];
-        return apps.map((app) => (
-            <UbuntuApp
-                key={app.id}
-                name={app.title}
-                id={app.id}
-                icon={app.icon}
-                openApp={() => this.openApp(app.id)}
-                disabled={app.disabled}
-                prefetch={app.screen?.prefetch}
-            />
+        const menu = this.state.menu || {};
+        return Object.entries(menu).map(([category, apps]) => (
+            <section key={category} className="w-full mb-4">
+                <h2 className="mb-2 text-lg font-bold text-white">{category}</h2>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 pb-2 place-items-center">
+                    {apps.map((app) => (
+                        <UbuntuApp
+                            key={app.exec}
+                            name={app.name}
+                            id={app.exec}
+                            icon={app.icon}
+                            openApp={() => this.openApp(app.exec)}
+                            disabled={app.disabled}
+                            prefetch={app.prefetch}
+                        />
+                    ))}
+                </div>
+            </section>
         ));
     };
 
@@ -62,7 +84,7 @@ class AllApplications extends React.Component {
                     value={this.state.query}
                     onChange={this.handleChange}
                 />
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 pb-10 place-items-center">
+                <div className="w-full px-4 pb-10">
                     {this.renderApps()}
                 </div>
             </div>
