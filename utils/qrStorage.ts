@@ -7,14 +7,27 @@ const FILE_NAME = 'qr-scans.json';
 
 const getStorage = (): StorageManager => navigator.storage;
 
-const hasOpfs =
+const opfsSupported =
   isBrowser() && 'storage' in navigator && Boolean(getStorage().getDirectory);
+
+let directoryHandlePromise: Promise<FileSystemDirectoryHandle | null> | null = null;
+const getDirectoryHandle = (): Promise<FileSystemDirectoryHandle | null> => {
+  if (directoryHandlePromise) return directoryHandlePromise;
+  if (!opfsSupported) {
+    directoryHandlePromise = Promise.resolve(null);
+  } else {
+    directoryHandlePromise = getStorage()
+      .getDirectory()
+      .catch(() => null);
+  }
+  return directoryHandlePromise;
+};
 
 export const loadScans = async (): Promise<string[]> => {
   if (!isBrowser()) return [];
-  if (hasOpfs) {
+  const root = await getDirectoryHandle();
+  if (root) {
     try {
-      const root = await getStorage().getDirectory();
       const handle = await root.getFileHandle(FILE_NAME);
       const file = await handle.getFile();
       return JSON.parse(await file.text());
@@ -31,22 +44,26 @@ export const loadScans = async (): Promise<string[]> => {
 
 export const saveScans = async (scans: string[]): Promise<void> => {
   if (!isBrowser()) return;
-  if (hasOpfs) {
-    const root = await getStorage().getDirectory();
-    const handle = await root.getFileHandle(FILE_NAME, { create: true });
-    const writable = await handle.createWritable();
-    await writable.write(JSON.stringify(scans));
-    await writable.close();
-    return;
+  const root = await getDirectoryHandle();
+  if (root) {
+    try {
+      const handle = await root.getFileHandle(FILE_NAME, { create: true });
+      const writable = await handle.createWritable();
+      await writable.write(JSON.stringify(scans));
+      await writable.close();
+      return;
+    } catch {
+      // fall through to localStorage
+    }
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(scans));
 };
 
 export const clearScans = async (): Promise<void> => {
   if (!isBrowser()) return;
-  if (hasOpfs) {
+  const root = await getDirectoryHandle();
+  if (root) {
     try {
-      const root = await getStorage().getDirectory();
       await root.removeEntry(FILE_NAME);
     } catch {
       /* ignore */
