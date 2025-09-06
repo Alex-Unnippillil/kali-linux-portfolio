@@ -85,6 +85,14 @@ export default function CalendarPopup() {
           </div>
         )) : <div>No events</div>}
       </div>
+      <div className="mt-2 text-xs">
+        <a
+          href="/apps/settings#datetime"
+          className="text-blue-400 hover:underline"
+        >
+          Time & Date Settings
+        </a>
+      </div>
     </div>
   );
 }
