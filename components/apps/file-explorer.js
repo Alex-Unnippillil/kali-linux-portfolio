@@ -5,6 +5,8 @@ import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
 import PropertiesDialog from '../ui/PropertiesDialog';
+import { openWithDefault } from '../../utils/mimeDefaults';
+import { loadFolderPrefs, saveFolderPrefs } from '../../utils/folderPrefs';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -107,6 +109,9 @@ export default function FileExplorer({ openApp }) {
   const [results, setResults] = useState([]);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
+  const [viewMode, setViewMode] = useState('icon');
+  const [sort, setSort] = useState('name');
+  const [zoom, setZoom] = useState(1);
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -180,6 +185,7 @@ export default function FileExplorer({ openApp }) {
   };
 
   const openFile = async (file) => {
+    if (openWithDefault(file.type || '', (app) => openApp && openApp(app))) return;
     if (imageRegex.test(file.name)) {
       const imageFiles = files.filter(f => imageRegex.test(f.name));
       if (typeof window !== 'undefined') {
@@ -229,7 +235,7 @@ export default function FileExplorer({ openApp }) {
     if (dirHandle) await readDir(dirHandle);
   };
 
-  const readDir = async (handle) => {
+  const readDir = async (handle, p = path) => {
     const ds = [];
     const fs = [];
     for await (const [name, h] of handle.entries()) {
@@ -238,20 +244,29 @@ export default function FileExplorer({ openApp }) {
     }
     setDirs(ds);
     setFiles(fs);
+    const keyPath = '/' + p.map((seg) => seg.name).join('/');
+    const prefs = loadFolderPrefs(keyPath);
+    if (prefs) {
+      setViewMode(prefs.viewMode);
+      setSort(prefs.sort);
+      setZoom(prefs.zoom);
+    }
   };
 
   const openDir = async (dir) => {
+    const newPath = [...path, { name: dir.name, handle: dir.handle }];
     setDirHandle(dir.handle);
-    setPath((p) => [...p, { name: dir.name, handle: dir.handle }]);
-    await readDir(dir.handle);
+    setPath(newPath);
+    await readDir(dir.handle, newPath);
   };
 
   const navigateTo = async (index) => {
     const target = path[index];
     if (!target) return;
+    const newPath = path.slice(0, index + 1);
     setDirHandle(target.handle);
-    setPath(path.slice(0, index + 1));
-    await readDir(target.handle);
+    setPath(newPath);
+    await readDir(target.handle, newPath);
   };
 
   const goBack = async () => {
@@ -260,7 +275,25 @@ export default function FileExplorer({ openApp }) {
     const prev = newPath[newPath.length - 1];
     setPath(newPath);
     setDirHandle(prev.handle);
-    await readDir(prev.handle);
+    await readDir(prev.handle, newPath);
+  };
+
+  const changeView = (mode) => {
+    setViewMode(mode);
+    const keyPath = '/' + path.map((seg) => seg.name).join('/');
+    saveFolderPrefs(keyPath, { viewMode: mode, sort, zoom });
+  };
+
+  const changeSort = (s) => {
+    setSort(s);
+    const keyPath = '/' + path.map((seg) => seg.name).join('/');
+    saveFolderPrefs(keyPath, { viewMode, sort: s, zoom });
+  };
+
+  const changeZoom = (z) => {
+    setZoom(z);
+    const keyPath = '/' + path.map((seg) => seg.name).join('/');
+    saveFolderPrefs(keyPath, { viewMode, sort, zoom: z });
   };
 
   const saveFile = async () => {
