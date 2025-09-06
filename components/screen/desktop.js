@@ -1092,6 +1092,7 @@ export class Desktop extends Component {
                 {/* Context Menus */}
                 <DesktopMenu
                     active={this.state.context_menus.desktop}
+                    onClose={this.hideAllContextMenu}
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
