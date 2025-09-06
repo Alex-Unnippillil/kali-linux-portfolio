@@ -18,6 +18,11 @@ function TaskbarMenu(props) {
         props.onCloseMenu && props.onCloseMenu();
     };
 
+    const handleShade = () => {
+        props.onShade && props.onShade();
+        props.onCloseMenu && props.onCloseMenu();
+    };
+
     const handleClose = () => {
         props.onClose && props.onClose();
         props.onCloseMenu && props.onCloseMenu();
@@ -40,6 +45,15 @@ function TaskbarMenu(props) {
                 className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
                 <span className="ml-5">{props.minimized ? 'Restore' : 'Minimize'}</span>
+            </button>
+            <button
+                type="button"
+                onClick={handleShade}
+                role="menuitem"
+                aria-label={props.shaded ? 'Unshade Window' : 'Shade Window'}
+                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+            >
+                <span className="ml-5">{props.shaded ? 'Unshade' : 'Shade'}</span>
             </button>
             <button
                 type="button"

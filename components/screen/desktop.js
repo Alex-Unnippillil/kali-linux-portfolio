@@ -30,6 +30,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.windowRefs = {};
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -481,7 +482,7 @@ export class Desktop extends Component {
                 }
 
                 windowsJsx.push(
-                    <Window key={app.id} {...props} />
+                    <Window key={app.id} ref={ref => this.windowRefs[app.id] = ref} {...props} />
                 )
             }
         });
@@ -908,6 +909,7 @@ export class Desktop extends Component {
                 <TaskbarMenu
                     active={this.state.context_menus.taskbar}
                     minimized={this.state.context_app ? this.state.minimized_windows[this.state.context_app] : false}
+                    shaded={this.state.context_app ? this.windowRefs[this.state.context_app]?.state?.shaded : false}
                     onMinimize={() => {
                         const id = this.state.context_app;
                         if (!id) return;
@@ -916,6 +918,11 @@ export class Desktop extends Component {
                         } else {
                             this.hasMinimised(id);
                         }
+                    }}
+                    onShade={() => {
+                        const id = this.state.context_app;
+                        if (!id) return;
+                        this.windowRefs[id]?.toggleShade();
                     }}
                     onClose={() => {
                         const id = this.state.context_app;
