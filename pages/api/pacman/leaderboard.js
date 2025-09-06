@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { validateCsrfToken } from '../../lib/csrf';
 
 const filePath = path.join(process.cwd(), 'data', 'pacman-leaderboard.json');
 const MAX_ENTRIES = 10;
@@ -33,6 +34,10 @@ export default function handler(
   }
 
   if (req.method === 'POST') {
+    if (!validateCsrfToken(req)) {
+      res.status(403).json({ error: 'invalid_csrf' });
+      return;
+    }
     const { name, score } = req.body || {};
     if (typeof name !== 'string' || typeof score !== 'number') {
       res.status(400).json(readBoard());

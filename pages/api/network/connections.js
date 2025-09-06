@@ -1,5 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import { validateCsrfToken } from '../../lib/csrf';
 
 const filePath = path.join(process.cwd(), 'data', 'network-connections.json');
 
@@ -15,6 +16,10 @@ export default async function handler(req, res) {
     return;
   }
   if (req.method === 'POST') {
+    if (!validateCsrfToken(req)) {
+      res.status(403).json({ error: 'invalid_csrf' });
+      return;
+    }
     const { connections } = req.body || {};
     if (!Array.isArray(connections)) {
       res.status(400).json({ error: 'Invalid connections' });

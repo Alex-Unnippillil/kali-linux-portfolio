@@ -40,6 +40,8 @@ describe('Hydra API temp file cleanup', () => {
 
     const req: any = {
       method: 'POST',
+      headers: { 'x-csrf-token': 'token' },
+      cookies: { csrfToken: 'token' },
       body: { target: 'host', service: 'ssh', userList: 'u', passList: 'p' },
     };
     const res: any = { status: jest.fn().mockReturnThis(), json: jest.fn() };
@@ -68,6 +70,8 @@ describe('Hydra API temp file cleanup', () => {
 
     const req: any = {
       method: 'POST',
+      headers: { 'x-csrf-token': 'token' },
+      cookies: { csrfToken: 'token' },
       body: { target: 'host', service: 'ssh', userList: 'u', passList: 'p' },
     };
     const res: any = { status: jest.fn().mockReturnThis(), json: jest.fn() };
@@ -111,7 +115,12 @@ describe('Hydra API resume session', () => {
 
     const handler = (await import('../pages/api/hydra')).default;
 
-    const req: any = { method: 'POST', body: { action: 'resume' } };
+    const req: any = {
+      method: 'POST',
+      headers: { 'x-csrf-token': 'token' },
+      cookies: { csrfToken: 'token' },
+      body: { action: 'resume' },
+    };
     const res: any = { status: jest.fn().mockReturnThis(), json: jest.fn() };
 
     await handler(req, res);

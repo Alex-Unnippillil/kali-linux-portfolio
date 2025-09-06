@@ -25,8 +25,10 @@ const fs = require('fs').promises;
 const sessionDir = path.join(process.cwd(), 'hydra');
 
 test('removes temp files after hydra execution', async () => {
-  const req = {
+const req = {
     method: 'POST',
+    headers: { 'x-csrf-token': 'token' },
+    cookies: { csrfToken: 'token' },
     body: { target: 'target', service: 'ssh', userList: 'u', passList: 'p' },
   };
   const res = {

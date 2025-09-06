@@ -1,7 +1,7 @@
-import { randomBytes } from 'crypto';
 import { contactSchema } from '../../utils/contactSchema';
 import { validateServerEnv } from '../../lib/validate';
 import { getServiceSupabase } from '../../lib/supabase';
+import { generateCsrfToken, validateCsrfToken } from '../../lib/csrf';
 
 // Simple in-memory rate limiter. Not suitable for distributed environments.
 export const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -22,11 +22,7 @@ export default async function handler(req, res) {
     return;
   }
   if (req.method === 'GET') {
-    const token = randomBytes(32).toString('hex');
-    res.setHeader(
-      'Set-Cookie',
-      `csrfToken=${token}; HttpOnly; Path=/; SameSite=Strict`
-    );
+    const token = generateCsrfToken(res);
     res.status(200).json({ ok: true, csrfToken: token });
     return;
   }
@@ -57,9 +53,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  const csrfHeader = req.headers['x-csrf-token'];
-  const csrfCookie = req.cookies?.csrfToken;
-  if (!csrfHeader || !csrfCookie || csrfHeader !== csrfCookie) {
+  if (!validateCsrfToken(req)) {
     console.warn('Contact submission rejected', { ip, reason: 'invalid_csrf' });
     res.status(403).json({ ok: false, code: 'invalid_csrf' });
     return;
@@ -105,7 +99,7 @@ export default async function handler(req, res) {
 
   let sanitized;
   try {
-    const parsed = contactSchema.parse({ ...rest, csrfToken: csrfHeader, recaptchaToken });
+    const parsed = contactSchema.parse({ ...rest, csrfToken: req.headers['x-csrf-token'], recaptchaToken });
     if (parsed.honeypot) {
       console.warn('Contact submission rejected', { ip, reason: 'honeypot' });
       res.status(400).json({ ok: false, code: 'invalid_input' });

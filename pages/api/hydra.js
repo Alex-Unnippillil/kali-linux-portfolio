@@ -3,6 +3,7 @@ import { promises as fs } from 'fs';
 import { randomUUID } from 'crypto';
 import { promisify } from 'util';
 import path from 'path';
+import { validateCsrfToken } from '../../lib/csrf';
 
 const execFileAsync = promisify(execFile);
 const allowed = new Set(['http', 'https', 'ssh', 'ftp', 'smtp']);
@@ -19,6 +20,11 @@ export default async function handler(req, res) {
   // actual binary may stub this handler for demonstration purposes.
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+
+  if (!validateCsrfToken(req)) {
+    res.status(403).json({ error: 'invalid_csrf' });
     return;
   }
 

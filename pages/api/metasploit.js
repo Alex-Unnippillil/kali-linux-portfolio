@@ -1,4 +1,5 @@
 import modules from '../../components/apps/metasploit/modules.json';
+import { validateCsrfToken } from '../../lib/csrf';
 
 export default function handler(req, res) {
   if (process.env.FEATURE_TOOL_APIS !== 'enabled') {
@@ -8,6 +9,10 @@ export default function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
     return res.status(405).end('Method Not Allowed');
+  }
+
+  if (!validateCsrfToken(req)) {
+    return res.status(403).json({ error: 'invalid_csrf' });
   }
 
   const { command } = req.body || {};
