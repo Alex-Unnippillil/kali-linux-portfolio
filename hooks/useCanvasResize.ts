@@ -10,6 +10,8 @@ export default function useCanvasResize(baseWidth: number, baseHeight: number) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    canvas.style.willChange = 'transform';
+
     const resize = () => {
       const parent = canvas.parentElement;
       if (!parent) return;
@@ -31,10 +33,12 @@ export default function useCanvasResize(baseWidth: number, baseHeight: number) {
     resize();
     const ro = new ResizeObserver(resize);
     const parent = canvas.parentElement;
-    if (parent) ro.observe(parent);
-    window.addEventListener('resize', resize);
+    if (parent) {
+      ro.observe(parent);
+    } else {
+      ro.observe(canvas);
+    }
     return () => {
-      window.removeEventListener('resize', resize);
       ro.disconnect();
     };
   }, [baseWidth, baseHeight]);
