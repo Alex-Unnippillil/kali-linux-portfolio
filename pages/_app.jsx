@@ -6,6 +6,7 @@ import { isBrowser } from '@/utils/env';
 import { useEffect } from 'react';
 import { Analytics } from '@vercel/analytics/next';
 import dynamic from 'next/dynamic';
+import { validatePublicEnv } from '@/lib/validate-public';
 import '../styles/tailwind.css';
 import '../styles/globals.css';
 import '../styles/index.css';
@@ -19,6 +20,8 @@ import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 
+
+validatePublicEnv(process.env);
 
 let SpeedInsights = () => null;
 if (process.env.NODE_ENV === 'production') {
