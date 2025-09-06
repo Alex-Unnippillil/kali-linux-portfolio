@@ -192,7 +192,7 @@ module.exports = withBundleAnalyzer(
                 ],
               },
               {
-                source: '/fonts/(.*)',
+                source: '/fonts/:path*',
                 headers: [
                   {
                     key: 'Cache-Control',
@@ -201,11 +201,11 @@ module.exports = withBundleAnalyzer(
                 ],
               },
               {
-                source: '/images/(.*)',
+                source: '/images/:path*',
                 headers: [
                   {
                     key: 'Cache-Control',
-                    value: 'public, max-age=86400',
+                    value: 'public, max-age=86400, immutable',
                   },
                 ],
               },
