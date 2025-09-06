@@ -13,7 +13,7 @@ Use this checklist when adding a new app to the portfolio.
 ```ts
 import dynamic from 'next/dynamic';
 
-const MyApp = dynamic(() => import('./components/apps/my-app'), {
+const MyApp = dynamic(() => import('./apps/my-app'), {
   ssr: false,
 });
 export const displayMyApp = () => <MyApp />;
