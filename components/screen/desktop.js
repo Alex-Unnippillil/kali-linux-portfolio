@@ -8,6 +8,9 @@ const BackgroundImage = dynamic(
     { ssr: false }
 );
 import SideBar from './side_bar';
+import Taskbar from './taskbar';
+
+const WORKSPACES = [0, 1, 2, 3];
 import apps, { games } from '../../apps.config';
 import Window from '../base/window';
 import UbuntuApp from '../base/ubuntu_app';
@@ -17,7 +20,6 @@ import WindowSwitcher from '../screen/window-switcher'
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
-import Taskbar from './taskbar';
 import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
@@ -40,6 +42,8 @@ export class Desktop extends Component {
             hideSideBar: false,
             minimized_windows: {},
             window_positions: {},
+            window_workspaces: {},
+            active_workspace: 0,
             desktop_apps: [],
             context_menus: {
                 desktop: false,
@@ -182,19 +186,20 @@ export class Desktop extends Component {
     }
 
     cycleApps = (direction) => {
-        if (!this.app_stack.length) return;
+        const windows = this.app_stack.filter(id => this.state.closed_windows[id] === false && this.state.window_workspaces[id] === this.state.active_workspace);
+        if (!windows.length) return;
         const currentId = this.getFocusedWindowId();
-        let index = this.app_stack.indexOf(currentId);
+        let index = windows.indexOf(currentId);
         if (index === -1) index = 0;
-        let next = (index + direction + this.app_stack.length) % this.app_stack.length;
+        let next = (index + direction + windows.length) % windows.length;
         // Skip minimized windows
-        for (let i = 0; i < this.app_stack.length; i++) {
-            const id = this.app_stack[next];
+        for (let i = 0; i < windows.length; i++) {
+            const id = windows[next];
             if (!this.state.minimized_windows[id]) {
                 this.focus(id);
                 break;
             }
-            next = (next + direction + this.app_stack.length) % this.app_stack.length;
+            next = (next + direction + windows.length) % windows.length;
         }
     }
 
@@ -202,7 +207,7 @@ export class Desktop extends Component {
         const currentId = this.getFocusedWindowId();
         if (!currentId) return;
         const base = currentId.split('#')[0];
-        const windows = this.app_stack.filter(id => id.startsWith(base));
+        const windows = this.app_stack.filter(id => id.startsWith(base) && this.state.window_workspaces[id] === this.state.active_workspace);
         if (windows.length <= 1) return;
         let index = windows.indexOf(currentId);
         let next = (index + direction + windows.length) % windows.length;
@@ -455,7 +460,7 @@ export class Desktop extends Component {
     renderWindows = () => {
         let windowsJsx = [];
         apps.forEach((app, index) => {
-            if (this.state.closed_windows[app.id] === false) {
+            if (this.state.closed_windows[app.id] === false && this.state.window_workspaces[app.id] === this.state.active_workspace) {
 
                 const pos = this.state.window_positions[app.id];
                 const props = {
@@ -509,6 +514,25 @@ export class Desktop extends Component {
         this.props.setSession({ ...this.props.session, windows, dock });
     }
 
+    switchWorkspace = (ws) => {
+        const focused_windows = {};
+        Object.keys(this.state.focused_windows).forEach(id => {
+            focused_windows[id] = false;
+        });
+        this.setState({ active_workspace: ws, focused_windows }, () => {
+            this.giveFocusToLastApp();
+        });
+    }
+
+    moveWindowToWorkspace = (id, ws) => {
+        this.setState(prev => ({
+            window_workspaces: { ...prev.window_workspaces, [id]: ws },
+            active_workspace: ws,
+        }), () => {
+            this.focus(id);
+        });
+    }
+
     hideSideBar = (objId, hide) => {
         if (hide === this.state.hideSideBar) return;
 
@@ -553,11 +577,13 @@ export class Desktop extends Component {
     }
 
     giveFocusToLastApp = () => {
-        // if there is atleast one app opened, give it focus
+        // if there is atleast one app opened in this workspace, give it focus
         if (!this.checkAllMinimised()) {
             for (const index in this.app_stack) {
-                if (!this.state.minimized_windows[this.app_stack[index]]) {
-                    this.focus(this.app_stack[index]);
+                const id = this.app_stack[index];
+                if (this.state.window_workspaces[id] !== this.state.active_workspace) continue;
+                if (!this.state.minimized_windows[id]) {
+                    this.focus(id);
                     break;
                 }
             }
@@ -567,7 +593,7 @@ export class Desktop extends Component {
     checkAllMinimised = () => {
         let result = true;
         for (const key in this.state.minimized_windows) {
-            if (!this.state.closed_windows[key]) { // if app is opened
+            if (!this.state.closed_windows[key] && this.state.window_workspaces[key] === this.state.active_workspace) {
                 result = result & this.state.minimized_windows[key];
             }
         }
@@ -631,7 +657,8 @@ export class Desktop extends Component {
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
-                this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
+                const window_workspaces = { ...this.state.window_workspaces, [objId]: this.state.active_workspace };
+                this.setState({ closed_windows, favourite_apps, allAppsView: false, window_workspaces }, () => {
                     this.focus(objId);
                     this.saveSession();
                 });
@@ -681,11 +708,13 @@ export class Desktop extends Component {
         // close window
         let closed_windows = this.state.closed_windows;
         let favourite_apps = this.state.favourite_apps;
+        let window_workspaces = { ...this.state.window_workspaces };
 
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
+        delete window_workspaces[objId];
 
-        this.setState({ closed_windows, favourite_apps }, this.saveSession);
+        this.setState({ closed_windows, favourite_apps, window_workspaces }, this.saveSession);
     }
 
     pinApp = (id) => {
@@ -884,6 +913,10 @@ export class Desktop extends Component {
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    activeWorkspace={this.state.active_workspace}
+                    windowWorkspaces={this.state.window_workspaces}
+                    workspaces={WORKSPACES}
+                    onSelectWorkspace={this.switchWorkspace}
                 />
 
                 {/* Desktop Apps */}
@@ -923,6 +956,12 @@ export class Desktop extends Component {
                         this.closeApp(id);
                     }}
                     onCloseMenu={this.hideAllContextMenu}
+                    workspaces={WORKSPACES}
+                    onMove={(ws) => {
+                        const id = this.state.context_app;
+                        if (!id) return;
+                        this.moveWindowToWorkspace(id, ws);
+                    }}
                 />
 
                 {/* Folder Input Name Bar */}

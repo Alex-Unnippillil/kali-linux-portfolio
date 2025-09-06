@@ -23,6 +23,11 @@ function TaskbarMenu(props) {
         props.onCloseMenu && props.onCloseMenu();
     };
 
+    const handleMove = (ws) => {
+        props.onMove && props.onMove(ws);
+        props.onCloseMenu && props.onCloseMenu();
+    };
+
     return (
         <div
             id="taskbar-menu"
@@ -50,6 +55,31 @@ function TaskbarMenu(props) {
             >
                 <span className="ml-5">Close</span>
             </button>
+            {props.workspaces && props.workspaces.length > 0 && (
+                <>
+                    <Devider />
+                    {props.workspaces.map((w) => (
+                        <button
+                            key={w}
+                            type="button"
+                            role="menuitem"
+                            aria-label={`Move to workspace ${w + 1}`}
+                            onClick={() => handleMove(w)}
+                            className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                        >
+                            <span className="ml-5">Workspace {w + 1}</span>
+                        </button>
+                    ))}
+                </>
+            )}
+        </div>
+    );
+}
+
+function Devider() {
+    return (
+        <div className="flex justify-center w-full">
+            <div className=" border-t border-gray-900 py-1 w-2/5"></div>
         </div>
     );
 }
