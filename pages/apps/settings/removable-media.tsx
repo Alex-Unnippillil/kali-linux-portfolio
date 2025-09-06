@@ -4,67 +4,109 @@ import { useState } from 'react';
 import ToggleSwitch from '../../../components/ToggleSwitch';
 import Toast from '../../../components/ui/Toast';
 
+interface Settings {
+  mountDrives: boolean;
+  mountMedia: boolean;
+  browseMedia: boolean;
+  autoRun: boolean;
+  cameraImportCommand: string;
+}
+
 export default function RemovableMediaPage() {
-  const [autoRun, setAutoRun] = useState(false);
-  const [promptOpen, setPromptOpen] = useState(false);
+  const [settings, setSettings] = useState<Settings>({
+    mountDrives: false,
+    mountMedia: false,
+    browseMedia: false,
+    autoRun: false,
+    cameraImportCommand: '',
+  });
   const [toast, setToast] = useState('');
 
+  const update = (partial: Partial<Settings>) =>
+    setSettings((s) => ({ ...s, ...partial }));
+
   const insertDevice = () => {
-    if (autoRun) {
-      setPromptOpen(true);
-    }
+    window.localStorage.setItem(
+      'volume-event',
+      JSON.stringify({
+        type: 'insert',
+        id: 'demo-usb',
+        label: 'Demo USB',
+        open: settings.browseMedia,
+      }),
+    );
+    setToast(settings.autoRun ? 'Demo; no binaries executed' : 'Demo USB inserted');
   };
 
-  const handleRun = () => {
-    setPromptOpen(false);
-    setToast('Demo; no binaries executed');
+  const ejectDevice = () => {
+    window.localStorage.setItem(
+      'volume-event',
+      JSON.stringify({ type: 'eject', id: 'demo-usb' }),
+    );
   };
 
   return (
-    <div className="p-4 text-white">
-      <div className="flex items-center space-x-2">
-        <span className="text-ubt-grey">Auto-run programs when media is inserted</span>
+    <div className="p-4 text-white space-y-4">
+      <div className="flex items-center justify-between">
+        <span>Mount removable drives when hot-plugged</span>
         <ToggleSwitch
-          checked={autoRun}
-          onChange={setAutoRun}
-          ariaLabel="Auto-run programs when media is inserted"
+          checked={settings.mountDrives}
+          onChange={(checked) => update({ mountDrives: checked })}
+          ariaLabel="Mount removable drives when hot-plugged"
         />
       </div>
-      <button
-        onClick={insertDevice}
-        className="mt-4 px-4 py-2 rounded bg-ub-orange text-white"
-      >
-        Insert device with autorun
-      </button>
-
-      {promptOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
-          role="dialog"
-          aria-modal="true"
+      <div className="flex items-center justify-between">
+        <span>Mount removable media when inserted</span>
+        <ToggleSwitch
+          checked={settings.mountMedia}
+          onChange={(checked) => update({ mountMedia: checked })}
+          ariaLabel="Mount removable media when inserted"
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <span>Browse removable media when inserted</span>
+        <ToggleSwitch
+          checked={settings.browseMedia}
+          onChange={(checked) => update({ browseMedia: checked })}
+          ariaLabel="Browse removable media when inserted"
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <span>Auto-run programs on new drives and media</span>
+        <ToggleSwitch
+          checked={settings.autoRun}
+          onChange={(checked) => update({ autoRun: checked })}
+          ariaLabel="Auto-run programs on new drives and media"
+        />
+      </div>
+      <div>
+        <label htmlFor="camera-import" className="block mb-1">
+          Camera import command
+        </label>
+        <input
+          id="camera-import"
+          type="text"
+          value={settings.cameraImportCommand}
+          onChange={(e) => update({ cameraImportCommand: e.target.value })}
+          className="w-full border rounded p-1"
+          aria-label="Camera import command"
+        />
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={insertDevice}
+          className="px-4 py-2 rounded bg-ub-orange text-white"
         >
-          <div className="bg-ub-cool-grey p-4 rounded space-y-4">
-            <p>Autorun program detected. Run it?</p>
-            <div className="flex justify-end space-x-2">
-              <button
-                onClick={handleRun}
-                className="px-4 py-2 bg-ub-orange text-white rounded"
-              >
-                Run
-              </button>
-              <button
-                onClick={() => setPromptOpen(false)}
-                className="px-4 py-2 bg-ubt-cool-grey text-white rounded"
-              >
-                Ignore
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
+          Insert mock device
+        </button>
+        <button
+          onClick={ejectDevice}
+          className="px-4 py-2 rounded bg-ubt-cool-grey text-white"
+        >
+          Eject device
+        </button>
+      </div>
       {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
   );
 }
-
