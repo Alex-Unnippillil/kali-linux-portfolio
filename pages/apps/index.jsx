@@ -18,9 +18,27 @@ const AppsPage = () => {
   useEffect(() => {
     let isMounted = true;
     import('../../apps.config').then((mod) => {
-      if (isMounted) {
-        setApps(mod.default);
-      }
+      if (!isMounted) return;
+      const list = mod.default.map((app) => {
+        let id = app.id;
+        try {
+          const fn = app.screen?.toString?.();
+          const match = fn && fn.match(/components\/apps\/([^"']+)/);
+          if (match) {
+            const dynId = match[1].replace(/\/index$/, '');
+            id = dynId
+              .split('/')
+              .pop()
+              .replace(/([a-z])([A-Z])/g, '$1-$2')
+              .replace(/_/g, '-')
+              .toLowerCase();
+          }
+        } catch (err) {
+          // ignore parsing errors and fall back to existing id
+        }
+        return { ...app, id };
+      });
+      setApps(list);
     });
     return () => {
       isMounted = false;
