@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  networkTime: false,
 };
 
 export async function getAccent() {
@@ -124,6 +125,16 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getNetworkTime() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.networkTime;
+  return window.localStorage.getItem('network-time') === 'true';
+}
+
+export async function setNetworkTime(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('network-time', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -138,6 +149,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('network-time');
 }
 
 export async function exportSettings() {
@@ -152,6 +164,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    networkTime,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -163,6 +176,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getNetworkTime(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -176,6 +190,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    networkTime,
     theme,
   });
 }
@@ -200,6 +215,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    networkTime,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -212,6 +228,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (networkTime !== undefined) await setNetworkTime(networkTime);
   if (theme !== undefined) setTheme(theme);
 }
 
