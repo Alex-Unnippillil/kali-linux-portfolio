@@ -464,6 +464,7 @@ play/pause and track controls include keyboard hotkeys.
 - **`components/apps/GameLayout.tsx`** - standardized layout and help toggle for games.
 - **`components/apps/radare2`** - dual hex/disassembly panes with seek/find/xref; graph mode from JSON fixtures; per-file notes and bookmarks.
 - **`components/common/PipPortal.tsx`** - renders arbitrary UI inside a Document Picture-in-Picture window. See [`docs/pip-portal.md`](./docs/pip-portal.md).
+- **`hooks/useTray.tsx`** & **`components/util-components/status.js`** - unified tray grouping StatusNotifierItem icons with legacy systray fallback. See [`docs/system-tray.md`](./docs/system-tray.md).
 
 ---
 
