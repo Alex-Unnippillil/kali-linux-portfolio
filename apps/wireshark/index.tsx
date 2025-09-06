@@ -1,7 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import PcapViewer from './components/PcapViewer';
+import dynamic from 'next/dynamic';
+
+const PcapViewer = dynamic(() => import('./components/PcapViewer'), {
+  ssr: false,
+  loading: () => <p>Loading...</p>,
+});
 
 const WiresharkPage: React.FC = () => {
   const [showLegend, setShowLegend] = useState(true);

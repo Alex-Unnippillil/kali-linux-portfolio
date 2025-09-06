@@ -1,8 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Image from 'next/image';
-import GhidraApp from '../../../components/apps/ghidra';
+
+const GhidraApp = dynamic(() => import('../../../components/apps/ghidra'), {
+  ssr: false,
+  loading: () => <p>Loading...</p>,
+});
 
 export default function DemoRunner() {
   const wasmUrl = process.env.NEXT_PUBLIC_GHIDRA_WASM;
