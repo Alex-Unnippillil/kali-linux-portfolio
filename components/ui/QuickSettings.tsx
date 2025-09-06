@@ -13,7 +13,16 @@ const QuickSettings = ({ open, lockScreen, logOut }: Props) => {
   const [theme, setTheme] = usePersistentState('qs-theme', 'light');
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
-  const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
+  const [reduceMotion, setReduceMotion] = usePersistentState(
+    'qs-reduce-motion',
+    false,
+  );
+
+  const toggleTheme = () =>
+    setTheme((t) => (t === 'light' ? 'dark' : 'light'));
+  const toggleSound = () => setSound((s) => !s);
+  const toggleOnline = () => setOnline((o) => !o);
+  const toggleReduceMotion = () => setReduceMotion((r) => !r);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -32,7 +41,7 @@ const QuickSettings = ({ open, lockScreen, logOut }: Props) => {
       <div className="px-4 pb-2">
         <button
           className="w-full flex justify-between"
-          onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+          onClick={toggleTheme}
         >
           <span>Theme</span>
           <span>{theme === 'light' ? 'Light' : 'Dark'}</span>
@@ -40,18 +49,18 @@ const QuickSettings = ({ open, lockScreen, logOut }: Props) => {
       </div>
       <div className="px-4 pb-2 flex justify-between">
         <span>Sound</span>
-        <input type="checkbox" checked={sound} onChange={() => setSound(!sound)} />
+        <input type="checkbox" checked={sound} onChange={toggleSound} />
       </div>
       <div className="px-4 pb-2 flex justify-between">
         <span>Network</span>
-        <input type="checkbox" checked={online} onChange={() => setOnline(!online)} />
+        <input type="checkbox" checked={online} onChange={toggleOnline} />
       </div>
       <div className="px-4 flex justify-between">
         <span>Reduced motion</span>
         <input
           type="checkbox"
           checked={reduceMotion}
-          onChange={() => setReduceMotion(!reduceMotion)}
+          onChange={toggleReduceMotion}
         />
       </div>
       <div className="px-4 pt-2 border-t border-black border-opacity-20 mt-2 space-y-1">
