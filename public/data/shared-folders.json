@@ -1,0 +1,5 @@
+[
+  { "name": "Documents", "enabled": true },
+  { "name": "Downloads", "enabled": false },
+  { "name": "Pictures", "enabled": false }
+]
