@@ -9,7 +9,7 @@ const BackgroundImage = dynamic(
 );
 import SideBar from './side_bar';
 import apps, { games } from '../../apps.config';
-import Window from '../base/window';
+import Window from '../base/Window';
 import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'

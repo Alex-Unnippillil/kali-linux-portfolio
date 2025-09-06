@@ -148,7 +148,7 @@ function MyApp(props) {
   }, []);
 
   return (
-    <ErrorBoundary>
+    <>
       <Script src="/a2hs.js" strategy="beforeInteractive" />
       <div className={ubuntu.className}>
         <a
@@ -161,7 +161,9 @@ function MyApp(props) {
           <TrayProvider>
             <PipPortalProvider>
               <div aria-live="polite" id="live-region" />
-              <Component {...pageProps} />
+              <ErrorBoundary>
+                <Component {...pageProps} />
+              </ErrorBoundary>
               <ShortcutOverlay />
               <Analytics
                 beforeSend={(e) => {
@@ -177,9 +179,7 @@ function MyApp(props) {
           </TrayProvider>
         </SettingsProvider>
       </div>
-    </ErrorBoundary>
-
-
+    </>
   );
 }
 
