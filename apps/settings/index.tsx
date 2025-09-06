@@ -41,6 +41,7 @@ export default function Settings() {
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
+    { id: "mirrors", label: "Mirrors" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
@@ -55,6 +56,22 @@ export default function Settings() {
     "wall-7",
     "wall-8",
   ];
+
+  const mirrorOptions = [
+    { value: "auto", label: "Auto-select fastest (mock)" },
+    { value: "http://http.kali.org/kali", label: "http.kali.org (Primary)" },
+    { value: "https://kali.download/kali", label: "kali.download (CDN)" },
+    {
+      value: "http://ftp.igh.cnrs.fr/pub/kali",
+      label: "ftp.igh.cnrs.fr (France)",
+    },
+  ] as const;
+  type MirrorId = (typeof mirrorOptions)[number]["value"];
+  const [mirror, setMirror] = useState<MirrorId>("auto");
+  const mirrorUrl = mirror === "auto" ? "http://http.kali.org/kali" : mirror;
+  const sourcesList =
+    `deb ${mirrorUrl} kali-rolling main non-free non-free-firmware\n` +
+    `# deb-src ${mirrorUrl} kali-rolling main non-free non-free-firmware`;
 
   const changeBackground = (name: string) => setWallpaper(name);
 
@@ -322,11 +339,47 @@ export default function Settings() {
           </div>
         </>
       )}
-        <input
-          type="file"
-          accept="application/json"
-          ref={fileInputRef}
-          aria-label="Import settings file"
+      {activeTab === "mirrors" && (
+        <>
+          <div
+            role="alert"
+            className="mx-4 my-4 p-2 rounded bg-yellow-900 text-yellow-100 text-sm"
+          >
+            Adding unofficial repositories may cause system instability.
+          </div>
+          <div className="flex flex-col items-start px-4 space-y-2">
+            {mirrorOptions.map((m) => (
+              <label
+                key={m.value}
+                className="flex items-center gap-2 text-ubt-grey"
+              >
+                <input
+                  type="radio"
+                  name="mirror"
+                  value={m.value}
+                  checked={mirror === m.value}
+                  onChange={() => setMirror(m.value)}
+                  aria-label={m.label}
+                />
+                <span>{m.label}</span>
+              </label>
+            ))}
+          </div>
+          <div className="px-4 mt-4 w-full">
+            <textarea
+              readOnly
+              value={sourcesList}
+              className="w-full h-32 bg-gray-900 text-white p-2 font-mono text-sm"
+              aria-label="sources.list preview"
+            />
+          </div>
+        </>
+      )}
+      <input
+        type="file"
+        accept="application/json"
+        ref={fileInputRef}
+        aria-label="Import settings file"
           onChange={(e) => {
             const file = e.target.files && e.target.files[0];
             if (file) handleImport(file);
