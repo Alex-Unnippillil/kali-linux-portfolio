@@ -3,7 +3,7 @@
 // Allows external badges and same-origin PDF embedding.
 // Update README (section "CSP External Domains") when editing domains below.
 
-const { validateServerEnv: validateEnv } = require('./lib/validate');
+const { validateServerEnv } = require('./lib/validate');
 
 
 const ContentSecurityPolicy = [
@@ -76,7 +76,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   disable: process.env.VERCEL_ENV !== 'production',
   buildExcludes: [/dynamic-css-manifest\.json$/],
   fallbacks: {
-    document: '/offline.html',
+    'document': '/offline.html',
   },
   workboxOptions: {
     cacheId: buildId,
