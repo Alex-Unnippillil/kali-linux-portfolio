@@ -1,8 +1,12 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import usePersistentState from '../../hooks/usePersistentState';
-import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
-import usePersistentState from '../../hooks/usePersistentState';
+import {
+  resetSettings,
+  defaults,
+  exportSettings as exportSettingsData,
+  importSettings as importSettingsData,
+} from '../../utils/settingsStore';
 
 export function Settings() {
     const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();

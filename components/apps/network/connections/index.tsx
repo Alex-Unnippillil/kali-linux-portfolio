@@ -1,8 +1,11 @@
 import dynamic from 'next/dynamic';
 
-const NetworkConnections = dynamic(() => import('../../../apps/network/connections'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
+const NetworkConnectionsLazy = dynamic(
+  () => import('../../../apps/network/connections'),
+  {
+    ssr: false,
+    loading: () => <p>Loading...</p>,
+  },
+);
 
-export default NetworkConnections;
+export default NetworkConnectionsLazy;

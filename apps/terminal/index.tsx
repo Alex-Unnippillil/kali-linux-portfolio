@@ -368,11 +368,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
       term.focus();
       const preset = THEME_PRESETS[scheme as keyof typeof THEME_PRESETS];
       const bg = hexToRgba(preset.background, opacity);
-      term.setOption?.('theme', {
-        background: bg,
-        foreground: preset.foreground,
-        cursor: preset.foreground,
-      });
+      term.options = {
+        ...term.options,
+        theme: {
+          background: bg,
+          foreground: preset.foreground,
+          cursor: preset.foreground,
+        },
+      };
       containerRef.current!.style.backgroundColor = bg;
       containerRef.current!.style.color = preset.foreground;
       if (opfsSupported) {
