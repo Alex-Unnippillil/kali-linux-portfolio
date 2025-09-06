@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import useSWR from 'swr';
 import { City } from '../state';
 
 interface Props {
@@ -12,18 +13,35 @@ export default function CityDetail({ city, onClose }: Props) {
   const [unit, setUnit] = useState<'C' | 'F'>('C');
   const [hourly, setHourly] = useState<number[]>([]);
   const [precip, setPrecip] = useState<number | null>(null);
+  const [offline, setOffline] = useState(
+    typeof navigator !== 'undefined' ? !navigator.onLine : false,
+  );
 
   useEffect(() => {
-    fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&hourly=temperature_2m,precipitation_probability&forecast_days=1&timezone=auto`,
-    )
-      .then((res) => res.json())
-      .then((data) => {
-        setHourly(data.hourly.temperature_2m as number[]);
-        setPrecip(data.hourly.precipitation_probability?.[0] ?? null);
-      })
-      .catch(() => {});
-  }, [city]);
+    const onOnline = () => setOffline(false);
+    const onOffline = () => setOffline(true);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
+  }, []);
+
+  const { data } = useSWR(
+    offline ? null : ['detail', city.lat, city.lon],
+    ([, lat, lon]) =>
+      fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation_probability&forecast_days=1&timezone=auto`,
+      ).then((res) => res.json()),
+    { revalidateOnFocus: false },
+  );
+
+  useEffect(() => {
+    if (!data) return;
+    setHourly(data.hourly.temperature_2m as number[]);
+    setPrecip(data.hourly.precipitation_probability?.[0] ?? null);
+  }, [data]);
 
   const temps = unit === 'C' ? hourly : hourly.map((t) => t * 1.8 + 32);
   const slice = temps.slice(0, 24);
@@ -84,6 +102,9 @@ export default function CityDetail({ city, onClose }: Props) {
         </div>
         {precip !== null && (
           <div className="mt-4 precip-text">Precipitation: {precip}%</div>
+        )}
+        {offline && (
+          <div className="mt-4 text-sm">Offline - showing cached data</div>
         )}
       </div>
     </div>

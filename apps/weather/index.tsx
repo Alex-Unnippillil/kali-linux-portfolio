@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react';
+import useSWR from 'swr';
 import useWeatherState, {
   City,
   ForecastDay,
@@ -26,6 +27,70 @@ function CityTile({ city }: { city: City }) {
         <div className="opacity-70 mb-1.5">No data</div>
       )}
       {city.forecast && <Forecast days={city.forecast.slice(0, 5)} />}
+    </div>
+  );
+}
+
+interface CityItemProps {
+  city: City;
+  index: number;
+  offline: boolean;
+  setCities: Dispatch<SetStateAction<City[]>>;
+  onDragStart: (i: number) => void;
+  onDrop: (i: number) => void;
+  setSelected: (c: City) => void;
+}
+
+function CityItem({
+  city,
+  index,
+  offline,
+  setCities,
+  onDragStart,
+  onDrop,
+  setSelected,
+}: CityItemProps) {
+  const { data } = useSWR(
+    offline ? null : ['weather', city.lat, city.lon],
+    ([, lat, lon]) =>
+      fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=weathercode,temperature_2m_max&forecast_days=5&timezone=auto`,
+      ).then((res) => res.json()),
+    { revalidateOnFocus: false },
+  );
+
+  useEffect(() => {
+    if (!data) return;
+    const reading: ReadingUpdate = {
+      temp: data.current_weather.temperature,
+      condition: data.current_weather.weathercode,
+      time: Date.now(),
+    };
+    const forecast: ForecastDay[] = data.daily.time.map(
+      (date: string, idx: number) => ({
+        date,
+        temp: data.daily.temperature_2m_max[idx],
+        condition: data.daily.weathercode[idx],
+      }),
+    );
+    setCities((prev) => {
+      const next = [...prev];
+      if (!next[index]) return prev;
+      next[index] = { ...next[index], lastReading: reading, forecast };
+      return next;
+    });
+  }, [data, index, setCities]);
+
+  return (
+    <div
+      draggable
+      onDragStart={() => onDragStart(index)}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={() => onDrop(index)}
+      onClick={() => setSelected(city)}
+      className="bg-white/10 p-4 rounded cursor-pointer"
+    >
+      <CityTile city={city} />
     </div>
   );
 }
@@ -60,39 +125,6 @@ export default function WeatherApp() {
       window.removeEventListener('offline', onOffline);
     };
   }, []);
-
-  useEffect(() => {
-    if (offline) return;
-    cities.forEach((city, i) => {
-      fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current_weather=true&daily=weathercode,temperature_2m_max&forecast_days=5&timezone=auto`,
-      )
-        .then((res) => res.json())
-        .then((data) => {
-          const reading: ReadingUpdate = {
-            temp: data.current_weather.temperature,
-            condition: data.current_weather.weathercode,
-            time: Date.now(),
-          };
-          const forecast: ForecastDay[] = data.daily.time.map(
-            (date: string, idx: number) => ({
-              date,
-              temp: data.daily.temperature_2m_max[idx],
-              condition: data.daily.weathercode[idx],
-            }),
-          );
-          setCities((prev) => {
-            const next = [...prev];
-            if (!next[i]) return prev;
-            next[i] = { ...next[i], lastReading: reading, forecast };
-            return next;
-          });
-        })
-        .catch(() => {
-          // ignore fetch errors
-        });
-    });
-    }, [offline, cities, setCities]);
 
   const addCity = () => {
     const latNum = parseFloat(lat);
@@ -191,17 +223,16 @@ export default function WeatherApp() {
       </div>
       <div className="grid grid-cols-2 gap-4">
         {cities.map((city, i) => (
-          <div
+          <CityItem
             key={city.id}
-            draggable
-            onDragStart={() => onDragStart(i)}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={() => onDrop(i)}
-            onClick={() => setSelected(city)}
-            className="bg-white/10 p-4 rounded cursor-pointer"
-          >
-            <CityTile city={city} />
-          </div>
+            city={city}
+            index={i}
+            offline={offline}
+            setCities={setCities}
+            onDragStart={onDragStart}
+            onDrop={onDrop}
+            setSelected={setSelected}
+          />
         ))}
       </div>
       {offline && (
