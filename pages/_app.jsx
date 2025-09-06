@@ -55,18 +55,32 @@ function MyApp(props) {
     initAnalytics().catch((err) => {
       console.error('Analytics initialization failed', err);
     });
+  }, []);
 
+  useEffect(() => {
     if (
       process.env.NODE_ENV === 'production' &&
       process.env.VERCEL_ENV === 'production' &&
       'serviceWorker' in navigator
     ) {
-      // Register PWA service worker generated via @ducanh2912/next-pwa
       const register = async () => {
         try {
           const registration = await navigator.serviceWorker.register('/sw.js');
 
           window.manualRefresh = () => registration.update();
+
+          registration.addEventListener('updatefound', () => {
+            const installing = registration.installing;
+            if (!installing) return;
+            installing.addEventListener('statechange', () => {
+              if (
+                installing.state === 'installed' &&
+                navigator.serviceWorker.controller
+              ) {
+                registration.update();
+              }
+            });
+          });
 
           if ('periodicSync' in registration) {
             try {
