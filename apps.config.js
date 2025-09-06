@@ -77,6 +77,7 @@ const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
 const TrashApp = createDynamicApp('trash', 'Trash');
 const SerialTerminalApp = createDynamicApp('serial-terminal', 'Serial Terminal');
+const RemovableDriveApp = createDynamicApp('removable-drive', 'Removable Drive');
 
 
 const WiresharkApp = createDynamicApp('wireshark', 'Wireshark');
@@ -163,6 +164,7 @@ const displayProjectGallery = createDisplay(ProjectGalleryApp);
 const displayTrash = createDisplay(TrashApp);
 const displayStickyNotes = createDisplay(StickyNotesApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);
+const displayRemovableDrive = createDisplay(RemovableDriveApp);
 const displayWeatherWidget = createDisplay(WeatherWidgetApp);
 const displayInputLab = createDisplay(InputLabApp);
 
@@ -781,6 +783,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayTrash,
+  },
+  {
+    id: 'removable-drive',
+    title: 'Removable Drive',
+    icon: '/themes/Yaru/status/drive-removable.svg',
+    disabled: false,
+    favourite: true,
+    desktop_shortcut: true,
+    screen: displayRemovableDrive,
   },
   {
     id: 'gedit',

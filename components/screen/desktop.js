@@ -52,6 +52,7 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            removableMounted: false,
         }
     }
 
@@ -88,12 +89,41 @@ export class Desktop extends Component {
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
+        if (typeof window !== 'undefined') {
+            window.removableDriveMounted = this.state.removableMounted;
+        }
     }
 
     componentWillUnmount() {
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
+    }
+
+    notify = (title, body) => {
+        if (typeof window === 'undefined') return;
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification(title, { body });
+        } else {
+            alert(`${title}${body ? ': ' + body : ''}`);
+        }
+    }
+
+    toggleRemovableDrive = () => {
+        const mounted = !this.state.removableMounted;
+        this.setState({ removableMounted: mounted }, () => {
+            const app = apps.find(a => a.id === 'removable-drive');
+            if (app) {
+                app.icon = mounted
+                    ? '/themes/Yaru/status/drive-removable-mounted.svg'
+                    : '/themes/Yaru/status/drive-removable.svg';
+            }
+            if (typeof window !== 'undefined') {
+                window.removableDriveMounted = mounted;
+                window.dispatchEvent(new Event('removable-drive-change'));
+            }
+            this.notify('Removable Drive', mounted ? 'Mounted' : 'Unmounted');
+        });
     }
 
     checkForNewFolders = () => {
@@ -904,6 +934,9 @@ export class Desktop extends Component {
                     pinApp={() => this.pinApp(this.state.context_app)}
                     unpinApp={() => this.unpinApp(this.state.context_app)}
                     onClose={this.hideAllContextMenu}
+                    appId={this.state.context_app}
+                    mounted={this.state.removableMounted}
+                    onToggleMount={this.toggleRemovableDrive}
                 />
                 <TaskbarMenu
                     active={this.state.context_menus.taskbar}
