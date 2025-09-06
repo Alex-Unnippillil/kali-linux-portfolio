@@ -41,6 +41,8 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._dragFrame = null;
+        this._pendingDrag = null;
     }
 
     componentDidMount() {
@@ -57,6 +59,10 @@ export class Window extends Component {
         window.addEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.addEventListener('super-arrow', this.handleSuperArrow);
+        if (root) {
+            root.style.setProperty('--window-transform-x', `${this.startX}px`);
+            root.style.setProperty('--window-transform-y', `${this.startY}px`);
+        }
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -72,6 +78,10 @@ export class Window extends Component {
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+        if (this._dragFrame) {
+            cancelAnimationFrame(this._dragFrame);
+            this._dragFrame = null;
         }
     }
 
@@ -274,11 +284,7 @@ export class Window extends Component {
         if (!this.state.snapped) return;
         var r = document.querySelector("#" + this.id);
         if (r) {
-            const x = r.style.getPropertyValue('--window-transform-x');
-            const y = r.style.getPropertyValue('--window-transform-y');
-            if (x && y) {
-                r.style.transform = `translate(${x},${y})`;
-            }
+            r.style.transform = 'translate(var(--window-transform-x), var(--window-transform-y))';
         }
         if (this.state.lastSize) {
             this.setState({
@@ -296,23 +302,25 @@ export class Window extends Component {
         const { width, height } = this.state;
         let newWidth = width;
         let newHeight = height;
-        let transform = '';
-        if (position === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (position === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        } else if (position === 'top') {
-            newWidth = 100.2;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        }
         const r = document.querySelector("#" + this.id);
-        if (r && transform) {
-            r.style.transform = transform;
+        if (r) {
+            if (position === 'left') {
+                newWidth = 50;
+                newHeight = 96.3;
+                r.style.setProperty('--window-transform-x', '-1pt');
+                r.style.setProperty('--window-transform-y', '-2pt');
+            } else if (position === 'right') {
+                newWidth = 50;
+                newHeight = 96.3;
+                r.style.setProperty('--window-transform-x', `${window.innerWidth / 2}px`);
+                r.style.setProperty('--window-transform-y', '-2pt');
+            } else if (position === 'top') {
+                newWidth = 100.2;
+                newHeight = 96.3;
+                r.style.setProperty('--window-transform-x', '-1pt');
+                r.style.setProperty('--window-transform-y', '-2pt');
+            }
+            r.style.transform = 'translate(var(--window-transform-x), var(--window-transform-y))';
         }
         this.setState({
             snapPreview: null,
@@ -386,23 +394,34 @@ export class Window extends Component {
             if (pos > max) return max;
             if (pos > max - threshold) return max - (max - pos) * resistance;
             return pos;
-        }
+        };
 
         x = resist(x, 0, maxX);
         y = resist(y, 0, maxY);
-        node.style.transform = `translate(${x}px, ${y}px)`;
+
+        node.style.setProperty('--window-transform-x', `${x}px`);
+        node.style.setProperty('--window-transform-y', `${y}px`);
+        node.style.transform = 'translate(var(--window-transform-x), var(--window-transform-y))';
     }
 
     handleDrag = (e, data) => {
-        if (data && data.node) {
-            this.applyEdgeResistance(data.node, data);
+        if (!data || !data.node) return;
+        this._pendingDrag = { node: data.node, data };
+        if (!this._dragFrame) {
+            this._dragFrame = requestAnimationFrame(() => {
+                const pending = this._pendingDrag;
+                this._dragFrame = null;
+                if (!pending) return;
+                this.applyEdgeResistance(pending.node, pending.data);
+                this.checkOverlap();
+                this.checkSnapPreview();
+            });
         }
-        this.checkOverlap();
-        this.checkSnapPreview();
     }
 
     handleStop = () => {
         this.changeCursorToDefault();
+        this._pendingDrag = null;
         const snapPos = this.state.snapPosition;
         if (snapPos) {
             this.snapWindow(snapPos);
@@ -426,7 +445,11 @@ export class Window extends Component {
         var sidebBarApp = r.getBoundingClientRect();
 
         const node = document.querySelector("#" + this.id);
-        const endTransform = `translate(${posx}px,${sidebBarApp.y.toFixed(1) - 240}px) scale(0.2)`;
+        const endX = posx;
+        const endY = sidebBarApp.y.toFixed(1) - 240;
+        node.style.setProperty('--window-transform-x', `${endX}px`);
+        node.style.setProperty('--window-transform-y', `${endY}px`);
+        const endTransform = 'translate(var(--window-transform-x), var(--window-transform-y)) scale(0.2)';
         const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         if (prefersReducedMotion) {
@@ -435,7 +458,7 @@ export class Window extends Component {
             return;
         }
 
-        const startTransform = node.style.transform;
+        const startTransform = 'translate(var(--window-transform-x), var(--window-transform-y))';
         this._dockAnimation = node.animate(
             [{ transform: startTransform }, { transform: endTransform }],
             { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
@@ -451,10 +474,8 @@ export class Window extends Component {
         const node = document.querySelector("#" + this.id);
         this.setDefaultWindowDimenstion();
         // get previous position
-        let posx = node.style.getPropertyValue("--window-transform-x");
-        let posy = node.style.getPropertyValue("--window-transform-y");
         const startTransform = node.style.transform;
-        const endTransform = `translate(${posx},${posy})`;
+        const endTransform = 'translate(var(--window-transform-x), var(--window-transform-y))';
         const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         if (prefersReducedMotion) {
@@ -496,7 +517,9 @@ export class Window extends Component {
             var r = document.querySelector("#" + this.id);
             this.setWinowsPosition();
             // translate window to maximize position
-            r.style.transform = `translate(-1pt,-2pt)`;
+            r.style.setProperty('--window-transform-x', '-1pt');
+            r.style.setProperty('--window-transform-y', '-2pt');
+            r.style.transform = 'translate(var(--window-transform-x), var(--window-transform-y))';
             this.setState({ maximized: true, height: 96.3, width: 100.2 });
             this.props.hideSideBar(this.id, true);
         }
@@ -696,7 +719,7 @@ export class Window extends Component {
                     bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
                 >
                     <div
-                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
+                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%`, transform: 'translate(var(--window-transform-x, 0px), var(--window-transform-y, 0px))' }}
                         className={
                             this.state.cursorType + " " +
                             (this.state.closed ? " closed-window " : "") +
