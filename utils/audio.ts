@@ -3,22 +3,11 @@
  * Provides precise tone playback per color and helpers for scheduling.
  */
 
+import { getAudioContext } from "../player";
+
 const TONE_FREQUENCIES = [329.63, 261.63, 220, 164.81];
 
-let ctx: AudioContext | null = null;
-
-export function getAudioContext(): AudioContext {
-  if (typeof window === "undefined") {
-    throw new Error("AudioContext unavailable");
-  }
-  if (!ctx) {
-    ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-  }
-  if (ctx.state === "suspended") {
-    ctx.resume();
-  }
-  return ctx;
-}
+export { getAudioContext };
 
 /**
  * Play the tone associated with a Simon pad index at a specific time.
