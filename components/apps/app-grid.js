@@ -140,7 +140,7 @@ export default function AppGrid({ openApp }) {
   };
 
   return (
-    <div className="flex flex-col items-center h-full">
+    <div id="app-grid" className="flex flex-col items-center h-full">
       <div className="mt-4 mb-2 flex space-x-2">
         {Object.keys(categories).map((cat) => (
           <button
