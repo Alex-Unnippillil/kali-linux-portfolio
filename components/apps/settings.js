@@ -3,7 +3,7 @@ import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme, interactionMode, setInteractionMode } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -97,6 +97,17 @@ export function Settings() {
                 >
                     <option value="regular">Regular</option>
                     <option value="compact">Compact</option>
+                </select>
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey">Click items:</label>
+                <select
+                    value={interactionMode}
+                    onChange={(e) => setInteractionMode(e.target.value)}
+                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                >
+                    <option value="single">Single-click to open (hover select)</option>
+                    <option value="double">Double-click to open</option>
                 </select>
             </div>
             <div className="flex justify-center my-4">
@@ -252,6 +263,7 @@ export function Settings() {
                         setFontScale(defaults.fontScale);
                         setHighContrast(defaults.highContrast);
                         setTheme('default');
+                        setInteractionMode(defaults.interactionMode);
                     }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
                 >
@@ -276,6 +288,7 @@ export function Settings() {
                         if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);
                         if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
                         if (parsed.theme !== undefined) { setTheme(parsed.theme); }
+                        if (parsed.interactionMode !== undefined) setInteractionMode(parsed.interactionMode);
                     } catch (err) {
                         console.error('Invalid settings', err);
                     }
