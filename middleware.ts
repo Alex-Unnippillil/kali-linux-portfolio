@@ -25,5 +25,8 @@ export function middleware(req: NextRequest) {
   const res = NextResponse.next();
   res.headers.set('x-csp-nonce', n);
   res.headers.set('Content-Security-Policy', csp);
+  if (req.headers.get('accept')?.includes('text/html')) {
+    res.headers.set('X-Content-Type-Options', 'nosniff');
+  }
   return res;
 }
