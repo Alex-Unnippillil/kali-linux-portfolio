@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import usePersistentState from '@/hooks/usePersistentState';
+import usePersistentState from '../../hooks/usePersistentState';
 
 export type ClockStyle = 'time' | 'date' | 'datetime' | 'custom';
 

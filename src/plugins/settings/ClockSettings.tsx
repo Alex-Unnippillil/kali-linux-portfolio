@@ -1,7 +1,7 @@
 'use client';
 
 import { ChangeEvent } from 'react';
-import usePersistentState from '@/hooks/usePersistentState';
+import usePersistentState from '../../../hooks/usePersistentState';
 import type { ClockStyle } from '../Clock';
 
 const STYLES: { value: ClockStyle; label: string }[] = [
