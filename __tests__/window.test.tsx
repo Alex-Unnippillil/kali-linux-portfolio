@@ -42,6 +42,34 @@ describe('Window lifecycle', () => {
   });
 });
 
+describe('Window above property', () => {
+  it('toggles z-index when keep above is clicked', () => {
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+      />
+    );
+
+    const btn = screen.getByRole('button', { name: /window keep above/i });
+    fireEvent.click(btn);
+
+    const winEl = document.getElementById('test-window')!;
+    expect(winEl.className).toMatch(/z-40/);
+    expect(window.above && window.above['test-window']).toBe(true);
+
+    fireEvent.click(btn);
+    expect(winEl.className).not.toMatch(/z-40/);
+    expect(window.above && window.above['test-window']).toBe(false);
+  });
+});
+
 describe('Window snapping preview', () => {
   it('shows preview when dragged near left edge', () => {
     const ref = React.createRef<Window>();
@@ -199,7 +227,7 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true, preventDefault() {}, stopPropagation() {} } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();

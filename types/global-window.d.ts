@@ -13,6 +13,7 @@ declare global {
     documentPictureInPicture?: {
       requestWindow: (options?: PictureInPictureWindowOptions) => Promise<Window>;
     };
+    above?: Record<string, boolean>;
   }
 }
 
