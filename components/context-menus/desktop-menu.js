@@ -1,144 +1,119 @@
-import React, { useState, useEffect } from 'react'
-import logger from '../../utils/logger'
+import React, { useState } from 'react';
 
 function DesktopMenu(props) {
-
-    const [isFullScreen, setIsFullScreen] = useState(false)
-
-    useEffect(() => {
-        document.addEventListener('fullscreenchange', checkFullScreen);
-        return () => {
-            document.removeEventListener('fullscreenchange', checkFullScreen);
-        };
-    }, [])
-
+    const [showApps, setShowApps] = useState(false);
 
     const openTerminal = () => {
-        props.openApp("terminal");
-    }
+        if (typeof window !== 'undefined') {
+            window.localStorage.setItem('terminal_cwd', 'desktop');
+        }
+        props.openApp && props.openApp('terminal');
+    };
 
     const openSettings = () => {
-        props.openApp("settings");
-    }
+        props.openApp && props.openApp('settings');
+    };
 
-    const checkFullScreen = () => {
-        if (document.fullscreenElement) {
-            setIsFullScreen(true)
-        } else {
-            setIsFullScreen(false)
-        }
-    }
+    const createLauncher = () => {
+        props.openShortcutSelector && props.openShortcutSelector();
+    };
 
-    const goFullScreen = () => {
-        // make website full screen
-        try {
-            if (document.fullscreenElement) {
-                document.exitFullscreen()
-            } else {
-                document.documentElement.requestFullscreen()
-            }
-        }
-        catch (e) {
-            logger.error(e)
-        }
-    }
+    const createUrlLink = () => {
+        props.createUrlLink && props.createUrlLink();
+    };
 
     return (
         <div
             id="desktop-menu"
             role="menu"
             aria-label="Desktop context menu"
-            className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
+            className={(props.active ? ' block ' : ' hidden ') + ' cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm'}
         >
+            <div
+                className="relative"
+                onMouseEnter={() => setShowApps(true)}
+                onMouseLeave={() => setShowApps(false)}
+            >
+                <button
+                    type="button"
+                    role="menuitem"
+                    aria-haspopup="true"
+                    aria-expanded={showApps}
+                    className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                >
+                    <span className="ml-5">Applications ▸</span>
+                </button>
+                <div
+                    role="menu"
+                    aria-label="Applications"
+                    className={(showApps ? ' block ' : ' hidden ') + ' absolute top-0 left-full ml-1 cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 z-50'}
+                >
+                    {props.apps && props.apps.map(app => (
+                        <button
+                            key={app.id}
+                            type="button"
+                            role="menuitem"
+                            onClick={() => props.openApp(app.id)}
+                            className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                        >
+                            <span className="ml-5">{app.title}</span>
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <button
+                onClick={createLauncher}
+                type="button"
+                role="menuitem"
+                aria-label="Create Launcher"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
+                <span className="ml-5">Create Launcher...</span>
+            </button>
+
+            <button
+                onClick={createUrlLink}
+                type="button"
+                role="menuitem"
+                aria-label="Create URL Link"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
+                <span className="ml-5">Create URL Link...</span>
+            </button>
+
             <button
                 onClick={props.addNewFolder}
                 type="button"
                 role="menuitem"
-                aria-label="New Folder"
+                aria-label="Create Folder"
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
             >
-                <span className="ml-5">New Folder</span>
+                <span className="ml-5">Create Folder</span>
             </button>
-            <button
-                onClick={props.openShortcutSelector}
-                type="button"
-                role="menuitem"
-                aria-label="Create Shortcut"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
-            >
-                <span className="ml-5">Create Shortcut...</span>
-            </button>
-            <Devider />
-            <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Paste</span>
-            </div>
-            <Devider />
-            <div role="menuitem" aria-label="Show Desktop in Files" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Show Desktop in Files</span>
-            </div>
+
             <button
                 onClick={openTerminal}
                 type="button"
                 role="menuitem"
-                aria-label="Open in Terminal"
+                aria-label="Open Terminal Here"
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
             >
-                <span className="ml-5">Open in Terminal</span>
+                <span className="ml-5">Open Terminal Here</span>
             </button>
-            <Devider />
-            <button
-                onClick={openSettings}
-                type="button"
-                role="menuitem"
-                aria-label="Change Background"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
-            >
-                <span className="ml-5">Change Background...</span>
-            </button>
-            <Devider />
-            <div role="menuitem" aria-label="Display Settings" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Display Settings</span>
-            </div>
-            <button
-                onClick={openSettings}
-                type="button"
-                role="menuitem"
-                aria-label="Settings"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
-            >
-                <span className="ml-5">Settings</span>
-            </button>
-            <Devider />
-            <button
-                onClick={goFullScreen}
-                type="button"
-                role="menuitem"
-                aria-label={isFullScreen ? "Exit Full Screen" : "Enter Full Screen"}
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
-            >
-                <span className="ml-5">{isFullScreen ? "Exit" : "Enter"} Full Screen</span>
-            </button>
-            <Devider />
-            <button
-                onClick={props.clearSession}
-                type="button"
-                role="menuitem"
-                aria-label="Clear Session"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
-            >
-                <span className="ml-5">Clear Session</span>
-            </button>
-        </div>
-    )
-}
 
-function Devider() {
-    return (
-        <div className="flex justify-center w-full">
-            <div className=" border-t border-gray-900 py-1 w-2/5"></div>
+            <button
+                onClick={openSettings}
+                type="button"
+                role="menuitem"
+                aria-label="Desktop Settings"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
+                <span className="ml-5">Desktop Settings</span>
+            </button>
         </div>
     );
 }
 
+export default DesktopMenu;
 
-export default DesktopMenu

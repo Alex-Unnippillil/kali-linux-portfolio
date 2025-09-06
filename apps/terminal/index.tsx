@@ -316,7 +316,15 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       fit.fit();
       term.focus();
       if (opfsSupported) {
-        dirRef.current = await getDir('terminal');
+        let startDir = 'terminal';
+        if (typeof window !== 'undefined') {
+          const stored = window.localStorage.getItem('terminal_cwd');
+          if (stored) {
+            startDir = stored;
+            window.localStorage.removeItem('terminal_cwd');
+          }
+        }
+        dirRef.current = await getDir(startDir);
         const existing = await readFile('history.txt', dirRef.current || undefined);
         if (existing) {
           existing

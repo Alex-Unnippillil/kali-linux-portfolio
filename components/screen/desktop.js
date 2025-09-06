@@ -84,6 +84,7 @@ export class Desktop extends Component {
         this.setContextListeners();
         this.setEventListeners();
         this.checkForNewFolders();
+        this.checkForUrlLinks();
         this.checkForAppShortcuts();
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
@@ -118,6 +119,31 @@ export class Desktop extends Component {
             this.updateAppsData();
         } catch (e) {
             safeLocalStorage?.setItem('new_folders', JSON.stringify([]));
+        }
+    }
+
+    checkForUrlLinks = () => {
+        const stored = safeLocalStorage?.getItem('desktop_links');
+        if (!stored) {
+            safeLocalStorage?.setItem('desktop_links', JSON.stringify([]));
+            return;
+        }
+        try {
+            const links = JSON.parse(stored);
+            links.forEach(link => {
+                apps.push({
+                    id: `url-link-${link.id}`,
+                    title: link.name,
+                    icon: '/themes/Yaru/apps/chrome.png',
+                    disabled: true,
+                    favourite: false,
+                    desktop_shortcut: true,
+                    screen: () => { window.open(link.url, '_blank'); },
+                });
+            });
+            this.updateAppsData();
+        } catch (e) {
+            safeLocalStorage?.setItem('desktop_links', JSON.stringify([]));
         }
     }
 
@@ -739,6 +765,28 @@ export class Desktop extends Component {
         this.setState({ showShortcutSelector: true });
     }
 
+    createUrlLink = () => {
+        const name = window.prompt('Link name');
+        if (!name) return;
+        const url = window.prompt('URL');
+        if (!url) return;
+        const id = Date.now();
+        let links = [];
+        try { links = JSON.parse(safeLocalStorage?.getItem('desktop_links') || '[]'); } catch (e) { links = []; }
+        links.push({ id, name, url });
+        safeLocalStorage?.setItem('desktop_links', JSON.stringify(links));
+        apps.push({
+            id: `url-link-${id}`,
+            title: name,
+            icon: '/themes/Yaru/apps/chrome.png',
+            disabled: true,
+            favourite: false,
+            desktop_shortcut: true,
+            screen: () => { window.open(url, '_blank'); },
+        });
+        this.updateAppsData();
+    }
+
     addShortcutToDesktop = (app_id) => {
         const appIndex = apps.findIndex(app => app.id === app_id);
         if (appIndex === -1) return;
@@ -893,8 +941,10 @@ export class Desktop extends Component {
                 <DesktopMenu
                     active={this.state.context_menus.desktop}
                     openApp={this.openApp}
+                    apps={apps}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
+                    createUrlLink={this.createUrlLink}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
