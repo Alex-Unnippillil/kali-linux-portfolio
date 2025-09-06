@@ -271,6 +271,7 @@ These external domains are whitelisted in the default CSP. Update this list when
 | `react.dev` | React documentation embeds |
 | `sdk.scdn.co` | Spotify Web Playback SDK |
 | `vercel.live` | Vercel toolbar |
+| `img.shields.io` | Skill badge images |
 
 **Notes for prod hardening**
 - Review `connect-src` and `frame-src` to ensure only required domains are present for your deployment.

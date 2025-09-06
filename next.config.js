@@ -153,6 +153,7 @@ module.exports = withBundleAnalyzer(
         'openweathermap.org',
         'staticmap.openstreetmap.de',
         'data.typeracer.com',
+        'img.shields.io',
         'images.credly.com',
       ],
       localPatterns: [
