@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import Modal from '../base/Modal';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -91,6 +92,24 @@ async function addRecentDir(handle) {
   } catch {}
 }
 
+function formatSize(bytes) {
+  if (typeof bytes !== 'number') return bytes;
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let size = bytes;
+  let unit = 0;
+  while (size >= 1024 && unit < units.length - 1) {
+    size /= 1024;
+    unit++;
+  }
+  return `${size.toFixed(1)} ${units[unit]}`;
+}
+
+function getIcon(name, kind) {
+  if (kind === 'directory') return '/themes/Yaru/system/folder.png';
+  const ext = name.split('.').pop()?.toLowerCase();
+  return `/themes/filetypes/${ext}.png`;
+}
+
 export default function FileExplorer() {
   const [supported, setSupported] = useState(true);
   const [dirHandle, setDirHandle] = useState(null);
@@ -104,6 +123,9 @@ export default function FileExplorer() {
   const [results, setResults] = useState([]);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [itemInfo, setItemInfo] = useState({});
+  const [rename, setRename] = useState('');
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -145,6 +167,62 @@ export default function FileExplorer() {
     if (unsavedDir) await opfsDelete(name, unsavedDir);
   };
 
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      if (!selectedItem) return;
+      setRename(selectedItem.name);
+      if (selectedItem.handle.kind === 'file') {
+        const f = await selectedItem.handle.getFile();
+        if (!active) return;
+        setItemInfo({
+          type: f.type || 'File',
+          size: f.size,
+          modified: f.lastModified,
+          icon: getIcon(selectedItem.name, 'file'),
+        });
+      } else {
+        setItemInfo({
+          type: 'Directory',
+          size: '-',
+          modified: '-',
+          icon: getIcon(selectedItem.name, 'directory'),
+        });
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [selectedItem]);
+
+  const selectItem = (item) => {
+    setSelectedItem(item);
+  };
+
+  const applyRename = () => {
+    const newName = rename.trim();
+    if (!selectedItem || !newName) {
+      setSelectedItem(null);
+      return;
+    }
+    if (selectedItem.handle.kind === 'file') {
+      setFiles((fs) =>
+        fs.map((f) =>
+          f.handle === selectedItem.handle ? { ...f, name: newName } : f,
+        ),
+      );
+      if (currentFile?.handle === selectedItem.handle)
+        setCurrentFile((cf) => ({ ...cf, name: newName }));
+    } else {
+      setDirs((ds) =>
+        ds.map((d) =>
+          d.handle === selectedItem.handle ? { ...d, name: newName } : d,
+        ),
+      );
+    }
+    setSelectedItem(null);
+  };
+
   const openFallback = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -175,6 +253,7 @@ export default function FileExplorer() {
   };
 
   const openFile = async (file) => {
+    setSelectedItem(null);
     setCurrentFile(file);
     let text = '';
     if (opfsSupported) {
@@ -200,6 +279,7 @@ export default function FileExplorer() {
   };
 
   const openDir = async (dir) => {
+    setSelectedItem(null);
     setDirHandle(dir.handle);
     setPath((p) => [...p, { name: dir.name, handle: dir.handle }]);
     await readDir(dir.handle);
@@ -262,7 +342,13 @@ export default function FileExplorer() {
   if (!supported) {
     return (
       <div className="p-4 flex flex-col h-full">
-        <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
+          <input
+            ref={fallbackInputRef}
+            type="file"
+            onChange={openFallback}
+            className="hidden"
+            aria-label="file"
+          />
         {!currentFile && (
           <button
             onClick={() => fallbackInputRef.current?.click()}
@@ -273,11 +359,12 @@ export default function FileExplorer() {
         )}
         {currentFile && (
           <>
-            <textarea
-              className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
-              value={content}
-              onChange={onChange}
-            />
+              <textarea
+                className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
+                value={content}
+                onChange={onChange}
+                aria-label="content"
+              />
             <button
               onClick={async () => {
                 const handle = await saveFileDialog({ suggestedName: currentFile.name });
@@ -296,7 +383,8 @@ export default function FileExplorer() {
   }
 
   return (
-    <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
+    <>
+      <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
       <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
         <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
           Open Folder
@@ -329,8 +417,9 @@ export default function FileExplorer() {
           {dirs.map((d, i) => (
             <div
               key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openDir(d)}
+              className={`px-2 cursor-pointer hover:bg-black hover:bg-opacity-30 ${selectedItem?.handle === d.handle ? 'bg-black bg-opacity-30' : ''}`}
+              onClick={() => selectItem(d)}
+              onDoubleClick={() => openDir(d)}
             >
               {d.name}
             </div>
@@ -339,8 +428,9 @@ export default function FileExplorer() {
           {files.map((f, i) => (
             <div
               key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openFile(f)}
+              className={`px-2 cursor-pointer hover:bg-black hover:bg-opacity-30 ${selectedItem?.handle === f.handle ? 'bg-black bg-opacity-30' : ''}`}
+              onClick={() => selectItem(f)}
+              onDoubleClick={() => openFile(f)}
             >
               {f.name}
             </div>
@@ -348,7 +438,12 @@ export default function FileExplorer() {
         </div>
         <div className="flex-1 flex flex-col">
           {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
+            <textarea
+              className="flex-1 p-2 bg-ub-cool-grey outline-none"
+              value={content}
+              onChange={onChange}
+              aria-label="content"
+            />
           )}
           <div className="p-2 border-t border-gray-600">
             <input
@@ -356,6 +451,7 @@ export default function FileExplorer() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Find in files"
               className="px-1 py-0.5 text-black"
+              aria-label="find"
             />
             <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
               Search
@@ -369,7 +465,42 @@ export default function FileExplorer() {
             </div>
           </div>
         </div>
+        </div>
       </div>
-    </div>
-  );
-}
+      <Modal isOpen={!!selectedItem} onClose={() => setSelectedItem(null)}>
+        <div className="p-4 bg-ub-cool-grey rounded text-white w-64">
+          {selectedItem && (
+            <>
+              <div className="flex items-center mb-2">
+                {itemInfo.icon && (
+                  <img src={itemInfo.icon} alt="" className="w-8 h-8 mr-2" />
+                )}
+                  <input
+                    value={rename}
+                    onChange={(e) => setRename(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && applyRename()}
+                    className="flex-1 bg-black bg-opacity-30 px-1"
+                    aria-label="rename"
+                  />
+              </div>
+              <div className="mb-1">Type: {itemInfo.type}</div>
+              <div className="mb-1">Size: {typeof itemInfo.size === 'number' ? formatSize(itemInfo.size) : itemInfo.size}</div>
+              <div className="mb-3">Modified: {itemInfo.modified && typeof itemInfo.modified === 'number' ? new Date(itemInfo.modified).toLocaleString() : itemInfo.modified}</div>
+              <div className="flex justify-end space-x-2">
+                <button onClick={applyRename} className="px-2 py-1 bg-black bg-opacity-50 rounded">
+                  OK
+                </button>
+                <button
+                  onClick={() => setSelectedItem(null)}
+                  className="px-2 py-1 bg-black bg-opacity-50 rounded"
+                >
+                  Cancel
+                </button>
+              </div>
+            </>
+          )}
+          </div>
+        </Modal>
+      </>
+    );
+  }
