@@ -3,10 +3,16 @@
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
-import { useSettings } from '../../../hooks/useSettings';
+import useSettingsBus from '../../../hooks/useSettingsBus';
+import { defaults } from '../../../utils/settingsStore';
 
 export default function BackgroundSlideshow() {
-  const { setWallpaper } = useSettings();
+  const [, setWallpaper] = useSettingsBus(
+    'appearance',
+    'wallpaper',
+    defaults.wallpaper,
+    'bg-image',
+  );
   const [available, setAvailable] = useState<string[]>([]);
   const [selected, setSelected] = usePersistentState<string[]>(
     'bg-slideshow-selected',
