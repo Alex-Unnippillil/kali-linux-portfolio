@@ -68,6 +68,31 @@ html[data-theme='matrix'] {
 
 }
 
+/* Undercover (Windows-like) theme */
+html[data-theme='undercover'] {
+  --color-bg: #f0f0f0;
+  --color-text: #000000;
+  --color-primary: #0078d7;
+  --color-secondary: #f3f3f3;
+  --color-accent: #0078d7;
+  --color-muted: #e5e5e5;
+  --color-surface: #ffffff;
+  --color-inverse: #ffffff;
+  --color-border: #d0d0d0;
+  --color-terminal: #008000;
+  --color-dark: #f0f0f0;
+}
+
+html[data-theme='undercover'] .main-navbar-vp,
+html[data-theme='undercover'] .taskbar {
+  background-color: #e5e5e5;
+  color: #000000;
+}
+
+html[data-theme='undercover'] .taskbar {
+  background-color: #c0c0c0;
+}
+
 ::selection {
   background: var(--color-selection);
   color: var(--color-inverse);
