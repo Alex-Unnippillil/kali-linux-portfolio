@@ -1,29 +1,18 @@
 export const THEME_KEY = 'app:theme';
 
-// Score required to unlock each theme
-export const THEME_UNLOCKS: Record<string, number> = {
-  default: 0,
-  neon: 100,
-  dark: 500,
-  matrix: 1000,
+const resolveAutoTheme = (): string => {
+  const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+  return prefersDark ? 'kali-dark' : 'kali-light';
 };
 
-const DARK_THEMES = ['dark', 'neon', 'matrix'] as const;
-
-export const isDarkTheme = (theme: string): boolean =>
-  DARK_THEMES.includes(theme as (typeof DARK_THEMES)[number]);
+export const isDarkTheme = (theme: string): boolean => theme === 'kali-dark';
 
 export const getTheme = (): string => {
-  if (typeof window === 'undefined') return 'default';
+  if (typeof window === 'undefined') return 'auto';
   try {
-    const stored = window.localStorage.getItem(THEME_KEY);
-    if (stored) return stored;
-    const prefersDark = window.matchMedia?.(
-      '(prefers-color-scheme: dark)'
-    ).matches;
-    return prefersDark ? 'dark' : 'default';
+    return window.localStorage.getItem(THEME_KEY) || 'auto';
   } catch {
-    return 'default';
+    return 'auto';
   }
 };
 
@@ -31,17 +20,19 @@ export const setTheme = (theme: string): void => {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(THEME_KEY, theme);
-    document.documentElement.dataset.theme = theme;
-    document.documentElement.classList.toggle('dark', isDarkTheme(theme));
+    const applied = theme === 'auto' ? resolveAutoTheme() : theme;
+    document.documentElement.dataset.theme = applied;
+    document.documentElement.classList.toggle('dark', isDarkTheme(applied));
   } catch {
     /* ignore storage errors */
   }
 };
 
-export const getUnlockedThemes = (highScore: number): string[] =>
-  Object.entries(THEME_UNLOCKS)
-    .filter(([, score]) => highScore >= score)
-    .map(([theme]) => theme);
+export const getUnlockedThemes = (_highScore?: number): string[] => [
+  'auto',
+  'kali-dark',
+  'kali-light',
+];
 
-export const isThemeUnlocked = (theme: string, highScore: number): boolean =>
-  highScore >= (THEME_UNLOCKS[theme] ?? Infinity);
+export const isThemeUnlocked = (theme: string, _highScore: number): boolean =>
+  getUnlockedThemes().includes(theme);
