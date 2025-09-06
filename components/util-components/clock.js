@@ -1,61 +1,69 @@
-import { Component } from 'react'
+import { useEffect, useRef, useState } from 'react';
+import CalendarPopup from './calendar-popup';
+import { useClickOutside } from '../../hooks/useClickOutside';
 
-export default class Clock extends Component {
-    constructor() {
-        super();
-        this.month_list = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        this.day_list = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-        this.state = {
-            hour_12: true,
-            current_time: null
-        };
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+export default function Clock({ onlyTime, onlyDay }) {
+  const [currentTime, setCurrentTime] = useState(null);
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useClickOutside(ref, () => setOpen(false));
+
+  useEffect(() => {
+    const update = () => setCurrentTime(new Date());
+    update();
+    let worker;
+    let interval;
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
+      worker = new Worker(new URL('../../workers/timer.worker.ts', import.meta.url));
+      worker.onmessage = update;
+      worker.postMessage({ action: 'start', interval: 10 * 1000 });
+    } else {
+      interval = setInterval(update, 10 * 1000);
     }
+    return () => {
+      if (worker) {
+        worker.postMessage({ action: 'stop' });
+        worker.terminate();
+      }
+      if (interval) clearInterval(interval);
+    };
+  }, []);
 
-    componentDidMount() {
-        const update = () => this.setState({ current_time: new Date() });
-        update();
-        if (typeof window !== 'undefined' && typeof Worker === 'function') {
-            this.worker = new Worker(new URL('../../workers/timer.worker.ts', import.meta.url));
-            this.worker.onmessage = update;
-            this.worker.postMessage({ action: 'start', interval: 10 * 1000 });
-        } else {
-            this.update_time = setInterval(update, 10 * 1000);
-        }
-    }
+  if (!currentTime) return <span suppressHydrationWarning></span>;
 
-    componentWillUnmount() {
-        if (this.worker) {
-            this.worker.postMessage({ action: 'stop' });
-            this.worker.terminate();
-        }
-        if (this.update_time) clearInterval(this.update_time);
-    }
+  let day = DAYS[currentTime.getDay()];
+  let hour = currentTime.getHours();
+  let minute = currentTime.getMinutes();
+  let month = MONTHS[currentTime.getMonth()];
+  let date = currentTime.getDate().toLocaleString();
+  let meridiem = hour < 12 ? 'AM' : 'PM';
 
-    render() {
-        const { current_time } = this.state;
-        if (!current_time) return <span suppressHydrationWarning></span>;
+  if (minute.toLocaleString().length === 1) minute = '0' + minute;
+  if (hour > 12) hour -= 12;
 
-        let day = this.day_list[current_time.getDay()];
-        let hour = current_time.getHours();
-        let minute = current_time.getMinutes();
-        let month = this.month_list[current_time.getMonth()];
-        let date = current_time.getDate().toLocaleString();
-        let meridiem = (hour < 12 ? "AM" : "PM");
+  let display;
+  if (onlyTime) {
+    display = `${hour}:${minute} ${meridiem}`;
+  } else if (onlyDay) {
+    display = `${day} ${month} ${date}`;
+  } else {
+    display = `${day} ${month} ${date} ${hour}:${minute} ${meridiem}`;
+  }
 
-        if (minute.toLocaleString().length === 1) {
-            minute = "0" + minute
-        }
-
-        if (this.state.hour_12 && hour > 12) hour -= 12;
-
-        let display_time;
-        if (this.props.onlyTime) {
-            display_time = hour + ":" + minute + " " + meridiem;
-        }
-        else if (this.props.onlyDay) {
-            display_time = day + " " + month + " " + date;
-        }
-        else display_time = day + " " + month + " " + date + " " + hour + ":" + minute + " " + meridiem;
-        return <span suppressHydrationWarning>{display_time}</span>;
-    }
+  return (
+    <div
+      ref={ref}
+      tabIndex={0}
+      onBlur={() => setOpen(false)}
+      className="relative inline-block"
+    >
+      <span suppressHydrationWarning onClick={() => setOpen(!open)}>{display}</span>
+      {open && <CalendarPopup />}
+    </div>
+  );
 }
+
