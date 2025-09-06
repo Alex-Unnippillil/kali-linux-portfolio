@@ -116,6 +116,7 @@ const SSHApp = createDynamicApp('ssh', 'SSH Command Builder');
 const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
 const HtmlRewriteApp = createDynamicApp('html-rewriter', 'HTML Rewriter');
 const ContactApp = createDynamicApp('contact', 'Contact');
+const GigoloApp = createDynamicApp('gigolo', 'Gigolo');
 
 
 
@@ -204,6 +205,7 @@ const displaySSH = createDisplay(SSHApp);
 const displayHTTP = createDisplay(HTTPApp);
 const displayHtmlRewrite = createDisplay(HtmlRewriteApp);
 const displayContact = createDisplay(ContactApp);
+const displayGigolo = createDisplay(GigoloApp);
 
 const displayHashcat = createDisplay(HashcatApp);
 
@@ -904,6 +906,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayGhidra,
+  },
+  {
+    id: 'gigolo',
+    title: 'Gigolo',
+    icon: '/themes/Yaru/apps/ftp.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayGigolo,
   },
   {
     id: 'mimikatz',
