@@ -146,22 +146,6 @@ function MyApp(props) {
       };
     }
 
-    const OriginalNotification = window.Notification;
-    if (OriginalNotification) {
-      const WrappedNotification = function (title, options) {
-        update(`${title}${options?.body ? ' ' + options.body : ''}`);
-        return new OriginalNotification(title, options);
-      };
-      WrappedNotification.requestPermission = OriginalNotification.requestPermission.bind(
-        OriginalNotification,
-      );
-      Object.defineProperty(WrappedNotification, 'permission', {
-        get: () => OriginalNotification.permission,
-      });
-      WrappedNotification.prototype = OriginalNotification.prototype;
-      window.Notification = WrappedNotification;
-    }
-
     return () => {
       window.removeEventListener('copy', handleCopy);
       window.removeEventListener('cut', handleCut);
@@ -170,9 +154,44 @@ function MyApp(props) {
         if (originalWrite) clipboard.writeText = originalWrite;
         if (originalRead) clipboard.readText = originalRead;
       }
-      if (OriginalNotification) {
-        window.Notification = OriginalNotification;
-      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const liveRegion = document.getElementById('live-region');
+    if (!liveRegion) return;
+
+    const update = (message) => {
+      liveRegion.textContent = '';
+      setTimeout(() => {
+        liveRegion.textContent = message;
+      }, 100);
+    };
+
+    const OriginalNotification = window.Notification;
+    if (!OriginalNotification) return;
+
+    const WrappedNotification = function (title, options) {
+      update(`${title}${options?.body ? ' ' + options.body : ''}`);
+      return new OriginalNotification(title, options);
+    };
+
+    WrappedNotification.requestPermission = OriginalNotification.requestPermission.bind(
+      OriginalNotification,
+    );
+
+    Object.defineProperty(WrappedNotification, 'permission', {
+      get: () => OriginalNotification.permission,
+    });
+
+    WrappedNotification.prototype = OriginalNotification.prototype;
+
+    window.Notification = WrappedNotification;
+
+    return () => {
+      window.Notification = OriginalNotification;
     };
   }, []);
 
