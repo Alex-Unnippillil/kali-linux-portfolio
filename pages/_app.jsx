@@ -213,16 +213,20 @@ function MyApp(props) {
               <div aria-live="polite" id="live-region" />
               <Component {...pageProps} />
               <ShortcutOverlay />
-              <Analytics
-                beforeSend={(e) => {
-                  if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-                  const evt = e;
-                  if (evt.metadata?.email) delete evt.metadata.email;
-                  return e;
-                }}
-              />
+              {process.env.VERCEL_ANALYTICS_ID && (
+                <>
+                  <Analytics
+                    beforeSend={(e) => {
+                      if (e.url.includes('/admin') || e.url.includes('/private')) return null;
+                      const evt = e;
+                      if (evt.metadata?.email) delete evt.metadata.email;
+                      return e;
+                    }}
+                  />
 
-              <SpeedInsights />
+                  <SpeedInsights />
+                </>
+              )}
             </PipPortalProvider>
           </TrayProvider>
         </SettingsProvider>
