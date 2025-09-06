@@ -1,9 +1,9 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react';
 import Clipman from '../components/Clipman';
-import { pastePlainText } from '@/src/lib/clipboard';
+import { pastePlainText } from '../src/lib/clipboard';
 
-jest.mock('@/src/lib/clipboard', () => ({
+jest.mock('../src/lib/clipboard', () => ({
   pastePlainText: jest.fn().mockResolvedValue('hello'),
 }));
 

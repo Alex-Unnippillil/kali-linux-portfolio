@@ -2,6 +2,7 @@
 
 import logger from '../utils/logger';
 
+
 function renderProgressBar(completed, total) {
   const percent = total === 0 ? 0 : (completed / total);
   const barLength = 20;

@@ -2,6 +2,7 @@ import { access, mkdir, copyFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import logger from '../utils/logger';
 
+
 const src = 'dist/utils/gamepad.js';
 const destDir = 'public/vendor';
 const dest = `${destDir}/gamepad.js`;

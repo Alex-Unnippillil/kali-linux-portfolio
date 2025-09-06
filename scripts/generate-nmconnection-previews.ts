@@ -3,6 +3,7 @@ import { join, basename } from 'node:path';
 import { toKeyfile, NMConnection } from '../utils/nmconnection.ts';
 import logger from '../utils/logger';
 
+
 const dir = join(process.cwd(), 'data', 'network-connections');
 
 const files = (await readdir(dir)).filter((f) => f.endsWith('.json'));

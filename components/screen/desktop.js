@@ -83,8 +83,8 @@ export class Desktop extends Component {
             }
 
             if (session.windows && session.windows.length) {
-                session.windows.forEach(({ id, x, y }) => {
-                    positions[id] = { x, y };
+                session.windows.forEach(({ id, x, y, snap }) => {
+                    positions[id] = { x, y, snap };
                 });
                 this.setState({ window_positions: positions }, () => {
                     session.windows.forEach(({ id }) => this.openApp(id));
@@ -575,7 +575,8 @@ export class Desktop extends Component {
                     defaultHeight: app.defaultHeight,
                     initialX: pos ? pos.x : undefined,
                     initialY: pos ? pos.y : undefined,
-                    onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
+                    initialSnap: pos ? pos.snap : undefined,
+                    onPositionChange: (x, y, snap) => this.updateWindowPosition(app.id, x, y, snap),
                     snapEnabled: this.props.snapEnabled,
                 }
 
@@ -591,12 +592,15 @@ export class Desktop extends Component {
         return windowsJsx;
     }
 
-    updateWindowPosition = (id, x, y) => {
+    updateWindowPosition = (id, x, y, snapPos = null) => {
         const snap = this.props.snapEnabled
             ? (v) => Math.round(v / 8) * 8
             : (v) => v;
         this.setState(prev => ({
-            window_positions: { ...prev.window_positions, [id]: { x: snap(x), y: snap(y) } }
+            window_positions: {
+                ...prev.window_positions,
+                [id]: { x: snap(x), y: snap(y), snap: snapPos }
+            }
         }), this.saveSession);
     }
 
@@ -606,7 +610,8 @@ export class Desktop extends Component {
         const windows = openWindows.map(id => ({
             id,
             x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
-            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10
+            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10,
+            snap: this.state.window_positions[id] ? this.state.window_positions[id].snap : null,
         }));
         const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
         this.props.setSession({ ...this.props.session, windows, dock });

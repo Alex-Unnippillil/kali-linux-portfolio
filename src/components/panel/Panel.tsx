@@ -17,11 +17,13 @@ interface DraggableProps {
   index: number;
   move: (from: number, to: number) => void;
   innerRef?: (el: HTMLDivElement | null) => void;
+  focused: boolean;
+  onFocus: () => void;
 }
 
 const type = 'PLUGIN_ITEM';
 
-function DraggablePlugin({ plugin, index, move, innerRef }: DraggableProps) {
+function DraggablePlugin({ plugin, index, move, innerRef, focused, onFocus }: DraggableProps) {
   const ref = useRef<HTMLDivElement>(null);
   const { editMode, locked } = usePanelPreferences();
 
@@ -49,7 +51,8 @@ function DraggablePlugin({ plugin, index, move, innerRef }: DraggableProps) {
         ref.current = el;
         innerRef?.(el);
       }}
-      tabIndex={-1}
+      tabIndex={focused ? 0 : -1}
+      onFocus={onFocus}
       className={`flex items-center p-2 border mb-1 bg-black/20 text-white focus:outline focus:outline-2 focus:outline-white ${
         editMode && !locked ? 'cursor-move' : ''
       }`}
@@ -108,31 +111,40 @@ export default function Panel() {
   }, [plugins]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (focusedIndex === -1) return;
     if (['ArrowRight', 'ArrowDown'].includes(e.key)) {
       e.preventDefault();
-      const next = (focusedIndex + 1) % plugins.length;
+      const next =
+        focusedIndex === -1 ? 0 : (focusedIndex + 1) % plugins.length;
       setFocusedIndex(next);
       pluginRefs.current[next]?.focus();
     } else if (['ArrowLeft', 'ArrowUp'].includes(e.key)) {
       e.preventDefault();
-      const prev = (focusedIndex - 1 + plugins.length) % plugins.length;
+      const prev =
+        focusedIndex === -1
+          ? plugins.length - 1
+          : (focusedIndex - 1 + plugins.length) % plugins.length;
       setFocusedIndex(prev);
       pluginRefs.current[prev]?.focus();
-    } else if (e.key === 'Enter') {
+    } else if (e.key === 'Enter' && focusedIndex !== -1) {
       e.preventDefault();
       pluginRefs.current[focusedIndex]?.click();
-    } else if (e.key === 'Escape') {
+    } else if (e.key === 'Escape' && focusedIndex !== -1) {
       e.preventDefault();
       pluginRefs.current[focusedIndex]?.blur();
       setFocusedIndex(-1);
-      panelRef.current?.blur();
+      panelRef.current?.focus();
     }
   };
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div ref={panelRef} onKeyDown={handleKeyDown}>
+      <div
+        ref={panelRef}
+        onKeyDown={handleKeyDown}
+        role="toolbar"
+        aria-label="Panel"
+        tabIndex={0}
+      >
         {plugins.map((p, i) => (
           <DraggablePlugin
             key={p.id}
@@ -140,6 +152,8 @@ export default function Panel() {
             index={i}
             move={move}
             innerRef={(el) => (pluginRefs.current[i] = el)}
+            focused={focusedIndex === i}
+            onFocus={() => setFocusedIndex(i)}
           />
         ))}
       </div>
