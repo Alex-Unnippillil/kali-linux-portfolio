@@ -1,10 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Clock from '../util-components/clock';
-import { useSettings } from '../../hooks/useSettings';
+import useSettingsBus from '../../hooks/useSettingsBus';
+import { defaults } from '../../utils/settingsStore';
 
 export default function LockScreen(props) {
 
-    const { wallpaper } = useSettings();
+    const [wallpaper] = useSettingsBus(
+        'appearance',
+        'wallpaper',
+        defaults.wallpaper,
+        'bg-image',
+    );
     const [password, setPassword] = useState('');
     const inputRef = useRef(null);
 

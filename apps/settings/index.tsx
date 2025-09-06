@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
+import { ACCENT_OPTIONS } from "../../hooks/useSettings";
+import useSettingsBus from "../../hooks/useSettingsBus";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import KernelTab from "./components/KernelTab";
 import {
@@ -17,24 +18,49 @@ import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
 
 export default function Settings() {
-  const {
-    accent,
-    setAccent,
-    wallpaper,
-    setWallpaper,
-    density,
-    setDensity,
-    reducedMotion,
-    setReducedMotion,
-    fontScale,
-    setFontScale,
-    highContrast,
-    setHighContrast,
-    haptics,
-    setHaptics,
-    theme,
-    setTheme,
-  } = useSettings();
+  const [accent, setAccent] = useSettingsBus(
+    "appearance",
+    "accent",
+    defaults.accent,
+    "accent",
+  );
+  const [wallpaper, setWallpaper] = useSettingsBus(
+    "appearance",
+    "wallpaper",
+    defaults.wallpaper,
+    "bg-image",
+  );
+  const [density, setDensity] = useSettingsBus(
+    "ui",
+    "density",
+    defaults.density as any,
+    "density",
+  );
+  const [reducedMotion, setReducedMotion] = useSettingsBus(
+    "ui",
+    "reducedMotion",
+    defaults.reducedMotion,
+    "reduced-motion",
+  );
+  const [fontScale, setFontScale] = useSettingsBus(
+    "ui",
+    "fontScale",
+    defaults.fontScale,
+    "font-scale",
+  );
+  const [highContrast, setHighContrast] = useSettingsBus(
+    "ui",
+    "highContrast",
+    defaults.highContrast,
+    "high-contrast",
+  );
+  const [haptics, setHaptics] = useSettingsBus(
+    "ui",
+    "haptics",
+    defaults.haptics,
+    "haptics",
+  );
+  const [theme, setTheme] = useSettingsBus("ui", "theme", "default");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const panelFileRef = useRef<HTMLInputElement>(null);
 

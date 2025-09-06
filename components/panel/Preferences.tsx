@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Tabs from "../Tabs";
 import ToggleSwitch from "../ToggleSwitch";
 import { PANEL_PROFILES, type PanelProfile } from "./profiles";
+import useSettingsBus from "../../hooks/useSettingsBus";
 
 const PANEL_PREFIX = "xfce.panel.";
 
@@ -26,60 +27,39 @@ export default function Preferences() {
 
   const [active, setActive] = useState<TabId>("display");
 
-  const [profileId, setProfileId] = useState(() => {
-    if (typeof window === "undefined") return PANEL_PROFILES[0].id;
-    return localStorage.getItem(`${PANEL_PREFIX}profile`) ||
-      PANEL_PROFILES[0].id;
-  });
+  const [profileId, setProfileId] = useSettingsBus(
+    "panel",
+    "profile",
+    PANEL_PROFILES[0].id,
+    `${PANEL_PREFIX}profile`,
+  );
 
   const [confirming, setConfirming] = useState<PanelProfile | null>(null);
 
-  const [size, setSize] = useState(() => {
-    if (typeof window === "undefined") return 24;
-    const stored = localStorage.getItem(`${PANEL_PREFIX}size`);
-    return stored ? parseInt(stored, 10) : 24;
-  });
-  const [length, setLength] = useState(() => {
-    if (typeof window === "undefined") return 100;
-    const stored = localStorage.getItem(`${PANEL_PREFIX}length`);
-    return stored ? parseInt(stored, 10) : 100;
-  });
-  const [orientation, setOrientation] = useState<"horizontal" | "vertical">(() => {
-    if (typeof window === "undefined") return "horizontal";
-    return (localStorage.getItem(`${PANEL_PREFIX}orientation`) as
-      | "horizontal"
-      | "vertical"
-      | null) || "horizontal";
-  });
-  const [autohide, setAutohide] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem(`${PANEL_PREFIX}autohide`) === "true";
-  });
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(`${PANEL_PREFIX}size`, String(size));
-  }, [size]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(`${PANEL_PREFIX}length`, String(length));
-  }, [length]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(`${PANEL_PREFIX}orientation`, orientation);
-  }, [orientation]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(`${PANEL_PREFIX}autohide`, autohide ? "true" : "false");
-  }, [autohide]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(`${PANEL_PREFIX}profile`, profileId);
-  }, [profileId]);
+  const [size, setSize] = useSettingsBus(
+    "panel",
+    "size",
+    24,
+    `${PANEL_PREFIX}size`,
+  );
+  const [length, setLength] = useSettingsBus(
+    "panel",
+    "length",
+    100,
+    `${PANEL_PREFIX}length`,
+  );
+  const [orientation, setOrientation] = useSettingsBus<"horizontal" | "vertical">(
+    "panel",
+    "orientation",
+    "horizontal",
+    `${PANEL_PREFIX}orientation`,
+  );
+  const [autohide, setAutohide] = useSettingsBus(
+    "panel",
+    "autohide",
+    false,
+    `${PANEL_PREFIX}autohide`,
+  );
 
   const applyProfile = (profile: PanelProfile) => {
     setOrientation(profile.settings.orientation);
