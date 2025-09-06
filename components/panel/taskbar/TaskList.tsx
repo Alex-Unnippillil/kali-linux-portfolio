@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import usePersistentState from '../../../hooks/usePersistentState';
 
 interface AppDefinition {
   id: string;
@@ -19,6 +20,21 @@ const WINDOW_MIME = 'application/x-window-id';
 
 const TaskList: React.FC<TaskListProps> = ({ apps, onMinimizeWindow }) => {
   const [dragTarget, setDragTarget] = useState<string | null>(null);
+  const [rowSize] = usePersistentState<number>('xfce.panel.size', 24);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [overflow, setOverflow] = useState(false);
+
+  useEffect(() => {
+    const checkOverflow = () => {
+      const el = panelRef.current;
+      if (el) {
+        setOverflow(el.scrollWidth > el.clientWidth);
+      }
+    };
+    checkOverflow();
+    window.addEventListener('resize', checkOverflow);
+    return () => window.removeEventListener('resize', checkOverflow);
+  }, [apps]);
 
   const handleDragOver = useCallback(
     (appId: string) => (e: React.DragEvent) => {
@@ -50,7 +66,11 @@ const TaskList: React.FC<TaskListProps> = ({ apps, onMinimizeWindow }) => {
   );
 
   return (
-    <div className="flex">
+    <div
+      ref={panelRef}
+      className="flex overflow-hidden"
+      style={{ height: rowSize }}
+    >
       {apps.map((app) => (
         <div
           key={app.id}
@@ -59,18 +79,28 @@ const TaskList: React.FC<TaskListProps> = ({ apps, onMinimizeWindow }) => {
           onDragOver={handleDragOver(app.id)}
           onDragLeave={handleDragLeave(app.id)}
           onDrop={handleDrop(app.id)}
-          className={`p-1 transition-outline ${
+          className={`transition-outline flex items-center justify-center ${
             dragTarget === app.id ? 'outline outline-2 outline-blue-500' : ''
           }`}
+          style={{ width: rowSize, height: rowSize }}
         >
           {app.icon ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={app.icon} alt="" className="w-5 h-5" />
+            <img src={app.icon} alt="" className="max-w-full max-h-full" />
           ) : (
             <span>{app.title}</span>
           )}
         </div>
       ))}
+      {overflow && (
+        <div
+          className="flex items-center justify-center"
+          style={{ width: rowSize, height: rowSize }}
+          aria-hidden="true"
+        >
+          ⌄
+        </div>
+      )}
     </div>
   );
 };
