@@ -81,7 +81,7 @@ export const DesktopContextMenu: React.FC<DesktopContextMenuProps> = ({
         <li>
           <button
             type="button"
-            className="block w-full px-4 py-1 text-left hover:bg-gray-700"
+            className="block w-full px-4 py-1 text-left hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]"
             onClick={handle(onNewFolder)}
           >
             New Folder
@@ -90,7 +90,7 @@ export const DesktopContextMenu: React.FC<DesktopContextMenuProps> = ({
         <li>
           <button
             type="button"
-            className="block w-full px-4 py-1 text-left hover:bg-gray-700"
+            className="block w-full px-4 py-1 text-left hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]"
             onClick={handle(onCreateShortcut)}
           >
             Create Shortcut...
@@ -100,7 +100,7 @@ export const DesktopContextMenu: React.FC<DesktopContextMenuProps> = ({
         <li>
           <button
             type="button"
-            className="block w-full px-4 py-1 text-left hover:bg-gray-700"
+            className="block w-full px-4 py-1 text-left hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]"
             onClick={handle(onArrange)}
           >
             Arrange Icons
@@ -110,7 +110,7 @@ export const DesktopContextMenu: React.FC<DesktopContextMenuProps> = ({
         <li>
           <button
             type="button"
-            className="block w-full px-4 py-1 text-left hover:bg-gray-700"
+            className="block w-full px-4 py-1 text-left hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]"
             onClick={handle(onOpenTerminal)}
           >
             Open in Terminal
@@ -119,7 +119,7 @@ export const DesktopContextMenu: React.FC<DesktopContextMenuProps> = ({
         <li>
           <button
             type="button"
-            className="block w-full px-4 py-1 text-left hover:bg-gray-700"
+            className="block w-full px-4 py-1 text-left hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]"
             onClick={handle(onChangeBackground)}
           >
             Change Background...
@@ -128,7 +128,7 @@ export const DesktopContextMenu: React.FC<DesktopContextMenuProps> = ({
         <li>
           <button
             type="button"
-            className="block w-full px-4 py-1 text-left hover:bg-gray-700"
+            className="block w-full px-4 py-1 text-left hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]"
             onClick={handle(onOpenSettings)}
           >
             Settings
@@ -137,7 +137,7 @@ export const DesktopContextMenu: React.FC<DesktopContextMenuProps> = ({
         <li>
           <button
             type="button"
-            className="block w-full px-4 py-1 text-left hover:bg-gray-700"
+            className="block w-full px-4 py-1 text-left hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]"
             onClick={handle(onToggleFullScreen)}
           >
             Toggle Full Screen
@@ -147,7 +147,7 @@ export const DesktopContextMenu: React.FC<DesktopContextMenuProps> = ({
         <li>
           <button
             type="button"
-            className="block w-full px-4 py-1 text-left hover:bg-gray-700"
+            className="block w-full px-4 py-1 text-left hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]"
             onClick={handle(onClearSession)}
           >
             Clear Session
