@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import FormError from "../../ui/FormError";
+import FormError from "@/components/ui/FormError";
 
 interface DeviceInfo {
   address: string;
