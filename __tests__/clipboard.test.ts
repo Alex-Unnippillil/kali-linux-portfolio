@@ -1,4 +1,4 @@
-import { stripFormatting } from '@/src/lib/clipboard';
+import { stripFormatting } from '../src/lib/clipboard';
 
 describe('stripFormatting', () => {
   it('removes HTML tags', () => {
