@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import usePersistentState from '../../hooks/usePersistentState';
+import { isBrowser } from '../../utils/env';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 
 export function Settings() {
@@ -45,6 +46,7 @@ export function Settings() {
     }, []);
 
     useEffect(() => {
+        if (!isBrowser) return;
         const tab = window.localStorage.getItem('settings-open-tab');
         if (tab === 'power') {
             document.getElementById('power-section')?.scrollIntoView();
