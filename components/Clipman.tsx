@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { pastePlainText } from '@/src/lib/clipboard';
+import { pastePlainText } from '../src/lib/clipboard';
 
 interface MenuState {
   x: number;

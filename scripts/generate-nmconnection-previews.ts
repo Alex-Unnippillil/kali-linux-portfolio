@@ -1,7 +1,8 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join, basename } from 'node:path';
 import { toKeyfile, NMConnection } from '../utils/nmconnection.ts';
-import logger from '../utils/logger.js';
+import logger from '../utils/logger';
+
 
 const dir = join(process.cwd(), 'data', 'network-connections');
 

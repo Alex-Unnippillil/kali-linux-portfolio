@@ -1,6 +1,6 @@
 'use client';
 
-import { useWorkspaceMargins } from '@/src/state/workspace';
+import { useWorkspaceMargins } from '../../../src/state/workspace';
 
 export default function WindowManagerTweaks() {
   const [margins, setMargins] = useWorkspaceMargins();

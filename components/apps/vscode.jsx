@@ -5,7 +5,16 @@ import dynamic from 'next/dynamic';
 import apps from '../../apps.config';
 
 // Load the actual VSCode app lazily so no editor dependencies are required
-const VsCode = dynamic(() => import('../../apps/vscode'), { ssr: false });
+const VsCode = dynamic(
+  () =>
+    import(
+      /* webpackChunkName: "app-vscode" */ '../../apps/vscode'
+    ),
+  {
+    ssr: false,
+    loading: () => <p>Loading VSCode...</p>,
+  },
+);
 
 // Simple fuzzy match: returns true if query characters appear in order
 function fuzzyMatch(text, query) {

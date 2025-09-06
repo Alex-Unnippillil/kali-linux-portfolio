@@ -2,7 +2,8 @@
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { parsePotfile } from '../components/apps/john/utils.js';
-import logger from '../utils/logger.js';
+import logger from '../utils/logger';
+
 
 function main() {
   const [filePath, filter = ''] = process.argv.slice(2);
