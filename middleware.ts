@@ -1,4 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import {
+  scriptSrcHosts,
+  connectSrcHosts,
+  frameSrcHosts,
+} from './lib/csp';
 
 function nonce() {
   const arr = new Uint8Array(16);
@@ -13,9 +18,9 @@ export function middleware(req: NextRequest) {
     "img-src 'self' https: data:",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
-    `script-src 'self' 'unsafe-inline' 'nonce-${n}' https://vercel.live https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com`,
-    "connect-src 'self' https://cdn.syndication.twimg.com https://*.twitter.com https://stackblitz.com",
-    "frame-src 'self' https://vercel.live https://stackblitz.com https://ghbtns.com https://platform.twitter.com https://open.spotify.com https://todoist.com https://www.youtube.com https://www.youtube-nocookie.com",
+    `script-src 'self' 'unsafe-inline' 'nonce-${n}' ${scriptSrcHosts.join(' ')}`,
+    `connect-src 'self' ${connectSrcHosts.join(' ')}`,
+    `frame-src 'self' ${frameSrcHosts.join(' ')}`,
     "frame-ancestors 'self'",
     "object-src 'none'",
     "base-uri 'self'",
