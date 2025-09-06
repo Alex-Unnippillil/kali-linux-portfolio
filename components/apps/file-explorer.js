@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import ContextMenu from '../common/ContextMenu';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -91,7 +92,7 @@ async function addRecentDir(handle) {
   } catch {}
 }
 
-export default function FileExplorer() {
+export default function FileExplorer({ openApp }) {
   const [supported, setSupported] = useState(true);
   const [dirHandle, setDirHandle] = useState(null);
   const [files, setFiles] = useState([]);
@@ -104,6 +105,7 @@ export default function FileExplorer() {
   const [results, setResults] = useState([]);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
+  const containerRef = useRef(null);
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -257,6 +259,12 @@ export default function FileExplorer() {
     }
   };
 
+  const openTerminalHere = () => {
+    const currentPath = '/' + path.slice(1).map(p => p.name).join('/');
+    window.__terminal_cwd = currentPath;
+    openApp && openApp('terminal');
+  };
+
   useEffect(() => () => workerRef.current?.terminate(), []);
 
   if (!supported) {
@@ -296,7 +304,7 @@ export default function FileExplorer() {
   }
 
   return (
-    <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
+    <div ref={containerRef} className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
       <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
         <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
           Open Folder
@@ -370,6 +378,10 @@ export default function FileExplorer() {
           </div>
         </div>
       </div>
+      <ContextMenu
+        targetRef={containerRef}
+        items={[{ label: 'Open in Terminal', onSelect: openTerminalHere }]}
+      />
     </div>
   );
 }
