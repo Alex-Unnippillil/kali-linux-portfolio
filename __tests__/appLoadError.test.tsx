@@ -30,7 +30,10 @@ describe("createDynamicApp", () => {
     );
     expect(screen.getByText("Shell Ready")).toBeInTheDocument();
     expect(
-      await screen.findByText("Unable to load Missing App"),
+      await screen.findByText(/Unable to load Missing App/),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: /retry/i }),
     ).toBeInTheDocument();
   });
 });
