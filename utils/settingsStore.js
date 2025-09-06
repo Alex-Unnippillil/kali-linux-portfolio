@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  avatar: '',
 };
 
 export async function getAccent() {
@@ -128,6 +129,7 @@ export async function resetSettings() {
   await Promise.all([
     del('accent'),
     del('bg-image'),
+    del('avatar'),
   ]);
   window.localStorage.removeItem('density');
   window.localStorage.removeItem('reduced-motion');
@@ -151,6 +153,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    avatar,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +165,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getAvatar(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +179,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    avatar,
     theme,
   });
 }
@@ -199,6 +204,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    avatar,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,7 +217,18 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (avatar !== undefined) await setAvatar(avatar);
   if (theme !== undefined) setTheme(theme);
 }
 
 export const defaults = DEFAULT_SETTINGS;
+
+export async function getAvatar() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.avatar;
+  return (await get('avatar')) || DEFAULT_SETTINGS.avatar;
+}
+
+export async function setAvatar(avatar) {
+  if (typeof window === 'undefined') return;
+  await set('avatar', avatar);
+}
