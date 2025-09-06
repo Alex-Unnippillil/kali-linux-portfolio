@@ -1,4 +1,4 @@
-import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
+import { createDynamicAppWithRetry as createDynamicApp, createDisplay } from './utils/createDynamicApp';
 
 import { displayX } from './components/apps/x';
 import { displaySpotify } from './components/apps/spotify';
