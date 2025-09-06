@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
+import AdvancedTab from "./components/AdvancedTab";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import KernelTab from "./components/KernelTab";
 import {
@@ -43,6 +44,7 @@ export default function Settings() {
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
     { id: "kernel", label: "Kernel" },
+    { id: "advanced", label: "Advanced" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
@@ -327,6 +329,7 @@ export default function Settings() {
         </>
       )}
       {activeTab === "kernel" && <KernelTab />}
+      {activeTab === "advanced" && <AdvancedTab />}
         <input
           type="file"
           accept="application/json"
