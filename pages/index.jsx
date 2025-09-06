@@ -1,29 +1,29 @@
-import dynamic from 'next/dynamic';
-import Meta from '../components/SEO/Meta';
-import BetaBadge from '../components/BetaBadge';
-import useSession from '../hooks/useSession';
+import dynamic from "next/dynamic";
+import Meta from "../components/SEO/Meta";
+import BetaBadge from "../components/BetaBadge";
+import useSession from "../hooks/useSession";
 
 const Ubuntu = dynamic(
   () =>
-    import('../components/ubuntu').catch((err) => {
-      console.error('Failed to load Ubuntu component', err);
+    import("../components/screen/ubuntu").catch((err) => {
+      console.error("Failed to load Ubuntu component", err);
       throw err;
     }),
   {
     ssr: false,
     loading: () => <p>Loading Ubuntu...</p>,
-  }
+  },
 );
 const InstallButton = dynamic(
   () =>
-    import('../components/InstallButton').catch((err) => {
-      console.error('Failed to load InstallButton component', err);
+    import("../components/InstallButton").catch((err) => {
+      console.error("Failed to load InstallButton component", err);
       throw err;
     }),
   {
     ssr: false,
     loading: () => <p>Loading install options...</p>,
-  }
+  },
 );
 
 /**
@@ -37,7 +37,11 @@ const App = () => {
         Skip to content
       </a>
       <Meta />
-      <Ubuntu session={session} setSession={setSession} resetSession={resetSession} />
+      <Ubuntu
+        session={session}
+        setSession={setSession}
+        resetSession={resetSession}
+      />
       <BetaBadge />
       <InstallButton />
     </>
