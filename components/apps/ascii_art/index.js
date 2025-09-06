@@ -233,11 +233,19 @@ export default function AsciiArt() {
       const file = e.target.files[0];
       if (!file || !file.type.startsWith('image/')) return;
       fileRef.current = file;
-      setImgSrc(URL.createObjectURL(file));
+      if (imgSrc) URL.revokeObjectURL(imgSrc);
+      const url = URL.createObjectURL(file);
+      setImgSrc(url);
       processFile();
     },
-    [processFile],
+    [imgSrc, processFile],
   );
+
+  useEffect(() => {
+    return () => {
+      if (imgSrc) URL.revokeObjectURL(imgSrc);
+    };
+  }, [imgSrc]);
 
   useEffect(() => {
     processFile();
