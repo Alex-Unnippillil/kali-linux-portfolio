@@ -77,3 +77,11 @@ html[data-theme='matrix'] {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
+
+#desktop [data-context="app"] {
+  transition: opacity 0.3s ease-in-out;
+}
+
+#desktop [data-context="app"].icon-refresh {
+  opacity: 0;
+}
