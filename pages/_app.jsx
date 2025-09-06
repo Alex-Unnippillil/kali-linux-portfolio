@@ -152,6 +152,7 @@ function MyApp(props) {
       <div className={ubuntu.className}>
         <a
           href="#app-grid"
+          tabIndex={-1}
           className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"
         >
           Skip to app grid

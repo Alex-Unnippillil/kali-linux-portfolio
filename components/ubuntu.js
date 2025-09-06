@@ -113,22 +113,32 @@ export default class Ubuntu extends Component {
                 safeLocalStorage?.setItem('shut-down', false);
 	};
 
-	render() {
-		return (
-			<div className="w-screen h-screen overflow-hidden" id="monitor-screen">
-				<LockScreen
-					isLocked={this.state.screen_locked}
-					bgImgName={this.state.bg_image_name}
-					unLockScreen={this.unLockScreen}
-				/>
-				<BootingScreen
-					visible={this.state.booting_screen}
-					isShutDown={this.state.shutDownScreen}
-					turnOn={this.turnOn}
-				/>
-				<Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
-				<Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
-			</div>
-		);
-	}
+        render() {
+                const screenInactive = this.state.screen_locked || this.state.booting_screen || this.state.shutDownScreen;
+                return (
+                        <div className="w-screen h-screen overflow-hidden" id="monitor-screen">
+                                <LockScreen
+                                        isLocked={this.state.screen_locked}
+                                        bgImgName={this.state.bg_image_name}
+                                        unLockScreen={this.unLockScreen}
+                                />
+                                <BootingScreen
+                                        visible={this.state.booting_screen}
+                                        isShutDown={this.state.shutDownScreen}
+                                        turnOn={this.turnOn}
+                                />
+                                <div
+                                        aria-hidden={screenInactive}
+                                        tabIndex={screenInactive ? -1 : undefined}
+                                        inert={screenInactive || undefined}
+                                >
+                                        <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
+                                        <Desktop
+                                                bg_image_name={this.state.bg_image_name}
+                                                changeBackgroundImage={this.changeBackgroundImage}
+                                        />
+                                </div>
+                        </div>
+                );
+        }
 }
