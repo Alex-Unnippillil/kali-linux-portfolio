@@ -5,9 +5,10 @@ export interface Shortcut {
   keys: string;
 }
 
-const DEFAULT_SHORTCUTS: Shortcut[] = [
+export const DEFAULT_SHORTCUTS: Shortcut[] = [
   { description: 'Show keyboard shortcuts', keys: '?' },
   { description: 'Open settings', keys: 'Ctrl+,' },
+  { description: 'Application Finder', keys: 'Alt+F2' },
 ];
 
 const validator = (value: unknown): value is Record<string, string> => {
@@ -41,8 +42,14 @@ export function useKeymap() {
     keys: map[description] || keys,
   }));
 
-  const updateShortcut = (description: string, keys: string) =>
+  const updateShortcut = (description: string, keys: string) => {
     setMap({ ...map, [description]: keys });
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('keymap-change', { detail: { description, keys } })
+      );
+    }
+  };
 
   return { shortcuts, updateShortcut };
 }
