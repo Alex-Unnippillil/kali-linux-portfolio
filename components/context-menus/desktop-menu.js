@@ -14,6 +14,9 @@ function DesktopMenu(props) {
 
 
     const openTerminal = () => {
+        if (typeof window !== 'undefined') {
+            window.__TERMINAL_CWD = props.cwd || '~';
+        }
         props.openApp("terminal");
     }
 

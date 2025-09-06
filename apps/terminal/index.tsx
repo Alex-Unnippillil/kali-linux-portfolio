@@ -104,6 +104,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
+  const cwdRef = useRef<string>((window as any).__TERMINAL_CWD || '~');
+  if (typeof window !== 'undefined') delete (window as any).__TERMINAL_CWD;
   const [overflow, setOverflow] = useState({ top: false, bottom: false });
   const ansiColors = [
     '#000000',
@@ -146,7 +148,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   contextRef.current.writeLine = writeLine;
 
   const prompt = useCallback(() => {
-    if (termRef.current) termRef.current.write('$ ');
+    if (termRef.current) termRef.current.write(`${cwdRef.current} $ `);
   }, []);
 
   const handleCopy = () => {
@@ -234,6 +236,10 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     const runCommand = useCallback(
       async (cmd: string) => {
         const [name, ...rest] = cmd.trim().split(/\s+/);
+        if (name === 'cd') {
+          cwdRef.current = rest[0] || '~';
+          return;
+        }
         const expanded =
           aliasesRef.current[name]
             ? `${aliasesRef.current[name]} ${rest.join(' ')}`.trim()
