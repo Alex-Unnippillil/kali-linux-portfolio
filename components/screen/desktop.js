@@ -23,8 +23,11 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import RemovableDeviceIcon from './removable-device';
+import { NotificationsContext } from '../common/NotificationCenter';
 
 export class Desktop extends Component {
+    static contextType = NotificationsContext;
     constructor() {
         super();
         this.app_stack = [];
@@ -52,6 +55,7 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            mounted: false,
         }
     }
 
@@ -142,6 +146,16 @@ export class Desktop extends Component {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
         document.removeEventListener('keydown', this.handleContextKey);
+    }
+
+    mountDevice = () => {
+        this.setState({ mounted: true });
+        this.context?.pushNotification?.('System', 'Device mounted');
+    }
+
+    unmountDevice = () => {
+        this.setState({ mounted: false });
+        this.context?.pushNotification?.('System', 'Device unmounted');
     }
 
     handleGlobalShortcut = (e) => {
@@ -449,6 +463,9 @@ export class Desktop extends Component {
                 );
             }
         });
+        if (this.state.mounted) {
+            appsJsx.push(<RemovableDeviceIcon key="removable-device" />);
+        }
         return appsJsx;
     }
 
@@ -896,6 +913,10 @@ export class Desktop extends Component {
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                    mounted={this.state.mounted}
+                    mountDevice={this.mountDevice}
+                    unmountDevice={this.unmountDevice}
+                    onClose={this.hideAllContextMenu}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
                 <AppMenu
