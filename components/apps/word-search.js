@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import seedrandom from "seedrandom";
 import useOPFS from "../../hooks/useOPFS.js";
+import usePersistentState from "../../hooks/usePersistentState";
 
 // Approximate pixel size of each grid cell for SVG overlay calculations
 const CELL_SIZE = 32;
@@ -63,30 +64,6 @@ const DIFFICULTIES = {
   easy: { size: 10, count: 5 },
   medium: { size: 12, count: 8 },
   hard: { size: 15, count: 10 },
-};
-
-const usePersistentState = (key, initial) => {
-  const [state, setState] = useState(() => {
-    if (typeof window !== "undefined") {
-      const stored = window.localStorage.getItem(key);
-      if (stored) {
-        try {
-          return JSON.parse(stored);
-        } catch {
-          // ignore parse errors
-        }
-      }
-    }
-    return typeof initial === "function" ? initial() : initial;
-  });
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(key, JSON.stringify(state));
-    }
-  }, [key, state]);
-
-  return [state, setState];
 };
 
 const pickWords = (count, list, rng, lists, language) => {
