@@ -38,9 +38,33 @@ class AllApplications extends React.Component {
         }
     };
 
+    renderRecentApps = () => {
+        const ids = this.props.recentApps || [];
+        const { unfilteredApps } = this.state;
+        const recent = ids
+            .map((id) => unfilteredApps.find((app) => app.id === id))
+            .filter(Boolean);
+        return recent.map((app) => (
+            <UbuntuApp
+                key={`recent-${app.id}`}
+                name={app.title}
+                id={app.id}
+                icon={app.icon}
+                openApp={() => this.openApp(app.id)}
+                disabled={app.disabled}
+                prefetch={app.screen?.prefetch}
+            />
+        ));
+    };
+
     renderApps = () => {
         const apps = this.state.apps || [];
-        return apps.map((app) => (
+        const exclude = new Set(this.props.recentApps || []);
+        const filtered =
+            this.state.query === ''
+                ? apps.filter((app) => !exclude.has(app.id))
+                : apps;
+        return filtered.map((app) => (
             <UbuntuApp
                 key={app.id}
                 name={app.title}
@@ -62,6 +86,14 @@ class AllApplications extends React.Component {
                     value={this.state.query}
                     onChange={this.handleChange}
                 />
+                {!this.state.query && this.props.recentApps && this.props.recentApps.length ? (
+                    <>
+                        <h2 className="mb-4 text-white">Recently Used</h2>
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 mb-8 place-items-center">
+                            {this.renderRecentApps()}
+                        </div>
+                    </>
+                ) : null}
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 pb-10 place-items-center">
                     {this.renderApps()}
                 </div>
