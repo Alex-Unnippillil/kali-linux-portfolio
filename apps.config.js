@@ -93,6 +93,7 @@ const NetworkManagerApp = createDynamicApp('network-manager', 'Network Manager')
 
 const AutopsyApp = createDynamicApp('autopsy', 'Autopsy');
 const PluginManagerApp = createDynamicApp('plugin-manager', 'Plugin Manager');
+const PanelProfilesApp = createDynamicApp('panel-profiles', 'Panel Profiles');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
@@ -180,6 +181,7 @@ const displayBrasero = createDisplay(BraseroApp);
 
 const displayAutopsy = createDisplay(AutopsyApp);
 const displayPluginManager = createDisplay(PluginManagerApp);
+const displayPanelProfiles = createDisplay(PanelProfilesApp);
 
 const displayNetworkConnections = createDisplay(NetworkConnectionsApp);
 const displayBleSensor = createDisplay(BleSensorApp);
@@ -885,17 +887,26 @@ const apps = [
     desktop_shortcut: false,
     screen: displayAutopsy,
   },
-  {
-    id: 'plugin-manager',
-    title: 'Plugin Manager',
-    icon: '/themes/Yaru/apps/project-gallery.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayPluginManager,
-  },
-  {    id: 'reaver',
-    title: 'Reaver',
+    {
+      id: 'plugin-manager',
+      title: 'Plugin Manager',
+      icon: '/themes/Yaru/apps/project-gallery.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayPluginManager,
+    },
+    {
+      id: 'panel-profiles',
+      title: 'Panel Profiles',
+      icon: '/themes/Yaru/apps/project-gallery.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayPanelProfiles,
+    },
+    {    id: 'reaver',
+      title: 'Reaver',
     icon: '/themes/Yaru/apps/reaver.svg',
     disabled: false,
     favourite: false,
