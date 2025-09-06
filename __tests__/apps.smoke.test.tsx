@@ -38,7 +38,10 @@ beforeAll(() => {
 
   // mock fetch for components that request external resources
   (global as any).fetch = jest.fn(() =>
-    Promise.resolve({ json: () => Promise.resolve({}) })
+    Promise.resolve({
+      json: () => Promise.resolve({}),
+      headers: { get: () => '0' },
+    }),
   );
 
   // basic Worker mock for components using web workers

@@ -1011,15 +1011,19 @@ const apps = [
     desktop_shortcut: false,
     screen: displayHtmlRewrite,
   },
-  {
-    id: 'contact',
-    title: 'Contact',
-    icon: '/themes/Yaru/apps/project-gallery.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayContact,
-  },
+  ...(process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+    ? [
+        {
+          id: 'contact',
+          title: 'Contact',
+          icon: '/themes/Yaru/apps/project-gallery.svg',
+          disabled: false,
+          favourite: false,
+          desktop_shortcut: false,
+          screen: displayContact,
+        },
+      ]
+    : []),
   {
     id: 'hydra',
     title: 'Hydra',

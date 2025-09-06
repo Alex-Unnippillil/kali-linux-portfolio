@@ -5,7 +5,8 @@
   "homepage": "https://unnippillil.com/",
   "scripts": {
     "build:gamepad": "tsc -p tsconfig.gamepad.json",
-    "prebuild": "tsc -p tsconfig.gamepad.json",
+    "typegen": "next typegen",
+    "prebuild": "rm -rf .next && yarn typegen && yarn build:gamepad",
     "dev": "next dev",
     "build": "next build",
     "postbuild": "node --import tsx/esm scripts/safe-copy.mjs",
@@ -20,12 +21,13 @@
     "smoke": "node --import tsx/esm scripts/smoke-all-apps.mjs",
     "module-report": "node --import tsx/esm scripts/generate-module-report.mjs",
     "analyze": "ANALYZE=true yarn build",
+    "check-budgets": "node scripts/check-bundle-budgets.mjs",
     "preinstall": "corepack enable && corepack prepare yarn@4.9.2 --activate",
     "verify:all": "node --import tsx/esm scripts/verify.mjs",
     "validate:apps": "node --import tsx/esm scripts/validate-apps.mjs"
   },
   "engines": {
-    "node": "20.x"
+    "node": "20.x || 22.x"
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
@@ -130,6 +132,7 @@
     "@types/react-dom": "19.1.9",
     "@types/react-transition-group": "^4",
     "@types/seedrandom": "^3",
+    "@types/supertest": "^6",
     "@types/three": "^0.179.0",
     "@types/web-bluetooth": "^0.0.21",
     "@types/wicg-file-system-access": "^2023.10.6",
@@ -143,6 +146,7 @@
     "node-mocks-http": "1.17.2",
     "pa11y": "^9.0.0",
     "playwright-core": "^1.55.0",
+    "supertest": "^6.3.3",
     "test-exclude": "7.0.1",
     "tsx": "^4.20.5",
     "typescript": "5.8.2",

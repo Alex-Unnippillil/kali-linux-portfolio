@@ -17,13 +17,15 @@ jest.mock('../src/components/panel/PanelPreferences', () => ({
 
 describe('panel keyboard navigation', () => {
   it('focuses and navigates plugins via keyboard', () => {
-    const { getByText } = render(<Panel />);
+    const { getByRole, getByText } = render(<Panel />);
+    const panel = getByRole('toolbar', { name: 'Panel' });
     const first = getByText('Plugin A');
     const second = getByText('Plugin B');
     const clickSpy = jest.fn();
     first.addEventListener('click', clickSpy);
 
-    fireEvent.keyDown(window, { key: 'Tab', altKey: true, ctrlKey: true });
+    panel.focus();
+    fireEvent.keyDown(panel, { key: 'ArrowRight' });
     expect(document.activeElement).toBe(first);
 
     fireEvent.keyDown(first, { key: 'ArrowRight' });
@@ -36,6 +38,6 @@ describe('panel keyboard navigation', () => {
     expect(clickSpy).toHaveBeenCalled();
 
     fireEvent.keyDown(first, { key: 'Escape' });
-    expect(document.activeElement).not.toBe(first);
+    expect(document.activeElement).toBe(panel);
   });
 });

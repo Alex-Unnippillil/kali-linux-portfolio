@@ -3,12 +3,12 @@
 import { ChangeEvent, useEffect, useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import { useSettings } from '../../../hooks/useSettings';
-import PanelProfilesDialog from '@/src/components/panel/PanelProfilesDialog';
+import PanelProfilesDialog from '../../../src/components/panel/PanelProfilesDialog';
 import {
   DEFAULT_PANEL_LAYOUT,
   PANEL_LAYOUT_KEY,
   PanelLayout,
-} from '@/src/components/panel/types';
+} from '../../../src/components/panel/types';
 
 /** Simple Adwaita-like toggle switch */
 function Toggle({

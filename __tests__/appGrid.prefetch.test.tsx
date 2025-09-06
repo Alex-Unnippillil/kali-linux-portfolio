@@ -42,6 +42,13 @@ import AppGrid from '../components/apps/app-grid';
 
 beforeEach(() => {
   prefetch.mockClear();
+  // Mock fetch HEAD requests for prefetch size checks
+  global.fetch = jest.fn(() =>
+    Promise.resolve({
+      ok: true,
+      headers: { get: () => '1000' },
+    }) as any,
+  );
   global.IntersectionObserver = class {
     constructor(cb) {
       this.cb = cb;
@@ -55,11 +62,11 @@ beforeEach(() => {
   } as any;
 });
 
-test('prefetches when grid item becomes visible', () => {
+test('prefetches when grid item becomes visible', async () => {
   jest.useFakeTimers();
   render(<AppGrid openApp={() => {}} />);
   expect(prefetch).not.toHaveBeenCalled();
-  jest.runAllTimers();
+  await jest.runAllTimersAsync();
   expect(prefetch).toHaveBeenCalledTimes(1);
   jest.useRealTimers();
 });

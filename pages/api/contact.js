@@ -8,14 +8,17 @@ const RATE_LIMIT_MAX = 5;
 export const RATE_LIMIT_COOKIE = 'contactBackoff';
 
 export default async function handler(req, res) {
-  const missingRecaptcha = !process.env.RECAPTCHA_SECRET;
+  const missingRecaptchaSecret = !process.env.RECAPTCHA_SECRET;
+  const missingRecaptchaSiteKey = !process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
   const missingSupabase =
     !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY;
   const missingRateLimit = !process.env.RATE_LIMIT_SECRET;
 
   if (missingRecaptcha || missingSupabase || missingRateLimit) {
+
     console.warn('Contact API running in demo mode', {
-      missingRecaptcha,
+      missingRecaptchaSecret,
+      missingRecaptchaSiteKey,
       missingSupabase,
       missingRateLimit,
     });
