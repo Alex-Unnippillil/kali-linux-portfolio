@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/router';
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
 
@@ -12,6 +13,15 @@ interface HelpPanelProps {
 export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
   const [open, setOpen] = useState(false);
   const [html, setHtml] = useState("<p>Loading...</p>");
+  const router = useRouter();
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  const scrollToHash = () => {
+    const hash = window.location.hash.slice(1);
+    if (!hash) return;
+    const el = contentRef.current?.querySelector(`#${hash}`) as HTMLElement | null;
+    el?.scrollIntoView();
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -23,11 +33,29 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
           setHtml("<p>No help available.</p>");
           return;
         }
-        const rendered = DOMPurify.sanitize(marked.parse(md) as string);
+        const rendered = DOMPurify.sanitize(marked.parse(md) as string, {
+          ADD_ATTR: ['id'],
+        });
         setHtml(rendered);
       })
       .catch(() => setHtml("<p>No help available.</p>"));
   }, [open, appId, docPath]);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      if (window.location.hash) {
+        setOpen(true);
+        setTimeout(scrollToHash, 0);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    handleHashChange();
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  useEffect(() => {
+    if (open) scrollToHash();
+  }, [open, html]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -46,7 +74,13 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  const toggle = () => setOpen((o) => !o);
+  const toggle = () =>
+    setOpen((o) => {
+      if (o && router.asPath.includes('#')) {
+        router.replace(router.asPath.split('#')[0], undefined, { shallow: true });
+      }
+      return !o;
+    });
 
   return (
     <>
@@ -67,6 +101,7 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
           <div
             className="bg-white text-black p-4 rounded max-w-md w-full h-full overflow-auto"
             onClick={(e) => e.stopPropagation()}
+            ref={contentRef}
           >
             <div dangerouslySetInnerHTML={{ __html: html }} />
           </div>
