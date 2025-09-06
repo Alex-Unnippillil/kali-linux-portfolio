@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import keybindingManager from './keybindingManager';
+import Icon from '@/components/common/Icon';
 
 export interface WindowInfo {
   id: string;
@@ -80,12 +81,14 @@ export default function WindowSwitcher({ windows, onSelect }: Props) {
               textAlign: 'center',
             }}
           >
-            <img src={win.icon} alt="" style={{ width: '32px', height: '32px' }} />
+            <Icon src={win.icon} alt="" width={32} height={32} />
             <div>{win.title}</div>
             {win.preview && (
               <img
                 src={win.preview}
                 alt="preview"
+                width={200}
+                height={112}
                 style={{ width: '100%', marginTop: '0.5rem' }}
               />
             )}

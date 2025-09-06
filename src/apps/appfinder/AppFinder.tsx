@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Icon from '@/components/common/Icon';
 
 // Representation of a parsed .desktop entry
 export interface DesktopEntry {
@@ -169,12 +170,13 @@ export default function AppFinder() {
       {expanded && (
         <div className="finder-panel">
           <form onSubmit={handleSubmit} className="search">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search or enter command"
-              autoFocus
-            />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search or enter command"
+                aria-label="Search or enter command"
+                autoFocus
+              />
           </form>
 
           {apps.length > 0 && (
@@ -188,7 +190,7 @@ export default function AppFinder() {
                     }}
                   >
                     {app.icon && (
-                      <img src={app.icon} alt="" className="icon" />
+                      <Icon src={app.icon} alt="" size={16} className="icon" />
                     )}
                     {app.name}
                   </button>

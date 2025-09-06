@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, useEffect, useState } from "react";
+import Icon from "@/components/common/Icon";
 import DOMPurify from "dompurify";
 import { XMLParser } from "fast-xml-parser";
 
@@ -108,7 +109,7 @@ export default function GenMon({ code, interval = 60 }: GenMonProps) {
 
   return (
     <div className="flex items-center gap-2">
-      {icon && <img src={icon} alt="" className="w-4 h-4" />}
+      {icon && <Icon src={icon} alt="" size={16} className="w-4 h-4" />}
       {text && <span>{text}</span>}
       {bar !== null && (
         <div className="w-16 h-2 bg-gray-700 rounded overflow-hidden">

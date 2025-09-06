@@ -93,6 +93,8 @@ const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
                 alt={win.title}
                 draggable
                 onDragStart={handleDragStart(win.id)}
+                width={64}
+                height={48}
                 className="w-16 h-12 object-cover rounded"
               />
             ))}
