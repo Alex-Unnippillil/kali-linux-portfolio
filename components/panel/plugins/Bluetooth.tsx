@@ -40,7 +40,7 @@ export default function Bluetooth() {
 
   return (
     <div className="relative">
-      <button onClick={() => setOpen(!open)} aria-label="Bluetooth">
+      <button onClick={() => setOpen((o) => !o)} aria-label="Bluetooth">
         <Image
           src="/themes/Yaru/status/bluetooth-symbolic.svg"
           alt="Bluetooth"

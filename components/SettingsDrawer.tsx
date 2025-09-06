@@ -14,7 +14,7 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
 
   return (
     <div>
-      <button aria-label="settings" onClick={() => setOpen(!open)}>
+      <button aria-label="settings" onClick={() => setOpen((o) => !o)}>
         Settings
       </button>
       {open && (

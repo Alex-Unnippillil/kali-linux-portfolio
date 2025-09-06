@@ -57,7 +57,7 @@ export default function PanelClock() {
       <button
         type="button"
         title={tooltip}
-        onClick={() => setOpen(!open)}
+        onClick={() => setOpen((o) => !o)}
         className="outline-none"
       >
         {timeStr}

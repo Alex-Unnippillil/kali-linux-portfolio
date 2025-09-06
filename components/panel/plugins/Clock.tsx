@@ -54,7 +54,7 @@ const Clock: React.FC = () => {
       <button
         type="button"
         className="px-2 py-1 text-white hover:bg-gray-700 rounded"
-        onClick={() => setOpen(!open)}
+        onClick={() => setOpen((o) => !o)}
         title={tooltip}
       >
         {formattedTime}
