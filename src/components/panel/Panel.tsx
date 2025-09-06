@@ -4,6 +4,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useDrag, useDrop } from 'react-dnd';
 import layoutData from './layout.json';
 import { usePanelPreferences } from './PanelPreferences';
+import keybindingManager from '../../wm/keybindingManager';
 
 interface PluginItem {
   id: string;
@@ -14,11 +15,12 @@ interface DraggableProps {
   plugin: PluginItem;
   index: number;
   move: (from: number, to: number) => void;
+  innerRef?: (el: HTMLDivElement | null) => void;
 }
 
 const type = 'PLUGIN_ITEM';
 
-function DraggablePlugin({ plugin, index, move }: DraggableProps) {
+function DraggablePlugin({ plugin, index, move, innerRef }: DraggableProps) {
   const ref = useRef<HTMLDivElement>(null);
   const { editMode, locked } = usePanelPreferences();
 
@@ -42,8 +44,12 @@ function DraggablePlugin({ plugin, index, move }: DraggableProps) {
 
   return (
     <div
-      ref={ref}
-      className={`flex items-center p-2 border mb-1 bg-black/20 text-white ${
+      ref={(el) => {
+        ref.current = el;
+        innerRef?.(el);
+      }}
+      tabIndex={-1}
+      className={`flex items-center p-2 border mb-1 bg-black/20 text-white focus:outline focus:outline-2 focus:outline-white ${
         editMode && !locked ? 'cursor-move' : ''
       }`}
       style={{ opacity: isDragging ? 0.5 : 1 }}
@@ -84,11 +90,56 @@ export default function Panel() {
     });
   };
 
+  const panelRef = useRef<HTMLDivElement>(null);
+  const pluginRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+
+  useEffect(() => {
+    const focusPanel = () => {
+      if (plugins.length === 0) return;
+      setFocusedIndex(0);
+      pluginRefs.current[0]?.focus();
+    };
+    keybindingManager.register('Alt+Ctrl+Tab', focusPanel);
+    return () => {
+      keybindingManager.unregister('Alt+Ctrl+Tab', focusPanel);
+    };
+  }, [plugins]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (focusedIndex === -1) return;
+    if (['ArrowRight', 'ArrowDown'].includes(e.key)) {
+      e.preventDefault();
+      const next = (focusedIndex + 1) % plugins.length;
+      setFocusedIndex(next);
+      pluginRefs.current[next]?.focus();
+    } else if (['ArrowLeft', 'ArrowUp'].includes(e.key)) {
+      e.preventDefault();
+      const prev = (focusedIndex - 1 + plugins.length) % plugins.length;
+      setFocusedIndex(prev);
+      pluginRefs.current[prev]?.focus();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      pluginRefs.current[focusedIndex]?.click();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      pluginRefs.current[focusedIndex]?.blur();
+      setFocusedIndex(-1);
+      panelRef.current?.blur();
+    }
+  };
+
   return (
     <DndProvider backend={HTML5Backend}>
-      <div>
+      <div ref={panelRef} onKeyDown={handleKeyDown}>
         {plugins.map((p, i) => (
-          <DraggablePlugin key={p.id} plugin={p} index={i} move={move} />
+          <DraggablePlugin
+            key={p.id}
+            plugin={p}
+            index={i}
+            move={move}
+            innerRef={(el) => (pluginRefs.current[i] = el)}
+          />
         ))}
       </div>
     </DndProvider>
