@@ -1,4 +1,5 @@
 import { createMD5, createSHA1 } from 'hash-wasm';
+import logger from '../../utils/logger';
 
 export async function hashExample() {
   const samples = ['hello', 'world'];
@@ -14,7 +15,7 @@ export async function hashExample() {
     sha1.update(text);
     const sha1Digest = sha1.digest('hex');
 
-    console.log(`${text}: MD5=${md5Digest} SHA-1=${sha1Digest}`);
+    logger.info(`${text}: MD5=${md5Digest} SHA-1=${sha1Digest}`);
   }
 }
 

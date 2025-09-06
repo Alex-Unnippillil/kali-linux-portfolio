@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import fs from 'fs';
 import path from 'path';
+import logger from '../../utils/logger';
 
 interface ClipmanSettings {
   syncSelections: boolean;
@@ -68,7 +69,7 @@ export default function Clipman({
   });
   const handleHex = onHex || ((hex: string) => {
     // default handler just logs
-    console.log('hex', hex);
+    logger.info('hex', hex);
   });
 
   useEffect(() => {

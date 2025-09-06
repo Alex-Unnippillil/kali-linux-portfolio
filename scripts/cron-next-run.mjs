@@ -1,4 +1,5 @@
 import { CronExpressionParser } from 'cron-parser';
+import logger from '../utils/logger';
 
 const expression = process.argv[2];
 const count = Number(process.argv[3] ?? 5);
@@ -10,6 +11,6 @@ if (!expression) {
 
 const interval = CronExpressionParser.parse(expression);
 for (let i = 0; i < count; i++) {
-  console.log(interval.next().toString());
+  logger.info(interval.next().toString());
 }
 

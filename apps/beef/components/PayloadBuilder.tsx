@@ -9,7 +9,7 @@ interface Payload {
 
 const payloads: Payload[] = [
   { name: 'Alert Box', code: "alert('BeEF demo payload');" },
-  { name: 'Console Log', code: "console.log('BeEF demo payload executed');" },
+  { name: 'Notify Parent', code: "window.parent.postMessage('BeEF demo payload executed','*');" },
   {
     name: 'Change Background',
     code: "document.body.style.background='lightyellow';",

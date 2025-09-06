@@ -1,5 +1,6 @@
 import { chromium, firefox, webkit } from 'playwright';
 import fs from 'fs';
+import logger from '../utils/logger';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
@@ -74,7 +75,7 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
       page.on('pageerror', (err) => {
         pageErrors.push(err.message);
       });
-      console.log(`[${name}] Visiting ${route}`);
+      logger.info(`[${name}] Visiting ${route}`);
       let error = '';
       try {
         const response = await page.goto(`${BASE_URL}${route}`);
@@ -88,7 +89,7 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
       }
       if (error) {
         hadError = true;
-        console.error(`[${name}] Error on ${route}: ${error}`);
+        logger.error(`[${name}] Error on ${route}: ${error}`);
       }
       results.push({ browser: name, route, error });
       await page.close();
@@ -98,9 +99,9 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
   }
 
   if (hadError) {
-    console.error('Completed with errors');
+    logger.error('Completed with errors');
   } else {
-    console.log('All app routes loaded without console errors.');
+    logger.info('All app routes loaded without console errors.');
   }
 
   // Write results to log file if TEST_LOG env variable provided
