@@ -22,21 +22,46 @@ function hasModule(base) {
   return false;
 }
 
+function getVariants(str) {
+  const variants = new Set([
+    str,
+    str.replace(/-/g, '_'),
+    str.replace(/_/g, '-'),
+  ]);
+  const camel = str.replace(/[-_]+(.)/g, (_, c) => c.toUpperCase());
+  variants.add(camel);
+  variants.add(camel.charAt(0).toUpperCase() + camel.slice(1));
+  const snake = str.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
+  variants.add(snake);
+  variants.add(snake.replace(/_/g, '-'));
+  return [...variants];
+}
+
 function routeExists(dynPath) {
   const base = dynPath.replace(/\.(jsx?|tsx?|mjs|cjs)$/, '').replace(/\/index$/, '');
-  const bases = [base];
-  const parts = base.split('/');
-  const last = parts[parts.length - 1];
-  if (/^\d/.test(last)) {
-    parts[parts.length - 1] = `_${last}`;
-    bases.push(parts.join('/'));
-  }
-  for (const b of bases) {
+  const htmlExts = [...exts, 'html'];
+  for (const b of getVariants(base)) {
+    if (fg.sync(`apps/**/${b}`, { cwd: root, onlyDirectories: true }).length) return true;
     const patterns = [
-      `apps/${b}.{${exts.join(',')}}`,
-      `apps/${b}/index.{${exts.join(',')}}`,
-      `apps/**/${b}.{${exts.join(',')}}`,
-      `apps/**/${b}/index.{${exts.join(',')}}`,
+      `apps/${b}.{${htmlExts.join(',')}}`,
+      `apps/${b}/index.{${htmlExts.join(',')}}`,
+      `apps/**/${b}.{${htmlExts.join(',')}}`,
+      `apps/**/${b}/index.{${htmlExts.join(',')}}`,
+    ];
+    if (fg.sync(patterns, { cwd: root }).length) return true;
+  }
+  return false;
+}
+
+function idResolves(id) {
+  const htmlExts = [...exts, 'html'];
+  for (const v of getVariants(id)) {
+    if (fg.sync(`apps/**/${v}`, { cwd: root, onlyDirectories: true }).length) return true;
+    const patterns = [
+      `apps/${v}.{${htmlExts.join(',')}}`,
+      `apps/${v}/index.{${htmlExts.join(',')}}`,
+      `apps/**/${v}.{${htmlExts.join(',')}}`,
+      `apps/**/${v}/index.{${htmlExts.join(',')}}`,
     ];
     if (fg.sync(patterns, { cwd: root }).length) return true;
   }
@@ -76,6 +101,9 @@ for (const { id, icon } of entries) {
   const iconPath = path.join(root, 'public', icon.replace(/^\//, ''));
   if (!fs.existsSync(iconPath)) {
     errors.push(`Missing icon: ${icon}`);
+  }
+  if (!idResolves(id)) {
+    errors.push(`Missing app module for id: ${id}`);
   }
 }
 
