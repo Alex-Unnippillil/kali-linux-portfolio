@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -17,6 +17,7 @@ import { TrayProvider } from '../hooks/useTray';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import Toast from '../components/ui/Toast';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -28,7 +29,7 @@ const ubuntu = Ubuntu({
 
 function MyApp(props) {
   const { Component, pageProps } = props;
-
+  const [errorToast, setErrorToast] = useState('');
 
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof window.initA2HS === 'function') {
@@ -43,6 +44,9 @@ function MyApp(props) {
     };
     initAnalytics().catch((err) => {
       console.error('Analytics initialization failed', err);
+      if (process.env.NODE_ENV === 'development') {
+        setErrorToast('Analytics initialization failed');
+      }
     });
 
     if (
@@ -52,35 +56,43 @@ function MyApp(props) {
     ) {
       // Register PWA service worker generated via @ducanh2912/next-pwa
       const register = async () => {
+        let registration;
         try {
-          const registration = await navigator.serviceWorker.register('/sw.js');
-
-          window.manualRefresh = () => registration.update();
-
-          if ('periodicSync' in registration) {
-            try {
-              const status = await navigator.permissions.query({
-                name: 'periodic-background-sync',
-              });
-              if (status.state === 'granted') {
-                await registration.periodicSync.register('content-sync', {
-                  minInterval: 24 * 60 * 60 * 1000,
-                });
-              } else {
-                registration.update();
-              }
-            } catch {
-              registration.update();
-            }
-          } else {
-            registration.update();
-          }
+          registration = await navigator.serviceWorker.register('/sw.js');
         } catch (err) {
           console.error('Service worker registration failed', err);
+          if (process.env.NODE_ENV === 'development') {
+            setErrorToast('Service worker registration failed');
+          }
+          return;
+        }
+
+        window.manualRefresh = () => registration.update();
+
+        if ('periodicSync' in registration) {
+          try {
+            const status = await navigator.permissions.query({
+              name: 'periodic-background-sync',
+            });
+            if (status.state === 'granted') {
+              await registration.periodicSync.register('content-sync', {
+                minInterval: 24 * 60 * 60 * 1000,
+              });
+            } else {
+              registration.update();
+            }
+          } catch {
+            registration.update();
+          }
+        } else {
+          registration.update();
         }
       };
       register().catch((err) => {
         console.error('Service worker setup failed', err);
+        if (process.env.NODE_ENV === 'development') {
+          setErrorToast('Service worker setup failed');
+        }
       });
     }
   }, []);
@@ -183,6 +195,12 @@ function MyApp(props) {
               <div aria-live="polite" id="live-region" />
               <Component {...pageProps} />
               <ShortcutOverlay />
+              {process.env.NODE_ENV === 'development' && errorToast && (
+                <Toast
+                  message={errorToast}
+                  onClose={() => setErrorToast('')}
+                />
+              )}
               <Analytics
                 beforeSend={(e) => {
                   if (e.url.includes('/admin') || e.url.includes('/private')) return null;
