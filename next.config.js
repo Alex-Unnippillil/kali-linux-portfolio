@@ -72,23 +72,12 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   },
   workboxOptions: {
     additionalManifestEntries: [
-      { url: '/', revision: null },
-      { url: '/feeds', revision: null },
-      { url: '/about', revision: null },
-      { url: '/projects', revision: null },
-      { url: '/projects.json', revision: null },
-      { url: '/apps', revision: null },
-      { url: '/apps/weather', revision: null },
-      { url: '/apps/terminal', revision: null },
-      { url: '/apps/checkers', revision: null },
-      { url: '/offline.html', revision: null },
-      { url: '/manifest.webmanifest', revision: null },
       { url: '/favicon.ico', revision: null },
       { url: '/favicon.svg', revision: null },
       { url: '/images/logos/fevicon.png', revision: null },
       { url: '/images/logos/logo_1024.png', revision: null },
     ],
-    // Cache only images and fonts to ensure app shell updates while assets work offline
+    // Cache only images and fonts; avoid HTML caching so the app shell always updates
     runtimeCaching: require('./cache.js'),
   },
 });
