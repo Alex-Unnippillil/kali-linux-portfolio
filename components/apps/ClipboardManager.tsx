@@ -35,6 +35,7 @@ const ClipboardManager: React.FC = () => {
   const [items, setItems] = useState<ClipItem[]>([]);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'text' | 'url' | 'hash'>('all');
+  const [permissionNeeded, setPermissionNeeded] = useState(false);
 
   const isUrl = (text: string) => {
     try {
@@ -92,13 +93,17 @@ const ClipboardManager: React.FC = () => {
       const perm = await (navigator.permissions as any)?.query?.({
         name: 'clipboard-read' as any,
       });
-      if (perm && perm.state === 'denied') return;
+      if (perm && perm.state === 'denied') {
+        setPermissionNeeded(true);
+        return;
+      }
       const text = await navigator.clipboard.readText();
       if (text && (!items[0] || items[0].text !== text)) {
         await addItem(text);
       }
     } catch (err) {
       console.error('Clipboard read failed:', err);
+      setPermissionNeeded(true);
     }
   }, [items, addItem]);
 
@@ -112,10 +117,14 @@ const ClipboardManager: React.FC = () => {
       const perm = await (navigator.permissions as any)?.query?.({
         name: 'clipboard-write' as any,
       });
-      if (perm && perm.state === 'denied') return;
+      if (perm && perm.state === 'denied') {
+        setPermissionNeeded(true);
+        return;
+      }
       await navigator.clipboard.writeText(text);
     } catch (err) {
       console.error('Clipboard write failed:', err);
+      setPermissionNeeded(true);
     }
   };
 
@@ -164,8 +173,34 @@ const ClipboardManager: React.FC = () => {
     return matchesSearch && matchesType;
   });
 
+  const requestClipboardAccess = async () => {
+    try {
+      await navigator.clipboard.readText();
+      setPermissionNeeded(false);
+    } catch {
+      setPermissionNeeded(true);
+    }
+  };
+
+  useEffect(() => {
+    (navigator.permissions as any)
+      ?.query?.({ name: 'clipboard-read' as any })
+      .then((perm: any) => {
+        if (perm && perm.state === 'denied') setPermissionNeeded(true);
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <div className="p-4 space-y-2 text-white bg-ub-cool-grey h-full flex flex-col">
+      {permissionNeeded && (
+        <div className="mb-2 p-2 bg-red-800 text-center" role="alert">
+          Permission needed to access clipboard.
+          <button className="ml-2 underline" onClick={requestClipboardAccess}>
+            Grant Access
+          </button>
+        </div>
+      )}
       <div className="flex items-center gap-2">
         <button
           className="px-2 py-1 bg-gray-700 hover:bg-gray-600"
