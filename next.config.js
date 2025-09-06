@@ -192,6 +192,27 @@ module.exports = withBundleAnalyzer(
         },
       ],
 
+      
+      
+      remotePatterns: [
+        { protocol: 'https', hostname: 'opengraph.githubassets.com' },
+        { protocol: 'https', hostname: 'raw.githubusercontent.com' },
+        { protocol: 'https', hostname: 'avatars.githubusercontent.com' },
+        { protocol: 'https', hostname: 'i.ytimg.com' },
+        { protocol: 'https', hostname: 'yt3.ggpht.com' },
+        { protocol: 'https', hostname: 'i.scdn.co' },
+        { protocol: 'https', hostname: 'www.google.com' },
+        { protocol: 'https', hostname: 'example.com' },
+        { protocol: 'https', hostname: 'developer.mozilla.org' },
+        { protocol: 'https', hostname: 'en.wikipedia.org' },
+        { protocol: 'https', hostname: 'ghchart.rshah.org' },
+        { protocol: 'https', hostname: 'openweathermap.org' },
+        { protocol: 'https', hostname: 'staticmap.openstreetmap.de' },
+        { protocol: 'https', hostname: 'data.typeracer.com' },
+        { protocol: 'https', hostname: 'img.shields.io' },
+        { protocol: 'https', hostname: 'images.credly.com' },
+      ],
+
       localPatterns: [
         { pathname: '/themes/Yaru/apps/**' },
         { pathname: '/icons/**' },
