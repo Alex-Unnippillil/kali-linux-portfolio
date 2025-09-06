@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { SettingsContext } from '../../hooks/useSettings';
 
 export class Desktop extends Component {
     constructor() {
@@ -54,6 +55,8 @@ export class Desktop extends Component {
             switcherWindows: [],
         }
     }
+
+    static contextType = SettingsContext;
 
     componentDidMount() {
         // google analytics
@@ -430,11 +433,20 @@ export class Desktop extends Component {
     }
 
     renderDesktopApps = () => {
-        if (Object.keys(this.state.closed_windows).length === 0) return;
+        const {
+            showDesktopIcons,
+            desktopIconSize,
+            desktopLabelPosition,
+            alignToGrid,
+            autoArrange,
+        } = this.context;
+        if (!showDesktopIcons || Object.keys(this.state.closed_windows).length === 0) return null;
         let appsJsx = [];
-        apps.forEach((app, index) => {
+        const list = autoArrange
+            ? [...apps].sort((a, b) => a.title.localeCompare(b.title))
+            : apps;
+        list.forEach((app) => {
             if (this.state.desktop_apps.includes(app.id)) {
-
                 const props = {
                     name: app.title,
                     id: app.id,
@@ -442,14 +454,25 @@ export class Desktop extends Component {
                     openApp: this.openApp,
                     disabled: this.state.disabled_apps[app.id],
                     prefetch: app.screen?.prefetch,
-                }
-
-                appsJsx.push(
-                    <UbuntuApp key={app.id} {...props} />
-                );
+                    iconSize: desktopIconSize,
+                    labelPosition: desktopLabelPosition,
+                };
+                appsJsx.push(<UbuntuApp key={app.id} {...props} />);
             }
         });
-        return appsJsx;
+        const style = alignToGrid
+            ? {
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(auto-fill, minmax(${96 *
+                    desktopIconSize}px, 1fr))`,
+                  gridAutoRows: 'min-content',
+              }
+            : { display: 'flex', flexWrap: 'wrap' };
+        return (
+            <div id="desktop-icons" style={style} className="p-2">
+                {appsJsx}
+            </div>
+        );
     }
 
     renderWindows = () => {
