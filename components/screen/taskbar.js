@@ -17,6 +17,21 @@ export default function Taskbar(props) {
 
     return (
         <div className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center z-40" role="toolbar">
+            <button
+                type="button"
+                aria-label="Show Desktop"
+                onClick={() => props.toggleMinimizeAll && props.toggleMinimizeAll(props.toggleScope || 'workspace')}
+                className="relative flex items-center mx-1 px-2 py-1 rounded hover:bg-white hover:bg-opacity-10"
+            >
+                <Image
+                    width={24}
+                    height={24}
+                    className="w-5 h-5"
+                    src="/themes/Yaru/system/user-desktop.png"
+                    alt=""
+                    sizes="24px"
+                />
+            </button>
             {runningApps.map(app => (
                 <button
                     key={app.id}
