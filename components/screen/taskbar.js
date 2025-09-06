@@ -58,6 +58,7 @@ export default function Taskbar(props) {
             style={{ transform: visible ? 'translateY(0)' : 'translateY(100%)', transition: 'transform 0.3s' }}
             className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center z-40"
             role="toolbar"
+            aria-label="Taskbar"
         >
             {runningApps.map(app => (
                 <button
