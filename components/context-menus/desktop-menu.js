@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import logger from '../../utils/logger'
+import { getSendToTargets } from '../../utils/sendTo'
 
 function DesktopMenu(props) {
 
     const [isFullScreen, setIsFullScreen] = useState(false)
+    const [sendToTargets, setSendToTargets] = useState([])
 
     useEffect(() => {
         document.addEventListener('fullscreenchange', checkFullScreen);
+        getSendToTargets().then(setSendToTargets)
         return () => {
             document.removeEventListener('fullscreenchange', checkFullScreen);
         };
@@ -40,6 +43,22 @@ function DesktopMenu(props) {
         }
         catch (e) {
             logger.error(e)
+        }
+    }
+
+    const handleSendTo = (target) => {
+        switch (target.action) {
+            case 'desktop':
+                alert('Shortcut created on Desktop')
+                break
+            case 'trash':
+                alert('Item moved to Trash')
+                break
+            case 'archive':
+                alert('Item archived')
+                break
+            default:
+                alert(`Sent to ${target.label}`)
         }
     }
 
@@ -80,6 +99,26 @@ function DesktopMenu(props) {
             <Devider />
             <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
                 <span className="ml-5">Paste</span>
+            </div>
+            <Devider />
+            <div className="relative group">
+                <div role="menuitem" aria-label="Send To" aria-haspopup="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 flex justify-between items-center">
+                    <span className="ml-5">Send To</span>
+                    <span className="mr-2">▶</span>
+                </div>
+                <div className="hidden group-hover:block absolute top-0 left-full w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 z-50 text-sm">
+                    {sendToTargets.map((t, i) => (
+                        <button
+                            key={i}
+                            onClick={() => handleSendTo(t)}
+                            type="button"
+                            role="menuitem"
+                            className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                        >
+                            <span className="ml-5">{t.label}</span>
+                        </button>
+                    ))}
+                </div>
             </div>
             <Devider />
             <div role="menuitem" aria-label="Show Desktop in Files" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
