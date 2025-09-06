@@ -21,7 +21,11 @@
     "module-report": "node scripts/generate-module-report.mjs",
     "analyze": "ANALYZE=true yarn build",
     "preinstall": "corepack enable && corepack prepare yarn@4.9.2 --activate",
-    "verify:all": "node scripts/verify.mjs"
+    "verify:all": "node scripts/verify.mjs",
+    "validate:apps": "playwright test tests/apps.smoke.spec.ts",
+    "test:csp": "playwright test tests/csp.spec.ts",
+    "e2e:pwa": "playwright test tests/pwa.e2e.spec.ts",
+    "preflight": "yarn lint && yarn test && yarn validate:apps && yarn test:csp && yarn e2e:pwa"
   },
   "engines": {
     "node": "20.19.5"
