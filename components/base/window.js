@@ -236,12 +236,15 @@ export class Window extends Component {
 
     unsnapWindow = () => {
         if (!this.state.snapped) return;
-        var r = document.querySelector("#" + this.id);
+        const r = document.querySelector("#" + this.id);
         if (r) {
-            const x = r.style.getPropertyValue('--window-transform-x');
-            const y = r.style.getPropertyValue('--window-transform-y');
-            if (x && y) {
-                r.style.transform = `translate(${x},${y})`;
+            const x = parseFloat(r.style.getPropertyValue('--window-transform-x'));
+            const y = parseFloat(r.style.getPropertyValue('--window-transform-y'));
+            if (!Number.isNaN(x) && !Number.isNaN(y)) {
+                r.style.transform = `translate(${x}px,${y}px)`;
+                if (this.props.onPositionChange) {
+                    this.props.onPositionChange(x, y);
+                }
             }
         }
         if (this.state.lastSize) {
@@ -586,6 +589,7 @@ export class Window extends Component {
 
     snapWindow = (pos) => {
         this.focusWindow();
+        this.setWinowsPosition();
         const { width, height } = this.state;
         let newWidth = width;
         let newHeight = height;
