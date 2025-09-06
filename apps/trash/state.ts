@@ -7,6 +7,8 @@ export interface TrashItem {
   icon?: string;
   image?: string;
   closedAt: number;
+  /** Original location of the window when it was trashed. */
+  path?: string;
 }
 
 const ITEMS_KEY = 'window-trash';

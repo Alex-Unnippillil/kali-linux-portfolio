@@ -8,6 +8,7 @@ interface TrashItem {
   icon?: string;
   image?: string;
   closedAt: number;
+  path?: string;
 }
 
 const formatAge = (closedAt: number): string => {

@@ -21,6 +21,18 @@ function AppMenu(props) {
         }
     }
 
+    const handleRestore = () => {
+        props.restoreTrash && props.restoreTrash();
+        props.onClose && props.onClose();
+    };
+
+    const handleEmpty = () => {
+        props.emptyTrash && props.emptyTrash();
+        props.onClose && props.onClose();
+    };
+
+    const isTrash = props.appId === 'trash';
+
     return (
         <div
             id="app-menu"
@@ -30,6 +42,26 @@ function AppMenu(props) {
             onKeyDown={handleKeyDown}
             className={(props.active ? ' block ' : ' hidden ') + ' cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm'}
         >
+            {isTrash && (
+                <>
+                    <button
+                        type="button"
+                        onClick={handleRestore}
+                        role="menuitem"
+                        className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                    >
+                        <span className="ml-5">Restore</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleEmpty}
+                        role="menuitem"
+                        className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                    >
+                        <span className="ml-5">Empty</span>
+                    </button>
+                </>
+            )}
             <button
                 type="button"
                 onClick={handlePin}
