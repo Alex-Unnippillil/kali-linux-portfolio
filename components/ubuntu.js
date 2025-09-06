@@ -18,17 +18,43 @@ export default class Ubuntu extends Component {
                 super();
                 this.desktopRef = React.createRef();
                 this.state = {
-			screen_locked: false,
-			bg_image_name: 'wall-2',
-			booting_screen: true,
-			shutDownScreen: false
-		};
-	}
+                        screen_locked: false,
+                        bg_image_name: 'wall-2',
+                        booting_screen: true,
+                        shutDownScreen: false,
+                        updateReady: false,
+                };
+        }
 
         componentDidMount() {
                 this.getLocalData();
                 this.maybeShowSessionChooser();
+                if ('serviceWorker' in navigator) {
+                        navigator.serviceWorker.addEventListener('message', this.handleSWMessage);
+                }
         }
+
+        componentWillUnmount() {
+                if ('serviceWorker' in navigator) {
+                        navigator.serviceWorker.removeEventListener('message', this.handleSWMessage);
+                }
+        }
+
+        handleSWMessage = (event) => {
+                if (event.data === 'UPDATE_READY') {
+                        this.setState({ updateReady: true });
+                }
+        };
+
+        applyUpdate = async () => {
+                const registration = await navigator.serviceWorker.getRegistration();
+                registration?.waiting?.postMessage('SKIP_WAITING');
+                navigator.serviceWorker.addEventListener(
+                        'controllerchange',
+                        () => window.location.reload(),
+                        { once: true },
+                );
+        };
 
 	setTimeOutBootScreen = () => {
 		setTimeout(() => {
@@ -144,19 +170,27 @@ export default class Ubuntu extends Component {
 	};
 
 	render() {
-		return (
-			<div className="w-screen h-screen overflow-hidden" id="monitor-screen">
-				<LockScreen
-					isLocked={this.state.screen_locked}
-					bgImgName={this.state.bg_image_name}
-					unLockScreen={this.unLockScreen}
-				/>
-				<BootingScreen
-					visible={this.state.booting_screen}
-					isShutDown={this.state.shutDownScreen}
-					turnOn={this.turnOn}
-				/>
-				<Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
+                return (
+                        <div className="w-screen h-screen overflow-hidden" id="monitor-screen">
+                                {this.state.updateReady && (
+                                        <div
+                                                className="fixed top-0 left-0 right-0 z-50 bg-blue-600 text-white text-center p-2 cursor-pointer"
+                                                onClick={this.applyUpdate}
+                                        >
+                                                Update available - click to reload
+                                        </div>
+                                )}
+                                <LockScreen
+                                        isLocked={this.state.screen_locked}
+                                        bgImgName={this.state.bg_image_name}
+                                        unLockScreen={this.unLockScreen}
+                                />
+                                <BootingScreen
+                                        visible={this.state.booting_screen}
+                                        isShutDown={this.state.shutDownScreen}
+                                        turnOn={this.turnOn}
+                                />
+                                <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
                                 <Desktop
                                         ref={this.desktopRef}
                                         bg_image_name={this.state.bg_image_name}
