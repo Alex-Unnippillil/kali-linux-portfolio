@@ -81,6 +81,7 @@ Copy `.env.local.example` to `.env.local` and fill in required API keys:
 - `RECAPTCHA_SECRET` and related `NEXT_PUBLIC_RECAPTCHA_*` keys for contact form spam protection.
 - `RATE_LIMIT_SECRET` – secret used to sign rate limit cookies (configure this in Vercel environment variables).
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` – Supabase credentials. When unset, Supabase-backed APIs and features are disabled.
+- `NODE_OPTIONS` – override Node.js memory limits. The build script sets `NODE_OPTIONS="--max-old-space-size=4096"` automatically when `CI` is detected to avoid out-of-memory errors in constrained environments.
 
 See `.env.local.example` for the full list.
 
