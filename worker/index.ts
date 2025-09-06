@@ -1,5 +1,6 @@
-const BUILD_ID = self.BUILD_ID || "0";
+const BUILD_ID = (self as any).BUILD_ID || "0";
 const CACHE_NAME = `KLP_v${BUILD_ID}-periodic-cache-v1`;
+
 const ASSETS = [
   "/apps/weather.js",
   "/feeds",
@@ -14,7 +15,7 @@ const ASSETS = [
   "/manifest.webmanifest",
 ];
 
-async function prefetchAssets() {
+async function prefetchAssets(): Promise<void> {
   const cache = await caches.open(CACHE_NAME);
   await Promise.all(
     ASSETS.map(async (url) => {
@@ -23,25 +24,25 @@ async function prefetchAssets() {
         if (response.ok) {
           await cache.put(url, response.clone());
         }
-      } catch (err) {
+      } catch {
         // Ignore individual failures
       }
     }),
   );
 }
 
-async function cleanupOldCaches() {
+async function cleanupOldCaches(): Promise<void> {
   const keys = await caches.keys();
   const appCaches = keys.filter((name) => name.startsWith("KLP_v"));
   const old = appCaches.sort().slice(0, -2);
   await Promise.all(old.map((name) => caches.delete(name)));
 }
 
-self.addEventListener("install", (event) => {
+self.addEventListener("install", (event: ExtendableEvent) => {
   event.waitUntil(prefetchAssets());
 });
 
-self.addEventListener("activate", (event) => {
+self.addEventListener("activate", (event: ExtendableEvent) => {
   event.waitUntil(
     (async () => {
       await cleanupOldCaches();
@@ -50,19 +51,19 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-self.addEventListener("periodicsync", (event) => {
+self.addEventListener("periodicsync", (event: any) => {
   if (event.tag === "content-sync") {
     event.waitUntil(prefetchAssets());
   }
 });
 
-self.addEventListener("message", (event) => {
+self.addEventListener("message", (event: any) => {
   if (event.data && event.data.type === "refresh") {
     event.waitUntil(prefetchAssets());
   }
 });
 
-self.addEventListener("fetch", (event) => {
+self.addEventListener("fetch", (event: FetchEvent) => {
   const { request } = event;
   const url = new URL(request.url);
 
@@ -75,8 +76,8 @@ self.addEventListener("fetch", (event) => {
             cache.put(request, response.clone());
           }
           return response;
-        } catch (err) {
-          return cache.match(request);
+        } catch {
+          return cache.match(request) as Promise<Response | undefined>;
         }
       }),
     );
