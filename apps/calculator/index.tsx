@@ -165,13 +165,34 @@ export default function Calculator() {
       };
       document.addEventListener('keydown', keyHandler);
 
+      const announcer = document.getElementById('calc-announcer');
+      const announce = (msg: string) => {
+        if (announcer) announcer.textContent = msg;
+      };
+
       historyToggle?.addEventListener('click', () => {
-        historyEl?.classList.toggle('hidden');
+        const hidden = historyEl?.classList.toggle('hidden') ?? false;
+        historyToggle?.setAttribute('aria-pressed', (!hidden).toString());
+        announce(`History ${hidden ? 'hidden' : 'shown'}`);
       });
 
       formulasToggle?.addEventListener('click', () => {
-        formulasEl?.classList.toggle('hidden');
+        const hidden = formulasEl?.classList.toggle('hidden') ?? false;
+        formulasToggle?.setAttribute('aria-pressed', (!hidden).toString());
+        announce(`Formulas ${hidden ? 'hidden' : 'shown'}`);
       });
+
+      const shortcutHandler = (e: KeyboardEvent) => {
+        if (e.altKey && e.key.toLowerCase() === 'h') {
+          e.preventDefault();
+          historyToggle?.click();
+        }
+        if (e.altKey && e.key.toLowerCase() === 'f') {
+          e.preventDefault();
+          formulasToggle?.click();
+        }
+      };
+      document.addEventListener('keydown', shortcutHandler);
 
       baseSelect?.addEventListener('change', () => {
         setBase(parseInt(baseSelect.value, 10));
@@ -182,6 +203,7 @@ export default function Calculator() {
           btn.removeEventListener('click', handler),
         );
         document.removeEventListener('keydown', keyHandler);
+        document.removeEventListener('keydown', shortcutHandler);
       };
     };
 
@@ -335,6 +357,12 @@ export default function Calculator() {
         ))}
       </div>
       <Tape entries={history} />
+      <div
+        id="calc-announcer"
+        role="status"
+        aria-live="polite"
+        className="sr-only"
+      />
     </div>
   );
 }
