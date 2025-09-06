@@ -1,11 +1,11 @@
+/* eslint-disable jsx-a11y/control-has-associated-label */
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import usePersistentState from '../../hooks/usePersistentState';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
-import usePersistentState from '../../hooks/usePersistentState';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme, symbolicTrayIcons, setSymbolicTrayIcons } = useSettings();
     const [panelBehavior, setPanelBehavior] = usePersistentState('xfce.panel.autohideBehavior', 'never');
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
@@ -180,6 +180,17 @@ export function Settings() {
                         className="mr-2"
                     />
                     Allow Network Requests
+                </label>
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey flex items-center">
+                    <input
+                        type="checkbox"
+                        checked={symbolicTrayIcons}
+                        onChange={(e) => setSymbolicTrayIcons(e.target.checked)}
+                        className="mr-2"
+                    />
+                    Prefer Monochrome Tray Icons
                 </label>
             </div>
             <div className="flex justify-center my-4">
