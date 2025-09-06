@@ -6,9 +6,11 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import { SettingsContext } from '../../hooks/useSettings';
 import styles from './window.module.css';
 
 export class Window extends Component {
+    static contextType = SettingsContext;
     constructor(props) {
         super(props);
         this.id = null;
@@ -379,6 +381,12 @@ export class Window extends Component {
         this.props.focus(this.id);
     }
 
+    handleMouseEnter = () => {
+        if (this.context.focusFollowsMouse) {
+            this.focusWindow();
+        }
+    }
+
     minimizeWindow = () => {
         let posx = -310;
         if (this.state.maximized) {
@@ -641,6 +649,8 @@ export class Window extends Component {
                         aria-label={this.props.title}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
+                        onMouseDown={this.focusWindow}
+                        onMouseEnter={this.handleMouseEnter}
                     >
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
