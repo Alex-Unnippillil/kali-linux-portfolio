@@ -68,28 +68,36 @@ const PopularModules: React.FC = () => {
   };
 
   useEffect(() => {
-    fetch(`/api/modules/update?version=${version}`)
-      .then((res) => res.json())
-      .then((data) => setUpdateAvailable(data.needsUpdate))
-      .catch(() => setUpdateAvailable(false));
+    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+      fetch(`/api/modules/update?version=${version}`)
+        .then((res) => res.json())
+        .then((data) => setUpdateAvailable(data.needsUpdate))
+        .catch(() => setUpdateAvailable(false));
+    }
   }, [version]);
 
   const handleUpdate = async () => {
-    try {
-      const res = await fetch(`/api/modules/update?version=${version}`);
-      const data = await res.json();
-      if (data.needsUpdate) {
-        const mods = await fetch('/data/module-index.json').then((r) => r.json());
-        setModules(mods);
-        setVersion(data.latest);
-        setUpdateMessage(`Updated to v${data.latest}`);
-        setUpdateAvailable(false);
-      } else {
-        setUpdateMessage('Already up to date');
-        setUpdateAvailable(false);
+    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+      try {
+        const res = await fetch(`/api/modules/update?version=${version}`);
+        const data = await res.json();
+        if (data.needsUpdate) {
+          const mods = await fetch('/data/module-index.json').then((r) =>
+            r.json(),
+          );
+          setModules(mods);
+          setVersion(data.latest);
+          setUpdateMessage(`Updated to v${data.latest}`);
+          setUpdateAvailable(false);
+        } else {
+          setUpdateMessage('Already up to date');
+          setUpdateAvailable(false);
+        }
+      } catch {
+        setUpdateMessage('Update failed');
       }
-    } catch {
-      setUpdateMessage('Update failed');
+    } else {
+      setUpdateMessage('Unavailable in static export');
     }
   };
 

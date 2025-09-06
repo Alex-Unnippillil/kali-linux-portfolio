@@ -15,44 +15,47 @@ const WeatherApp = dynamic(() => import('../../apps/weather'), {
  * the Cache Storage API so subsequent calls can be served while offline.
  */
 export async function fetchWeather(provider, opts = {}) {
-  const providers = {
-    openWeather: ({ city, apiKey }) =>
-      `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(
-        city,
-      )}&units=metric&appid=${apiKey}`,
-    openMeteo: ({ lat, lon }) =>
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=weathercode,temperature_2m_max&forecast_days=5&timezone=auto`,
-  };
+  if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+    const providers = {
+      openWeather: ({ city, apiKey }) =>
+        `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(
+          city,
+        )}&units=metric&appid=${apiKey}`,
+      openMeteo: ({ lat, lon }) =>
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=weathercode,temperature_2m_max&forecast_days=5&timezone=auto`,
+    };
 
-  const buildUrl = providers[provider];
-  if (!buildUrl) throw new Error(`Unsupported weather provider: ${provider}`);
+    const buildUrl = providers[provider];
+    if (!buildUrl) throw new Error(`Unsupported weather provider: ${provider}`);
 
-  const url = buildUrl(opts);
+    const url = buildUrl(opts);
 
-  // Attempt to serve from service worker cache first
-  let cached;
-  try {
-    const cache = await caches.open('weather-data');
-    cached = await cache.match(url);
-    if (cached) {
-      return await cached.json();
+    // Attempt to serve from service worker cache first
+    let cached;
+    try {
+      const cache = await caches.open('weather-data');
+      cached = await cache.match(url);
+      if (cached) {
+        return await cached.json();
+      }
+    } catch {
+      // Cache API might be unavailable; ignore errors
     }
-  } catch {
-    // Cache API might be unavailable; ignore errors
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to fetch weather');
+
+    // Cache the fresh response for offline use
+    try {
+      const cache = await caches.open('weather-data');
+      cache.put(url, res.clone());
+    } catch {
+      // Ignore cache errors
+    }
+
+    return await res.json();
   }
-
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch weather');
-
-  // Cache the fresh response for offline use
-  try {
-    const cache = await caches.open('weather-data');
-    cache.put(url, res.clone());
-  } catch {
-    // Ignore cache errors
-  }
-
-  return await res.json();
+  return null;
 }
 
 export default WeatherApp;
