@@ -54,6 +54,7 @@ describe('OpenVASApp', () => {
     await waitFor(() =>
       expect(Notification).toHaveBeenCalledWith('OpenVAS Scan Complete', {
         body: expect.any(String),
+        data: { critical: true },
       })
     );
   });
@@ -71,6 +72,7 @@ describe('OpenVASApp', () => {
     await waitFor(() =>
       expect(Notification).toHaveBeenCalledWith('OpenVAS Scan Failed', {
         body: 'fail',
+        data: { critical: true },
       })
     );
   });

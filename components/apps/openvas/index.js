@@ -28,7 +28,7 @@ const profileTabs = [
 const notify = (title, body) => {
   if (typeof window === 'undefined') return;
   if ('Notification' in window && Notification.permission === 'granted') {
-    new Notification(title, { body });
+    new Notification(title, { body, data: { critical: true } });
   } else {
     alert(`${title}: ${body}`);
   }

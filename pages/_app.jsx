@@ -16,6 +16,7 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { isWithinQuietHours } from '../utils/quietHours';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -118,7 +119,15 @@ function MyApp(props) {
 
     const OriginalNotification = window.Notification;
     if (OriginalNotification) {
-      const WrappedNotification = function (title, options) {
+      const WrappedNotification = function (title, options = {}) {
+        const start =
+          window.localStorage.getItem('quiet-hours-start') || '';
+        const end = window.localStorage.getItem('quiet-hours-end') || '';
+        const quiet = isWithinQuietHours(new Date(), start, end);
+        const critical = options?.data?.critical;
+        if (quiet && !critical) {
+          return { close: () => {} };
+        }
         update(`${title}${options?.body ? ' ' + options.body : ''}`);
         return new OriginalNotification(title, options);
       };
