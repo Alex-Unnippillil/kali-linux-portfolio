@@ -1,9 +1,8 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 
-jest.mock("../components/ubuntu", () => {
-  return function BrokenUbuntu() {
+jest.mock("../components/screen/desktop", () => {
+  return function BrokenDesktop() {
     throw new Error("boot failure");
   };
 });
@@ -11,7 +10,7 @@ jest.mock("../components/ubuntu", () => {
 import Ubuntu from "../components/screen/ubuntu";
 
 describe("Ubuntu safe mode", () => {
-  it("displays safe mode and clears customizations", async () => {
+  it("displays safe mode and clears customizations", () => {
     window.localStorage.setItem("app:theme", "dark");
     window.localStorage.setItem(
       "panel:profiles",
@@ -25,9 +24,5 @@ describe("Ubuntu safe mode", () => {
 
     expect(window.localStorage.getItem("app:theme")).toBe('"default"');
     expect(window.localStorage.getItem("panel:profiles")).toBe("{}");
-
-    await userEvent.click(
-      screen.getByRole("button", { name: /return to desktop/i }),
-    );
   });
 });

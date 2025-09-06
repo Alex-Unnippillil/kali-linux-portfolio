@@ -62,6 +62,9 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        if (this.props.initialSnap) {
+            this.snapWindow(this.props.initialSnap);
+        }
     }
 
     componentWillUnmount() {
@@ -268,16 +271,17 @@ export class Window extends Component {
         r.style.setProperty('--window-transform-x', x.toFixed(1).toString() + "px");
         r.style.setProperty('--window-transform-y', y.toFixed(1).toString() + "px");
         if (this.props.onPositionChange) {
-            this.props.onPositionChange(x, y);
+            this.props.onPositionChange(x, y, this.state.snapped);
         }
     }
 
     unsnapWindow = () => {
         if (!this.state.snapped) return;
+        const prev = this.state.prevBounds;
         var r = document.querySelector("#" + this.id);
         if (r) {
-            if (this.state.prevBounds) {
-                const { x, y } = this.state.prevBounds;
+            if (prev) {
+                const { x, y } = prev;
                 r.style.transform = `translate(${x}px,${y}px)`;
             } else {
                 const x = r.style.getPropertyValue('--window-transform-x');
@@ -286,6 +290,9 @@ export class Window extends Component {
                     r.style.transform = `translate(${x},${y})`;
                 }
             }
+        }
+        if (this.props.onPositionChange && prev) {
+            this.props.onPositionChange(prev.x, prev.y, null);
         }
         if (this.state.lastSize) {
             this.setState({
@@ -330,6 +337,9 @@ export class Window extends Component {
         }
         if (r && transform) {
             r.style.transform = transform;
+        }
+        if (this.props.onPositionChange && prevBounds) {
+            this.props.onPositionChange(prevBounds.x, prevBounds.y, position);
         }
         this.setState({
             snapPreview: null,

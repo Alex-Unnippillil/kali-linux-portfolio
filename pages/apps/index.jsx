@@ -6,6 +6,7 @@ import { useRouter } from 'next/router';
 
 const AppGrid = dynamic(() => import('../../components/apps/app-grid'), {
   ssr: false,
+  loading: () => <p>Loading...</p>,
 });
 
 const AppsPage = () => {
