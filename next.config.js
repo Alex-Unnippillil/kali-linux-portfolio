@@ -3,8 +3,7 @@
 // Allows external badges and same-origin PDF embedding.
 // Update README (section "CSP External Domains") when editing domains below.
 
-const { validateServerEnv: validateEnv } = require('./lib/validate');
-
+const { validateServerEnv } = require("./lib/validate");
 
 const ContentSecurityPolicy = [
   "default-src 'self'",
@@ -32,77 +31,75 @@ const ContentSecurityPolicy = [
   // Allow this site to embed its own resources (resume PDF)
   "frame-ancestors 'self'",
   // Enforce HTTPS for all requests
-  'upgrade-insecure-requests',
-].join('; ');
+  "upgrade-insecure-requests",
+].join("; ");
 
 const securityHeaders = [
   {
-    key: 'Content-Security-Policy',
+    key: "Content-Security-Policy",
     value: ContentSecurityPolicy,
   },
   {
-    key: 'X-Content-Type-Options',
-    value: 'nosniff',
+    key: "X-Content-Type-Options",
+    value: "nosniff",
   },
   {
-    key: 'Referrer-Policy',
-    value: 'strict-origin-when-cross-origin',
+    key: "Referrer-Policy",
+    value: "strict-origin-when-cross-origin",
   },
   {
-    key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=*, interest-cohort=()',
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=*, interest-cohort=()",
   },
   {
     // Allow same-origin framing so the PDF resume renders in an <object>
-    key: 'X-Frame-Options',
-    value: 'SAMEORIGIN',
+    key: "X-Frame-Options",
+    value: "SAMEORIGIN",
   },
 ];
 
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
-  enabled: process.env.ANALYZE === 'true',
+const withBundleAnalyzer = require("@next/bundle-analyzer")({
+  enabled: process.env.ANALYZE === "true",
   openAnalyzer: false,
-  analyzerMode: 'json',
+  analyzerMode: "json",
 });
 
 // Prefix all PWA caches with the current build ID so that each deployment
 // uses its own set of caches and outdated entries are naturally discarded.
-const buildId =
-  process.env.NEXT_BUILD_ID || process.env.BUILD_ID || 'dev';
+const buildId = process.env.NEXT_BUILD_ID || process.env.BUILD_ID || "dev";
 
-const withPWA = require('@ducanh2912/next-pwa').default({
-  dest: 'public',
-  sw: 'sw.js',
-  disable: process.env.VERCEL_ENV !== 'production',
+const withPWA = require("@ducanh2912/next-pwa").default({
+  dest: "public",
+  sw: "sw.js",
+  disable: process.env.VERCEL_ENV !== "production",
   buildExcludes: [/dynamic-css-manifest\.json$/],
   fallbacks: {
-    document: '/offline.html',
+    document: "/offline.html",
   },
   workboxOptions: {
     cacheId: buildId,
-    navigateFallback: '/offline.html',
+    navigateFallback: "/offline.html",
 
     additionalManifestEntries: [
-      { url: '/favicon.ico', revision: null },
-      { url: '/favicon.svg', revision: null },
-      { url: '/images/logos/fevicon.png', revision: null },
-      { url: '/images/logos/logo_1024.png', revision: null },
+      { url: "/favicon.ico", revision: null },
+      { url: "/favicon.svg", revision: null },
+      { url: "/images/logos/fevicon.png", revision: null },
+      { url: "/images/logos/logo_1024.png", revision: null },
     ],
 
     // Cache only images and fonts to ensure app shell updates while assets work offline
-    runtimeCaching: require('./cache.js')(buildId),
-
+    runtimeCaching: require("./cache.js")(buildId),
   },
 });
 
-const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
-const isProd = process.env.NODE_ENV === 'production';
+const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === "true";
+const isProd = process.env.NODE_ENV === "production";
 
 if (isProd) {
   try {
     validateServerEnv(process.env);
   } catch {
-    console.warn('Missing env vars; running without validation');
+    console.warn("Missing env vars; running without validation");
   }
 }
 
@@ -122,7 +119,7 @@ function configureWebpack(config, { isServer }) {
   };
   config.resolve.alias = {
     ...(config.resolve.alias || {}),
-    'react-dom$': require('path').resolve(__dirname, 'lib/react-dom-shim.js'),
+    "react-dom$": require("path").resolve(__dirname, "lib/react-dom-shim.js"),
   };
   if (isProd) {
     config.optimization = {
@@ -133,11 +130,9 @@ function configureWebpack(config, { isServer }) {
   return config;
 }
 
-
-
 module.exports = withBundleAnalyzer(
   withPWA({
-    ...(isStaticExport && { output: 'export' }),
+    ...(isStaticExport && { output: "export" }),
     webpack: configureWebpack,
 
     // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
@@ -147,75 +142,71 @@ module.exports = withBundleAnalyzer(
     images: {
       unoptimized: true,
 
-      
-      
       remotePatterns: [
         {
-          protocol: 'https',
-          hostname: 'i.ytimg.com',
-          pathname: '/**',
+          protocol: "https",
+          hostname: "i.ytimg.com",
+          pathname: "/**",
         },
         {
-          protocol: 'https',
-          hostname: 'openweathermap.org',
-          pathname: '/**',
+          protocol: "https",
+          hostname: "openweathermap.org",
+          pathname: "/**",
         },
         {
-          protocol: 'https',
-          hostname: 'img.shields.io',
-          pathname: '/**',
+          protocol: "https",
+          hostname: "img.shields.io",
+          pathname: "/**",
         },
         {
-          protocol: 'https',
-          hostname: 'images.credly.com',
-          pathname: '/**',
+          protocol: "https",
+          hostname: "images.credly.com",
+          pathname: "/**",
         },
         {
-          protocol: 'https',
-          hostname: 'ghchart.rshah.org',
-          pathname: '/**',
+          protocol: "https",
+          hostname: "ghchart.rshah.org",
+          pathname: "/**",
         },
         {
-          protocol: 'https',
-          hostname: 'staticmap.openstreetmap.de',
-          pathname: '/**',
+          protocol: "https",
+          hostname: "staticmap.openstreetmap.de",
+          pathname: "/**",
         },
         {
-          protocol: 'https',
-          hostname: 'data.typeracer.com',
-          pathname: '/**',
+          protocol: "https",
+          hostname: "data.typeracer.com",
+          pathname: "/**",
         },
         {
-          protocol: 'https',
-          hostname: 'www.google.com',
-          pathname: '/**',
+          protocol: "https",
+          hostname: "www.google.com",
+          pathname: "/**",
         },
       ],
 
-      
-      
       remotePatterns: [
-        { protocol: 'https', hostname: 'opengraph.githubassets.com' },
-        { protocol: 'https', hostname: 'raw.githubusercontent.com' },
-        { protocol: 'https', hostname: 'avatars.githubusercontent.com' },
-        { protocol: 'https', hostname: 'i.ytimg.com' },
-        { protocol: 'https', hostname: 'yt3.ggpht.com' },
-        { protocol: 'https', hostname: 'i.scdn.co' },
-        { protocol: 'https', hostname: 'www.google.com' },
-        { protocol: 'https', hostname: 'example.com' },
-        { protocol: 'https', hostname: 'developer.mozilla.org' },
-        { protocol: 'https', hostname: 'en.wikipedia.org' },
-        { protocol: 'https', hostname: 'ghchart.rshah.org' },
-        { protocol: 'https', hostname: 'openweathermap.org' },
-        { protocol: 'https', hostname: 'staticmap.openstreetmap.de' },
-        { protocol: 'https', hostname: 'data.typeracer.com' },
-        { protocol: 'https', hostname: 'img.shields.io' },
-        { protocol: 'https', hostname: 'images.credly.com' },
+        { protocol: "https", hostname: "opengraph.githubassets.com" },
+        { protocol: "https", hostname: "raw.githubusercontent.com" },
+        { protocol: "https", hostname: "avatars.githubusercontent.com" },
+        { protocol: "https", hostname: "i.ytimg.com" },
+        { protocol: "https", hostname: "yt3.ggpht.com" },
+        { protocol: "https", hostname: "i.scdn.co" },
+        { protocol: "https", hostname: "www.google.com" },
+        { protocol: "https", hostname: "example.com" },
+        { protocol: "https", hostname: "developer.mozilla.org" },
+        { protocol: "https", hostname: "en.wikipedia.org" },
+        { protocol: "https", hostname: "ghchart.rshah.org" },
+        { protocol: "https", hostname: "openweathermap.org" },
+        { protocol: "https", hostname: "staticmap.openstreetmap.de" },
+        { protocol: "https", hostname: "data.typeracer.com" },
+        { protocol: "https", hostname: "img.shields.io" },
+        { protocol: "https", hostname: "images.credly.com" },
       ],
 
       localPatterns: [
-        { pathname: '/themes/Yaru/apps/**' },
-        { pathname: '/icons/**' },
+        { pathname: "/themes/Yaru/apps/**" },
+        { pathname: "/icons/**" },
       ],
       deviceSizes: [640, 750, 828, 1080, 1200, 1280, 1920, 2048, 3840],
       imageSizes: [16, 32, 48, 64, 96, 128, 256],
@@ -226,46 +217,46 @@ module.exports = withBundleAnalyzer(
           async headers() {
             return [
               {
-                source: '/(.*)',
+                source: "/(.*)",
                 headers: securityHeaders,
               },
               {
-                source: '/manifest.webmanifest',
+                source: "/manifest.webmanifest",
                 headers: [
                   {
-                    key: 'Content-Type',
-                    value: 'application/manifest+json',
+                    key: "Content-Type",
+                    value: "application/manifest+json",
                   },
                   {
-                    key: 'Cache-Control',
-                    value: 'public, max-age=0, must-revalidate',
-                  },
-                ],
-              },
-              {
-                source: '/sw.js',
-                headers: [
-                  {
-                    key: 'Cache-Control',
-                    value: 'public, max-age=0, must-revalidate',
+                    key: "Cache-Control",
+                    value: "public, max-age=0, must-revalidate",
                   },
                 ],
               },
               {
-                source: '/fonts/:path*',
+                source: "/sw.js",
                 headers: [
                   {
-                    key: 'Cache-Control',
-                    value: 'public, max-age=31536000, immutable',
+                    key: "Cache-Control",
+                    value: "public, max-age=0, must-revalidate",
                   },
                 ],
               },
               {
-                source: '/images/:path*',
+                source: "/fonts/:path*",
                 headers: [
                   {
-                    key: 'Cache-Control',
-                    value: 'public, max-age=86400, immutable',
+                    key: "Cache-Control",
+                    value: "public, max-age=31536000, immutable",
+                  },
+                ],
+              },
+              {
+                source: "/images/:path*",
+                headers: [
+                  {
+                    key: "Cache-Control",
+                    value: "public, max-age=86400, immutable",
                   },
                 ],
               },
@@ -273,6 +264,13 @@ module.exports = withBundleAnalyzer(
           },
         }
       : {}),
-  })
+    async rewrites() {
+      return [
+        {
+          source: "/.well-known/vercel/flags",
+          destination: "/api/vercel/flags",
+        },
+      ];
+    },
+  }),
 );
-
