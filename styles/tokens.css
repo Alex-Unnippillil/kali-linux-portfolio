@@ -61,21 +61,21 @@
   --focus-outline-width: 2px;
 }
 
-/* High contrast theme */
+/* High contrast theme (~35% stronger text and borders) */
 .high-contrast {
-  --color-bg: #000000;
-  --color-text: #ffffff;
-  --color-ub-grey: #000000;
-  --color-ub-cool-grey: #000000;
-  --color-ubt-grey: #ffffff;
-  --color-ubt-cool-grey: #ffffff;
-  --color-ub-orange: #ffff00;
-  --color-ub-lite-abrgn: #00ffff;
-  --color-ub-border-orange: #ffff00;
-  --game-color-secondary: #ffff00;
-  --game-color-success: #00ffff;
-  --game-color-warning: #ff00ff;
-  --game-color-danger: #ff0000;
+  --color-bg: #0a0c0f;
+  --color-ub-grey: #0a0c0f;
+  --color-ub-cool-grey: #111419;
+  --color-text: #f9f9f9;
+  --color-ubt-grey: #f9f9f9;
+  --color-ubt-cool-grey: #7a7a7a;
+  --color-ub-orange: #68b9e1;
+  --color-ub-lite-abrgn: #6f7276;
+  --color-ub-border-orange: #68b9e1;
+  --game-color-secondary: #6c8ce6;
+  --game-color-success: #67ac81;
+  --game-color-warning: #e6a75d;
+  --game-color-danger: #d26b6b;
 }
 
 /* Dyslexia-friendly fonts */
@@ -106,14 +106,14 @@
 /* Optional high contrast via media query */
 @media (prefers-contrast: more) {
   :root {
-    --color-bg: #000000;
-    --color-text: #ffffff;
-    --color-ub-grey: #000000;
-    --color-ub-cool-grey: #000000;
-    --color-ubt-grey: #ffffff;
-    --color-ubt-cool-grey: #ffffff;
-    --color-ub-orange: #ffff00;
-    --color-ub-lite-abrgn: #00ffff;
-    --color-ub-border-orange: #ffff00;
+    --color-bg: #0a0c0f;
+    --color-ub-grey: #0a0c0f;
+    --color-ub-cool-grey: #111419;
+    --color-text: #f9f9f9;
+    --color-ubt-grey: #f9f9f9;
+    --color-ubt-cool-grey: #7a7a7a;
+    --color-ub-orange: #68b9e1;
+    --color-ub-lite-abrgn: #6f7276;
+    --color-ub-border-orange: #68b9e1;
   }
 }
