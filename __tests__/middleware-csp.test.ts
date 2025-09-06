@@ -2,8 +2,19 @@
 
 import http from 'node:http';
 import request from 'supertest';
-import { NextRequest } from 'next/server';
-import { middleware } from '../middleware';
+
+jest.mock('next/server', () => ({
+  NextRequest: class {
+    headers: Headers;
+    constructor(_url: string, init: { headers: Record<string, string> }) {
+      this.headers = new Headers(init.headers);
+    }
+  },
+  NextResponse: { next: () => ({ headers: new Headers() }) },
+}));
+
+const { NextRequest } = require('next/server');
+const { middleware } = require('../middleware');
 
 describe('middleware CSP header', () => {
   function createServer() {
@@ -27,5 +38,20 @@ describe('middleware CSP header', () => {
     expect(csp).toContain('nonce-');
     expect(csp).toContain('https://platform.twitter.com');
     expect(csp).toContain('https://cdn.jsdelivr.net');
+  });
+
+  it("omits 'unsafe-inline' and contains a single nonce", async () => {
+    const server = createServer();
+    const res = await request(server).get('/');
+    server.close();
+
+    const csp = res.headers['content-security-policy'];
+    expect(csp).toBeDefined();
+
+    const directives = csp.split(';').map((d) => d.trim().split(/\s+/).slice(1)).flat();
+    expect(directives).not.toContain("'unsafe-inline'");
+
+    const nonces = csp.match(/nonce-[^';\s]+/g) || [];
+    expect(nonces).toHaveLength(1);
   });
 });
