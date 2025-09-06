@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -16,6 +16,8 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import Toast from '../components/ui/Toast';
+import useKeymap from '../apps/settings/keymapRegistry';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -27,6 +29,9 @@ const ubuntu = Ubuntu({
 
 function MyApp(props) {
   const { Component, pageProps } = props;
+  const { shortcuts } = useKeymap();
+  const [, setIme] = useState(false);
+  const [toast, setToast] = useState('');
 
 
   useEffect(() => {
@@ -79,6 +84,37 @@ function MyApp(props) {
       });
     }
   }, []);
+
+  useEffect(() => {
+    const formatEvent = (e) => {
+      const parts = [
+        e.ctrlKey ? 'Ctrl' : '',
+        e.altKey ? 'Alt' : '',
+        e.shiftKey ? 'Shift' : '',
+        e.metaKey ? 'Meta' : '',
+        e.key.length === 1 ? e.key.toUpperCase() : e.key,
+      ];
+      return parts.filter(Boolean).join('+');
+    };
+
+    const toggleKey =
+      shortcuts.find((s) => s.description === 'Toggle IME')?.keys ||
+      'Meta+Space';
+
+    const handler = (e) => {
+      if (formatEvent(e) === toggleKey) {
+        e.preventDefault();
+        setIme((prev) => {
+          const next = !prev;
+          setToast(`IME ${next ? 'enabled' : 'disabled'}`);
+          return next;
+        });
+      }
+    };
+
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [shortcuts]);
 
   useEffect(() => {
     const liveRegion = document.getElementById('live-region');
@@ -161,6 +197,7 @@ function MyApp(props) {
             <div aria-live="polite" id="live-region" />
             <Component {...pageProps} />
             <ShortcutOverlay />
+            {toast && <Toast message={toast} onClose={() => setToast('')} />}
             <Analytics
               beforeSend={(e) => {
                 if (e.url.includes('/admin') || e.url.includes('/private')) return null;
