@@ -37,10 +37,65 @@ function alias(args: string, ctx: CommandContext) {
   }
 }
 
+function neofetch(_args: string, ctx: CommandContext) {
+  const style = getComputedStyle(document.documentElement);
+  const primary = style.getPropertyValue('--color-primary').trim() || '#1793d1';
+  const text = style.getPropertyValue('--color-text').trim() || '#f5f5f5';
+
+  const hexToRgb = (hex: string) => {
+    const clean = hex.replace('#', '');
+    const num = parseInt(clean, 16);
+    return [
+      (num >> 16) & 0xff,
+      (num >> 8) & 0xff,
+      num & 0xff,
+    ];
+  };
+
+  const ansi = (hex: string) => {
+    const [r, g, b] = hexToRgb(hex);
+    return `\x1b[38;2;${r};${g};${b}m`;
+  };
+
+  const c1 = ansi(primary);
+  const c2 = ansi(text);
+  const reset = '\x1b[0m';
+
+  const lines = [
+    `${c1}..............`,
+    `            ..,;:ccc,.`,
+    `          ......''';lxO.`,
+    `.....''''..........,:ld;`,
+    `           .';;;:::;,,.x,`,
+    `      ..'''.            0Xxoc:,.  ...`,
+    `  ....                ,ONkc;,;cokOdc',.`,
+    ` .                   OMo           ':${c2}dd${c1}o.`,
+    `                    dMc               :OO;`,
+    `                    0M.                 .:o.`,
+    `                    ;Wd`,
+    `                     ;XO,`,
+    `                       ,d0Odlc;,..`,
+    `                           ..',;:cdOOd::,.`,
+    `                                    .:d;.':;.`,
+    `                                       'd,  .'`,
+    `                                         ;l   ..`,
+    `                                          .o`,
+    `                                            c${reset}`,
+    '',
+  ];
+  lines.forEach((line) => ctx.writeLine(line));
+
+  const variant = document.documentElement.classList.contains('dark')
+    ? 'Dark'
+    : 'Light';
+  ctx.writeLine(`${c2}Theme: Undercover (${variant})${reset}`);
+}
+
 const registry: Record<string, CommandHandler> = {
   man,
   history,
   alias,
+  neofetch,
   cat: (args, ctx) => ctx.runWorker(`cat ${args}`),
   grep: (args, ctx) => ctx.runWorker(`grep ${args}`),
   jq: (args, ctx) => ctx.runWorker(`jq ${args}`),
