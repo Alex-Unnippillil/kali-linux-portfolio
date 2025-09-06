@@ -53,6 +53,8 @@ export class Desktop extends Component {
             showWindowSwitcher: false,
             switcherWindows: [],
         }
+        this._toggledWindows = [];
+        this._desktopShown = false;
     }
 
     componentDidMount() {
@@ -552,6 +554,36 @@ export class Desktop extends Component {
         this.giveFocusToLastApp();
     }
 
+    toggleMinimizeAll = (scope = 'workspace') => {
+        // For now, scope is reserved for future multi-workspace support
+        const minimized_windows = { ...this.state.minimized_windows };
+        const focused_windows = { ...this.state.focused_windows };
+
+        if (this._desktopShown) {
+            this._toggledWindows.forEach(id => {
+                minimized_windows[id] = false;
+            });
+            this._toggledWindows = [];
+            this._desktopShown = false;
+            this.setState({ minimized_windows }, () => this.giveFocusToLastApp());
+            return;
+        }
+
+        this._toggledWindows = [];
+        for (const id in this.state.closed_windows) {
+            if (this.state.closed_windows[id]) continue;
+            if (!minimized_windows[id]) {
+                minimized_windows[id] = true;
+                focused_windows[id] = false;
+                this._toggledWindows.push(id);
+            }
+        }
+
+        this._desktopShown = true;
+        this.setState({ minimized_windows, focused_windows });
+        this.hideSideBar(null, false);
+    }
+
     giveFocusToLastApp = () => {
         // if there is atleast one app opened, give it focus
         if (!this.checkAllMinimised()) {
@@ -884,6 +916,8 @@ export class Desktop extends Component {
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    toggleMinimizeAll={this.toggleMinimizeAll}
+                    toggleScope={this.props?.toggleScope}
                 />
 
                 {/* Desktop Apps */}
