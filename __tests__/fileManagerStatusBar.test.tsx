@@ -14,7 +14,7 @@ const folder: FileItem = {
 describe('StatusBar', () => {
   test('updates count and size when selection changes', async () => {
     const { rerender } = render(<StatusBar selectedItems={[]} />);
-    expect(screen.getByText('0 items selected')).toBeInTheDocument();
+    expect(screen.getByText('No items selected')).toBeInTheDocument();
     expect(screen.getByText('0 B')).toBeInTheDocument();
 
     rerender(<StatusBar selectedItems={[file]} />);

@@ -61,9 +61,11 @@ export default function StatusBar({ selectedItems }: StatusBarProps) {
   }, [selectedItems]);
 
   const count = selectedItems.length;
+  const label =
+    count === 0 ? 'No items selected' : `${count} item${count === 1 ? '' : 's'} selected`;
   return (
     <div className="w-full px-2 py-1 border-t border-gray-600 flex justify-between text-xs text-white bg-ub-warm-grey bg-opacity-40">
-      <span>{count} item{count === 1 ? '' : 's'} selected</span>
+      <span>{label}</span>
       <span>{formatBytes(size)}</span>
     </div>
   );
