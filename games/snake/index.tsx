@@ -3,12 +3,12 @@
 import React, { useRef, useEffect, useState } from "react";
 import GameShell from "../../components/games/GameShell";
 import usePersistentState from "../../hooks/usePersistentState";
+import useCanvasResize from "../../hooks/useCanvasResize";
 import { DEFAULT_GRID_SIZE, createState, step, GameState } from "./logic";
 
 const CELL_SIZE = 16;
 
 const Snake = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [wrap, setWrap] = usePersistentState<boolean>("snake:wrap", false);
   const [speed, setSpeed] = usePersistentState<number>("snake:speed", 150);
   const [gridSize, setGridSize] = usePersistentState<number>(
@@ -21,6 +21,8 @@ const Snake = () => {
   const [score, setScore] = useState(0);
   const [foodAnim, setFoodAnim] = useState(1);
   const runningRef = useRef(true);
+  const width = state.gridSize * CELL_SIZE;
+  const canvasRef = useCanvasResize(width, width);
 
   // reset when wrap or grid size changes
   useEffect(() => {
@@ -106,6 +108,7 @@ const Snake = () => {
       <label className="flex items-center space-x-2">
         <input
           type="checkbox"
+          aria-label="Wrap edges"
           checked={wrap}
           onChange={(e) => setWrap(e.target.checked)}
         />
@@ -114,6 +117,7 @@ const Snake = () => {
       <label className="flex items-center space-x-2">
         <span>Map size</span>
         <select
+          aria-label="Map size"
           value={gridSize}
           onChange={(e) => setGridSize(parseInt(e.target.value, 10))}
         >
@@ -132,8 +136,6 @@ const Snake = () => {
     { label: "Normal", value: 150 },
     { label: "Fast", value: 100 },
   ];
-
-  const width = state.gridSize * CELL_SIZE;
 
   return (
     <GameShell game="snake" settings={settings}>
@@ -156,7 +158,7 @@ const Snake = () => {
           </div>
           <div>Score: {score}</div>
         </div>
-        <canvas ref={canvasRef} width={width} height={width} />
+          <canvas ref={canvasRef} aria-label="Snake game canvas" />
       </div>
     </GameShell>
   );

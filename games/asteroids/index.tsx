@@ -234,15 +234,18 @@ const AsteroidsGame: React.FC = () => {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    function resize() {
+    canvas.style.willChange = "transform";
+
+    const resize = () => {
       if (!canvas || !ctx) return;
       const { clientWidth, clientHeight } = canvas;
       canvas.width = clientWidth * DPR;
       canvas.height = clientHeight * DPR;
       ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    }
+    };
     resize();
-    window.addEventListener("resize", resize);
+    const ro = new ResizeObserver(resize);
+    ro.observe(canvas);
 
     initGame();
 
@@ -257,7 +260,7 @@ const AsteroidsGame: React.FC = () => {
     id = requestAnimationFrame(loop);
     return () => {
       cancelAnimationFrame(id);
-      window.removeEventListener("resize", resize);
+      ro.disconnect();
     };
   }, [paused, initGame, update, draw]);
 
@@ -268,7 +271,7 @@ const AsteroidsGame: React.FC = () => {
 
   return (
     <div className="relative w-full h-full bg-black" data-testid="asteroids-game">
-      <canvas ref={canvasRef} className="w-full h-full" />
+      <canvas ref={canvasRef} className="w-full h-full" aria-label="Asteroids game canvas" />
       <div className="pointer-events-none absolute inset-0 select-none">
         <div className="absolute top-2 left-2 flex gap-1">
           {Array.from({ length: lives }).map((_, i) => (

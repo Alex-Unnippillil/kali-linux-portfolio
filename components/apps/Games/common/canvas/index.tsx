@@ -29,6 +29,8 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(
       const canvas = canvasRef.current;
       if (!canvas) return;
 
+      canvas.style.willChange = 'transform';
+
       // Prefer OffscreenCanvas with a worker when supported
       if (typeof Worker === 'function' && hasOffscreenCanvas()) {
         const worker = new Worker(
@@ -56,10 +58,11 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(
         );
 
         resize();
-        window.addEventListener('resize', resize);
+        const ro = new ResizeObserver(resize);
+        ro.observe(canvas);
         return () => {
           worker.terminate();
-          window.removeEventListener('resize', resize);
+          ro.disconnect();
         };
       }
 
@@ -77,8 +80,9 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(
       };
 
       resize();
-      window.addEventListener('resize', resize);
-      return () => window.removeEventListener('resize', resize);
+      const ro = new ResizeObserver(resize);
+      ro.observe(canvas);
+      return () => ro.disconnect();
     }, [width, height]);
 
     useImperativeHandle(ref, () => ({
@@ -95,15 +99,16 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(
       },
     }));
 
-    return (
-      <canvas
-        ref={canvasRef}
-        className={className}
-        style={{ imageRendering: 'pixelated' }}
-      />
-    );
-  }
-);
+      return (
+        <canvas
+          ref={canvasRef}
+          className={className}
+          style={{ imageRendering: 'pixelated' }}
+          aria-label="Game canvas"
+        />
+      );
+    }
+  );
 
 Canvas.displayName = 'Canvas';
 
