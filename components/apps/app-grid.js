@@ -4,6 +4,7 @@ import apps, { games, utilities } from '../../apps.config';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { Grid } from 'react-window';
 import useIntersection from '../../hooks/useIntersection';
+import prefetchDynamicImport from '../../utils/prefetchDynamicImport';
 
 function fuzzyHighlight(text, query) {
   const q = query.toLowerCase();
@@ -109,7 +110,7 @@ export default function AppGrid({ openApp }) {
         !prefetchedRef.current.has(app.id)
       ) {
         const timer = setTimeout(() => {
-          app.screen.prefetch();
+          prefetchDynamicImport(app.screen.prefetch, `/apps/${app.id}.js`);
           prefetchedRef.current.add(app.id);
         }, 200);
         return () => clearTimeout(timer);
