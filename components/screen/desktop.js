@@ -99,6 +99,24 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+
+        // Warm commonly used modules during idle periods so the first
+        // interaction is snappy even on a cold cache. Falling back to
+        // setTimeout ensures compatibility with environments lacking
+        // requestIdleCallback.
+        if (typeof window !== 'undefined') {
+            const warmModules = () => {
+                import('../apps/terminal');
+                import('../../apps/terminal/tabs');
+                import('../apps/file-explorer');
+                import('../apps/settings');
+            };
+            if ('requestIdleCallback' in window) {
+                requestIdleCallback(warmModules);
+            } else {
+                setTimeout(warmModules, 0);
+            }
+        }
     }
 
     componentWillUnmount() {
