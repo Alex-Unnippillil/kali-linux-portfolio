@@ -9,9 +9,9 @@ import {
   exportSettings as exportSettingsData,
   importSettings as importSettingsData,
 } from "../../utils/settingsStore";
-import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import KeymapEditor from "./components/KeymapEditor";
 
 export default function Settings() {
   const {
@@ -37,6 +37,7 @@ export default function Settings() {
   const tabs = [
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
+    { id: "keyboard", label: "Keyboard" },
     { id: "privacy", label: "Privacy" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
@@ -102,8 +103,6 @@ export default function Settings() {
     setHighContrast(defaults.highContrast);
     setTheme("default");
   };
-
-  const [showKeymap, setShowKeymap] = useState(false);
 
   return (
     <div className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey">
@@ -260,15 +259,13 @@ export default function Settings() {
               ariaLabel="Haptics"
             />
           </div>
-          <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
-            <button
-              onClick={() => setShowKeymap(true)}
-              className="px-4 py-2 rounded bg-ub-orange text-white"
-            >
-              Edit Shortcuts
-            </button>
-          </div>
         </>
+      )}
+      {activeTab === "keyboard" && (
+        <div className="p-4 space-y-4">
+          <h2 className="text-lg font-bold">Keyboard Shortcuts</h2>
+          <KeymapEditor />
+        </div>
       )}
       {activeTab === "privacy" && (
         <>
@@ -300,7 +297,6 @@ export default function Settings() {
           }}
           className="hidden"
         />
-      <KeymapOverlay open={showKeymap} onClose={() => setShowKeymap(false)} />
     </div>
   );
 }

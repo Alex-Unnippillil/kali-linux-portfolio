@@ -290,6 +290,16 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   }));
 
   useEffect(() => {
+    const handler = (e: Event) => {
+      const cmd = (e as CustomEvent<string>).detail;
+      runCommand(cmd);
+    };
+    window.addEventListener('run-terminal-command', handler as EventListener);
+    return () =>
+      window.removeEventListener('run-terminal-command', handler as EventListener);
+  }, [runCommand]);
+
+  useEffect(() => {
     let disposed = false;
     (async () => {
       const [{ Terminal: XTerm }, { FitAddon }, { SearchAddon }] = await Promise.all([
