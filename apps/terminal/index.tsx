@@ -65,6 +65,9 @@ const SettingsIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export interface TerminalProps {
   openApp?: (id: string) => void;
+  scheme?: string;
+  opacity?: number;
+  onSettingsChange?: (scheme: string, opacity: number) => void;
 }
 
 export interface TerminalHandle {
@@ -76,7 +79,24 @@ const files: Record<string, string> = {
   'README.md': 'Welcome to the web terminal.\nThis is a fake file used for demos.',
 };
 
-const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref) => {
+const THEME_PRESETS = {
+  'Kali-Dark': { background: '#0f1317', foreground: '#f5f5f5' },
+  'Kali-Light': { background: '#f5f5f5', foreground: '#0f1317' },
+  Solarized: { background: '#002b36', foreground: '#839496' },
+  Dracula: { background: '#282a36', foreground: '#f8f8f2' },
+} as const;
+
+const hexToRgba = (hex: string, alpha: number) => {
+  const sanitized = hex.replace('#', '');
+  const num = parseInt(sanitized, 16);
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
+  ({ openApp, scheme = 'Kali-Dark', opacity = 1, onSettingsChange }, ref) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<any>(null);
   const fitRef = useRef<any>(null);
@@ -101,28 +121,12 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsScheme, setSettingsScheme] = useState(scheme);
+  const [settingsOpacity, setSettingsOpacity] = useState(opacity);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
   const [overflow, setOverflow] = useState({ top: false, bottom: false });
-  const ansiColors = [
-    '#000000',
-    '#AA0000',
-    '#00AA00',
-    '#AA5500',
-    '#0000AA',
-    '#AA00AA',
-    '#00AAAA',
-    '#AAAAAA',
-    '#555555',
-    '#FF5555',
-    '#55FF55',
-    '#FFFF55',
-    '#5555FF',
-    '#FF55FF',
-    '#55FFFF',
-    '#FFFFFF',
-  ];
 
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
@@ -188,6 +192,19 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   );
 
   contextRef.current.runWorker = runWorker;
+
+  useEffect(() => {
+    if (!termRef.current || !containerRef.current) return;
+    const preset = THEME_PRESETS[scheme as keyof typeof THEME_PRESETS];
+    const bg = hexToRgba(preset.background, opacity);
+    termRef.current.setOption?.('theme', {
+      background: bg,
+      foreground: preset.foreground,
+      cursor: preset.foreground,
+    });
+    containerRef.current.style.backgroundColor = bg;
+    containerRef.current.style.color = preset.foreground;
+  }, [scheme, opacity]);
 
   useEffect(() => {
     registryRef.current = {
@@ -315,6 +332,15 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       term.open(containerRef.current!);
       fit.fit();
       term.focus();
+      const preset = THEME_PRESETS[scheme as keyof typeof THEME_PRESETS];
+      const bg = hexToRgba(preset.background, opacity);
+      term.setOption?.('theme', {
+        background: bg,
+        foreground: preset.foreground,
+        cursor: preset.foreground,
+      });
+      containerRef.current!.style.backgroundColor = bg;
+      containerRef.current!.style.color = preset.foreground;
       if (opfsSupported) {
         dirRef.current = await getDir('terminal');
         const existing = await readFile('history.txt', dirRef.current || undefined);
@@ -436,17 +462,36 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       )}
       {settingsOpen && (
         <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-10">
-          <div className="bg-gray-900 p-4 rounded space-y-4">
-            <div className="grid grid-cols-8 gap-2">
-              {ansiColors.map((c, i) => (
-                <div key={i} className="h-4 w-4 rounded" style={{ backgroundColor: c }} />
-              ))}
-            </div>
-            <pre className="text-sm leading-snug">
-              <span className="text-blue-400">bin</span>{' '}
-              <span className="text-green-400">script.sh</span>{' '}
-              <span className="text-gray-300">README.md</span>
-            </pre>
+          <div className="bg-gray-900 p-4 rounded space-y-4 text-white">
+            <label className="flex flex-col">
+              <span className="mb-1">Color Scheme</span>
+              <select
+                className="bg-gray-800 p-1 rounded"
+                value={settingsScheme}
+                onChange={(e) => setSettingsScheme(e.target.value)}
+              >
+                {Object.keys(THEME_PRESETS).map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col">
+              <span className="mb-1">
+                Background Opacity: {Math.round(settingsOpacity * 100)}%
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={settingsOpacity}
+                onChange={(e) =>
+                  setSettingsOpacity(parseFloat(e.target.value))
+                }
+              />
+            </label>
             <div className="flex justify-end gap-2">
               <button
                 className="px-2 py-1 bg-gray-700 rounded"
@@ -460,6 +505,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               <button
                 className="px-2 py-1 bg-blue-600 rounded"
                 onClick={() => {
+                  onSettingsChange?.(settingsScheme, settingsOpacity);
                   setSettingsOpen(false);
                   termRef.current?.focus();
                 }}
@@ -478,7 +524,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           <button onClick={handlePaste} aria-label="Paste">
             <PasteIcon />
           </button>
-          <button onClick={() => setSettingsOpen(true)} aria-label="Settings">
+          <button
+            onClick={() => {
+              setSettingsScheme(scheme);
+              setSettingsOpacity(opacity);
+              setSettingsOpen(true);
+            }}
+            aria-label="Settings"
+          >
             <SettingsIcon />
           </button>
         </div>
