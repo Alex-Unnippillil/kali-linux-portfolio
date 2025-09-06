@@ -6,6 +6,12 @@ test.describe('Service worker recovery', () => {
   test('clears app caches and reloads', async ({ page }) => {
     await page.goto('/apps/power');
 
+    const swUrl = await page.evaluate(async () => {
+      await navigator.serviceWorker.ready;
+      return navigator.serviceWorker.controller?.scriptURL;
+    });
+    expect(swUrl).toMatch(/\/service-worker\.js$/);
+
     await page.evaluate(async () => {
       await caches.open('KLP_stale-cache');
       await caches.open('unrelated-cache');
