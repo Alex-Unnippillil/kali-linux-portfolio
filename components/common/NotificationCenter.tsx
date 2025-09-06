@@ -1,4 +1,5 @@
-import React, { createContext, useCallback, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useState } from 'react';
+import NotificationsPanel from '../ui/NotificationsPanel';
 
 export interface AppNotification {
   id: string;
@@ -7,73 +8,42 @@ export interface AppNotification {
 }
 
 interface NotificationsContextValue {
-  notifications: Record<string, AppNotification[]>;
-  pushNotification: (appId: string, message: string) => void;
-  clearNotifications: (appId?: string) => void;
+  notifications: AppNotification[];
+  pushNotification: (message: string) => void;
+  clearNotifications: () => void;
+  dnd: boolean;
+  toggleDnd: () => void;
+  panelOpen: boolean;
+  openPanel: () => void;
+  closePanel: () => void;
 }
 
 export const NotificationsContext = createContext<NotificationsContextValue | null>(null);
 
 export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
-  const [notifications, setNotifications] = useState<Record<string, AppNotification[]>>({});
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [dnd, setDnd] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
 
-  const pushNotification = useCallback((appId: string, message: string) => {
-    setNotifications(prev => {
-      const list = prev[appId] ?? [];
-      const next = {
-        ...prev,
-        [appId]: [
-          ...list,
-          {
-            id: `${Date.now()}-${Math.random()}`,
-            message,
-            date: Date.now(),
-          },
-        ],
-      };
-      return next;
-    });
+  const pushNotification = useCallback((message: string) => {
+    setNotifications(prev => [
+      ...prev,
+      { id: `${Date.now()}-${Math.random()}`, message, date: Date.now() },
+    ]);
   }, []);
 
-  const clearNotifications = useCallback((appId?: string) => {
-    setNotifications(prev => {
-      if (!appId) return {};
-      const next = { ...prev };
-      delete next[appId];
-      return next;
-    });
-  }, []);
+  const clearNotifications = useCallback(() => setNotifications([]), []);
 
-  const totalCount = Object.values(notifications).reduce(
-    (sum, list) => sum + list.length,
-    0
-  );
-
-  useEffect(() => {
-    const nav: any = navigator;
-    if (nav && nav.setAppBadge) {
-      if (totalCount > 0) nav.setAppBadge(totalCount).catch(() => {});
-      else nav.clearAppBadge?.().catch(() => {});
-    }
-  }, [totalCount]);
+  const toggleDnd = useCallback(() => setDnd(prev => !prev), []);
+  const openPanel = useCallback(() => setPanelOpen(true), []);
+  const closePanel = useCallback(() => setPanelOpen(false), []);
 
   return (
     <NotificationsContext.Provider
-      value={{ notifications, pushNotification, clearNotifications }}
+      value={{ notifications, pushNotification, clearNotifications, dnd, toggleDnd, panelOpen, openPanel, closePanel }}
     >
       {children}
-      <div className="notification-center">
-        {Object.entries(notifications).map(([appId, list]) => (
-          <section key={appId} className="notification-group">
-            <h3>{appId}</h3>
-            <ul>
-              {list.map(n => (
-                <li key={n.id}>{n.message}</li>
-              ))}
-            </ul>
-          </section>
-        ))}
-      </div>
+      <NotificationsPanel open={panelOpen} notifications={notifications} onClose={closePanel} />
     </NotificationsContext.Provider>
   );
 };

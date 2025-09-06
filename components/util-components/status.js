@@ -2,12 +2,19 @@ import React, { useEffect, useState } from "react";
 import Image from 'next/image';
 import SmallArrow from "./small_arrow";
 import { useSettings } from '../../hooks/useSettings';
+import { useNotifications } from '../../hooks/useNotifications';
 
 const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
 
 export default function Status() {
   const { allowNetwork } = useSettings();
   const [online, setOnline] = useState(true);
+  const { dnd, toggleDnd, openPanel } = useNotifications();
+
+  const handleBellClick = () => {
+    toggleDnd();
+    openPanel();
+  };
 
   useEffect(() => {
     const pingServer = async () => {
@@ -40,6 +47,23 @@ export default function Status() {
 
   return (
     <div className="flex justify-center items-center">
+      <span className="mx-1.5 relative">
+        <button
+          type="button"
+          aria-label="Notifications"
+          onClick={handleBellClick}
+        >
+          <Image
+            width={16}
+            height={16}
+            src="/themes/Yaru/status/notification-symbolic.svg"
+            alt="notifications"
+            className="inline status-symbol w-4 h-4"
+            sizes="16px"
+          />
+        </button>
+        {dnd && <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />}
+      </span>
       <span
         className="mx-1.5 relative"
         title={online ? (allowNetwork ? 'Online' : 'Online (requests blocked)') : 'Offline'}
