@@ -9,11 +9,15 @@ interface SerialPort {
 
 interface Serial {
   requestPort(): Promise<SerialPort>;
-  addEventListener(type: 'disconnect', listener: (ev: Event & { readonly target: SerialPort }) => void): void;
-  removeEventListener(type: 'disconnect', listener: (ev: Event & { readonly target: SerialPort }) => void): void;
+  addEventListener(
+    type: 'disconnect',
+    listener: (ev: Event & { readonly target: SerialPort }) => void
+  ): void;
+  removeEventListener(
+    type: 'disconnect',
+    listener: (ev: Event & { readonly target: SerialPort }) => void
+  ): void;
 }
-
-type NavigatorSerial = Navigator & { serial: Serial };
 
 const SerialTerminalApp: React.FC = () => {
   const supported = typeof navigator !== 'undefined' && 'serial' in navigator;
@@ -30,11 +34,13 @@ const SerialTerminalApp: React.FC = () => {
         setPort(null);
       }
     };
-    const nav = navigator as NavigatorSerial;
-    nav.serial.addEventListener('disconnect', handleDisconnect);
-    return () => {
-      nav.serial.removeEventListener('disconnect', handleDisconnect);
-    };
+    if ('serial' in navigator) {
+      const serial = navigator.serial as Serial;
+      serial.addEventListener('disconnect', handleDisconnect);
+      return () => {
+        serial.removeEventListener('disconnect', handleDisconnect);
+      };
+    }
   }, [supported, port]);
 
   const readLoop = async (p: SerialPort) => {
@@ -60,10 +66,13 @@ const SerialTerminalApp: React.FC = () => {
     if (!supported) return;
     setError('');
     try {
-      const p = await (navigator as NavigatorSerial).serial.requestPort();
-      await p.open({ baudRate: 9600 });
-      setPort(p);
-      readLoop(p);
+      if ('serial' in navigator) {
+        const serial = navigator.serial as Serial;
+        const p = await serial.requestPort();
+        await p.open({ baudRate: 9600 });
+        setPort(p);
+        readLoop(p);
+      }
     } catch (err) {
       const e = err as DOMException;
       if (e.name === 'NotAllowedError') {
