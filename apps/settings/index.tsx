@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
+import WindowControls from "./components/WindowControls";
 import {
   resetSettings,
   defaults,
@@ -36,6 +37,7 @@ export default function Settings() {
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
+    { id: "windows", label: "Window Manager" },
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
   ] as const;
@@ -209,6 +211,7 @@ export default function Settings() {
           </div>
         </>
       )}
+      {activeTab === "windows" && <WindowControls />}
       {activeTab === "accessibility" && (
         <>
           <div className="flex justify-center my-4">
