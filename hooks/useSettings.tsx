@@ -211,7 +211,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setWallpaper(base);
       setRotationIndex((index + 1) % rotationSet.length);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rotationMode, rotationSet]);
 
   useEffect(() => {

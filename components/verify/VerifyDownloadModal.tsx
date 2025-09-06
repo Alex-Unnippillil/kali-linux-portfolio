@@ -133,7 +133,7 @@ const VerifyDownloadModal = ({ isOpen, onClose }: VerifyDownloadModalProps) => {
           {step === 2 && (
             <div>
               <p className="mb-2">
-                Paste the GPG signature and verify it with Kali's signing key.
+                Paste the GPG signature and verify it with Kali&apos;s signing key.
               </p>
               <input
                 value={signature}

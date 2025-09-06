@@ -178,7 +178,7 @@ export default function Timer() {
       {(running || remaining > 0) && <div>Remaining: {formatTime(remaining)}</div>}
       {showNotice && (
         <div className="p-2 bg-ub-cool-grey text-white rounded">
-          <p>Time's up!</p>
+          <p>Time&apos;s up!</p>
           <div className="mt-2 space-x-2">
             <button
               onClick={() => {

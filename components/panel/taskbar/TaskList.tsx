@@ -85,7 +85,6 @@ const TaskList: React.FC<TaskListProps> = ({ apps, onMinimizeWindow }) => {
           style={{ width: rowSize, height: rowSize }}
         >
           {app.icon ? (
-            // eslint-disable-next-line @next/next/no-img-element
             <img src={app.icon} alt="" className="max-w-full max-h-full" />
           ) : (
             <span>{app.title}</span>

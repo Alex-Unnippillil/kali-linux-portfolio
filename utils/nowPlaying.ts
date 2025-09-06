@@ -21,7 +21,7 @@ export const subscribeState = (
   handler: (s: NowPlayingState) => void
 ): (() => void) => {
   handler(state);
-  return sub(STATE_TOPIC, handler);
+  return sub(STATE_TOPIC, handler as unknown as (data: unknown) => void);
 };
 
 export type ControlAction = 'play' | 'pause' | 'next' | 'prev';
@@ -32,7 +32,8 @@ export const control = (action: ControlAction): void => {
 
 export const subscribeControl = (
   handler: (a: ControlAction) => void
-): (() => void) => sub(CONTROL_TOPIC, handler);
+): (() => void) =>
+  sub(CONTROL_TOPIC, handler as unknown as (data: unknown) => void);
 
 export const play = () => control('play');
 export const pause = () => control('pause');
