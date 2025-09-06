@@ -140,6 +140,7 @@ const uploadAttachments = async (files: File[]) => {
 };
 
 const ContactApp: React.FC = () => {
+  const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
@@ -215,11 +216,13 @@ const ContactApp: React.FC = () => {
     let recaptchaToken = '';
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
     let shouldFallback = fallback;
-    if (!shouldFallback && siteKey && (window as any).grecaptcha) {
-      recaptchaToken = await getRecaptchaToken(siteKey);
-      if (!recaptchaToken) shouldFallback = true;
-    } else {
-      shouldFallback = true;
+    if (!shouldFallback) {
+      if (siteKey && (window as any).grecaptcha) {
+        recaptchaToken = await getRecaptchaToken(siteKey);
+        if (!recaptchaToken && !demoMode) shouldFallback = true;
+      } else if (!demoMode) {
+        shouldFallback = true;
+      }
     }
     if (shouldFallback) {
       setFallback(true);
@@ -263,6 +266,11 @@ const ContactApp: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
       <h1 className="mb-6 text-2xl">Contact</h1>
+      {demoMode && (
+        <div className="mb-6 rounded bg-yellow-700 p-3 text-sm text-yellow-100">
+          Demo mode: messages are not stored.
+        </div>
+      )}
       {banner && (
         <div
           className={`mb-6 rounded p-3 text-sm ${
