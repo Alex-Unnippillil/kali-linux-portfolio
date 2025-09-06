@@ -9,8 +9,6 @@ import '../styles/globals.css';
 import '../styles/index.css';
 import '../styles/resume-print.css';
 import '../styles/print.css';
-import '@xterm/xterm/css/xterm.css';
-import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
@@ -38,6 +36,10 @@ if (process.env.NODE_ENV === 'production') {
 function MyApp(props) {
   const { Component, pageProps } = props;
 
+  useEffect(() => {
+    void import('@xterm/xterm/css/xterm.css');
+    void import('leaflet/dist/leaflet.css');
+  }, []);
 
   useEffect(() => {
     if (isBrowser() && typeof window.initA2HS === 'function') {

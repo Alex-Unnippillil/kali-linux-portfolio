@@ -187,3 +187,15 @@ jest.mock(
   }),
   { virtual: true }
 );
+
+jest.mock(
+  '@xterm/addon-web-links',
+  () => ({
+    WebLinksAddon: class {
+      activate() {}
+      dispose() {}
+    },
+
+  }),
+  { virtual: true }
+);
