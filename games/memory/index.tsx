@@ -9,6 +9,7 @@ import {
   recordScore,
   type LeaderboardEntry,
 } from '../../components/apps/Games/common/leaderboard';
+import useRafInterval from '../../hooks/useRafInterval';
 
 const ATTACK_LIMIT = 60_000; // 60 seconds
 
@@ -42,24 +43,21 @@ const MemoryGame: React.FC = () => {
     setTimeLeft(ATTACK_LIMIT);
   }, [size, attackMode]);
 
-  // timer effect
-  useEffect(() => {
+  // timer effect using requestAnimationFrame
+  useRafInterval(() => {
     if (startTime === null) return;
-    const id = setInterval(() => {
-      const now = Date.now();
-      const diff = now - startTime;
-      setElapsed(diff);
-      if (attackMode) {
-        const remaining = ATTACK_LIMIT - diff;
-        setTimeLeft(remaining);
-        if (remaining <= 0) {
-          setCompleted(true);
-          setStartTime(null);
-        }
+    const now = Date.now();
+    const diff = now - startTime;
+    setElapsed(diff);
+    if (attackMode) {
+      const remaining = ATTACK_LIMIT - diff;
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        setCompleted(true);
+        setStartTime(null);
       }
-    }, 100);
-    return () => clearInterval(id);
-  }, [startTime, attackMode]);
+    }
+  }, 100);
 
   const handleClick = (idx: number) => {
     if (matched.has(idx) || flipped.includes(idx) || completed) return;

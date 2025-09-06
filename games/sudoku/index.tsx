@@ -15,6 +15,7 @@ import {
   cellsToBoard,
 } from "../../apps/games/sudoku/cell";
 import PencilMarks from "./components/PencilMarks";
+import useRafInterval from "../../hooks/useRafInterval";
 
 const formatTime = (s: number) =>
   `${Math.floor(s / 60)}:${("0" + (s % 60)).slice(-2)}`;
@@ -64,10 +65,7 @@ const SudokuGame: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [difficulty]);
 
-  useEffect(() => {
-    const id = setInterval(() => setTime((t) => t + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
+  useRafInterval(() => setTime((t) => t + 1), 1000);
 
   const handleValue = (
     r: number,
