@@ -62,12 +62,18 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 });
 
+// Prefix all PWA caches with the current build ID so that each deployment
+// uses its own set of caches and outdated entries are naturally discarded.
+const buildId =
+  process.env.NEXT_BUILD_ID || process.env.BUILD_ID || 'dev';
+
 const withPWA = require('@ducanh2912/next-pwa').default({
   dest: 'public',
   sw: 'sw.js',
   disable: process.env.VERCEL_ENV !== 'production',
   buildExcludes: [/dynamic-css-manifest\.json$/],
   workboxOptions: {
+    cacheId: buildId,
     navigateFallback: '/offline.html',
     additionalManifestEntries: [
       { url: '/', revision: null },
@@ -87,7 +93,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
       { url: '/images/logos/logo_1024.png', revision: null },
     ],
     // Cache only images and fonts to ensure app shell updates while assets work offline
-    runtimeCaching: require('./cache.js'),
+    runtimeCaching: require('./cache.js')(buildId),
   },
 });
 
