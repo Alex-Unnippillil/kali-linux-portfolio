@@ -2,6 +2,7 @@
 
 import usePersistentState from '../../hooks/usePersistentState';
 import { useEffect } from 'react';
+import { notify } from '../../utils/notify';
 
 interface Props {
   open: boolean;
@@ -42,7 +43,21 @@ const QuickSettings = ({ open }: Props) => {
       </div>
       <div className="px-4 pb-2 flex justify-between">
         <span>Network</span>
-        <input type="checkbox" checked={online} onChange={() => setOnline(!online)} />
+        <input
+          type="checkbox"
+          checked={online}
+          onChange={() => {
+            const next = !online;
+            setOnline(next);
+            notify({
+              title: 'Network',
+              body: next ? 'Online' : 'Offline',
+              icon: next
+                ? '/themes/Yaru/status/network-wireless-signal-good-symbolic.svg'
+                : '/themes/Yaru/status/network-wireless-signal-none-symbolic.svg',
+            });
+          }}
+        />
       </div>
       <div className="px-4 flex justify-between">
         <span>Reduced motion</span>

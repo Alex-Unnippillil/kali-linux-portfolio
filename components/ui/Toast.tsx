@@ -2,7 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { kaliTheme } from '../../styles/themes/kali';
 
 interface ToastProps {
-  message: string;
+  message?: string;
+  title?: string;
+  body?: string;
+  icon?: string;
   actionLabel?: string;
   onAction?: () => void;
   onClose?: () => void;
@@ -11,6 +14,9 @@ interface ToastProps {
 
 const Toast: React.FC<ToastProps> = ({
   message,
+  title,
+  body,
+  icon,
   actionLabel,
   onAction,
   onClose,
@@ -46,7 +52,11 @@ const Toast: React.FC<ToastProps> = ({
         borderRadius: 'var(--radius-md)',
       }}
     >
-      <span>{message}</span>
+      {icon && <img src={icon} alt="" className="w-4 h-4 mr-2" />}
+      <div className="flex flex-col">
+        {title && <strong className="font-semibold">{title}</strong>}
+        <span>{body ?? message}</span>
+      </div>
       {onAction && actionLabel && (
         <button
           onClick={onAction}
