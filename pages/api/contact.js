@@ -2,12 +2,11 @@ import { randomBytes } from 'crypto';
 import { contactSchema } from '../../utils/contactSchema';
 import { validateServerEnv } from '../../lib/validate';
 import { getServiceSupabase } from '../../lib/supabase';
+import { applyBackoff } from '../../utils/backoff';
 
-// Simple in-memory rate limiter. Not suitable for distributed environments.
 export const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 5;
-
-export const rateLimit = new Map();
+export const RATE_LIMIT_COOKIE = 'contactBackoff';
 
 export default async function handler(req, res) {
   try {
@@ -38,20 +37,13 @@ export default async function handler(req, res) {
 
   const ip =
     req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
-  const now = Date.now();
-  const entry = rateLimit.get(ip) || { count: 0, start: now };
-  if (now - entry.start > RATE_LIMIT_WINDOW_MS) {
-    entry.count = 0;
-    entry.start = now;
-  }
-  entry.count += 1;
-  rateLimit.set(ip, entry);
-  for (const [key, value] of rateLimit) {
-    if (now - value.start > RATE_LIMIT_WINDOW_MS) {
-      rateLimit.delete(key);
-    }
-  }
-  if (entry.count > RATE_LIMIT_MAX) {
+  const allowed = applyBackoff(req, res, {
+    name: RATE_LIMIT_COOKIE,
+    limit: RATE_LIMIT_MAX,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+    secret: process.env.RATE_LIMIT_SECRET || '',
+  });
+  if (!allowed) {
     console.warn('Contact submission rejected', { ip, reason: 'rate_limit' });
     res.status(429).json({ ok: false, code: 'rate_limit' });
     return;
