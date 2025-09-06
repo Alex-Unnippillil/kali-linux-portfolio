@@ -4,6 +4,12 @@ import {
   setAccent as saveAccent,
   getWallpaper as loadWallpaper,
   setWallpaper as saveWallpaper,
+  getLockWallpaper as loadLockWallpaper,
+  setLockWallpaper as saveLockWallpaper,
+  getRotateWallpapers as loadRotateWallpapers,
+  setRotateWallpapers as saveRotateWallpapers,
+  getWallpaperRotationDate as loadWallpaperRotationDate,
+  setWallpaperRotationDate as saveWallpaperRotationDate,
   getDensity as loadDensity,
   setDensity as saveDensity,
   getReducedMotion as loadReducedMotion,
@@ -35,6 +41,17 @@ export const ACCENT_OPTIONS = [
   '#ed64a6', // pink
 ];
 
+const WALLPAPERS = [
+  'wall-1',
+  'wall-2',
+  'wall-3',
+  'wall-4',
+  'wall-5',
+  'wall-6',
+  'wall-7',
+  'wall-8',
+];
+
 // Utility to lighten or darken a hex color by a percentage
 const shadeColor = (color: string, percent: number): string => {
   const f = parseInt(color.slice(1), 16);
@@ -54,6 +71,8 @@ const shadeColor = (color: string, percent: number): string => {
 interface SettingsContextValue {
   accent: string;
   wallpaper: string;
+  lockWallpaper: string;
+  rotateWallpapers: boolean;
   density: Density;
   reducedMotion: boolean;
   fontScale: number;
@@ -65,6 +84,8 @@ interface SettingsContextValue {
   theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
+  setLockWallpaper: (wallpaper: string) => void;
+  setRotateWallpapers: (value: boolean) => void;
   setDensity: (density: Density) => void;
   setReducedMotion: (value: boolean) => void;
   setFontScale: (value: number) => void;
@@ -79,6 +100,8 @@ interface SettingsContextValue {
 export const SettingsContext = createContext<SettingsContextValue>({
   accent: defaults.accent,
   wallpaper: defaults.wallpaper,
+  lockWallpaper: defaults.lockWallpaper,
+  rotateWallpapers: defaults.rotateWallpapers,
   density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
   fontScale: defaults.fontScale,
@@ -90,6 +113,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   theme: 'default',
   setAccent: () => {},
   setWallpaper: () => {},
+  setLockWallpaper: () => {},
+  setRotateWallpapers: () => {},
   setDensity: () => {},
   setReducedMotion: () => {},
   setFontScale: () => {},
@@ -104,6 +129,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [accent, setAccent] = useState<string>(defaults.accent);
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
+  const [lockWallpaper, setLockWallpaper] = useState<string>(defaults.lockWallpaper);
+  const [rotateWallpapers, setRotateWallpapers] = useState<boolean>(defaults.rotateWallpapers);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
@@ -118,7 +145,23 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     (async () => {
       setAccent(await loadAccent());
-      setWallpaper(await loadWallpaper());
+      const loadedWallpaper = await loadWallpaper();
+      setWallpaper(loadedWallpaper);
+      setLockWallpaper(await loadLockWallpaper());
+      const rotate = await loadRotateWallpapers();
+      setRotateWallpapers(rotate);
+      if (rotate) {
+        const today = new Date().toDateString();
+        const last = await loadWallpaperRotationDate();
+        if (last !== today) {
+          const next = WALLPAPERS[(WALLPAPERS.indexOf(loadedWallpaper) + 1) % WALLPAPERS.length];
+          setWallpaper(next);
+          setLockWallpaper(next);
+          await saveWallpaper(next);
+          await saveLockWallpaper(next);
+          await saveWallpaperRotationDate(today);
+        }
+      }
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
       setFontScale(await loadFontScale());
@@ -155,6 +198,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveWallpaper(wallpaper);
   }, [wallpaper]);
+
+  useEffect(() => {
+    saveLockWallpaper(lockWallpaper);
+  }, [lockWallpaper]);
+
+  useEffect(() => {
+    saveRotateWallpapers(rotateWallpapers);
+  }, [rotateWallpapers]);
 
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {
@@ -241,6 +292,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       value={{
         accent,
         wallpaper,
+        lockWallpaper,
+        rotateWallpapers,
         density,
         reducedMotion,
         fontScale,
@@ -252,6 +305,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         theme,
         setAccent,
         setWallpaper,
+        setLockWallpaper,
+        setRotateWallpapers,
         setDensity,
         setReducedMotion,
         setFontScale,

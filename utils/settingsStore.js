@@ -6,6 +6,8 @@ import { getTheme, setTheme } from './theme';
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
   wallpaper: 'wall-2',
+  lockWallpaper: 'wall-2',
+  rotateWallpapers: false,
   density: 'regular',
   reducedMotion: false,
   fontScale: 1,
@@ -34,6 +36,37 @@ export async function getWallpaper() {
 export async function setWallpaper(wallpaper) {
   if (typeof window === 'undefined') return;
   await set('bg-image', wallpaper);
+}
+
+export async function getLockWallpaper() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.lockWallpaper;
+  return (await get('lock-bg-image')) || DEFAULT_SETTINGS.lockWallpaper;
+}
+
+export async function setLockWallpaper(wallpaper) {
+  if (typeof window === 'undefined') return;
+  await set('lock-bg-image', wallpaper);
+}
+
+export async function getRotateWallpapers() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.rotateWallpapers;
+  const val = await get('wallpaper-rotate');
+  return val === undefined ? DEFAULT_SETTINGS.rotateWallpapers : val;
+}
+
+export async function setRotateWallpapers(value) {
+  if (typeof window === 'undefined') return;
+  await set('wallpaper-rotate', value);
+}
+
+export async function getWallpaperRotationDate() {
+  if (typeof window === 'undefined') return null;
+  return (await get('wallpaper-rotate-date')) || null;
+}
+
+export async function setWallpaperRotationDate(date) {
+  if (typeof window === 'undefined') return;
+  await set('wallpaper-rotate-date', date);
 }
 
 export async function getDensity() {
@@ -128,6 +161,9 @@ export async function resetSettings() {
   await Promise.all([
     del('accent'),
     del('bg-image'),
+    del('lock-bg-image'),
+    del('wallpaper-rotate'),
+    del('wallpaper-rotate-date'),
   ]);
   window.localStorage.removeItem('density');
   window.localStorage.removeItem('reduced-motion');
@@ -143,6 +179,8 @@ export async function exportSettings() {
   const [
     accent,
     wallpaper,
+    lockWallpaper,
+    rotateWallpapers,
     density,
     reducedMotion,
     fontScale,
@@ -154,6 +192,8 @@ export async function exportSettings() {
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
+    getLockWallpaper(),
+    getRotateWallpapers(),
     getDensity(),
     getReducedMotion(),
     getFontScale(),
@@ -167,6 +207,8 @@ export async function exportSettings() {
   return JSON.stringify({
     accent,
     wallpaper,
+    lockWallpaper,
+    rotateWallpapers,
     density,
     reducedMotion,
     fontScale,
@@ -191,6 +233,8 @@ export async function importSettings(json) {
   const {
     accent,
     wallpaper,
+    lockWallpaper,
+    rotateWallpapers,
     density,
     reducedMotion,
     fontScale,
@@ -203,6 +247,8 @@ export async function importSettings(json) {
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
+  if (lockWallpaper !== undefined) await setLockWallpaper(lockWallpaper);
+  if (rotateWallpapers !== undefined) await setRotateWallpapers(rotateWallpapers);
   if (density !== undefined) await setDensity(density);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
   if (fontScale !== undefined) await setFontScale(fontScale);
