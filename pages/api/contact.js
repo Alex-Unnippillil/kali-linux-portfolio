@@ -1,6 +1,5 @@
 import { randomBytes } from 'crypto';
 import { contactSchema } from '../../utils/contactSchema';
-import { validateServerEnv } from '../../lib/validate';
 import { getServiceSupabase } from '../../lib/supabase';
 import { applyBackoff } from '../../utils/backoff';
 
@@ -9,16 +8,15 @@ const RATE_LIMIT_MAX = 5;
 export const RATE_LIMIT_COOKIE = 'contactBackoff';
 
 export default async function handler(req, res) {
-  try {
-    validateServerEnv(process.env);
-  } catch {
-    if (!process.env.RECAPTCHA_SECRET) {
-      res.status(503).json({ ok: false, code: 'recaptcha_disabled' });
-    } else {
-      res.status(500).json({ ok: false });
-    }
+  const missingRecaptcha = !process.env.RECAPTCHA_SECRET;
+  const missingSupabase =
+    !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    return;
+  if (missingRecaptcha || missingSupabase) {
+    console.warn('Contact API running in demo mode', {
+      missingRecaptcha,
+      missingSupabase,
+    });
   }
   if (req.method === 'GET') {
     const token = randomBytes(32).toString('hex');
@@ -59,40 +57,41 @@ export default async function handler(req, res) {
 
   const { recaptchaToken = '', ...rest } = req.body || {};
   const secret = process.env.RECAPTCHA_SECRET;
-  if (!secret) {
-    console.warn('Contact submission rejected', { ip, reason: 'recaptcha_disabled' });
-    res.status(503).json({ ok: false, code: 'recaptcha_disabled' });
-    return;
-  }
-  if (!recaptchaToken) {
-    console.warn('Contact submission rejected', { ip, reason: 'invalid_recaptcha' });
-    res.status(400).json({ ok: false, code: 'invalid_recaptcha' });
-    return;
-  }
-  try {
-    const verify = await fetch(
-      'https://www.google.com/recaptcha/api/siteverify',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          secret: String(secret ?? ''),
-          response: String(recaptchaToken ?? ''),
-        }),
-      }
-    );
-    const captcha = await verify.json();
-    if (!captcha.success) {
+  if (secret) {
+    if (!recaptchaToken) {
       console.warn('Contact submission rejected', { ip, reason: 'invalid_recaptcha' });
       res.status(400).json({ ok: false, code: 'invalid_recaptcha' });
       return;
     }
-  } catch {
-    console.warn('Contact submission rejected', { ip, reason: 'invalid_recaptcha' });
-    res.status(400).json({ ok: false, code: 'invalid_recaptcha' });
-    return;
+    try {
+      const verify = await fetch(
+        'https://www.google.com/recaptcha/api/siteverify',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            secret: String(secret ?? ''),
+            response: String(recaptchaToken ?? ''),
+          }),
+        }
+      );
+      const captcha = await verify.json();
+      if (!captcha.success) {
+        console.warn('Contact submission rejected', { ip, reason: 'invalid_recaptcha' });
+        res.status(400).json({ ok: false, code: 'invalid_recaptcha' });
+        return;
+      }
+    } catch {
+      console.warn('Contact submission rejected', { ip, reason: 'invalid_recaptcha' });
+      res.status(400).json({ ok: false, code: 'invalid_recaptcha' });
+      return;
+    }
+  } else {
+    console.warn('Contact submission accepted without reCAPTCHA verification', {
+      ip,
+    });
   }
 
   let sanitized;

@@ -24,6 +24,7 @@ const getRecaptchaToken = (siteKey: string): Promise<string> =>
   });
 
 const ContactApp: React.FC = () => {
+  const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
@@ -83,12 +84,15 @@ const ContactApp: React.FC = () => {
     }
 
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
-    const recaptchaToken = await getRecaptchaToken(siteKey);
-    if (!recaptchaToken) {
-      setError("Captcha verification failed. Please try again.");
-      setSubmitting(false);
-      trackEvent("contact_submit_error", { method: "form" });
-      return;
+    let recaptchaToken = "";
+    if (siteKey) {
+      recaptchaToken = await getRecaptchaToken(siteKey);
+      if (!recaptchaToken && !demoMode) {
+        setError("Captcha verification failed. Please try again.");
+        setSubmitting(false);
+        trackEvent("contact_submit_error", { method: "form" });
+        return;
+      }
     }
 
     try {
@@ -121,6 +125,11 @@ const ContactApp: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4">
+      {demoMode && (
+        <div className="mb-4 rounded bg-yellow-700 p-2 text-sm text-yellow-100">
+          Demo mode: messages are not stored.
+        </div>
+      )}
       <h1 className="mb-4 text-2xl">Contact</h1>
       <p className="mb-4 text-sm">
         Prefer email?{" "}
