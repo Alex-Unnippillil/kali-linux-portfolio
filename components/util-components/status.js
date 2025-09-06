@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import Image from 'next/image';
 import SmallArrow from "./small_arrow";
 import { useSettings } from '../../hooks/useSettings';
+import NotifyBell from "../panel/NotifyBell";
 
 const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
 
@@ -75,6 +76,9 @@ export default function Status() {
           className="inline status-symbol w-4 h-4"
           sizes="16px"
         />
+      </span>
+      <span className="mx-1.5">
+        <NotifyBell />
       </span>
       <span className="mx-1">
         <SmallArrow angle="down" className=" status-symbol" />
