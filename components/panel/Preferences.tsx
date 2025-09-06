@@ -19,9 +19,14 @@ export default function Preferences() {
   const [active, setActive] = useState<TabId>("display");
 
   const [size, setSize] = useState(() => {
-    if (typeof window === "undefined") return 24;
+    if (typeof window === "undefined") return 40;
     const stored = localStorage.getItem(`${PANEL_PREFIX}size`);
-    return stored ? parseInt(stored, 10) : 24;
+    return stored ? parseInt(stored, 10) : 40;
+  });
+  const [rows, setRows] = useState(() => {
+    if (typeof window === "undefined") return 1;
+    const stored = localStorage.getItem(`${PANEL_PREFIX}rows`);
+    return stored ? parseInt(stored, 10) : 1;
   });
   const [length, setLength] = useState(() => {
     if (typeof window === "undefined") return 100;
@@ -43,7 +48,14 @@ export default function Preferences() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     localStorage.setItem(`${PANEL_PREFIX}size`, String(size));
+    window.dispatchEvent(new Event("storage"));
   }, [size]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(`${PANEL_PREFIX}rows`, String(rows));
+    window.dispatchEvent(new Event("storage"));
+  }, [rows]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -95,19 +107,35 @@ export default function Preferences() {
         {active === "measurements" && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <label htmlFor="panel-size" className="text-ubt-grey">
-                Size: {size}px
+              <label htmlFor="panel-height" className="text-ubt-grey">
+                Height
               </label>
-              <input
-                id="panel-size"
-                type="range"
-                min="16"
-                max="128"
+              <select
+                id="panel-height"
                 value={size}
                 onChange={(e) => setSize(parseInt(e.target.value, 10))}
-                className="ubuntu-slider"
-                aria-label="Panel size"
-              />
+                className="bg-ub-cool-grey text-white px-2 py-1 rounded"
+              >
+                {[24, 28, 32, 40].map((h) => (
+                  <option key={h} value={h}>
+                    {h}px
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center justify-between">
+              <label htmlFor="panel-rows" className="text-ubt-grey">
+                Rows
+              </label>
+              <select
+                id="panel-rows"
+                value={rows}
+                onChange={(e) => setRows(parseInt(e.target.value, 10))}
+                className="bg-ub-cool-grey text-white px-2 py-1 rounded"
+              >
+                <option value={1}>1</option>
+                <option value={2}>2</option>
+              </select>
             </div>
             <div className="flex items-center justify-between">
               <label htmlFor="panel-length" className="text-ubt-grey">
