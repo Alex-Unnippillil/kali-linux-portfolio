@@ -16,6 +16,7 @@ const DEFAULT_SETTINGS = {
   allowNetwork: false,
   haptics: true,
   networkTime: false,
+  symbolicTrayIcons: false,
 };
 
 export async function getAccent() {
@@ -135,6 +136,16 @@ export async function setNetworkTime(value) {
   window.localStorage.setItem('network-time', value ? 'true' : 'false');
 }
 
+export async function getSymbolicTrayIcons() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.symbolicTrayIcons;
+  return window.localStorage.getItem('symbolic-tray-icons') === 'true';
+}
+
+export async function setSymbolicTrayIcons(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('symbolic-tray-icons', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -150,6 +161,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('network-time');
+  window.localStorage.removeItem('symbolic-tray-icons');
 }
 
 export async function exportSettings() {
@@ -165,6 +177,7 @@ export async function exportSettings() {
     allowNetwork,
     haptics,
     networkTime,
+    symbolicTrayIcons,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -177,6 +190,7 @@ export async function exportSettings() {
     getAllowNetwork(),
     getHaptics(),
     getNetworkTime(),
+    getSymbolicTrayIcons(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -191,6 +205,7 @@ export async function exportSettings() {
     allowNetwork,
     haptics,
     networkTime,
+    symbolicTrayIcons,
     theme,
   });
 }
@@ -216,6 +231,7 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     networkTime,
+    symbolicTrayIcons,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -229,6 +245,7 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (networkTime !== undefined) await setNetworkTime(networkTime);
+  if (symbolicTrayIcons !== undefined) await setSymbolicTrayIcons(symbolicTrayIcons);
   if (theme !== undefined) setTheme(theme);
 }
 

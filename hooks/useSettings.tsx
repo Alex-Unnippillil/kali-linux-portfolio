@@ -23,6 +23,8 @@ import {
   setHaptics as saveHaptics,
   getNetworkTime as loadNetworkTime,
   setNetworkTime as saveNetworkTime,
+  getSymbolicTrayIcons as loadSymbolicTrayIcons,
+  setSymbolicTrayIcons as saveSymbolicTrayIcons,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -67,6 +69,7 @@ interface SettingsContextValue {
   haptics: boolean;
   networkTime: boolean;
   theme: string;
+  symbolicTrayIcons: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -79,6 +82,7 @@ interface SettingsContextValue {
   setHaptics: (value: boolean) => void;
   setNetworkTime: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setSymbolicTrayIcons: (value: boolean) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -94,6 +98,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   haptics: defaults.haptics,
   networkTime: defaults.networkTime,
   theme: 'default',
+  symbolicTrayIcons: defaults.symbolicTrayIcons,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -106,6 +111,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setHaptics: () => {},
   setNetworkTime: () => {},
   setTheme: () => {},
+  setSymbolicTrayIcons: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -120,6 +126,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [networkTime, setNetworkTime] = useState<boolean>(defaults.networkTime);
+  const [symbolicTrayIcons, setSymbolicTrayIcons] = useState<boolean>(defaults.symbolicTrayIcons);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
@@ -158,6 +165,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setNetworkTime(await loadNetworkTime());
+      setSymbolicTrayIcons(await loadSymbolicTrayIcons());
       setTheme(loadTheme());
     })();
   }, []);
@@ -289,6 +297,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveNetworkTime(networkTime);
   }, [networkTime]);
 
+  useEffect(() => {
+    saveSymbolicTrayIcons(symbolicTrayIcons);
+  }, [symbolicTrayIcons]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -303,6 +315,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         networkTime,
+        symbolicTrayIcons,
         theme,
         setAccent,
         setWallpaper,
@@ -316,6 +329,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setHaptics,
         setNetworkTime,
         setTheme,
+        setSymbolicTrayIcons,
       }}
     >
       {children}

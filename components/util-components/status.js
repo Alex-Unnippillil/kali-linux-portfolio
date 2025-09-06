@@ -4,10 +4,8 @@ import SmallArrow from "./small_arrow";
 import { useSettings } from '../../hooks/useSettings';
 import { useTray } from '../../hooks/useTray';
 
-const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
-
 export default function Status() {
-  const { allowNetwork } = useSettings();
+  const { allowNetwork, theme, symbolicTrayIcons } = useSettings();
   const { icons, register, unregister } = useTray();
   const [online, setOnline] = useState(true);
 
@@ -42,35 +40,35 @@ export default function Status() {
 
   useEffect(() => {
     const id = 'network';
+    const themeDir = theme === 'kali-light' ? 'Yaru' : 'Yaru';
     register({
       id,
       tooltip: online ? (allowNetwork ? 'Online' : 'Online (requests blocked)') : 'Offline',
       sni: online
-        ? "/themes/Yaru/status/network-wireless-signal-good-symbolic.svg"
-        : "/themes/Yaru/status/network-wireless-signal-none-symbolic.svg",
+        ? `/themes/${themeDir}/status/network-wireless-signal-good-symbolic.svg`
+        : `/themes/${themeDir}/status/network-wireless-signal-none-symbolic.svg`,
       legacy: online
-        ? "/themes/Yaru/status/network-wireless-signal-good-symbolic.svg"
-        : "/themes/Yaru/status/network-wireless-signal-none-symbolic.svg",
+        ? `/themes/${themeDir}/status/network-wireless-signal-good-symbolic.svg`
+        : `/themes/${themeDir}/status/network-wireless-signal-none-symbolic.svg`,
     });
     return () => unregister(id);
-  }, [online, allowNetwork, register, unregister]);
+  }, [online, allowNetwork, register, unregister, theme]);
 
   useEffect(() => {
     const id = 'volume';
-    register({ id, tooltip: 'Volume', sni: VOLUME_ICON, legacy: VOLUME_ICON });
+    const themeDir = theme === 'kali-light' ? 'Yaru' : 'Yaru';
+    const icon = `/themes/${themeDir}/status/audio-volume-medium-symbolic.svg`;
+    register({ id, tooltip: 'Volume', sni: icon, legacy: icon });
     return () => unregister(id);
-  }, [register, unregister]);
+  }, [register, unregister, theme]);
 
   useEffect(() => {
     const id = 'battery';
-    register({
-      id,
-      tooltip: 'Battery',
-      sni: '/themes/Yaru/status/battery-good-symbolic.svg',
-      legacy: '/themes/Yaru/status/battery-good-symbolic.svg',
-    });
+    const themeDir = theme === 'kali-light' ? 'Yaru' : 'Yaru';
+    const icon = `/themes/${themeDir}/status/battery-good-symbolic.svg`;
+    register({ id, tooltip: 'Battery', sni: icon, legacy: icon });
     return () => unregister(id);
-  }, [register, unregister]);
+  }, [register, unregister, theme]);
 
   return (
     <div className="flex justify-center items-center" role="group" aria-label="System tray">
@@ -79,7 +77,11 @@ export default function Status() {
           <Image
             width={16}
             height={16}
-            src={icon.sni || icon.legacy}
+            src={
+              symbolicTrayIcons
+                ? icon.sni || icon.legacy
+                : icon.legacy || icon.sni
+            }
             alt={icon.tooltip || icon.id}
             className="inline status-symbol w-4 h-4"
             sizes="16px"
