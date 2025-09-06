@@ -53,9 +53,11 @@ export const minimax = (
   if (winner === 'X') return { score: depth - 10, index: -1 };
   if (winner === 'draw') return { score: 0, index: -1 };
 
-  const key = player + (misere ? 'M' : 'N') + boardKey(board);
-  const cached = memo.get(key);
-  if (cached && cached.index !== undefined) return cached as any;
+    const key = player + (misere ? 'M' : 'N') + boardKey(board);
+    const cached = memo.get(key);
+    if (cached && cached.index !== undefined) {
+      return { index: cached.index, score: cached.score };
+    }
 
   let best: { index: number; score: number } = {
     index: -1,

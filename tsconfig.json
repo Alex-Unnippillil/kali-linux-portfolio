@@ -32,4 +32,13 @@
     ".next/types/**/*.ts"
   ],
   "exclude": ["node_modules", "__tests__", "components/apps/archive", "components/apps/kismet"]
+  ,
+  "overrides": [
+    {
+      "files": ["apps/games/**/*.ts", "games/**/*.ts"],
+      "compilerOptions": {
+        "noImplicitAny": true
+      }
+    }
+  ]
 }
