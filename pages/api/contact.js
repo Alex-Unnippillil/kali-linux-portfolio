@@ -11,11 +11,13 @@ export default async function handler(req, res) {
   const missingRecaptcha = !process.env.RECAPTCHA_SECRET;
   const missingSupabase =
     !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const missingRateLimit = !process.env.RATE_LIMIT_SECRET;
 
-  if (missingRecaptcha || missingSupabase) {
+  if (missingRecaptcha || missingSupabase || missingRateLimit) {
     console.warn('Contact API running in demo mode', {
       missingRecaptcha,
       missingSupabase,
+      missingRateLimit,
     });
   }
   if (req.method === 'GET') {
