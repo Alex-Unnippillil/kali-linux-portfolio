@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import logger from '../../utils/logger'
+import { useSettings } from '../../hooks/useSettings'
 
 function DesktopMenu(props) {
 
     const [isFullScreen, setIsFullScreen] = useState(false)
+    const { showAppMenu } = useSettings()
 
     useEffect(() => {
         document.addEventListener('fullscreenchange', checkFullScreen);
@@ -76,38 +78,42 @@ function DesktopMenu(props) {
             <div role="menuitem" aria-label="Show Desktop in Files" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
                 <span className="ml-5">Show Desktop in Files</span>
             </div>
-            <button
-                onClick={openTerminal}
-                type="button"
-                role="menuitem"
-                aria-label="Open in Terminal"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
-            >
-                <span className="ml-5">Open in Terminal</span>
-            </button>
-            <Devider />
-            <button
-                onClick={openSettings}
-                type="button"
-                role="menuitem"
-                aria-label="Change Background"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
-            >
-                <span className="ml-5">Change Background...</span>
-            </button>
-            <Devider />
-            <div role="menuitem" aria-label="Display Settings" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Display Settings</span>
-            </div>
-            <button
-                onClick={openSettings}
-                type="button"
-                role="menuitem"
-                aria-label="Settings"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
-            >
-                <span className="ml-5">Settings</span>
-            </button>
+            {showAppMenu && (
+                <>
+                    <button
+                        onClick={openTerminal}
+                        type="button"
+                        role="menuitem"
+                        aria-label="Open in Terminal"
+                        className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                    >
+                        <span className="ml-5">Open in Terminal</span>
+                    </button>
+                    <Devider />
+                    <button
+                        onClick={openSettings}
+                        type="button"
+                        role="menuitem"
+                        aria-label="Change Background"
+                        className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                    >
+                        <span className="ml-5">Change Background...</span>
+                    </button>
+                    <Devider />
+                    <div role="menuitem" aria-label="Display Settings" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
+                        <span className="ml-5">Display Settings</span>
+                    </div>
+                    <button
+                        onClick={openSettings}
+                        type="button"
+                        role="menuitem"
+                        aria-label="Settings"
+                        className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                    >
+                        <span className="ml-5">Settings</span>
+                    </button>
+                </>
+            )}
             <Devider />
             <button
                 onClick={goFullScreen}
