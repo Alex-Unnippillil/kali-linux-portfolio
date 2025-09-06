@@ -192,7 +192,7 @@ function MyApp(props) {
                 }}
               />
 
-              {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+              <SpeedInsights />
             </PipPortalProvider>
           </TrayProvider>
         </SettingsProvider>
