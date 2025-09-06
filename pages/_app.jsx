@@ -1,5 +1,7 @@
 "use client";
 
+/* global clients */
+
 import { isBrowser } from '@/utils/env';
 import { useEffect } from 'react';
 import { Analytics } from '@vercel/analytics/next';
@@ -66,7 +68,10 @@ function MyApp(props) {
         try {
           const registration = await navigator.serviceWorker.register('/sw.js');
 
-          window.manualRefresh = () => registration.update();
+          window.manualRefresh = () => {
+            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+            clients.claim();
+          };
 
           if ('periodicSync' in registration) {
             try {
