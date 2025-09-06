@@ -26,6 +26,7 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 import { addRecentApp, getRecentApps } from '../../utils/recent';
+import osdService from '../../utils/osdService';
 
 export class Desktop extends Component {
     constructor() {
@@ -258,17 +259,32 @@ export class Desktop extends Component {
 
     switchWorkspace = (direction) => {
         const WORKSPACE_COUNT = 3;
+        let nextWs = 0;
         this.setState(prev => {
-            const next = (prev.currentWorkspace + direction + WORKSPACE_COUNT) % WORKSPACE_COUNT;
+            nextWs = (prev.currentWorkspace + direction + WORKSPACE_COUNT) % WORKSPACE_COUNT;
             const closed_windows = { ...prev.closed_windows };
             const focused_windows = { ...prev.focused_windows };
             Object.keys(prev.window_workspaces).forEach(id => {
-                const same = prev.window_workspaces[id] === next;
+                const same = prev.window_workspaces[id] === nextWs;
                 closed_windows[id] = !same;
                 if (!same) focused_windows[id] = false;
             });
-            return { currentWorkspace: next, closed_windows, focused_windows };
-        }, this.giveFocusToLastApp);
+            return { currentWorkspace: nextWs, closed_windows, focused_windows };
+        }, () => {
+            let name = `Workspace ${nextWs + 1}`;
+            try {
+                const stored = window.localStorage.getItem('workspaces');
+                if (stored) {
+                    const names = JSON.parse(stored);
+                    if (Array.isArray(names) && typeof names[nextWs] === 'string' && names[nextWs].trim()) {
+                        name = names[nextWs];
+                    }
+                }
+            } catch { /* ignore */ }
+            const message = `Workspace ${nextWs + 1} — ${name}`;
+            osdService.show(message, 1200);
+            this.giveFocusToLastApp();
+        });
     }
 
     closeWindowSwitcher = () => {
