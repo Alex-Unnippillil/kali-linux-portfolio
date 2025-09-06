@@ -25,6 +25,12 @@
   --color-ub-dark-grey: #2a2e36;
   --color-bg: #0f1317;
   --color-text: #F5F5F5;
+  --panel-h: 28px;
+  --kali-bg: #0f1317;
+  --kali-surface: #1a1f26;
+  --kali-border: #2a2e36;
+  --kali-text: #f5f5f5;
+  --kali-accent: #1793d1;
 
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
