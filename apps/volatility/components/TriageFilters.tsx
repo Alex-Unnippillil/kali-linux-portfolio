@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import usePersistentState from '../../../hooks/usePersistentState';
+import usePersistentState from '@/hooks/usePersistentState';
 
 // Static dataset illustrating possible suspicious markers
 const markers = [

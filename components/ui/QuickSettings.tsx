@@ -1,6 +1,6 @@
 "use client";
 
-import usePersistentState from '../../hooks/usePersistentState';
+import usePersistentState from '@/hooks/usePersistentState';
 import { useEffect } from 'react';
 
 interface Props {
