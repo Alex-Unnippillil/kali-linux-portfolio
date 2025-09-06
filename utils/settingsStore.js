@@ -6,6 +6,10 @@ import { getTheme, setTheme } from './theme';
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
   wallpaper: 'wall-2',
+  // default wallpaper for individual workspaces
+  wallpapers: ['wall-2', 'wall-2', 'wall-2'],
+  // whether all workspaces share the same wallpaper
+  useSameWallpaper: true,
   density: 'regular',
   reducedMotion: false,
   fontScale: 1,
@@ -26,14 +30,43 @@ export async function setAccent(accent) {
   await set('accent', accent);
 }
 
+// Retrieve wallpapers for all workspaces
+export async function getWallpapers() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.wallpapers;
+  const stored = await get('bg-images');
+  if (stored) return stored;
+  const single = await get('bg-image');
+  return single ? [single] : DEFAULT_SETTINGS.wallpapers;
+}
+
+// Persist wallpapers for all workspaces
+export async function setWallpapers(wallpapers) {
+  if (typeof window === 'undefined') return;
+  await set('bg-images', wallpapers);
+  // store first wallpaper for backwards compatibility
+  await set('bg-image', wallpapers[0]);
+}
+
+// Whether all workspaces share the same wallpaper
+export async function getUseSameWallpaper() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.useSameWallpaper;
+  const val = window.localStorage.getItem('same-wallpaper');
+  return val === null ? DEFAULT_SETTINGS.useSameWallpaper : val === 'true';
+}
+
+export async function setUseSameWallpaper(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('same-wallpaper', value ? 'true' : 'false');
+}
+
+// Legacy single wallpaper helpers
 export async function getWallpaper() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.wallpaper;
-  return (await get('bg-image')) || DEFAULT_SETTINGS.wallpaper;
+  const wallpapers = await getWallpapers();
+  return wallpapers[0];
 }
 
 export async function setWallpaper(wallpaper) {
-  if (typeof window === 'undefined') return;
-  await set('bg-image', wallpaper);
+  await setWallpapers([wallpaper]);
 }
 
 export async function getDensity() {
@@ -128,6 +161,7 @@ export async function resetSettings() {
   await Promise.all([
     del('accent'),
     del('bg-image'),
+    del('bg-images'),
   ]);
   window.localStorage.removeItem('density');
   window.localStorage.removeItem('reduced-motion');
@@ -137,12 +171,13 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('same-wallpaper');
 }
 
 export async function exportSettings() {
   const [
     accent,
-    wallpaper,
+    wallpapers,
     density,
     reducedMotion,
     fontScale,
@@ -151,9 +186,10 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    useSameWallpaper,
   ] = await Promise.all([
     getAccent(),
-    getWallpaper(),
+    getWallpapers(),
     getDensity(),
     getReducedMotion(),
     getFontScale(),
@@ -162,11 +198,14 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getUseSameWallpaper(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
     accent,
-    wallpaper,
+    wallpaper: wallpapers[0],
+    wallpapers,
+    useSameWallpaper,
     density,
     reducedMotion,
     fontScale,
@@ -191,6 +230,8 @@ export async function importSettings(json) {
   const {
     accent,
     wallpaper,
+    wallpapers,
+    useSameWallpaper,
     density,
     reducedMotion,
     fontScale,
@@ -202,7 +243,9 @@ export async function importSettings(json) {
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
-  if (wallpaper !== undefined) await setWallpaper(wallpaper);
+  if (wallpapers !== undefined) await setWallpapers(wallpapers);
+  else if (wallpaper !== undefined) await setWallpaper(wallpaper);
+  if (useSameWallpaper !== undefined) await setUseSameWallpaper(useSameWallpaper);
   if (density !== undefined) await setDensity(density);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
   if (fontScale !== undefined) await setFontScale(fontScale);

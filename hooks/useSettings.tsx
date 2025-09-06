@@ -2,8 +2,10 @@ import { createContext, useContext, useEffect, useState, ReactNode, useRef } fro
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
-  getWallpaper as loadWallpaper,
-  setWallpaper as saveWallpaper,
+  getWallpapers as loadWallpapers,
+  setWallpapers as saveWallpapers,
+  getUseSameWallpaper as loadUseSameWallpaper,
+  setUseSameWallpaper as saveUseSameWallpaper,
   getDensity as loadDensity,
   setDensity as saveDensity,
   getReducedMotion as loadReducedMotion,
@@ -22,6 +24,7 @@ import {
   setHaptics as saveHaptics,
   defaults,
 } from '../utils/settingsStore';
+import usePersistentState from './usePersistentState';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
 
@@ -54,6 +57,9 @@ const shadeColor = (color: string, percent: number): string => {
 interface SettingsContextValue {
   accent: string;
   wallpaper: string;
+  wallpapers: string[];
+  useSameWallpaper: boolean;
+  workspace: number;
   density: Density;
   reducedMotion: boolean;
   fontScale: number;
@@ -64,7 +70,7 @@ interface SettingsContextValue {
   haptics: boolean;
   theme: string;
   setAccent: (accent: string) => void;
-  setWallpaper: (wallpaper: string) => void;
+  setWallpaper: (wallpaper: string, workspaceIndex?: number) => void;
   setDensity: (density: Density) => void;
   setReducedMotion: (value: boolean) => void;
   setFontScale: (value: number) => void;
@@ -74,11 +80,16 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setUseSameWallpaper: (value: boolean) => void;
+  setWorkspace: (index: number) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
   accent: defaults.accent,
   wallpaper: defaults.wallpaper,
+  wallpapers: defaults.wallpapers,
+  useSameWallpaper: defaults.useSameWallpaper,
+  workspace: 0,
   density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
   fontScale: defaults.fontScale,
@@ -99,11 +110,19 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setUseSameWallpaper: () => {},
+  setWorkspace: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [accent, setAccent] = useState<string>(defaults.accent);
-  const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
+  const [wallpapers, setWallpapers] = useState<string[]>(defaults.wallpapers);
+  const [useSameWallpaper, setUseSameWallpaper] = useState<boolean>(defaults.useSameWallpaper);
+  const [workspace, setWorkspace] = usePersistentState<number>(
+    'active-workspace',
+    0,
+    (v): v is number => typeof v === 'number',
+  );
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
@@ -115,10 +134,26 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
+  const wallpaper = useSameWallpaper
+    ? wallpapers[0]
+    : wallpapers[workspace] ?? defaults.wallpaper;
+
+  const setWallpaper = (wp: string, index: number = workspace) => {
+    setWallpapers((prev) => {
+      if (useSameWallpaper) {
+        return prev.map(() => wp);
+      }
+      const next = [...prev];
+      next[index] = wp;
+      return next;
+    });
+  };
+
   useEffect(() => {
     (async () => {
       setAccent(await loadAccent());
-      setWallpaper(await loadWallpaper());
+      setWallpapers(await loadWallpapers());
+      setUseSameWallpaper(await loadUseSameWallpaper());
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
       setFontScale(await loadFontScale());
@@ -153,8 +188,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [accent]);
 
   useEffect(() => {
-    saveWallpaper(wallpaper);
-  }, [wallpaper]);
+    saveWallpapers(wallpapers);
+  }, [wallpapers]);
+
+  useEffect(() => {
+    saveUseSameWallpaper(useSameWallpaper);
+  }, [useSameWallpaper]);
 
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {
@@ -241,6 +280,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       value={{
         accent,
         wallpaper,
+        wallpapers,
+        useSameWallpaper,
+        workspace,
         density,
         reducedMotion,
         fontScale,
@@ -261,6 +303,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setUseSameWallpaper,
+        setWorkspace,
       }}
     >
       {children}
