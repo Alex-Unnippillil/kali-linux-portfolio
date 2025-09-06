@@ -35,6 +35,17 @@ module.exports = [
     }
   },
   {
+    urlPattern: /\/(?:favicon\.ico|favicon\.svg|images\/logos\/.*\.(?:png|svg))$/i,
+    handler: 'CacheFirst',
+    options: {
+      cacheName: 'static-icon-assets',
+      expiration: {
+        maxEntries: 16,
+        maxAgeSeconds: 30 * 24 * 60 * 60 // 30 days
+      }
+    }
+  },
+  {
     urlPattern: /\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i,
     handler: 'StaleWhileRevalidate',
     options: {

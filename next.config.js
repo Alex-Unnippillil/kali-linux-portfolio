@@ -81,6 +81,10 @@ const withPWA = require('@ducanh2912/next-pwa').default({
       { url: '/apps/checkers', revision: null },
       { url: '/offline.html', revision: null },
       { url: '/manifest.webmanifest', revision: null },
+      { url: '/favicon.ico', revision: null },
+      { url: '/favicon.svg', revision: null },
+      { url: '/images/logos/fevicon.png', revision: null },
+      { url: '/images/logos/logo_1024.png', revision: null },
     ],
     // Cache only images and fonts to ensure app shell updates while assets work offline
     runtimeCaching: require('./cache.js'),
