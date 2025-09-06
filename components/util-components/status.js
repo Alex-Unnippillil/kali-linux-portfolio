@@ -2,12 +2,31 @@ import React, { useEffect, useState } from "react";
 import Image from 'next/image';
 import SmallArrow from "./small_arrow";
 import { useSettings } from '../../hooks/useSettings';
+import useBattery from '../../hooks/useBattery';
 
 const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
 
 export default function Status() {
   const { allowNetwork } = useSettings();
   const [online, setOnline] = useState(true);
+  const { level, charging, timeLeft } = useBattery();
+
+  const formatTime = (secs) => {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    return `${h}h ${m}m`;
+  };
+
+  const batteryTitle =
+    level !== null
+      ? `${Math.round(level * 100)}%${
+          timeLeft != null
+            ? ` — about ${formatTime(timeLeft)} ${
+                charging ? 'charging' : 'remaining'
+              }`
+            : ''
+        }`
+      : 'Battery status unavailable';
 
   useEffect(() => {
     const pingServer = async () => {
@@ -66,7 +85,7 @@ export default function Status() {
           sizes="16px"
         />
       </span>
-      <span className="mx-1.5">
+      <span className="mx-1.5" title={batteryTitle}>
         <Image
           width={16}
           height={16}
