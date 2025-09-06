@@ -5,6 +5,7 @@ export interface SessionWindow {
   id: string;
   x: number;
   y: number;
+  snap?: 'left' | 'right' | 'top' | null;
 }
 
 export interface DesktopSession {
@@ -24,6 +25,18 @@ function isSession(value: unknown): value is DesktopSession {
   const s = value as DesktopSession;
   return (
     Array.isArray(s.windows) &&
+    s.windows.every(
+      (w) =>
+        w &&
+        typeof w.id === 'string' &&
+        typeof w.x === 'number' &&
+        typeof w.y === 'number' &&
+        (w.snap === undefined ||
+          w.snap === null ||
+          w.snap === 'left' ||
+          w.snap === 'right' ||
+          w.snap === 'top'),
+    ) &&
     typeof s.wallpaper === 'string' &&
     Array.isArray(s.dock)
   );
