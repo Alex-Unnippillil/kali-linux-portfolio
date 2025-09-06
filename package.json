@@ -5,7 +5,8 @@
   "homepage": "https://unnippillil.com/",
   "scripts": {
     "build:gamepad": "tsc -p tsconfig.gamepad.json",
-    "prebuild": "tsc -p tsconfig.gamepad.json",
+    "typegen": "next typegen",
+    "prebuild": "rm -rf .next && yarn typegen && yarn build:gamepad",
     "dev": "next dev",
     "build": "next build",
     "postbuild": "node --import tsx/esm scripts/safe-copy.mjs",
