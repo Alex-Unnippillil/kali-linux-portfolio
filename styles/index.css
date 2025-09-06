@@ -18,9 +18,33 @@ button, [role="button"], input[type="button"], input[type="submit"], input[type=
 }
 
 a:focus-visible,
-button:focus-visible {
+button:focus-visible,
+li:focus-visible,
+menu li:focus-visible,
+[role="menuitem"]:focus-visible {
     outline: var(--focus-outline-width) solid var(--focus-outline-color) !important;
     outline-offset: 2px;
+}
+
+button:hover,
+li:hover,
+menu li:hover,
+[role="menuitem"]:hover {
+    background-color: var(--kali-accent-hover);
+}
+
+button:active,
+li:active,
+menu li:active,
+[role="menuitem"]:active {
+    background-color: var(--kali-accent-active);
+}
+
+button:focus-visible,
+li:focus-visible,
+menu li:focus-visible,
+[role="menuitem"]:focus-visible {
+    background-color: var(--kali-accent-focus);
 }
 
 @media (prefers-reduced-motion: reduce) {
