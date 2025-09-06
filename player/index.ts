@@ -20,6 +20,9 @@ export function getAudioContext(): AudioContext {
 }
 
 export function getAudioPlayer(src: string): HTMLAudioElement {
+  if (typeof window === 'undefined' || typeof Audio === 'undefined') {
+    throw new Error('Audio element unavailable');
+  }
   let player = players.get(src);
   if (!player) {
     player = new Audio(src);
