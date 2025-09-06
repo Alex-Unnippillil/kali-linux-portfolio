@@ -3,7 +3,8 @@
 // Allows external badges and same-origin PDF embedding.
 // Update README (section "CSP External Domains") when editing domains below.
 
-const { validateServerEnv: validateEnv } = require('./lib/validate.js');
+require('tsx/cjs');
+const { validateServerEnv: validateEnv } = require('./lib/validate.ts');
 
 const ContentSecurityPolicy = [
   "default-src 'self'",

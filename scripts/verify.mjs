@@ -2,7 +2,7 @@ import { execSync, spawn } from 'child_process';
 import { createRequire } from 'module';
 import net from 'net';
 import waitOn from 'wait-on';
-import logger from '../utils/logger.js';
+import logger from '../utils/logger.ts';
 
 const require = createRequire(import.meta.url);
 
