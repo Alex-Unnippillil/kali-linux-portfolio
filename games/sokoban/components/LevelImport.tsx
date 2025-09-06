@@ -6,10 +6,13 @@ import { LevelPack, parseLevels } from "../../../apps/sokoban/levels";
 const STORAGE_KEY = "sokoban_packs";
 const FILE_NAME = "sokoban-packs.json";
 
-const hasOpfs =
-  typeof window !== "undefined" &&
-  "storage" in navigator &&
-  Boolean((navigator.storage as any).getDirectory);
+const hasOpfs = (() => {
+  if (typeof window === "undefined") return false;
+  return (
+    "storage" in navigator &&
+    Boolean((navigator.storage as any).getDirectory)
+  );
+})();
 
 export const loadLocalPacks = async (): Promise<LevelPack[]> => {
   if (typeof window === "undefined") return [];

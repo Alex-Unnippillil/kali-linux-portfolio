@@ -1,11 +1,21 @@
-const omnibox =
-  typeof document !== 'undefined'
-    ? document.getElementById('omnibox')
-    : null;
-const playBtn =
-  typeof document !== 'undefined' ? document.getElementById('play') : null;
-const pauseBtn =
-  typeof document !== 'undefined' ? document.getElementById('pause') : null;
+const omnibox = (() => {
+  if (typeof window !== 'undefined') {
+    return document.getElementById('omnibox');
+  }
+  return null;
+})();
+const playBtn = (() => {
+  if (typeof window !== 'undefined') {
+    return document.getElementById('play');
+  }
+  return null;
+})();
+const pauseBtn = (() => {
+  if (typeof window !== 'undefined') {
+    return document.getElementById('pause');
+  }
+  return null;
+})();
 
 function refresh() {
   chrome.runtime.sendMessage({ type: 'query' }, (response) => {
