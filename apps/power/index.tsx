@@ -35,6 +35,24 @@ export default function PowerSettings() {
               ariaLabel="Handle display brightness keys"
             />
           </div>
+          <div className="flex items-center justify-between">
+            <span>Reset application cache</span>
+            <button
+              className="px-2 py-1 rounded border border-ubt-cool-grey"
+              aria-label="Clear cached data and reload"
+              onClick={async () => {
+                const keys = await caches.keys();
+                await Promise.all(
+                  keys
+                    .filter((name) => name.startsWith('KLP'))
+                    .map((name) => caches.delete(name)),
+                );
+                location.reload();
+              }}
+            >
+              Reload
+            </button>
+          </div>
         </div>
       )}
       {activeTab === 'system' && (
