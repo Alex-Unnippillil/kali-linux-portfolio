@@ -14,6 +14,7 @@ import {
   serialize as serializeRng,
   deserialize as deserializeRng,
 } from '../../apps/games/rng';
+import logger from '../../utils/logger';
 
 interface GameLayoutProps {
   gameId?: string;
@@ -124,7 +125,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
     } catch {
       /* ignore download errors */
     }
-    console.log(data);
+    logger.info(data);
   }, [log, gameId]);
 
   const replay = useCallback(() => {

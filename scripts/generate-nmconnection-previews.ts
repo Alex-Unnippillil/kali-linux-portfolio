@@ -1,6 +1,7 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join, basename } from 'node:path';
 import { toKeyfile, NMConnection } from '../utils/nmconnection.ts';
+import logger from '../utils/logger';
 
 const dir = join(process.cwd(), 'data', 'network-connections');
 
@@ -12,5 +13,5 @@ for (const file of files) {
   const ini = toKeyfile(data);
   const outFile = join(dir, `${basename(file, '.json')}.ini`);
   await writeFile(outFile, ini, 'utf8');
-  console.log(`Generated ${outFile}`);
+  logger.info(`Generated ${outFile}`);
 }

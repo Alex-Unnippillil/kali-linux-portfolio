@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import logger from '../../../utils/logger';
 
 // Representation of a parsed .desktop entry
 export interface DesktopEntry {
@@ -119,7 +120,7 @@ export default function AppFinder() {
       try {
         window.open(`command:${command}`);
       } catch {
-        console.log('Execute:', command);
+        logger.info('Execute:', command);
       }
     }
   };

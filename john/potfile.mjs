@@ -2,11 +2,12 @@
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { parsePotfile } from '../components/apps/john/utils.js';
+import logger from '../utils/logger';
 
 function main() {
   const [filePath, filter = ''] = process.argv.slice(2);
   if (!filePath) {
-    console.error('Usage: node john/potfile.mjs <file> [filter]');
+    logger.error('Usage: node john/potfile.mjs <file> [filter]');
     process.exit(1);
   }
   const text = readFileSync(filePath, 'utf8');
@@ -20,7 +21,7 @@ function main() {
       )
     : entries;
   filtered.forEach((p) => {
-    console.log(`${p.hash}:${p.password}`);
+    logger.info(`${p.hash}:${p.password}`);
   });
 }
 

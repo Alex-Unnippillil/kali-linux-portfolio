@@ -2,6 +2,7 @@
 
 import React, { Component } from 'react';
 import dynamic from 'next/dynamic';
+import logger from '../../utils/logger';
 
 const BackgroundImage = dynamic(
     () => import('../util-components/background-image'),
@@ -1098,7 +1099,7 @@ export class Desktop extends Component {
                     pinApp={() => this.pinApp(this.state.context_app)}
                     unpinApp={() => this.unpinApp(this.state.context_app)}
                     openMenuEditor={() => this.openApp('settings')}
-                    addToPanel={() => { const id = this.state.context_app; if (id) console.log('Add to panel', id); }}
+                    addToPanel={() => { const id = this.state.context_app; if (id) logger.info('Add to panel', id); }}
                     addToDesktop={() => { const id = this.state.context_app; if (id) this.addShortcutToDesktop(id); }}
                     onClose={this.hideAllContextMenu}
                 />

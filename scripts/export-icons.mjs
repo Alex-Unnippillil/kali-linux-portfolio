@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import sharp from 'sharp';
+import logger from '../utils/logger';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -43,12 +44,12 @@ async function run() {
   }
   for (const svg of svgs) {
     await exportIcon(svg);
-    console.log(`Exported ${svg}`);
+    logger.info(`Exported ${svg}`);
   }
-  console.log('All icons exported and validated.');
+  logger.info('All icons exported and validated.');
 }
 
 run().catch((err) => {
-  console.error(err);
+  logger.error(err);
   process.exit(1);
 });
