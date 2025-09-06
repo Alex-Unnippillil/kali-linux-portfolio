@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import logger from '../utils/logger.js';
+import logger from '../utils/logger.ts';
 
 function renderProgressBar(completed, total) {
   const percent = total === 0 ? 0 : (completed / total);
