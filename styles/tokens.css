@@ -52,7 +52,8 @@
   --motion-slow: 500ms;
 
   /* Fonts */
-  --font-family-base: 'Ubuntu', sans-serif;
+  --font-family-base: 'Noto Sans', sans-serif;
+  --font-family-mono: 'Noto Sans Mono', monospace;
   --font-multiplier: 1;
   /* Minimum interactive target size */
   --hit-area: 32px;
