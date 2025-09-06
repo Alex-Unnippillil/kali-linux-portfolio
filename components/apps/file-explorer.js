@@ -2,7 +2,7 @@
 
 import { isBrowser } from '@/utils/env';
 import React, { useState, useEffect, useRef } from 'react';
-import useOPFS from '../../hooks/useOPFS';
+import useOPFS from '../../hooks/useOPFS.ts';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
 import PropertiesDialog from '../ui/PropertiesDialog';

@@ -5,7 +5,7 @@ import {
   categories as allCategories,
   convertUnit,
 } from './unitData';
-import usePersistentState from '../../../hooks/usePersistentState';
+import usePersistentState from '../../../hooks/usePersistentState.ts';
 
 const categories = allCategories;
 

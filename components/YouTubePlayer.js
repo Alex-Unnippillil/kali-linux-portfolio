@@ -4,7 +4,7 @@ import { isBrowser } from '@/utils/env';
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
-import useOPFS from '../hooks/useOPFS';
+import useOPFS from '../hooks/useOPFS.ts';
 import useWakeLockOnFullscreen from '../hooks/useWakeLockOnFullscreen';
 
 // Basic YouTube player with keyboard shortcuts, playback rate cycling,

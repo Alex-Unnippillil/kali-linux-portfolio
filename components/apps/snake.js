@@ -3,7 +3,7 @@ import GameLayout from './GameLayout';
 import useGameControls from './useGameControls';
 import { useSaveSlots } from './Games/common';
 import useGameHaptics from '../../hooks/useGameHaptics';
-import usePersistentState from '../../hooks/usePersistentState';
+import usePersistentState from '../../hooks/usePersistentState.ts';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 import {

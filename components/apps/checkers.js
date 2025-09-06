@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import GameLayout from './GameLayout';
-import usePersistedState from '../../hooks/usePersistedState';
+import usePersistedState from '../../hooks/usePersistedState.ts';
 import {
   createBoard,
   getPieceMoves,

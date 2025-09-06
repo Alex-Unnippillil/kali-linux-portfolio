@@ -9,7 +9,7 @@ import {
 } from '../../apps/games/battleship/ai';
 import { fireShots } from '../../apps/games/battleship/logic';
 import GameLayout from './battleship/GameLayout';
-import usePersistentState from '../../hooks/usePersistentState';
+import usePersistentState from '../../hooks/usePersistentState.ts';
 import useGameControls from './useGameControls';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 

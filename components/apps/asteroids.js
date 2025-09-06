@@ -16,7 +16,7 @@ import useGameControls from './useGameControls';
 import GameLayout from './GameLayout';
 import { vibrate } from './Games/common/haptics';
 import { getMapping } from './Games/common/input-remap/useInputMapping';
-import useOPFS from '../../hooks/useOPFS';
+import useOPFS from '../../hooks/useOPFS.ts';
 
 // Arcade-style tuning constants
 const THRUST = 0.1;

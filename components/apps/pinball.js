@@ -2,7 +2,7 @@ import { isBrowser } from '@/utils/env';
 import React, { useEffect, useRef, useState } from 'react';
 import Matter from 'matter-js';
 import useCanvasResize from '../../hooks/useCanvasResize';
-import usePersistentState from '../../hooks/usePersistentState';
+import usePersistentState from '../../hooks/usePersistentState.ts';
 
 const WIDTH = 400;
 const HEIGHT = 500;

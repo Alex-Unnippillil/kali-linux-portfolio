@@ -2,7 +2,7 @@ import { isBrowser } from '@/utils/env';
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import useGameControls from './useGameControls';
-import usePersistentState from '../../hooks/usePersistentState';
+import usePersistentState from '../../hooks/usePersistentState.ts';
 import { useSettings as useGlobalSettings } from '../../hooks/useSettings';
 import { SettingsProvider, useSettings as useGameSettings } from './GameSettingsContext';
 import { getBallSpin } from '../../games/pong/physics';

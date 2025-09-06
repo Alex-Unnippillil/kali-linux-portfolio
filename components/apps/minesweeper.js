@@ -1,7 +1,7 @@
 import { isBrowser } from '@/utils/env';
 import React, { useEffect, useRef, useState } from 'react';
 import GameLayout from './GameLayout';
-import usePersistedState from '../../hooks/usePersistedState';
+import usePersistedState from '../../hooks/usePersistedState.ts';
 import calculate3BV from '../../games/minesweeper/metrics';
 import { serializeBoard, deserializeBoard } from '../../games/minesweeper/save';
 import { getDailySeed } from '../../utils/dailySeed';

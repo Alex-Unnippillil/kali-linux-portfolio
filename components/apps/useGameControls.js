@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { getMapping } from './Games/common/input-remap/useInputMapping';
 import useGamepad from '../../hooks/useGamepad';
-import usePersistedState from '../../hooks/usePersistedState';
+import usePersistedState from '../../hooks/usePersistedState.ts';
 
 /**
  * Multifunctional game control hook.

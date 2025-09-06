@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import usePersistentState from '../hooks/usePersistentState';
+import usePersistentState from '../hooks/usePersistentState.ts';
 
 const GitHubStars = ({ user, repo }) => {
   const ref = useRef(null);

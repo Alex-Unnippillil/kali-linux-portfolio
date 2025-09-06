@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useClickOutside } from '../../hooks/useClickOutside';
-import usePersistentState from '../../hooks/usePersistentState';
+import usePersistentState from '../../hooks/usePersistentState.ts';
 
 const pad = (n) => n.toString().padStart(2, '0');
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

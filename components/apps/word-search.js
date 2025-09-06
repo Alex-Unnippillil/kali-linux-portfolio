@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import seedrandom from "seedrandom";
-import useOPFS from "../../hooks/useOPFS.js";
+import useOPFS from "../../hooks/useOPFS.ts";
 import { isBrowser } from '@/utils/env';
 
 // Approximate pixel size of each grid cell for SVG overlay calculations

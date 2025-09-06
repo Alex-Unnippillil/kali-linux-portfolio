@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import usePersistentState from '../../hooks/usePersistentState';
+import usePersistentState from '../../hooks/usePersistentState.ts';
 
 export default function Taskbar(props) {
     const runningApps = props.apps.filter(app => props.closed_windows[app.id] === false);

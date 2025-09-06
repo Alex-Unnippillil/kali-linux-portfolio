@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useState } from 'react';
-import usePersistedState from './usePersistedState';
+import usePersistedState from './usePersistedState.ts';
 
 /**
  * Global game audio hook.  Lazily creates an `AudioContext` in response to the

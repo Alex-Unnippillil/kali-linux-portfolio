@@ -6,7 +6,7 @@ import React, {
   useState,
 } from 'react';
 import confetti from 'canvas-confetti';
-import usePersistentState from '../../hooks/usePersistentState';
+import usePersistentState from '../../hooks/usePersistentState.ts';
 import {
   logEvent,
   logGameStart,

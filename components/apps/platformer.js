@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import usePersistentState from '../../hooks/usePersistentState';
+import usePersistentState from '../../hooks/usePersistentState.ts';
 import {
   Player,
   updatePhysics,

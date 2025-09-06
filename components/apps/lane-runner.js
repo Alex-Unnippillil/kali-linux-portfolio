@@ -1,7 +1,7 @@
 import { isBrowser } from '@/utils/env';
 import React, { useEffect, useState, useRef } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
-import usePersistentState from '../../hooks/usePersistentState';
+import usePersistentState from '../../hooks/usePersistentState.ts';
 import { exportGameSettings, importGameSettings } from '../../utils/gameSettings';
 
 const WIDTH = 300;

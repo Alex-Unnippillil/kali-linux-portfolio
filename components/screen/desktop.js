@@ -26,7 +26,7 @@ import WindowMenu from '../context-menus/window-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
-import { useSnapSetting } from '../../hooks/usePersistentState';
+import { useSnapSetting } from '../../hooks/usePersistentState.ts';
 import { addRecentApp, getRecentApps } from '../../utils/recent';
 import osdService from '../../utils/osdService';
 
