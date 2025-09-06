@@ -19,7 +19,7 @@ document.getElementById('retry').addEventListener('click', () => {
       }
     }
     if (urls.size === 0) {
-      list.innerHTML = '<li>No apps available offline.</li>';
+      list.innerHTML = '<li>No recent apps available.</li>';
     } else {
       urls.forEach((path) => {
         const li = document.createElement('li');
@@ -31,6 +31,6 @@ document.getElementById('retry').addEventListener('click', () => {
       });
     }
   } catch (err) {
-    list.innerHTML = '<li>Unable to access cached apps.</li>';
+    list.innerHTML = '<li>Unable to access recent apps.</li>';
   }
 })();
