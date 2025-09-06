@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { migrate, settings } from '../lib/migrations';
+import { logEvent } from '../utils/analytics';
 
 /**
  * Persist state in localStorage.
@@ -20,6 +22,15 @@ export default function usePersistentState<T>(
   const [state, setState] = useState<T>(() => {
     if (typeof window === 'undefined') return getInitial();
     try {
+      const prev = window.localStorage.getItem('settings.version');
+      if (prev !== String(settings.version)) {
+        const migrated = migrate(key);
+        if (migrated) {
+          logEvent({ category: 'settings', action: 'migrated', label: key });
+        }
+        window.localStorage.setItem('settings.version', String(settings.version));
+      }
+
       const stored = window.localStorage.getItem(key);
       if (stored !== null) {
         const parsed = JSON.parse(stored);
