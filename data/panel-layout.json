@@ -1,0 +1,6 @@
+{
+  "items": [
+    { "type": "clock", "id": "clock-local", "useSystemTimezone": true },
+    { "type": "clock", "id": "clock-utc", "useSystemTimezone": false, "timezone": "UTC" }
+  ]
+}

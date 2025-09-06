@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Clock from '../util-components/clock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
+import panelLayout from '../../data/panel-layout.json';
 
 export default class Navbar extends Component {
 	constructor() {
@@ -30,13 +31,16 @@ export default class Navbar extends Component {
                                         />
                                         Activities
                                 </div>
-                                <div
-                                        className={
-                                                'pl-2 pr-2 text-xs md:text-sm outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1'
-                                        }
-                                >
-                                        <Clock />
-                                </div>
+                                {panelLayout.items.filter((item) => item.type === 'clock').map((clock) => (
+                                        <div
+                                                key={clock.id}
+                                                className={
+                                                        'pl-2 pr-2 text-xs md:text-sm outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1'
+                                                }
+                                        >
+                                                <Clock timezone={clock.timezone} useSystemTimezone={clock.useSystemTimezone} />
+                                        </div>
+                                ))}
                                 <button
                                         type="button"
                                         id="status-bar"

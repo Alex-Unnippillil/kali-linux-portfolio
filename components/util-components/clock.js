@@ -1,8 +1,8 @@
 import { Component } from 'react'
 
 export default class Clock extends Component {
-    constructor() {
-        super();
+    constructor(props) {
+        super(props);
         this.month_list = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         this.day_list = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         this.state = {
@@ -11,8 +11,15 @@ export default class Clock extends Component {
         };
     }
 
+    getCurrentTime() {
+        if (this.props.useSystemTimezone === false && this.props.timezone) {
+            return new Date(new Date().toLocaleString('en-US', { timeZone: this.props.timezone }));
+        }
+        return new Date();
+    }
+
     componentDidMount() {
-        const update = () => this.setState({ current_time: new Date() });
+        const update = () => this.setState({ current_time: this.getCurrentTime() });
         update();
         if (typeof window !== 'undefined' && typeof Worker === 'function') {
             this.worker = new Worker(new URL('../../workers/timer.worker.ts', import.meta.url));
@@ -59,3 +66,7 @@ export default class Clock extends Component {
         return <span suppressHydrationWarning>{display_time}</span>;
     }
 }
+
+Clock.defaultProps = {
+    useSystemTimezone: true
+};
