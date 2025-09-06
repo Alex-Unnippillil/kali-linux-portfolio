@@ -114,6 +114,7 @@ const NessusApp = createDynamicApp('nessus', 'Nessus');
 const NmapNSEApp = createDynamicApp('nmap-nse', 'Nmap NSE');
 const OpenVASApp = createDynamicApp('openvas', 'OpenVAS');
 const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
+const KaliToolsApp = createDynamicApp('kali-tools', 'Kali Tools');
 const SecurityToolsApp = createDynamicApp('security-tools', 'Security Tools');
 const SSHApp = createDynamicApp('ssh', 'SSH Command Builder');
 const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
@@ -206,6 +207,7 @@ const displayNessus = createDisplay(NessusApp);
 const displayNmapNSE = createDisplay(NmapNSEApp);
 const displayOpenVAS = createDisplay(OpenVASApp);
 const displayReconNG = createDisplay(ReconNGApp);
+const displayKaliTools = createDisplay(KaliToolsApp);
 const displaySecurityTools = createDisplay(SecurityToolsApp);
 const displaySSH = createDisplay(SSHApp);
 const displayHTTP = createDisplay(HTTPApp);
@@ -1128,6 +1130,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayReconNG,
+  },
+  {
+    id: 'kali-tools',
+    title: 'Kali Tools',
+    icon: '/themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayKaliTools,
   },
   {
     id: 'security-tools',
