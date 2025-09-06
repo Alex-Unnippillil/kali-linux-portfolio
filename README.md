@@ -79,7 +79,7 @@ Copy `.env.local.example` to `.env.local` and fill in required API keys:
 - `NEXT_PUBLIC_ENABLE_ANALYTICS` – enable client-side analytics when set to `true`.
 - `FEATURE_TOOL_APIS` – toggle simulated tool APIs (`enabled` or `disabled`).
 - `RECAPTCHA_SECRET` and related `NEXT_PUBLIC_RECAPTCHA_*` keys for contact form spam protection.
-- `RATE_LIMIT_SECRET` – secret used to sign rate limit cookies.
+- `RATE_LIMIT_SECRET` – secret used to sign rate limit cookies (configure this in Vercel environment variables).
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` – Supabase credentials. When unset, Supabase-backed APIs and features are disabled.
 
 See `.env.local.example` for the full list.
@@ -190,7 +190,7 @@ __tests__/
 ```ts
 import dynamic from 'next/dynamic';
 
-const SudokuApp = dynamic(() => import('./components/apps/sudoku'), {
+const SudokuApp = dynamic(() => import('./apps/sudoku'), {
   ssr: false,
 });
 export const displaySudoku = () => <SudokuApp />;
@@ -244,7 +244,7 @@ Defined in `next.config.js`. See [CSP External Domains](#csp-external-domains) f
 - **Content-Security-Policy (CSP)** (string built from `ContentSecurityPolicy[]`; see [CSP External Domains](#csp-external-domains))
 - `X-Content-Type-Options: nosniff`
 - `Referrer-Policy: strict-origin-when-cross-origin`
-- `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+- `Permissions-Policy: camera=(), microphone=(), geolocation=*, interest-cohort=()`
 - `X-Frame-Options: SAMEORIGIN`
 
 ### CSP External Domains
@@ -479,7 +479,7 @@ play/pause and track controls include keyboard hotkeys.
 - **`hooks/usePersistentState.ts`** - localStorage-backed state with validation + reset helper.
 - **`hooks/useSettings.tsx`** - global settings context exposing theme, accent, wallpaper and other preferences with persistence.
 - **`components/apps/GameLayout.tsx`** - standardized layout and help toggle for games.
-- **`components/apps/radare2`** - dual hex/disassembly panes with seek/find/xref; graph mode from JSON fixtures; per-file notes and bookmarks.
+- **`apps/radare2`** - dual hex/disassembly panes with seek/find/xref; graph mode from JSON fixtures; per-file notes and bookmarks.
 - **`components/common/PipPortal.tsx`** - renders arbitrary UI inside a Document Picture-in-Picture window. See [`docs/pip-portal.md`](./docs/pip-portal.md).
 - **`hooks/useTray.tsx`** & **`components/util-components/status.js`** - unified tray grouping StatusNotifierItem icons with legacy systray fallback. See [`docs/system-tray.md`](./docs/system-tray.md).
 
@@ -487,10 +487,10 @@ play/pause and track controls include keyboard hotkeys.
 
 ## Adding a New App
 
-1. Create your component under `components/apps/my-app/index.tsx`.
+1. Create your component under `apps/my-app/index.tsx`.
 2. Register it in `apps.config.js` using dynamic import:
    ```ts
-   const MyApp = dynamic(() => import('./components/apps/my-app'));
+   const MyApp = dynamic(() => import('./apps/my-app'));
    export const displayMyApp = () => <MyApp />;
    ```
 3. Add metadata (icon, title) where appropriate.

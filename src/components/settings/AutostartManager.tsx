@@ -5,7 +5,7 @@ import {
   readAutostart,
   saveAutostartEntry,
   AutostartEntry,
-} from "@/src/lib/autostart";
+} from "../../lib/autostart";
 
 const AutostartManager: React.FC = () => {
   const [entries, setEntries] = useState<AutostartEntry[]>([]);
