@@ -9,6 +9,7 @@ import {
   type SVGProps,
 } from 'react';
 import DOMPurify from 'dompurify';
+import Head from 'next/head';
 import Script from 'next/script';
 import usePersistentState from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
@@ -163,7 +164,6 @@ export default function XTimeline() {
   useEffect(() => {
     if (!loaded || !scriptLoaded) return;
     loadTimeline();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [theme, feed, timelineType, scriptLoaded]);
 
   const loadTimeline = () => {
@@ -254,6 +254,9 @@ export default function XTimeline() {
 
   return (
     <>
+      <Head>
+        <link rel="preconnect" href="https://platform.twitter.com" />
+      </Head>
       {showSetup && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
@@ -327,6 +330,7 @@ export default function XTimeline() {
         <div className="p-1.5 space-y-4 flex-1 overflow-auto">
         <form onSubmit={handleScheduleTweet} className="space-y-2">
           <textarea
+            aria-label="Tweet text"
             value={tweetText}
             onChange={(e) => setTweetText(e.target.value)}
             placeholder="Tweet text"
@@ -334,6 +338,7 @@ export default function XTimeline() {
           />
           <div className="flex gap-2 items-center">
             <input
+              aria-label="Schedule time"
               type="datetime-local"
               value={tweetTime}
               onChange={(e) => setTweetTime(e.target.value)}
@@ -405,6 +410,7 @@ export default function XTimeline() {
         </div>
         <form onSubmit={handleAddPreset} className="flex gap-2">
           <input
+            aria-label="Add feed"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={
