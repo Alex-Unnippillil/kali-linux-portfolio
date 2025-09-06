@@ -4,6 +4,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import { useTheme } from '../../hooks/useTheme';
+import { getIconForMime } from '../filemanager/IconMapper';
+import FilePropertiesModal from '../filemanager/FilePropertiesModal';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -102,6 +105,8 @@ export default function FileExplorer() {
   const [content, setContent] = useState('');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+  const [propFile, setPropFile] = useState(null);
+  const { theme } = useTheme();
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
 
@@ -188,12 +193,32 @@ export default function FileExplorer() {
     setContent(text);
   };
 
+  const showProperties = async (entry) => {
+    try {
+      const f = await entry.handle.getFile();
+      setPropFile({
+        name: entry.name,
+        mime: f.type || 'application/octet-stream',
+        size: f.size,
+        lastModified: f.lastModified,
+      });
+    } catch {}
+  };
+
   const readDir = async (handle) => {
     const ds = [];
     const fs = [];
     for await (const [name, h] of handle.entries()) {
-      if (h.kind === 'file') fs.push({ name, handle: h });
-      else if (h.kind === 'directory') ds.push({ name, handle: h });
+      if (h.kind === 'file') {
+        let mime = '';
+        try {
+          const f = await h.getFile();
+          mime = f.type || '';
+        } catch {}
+        fs.push({ name, handle: h, mime });
+      } else if (h.kind === 'directory') {
+        ds.push({ name, handle: h });
+      }
     }
     setDirs(ds);
     setFiles(fs);
@@ -296,7 +321,8 @@ export default function FileExplorer() {
   }
 
   return (
-    <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
+    <>
+      <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
       <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
         <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
           Open Folder
@@ -329,20 +355,26 @@ export default function FileExplorer() {
           {dirs.map((d, i) => (
             <div
               key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30 flex items-center"
               onClick={() => openDir(d)}
             >
-              {d.name}
+              {getIconForMime('inode/directory', theme)}
+              <span className="ml-1">{d.name}</span>
             </div>
           ))}
           <div className="p-2 font-bold">Files</div>
           {files.map((f, i) => (
             <div
               key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30 flex items-center"
               onClick={() => openFile(f)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                showProperties(f);
+              }}
             >
-              {f.name}
+              {getIconForMime(f.mime || '', theme)}
+              <span className="ml-1 flex-1 truncate">{f.name}</span>
             </div>
           ))}
         </div>
@@ -370,6 +402,8 @@ export default function FileExplorer() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+      <FilePropertiesModal file={propFile} onClose={() => setPropFile(null)} theme={theme} />
+    </>
   );
 }
