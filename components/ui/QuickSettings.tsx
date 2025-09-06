@@ -5,9 +5,11 @@ import { useEffect } from 'react';
 
 interface Props {
   open: boolean;
+  lockScreen: () => void;
+  logOut: () => void;
 }
 
-const QuickSettings = ({ open }: Props) => {
+const QuickSettings = ({ open, lockScreen, logOut }: Props) => {
   const [theme, setTheme] = usePersistentState('qs-theme', 'light');
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
@@ -52,9 +54,42 @@ const QuickSettings = ({ open }: Props) => {
           onChange={() => setReduceMotion(!reduceMotion)}
         />
       </div>
-      <div className="px-4 pt-2 border-t border-black border-opacity-20 mt-2">
+      <div className="px-4 pt-2 border-t border-black border-opacity-20 mt-2 space-y-1">
         <button
-          className="w-full text-left text-blue-300 hover:underline"
+          type="button"
+          className="w-full text-left hover:underline"
+          onClick={lockScreen}
+        >
+          Lock
+        </button>
+        <button
+          type="button"
+          className="w-full text-left hover:underline"
+          onClick={logOut}
+        >
+          Log Out
+        </button>
+        <button
+          type="button"
+          className="w-full text-left text-gray-400 cursor-not-allowed"
+          disabled
+          title="Restart is disabled in this demo"
+          aria-disabled="true"
+        >
+          Restart
+        </button>
+        <button
+          type="button"
+          className="w-full text-left text-gray-400 cursor-not-allowed"
+          disabled
+          title="Shut Down is disabled in this demo"
+          aria-disabled="true"
+        >
+          Shut Down
+        </button>
+        <button
+          type="button"
+          className="w-full text-left text-blue-300 hover:underline pt-1"
           onClick={() => {
             window.localStorage.setItem('settings-open-tab', 'power');
             document.dispatchEvent(
