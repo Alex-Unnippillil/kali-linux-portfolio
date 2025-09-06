@@ -31,6 +31,8 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    edgeResistance,
+    setEdgeResistance,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -80,6 +82,9 @@ export default function Settings() {
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
+      if (parsed.haptics !== undefined) setHaptics(parsed.haptics);
+      if (parsed.edgeResistance !== undefined)
+        setEdgeResistance(parsed.edgeResistance);
     } catch (err) {
       console.error("Invalid settings", err);
     }
@@ -101,6 +106,8 @@ export default function Settings() {
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
     setTheme("default");
+    setEdgeResistance(defaults.edgeResistance);
+    setHaptics(defaults.haptics);
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
@@ -258,6 +265,17 @@ export default function Settings() {
               checked={haptics}
               onChange={setHaptics}
               ariaLabel="Haptics"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <label htmlFor="edge-resistance" className="mr-2 text-ubt-grey">Edge Resistance (px):</label>
+            <input
+              id="edge-resistance"
+              type="number"
+              min="0"
+              className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey w-20"
+              value={edgeResistance}
+              onChange={(e) => setEdgeResistance(parseInt(e.target.value, 10) || 0)}
             />
           </div>
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
