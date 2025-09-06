@@ -1,4 +1,5 @@
 import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
+import { parseDesktopEntry } from './lib/xdg/desktop';
 
 import { displayX } from './components/apps/x';
 import { displaySpotify } from './components/apps/spotify';
@@ -269,7 +270,7 @@ const utilityList = [
   },
 ];
 
-export const utilities = utilityList;
+export const utilities = utilityList.map((u) => ({ ...u, categories: ['Utility'] }));
 
 // Default window sizing for games to prevent oversized frames
 export const gameDefaults = {
@@ -592,7 +593,7 @@ const gameList = [
   },
 ];
 
-export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
+export const games = gameList.map((game) => ({ ...gameDefaults, ...game, categories: ['Game'] }));
 
 const apps = [
   {
@@ -1056,5 +1057,7 @@ const apps = [
   // Games are included so they appear alongside apps
   ...games,
 ];
+
+export const desktopEntries = apps.map(parseDesktopEntry);
 
 export default apps;
