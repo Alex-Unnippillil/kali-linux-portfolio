@@ -96,18 +96,35 @@ const BleSensor: React.FC = () => {
       const serviceData: ServiceData[] = [];
 
       for (const service of primServices) {
-        const chars = await service.getCharacteristics();
-        const charData: CharacteristicData[] = await Promise.all(
-          chars.map(async (char: any) => {
-            try {
-              const val = await char.readValue();
-              const decoder = new TextDecoder();
-              return { uuid: char.uuid, value: decoder.decode(val.buffer) };
-            } catch {
-              return { uuid: char.uuid, value: '[unreadable]' };
-            }
-          })
-        );
+          const chars = await service.getCharacteristics();
+          const charData: CharacteristicData[] = await Promise.all(
+            chars.map(async (char: any) => {
+              try {
+                const val = await char.readValue();
+                let value = '';
+
+                try {
+                  const decoder = new TextDecoder();
+                  value = decoder.decode(val.buffer);
+                } catch {
+                  try {
+                    const view = new DataView(val.buffer);
+                    const hex: string[] = [];
+                    for (let i = 0; i < view.byteLength; i++) {
+                      hex.push(view.getUint8(i).toString(16).padStart(2, '0'));
+                    }
+                    value = hex.join(' ');
+                  } catch {
+                    value = '[unreadable]';
+                  }
+                }
+
+                return { uuid: char.uuid, value };
+              } catch {
+                return { uuid: char.uuid, value: '[unreadable]' };
+              }
+            })
+          );
         serviceData.push({ uuid: service.uuid, characteristics: charData });
       }
       setServices(serviceData);
