@@ -70,13 +70,20 @@ function MyApp(props) {
 
           if ('periodicSync' in registration) {
             try {
-              const status = await navigator.permissions.query({
-                name: 'periodic-background-sync',
-              });
-              if (status.state === 'granted') {
-                await registration.periodicSync.register('content-sync', {
-                  minInterval: 24 * 60 * 60 * 1000,
+              if (
+                'permissions' in navigator &&
+                typeof navigator.permissions.query === 'function'
+              ) {
+                const status = await navigator.permissions.query({
+                  name: 'periodic-background-sync',
                 });
+                if (status.state === 'granted') {
+                  await registration.periodicSync.register('content-sync', {
+                    minInterval: 24 * 60 * 60 * 1000,
+                  });
+                } else {
+                  registration.update();
+                }
               } else {
                 registration.update();
               }
