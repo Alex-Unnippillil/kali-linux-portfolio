@@ -1,6 +1,7 @@
 import dynamic from 'next/dynamic';
 import Meta from '../components/SEO/Meta';
 import BetaBadge from '../components/BetaBadge';
+import useSession from '../hooks/useSession';
 
 const Ubuntu = dynamic(
   () =>
@@ -28,16 +29,19 @@ const InstallButton = dynamic(
 /**
  * @returns {JSX.Element}
  */
-const App = () => (
-  <>
-    <a href="#window-area" className="sr-only focus:not-sr-only">
-      Skip to content
-    </a>
-    <Meta />
-    <Ubuntu />
-    <BetaBadge />
-    <InstallButton />
-  </>
-);
+const App = () => {
+  const { session, setSession, resetSession } = useSession();
+  return (
+    <>
+      <a href="#window-area" className="sr-only focus:not-sr-only">
+        Skip to content
+      </a>
+      <Meta />
+      <Ubuntu session={session} setSession={setSession} resetSession={resetSession} />
+      <BetaBadge />
+      <InstallButton />
+    </>
+  );
+};
 
 export default App;

@@ -60,6 +60,10 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+
+        if (this.props.onSizeChange) {
+            this.props.onSizeChange(this.state.width, this.state.height);
+        }
     }
 
     componentWillUnmount() {
@@ -106,6 +110,9 @@ export class Window extends Component {
                     - (window.innerWidth * (this.state.width / 100.0)) //this window's width
             }
         }, () => {
+            if (this.props.onSizeChange) {
+                this.props.onSizeChange(this.state.width, this.state.height);
+            }
             if (this._uiExperiments) {
                 this.scheduleUsageCheck();
             }

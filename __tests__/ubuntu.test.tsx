@@ -16,11 +16,13 @@ jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 describe('Ubuntu component', () => {
   beforeEach(() => {
     jest.useFakeTimers();
+    jest.spyOn(window, 'confirm').mockImplementation(() => false);
   });
 
   afterEach(() => {
     jest.runOnlyPendingTimers();
     jest.useRealTimers();
+    (window.confirm as jest.Mock).mockRestore();
   });
 
   it('renders boot screen then desktop', () => {

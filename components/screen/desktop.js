@@ -46,6 +46,8 @@ export class Desktop extends Component {
             hideSideBar: false,
             minimized_windows: {},
             window_positions: {},
+            window_sizes: {},
+            window_workspaces: {},
             desktop_apps: [],
             recentApps: getRecentApps(),
             context_menus: {
@@ -71,6 +73,8 @@ export class Desktop extends Component {
         this.fetchAppsData(() => {
             const session = this.props.session || {};
             const positions = {};
+            const sizes = {};
+            const workspaces = {};
             if (session.dock && session.dock.length) {
                 let favourite_apps = { ...this.state.favourite_apps };
                 session.dock.forEach(id => {
@@ -80,12 +84,20 @@ export class Desktop extends Component {
             }
 
             if (session.windows && session.windows.length) {
-                session.windows.forEach(({ id, x, y }) => {
-                    positions[id] = { x, y };
-                });
-                this.setState({ window_positions: positions }, () => {
-                    session.windows.forEach(({ id }) => this.openApp(id));
-                });
+                const restore = window.confirm('Restore previous session?');
+                if (restore) {
+                    session.windows.forEach(({ id, x, y, width, height, workspace }) => {
+                        positions[id] = { x, y };
+                        sizes[id] = { width, height };
+                        workspaces[id] = workspace;
+                    });
+                    this.setState({ window_positions: positions, window_sizes: sizes, window_workspaces: workspaces }, () => {
+                        session.windows.forEach(({ id }) => this.openApp(id));
+                    });
+                } else {
+                    this.props.resetSession?.();
+                    this.openApp('about-alex');
+                }
             } else {
                 this.openApp('about-alex');
             }
@@ -521,6 +533,7 @@ export class Desktop extends Component {
             if (this.state.closed_windows[app.id] === false) {
 
                 const pos = this.state.window_positions[app.id];
+                const size = this.state.window_sizes[app.id];
                 const props = {
                     title: app.title,
                     id: app.id,
@@ -535,11 +548,12 @@ export class Desktop extends Component {
                     minimized: this.state.minimized_windows[app.id],
                     resizable: app.resizable,
                     allowMaximize: app.allowMaximize,
-                    defaultWidth: app.defaultWidth,
-                    defaultHeight: app.defaultHeight,
+                    defaultWidth: size ? size.width : app.defaultWidth,
+                    defaultHeight: size ? size.height : app.defaultHeight,
                     initialX: pos ? pos.x : undefined,
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
+                    onSizeChange: (w, h) => this.updateWindowSize(app.id, w, h),
                     snapEnabled: this.props.snapEnabled,
                 }
 
@@ -564,13 +578,28 @@ export class Desktop extends Component {
         }), this.saveSession);
     }
 
+    updateWindowSize = (id, width, height) => {
+        this.setState(prev => ({
+            window_sizes: { ...prev.window_sizes, [id]: { width, height } }
+        }), this.saveSession);
+    }
+
+    updateWindowWorkspace = (id, workspace) => {
+        this.setState(prev => ({
+            window_workspaces: { ...prev.window_workspaces, [id]: workspace }
+        }), this.saveSession);
+    }
+
     saveSession = () => {
         if (!this.props.setSession) return;
         const openWindows = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
         const windows = openWindows.map(id => ({
             id,
             x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
-            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10
+            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10,
+            width: this.state.window_sizes[id] ? this.state.window_sizes[id].width : 60,
+            height: this.state.window_sizes[id] ? this.state.window_sizes[id].height : 85,
+            workspace: this.state.window_workspaces[id] ? this.state.window_workspaces[id] : 0,
         }));
         const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
         this.props.setSession({ ...this.props.session, windows, dock });

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Component } from 'react';
+import React, { Component, createRef } from 'react';
 import BootingScreen from './screen/booting_screen';
 import Desktop from './screen/desktop';
 import LockScreen from './screen/lock_screen';
@@ -9,15 +9,16 @@ import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
 
 export default class Ubuntu extends Component {
-	constructor() {
-		super();
-		this.state = {
-			screen_locked: false,
-			bg_image_name: 'wall-2',
-			booting_screen: true,
-			shutDownScreen: false
-		};
-	}
+        constructor(props) {
+                super(props);
+                this.state = {
+                        screen_locked: false,
+                        bg_image_name: 'wall-2',
+                        booting_screen: true,
+                        shutDownScreen: false
+                };
+                this.desktopRef = createRef();
+        }
 
 	componentDidMount() {
 		this.getLocalData();
@@ -90,20 +91,27 @@ export default class Ubuntu extends Component {
                 safeLocalStorage?.setItem('bg-image', img_name);
 	};
 
-	shutDown = () => {
-		ReactGA.send({ hitType: "pageview", page: "/switch-off", title: "Custom Title" });
+        shutDown = () => {
+                const save = window.confirm('Save session?');
+                if (save) {
+                        this.desktopRef.current?.saveSession();
+                } else {
+                        this.props.resetSession?.();
+                }
 
-		ReactGA.event({
-			category: `Screen Change`,
-			action: `Switched off the Ubuntu`
-		});
+                ReactGA.send({ hitType: "pageview", page: "/switch-off", title: "Custom Title" });
+
+                ReactGA.event({
+                        category: `Screen Change`,
+                        action: `Switched off the Ubuntu`
+                });
 
                 const statusBar = document.getElementById('status-bar');
                 // Consider using a React ref if the status bar element lives within this component tree
                 statusBar?.blur();
-		this.setState({ shutDownScreen: true });
+                this.setState({ shutDownScreen: true });
                 safeLocalStorage?.setItem('shut-down', true);
-	};
+        };
 
 	turnOn = () => {
 		ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
@@ -126,8 +134,15 @@ export default class Ubuntu extends Component {
 					isShutDown={this.state.shutDownScreen}
 					turnOn={this.turnOn}
 				/>
-				<Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
-				<Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
+                                <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
+                                <Desktop
+                                        ref={this.desktopRef}
+                                        bg_image_name={this.state.bg_image_name}
+                                        changeBackgroundImage={this.changeBackgroundImage}
+                                        session={this.props.session}
+                                        setSession={this.props.setSession}
+                                        resetSession={this.props.resetSession}
+                                />
 			</div>
 		);
 	}
