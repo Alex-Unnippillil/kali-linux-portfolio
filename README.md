@@ -255,6 +255,8 @@ These external domains are whitelisted in the default CSP. Update this list when
 | `www.youtube.com` | YouTube IFrame API |
 | `www.youtube-nocookie.com` | YouTube video embeds (privacy-enhanced) |
 | `open.spotify.com` | Spotify embeds |
+| `react.dev` | React documentation embeds |
+| `sdk.scdn.co` | Spotify Web Playback SDK |
 | `vercel.live` | Vercel toolbar |
 
 **Notes for prod hardening**
