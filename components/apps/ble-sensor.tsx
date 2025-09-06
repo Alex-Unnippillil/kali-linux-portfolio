@@ -72,51 +72,53 @@ const BleSensor: React.FC = () => {
     }
 
     try {
-      const device = await (navigator as any).bluetooth.requestDevice({
-        acceptAllDevices: true,
-        optionalServices: ['battery_service', 'device_information'],
-      });
+      if ('bluetooth' in navigator) {
+        const device = await navigator.bluetooth.requestDevice({
+          acceptAllDevices: true,
+          optionalServices: ['battery_service', 'device_information'],
+        });
 
-      const saved = await loadProfile(device.id);
-      if (saved) {
-        setDeviceName(saved.name);
-        setServices(saved.services);
-        return;
-      }
+        const saved = await loadProfile(device.id);
+        if (saved) {
+          setDeviceName(saved.name);
+          setServices(saved.services);
+          return;
+        }
 
-      setDeviceName(device.name || 'Unknown device');
+        setDeviceName(device.name || 'Unknown device');
 
-      const server = await connectWithRetry(device);
+        const server = await connectWithRetry(device);
 
-      device.addEventListener('gattserverdisconnected', () =>
-        setError('Device disconnected.')
-      );
-
-      const primServices = await server.getPrimaryServices();
-      const serviceData: ServiceData[] = [];
-
-      for (const service of primServices) {
-        const chars = await service.getCharacteristics();
-        const charData: CharacteristicData[] = await Promise.all(
-          chars.map(async (char: any) => {
-            try {
-              const val = await char.readValue();
-              const decoder = new TextDecoder();
-              return { uuid: char.uuid, value: decoder.decode(val.buffer) };
-            } catch {
-              return { uuid: char.uuid, value: '[unreadable]' };
-            }
-          })
+        device.addEventListener('gattserverdisconnected', () =>
+          setError('Device disconnected.')
         );
-        serviceData.push({ uuid: service.uuid, characteristics: charData });
+
+        const primServices = await server.getPrimaryServices();
+        const serviceData: ServiceData[] = [];
+
+        for (const service of primServices) {
+          const chars = await service.getCharacteristics();
+          const charData: CharacteristicData[] = await Promise.all(
+            chars.map(async (char: any) => {
+              try {
+                const val = await char.readValue();
+                const decoder = new TextDecoder();
+                return { uuid: char.uuid, value: decoder.decode(val.buffer) };
+              } catch {
+                return { uuid: char.uuid, value: '[unreadable]' };
+              }
+            })
+          );
+          serviceData.push({ uuid: service.uuid, characteristics: charData });
+        }
+        setServices(serviceData);
+        await saveProfile(device.id, {
+          name: device.name || 'Unknown device',
+          services: serviceData,
+        });
+        bcRef.current?.postMessage('update');
+        await refreshProfiles();
       }
-      setServices(serviceData);
-      await saveProfile(device.id, {
-        name: device.name || 'Unknown device',
-        services: serviceData,
-      });
-      bcRef.current?.postMessage('update');
-      await refreshProfiles();
     } catch (err) {
       const e = err as DOMException;
       if (e.name === 'NotAllowedError') {
