@@ -31,11 +31,14 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    interactionMode,
+    setInteractionMode,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
+    { id: "behavior", label: "Behavior" },
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
   ] as const;
@@ -80,6 +83,8 @@ export default function Settings() {
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
+      if (parsed.interactionMode !== undefined)
+        setInteractionMode(parsed.interactionMode);
     } catch (err) {
       console.error("Invalid settings", err);
     }
@@ -101,6 +106,7 @@ export default function Settings() {
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
     setTheme("default");
+    setInteractionMode(defaults.interactionMode as any);
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
@@ -208,6 +214,19 @@ export default function Settings() {
             </button>
           </div>
         </>
+      )}
+      {activeTab === "behavior" && (
+        <div className="flex justify-center my-4">
+          <label className="mr-2 text-ubt-grey">Click items:</label>
+          <select
+            value={interactionMode}
+            onChange={(e) => setInteractionMode(e.target.value as any)}
+            className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+          >
+            <option value="single">Single-click to open (hover select)</option>
+            <option value="double">Double-click to open</option>
+          </select>
+        </div>
       )}
       {activeTab === "accessibility" && (
         <>

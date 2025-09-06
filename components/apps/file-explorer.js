@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import { useSettings } from '../../hooks/useSettings';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -104,6 +105,8 @@ export default function FileExplorer() {
   const [results, setResults] = useState([]);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
+  const { interactionMode } = useSettings();
+  const [selected, setSelected] = useState(null);
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -121,6 +124,10 @@ export default function FileExplorer() {
     setSupported(ok);
     if (ok) getRecentDirs().then(setRecent);
   }, []);
+
+  useEffect(() => {
+    setSelected(null);
+  }, [interactionMode]);
 
   useEffect(() => {
     if (!opfsSupported || !root) return;
@@ -319,8 +326,18 @@ export default function FileExplorer() {
           {recent.map((r, i) => (
             <div
               key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openRecent(r)}
+              className={`px-2 cursor-pointer hover:bg-black hover:bg-opacity-30 ${
+                selected?.type === 'recent' && selected.name === r.name
+                  ? 'bg-black bg-opacity-30'
+                  : ''
+              }`}
+              onClick={() => {
+                if (interactionMode === 'single') openRecent(r);
+                else setSelected({ type: 'recent', name: r.name });
+              }}
+              onDoubleClick={() => {
+                if (interactionMode === 'double') openRecent(r);
+              }}
             >
               {r.name}
             </div>
@@ -329,8 +346,18 @@ export default function FileExplorer() {
           {dirs.map((d, i) => (
             <div
               key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openDir(d)}
+              className={`px-2 cursor-pointer hover:bg-black hover:bg-opacity-30 ${
+                selected?.type === 'dir' && selected.name === d.name
+                  ? 'bg-black bg-opacity-30'
+                  : ''
+              }`}
+              onClick={() => {
+                if (interactionMode === 'single') openDir(d);
+                else setSelected({ type: 'dir', name: d.name });
+              }}
+              onDoubleClick={() => {
+                if (interactionMode === 'double') openDir(d);
+              }}
             >
               {d.name}
             </div>
@@ -339,8 +366,18 @@ export default function FileExplorer() {
           {files.map((f, i) => (
             <div
               key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openFile(f)}
+              className={`px-2 cursor-pointer hover:bg-black hover:bg-opacity-30 ${
+                selected?.type === 'file' && selected.name === f.name
+                  ? 'bg-black bg-opacity-30'
+                  : ''
+              }`}
+              onClick={() => {
+                if (interactionMode === 'single') openFile(f);
+                else setSelected({ type: 'file', name: f.name });
+              }}
+              onDoubleClick={() => {
+                if (interactionMode === 'double') openFile(f);
+              }}
             >
               {f.name}
             </div>

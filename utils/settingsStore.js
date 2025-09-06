@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  interactionMode: 'double',
 };
 
 export async function getAccent() {
@@ -123,6 +124,19 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getInteractionMode() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.interactionMode;
+  return (
+    window.localStorage.getItem('interaction-mode') ||
+    DEFAULT_SETTINGS.interactionMode
+  );
+}
+
+export async function setInteractionMode(mode) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('interaction-mode', mode);
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +151,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('interaction-mode');
 }
 
 export async function exportSettings() {
@@ -151,6 +166,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    interactionMode,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +178,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getInteractionMode(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +192,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    interactionMode,
     theme,
   });
 }
@@ -199,6 +217,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    interactionMode,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +230,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (interactionMode !== undefined) await setInteractionMode(interactionMode);
   if (theme !== undefined) setTheme(theme);
 }
 
