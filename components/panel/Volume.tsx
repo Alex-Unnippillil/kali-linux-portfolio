@@ -1,24 +1,31 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import useDoNotDisturb from '../../hooks/useDoNotDisturb';
+import {
+  subscribeState,
+  play,
+  pause,
+  next,
+  prev,
+} from '../../utils/nowPlaying';
 
 export default function Volume() {
   const [volume, setVolume] = useState(0.5);
   const [dnd] = useDoNotDisturb();
 
-  const playSample = () => {
-    if (dnd || typeof window === 'undefined') return;
-    const AudioCtx =
-      (window as any).AudioContext || (window as any).webkitAudioContext;
-    const ctx = new AudioCtx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.value = 440;
-    gain.gain.value = volume;
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.5);
+  const [track, setTrack] = useState<string | null>(null);
+  const [playing, setPlaying] = useState(false);
+
+  useEffect(() => {
+    const unsub = subscribeState((s) => {
+      setTrack(s.track);
+      setPlaying(s.playing);
+    });
+    return unsub;
+  }, []);
+
+  const togglePlay = () => {
+    if (playing) pause();
+    else play();
   };
 
   return (
@@ -33,13 +40,20 @@ export default function Volume() {
         aria-label='Volume'
         className='ubuntu-slider w-full'
       />
-      <button
-        onClick={playSample}
-        disabled={dnd}
-        className='px-2 py-1 bg-ubt-grey text-white rounded w-full'
-      >
-        Play sample track
-      </button>
+      {track && (
+        <div className='text-center text-white text-sm'>{track}</div>
+      )}
+      <div className='flex justify-center gap-2'>
+        <button aria-label='Previous track' onClick={() => prev()}>⏮</button>
+        <button
+          aria-label={playing ? 'Pause' : 'Play'}
+          onClick={togglePlay}
+          disabled={dnd}
+        >
+          {playing ? '⏸' : '▶️'}
+        </button>
+        <button aria-label='Next track' onClick={() => next()}>⏭</button>
+      </div>
     </div>
   );
 }
