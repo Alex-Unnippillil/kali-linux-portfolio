@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Clock from '../util-components/clock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
+import NotificationBell from '../ui/NotificationBell';
 
 export default class Navbar extends Component {
 	constructor() {
@@ -37,6 +38,7 @@ export default class Navbar extends Component {
                                 >
                                         <Clock />
                                 </div>
+                                <NotificationBell />
                                 <button
                                         type="button"
                                         id="status-bar"
