@@ -163,10 +163,9 @@ module.exports = withBundleAnalyzer(
       deviceSizes: [640, 750, 828, 1080, 1200, 1280, 1920, 2048, 3840],
       imageSizes: [16, 32, 48, 64, 96, 128, 256],
     },
-    // Security headers are skipped outside production; remove !isProd check to restore them for development.
-    ...(isStaticExport || !isProd
-      ? {}
-      : {
+    // Apply security headers only in production.
+    ...(isProd
+      ? {
           async headers() {
             return [
               {
@@ -215,7 +214,8 @@ module.exports = withBundleAnalyzer(
               },
             ];
           },
-        }),
+        }
+      : {}),
   })
 );
 
