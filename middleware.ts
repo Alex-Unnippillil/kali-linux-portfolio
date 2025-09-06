@@ -22,12 +22,22 @@ export function middleware(req: NextRequest) {
     "frame-ancestors 'self'",
     "object-src 'none'",
     "base-uri 'self'",
-    "form-action 'self'"
+    "form-action 'self'",
+    'report-to csp-endpoint',
+    'report-uri /api/csp-report'
   ].join('; ');
 
   const res = NextResponse.next();
   res.headers.set('x-csp-nonce', n);
   res.headers.set('Content-Security-Policy', csp);
+  res.headers.set(
+    'Report-To',
+    JSON.stringify({
+      group: 'csp-endpoint',
+      max_age: 10886400,
+      endpoints: [{ url: '/api/csp-report' }],
+    }),
+  );
   if (req.headers.get('accept')?.includes('text/html')) {
     res.headers.set('X-Content-Type-Options', 'nosniff');
   }

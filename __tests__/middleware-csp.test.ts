@@ -27,5 +27,9 @@ describe('middleware CSP header', () => {
     expect(csp).toContain('nonce-');
     expect(csp).toContain('https://platform.twitter.com');
     expect(csp).toContain('https://cdn.jsdelivr.net');
+    expect(csp).toContain('report-to csp-endpoint');
+    expect(csp).toContain('report-uri /api/csp-report');
+    expect(res.headers['report-to']).toBeDefined();
+    expect(res.headers['report-to']).toContain('/api/csp-report');
   });
 });
