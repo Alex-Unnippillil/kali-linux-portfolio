@@ -32,6 +32,7 @@ export class Window extends Component {
             snapPosition: null,
             snapped: null,
             lastSize: null,
+            prevBounds: null,
             grabbed: false,
             alwaysOnTop: false,
             shaded: false,
@@ -274,25 +275,41 @@ export class Window extends Component {
         if (!this.state.snapped) return;
         var r = document.querySelector("#" + this.id);
         if (r) {
-            const x = r.style.getPropertyValue('--window-transform-x');
-            const y = r.style.getPropertyValue('--window-transform-y');
-            if (x && y) {
-                r.style.transform = `translate(${x},${y})`;
+            if (this.state.prevBounds) {
+                const { x, y } = this.state.prevBounds;
+                r.style.transform = `translate(${x}px,${y}px)`;
+            } else {
+                const x = r.style.getPropertyValue('--window-transform-x');
+                const y = r.style.getPropertyValue('--window-transform-y');
+                if (x && y) {
+                    r.style.transform = `translate(${x},${y})`;
+                }
             }
         }
         if (this.state.lastSize) {
             this.setState({
                 width: this.state.lastSize.width,
                 height: this.state.lastSize.height,
-                snapped: null
+                snapped: null,
+                prevBounds: null
             }, this.resizeBoundries);
         } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            this.setState({ snapped: null, prevBounds: null }, this.resizeBoundries);
         }
     }
 
     snapWindow = (position) => {
-        this.setWinowsPosition();
+        this.focusWindow();
+        const r = document.querySelector("#" + this.id);
+        let prevBounds = null;
+        if (r) {
+            const rect = r.getBoundingClientRect();
+            const x = this.snapToGrid(rect.x);
+            const y = this.snapToGrid(rect.y - 32);
+            r.style.setProperty('--window-transform-x', x.toFixed(1).toString() + "px");
+            r.style.setProperty('--window-transform-y', y.toFixed(1).toString() + "px");
+            prevBounds = { x, y };
+        }
         const { width, height } = this.state;
         let newWidth = width;
         let newHeight = height;
@@ -310,7 +327,6 @@ export class Window extends Component {
             newHeight = 96.3;
             transform = 'translate(-1pt,-2pt)';
         }
-        const r = document.querySelector("#" + this.id);
         if (r && transform) {
             r.style.transform = transform;
         }
@@ -320,7 +336,8 @@ export class Window extends Component {
             snapped: position,
             lastSize: { width, height },
             width: newWidth,
-            height: newHeight
+            height: newHeight,
+            prevBounds
         }, this.resizeBoundries);
     }
 
@@ -644,33 +661,6 @@ export class Window extends Component {
                 this.unsnapWindow();
             }
         }
-    }
-
-    snapWindow = (pos) => {
-        this.focusWindow();
-        const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
-        let transform = '';
-        if (pos === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (pos === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        }
-        const node = document.getElementById(this.id);
-        if (node && transform) {
-            node.style.transform = transform;
-        }
-        this.setState({
-            snapped: pos,
-            lastSize: { width, height },
-            width: newWidth,
-            height: newHeight
-        }, this.resizeBoundries);
     }
 
     render() {
