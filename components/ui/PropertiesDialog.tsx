@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getDefaultApp, setDefaultApp } from '../../utils/mimeDefaults';
 
 interface Props {
   item: {
@@ -16,12 +17,20 @@ interface Props {
 
 const PropertiesDialog: React.FC<Props> = ({ item, onClose, onRenamed }) => {
   const [name, setName] = useState(item.name);
+  const [openWith, setOpenWith] = useState('');
 
   useEffect(() => {
     return () => {
       if (item.preview) URL.revokeObjectURL(item.preview);
     };
   }, [item.preview]);
+
+  useEffect(() => {
+    if (item.type) {
+      const existing = getDefaultApp(item.type);
+      if (existing) setOpenWith(existing);
+    }
+  }, [item.type]);
 
   const save = async () => {
     if (name !== item.name && item.handle?.move) {
@@ -31,6 +40,9 @@ const PropertiesDialog: React.FC<Props> = ({ item, onClose, onRenamed }) => {
       } catch {
         // ignore rename errors
       }
+    }
+    if (item.type && openWith) {
+      setDefaultApp(item.type, openWith);
     }
   };
 
@@ -63,6 +75,17 @@ const PropertiesDialog: React.FC<Props> = ({ item, onClose, onRenamed }) => {
             <div>Modified: {new Date(item.modified).toLocaleString()}</div>
           )}
         </div>
+        {item.type && (
+          <div className="mt-4">
+            <label className="block mb-1 text-sm">Open With</label>
+            <input
+              value={openWith}
+              onChange={(e) => setOpenWith(e.target.value)}
+              data-testid="open-with-input"
+              className="w-full bg-transparent border-b border-gray-500 focus:outline-none"
+            />
+          </div>
+        )}
         <div className="mt-4 flex justify-end space-x-2">
           <button onClick={onClose} className="px-2 py-1 bg-black bg-opacity-50 rounded">
             Close
