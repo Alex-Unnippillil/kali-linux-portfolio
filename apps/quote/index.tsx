@@ -75,7 +75,7 @@ export default function QuoteApp() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [category, setCategory] = useState('');
   const [search, setSearch] = useState('');
-  const [authorFilter, setAuthorFilter] = useState('');
+  const [authorSearch, setAuthorSearch] = useState('');
   const [favorites, setFavorites] = useState<string[]>([]);
   const [dailyQuote, setDailyQuote] = useState<Quote | null>(null);
   const [posterize, setPosterize] = useState(false);
@@ -137,7 +137,7 @@ export default function QuoteApp() {
 
   const filtered = useMemo(() => {
     const lower = search.toLowerCase();
-    const lowerAuthor = authorFilter.toLowerCase();
+    const lowerAuthor = authorSearch.toLowerCase();
     return quotes.filter((q) => {
       const matchCategory =
         category === 'favorites'
@@ -147,7 +147,7 @@ export default function QuoteApp() {
       const matchAuthor = q.author.toLowerCase().includes(lowerAuthor);
       return matchCategory && matchSearch && matchAuthor;
     });
-  }, [quotes, category, search, authorFilter, favorites]);
+  }, [quotes, category, search, authorSearch, favorites]);
 
   useEffect(() => {
     if (!current) {
@@ -285,6 +285,10 @@ export default function QuoteApp() {
     copyToClipboard(text);
   };
 
+  const shuffleQuotes = () => {
+    setQuotes((q) => [...q].sort(() => Math.random() - 0.5));
+  };
+
   const tweetQuote = () => {
     if (!current) return;
     const text = `"${current.content}" — ${current.author}`;
@@ -392,6 +396,19 @@ export default function QuoteApp() {
           >
             New Quote
           </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={shuffleQuotes}
+            disabled={playing}
+          >
+            Shuffle
+          </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={copyQuote}
+          >
+            Copy
+          </button>
           <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={toggleFavorite}>
             {isFav ? 'Unfavorite' : 'Favorite'}
           </button>
@@ -411,7 +428,13 @@ export default function QuoteApp() {
           )}
           <label className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded cursor-pointer">
             Import
-            <input type="file" accept="application/json" className="hidden" onChange={importQuotes} />
+            <input
+              type="file"
+              accept="application/json"
+              className="hidden"
+              onChange={importQuotes}
+              aria-label="Import quotes"
+            />
           </label>
         </div>
         {posterize && (
@@ -425,12 +448,14 @@ export default function QuoteApp() {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search"
             className="px-2 py-1 rounded text-black"
+            aria-label="Search quotes"
           />
           <input
-            value={authorFilter}
-            onChange={(e) => setAuthorFilter(e.target.value)}
-            placeholder="Author"
+            value={authorSearch}
+            onChange={(e) => setAuthorSearch(e.target.value)}
+            placeholder="Search Author"
             className="px-2 py-1 rounded text-black"
+            aria-label="Search author"
           />
           <select
             value={category}
@@ -466,6 +491,7 @@ export default function QuoteApp() {
               type="checkbox"
               checked={loop}
               onChange={(e) => setLoop(e.target.checked)}
+              aria-label="Loop playlist"
             />
             <span>Loop</span>
           </label>
@@ -474,6 +500,7 @@ export default function QuoteApp() {
               type="checkbox"
               checked={shuffle}
               onChange={(e) => setShuffle(e.target.checked)}
+              aria-label="Shuffle playlist"
             />
             <span>Shuffle</span>
           </label>
