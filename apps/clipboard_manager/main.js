@@ -1,6 +1,8 @@
 /* eslint-env browser */
 
-if (isBrowser) {
+import { isBrowser } from '../../utils/env';
+
+if (isBrowser()) {
   const historyKey = 'clipboardHistory';
   let history = JSON.parse(safeLocalStorage?.getItem(historyKey) || '[]');
 

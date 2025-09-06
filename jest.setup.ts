@@ -1,4 +1,5 @@
 import { TextEncoder, TextDecoder } from 'util';
+import { isBrowser } from './utils/env';
 // Polyfill structuredClone before requiring modules that depend on it
 // @ts-ignore
 if (typeof global.structuredClone !== 'function') {
@@ -82,7 +83,7 @@ if (typeof HTMLCanvasElement !== 'undefined') {
 
 // Basic matchMedia mock for libraries that expect it
 (() => {
-  if (typeof window !== 'undefined' && !window.matchMedia) {
+  if (isBrowser() && !window.matchMedia) {
     // @ts-ignore
     window.matchMedia = () => ({
       matches: false,
@@ -96,7 +97,7 @@ if (typeof HTMLCanvasElement !== 'undefined') {
 
 // Minimal IntersectionObserver mock so components relying on it don't crash in tests
 (() => {
-  if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
+  if (isBrowser() && !('IntersectionObserver' in window)) {
     class IntersectionObserverMock {
       constructor() {}
       observe() {}

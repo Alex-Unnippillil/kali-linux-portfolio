@@ -1,3 +1,5 @@
+import { isBrowser } from './env';
+
 export const THEME_KEY = 'app:theme';
 
 // Score required to unlock each theme
@@ -16,13 +18,14 @@ export const isDarkTheme = (theme: string): boolean =>
   DARK_THEMES.includes(theme as (typeof DARK_THEMES)[number]);
 
 export const getTheme = (): string => {
-  if (typeof window === 'undefined') return 'default';
+  if (!isBrowser()) return 'default';
   try {
     const stored = window.localStorage.getItem(THEME_KEY);
     if (stored) return stored;
-    const prefersDark = window.matchMedia?.(
-      '(prefers-color-scheme: dark)'
-    ).matches;
+    const prefersDark =
+      isBrowser() &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches;
     return prefersDark ? 'dark' : 'default';
   } catch {
     return 'default';
@@ -30,7 +33,7 @@ export const getTheme = (): string => {
 };
 
 export const setTheme = (theme: string): void => {
-  if (typeof window === 'undefined') return;
+  if (!isBrowser()) return;
   try {
     window.localStorage.setItem(THEME_KEY, theme);
     document.documentElement.dataset.theme = theme;
