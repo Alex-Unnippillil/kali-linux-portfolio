@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
+import WindowedList from './windowed-list';
 import { getDb } from '../../utils/safeIDB';
 
 interface ClipItem {
@@ -164,7 +165,7 @@ const ClipboardManager: React.FC = () => {
   });
 
   return (
-    <div className="p-4 space-y-2 text-white bg-ub-cool-grey h-full overflow-auto">
+    <div className="p-4 space-y-2 text-white bg-ub-cool-grey h-full flex flex-col">
       <div className="flex items-center gap-2">
         <button
           className="px-2 py-1 bg-gray-700 hover:bg-gray-600"
@@ -193,11 +194,15 @@ const ClipboardManager: React.FC = () => {
           <option value="hash">Hash</option>
         </select>
       </div>
-      <ul className="space-y-1">
-        {filteredItems.map((item) => (
-          <li
+      <WindowedList
+        className="flex-1 space-y-1"
+        items={filteredItems}
+        itemHeight={32}
+        itemKey={(index, item) => item.id ?? index}
+        renderItem={(item) => (
+          <div
             key={item.id}
-            className="flex items-center cursor-pointer hover:underline"
+            className="flex items-center cursor-pointer hover:underline px-1"
             onClick={() => writeToClipboard(item.text)}
           >
             <span className="flex-1">{item.text}</span>
@@ -211,9 +216,9 @@ const ClipboardManager: React.FC = () => {
             >
               {item.pinned ? '★' : '☆'}
             </button>
-          </li>
-        ))}
-      </ul>
+          </div>
+        )}
+      />
     </div>
   );
 };
