@@ -1,11 +1,12 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import { logEvent } from './analytics';
+import ErrorBoundary from '../components/core/ErrorBoundary';
 
 const APP_DIR = '../apps';
 
-export const createDynamicApp = (id, title) =>
-  dynamic(
+export const createDynamicApp = (id, title) => {
+  const DynamicApp = dynamic(
     async () => {
       try {
         let mod;
@@ -35,11 +36,21 @@ export const createDynamicApp = (id, title) =>
         return mod.default;
       } catch (err) {
         console.error(`Failed to load ${title}`, err);
-        const Fallback = () => (
-          <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
-            {`Unable to load ${title}`}
-          </div>
-        );
+        const Fallback = () => {
+          const handleRetry = () => window.location.reload();
+          return (
+            <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white">
+              <p className="mb-2">{`Unable to load ${title}.`}</p>
+              <button
+                type="button"
+                onClick={handleRetry}
+                className="px-3 py-1 bg-ub-orange text-black rounded"
+              >
+                Retry
+              </button>
+            </div>
+          );
+        };
         Fallback.displayName = 'DynamicAppError';
         return Fallback;
       }
@@ -53,6 +64,16 @@ export const createDynamicApp = (id, title) =>
       ),
     }
   );
+
+  const WrappedApp = (props) => (
+    <ErrorBoundary>
+      <DynamicApp {...props} />
+    </ErrorBoundary>
+  );
+
+  WrappedApp.displayName = `${title}WithErrorBoundary`;
+  return WrappedApp;
+};
 
 export const createDisplay = (Component) => {
   const DynamicComponent = dynamic(() => Promise.resolve({ default: Component }), {
