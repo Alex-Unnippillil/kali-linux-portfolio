@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  symbolicIcons: false,
 };
 
 export async function getAccent() {
@@ -102,6 +103,16 @@ export async function setHaptics(value) {
   window.localStorage.setItem('haptics', value ? 'true' : 'false');
 }
 
+export async function getSymbolicIcons() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.symbolicIcons;
+  return window.localStorage.getItem('symbolic-icons') === 'true';
+}
+
+export async function setSymbolicIcons(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('symbolic-icons', value ? 'true' : 'false');
+}
+
 export async function getPongSpin() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
   const val = window.localStorage.getItem('pong-spin');
@@ -137,6 +148,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('symbolic-icons');
 }
 
 export async function exportSettings() {
@@ -151,6 +163,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    symbolicIcons,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +175,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getSymbolicIcons(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +189,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    symbolicIcons,
     theme,
   });
 }
@@ -199,6 +214,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    symbolicIcons,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +227,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (symbolicIcons !== undefined) await setSymbolicIcons(symbolicIcons);
   if (theme !== undefined) setTheme(theme);
 }
 

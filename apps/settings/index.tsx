@@ -29,6 +29,8 @@ export default function Settings() {
     setHighContrast,
     haptics,
     setHaptics,
+    symbolicIcons,
+    setSymbolicIcons,
     theme,
     setTheme,
   } = useSettings();
@@ -149,6 +151,14 @@ export default function Settings() {
                 />
               ))}
             </div>
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Prefer Symbolic Icons:</span>
+            <ToggleSwitch
+              checked={symbolicIcons}
+              onChange={setSymbolicIcons}
+              ariaLabel="Prefer symbolic icons"
+            />
           </div>
           <div className="flex justify-center my-4">
             <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">Wallpaper:</label>
