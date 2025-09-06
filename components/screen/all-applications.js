@@ -1,6 +1,7 @@
 import React from 'react';
 import UbuntuApp from '../base/ubuntu_app';
-import Fuse from 'fuse.js';
+// Fuse is quite large; load it dynamically only when needed
+let Fuse = null;
 
 class AllApplications extends React.Component {
     constructor() {
@@ -20,11 +21,7 @@ class AllApplications extends React.Component {
         games.forEach((game) => {
             if (!combined.some((app) => app.id === game.id)) combined.push(game);
         });
-        this.fuse = new Fuse(combined, {
-            keys: ['title'],
-            includeScore: true,
-            threshold: 0.4,
-        });
+        // Fuse will be loaded dynamically when a search is performed
         this.setState({ apps: combined, unfilteredApps: combined });
     }
 
@@ -32,9 +29,15 @@ class AllApplications extends React.Component {
         if (this.searchTimeout) clearTimeout(this.searchTimeout);
     }
 
-    performSearch = (value) => {
+    performSearch = async (value) => {
         const { unfilteredApps } = this.state;
+        if (!value) {
+            this.setState({ apps: unfilteredApps });
+            return;
+        }
         if (!this.fuse) {
+            const fuseModule = await import('fuse.js');
+            Fuse = fuseModule.default || fuseModule;
             this.fuse = new Fuse(unfilteredApps, {
                 keys: ['title'],
                 includeScore: true,
@@ -42,10 +45,6 @@ class AllApplications extends React.Component {
             });
         } else {
             this.fuse.setCollection(unfilteredApps);
-        }
-        if (!value) {
-            this.setState({ apps: unfilteredApps });
-            return;
         }
         const lower = value.toLowerCase();
         const results = this.fuse.search(value).map((res) => {
@@ -118,6 +117,7 @@ class AllApplications extends React.Component {
         return (
             <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim">
                 <input
+                    aria-label="Search"
                     className="mt-10 mb-8 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
                     placeholder="Search"
                     value={this.state.query}
