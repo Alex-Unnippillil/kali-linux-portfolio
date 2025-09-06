@@ -27,7 +27,7 @@ const DPR =
     : 1;
 
 const AsteroidsGame: React.FC = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const shipRef = useRef({
     x: 0,
     y: 0,

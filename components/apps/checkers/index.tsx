@@ -34,7 +34,7 @@ const Checkers = () => {
   const [cursor, setCursor] = useState<[number, number]>([0, 0]);
   const [showLegal, setShowLegal] = useState(false);
   const [rule, setRule] = useState<'forced' | 'relaxed'>('forced');
-  const boardRef = useRef<HTMLDivElement>(null);
+  const boardRef = useRef<HTMLDivElement | null>(null);
 
   const workerRef = useRef<Worker | null>(null);
   const hintRequest = useRef(false);

@@ -10,7 +10,7 @@ interface DpsChartsProps {
 }
 
 const DpsCharts = ({ towers }: DpsChartsProps) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
