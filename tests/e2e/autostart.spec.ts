@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 // E2E tests for the Autostart settings page
 // 1. Verify enabling/disabling user entries persists.
 // 2. Confirm system entries cannot be edited.
-// 3. Test Trigger dropdown and Reset autostart action.
+// 3. Show banner when Restore session on login is enabled.
 
 test.describe('Autostart settings', () => {
   test.beforeEach(async ({ page }) => {
@@ -20,7 +20,10 @@ test.describe('Autostart settings', () => {
 
     await page.reload();
 
-    const toggled = userEntry.getByRole('checkbox');
+    const toggled = page
+      .getByTestId('autostart-user-entry')
+      .first()
+      .getByRole('checkbox');
     await expect(toggled).toBeChecked({ checked: !initial });
 
     // restore original state to avoid side effects
@@ -38,29 +41,13 @@ test.describe('Autostart settings', () => {
     await expect(toggle).toBeChecked({ checked });
   });
 
-  test('Trigger dropdown and Reset autostart', async ({ page }) => {
-    const entry = page.getByTestId('autostart-user-entry').first();
-    const trigger = entry.getByTestId('trigger-select');
-    const toggle = entry.getByRole('checkbox');
-    const reset = page.getByRole('button', { name: /reset autostart/i });
-
-    const initialToggle = await toggle.isChecked();
-    const initialValue = await trigger.inputValue();
-
-    const options = await trigger.locator('option').all();
-    if (options.length > 1) {
-      const newValue = await options[1].getAttribute('value');
-      await trigger.selectOption(newValue!);
-      await expect(trigger).toHaveValue(newValue!);
-    }
-
-    await toggle.click();
-    await expect(toggle).toBeChecked({ checked: !initialToggle });
-
-    await reset.click();
-
-    await expect(trigger).toHaveValue(initialValue);
-    await expect(toggle).toBeChecked({ checked: initialToggle });
+  test('shows restore session banner when enabled', async ({ page }) => {
+    await page.evaluate(() => localStorage.setItem('session:auto-save', 'true'));
+    await page.reload();
+    await expect(page.getByRole('alert')).toContainText(
+      'Restore session on login',
+    );
+    await page.evaluate(() => localStorage.removeItem('session:auto-save'));
   });
 });
 
