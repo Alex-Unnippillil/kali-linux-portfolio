@@ -14,6 +14,8 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  brightness: 1,
+  presentationMode: false,
 };
 
 export async function getAccent() {
@@ -123,6 +125,27 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getBrightness() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.brightness;
+  const stored = window.localStorage.getItem('brightness');
+  return stored ? parseFloat(stored) : DEFAULT_SETTINGS.brightness;
+}
+
+export async function setBrightness(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('brightness', String(value));
+}
+
+export async function getPresentationMode() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.presentationMode;
+  return window.localStorage.getItem('presentation-mode') === 'true';
+}
+
+export async function setPresentationMode(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('presentation-mode', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +160,8 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('brightness');
+  window.localStorage.removeItem('presentation-mode');
 }
 
 export async function exportSettings() {
@@ -151,6 +176,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    brightness,
+    presentationMode,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +189,8 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getBrightness(),
+    getPresentationMode(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +204,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    brightness,
+    presentationMode,
     theme,
   });
 }
@@ -199,6 +230,8 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    brightness,
+    presentationMode,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +244,8 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (brightness !== undefined) await setBrightness(brightness);
+  if (presentationMode !== undefined) await setPresentationMode(presentationMode);
   if (theme !== undefined) setTheme(theme);
 }
 
