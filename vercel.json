@@ -3,7 +3,11 @@
   "version": 2,
   "functions": {
     "nodeVersion": "20.19.5",
-    "pages/api/**/*.{js,ts}": { "runtime": "@vercel/node@5.3.20" },
+    "pages/api/**/*.{js,ts}": {
+      "runtime": "@vercel/node@5.3.20",
+      "maxDuration": 60,
+      "memory": 1024
+    },
     "app/api/**/route.{js,ts}": { "runtime": "@vercel/node@5.3.20" }
   }
 }
