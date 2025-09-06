@@ -1,4 +1,4 @@
-import logger from '../../utils/logger.ts';
+import logger from '../../utils/logger';
 
 function greet(name) {
   logger.info('Hello ' + name)

@@ -1,5 +1,5 @@
 // Example scripts demonstrating the terminal worker
-import logger from '../../utils/logger.ts';
+import logger from '../../utils/logger';
 
 export function uppercaseExample() {
   if (typeof Worker !== 'function') return;

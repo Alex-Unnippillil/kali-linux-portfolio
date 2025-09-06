@@ -1,5 +1,5 @@
 import { createMD5, createSHA1 } from 'hash-wasm';
-import logger from '../../utils/logger.ts';
+import logger from '../../utils/logger';
 
 export async function hashExample() {
   const samples = ['hello', 'world'];

@@ -1,5 +1,6 @@
 import { CronExpressionParser } from 'cron-parser';
-import logger from '../utils/logger.ts';
+import logger from '../utils/logger';
+
 
 const expression = process.argv[2];
 const count = Number(process.argv[3] ?? 5);
