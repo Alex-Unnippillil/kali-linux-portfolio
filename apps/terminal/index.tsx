@@ -339,6 +339,10 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
               commandRef.current = commandRef.current.slice(0, -1);
               renderHint();
             }
+          } else if (ch === '\u0003') {
+            termRef.current?.writeln('');
+            commandRef.current = '';
+            prompt();
           } else {
             commandRef.current += ch;
             termRef.current?.write(ch);
