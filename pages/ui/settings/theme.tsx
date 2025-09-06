@@ -18,7 +18,7 @@ function Toggle({
       role="switch"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
+      className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${
         checked ? 'bg-ubt-blue' : 'bg-ubt-grey'
       }`}
     >
@@ -32,7 +32,7 @@ function Toggle({
 }
 
 export default function ThemeSettings() {
-  const { theme, setTheme } = useSettings();
+  const { theme, setTheme, highContrast, setHighContrast } = useSettings();
   const [panelSize, setPanelSize] = usePersistentState('app:panel-icons', 16);
   const [gridSize, setGridSize] = usePersistentState('app:grid-icons', 64);
 
@@ -64,6 +64,15 @@ export default function ThemeSettings() {
           <option value="neon">Neon</option>
           <option value="matrix">Matrix</option>
         </select>
+        <label className="mt-4 flex items-center gap-2">
+          <input
+            id="theme-high-contrast"
+            type="checkbox"
+            checked={highContrast}
+            onChange={(e) => setHighContrast(e.target.checked)}
+          />
+          <span>High Contrast</span>
+        </label>
 
         <div className="mt-6">
           <h2 className="text-lg mb-2">Panel Icons</h2>
