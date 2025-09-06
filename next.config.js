@@ -1,3 +1,4 @@
+// @ts-check
 // Security headers configuration for Next.js.
 // Allows external badges and same-origin PDF embedding.
 // Update README (section "CSP External Domains") when editing domains below.

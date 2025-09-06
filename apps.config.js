@@ -1,6 +1,10 @@
 import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
 
 
+/**
+ * @typedef {import('./types/app').AppMetadata} AppMetadata
+ */
+
 export const chromeDefaultTiles = [
   { title: 'MDN', url: 'https://developer.mozilla.org/' },
   { title: 'Wikipedia', url: 'https://en.wikipedia.org' },
@@ -237,6 +241,7 @@ const displayHashcat = createDisplay(HashcatApp);
 const displayKismet = createDisplay(KismetApp);
 
 // Utilities list used for the "Utilities" folder on the desktop
+/** @type {AppMetadata[]} */
 const utilityList = [
   {
     id: 'qr',
@@ -635,8 +640,10 @@ const gameList = [
   },
 ];
 
+/** @type {AppMetadata[]} */
 export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
 
+/** @type {AppMetadata[]} */
 const apps = [
   {
     id: 'chrome',
