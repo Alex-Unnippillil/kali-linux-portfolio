@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import { safeLocalStorage } from '../../utils/safeStorage';
+import FilePropertiesDialog from './FilePropertiesDialog';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -62,6 +64,32 @@ export async function saveFileDialog(options = {}) {
 const DB_NAME = 'file-explorer';
 const STORE_NAME = 'recent';
 
+const PERMS_KEY = 'file-permissions';
+
+const defaultFilePerm = () => ({
+  owner: { r: true, w: true, x: false },
+  group: { r: true, w: false, x: false },
+  other: { r: true, w: false, x: false },
+});
+
+const defaultDirPerm = () => ({
+  owner: { r: true, w: true, x: true },
+  group: { r: true, w: true, x: true },
+  other: { r: true, w: true, x: true },
+});
+
+function loadPermissions() {
+  try {
+    return JSON.parse(safeLocalStorage?.getItem(PERMS_KEY) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function savePermissions(p) {
+  safeLocalStorage?.setItem(PERMS_KEY, JSON.stringify(p));
+}
+
 function openDB() {
   return getDb(DB_NAME, 1, {
     upgrade(db) {
@@ -104,6 +132,9 @@ export default function FileExplorer() {
   const [results, setResults] = useState([]);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
+  const [permissions, setPermissions] = useState(loadPermissions());
+  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, entry: null, path: '' });
+  const [propDialog, setPropDialog] = useState({ open: false, entry: null, path: '', perm: null });
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -259,6 +290,61 @@ export default function FileExplorer() {
 
   useEffect(() => () => workerRef.current?.terminate(), []);
 
+  const getFullPath = (name) => [...path.map((p) => p.name), name].join('/');
+
+  const getPerm = (full, isDir) => {
+    return permissions[full] || (isDir ? defaultDirPerm() : defaultFilePerm());
+  };
+
+  const updatePerm = (full, perm) => {
+    setPermissions((p) => {
+      const next = { ...p, [full]: perm };
+      savePermissions(next);
+      return next;
+    });
+  };
+
+  const hasExec = (perm) => perm.owner.x || perm.group.x || perm.other.x;
+
+  const isScript = (name) => /\.(sh|py|js|ts|rb|pl|bash)$/i.test(name);
+
+  const handleContext = (e, entry, isDir = false) => {
+    e.preventDefault();
+    const pth = getFullPath(entry.name);
+    setContextMenu({ visible: true, x: e.pageX, y: e.pageY, entry, path: pth, isDir });
+  };
+
+  useEffect(() => {
+    const hide = () => setContextMenu((c) => ({ ...c, visible: false }));
+    document.addEventListener('click', hide);
+    return () => document.removeEventListener('click', hide);
+  }, []);
+
+  const openProperties = (entry, pth, isDir) => {
+    setPropDialog({ open: true, entry, path: pth, perm: getPerm(pth, isDir) });
+    setContextMenu((c) => ({ ...c, visible: false }));
+  };
+
+  const runFile = (entry) => {
+    openFile(entry);
+    setContextMenu((c) => ({ ...c, visible: false }));
+  };
+
+  const applyPermsRecursively = async (handle, basePath, perm) => {
+    const all = { ...permissions };
+    async function walk(h, pth) {
+      all[pth] = perm;
+      if (h.kind === 'directory') {
+        for await (const [name, ch] of h.entries()) {
+          await walk(ch, pth + '/' + name);
+        }
+      }
+    }
+    await walk(handle, basePath);
+    setPermissions(all);
+    savePermissions(all);
+  };
+
   if (!supported) {
     return (
       <div className="p-4 flex flex-col h-full">
@@ -331,6 +417,7 @@ export default function FileExplorer() {
               key={i}
               className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
               onClick={() => openDir(d)}
+              onContextMenu={(e) => handleContext(e, d, true)}
             >
               {d.name}
             </div>
@@ -341,6 +428,7 @@ export default function FileExplorer() {
               key={i}
               className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
               onClick={() => openFile(f)}
+              onContextMenu={(e) => handleContext(e, f)}
             >
               {f.name}
             </div>
@@ -370,6 +458,45 @@ export default function FileExplorer() {
           </div>
         </div>
       </div>
+      {contextMenu.visible && (
+        <div
+          className="fixed bg-ub-cool-grey border border-gray-600 rounded text-white z-50"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+        >
+          {contextMenu.entry &&
+            !contextMenu.isDir &&
+            isScript(contextMenu.entry.name) &&
+            hasExec(getPerm(contextMenu.path, false)) && (
+              <div
+                className="px-2 py-1 hover:bg-black hover:bg-opacity-30 cursor-pointer"
+                onClick={() => runFile(contextMenu.entry)}
+              >
+                Run
+              </div>
+            )}
+          <div
+            className="px-2 py-1 hover:bg-black hover:bg-opacity-30 cursor-pointer"
+            onClick={() => openProperties(contextMenu.entry, contextMenu.path, contextMenu.isDir)}
+          >
+            Properties
+          </div>
+        </div>
+      )}
+      {propDialog.open && (
+        <FilePropertiesDialog
+          entry={propDialog.entry}
+          perm={propDialog.perm}
+          onClose={() => setPropDialog({ open: false, entry: null, path: '', perm: null })}
+          onSave={async (p, rec) => {
+            if (rec && propDialog.entry.handle.kind === 'directory') {
+              await applyPermsRecursively(propDialog.entry.handle, propDialog.path, p);
+            } else {
+              updatePerm(propDialog.path, p);
+            }
+            setPropDialog({ open: false, entry: null, path: '', perm: null });
+          }}
+        />
+      )}
     </div>
   );
 }
