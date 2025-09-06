@@ -1,8 +1,14 @@
-import React from 'react';
+"use client";
+
+import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import usePersistentState from '../../hooks/usePersistentState';
 
 export default function Taskbar(props) {
     const runningApps = props.apps.filter(app => props.closed_windows[app.id] === false);
+    const [behavior] = usePersistentState('xfce.panel.autohideBehavior', 'never');
+    const [visible, setVisible] = useState(true);
+    const hideTimer = useRef(null);
 
     const handleClick = (app) => {
         const id = app.id;
@@ -15,8 +21,44 @@ export default function Taskbar(props) {
         }
     };
 
+    const show = () => {
+        if (hideTimer.current) clearTimeout(hideTimer.current);
+        setVisible(true);
+    };
+
+    const scheduleHide = () => {
+        if (behavior === 'never') return;
+        const delay = behavior === 'intelligent' ? 800 : 0;
+        if (hideTimer.current) clearTimeout(hideTimer.current);
+        hideTimer.current = setTimeout(() => setVisible(false), delay);
+    };
+
+    useEffect(() => {
+        if (behavior === 'never') {
+            setVisible(true);
+            return;
+        }
+        scheduleHide();
+        const handleMove = (e) => {
+            if (window.innerHeight - e.clientY <= 5) {
+                show();
+            }
+        };
+        window.addEventListener('mousemove', handleMove);
+        return () => {
+            window.removeEventListener('mousemove', handleMove);
+            if (hideTimer.current) clearTimeout(hideTimer.current);
+        };
+    }, [behavior]);
+
     return (
-        <div className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center z-40" role="toolbar">
+        <div
+            onMouseEnter={show}
+            onMouseLeave={scheduleHide}
+            style={{ transform: visible ? 'translateY(0)' : 'translateY(100%)', transition: 'transform 0.3s' }}
+            className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center z-40"
+            role="toolbar"
+        >
             {runningApps.map(app => (
                 <button
                     key={app.id}
