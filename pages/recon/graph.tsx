@@ -31,8 +31,14 @@ interface GraphLink {
 }
 
 const ForceGraph2D = dynamic(
-  () => import('react-force-graph').then((mod) => mod.ForceGraph2D),
-  { ssr: false },
+  () =>
+    import(
+      /* webpackChunkName: "react-force-graph" */ 'react-force-graph'
+    ).then((mod) => mod.ForceGraph2D),
+  {
+    ssr: false,
+    loading: () => <p>Loading graph...</p>,
+  },
 );
 
 const ReconGraph: React.FC = () => {

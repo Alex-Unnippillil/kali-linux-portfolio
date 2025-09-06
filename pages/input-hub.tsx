@@ -212,15 +212,16 @@ const InputHub = () => {
           onChange={(e) => setMessage(e.target.value)}
           required
         />
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={useCaptcha}
-            onChange={(e) => setUseCaptcha(e.target.checked)}
-            disabled={!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
-          />
-          <span>Use reCAPTCHA</span>
-        </label>
+        {process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY && (
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={useCaptcha}
+              onChange={(e) => setUseCaptcha(e.target.checked)}
+            />
+            <span>Use reCAPTCHA</span>
+          </label>
+        )}
         <button type="submit" className="bg-blue-500 text-white px-2 py-1">
           Send
         </button>

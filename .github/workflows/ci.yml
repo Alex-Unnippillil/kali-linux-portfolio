@@ -93,7 +93,9 @@ jobs:
       - run: yarn install --immutable --immutable-cache
       - run: yarn npm audit
 
-  validate-apps:
+
+validate-apps:
+
     runs-on: ubuntu-latest
     needs: install
     steps:
@@ -104,6 +106,7 @@ jobs:
           cache: yarn
       - run: yarn install --immutable --immutable-cache
       - run: npm run validate:apps
+
 
   vercel-preview:
     runs-on: ubuntu-latest
@@ -131,6 +134,7 @@ jobs:
       - test
       - e2e
       - security
+      - verify
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -138,7 +142,8 @@ jobs:
           node-version: 20.x
           cache: yarn
       - run: yarn install --immutable --immutable-cache
-      - run: yarn build
+      - run: ANALYZE=true yarn build
+      - run: yarn check-budgets
       - run: yarn export
       - uses: actions/upload-artifact@v4
         with:
