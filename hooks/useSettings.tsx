@@ -20,6 +20,10 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getToastPlacement as loadToastPlacement,
+  setToastPlacement as saveToastPlacement,
+  getToastFadeOut as loadToastFadeOut,
+  setToastFadeOut as saveToastFadeOut,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -62,6 +66,8 @@ interface SettingsContextValue {
   pongSpin: boolean;
   allowNetwork: boolean;
   haptics: boolean;
+  toastPlacement: 'primary' | 'mouse';
+  toastFadeOut: boolean;
   theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
@@ -73,6 +79,8 @@ interface SettingsContextValue {
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
+  setToastPlacement: (value: 'primary' | 'mouse') => void;
+  setToastFadeOut: (value: boolean) => void;
   setTheme: (value: string) => void;
 }
 
@@ -87,6 +95,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
+  toastPlacement: defaults.toastPlacement,
+  toastFadeOut: defaults.toastFadeOut,
   theme: 'default',
   setAccent: () => {},
   setWallpaper: () => {},
@@ -98,6 +108,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setPongSpin: () => {},
   setAllowNetwork: () => {},
   setHaptics: () => {},
+  setToastPlacement: () => {},
+  setToastFadeOut: () => {},
   setTheme: () => {},
 });
 
@@ -112,6 +124,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
+  const [toastPlacement, setToastPlacement] = useState<'primary' | 'mouse'>(
+    defaults.toastPlacement
+  );
+  const [toastFadeOut, setToastFadeOut] = useState<boolean>(
+    defaults.toastFadeOut
+  );
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
@@ -127,6 +145,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setToastPlacement(await loadToastPlacement());
+      setToastFadeOut(await loadToastFadeOut());
       setTheme(loadTheme());
     })();
   }, []);
@@ -236,6 +256,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveToastPlacement(toastPlacement);
+  }, [toastPlacement]);
+
+  useEffect(() => {
+    saveToastFadeOut(toastFadeOut);
+  }, [toastFadeOut]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -249,6 +277,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         pongSpin,
         allowNetwork,
         haptics,
+        toastPlacement,
+        toastFadeOut,
         theme,
         setAccent,
         setWallpaper,
@@ -260,6 +290,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
+        setToastPlacement,
+        setToastFadeOut,
         setTheme,
       }}
     >
