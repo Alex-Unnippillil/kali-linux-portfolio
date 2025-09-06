@@ -83,7 +83,7 @@ const TrashApp = createDynamicApp('trash', 'Trash');
 const SerialTerminalApp = createDynamicApp('serial-terminal', 'Serial Terminal');
 
 
-const WiresharkApp = createDynamicApp('wireshark', 'Wireshark');
+const NetworkConnectionsApp = createDynamicApp('network/connections', 'Network Connections');
 const BleSensorApp = createDynamicApp('ble-sensor', 'BLE Sensor');
 const BluetoothApp = createDynamicApp('bluetooth', 'Bluetooth');
 const DsniffApp = createDynamicApp('dsniff', 'dsniff');
@@ -181,7 +181,7 @@ const displayBrasero = createDisplay(BraseroApp);
 const displayAutopsy = createDisplay(AutopsyApp);
 const displayPluginManager = createDisplay(PluginManagerApp);
 
-const displayWireshark = createDisplay(WiresharkApp);
+const displayNetworkConnections = createDisplay(NetworkConnectionsApp);
 const displayBleSensor = createDisplay(BleSensorApp);
 const displayBluetooth = createDisplay(BluetoothApp);
 const displayBeef = createDisplay(BeefApp);
@@ -805,13 +805,13 @@ const apps = [
     screen: displayMetasploit,
   },
   {
-    id: 'wireshark',
-    title: 'Wireshark',
-    icon: '/themes/Yaru/apps/wireshark.svg',
+    id: 'network/connections',
+    title: 'Network Connections',
+    icon: '/themes/Yaru/status/network-wireless-signal-good-symbolic.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayWireshark,
+    screen: displayNetworkConnections,
   },
   {
     id: 'todoist',
