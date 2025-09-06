@@ -71,6 +71,8 @@ export default function ActiveWindowTitle({
             src="/themes/Yaru/window/window-minimize-symbolic.svg"
             alt="Kali window minimize"
             className="h-3 w-3"
+            width={12}
+            height={12}
           />
         </button>
       )}
@@ -85,6 +87,8 @@ export default function ActiveWindowTitle({
             src="/themes/Yaru/window/window-maximize-symbolic.svg"
             alt="Kali window maximize"
             className="h-3 w-3"
+            width={12}
+            height={12}
           />
         </button>
       )}
@@ -99,6 +103,8 @@ export default function ActiveWindowTitle({
             src="/themes/Yaru/window/window-close-symbolic.svg"
             alt="Kali window close"
             className="h-3 w-3"
+            width={12}
+            height={12}
           />
         </button>
       )}

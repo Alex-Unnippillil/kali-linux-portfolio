@@ -113,6 +113,8 @@ const Radare2 = ({ initialData = {} }) => {
           src="/themes/Yaru/apps/radare2.svg"
           alt="Radare2 badge"
           className="w-12 h-12"
+          width={48}
+          height={48}
         />
         <input
           value={seekAddr}

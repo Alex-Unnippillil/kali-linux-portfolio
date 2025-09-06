@@ -48,7 +48,13 @@ const PropertiesDialog: React.FC<Props> = ({ item, onClose, onRenamed }) => {
     >
       <div className="bg-ub-cool-grey p-4 rounded shadow-md text-white w-64">
         <div className="flex items-center mb-4">
-          <img src={iconSrc} alt="" className="w-12 h-12 mr-2 object-cover" />
+          <img
+            src={iconSrc}
+            alt=""
+            className="w-12 h-12 mr-2 object-cover"
+            width={48}
+            height={48}
+          />
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
