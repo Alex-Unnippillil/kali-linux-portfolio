@@ -15,10 +15,7 @@ import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
 import WindowSwitcher from '../screen/window-switcher'
 import DesktopMenu from '../context-menus/desktop-menu';
-import DefaultMenu from '../context-menus/default';
-import AppMenu from '../context-menus/app-menu';
 import Taskbar from './taskbar';
-import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
@@ -43,11 +40,7 @@ export class Desktop extends Component {
             desktop_apps: [],
             context_menus: {
                 desktop: false,
-                default: false,
-                app: false,
-                taskbar: false,
             },
-            context_app: null,
             showNameBar: false,
             showShortcutSelector: false,
             showWindowSwitcher: false,
@@ -234,35 +227,12 @@ export class Desktop extends Component {
         this.hideAllContextMenu();
         const target = e.target.closest('[data-context]');
         const context = target ? target.dataset.context : null;
-        const appId = target ? target.dataset.appId : null;
-        switch (context) {
-            case "desktop-area":
-                ReactGA.event({
-                    category: `Context Menu`,
-                    action: `Opened Desktop Context Menu`
-                });
-                this.showContextMenu(e, "desktop");
-                break;
-            case "app":
-                ReactGA.event({
-                    category: `Context Menu`,
-                    action: `Opened App Context Menu`
-                });
-                this.setState({ context_app: appId }, () => this.showContextMenu(e, "app"));
-                break;
-            case "taskbar":
-                ReactGA.event({
-                    category: `Context Menu`,
-                    action: `Opened Taskbar Context Menu`
-                });
-                this.setState({ context_app: appId }, () => this.showContextMenu(e, "taskbar"));
-                break;
-            default:
-                ReactGA.event({
-                    category: `Context Menu`,
-                    action: `Opened Default Context Menu`
-                });
-                this.showContextMenu(e, "default");
+        if (context === 'desktop-area') {
+            ReactGA.event({
+                category: `Context Menu`,
+                action: `Opened Desktop Context Menu`
+            });
+            this.showContextMenu(e, 'desktop');
         }
     }
 
@@ -272,25 +242,11 @@ export class Desktop extends Component {
         this.hideAllContextMenu();
         const target = e.target.closest('[data-context]');
         const context = target ? target.dataset.context : null;
-        const appId = target ? target.dataset.appId : null;
         const rect = target ? target.getBoundingClientRect() : { left: 0, top: 0, height: 0 };
         const fakeEvent = { pageX: rect.left, pageY: rect.top + rect.height };
-        switch (context) {
-            case "desktop-area":
-                ReactGA.event({ category: `Context Menu`, action: `Opened Desktop Context Menu` });
-                this.showContextMenu(fakeEvent, "desktop");
-                break;
-            case "app":
-                ReactGA.event({ category: `Context Menu`, action: `Opened App Context Menu` });
-                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "app"));
-                break;
-            case "taskbar":
-                ReactGA.event({ category: `Context Menu`, action: `Opened Taskbar Context Menu` });
-                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "taskbar"));
-                break;
-            default:
-                ReactGA.event({ category: `Context Menu`, action: `Opened Default Context Menu` });
-                this.showContextMenu(fakeEvent, "default");
+        if (context === 'desktop-area') {
+            ReactGA.event({ category: `Context Menu`, action: `Opened Desktop Context Menu` });
+            this.showContextMenu(fakeEvent, 'desktop');
         }
     }
 
@@ -317,7 +273,7 @@ export class Desktop extends Component {
         Object.keys(menus).forEach(key => {
             menus[key] = false;
         });
-        this.setState({ context_menus: menus, context_app: null });
+        this.setState({ context_menus: menus });
     }
 
     getMenuPosition = (e) => {
@@ -823,7 +779,15 @@ export class Desktop extends Component {
             <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
                 <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
                     <span>New folder name</span>
-                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
+                    <input
+                        className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5"
+                        id="folder-name-input"
+                        type="text"
+                        autoComplete="off"
+                        spellCheck="false"
+                        autoFocus={true}
+                        aria-label="New folder name"
+                    />
                 </div>
                 <div className="flex">
                     <button
@@ -895,34 +859,6 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
-                    clearSession={() => { this.props.clearSession(); window.location.reload(); }}
-                />
-                <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
-                <AppMenu
-                    active={this.state.context_menus.app}
-                    pinned={this.initFavourite[this.state.context_app]}
-                    pinApp={() => this.pinApp(this.state.context_app)}
-                    unpinApp={() => this.unpinApp(this.state.context_app)}
-                    onClose={this.hideAllContextMenu}
-                />
-                <TaskbarMenu
-                    active={this.state.context_menus.taskbar}
-                    minimized={this.state.context_app ? this.state.minimized_windows[this.state.context_app] : false}
-                    onMinimize={() => {
-                        const id = this.state.context_app;
-                        if (!id) return;
-                        if (this.state.minimized_windows[id]) {
-                            this.openApp(id);
-                        } else {
-                            this.hasMinimised(id);
-                        }
-                    }}
-                    onClose={() => {
-                        const id = this.state.context_app;
-                        if (!id) return;
-                        this.closeApp(id);
-                    }}
-                    onCloseMenu={this.hideAllContextMenu}
                 />
 
                 {/* Folder Input Name Bar */}
