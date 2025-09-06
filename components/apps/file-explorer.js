@@ -104,6 +104,10 @@ export default function FileExplorer() {
   const [results, setResults] = useState([]);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
+  const [addressMode, setAddressMode] = useState(false);
+  const [pathText, setPathText] = useState('');
+  const pathInputRef = useRef(null);
+  const [history, setHistory] = useState([]);
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -132,6 +136,12 @@ export default function FileExplorer() {
     })();
   }, [opfsSupported, root, getDir]);
 
+  const getPathString = (segments) => {
+    if (!segments.length) return '/';
+    const rest = segments.slice(1).map((s) => s.name).join('/');
+    return '/' + rest;
+  };
+
   const saveBuffer = async (name, data) => {
     if (unsavedDir) await opfsWrite(name, data, unsavedDir);
   };
@@ -144,6 +154,36 @@ export default function FileExplorer() {
   const removeBuffer = async (name) => {
     if (unsavedDir) await opfsDelete(name, unsavedDir);
   };
+
+  useEffect(() => {
+    if (!dirHandle) return;
+    const p = getPathString(path);
+    setHistory((h) => {
+      if (h.length && h[h.length - 1].path === p) return h;
+      return [
+        ...h,
+        { path: p, segments: path.map((seg) => ({ name: seg.name, handle: seg.handle })), handle: dirHandle },
+      ];
+    });
+  }, [dirHandle, path]);
+
+  useEffect(() => {
+    if (addressMode) {
+      setPathText(getPathString(path));
+      setTimeout(() => pathInputRef.current?.focus(), 0);
+    }
+  }, [addressMode, path]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key.toLowerCase() === 'l' && e.ctrlKey) {
+        e.preventDefault();
+        setAddressMode((m) => !m);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   const openFallback = async (e) => {
     const file = e.target.files[0];
@@ -203,6 +243,32 @@ export default function FileExplorer() {
     setDirHandle(dir.handle);
     setPath((p) => [...p, { name: dir.name, handle: dir.handle }]);
     await readDir(dir.handle);
+  };
+
+  const navigatePathString = async (pStr) => {
+    if (!path.length) return;
+    const segs = pStr.split('/').filter(Boolean);
+    let handle = path[0].handle;
+    const newPath = [{ name: path[0].name, handle }];
+    for (const name of segs) {
+      try {
+        handle = await handle.getDirectoryHandle(name);
+        newPath.push({ name, handle });
+      } catch {
+        return;
+      }
+    }
+    setDirHandle(handle);
+    setPath(newPath);
+    await readDir(handle);
+  };
+
+  const navigateHistory = async (idx) => {
+    const entry = history[idx];
+    if (!entry) return;
+    setDirHandle(entry.handle);
+    setPath(entry.segments);
+    await readDir(entry.handle);
   };
 
   const navigateTo = async (index) => {
@@ -306,7 +372,51 @@ export default function FileExplorer() {
             Back
           </button>
         )}
-        <Breadcrumbs path={path} onNavigate={navigateTo} />
+        {addressMode ? (
+          <>
+            <input
+              ref={pathInputRef}
+              value={pathText}
+              onChange={(e) => setPathText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  navigatePathString(pathText);
+                  setAddressMode(false);
+                }
+              }}
+              className="px-1 py-0.5 text-black flex-1"
+              list="path-history"
+            />
+            <datalist id="path-history">
+              {history.map((h, i) => (
+                <option key={i} value={h.path} />
+              ))}
+            </datalist>
+          </>
+        ) : (
+          <Breadcrumbs path={path} onNavigate={navigateTo} />
+        )}
+        <select
+          onChange={(e) => {
+            const idx = parseInt(e.target.value, 10);
+            if (!Number.isNaN(idx)) navigateHistory(idx);
+            e.target.value = '';
+          }}
+          className="px-1 py-0.5 text-black"
+        >
+          <option value="">History</option>
+          {history.map((h, i) => (
+            <option key={i} value={i}>
+              {h.path}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={() => setAddressMode((m) => !m)}
+          className="px-2 py-1 bg-black bg-opacity-50 rounded"
+        >
+          {addressMode ? 'Breadcrumbs' : 'Path'}
+        </button>
         {currentFile && (
           <button onClick={saveFile} className="px-2 py-1 bg-black bg-opacity-50 rounded">
             Save
