@@ -138,23 +138,47 @@ module.exports = withBundleAnalyzer(
     },
     images: {
       unoptimized: true,
-      domains: [
-        'opengraph.githubassets.com',
-        'raw.githubusercontent.com',
-        'avatars.githubusercontent.com',
-        'i.ytimg.com',
-        'yt3.ggpht.com',
-        'i.scdn.co',
-        'www.google.com',
-        'example.com',
-        'developer.mozilla.org',
-        'en.wikipedia.org',
-        'ghchart.rshah.org',
-        'openweathermap.org',
-        'staticmap.openstreetmap.de',
-        'data.typeracer.com',
-        'img.shields.io',
-        'images.credly.com',
+      remotePatterns: [
+        {
+          protocol: 'https',
+          hostname: 'i.ytimg.com',
+          pathname: '/**',
+        },
+        {
+          protocol: 'https',
+          hostname: 'openweathermap.org',
+          pathname: '/**',
+        },
+        {
+          protocol: 'https',
+          hostname: 'img.shields.io',
+          pathname: '/**',
+        },
+        {
+          protocol: 'https',
+          hostname: 'images.credly.com',
+          pathname: '/**',
+        },
+        {
+          protocol: 'https',
+          hostname: 'ghchart.rshah.org',
+          pathname: '/**',
+        },
+        {
+          protocol: 'https',
+          hostname: 'staticmap.openstreetmap.de',
+          pathname: '/**',
+        },
+        {
+          protocol: 'https',
+          hostname: 'data.typeracer.com',
+          pathname: '/**',
+        },
+        {
+          protocol: 'https',
+          hostname: 'www.google.com',
+          pathname: '/**',
+        },
       ],
       localPatterns: [
         { pathname: '/themes/Yaru/apps/**' },
