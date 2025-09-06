@@ -11,8 +11,11 @@ export class UbuntuApp extends Component {
         this.setState({ dragging: true });
     }
 
-    handleDragEnd = () => {
+    handleDragEnd = (e) => {
         this.setState({ dragging: false });
+        if (this.props.onDragEnd) {
+            this.props.onDragEnd(e);
+        }
     }
 
     openApp = () => {
@@ -49,6 +52,7 @@ export class UbuntuApp extends Component {
                 tabIndex={this.props.disabled ? -1 : 0}
                 onMouseEnter={this.handlePrefetch}
                 onFocus={this.handlePrefetch}
+                style={this.props.style}
             >
                 <Image
                     width={40}
