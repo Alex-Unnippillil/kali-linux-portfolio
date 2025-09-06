@@ -4,10 +4,20 @@ import SmallArrow from "./small_arrow";
 import { useSettings } from '../../hooks/useSettings';
 
 const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
+const SENSORS_PREFIX = "xfce.panel.sensors.";
 
 export default function Status() {
   const { allowNetwork } = useSettings();
   const [online, setOnline] = useState(true);
+  const [temperature, setTemperature] = useState(42);
+  const [unit, setUnit] = useState(() => {
+    if (typeof window === "undefined") return "c";
+    return localStorage.getItem(`${SENSORS_PREFIX}unit`) === "f" ? "f" : "c";
+  });
+  const [layout, setLayout] = useState(() => {
+    if (typeof window === "undefined") return "both";
+    return localStorage.getItem(`${SENSORS_PREFIX}layout`) || "both";
+  });
 
   useEffect(() => {
     const pingServer = async () => {
@@ -38,8 +48,53 @@ export default function Status() {
     };
   }, []);
 
+  useEffect(() => {
+    const id = setInterval(() => {
+      setTemperature((t) => {
+        const next = t + (Math.random() * 2 - 1) * 5;
+        return Math.max(30, Math.min(90, next));
+      });
+    }, 5000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => {
+      const { unit: u, layout: l } = e.detail || {};
+      if (u) setUnit(u);
+      if (l) setLayout(l);
+    };
+    window.addEventListener("sensors:settingsChanged", handler);
+    return () => window.removeEventListener("sensors:settingsChanged", handler);
+  }, []);
+
+  const renderTemp = () => {
+    const tempC = temperature;
+    const temp = unit === "f" ? (tempC * 9) / 5 + 32 : tempC;
+    const symbol = unit === "f" ? "°F" : "°C";
+    return (
+      <span className="mx-1.5 flex items-center">
+        {layout !== "bars" && (
+          <span className="text-xs">
+            {Math.round(temp)}
+            {symbol}
+          </span>
+        )}
+        {layout !== "text" && (
+          <span className="ml-1 w-8 h-2 bg-ub-dark-grey rounded overflow-hidden">
+            <span
+              className="block h-full bg-ub-orange"
+              style={{ width: `${Math.min(100, tempC)}%` }}
+            />
+          </span>
+        )}
+      </span>
+    );
+  };
+
   return (
     <div className="flex justify-center items-center">
+      {renderTemp()}
       <span
         className="mx-1.5 relative"
         title={online ? (allowNetwork ? 'Online' : 'Online (requests blocked)') : 'Offline'}
