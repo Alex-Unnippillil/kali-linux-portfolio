@@ -14,6 +14,10 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  cornerTL: 'none',
+  cornerTR: 'none',
+  cornerBL: 'none',
+  cornerBR: 'none',
 };
 
 export async function getAccent() {
@@ -123,6 +127,46 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getCornerTL() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.cornerTL;
+  return window.localStorage.getItem('corner-tl') || DEFAULT_SETTINGS.cornerTL;
+}
+
+export async function setCornerTL(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('corner-tl', value);
+}
+
+export async function getCornerTR() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.cornerTR;
+  return window.localStorage.getItem('corner-tr') || DEFAULT_SETTINGS.cornerTR;
+}
+
+export async function setCornerTR(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('corner-tr', value);
+}
+
+export async function getCornerBL() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.cornerBL;
+  return window.localStorage.getItem('corner-bl') || DEFAULT_SETTINGS.cornerBL;
+}
+
+export async function setCornerBL(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('corner-bl', value);
+}
+
+export async function getCornerBR() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.cornerBR;
+  return window.localStorage.getItem('corner-br') || DEFAULT_SETTINGS.cornerBR;
+}
+
+export async function setCornerBR(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('corner-br', value);
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +181,10 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('corner-tl');
+  window.localStorage.removeItem('corner-tr');
+  window.localStorage.removeItem('corner-bl');
+  window.localStorage.removeItem('corner-br');
 }
 
 export async function exportSettings() {
@@ -151,6 +199,10 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    cornerTL,
+    cornerTR,
+    cornerBL,
+    cornerBR,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +214,10 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getCornerTL(),
+    getCornerTR(),
+    getCornerBL(),
+    getCornerBR(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +231,10 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    cornerTL,
+    cornerTR,
+    cornerBL,
+    cornerBR,
     theme,
   });
 }
@@ -199,6 +259,10 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    cornerTL,
+    cornerTR,
+    cornerBL,
+    cornerBR,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +275,10 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (cornerTL !== undefined) await setCornerTL(cornerTL);
+  if (cornerTR !== undefined) await setCornerTR(cornerTR);
+  if (cornerBL !== undefined) await setCornerBL(cornerBL);
+  if (cornerBR !== undefined) await setCornerBR(cornerBR);
   if (theme !== undefined) setTheme(theme);
 }
 

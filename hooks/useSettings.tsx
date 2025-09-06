@@ -20,6 +20,14 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getCornerTL as loadCornerTL,
+  setCornerTL as saveCornerTL,
+  getCornerTR as loadCornerTR,
+  setCornerTR as saveCornerTR,
+  getCornerBL as loadCornerBL,
+  setCornerBL as saveCornerBL,
+  getCornerBR as loadCornerBR,
+  setCornerBR as saveCornerBR,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -63,6 +71,10 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  cornerTL: string;
+  cornerTR: string;
+  cornerBL: string;
+  cornerBR: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +86,10 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setCornerTL: (value: string) => void;
+  setCornerTR: (value: string) => void;
+  setCornerBL: (value: string) => void;
+  setCornerBR: (value: string) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +104,10 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  cornerTL: defaults.cornerTL,
+  cornerTR: defaults.cornerTR,
+  cornerBL: defaults.cornerBL,
+  cornerBR: defaults.cornerBR,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +119,10 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setCornerTL: () => {},
+  setCornerTR: () => {},
+  setCornerBL: () => {},
+  setCornerBR: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -113,6 +137,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [cornerTL, setCornerTL] = useState<string>(defaults.cornerTL);
+  const [cornerTR, setCornerTR] = useState<string>(defaults.cornerTR);
+  const [cornerBL, setCornerBL] = useState<string>(defaults.cornerBL);
+  const [cornerBR, setCornerBR] = useState<string>(defaults.cornerBR);
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -127,6 +155,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setCornerTL(await loadCornerTL());
+      setCornerTR(await loadCornerTR());
+      setCornerBL(await loadCornerBL());
+      setCornerBR(await loadCornerBR());
       setTheme(loadTheme());
     })();
   }, []);
@@ -236,6 +268,22 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveCornerTL(cornerTL);
+  }, [cornerTL]);
+
+  useEffect(() => {
+    saveCornerTR(cornerTR);
+  }, [cornerTR]);
+
+  useEffect(() => {
+    saveCornerBL(cornerBL);
+  }, [cornerBL]);
+
+  useEffect(() => {
+    saveCornerBR(cornerBR);
+  }, [cornerBR]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -250,6 +298,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        cornerTL,
+        cornerTR,
+        cornerBL,
+        cornerBR,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +313,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setCornerTL,
+        setCornerTR,
+        setCornerBL,
+        setCornerBR,
       }}
     >
       {children}
