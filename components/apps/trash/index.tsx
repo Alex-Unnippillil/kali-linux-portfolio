@@ -40,10 +40,18 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     setItems(data);
   }, []);
 
-  const persist = (next: TrashItem[]) => {
-    setItems(next);
-    localStorage.setItem('window-trash', JSON.stringify(next));
-  };
+  const notifyChange = useCallback(
+    () => window.dispatchEvent(new Event('trash-change')),
+    [],
+  );
+
+  const persist = useCallback(
+    (next: TrashItem[]) => {
+      setItems(next);
+      localStorage.setItem('window-trash', JSON.stringify(next));
+    },
+    [setItems],
+  );
 
   const restore = useCallback(() => {
     if (selected === null) return;
@@ -53,7 +61,8 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     const next = items.filter((_, i) => i !== selected);
     persist(next);
     setSelected(null);
-  }, [items, selected, openApp]);
+    notifyChange();
+  }, [items, selected, openApp, persist, notifyChange]);
 
   const remove = useCallback(() => {
     if (selected === null) return;
@@ -62,7 +71,23 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     const next = items.filter((_, i) => i !== selected);
     persist(next);
     setSelected(null);
-  }, [items, selected]);
+    notifyChange();
+  }, [items, selected, persist, notifyChange]);
+
+  const purge = useCallback(() => {
+    if (selected === null) return;
+    const item = items[selected];
+    if (
+      !window.confirm(
+        `Permanently delete ${item.title}? This action cannot be undone.`,
+      )
+    )
+      return;
+    const next = items.filter((_, i) => i !== selected);
+    persist(next);
+    setSelected(null);
+    notifyChange();
+  }, [items, selected, persist, notifyChange]);
 
   const restoreAll = () => {
     if (items.length === 0) return;
@@ -70,6 +95,7 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     items.forEach((item) => openApp(item.id));
     persist([]);
     setSelected(null);
+    notifyChange();
   };
 
   const empty = () => {
@@ -77,12 +103,20 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     if (!window.confirm('Empty trash?')) return;
     persist([]);
     setSelected(null);
+    notifyChange();
   };
 
   const handleKey = useCallback(
     (e: KeyboardEvent) => {
       if (selected === null) return;
-      if (e.key === 'Delete' || e.key === 'Backspace') {
+      if (e.key === 'Delete') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          purge();
+        } else {
+          remove();
+        }
+      } else if (e.key === 'Backspace') {
         e.preventDefault();
         remove();
       } else if (e.key === 'Enter' || e.key.toLowerCase() === 'r') {
@@ -90,7 +124,7 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
         restore();
       }
     },
-    [selected, remove, restore]
+    [selected, remove, purge, restore]
   );
 
   useEffect(() => {
