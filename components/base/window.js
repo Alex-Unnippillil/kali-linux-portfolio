@@ -4,11 +4,13 @@ import React, { Component } from 'react';
 import NextImage from 'next/image';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
+import { SettingsContext } from '../../hooks/useSettings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
 
 export class Window extends Component {
+    static contextType = SettingsContext;
     constructor(props) {
         super(props);
         this.id = null;
@@ -338,22 +340,35 @@ export class Window extends Component {
 
     applyEdgeResistance = (node, data) => {
         if (!node || !data) return;
-        const threshold = 30;
+        const threshold = this.context.edgeResistance ?? 30;
         const resistance = 0.35; // how much to slow near edges
         let { x, y } = data;
         const maxX = this.state.parentSize.width;
         const maxY = this.state.parentSize.height;
 
-        const resist = (pos, min, max) => {
-            if (pos < min) return min;
-            if (pos < min + threshold) return min + (pos - min) * resistance;
-            if (pos > max) return max;
-            if (pos > max - threshold) return max - (max - pos) * resistance;
+        const multiX = typeof window !== 'undefined' && window.screen && window.screen.width > window.innerWidth;
+        const multiY = typeof window !== 'undefined' && window.screen && window.screen.height > window.innerHeight;
+
+        const resist = (pos, min, max, multi) => {
+            if (pos < min) {
+                if (pos < min - threshold) {
+                    return multi ? max : min;
+                }
+                if (pos < min + threshold) return min + (pos - min) * resistance;
+                return min;
+            }
+            if (pos > max) {
+                if (pos > max + threshold) {
+                    return multi ? min : max;
+                }
+                if (pos > max - threshold) return max - (max - pos) * resistance;
+                return max;
+            }
             return pos;
         }
 
-        x = resist(x, 0, maxX);
-        y = resist(y, 0, maxY);
+        x = resist(x, 0, maxX, multiX);
+        y = resist(y, 0, maxY, multiY);
         node.style.transform = `translate(${x}px, ${y}px)`;
     }
 
