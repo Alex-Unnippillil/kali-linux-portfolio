@@ -12,18 +12,21 @@ import {
         AUTO_SAVE_KEY,
         PROMPT_LOGOUT_KEY,
 } from '../utils/sessionSettings';
+import LogoutModal from './screen/logout_modal';
 
 export default class Ubuntu extends Component {
         constructor() {
                 super();
                 this.desktopRef = React.createRef();
                 this.state = {
-			screen_locked: false,
-			bg_image_name: 'wall-2',
-			booting_screen: true,
-			shutDownScreen: false
-		};
-	}
+                        screen_locked: false,
+                        bg_image_name: 'wall-2',
+                        booting_screen: true,
+                        shutDownScreen: false,
+                        logoutModal: false,
+                        saveOnLogout: false
+                };
+        }
 
         componentDidMount() {
                 this.getLocalData();
@@ -79,10 +82,19 @@ export default class Ubuntu extends Component {
 
         lockScreen = () => {
                 const promptLogout = safeLocalStorage?.getItem(PROMPT_LOGOUT_KEY) === 'true';
-                if (promptLogout && !window.confirm('Log out of this session?')) return;
                 const autoSave = safeLocalStorage?.getItem(AUTO_SAVE_KEY) === 'true';
-                if (autoSave) {
+                if (promptLogout) {
+                        this.setState({ logoutModal: true, saveOnLogout: autoSave });
+                        return;
+                }
+                this.finishLogout(autoSave);
+        };
+
+        finishLogout = (save) => {
+                if (save) {
                         this.desktopRef.current?.saveSession?.();
+                } else {
+                        this.props.resetSession && this.props.resetSession();
                 }
                 // google analytics
                 ReactGA.send({ hitType: "pageview", page: "/lock-screen", title: "Lock Screen" });
@@ -94,11 +106,15 @@ export default class Ubuntu extends Component {
                 const statusBar = document.getElementById('status-bar');
                 // Consider using a React ref if the status bar element lives within this component tree
                 statusBar?.blur();
-		setTimeout(() => {
-			this.setState({ screen_locked: true });
-		}, 100); // waiting for all windows to close (transition-duration)
+                setTimeout(() => {
+                        this.setState({ screen_locked: true });
+                }, 100); // waiting for all windows to close (transition-duration)
                 safeLocalStorage?.setItem('screen-locked', true);
-	};
+        };
+
+        handleLogoutConfirm = (save) => {
+                this.setState({ logoutModal: false }, () => this.finishLogout(save));
+        };
 
         unLockScreen = () => {
                 ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
@@ -156,13 +172,19 @@ export default class Ubuntu extends Component {
 					isShutDown={this.state.shutDownScreen}
 					turnOn={this.turnOn}
 				/>
-				<Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
+                                <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
                                 <Desktop
                                         ref={this.desktopRef}
                                         bg_image_name={this.state.bg_image_name}
                                         changeBackgroundImage={this.changeBackgroundImage}
                                         session={this.props.session}
                                         setSession={this.props.setSession}
+                                />
+                                <LogoutModal
+                                        open={this.state.logoutModal}
+                                        initialSave={this.state.saveOnLogout}
+                                        onClose={() => this.setState({ logoutModal: false })}
+                                        onConfirm={this.handleLogoutConfirm}
                                 />
                         </div>
                 );

@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { render, screen } from '@testing-library/react';
 import Ubuntu from '../components/ubuntu';
+import { PROMPT_LOGOUT_KEY } from '../utils/sessionSettings';
 
 jest.mock('../components/screen/desktop', () => function DesktopMock() {
   return <div data-testid="desktop" />;
@@ -39,6 +40,7 @@ describe('Ubuntu component', () => {
 
   it('handles lockScreen when status bar is missing', () => {
     let instance: Ubuntu | null = null;
+    window.localStorage.setItem(PROMPT_LOGOUT_KEY, 'false');
     render(<Ubuntu ref={(c) => (instance = c)} />);
     expect(instance).not.toBeNull();
     act(() => {
