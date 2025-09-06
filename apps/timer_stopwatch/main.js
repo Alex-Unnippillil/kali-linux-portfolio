@@ -1,10 +1,15 @@
 import { isBrowser } from '../../utils/env';
 
 if (isBrowser) {
+const WORK_DURATION = 25 * 60;
+const BREAK_DURATION = 5 * 60;
+const POSTPONE_DURATION = 5 * 60;
+
 let mode = 'timer';
 let timerWorker = null;
-let timerRemaining = 30;
+let timerRemaining = WORK_DURATION;
 let timerEndTime = 0;
+let postponeUsed = false;
 let stopwatchWorker = null;
 let stopwatchElapsed = 0;
 let stopwatchStartTime = 0;
@@ -17,9 +22,10 @@ const timerDisplay = document.getElementById('timerDisplay');
 const stopwatchDisplay = document.getElementById('stopwatchDisplay');
 const timerControls = document.getElementById('timerControls');
 const stopwatchControls = document.getElementById('stopwatchControls');
-const minutesInput = document.getElementById('minutes');
-const secondsInput = document.getElementById('seconds');
 const lapsList = document.getElementById('laps');
+const breakOverlay = document.getElementById('breakOverlay');
+const breakCountdown = document.getElementById('breakCountdown');
+const postponeBtn = document.getElementById('postponeBreak');
 
 function formatTime(seconds) {
   const m = Math.floor(seconds / 60)
@@ -42,23 +48,54 @@ function updateTimerDisplay() {
   timerDisplay.textContent = formatTime(timerRemaining);
 }
 
-function startTimer() {
-  if (timerWorker || typeof Worker !== 'function') return;
-  const mins = parseInt(minutesInput.value, 10) || 0;
-  const secs = parseInt(secondsInput.value, 10) || 0;
-  timerRemaining = mins * 60 + secs;
-  timerEndTime = Date.now() + timerRemaining * 1000;
-  updateTimerDisplay();
+function updateBreakDisplay() {
+  breakCountdown.textContent = formatTime(timerRemaining);
+}
+
+function startTimerWorker(tick) {
   timerWorker = new Worker(new URL('../../workers/timer.worker.ts', import.meta.url));
   timerWorker.onmessage = () => {
     timerRemaining = Math.max(0, Math.ceil((timerEndTime - Date.now()) / 1000));
+    tick();
+  };
+  timerWorker.postMessage({ action: 'start', interval: 1000 });
+}
+
+function startWork(duration = WORK_DURATION) {
+  timerRemaining = duration;
+  timerEndTime = Date.now() + timerRemaining * 1000;
+  updateTimerDisplay();
+  startTimerWorker(() => {
     updateTimerDisplay();
     if (timerRemaining <= 0) {
       stopTimer();
       playSound();
+      startBreak();
     }
-  };
-  timerWorker.postMessage({ action: 'start', interval: 1000 });
+  });
+}
+
+function startBreak() {
+  timerRemaining = BREAK_DURATION;
+  timerEndTime = Date.now() + timerRemaining * 1000;
+  breakOverlay.classList.remove('hidden');
+  postponeBtn.style.display = postponeUsed ? 'none' : 'block';
+  updateBreakDisplay();
+  startTimerWorker(() => {
+    updateBreakDisplay();
+    if (timerRemaining <= 0) {
+      stopTimer();
+      breakOverlay.classList.add('hidden');
+      postponeUsed = false;
+      startWork();
+    }
+  });
+}
+
+function startTimer() {
+  if (timerWorker || typeof Worker !== 'function') return;
+  postponeUsed = false;
+  startWork();
 }
 
 function stopTimer() {
@@ -71,10 +108,11 @@ function stopTimer() {
 
 function resetTimer() {
   stopTimer();
-  const mins = parseInt(minutesInput.value, 10) || 0;
-  const secs = parseInt(secondsInput.value, 10) || 0;
-  timerRemaining = mins * 60 + secs;
+  postponeUsed = false;
+  // reset to default work session
+  timerRemaining = WORK_DURATION;
   updateTimerDisplay();
+  breakOverlay.classList.add('hidden');
 }
 
 function updateStopwatchDisplay() {
@@ -181,8 +219,18 @@ function playSound() {
 }
 
 document.getElementById('startTimer').addEventListener('click', startTimer);
-document.getElementById('stopTimer').addEventListener('click', stopTimer);
+document.getElementById('stopTimer').addEventListener('click', () => {
+  stopTimer();
+  breakOverlay.classList.add('hidden');
+});
 document.getElementById('resetTimer').addEventListener('click', resetTimer);
+postponeBtn.addEventListener('click', () => {
+  if (postponeUsed) return;
+  postponeUsed = true;
+  breakOverlay.classList.add('hidden');
+  stopTimer();
+  startWork(POSTPONE_DURATION);
+});
 
 document.getElementById('startWatch').addEventListener('click', startWatch);
 document.getElementById('pauseWatch').addEventListener('click', pauseWatch);
