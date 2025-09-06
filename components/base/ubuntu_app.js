@@ -31,6 +31,20 @@ export class UbuntuApp extends Component {
     }
 
     render() {
+        const size = this.props.iconSize || 1;
+        const labelPos = this.props.labelPosition || 'bottom';
+        const iconPx = 40 * size;
+        const containerStyle = {
+            width: labelPos === 'bottom' ? 96 * size : 120 * size,
+            height: labelPos === 'bottom' ? 80 * size : 48 * size,
+            fontSize: `${12 * size}px`
+        };
+        const containerClass =
+            (this.state.launching ? " app-icon-launch " : "") +
+            (this.state.dragging ? " opacity-70 " : "") +
+            " p-1 m-px z-10 bg-white bg-opacity-0 hover:bg-opacity-20 focus:bg-white focus:bg-opacity-50 focus:border-yellow-700 focus:border-opacity-100 border border-transparent outline-none rounded select-none flex transition-hover transition-active " +
+            (labelPos === 'right' ? ' flex-row justify-start items-center text-left w-auto h-auto' : ' flex-col justify-start items-center text-center');
+        const imageClass = labelPos === 'right' ? 'mr-2' : 'mb-1';
         return (
             <div
                 role="button"
@@ -41,8 +55,8 @@ export class UbuntuApp extends Component {
                 draggable
                 onDragStart={this.handleDragStart}
                 onDragEnd={this.handleDragEnd}
-                className={(this.state.launching ? " app-icon-launch " : "") + (this.state.dragging ? " opacity-70 " : "") +
-                    " p-1 m-px z-10 bg-white bg-opacity-0 hover:bg-opacity-20 focus:bg-white focus:bg-opacity-50 focus:border-yellow-700 focus:border-opacity-100 border border-transparent outline-none rounded select-none w-24 h-20 flex flex-col justify-start items-center text-center text-xs font-normal text-white transition-hover transition-active "}
+                className={containerClass}
+                style={containerStyle}
                 id={"app-" + this.props.id}
                 onDoubleClick={this.openApp}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openApp(); } }}
@@ -51,15 +65,15 @@ export class UbuntuApp extends Component {
                 onFocus={this.handlePrefetch}
             >
                 <Image
-                    width={40}
-                    height={40}
-                    className="mb-1 w-10"
+                    width={iconPx}
+                    height={iconPx}
+                    className={`w-10 ${imageClass}`}
+                    style={{ width: iconPx, height: iconPx }}
                     src={this.props.icon.replace('./', '/')}
                     alt={"Kali " + this.props.name}
-                    sizes="40px"
+                    sizes={`${iconPx}px`}
                 />
                 {this.props.displayName || this.props.name}
-
             </div>
         )
     }

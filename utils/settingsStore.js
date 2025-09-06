@@ -14,6 +14,11 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  showDesktopIcons: true,
+  desktopIconSize: 1,
+  desktopLabelPosition: 'bottom',
+  alignToGrid: true,
+  autoArrange: true,
 };
 
 export async function getAccent() {
@@ -123,6 +128,83 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getShowDesktopIcons() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.showDesktopIcons;
+  try {
+    const val = window.localStorage.getItem('show-desktop-icons');
+    return val === null ? DEFAULT_SETTINGS.showDesktopIcons : val === 'true';
+  } catch {
+    return DEFAULT_SETTINGS.showDesktopIcons;
+  }
+}
+
+export async function setShowDesktopIcons(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('show-desktop-icons', value ? 'true' : 'false');
+}
+
+export async function getDesktopIconSize() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.desktopIconSize;
+  try {
+    const stored = window.localStorage.getItem('desktop-icon-size');
+    return stored ? parseFloat(stored) : DEFAULT_SETTINGS.desktopIconSize;
+  } catch {
+    return DEFAULT_SETTINGS.desktopIconSize;
+  }
+}
+
+export async function setDesktopIconSize(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('desktop-icon-size', String(value));
+}
+
+export async function getDesktopLabelPosition() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.desktopLabelPosition;
+  try {
+    return (
+      window.localStorage.getItem('desktop-label-position') ||
+      DEFAULT_SETTINGS.desktopLabelPosition
+    );
+  } catch {
+    return DEFAULT_SETTINGS.desktopLabelPosition;
+  }
+}
+
+export async function setDesktopLabelPosition(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('desktop-label-position', value);
+}
+
+export async function getAlignToGrid() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.alignToGrid;
+  try {
+    const val = window.localStorage.getItem('align-to-grid');
+    return val === null ? DEFAULT_SETTINGS.alignToGrid : val === 'true';
+  } catch {
+    return DEFAULT_SETTINGS.alignToGrid;
+  }
+}
+
+export async function setAlignToGrid(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('align-to-grid', value ? 'true' : 'false');
+}
+
+export async function getAutoArrange() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.autoArrange;
+  try {
+    const val = window.localStorage.getItem('auto-arrange');
+    return val === null ? DEFAULT_SETTINGS.autoArrange : val === 'true';
+  } catch {
+    return DEFAULT_SETTINGS.autoArrange;
+  }
+}
+
+export async function setAutoArrange(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('auto-arrange', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +219,11 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('show-desktop-icons');
+  window.localStorage.removeItem('desktop-icon-size');
+  window.localStorage.removeItem('desktop-label-position');
+  window.localStorage.removeItem('align-to-grid');
+  window.localStorage.removeItem('auto-arrange');
 }
 
 export async function exportSettings() {
@@ -151,6 +238,11 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    showDesktopIcons,
+    desktopIconSize,
+    desktopLabelPosition,
+    alignToGrid,
+    autoArrange,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +254,11 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getShowDesktopIcons(),
+    getDesktopIconSize(),
+    getDesktopLabelPosition(),
+    getAlignToGrid(),
+    getAutoArrange(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +272,11 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    showDesktopIcons,
+    desktopIconSize,
+    desktopLabelPosition,
+    alignToGrid,
+    autoArrange,
     theme,
   });
 }
@@ -199,6 +301,11 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    showDesktopIcons,
+    desktopIconSize,
+    desktopLabelPosition,
+    alignToGrid,
+    autoArrange,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +318,12 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (showDesktopIcons !== undefined) await setShowDesktopIcons(showDesktopIcons);
+  if (desktopIconSize !== undefined) await setDesktopIconSize(desktopIconSize);
+  if (desktopLabelPosition !== undefined)
+    await setDesktopLabelPosition(desktopLabelPosition);
+  if (alignToGrid !== undefined) await setAlignToGrid(alignToGrid);
+  if (autoArrange !== undefined) await setAutoArrange(autoArrange);
   if (theme !== undefined) setTheme(theme);
 }
 

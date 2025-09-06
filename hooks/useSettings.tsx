@@ -20,6 +20,16 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getShowDesktopIcons as loadShowDesktopIcons,
+  setShowDesktopIcons as saveShowDesktopIcons,
+  getDesktopIconSize as loadDesktopIconSize,
+  setDesktopIconSize as saveDesktopIconSize,
+  getDesktopLabelPosition as loadDesktopLabelPosition,
+  setDesktopLabelPosition as saveDesktopLabelPosition,
+  getAlignToGrid as loadAlignToGrid,
+  setAlignToGrid as saveAlignToGrid,
+  getAutoArrange as loadAutoArrange,
+  setAutoArrange as saveAutoArrange,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -62,6 +72,11 @@ interface SettingsContextValue {
   pongSpin: boolean;
   allowNetwork: boolean;
   haptics: boolean;
+  showDesktopIcons: boolean;
+  desktopIconSize: number;
+  desktopLabelPosition: 'bottom' | 'right';
+  alignToGrid: boolean;
+  autoArrange: boolean;
   theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
@@ -73,6 +88,11 @@ interface SettingsContextValue {
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
+  setShowDesktopIcons: (value: boolean) => void;
+  setDesktopIconSize: (value: number) => void;
+  setDesktopLabelPosition: (value: 'bottom' | 'right') => void;
+  setAlignToGrid: (value: boolean) => void;
+  setAutoArrange: (value: boolean) => void;
   setTheme: (value: string) => void;
 }
 
@@ -87,6 +107,11 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
+  showDesktopIcons: defaults.showDesktopIcons,
+  desktopIconSize: defaults.desktopIconSize,
+  desktopLabelPosition: defaults.desktopLabelPosition,
+  alignToGrid: defaults.alignToGrid,
+  autoArrange: defaults.autoArrange,
   theme: 'default',
   setAccent: () => {},
   setWallpaper: () => {},
@@ -98,6 +123,11 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setPongSpin: () => {},
   setAllowNetwork: () => {},
   setHaptics: () => {},
+  setShowDesktopIcons: () => {},
+  setDesktopIconSize: () => {},
+  setDesktopLabelPosition: () => {},
+  setAlignToGrid: () => {},
+  setAutoArrange: () => {},
   setTheme: () => {},
 });
 
@@ -112,6 +142,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
+  const [showDesktopIcons, setShowDesktopIcons] = useState<boolean>(
+    defaults.showDesktopIcons
+  );
+  const [desktopIconSize, setDesktopIconSize] = useState<number>(
+    defaults.desktopIconSize
+  );
+  const [desktopLabelPosition, setDesktopLabelPosition] = useState<
+    'bottom' | 'right'
+  >(defaults.desktopLabelPosition as 'bottom' | 'right');
+  const [alignToGrid, setAlignToGrid] = useState<boolean>(defaults.alignToGrid);
+  const [autoArrange, setAutoArrange] = useState<boolean>(defaults.autoArrange);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
@@ -127,6 +168,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setShowDesktopIcons(await loadShowDesktopIcons());
+      setDesktopIconSize(await loadDesktopIconSize());
+      setDesktopLabelPosition(
+        (await loadDesktopLabelPosition()) as 'bottom' | 'right'
+      );
+      setAlignToGrid(await loadAlignToGrid());
+      setAutoArrange(await loadAutoArrange());
       setTheme(loadTheme());
     })();
   }, []);
@@ -236,6 +284,26 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveShowDesktopIcons(showDesktopIcons);
+  }, [showDesktopIcons]);
+
+  useEffect(() => {
+    saveDesktopIconSize(desktopIconSize);
+  }, [desktopIconSize]);
+
+  useEffect(() => {
+    saveDesktopLabelPosition(desktopLabelPosition);
+  }, [desktopLabelPosition]);
+
+  useEffect(() => {
+    saveAlignToGrid(alignToGrid);
+  }, [alignToGrid]);
+
+  useEffect(() => {
+    saveAutoArrange(autoArrange);
+  }, [autoArrange]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -249,6 +317,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         pongSpin,
         allowNetwork,
         haptics,
+        showDesktopIcons,
+        desktopIconSize,
+        desktopLabelPosition,
+        alignToGrid,
+        autoArrange,
         theme,
         setAccent,
         setWallpaper,
@@ -260,6 +333,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
+        setShowDesktopIcons,
+        setDesktopIconSize,
+        setDesktopLabelPosition,
+        setAlignToGrid,
+        setAutoArrange,
         setTheme,
       }}
     >

@@ -31,11 +31,22 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    showDesktopIcons,
+    setShowDesktopIcons,
+    desktopIconSize,
+    setDesktopIconSize,
+    desktopLabelPosition,
+    setDesktopLabelPosition,
+    alignToGrid,
+    setAlignToGrid,
+    autoArrange,
+    setAutoArrange,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
+    { id: "desktop", label: "Desktop" },
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
   ] as const;
@@ -100,6 +111,11 @@ export default function Settings() {
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
+    setShowDesktopIcons(defaults.showDesktopIcons);
+    setDesktopIconSize(defaults.desktopIconSize);
+    setDesktopLabelPosition(defaults.desktopLabelPosition as any);
+    setAlignToGrid(defaults.alignToGrid);
+    setAutoArrange(defaults.autoArrange);
     setTheme("default");
   };
 
@@ -206,6 +222,63 @@ export default function Settings() {
             >
               Reset Desktop
             </button>
+      </div>
+      </>
+      )}
+      {activeTab === "desktop" && (
+        <>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Show Icons:</span>
+            <ToggleSwitch
+              checked={showDesktopIcons}
+              onChange={setShowDesktopIcons}
+              ariaLabel="Show desktop icons"
+            />
+          </div>
+          <div className="flex justify-center my-4">
+            <label htmlFor="desktop-icon-size" className="mr-2 text-ubt-grey">
+              Icon Size:
+            </label>
+            <input
+              id="desktop-icon-size"
+              type="range"
+              min="0.5"
+              max="2"
+              step="0.1"
+              value={desktopIconSize}
+              onChange={(e) => setDesktopIconSize(parseFloat(e.target.value))}
+              className="ubuntu-slider"
+              aria-label="Desktop icon size"
+            />
+          </div>
+          <div className="flex justify-center my-4">
+            <label className="mr-2 text-ubt-grey">Label Position:</label>
+            <select
+              value={desktopLabelPosition}
+              onChange={(e) =>
+                setDesktopLabelPosition(e.target.value as 'bottom' | 'right')
+              }
+              className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+            >
+              <option value="bottom">Bottom</option>
+              <option value="right">Right</option>
+            </select>
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Align to Grid:</span>
+            <ToggleSwitch
+              checked={alignToGrid}
+              onChange={setAlignToGrid}
+              ariaLabel="Align to grid"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Auto-arrange:</span>
+            <ToggleSwitch
+              checked={autoArrange}
+              onChange={setAutoArrange}
+              ariaLabel="Auto arrange icons"
+            />
           </div>
         </>
       )}
