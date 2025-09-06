@@ -42,7 +42,7 @@ const SimonApp = createDynamicApp('simon', 'Simon');
 const SokobanApp = createDynamicApp('sokoban', 'Sokoban');
 // Use the enhanced TypeScript implementation of Solitaire that supports
 // draw-3 mode, hints, animations, and auto-complete.
-const SolitaireApp = createDynamicApp('solitaire/index', 'Solitaire');
+const SolitaireApp = createDynamicApp('solitaire', 'Solitaire');
 const TowerDefenseApp = createDynamicApp('tower-defense', 'Tower Defense');
 const WordSearchApp = createDynamicApp('word-search', 'Word Search');
 const WordleApp = createDynamicApp('wordle', 'Wordle');
