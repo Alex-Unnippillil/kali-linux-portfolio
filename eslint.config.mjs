@@ -4,7 +4,18 @@ import noTopLevelWindow from './eslint-plugin-no-top-level-window/index.js';
 const compat = new FlatCompat();
 
 const config = [
-  { ignores: ['components/apps/Chrome/index.tsx'] },
+  {
+    ignores: [
+      'components/apps/Chrome/index.tsx',
+      'public/**/*',
+      'chrome-extension/**/*',
+    ],
+  },
+  {
+    linterOptions: {
+      reportUnusedDisableDirectives: 'error',
+    },
+  },
   {
     plugins: {
       'no-top-level-window': noTopLevelWindow,
@@ -25,6 +36,9 @@ const config = [
       '@next/next/no-page-custom-font': 'off',
       '@next/next/no-img-element': 'off',
       'jsx-a11y/control-has-associated-label': 'error',
+      'jsx-a11y/role-supports-aria-props': 'off',
+      'react-hooks/exhaustive-deps': 'off',
+      'import/no-anonymous-default-export': 'off',
     },
   }),
 ];
