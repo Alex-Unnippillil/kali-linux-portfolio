@@ -50,6 +50,8 @@ export class Desktop extends Component {
             context_app: null,
             showNameBar: false,
             showShortcutSelector: false,
+            showLauncherDialog: false,
+            showUrlLinkDialog: false,
             showWindowSwitcher: false,
             switcherWindows: [],
         }
@@ -85,6 +87,7 @@ export class Desktop extends Component {
         this.setEventListeners();
         this.checkForNewFolders();
         this.checkForAppShortcuts();
+        this.checkForDesktopFiles();
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
@@ -582,6 +585,22 @@ export class Desktop extends Component {
             action: `Opened ${objId} window`
         });
 
+        const appMeta = apps.find(app => app.id === objId);
+        if (appMeta && appMeta.desktopFile) {
+            if (appMeta.desktopFile.type === 'launcher') {
+                const exec = appMeta.desktopFile.exec;
+                const builtIn = apps.find(a => a.id === exec);
+                if (builtIn && exec !== objId) {
+                    this.openApp(exec);
+                } else {
+                    window.open(exec, '_blank');
+                }
+            } else if (appMeta.desktopFile.type === 'url') {
+                window.open(appMeta.desktopFile.url, '_blank');
+            }
+            return;
+        }
+
         // if the app is disabled
         if (this.state.disabled_apps[objId]) return;
 
@@ -739,6 +758,14 @@ export class Desktop extends Component {
         this.setState({ showShortcutSelector: true });
     }
 
+    openLauncherDialog = () => {
+        this.setState({ showLauncherDialog: true });
+    }
+
+    openUrlLinkDialog = () => {
+        this.setState({ showUrlLinkDialog: true });
+    }
+
     addShortcutToDesktop = (app_id) => {
         const appIndex = apps.findIndex(app => app.id === app_id);
         if (appIndex === -1) return;
@@ -750,6 +777,44 @@ export class Desktop extends Component {
             safeLocalStorage?.setItem('app_shortcuts', JSON.stringify(shortcuts));
         }
         this.setState({ showShortcutSelector: false }, this.updateAppsData);
+    }
+
+    addLauncherToDesktop = (name, command) => {
+        const launcher_id = `launcher-${Date.now()}`;
+        apps.push({
+            id: launcher_id,
+            title: name,
+            icon: '/themes/Yaru/apps/bash.png',
+            favourite: false,
+            desktop_shortcut: true,
+            disabled: false,
+            screen: () => { },
+            desktopFile: { type: 'launcher', name, exec: command },
+        });
+        let files = [];
+        try { files = JSON.parse(safeLocalStorage?.getItem('desktop_files') || '[]'); } catch (e) { files = []; }
+        files.push({ id: launcher_id, type: 'launcher', name, exec: command });
+        safeLocalStorage?.setItem('desktop_files', JSON.stringify(files));
+        this.setState({ showLauncherDialog: false }, this.updateAppsData);
+    }
+
+    addUrlLinkToDesktop = (name, url) => {
+        const url_id = `url-${Date.now()}`;
+        apps.push({
+            id: url_id,
+            title: name,
+            icon: '/themes/Yaru/apps/chrome.png',
+            favourite: false,
+            desktop_shortcut: true,
+            disabled: false,
+            screen: () => { },
+            desktopFile: { type: 'url', name, url },
+        });
+        let files = [];
+        try { files = JSON.parse(safeLocalStorage?.getItem('desktop_files') || '[]'); } catch (e) { files = []; }
+        files.push({ id: url_id, type: 'url', name, url });
+        safeLocalStorage?.setItem('desktop_files', JSON.stringify(files));
+        this.setState({ showUrlLinkDialog: false }, this.updateAppsData);
     }
 
     checkForAppShortcuts = () => {
@@ -768,6 +833,34 @@ export class Desktop extends Component {
                 safeLocalStorage?.setItem('app_shortcuts', JSON.stringify([]));
             }
             this.updateAppsData();
+        }
+    }
+
+    checkForDesktopFiles = () => {
+        const stored = safeLocalStorage?.getItem('desktop_files');
+        if (!stored) {
+            safeLocalStorage?.setItem('desktop_files', JSON.stringify([]));
+            return;
+        }
+        try {
+            const files = JSON.parse(stored);
+            files.forEach(file => {
+                apps.push({
+                    id: file.id,
+                    title: file.name,
+                    icon: file.type === 'url'
+                        ? '/themes/Yaru/apps/chrome.png'
+                        : '/themes/Yaru/apps/bash.png',
+                    favourite: false,
+                    desktop_shortcut: true,
+                    disabled: false,
+                    screen: () => { },
+                    desktopFile: file,
+                });
+            });
+            this.updateAppsData();
+        } catch (e) {
+            safeLocalStorage?.setItem('desktop_files', JSON.stringify([]));
         }
     }
 
@@ -847,6 +940,84 @@ export class Desktop extends Component {
         );
     }
 
+    renderLauncherDialog = () => {
+        const createLauncher = () => {
+            const name = document.getElementById('launcher-name-input').value;
+            const command = document.getElementById('launcher-command-input').value;
+            this.addLauncherToDesktop(name, command);
+        }
+        const cancel = () => {
+            this.setState({ showLauncherDialog: false });
+        }
+        return (
+            <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
+                <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
+                    <span>Launcher name</span>
+                    <input className="outline-none mt-5 px-1 w-10/12 context-menu-bg border-2 border-blue-700 rounded py-0.5" id="launcher-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
+                    <span className="mt-4">Command</span>
+                    <input className="outline-none mt-1 px-1 w-10/12 context-menu-bg border-2 border-blue-700 rounded py-0.5" id="launcher-command-input" type="text" autoComplete="off" spellCheck="false" />
+                </div>
+                <div className="flex">
+                    <button
+                        type="button"
+                        onClick={createLauncher}
+                        aria-label="Create launcher"
+                        className="w-1/2 px-4 py-2 border border-gray-900 border-opacity-50 border-r-0 hover:bg-ub-warm-grey hover:bg-opacity-10 hover:border-opacity-50"
+                    >
+                        Create
+                    </button>
+                    <button
+                        type="button"
+                        onClick={cancel}
+                        aria-label="Cancel launcher creation"
+                        className="w-1/2 px-4 py-2 border border-gray-900 border-opacity-50 hover:bg-ub-warm-grey hover:bg-opacity-10 hover:border-opacity-50"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    renderUrlLinkDialog = () => {
+        const createLink = () => {
+            const name = document.getElementById('url-name-input').value;
+            const url = document.getElementById('url-link-input').value;
+            this.addUrlLinkToDesktop(name, url);
+        }
+        const cancel = () => {
+            this.setState({ showUrlLinkDialog: false });
+        }
+        return (
+            <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
+                <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
+                    <span>Link name</span>
+                    <input className="outline-none mt-5 px-1 w-10/12 context-menu-bg border-2 border-blue-700 rounded py-0.5" id="url-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
+                    <span className="mt-4">URL</span>
+                    <input className="outline-none mt-1 px-1 w-10/12 context-menu-bg border-2 border-blue-700 rounded py-0.5" id="url-link-input" type="text" autoComplete="off" spellCheck="false" />
+                </div>
+                <div className="flex">
+                    <button
+                        type="button"
+                        onClick={createLink}
+                        aria-label="Create URL link"
+                        className="w-1/2 px-4 py-2 border border-gray-900 border-opacity-50 border-r-0 hover:bg-ub-warm-grey hover:bg-opacity-10 hover:border-opacity-50"
+                    >
+                        Create
+                    </button>
+                    <button
+                        type="button"
+                        onClick={cancel}
+                        aria-label="Cancel URL link creation"
+                        className="w-1/2 px-4 py-2 border border-gray-900 border-opacity-50 hover:bg-ub-warm-grey hover:bg-opacity-10 hover:border-opacity-50"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     render() {
         return (
             <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
@@ -895,6 +1066,8 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
+                    openLauncherDialog={this.openLauncherDialog}
+                    openUrlLinkDialog={this.openUrlLinkDialog}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
@@ -932,6 +1105,9 @@ export class Desktop extends Component {
                         : null
                     )
                 }
+
+                { this.state.showLauncherDialog ? this.renderLauncherDialog() : null }
+                { this.state.showUrlLinkDialog ? this.renderUrlLinkDialog() : null }
 
                 { this.state.allAppsView ?
                     <AllApplications apps={apps}
