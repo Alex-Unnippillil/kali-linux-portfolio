@@ -129,6 +129,25 @@ try {
   console.warn('Missing env vars; running without validation');
 }
 
+const imageDomains = [
+  'opengraph.githubassets.com',
+  'raw.githubusercontent.com',
+  'avatars.githubusercontent.com',
+  'i.ytimg.com',
+  'yt3.ggpht.com',
+  'i.scdn.co',
+  'www.google.com',
+  'example.com',
+  'developer.mozilla.org',
+  'en.wikipedia.org',
+  'ghchart.rshah.org',
+  'openweathermap.org',
+  'staticmap.openstreetmap.de',
+  'data.typeracer.com',
+  'img.shields.io',
+  'images.credly.com',
+];
+
 module.exports = withBundleAnalyzer(
   withPWA({
     ...(isStaticExport && { output: 'export' }),
@@ -140,24 +159,11 @@ module.exports = withBundleAnalyzer(
     },
     images: {
       unoptimized: true,
-      domains: [
-        'opengraph.githubassets.com',
-        'raw.githubusercontent.com',
-        'avatars.githubusercontent.com',
-        'i.ytimg.com',
-        'yt3.ggpht.com',
-        'i.scdn.co',
-        'www.google.com',
-        'example.com',
-        'developer.mozilla.org',
-        'en.wikipedia.org',
-        'ghchart.rshah.org',
-        'openweathermap.org',
-        'staticmap.openstreetmap.de',
-        'data.typeracer.com',
-        'img.shields.io',
-        'images.credly.com',
-      ],
+      domains: imageDomains,
+      remotePatterns: imageDomains.map((hostname) => ({
+        protocol: 'https',
+        hostname,
+      })),
       localPatterns: [
         { pathname: '/themes/Yaru/apps/**' },
         { pathname: '/icons/**' },
