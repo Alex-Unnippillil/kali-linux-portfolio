@@ -45,6 +45,32 @@ function MyApp(props) {
       console.error('Analytics initialization failed', err);
     });
 
+    const params = new URLSearchParams(window.location.search);
+    const nosw = params.get('nosw') === '1';
+    if (nosw) sessionStorage.setItem('nosw', '1');
+    const swDisabled = nosw || sessionStorage.getItem('nosw') === '1';
+
+    const disableSw = async () => {
+      try {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.controller?.postMessage({ type: 'DISABLE_SW' });
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map((reg) => reg.unregister()));
+        }
+        if (window.caches) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((key) => caches.delete(key)));
+        }
+      } catch (err) {
+        console.error('Service worker disable failed', err);
+      }
+    };
+
+    if (swDisabled) {
+      disableSw();
+      return;
+    }
+
     if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
       // Register PWA service worker generated via @ducanh2912/next-pwa
       const register = async () => {
