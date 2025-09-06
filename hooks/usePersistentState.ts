@@ -60,3 +60,17 @@ export const useSnapSetting = () =>
     true,
     (v): v is boolean => typeof v === 'boolean',
   );
+
+export const useFocusModeSetting = () =>
+  usePersistentState<'click' | 'sloppy'>(
+    'wm-focus-mode',
+    'click',
+    (v): v is 'click' | 'sloppy' => v === 'click' || v === 'sloppy',
+  );
+
+export const useRaiseOnFocusSetting = () =>
+  usePersistentState<boolean>(
+    'wm-raise-on-focus',
+    true,
+    (v): v is boolean => typeof v === 'boolean',
+  );
