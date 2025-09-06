@@ -1,22 +1,40 @@
 import React, { useState } from 'react';
 import Modal from '../base/Modal';
+import { useShares, toggleShare } from '../../hooks/useShares';
 
 interface ShareModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Path of the folder being shared */
+  path: string;
 }
 
 /**
  * ShareModal presents file sharing options and a Samba requirement notice.
+ * It also allows toggling the share state for the provided path.
  */
-export default function ShareModal({ isOpen, onClose }: ShareModalProps) {
+export default function ShareModal({ isOpen, onClose, path }: ShareModalProps) {
   const [showInfo, setShowInfo] = useState(false);
+  const shares = useShares();
+  const isShared = shares.includes(path);
+
+  const handleToggle = () => {
+    toggleShare(path);
+    onClose();
+  };
 
   return (
     <>
       <Modal isOpen={isOpen} onClose={onClose}>
         <div className="p-4 bg-white rounded shadow max-w-sm">
-          {/* Placeholder for future share options */}
+          <h2 className="text-lg font-semibold mb-2">Share this folder</h2>
+          <button
+            type="button"
+            className="px-3 py-1 bg-ubt-blue text-white rounded"
+            onClick={handleToggle}
+          >
+            {isShared ? 'Unshare' : 'Share'}
+          </button>
           <p className="mt-4 text-sm">
             Requires Samba.{' '}
             <button

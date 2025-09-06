@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from 'react';
+import ShareModal from '../../filemanager/ShareModal';
+import { useShares } from '../../../hooks/useShares';
 
 interface Entry {
   name: string;
@@ -22,6 +24,8 @@ const fileSystem: Record<string, Entry[]> = {
 
 export default function Thunar() {
   const [path, setPath] = useState('/');
+  const [showShare, setShowShare] = useState(false);
+  const shares = useShares();
 
   const entries = fileSystem[path] || [];
 
@@ -73,6 +77,12 @@ export default function Thunar() {
           >
             Up
           </button>
+          <button
+            onClick={() => setShowShare(true)}
+            className="px-2 py-1 bg-gray-700 rounded hover:bg-gray-600"
+          >
+            Share
+          </button>
         </div>
         <nav className="bg-gray-900 p-2 text-sm">
           {breadcrumbs.map((crumb, i) => (
@@ -84,6 +94,9 @@ export default function Thunar() {
               >
                 {crumb.name}
               </button>
+              {shares.includes(crumb.path) && (
+                <span aria-label="shared" className="ml-1">🔗</span>
+              )}
             </span>
           ))}
         </nav>
@@ -98,6 +111,10 @@ export default function Thunar() {
                   >
                     {entry.name}
                   </button>
+                  {entry.type === 'folder' &&
+                    shares.includes(
+                      path === '/' ? `/${entry.name}` : `${path}/${entry.name}`
+                    ) && <span aria-label="shared" className="ml-1">🔗</span>}
                 </li>
               ))}
             </ul>
@@ -106,6 +123,11 @@ export default function Thunar() {
           )}
         </main>
       </div>
+      <ShareModal
+        isOpen={showShare}
+        onClose={() => setShowShare(false)}
+        path={path}
+      />
     </div>
   );
 }
