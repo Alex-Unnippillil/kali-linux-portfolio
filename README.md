@@ -244,7 +244,7 @@ Defined in `next.config.js`. See [CSP External Domains](#csp-external-domains) f
 - **Content-Security-Policy (CSP)** (string built from `ContentSecurityPolicy[]`; see [CSP External Domains](#csp-external-domains))
 - `X-Content-Type-Options: nosniff`
 - `Referrer-Policy: strict-origin-when-cross-origin`
-- `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+- `Permissions-Policy: camera=(), microphone=(), geolocation=*, interest-cohort=()`
 - `X-Frame-Options: SAMEORIGIN`
 
 ### CSP External Domains
