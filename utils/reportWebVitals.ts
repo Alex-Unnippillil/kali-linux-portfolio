@@ -1,4 +1,5 @@
 import ReactGA from 'react-ga4';
+import logger from './logger';
 
 interface WebVitalMetric {
   id: string;
@@ -12,11 +13,15 @@ const thresholds: Record<string, number> = {
   TTI: 5000,
 };
 
+const vitalNames = new Set(['TTFB', 'LCP', 'INP', 'CLS', 'TTI']);
+
 export const reportWebVitals = ({ id, name, value }: WebVitalMetric): void => {
   if (process.env.NEXT_PUBLIC_VERCEL_ENV !== 'preview') return;
-  if (name !== 'LCP' && name !== 'INP' && name !== 'TTI') return;
+  if (!vitalNames.has(name)) return;
 
-  const rounded = Math.round(value);
+  const rounded = Math.round(name === 'CLS' ? value * 1000 : value);
+
+  logger.log(`[Web Vitals] ${name} (${id}): ${rounded}`);
 
   ReactGA.event({
     category: 'Web Vitals',

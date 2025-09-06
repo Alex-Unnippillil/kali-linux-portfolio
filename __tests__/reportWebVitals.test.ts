@@ -8,16 +8,19 @@ jest.mock('react-ga4', () => ({
 describe('reportWebVitals', () => {
   const mockEvent = ReactGA.event as jest.Mock;
   const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
   const originalEnv = process.env;
 
   beforeEach(() => {
     mockEvent.mockReset();
     warnSpy.mockClear();
+    logSpy.mockClear();
     process.env = { ...originalEnv };
   });
 
   afterAll(() => {
     warnSpy.mockRestore();
+    logSpy.mockRestore();
     process.env = originalEnv;
   });
 
@@ -25,6 +28,7 @@ describe('reportWebVitals', () => {
     process.env.NEXT_PUBLIC_VERCEL_ENV = 'production';
     reportWebVitals({ id: '1', name: 'LCP', value: 3000 });
     expect(mockEvent).not.toHaveBeenCalled();
+    expect(logSpy).not.toHaveBeenCalled();
   });
 
   it('records LCP metric in preview', () => {
@@ -35,6 +39,7 @@ describe('reportWebVitals', () => {
       expect.objectContaining({ action: 'LCP' })
     );
     expect(warnSpy).not.toHaveBeenCalled();
+    expect(logSpy).toHaveBeenCalledTimes(1);
   });
 
   it('alerts when INP exceeds threshold', () => {
@@ -46,6 +51,7 @@ describe('reportWebVitals', () => {
       expect.objectContaining({ action: 'INP degraded' })
     );
     expect(warnSpy).toHaveBeenCalled();
+    expect(logSpy).toHaveBeenCalledTimes(1);
   });
 
   it('records TTI metric in preview', () => {
@@ -55,6 +61,7 @@ describe('reportWebVitals', () => {
       expect.objectContaining({ action: 'TTI' })
     );
     expect(warnSpy).not.toHaveBeenCalled();
+    expect(logSpy).toHaveBeenCalledTimes(1);
   });
 
   it('alerts when TTI exceeds threshold', () => {
@@ -66,5 +73,13 @@ describe('reportWebVitals', () => {
       expect.objectContaining({ action: 'TTI degraded' })
     );
     expect(warnSpy).toHaveBeenCalled();
+    expect(logSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('logs TTFB and CLS metrics', () => {
+    process.env.NEXT_PUBLIC_VERCEL_ENV = 'preview';
+    reportWebVitals({ id: '6', name: 'TTFB', value: 100 });
+    reportWebVitals({ id: '7', name: 'CLS', value: 0.2 });
+    expect(logSpy).toHaveBeenCalledTimes(2);
   });
 });
