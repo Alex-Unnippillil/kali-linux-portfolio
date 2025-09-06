@@ -1,6 +1,6 @@
 import { chromium, firefox, webkit } from 'playwright';
 import fs from 'fs';
-import logger from '../utils/logger';
+import logger from '../utils/logger.js';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
