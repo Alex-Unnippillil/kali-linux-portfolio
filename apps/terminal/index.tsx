@@ -70,6 +70,7 @@ export interface TerminalProps {
 export interface TerminalHandle {
   runCommand: (cmd: string) => void;
   getContent: () => string;
+  setScrollback: (lines: number) => void;
 }
 
 const files: Record<string, string> = {
@@ -88,6 +89,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const filesRef = useRef<Record<string, string>>(files);
   const aliasesRef = useRef<Record<string, string>>({});
   const historyRef = useRef<string[]>([]);
+  const scrollbackRef = useRef(1000);
+  const altBufferRef = useRef<{ active: boolean; saved: string }>({
+    active: false,
+    saved: '',
+  });
   const contextRef = useRef<CommandContext>({
     writeLine: () => {},
     files: filesRef.current,
@@ -101,6 +107,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [scrollbackInput, setScrollbackInput] = useState('1000');
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
@@ -124,6 +131,18 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     '#FFFFFF',
   ];
 
+  const stripAnsi = useCallback(
+    (s: string) => s.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ''),
+    [],
+  );
+
+  const enforceScrollback = useCallback(() => {
+    const lines = contentRef.current.split('\n');
+    if (lines.length > scrollbackRef.current) {
+      contentRef.current = lines.slice(-scrollbackRef.current).join('\n');
+    }
+  }, []);
+
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
     if (!term || !term.buffer) return;
@@ -134,13 +153,16 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const writeLine = useCallback(
     (text: string) => {
       if (termRef.current) termRef.current.writeln(text);
-      contentRef.current += `${text}\n`;
-      if (opfsSupported && dirRef.current) {
-        writeFile('history.txt', contentRef.current, dirRef.current);
+      if (!altBufferRef.current.active) {
+        contentRef.current += `${text}\n`;
+        enforceScrollback();
+        if (opfsSupported && dirRef.current) {
+          writeFile('history.txt', contentRef.current, dirRef.current);
+        }
       }
       updateOverflow();
     },
-    [opfsSupported, updateOverflow, writeFile],
+    [enforceScrollback, opfsSupported, updateOverflow, writeFile],
   );
 
   contextRef.current.writeLine = writeLine;
@@ -160,6 +182,37 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     } catch {}
   };
 
+  const writeData = useCallback(
+    (data: string) => {
+      const ENTER = '\u001b[?1049h';
+      const EXIT = '\u001b[?1049l';
+      if (data.includes(ENTER)) {
+        altBufferRef.current.active = true;
+        altBufferRef.current.saved = contentRef.current;
+      }
+      if (data.includes(EXIT)) {
+        altBufferRef.current.active = false;
+        contentRef.current = altBufferRef.current.saved;
+        if (opfsSupported && dirRef.current) {
+          writeFile('history.txt', contentRef.current, dirRef.current);
+        }
+      }
+      termRef.current?.write(data);
+      if (!altBufferRef.current.active) {
+        const printable = stripAnsi(
+          data.replace(ENTER, '').replace(EXIT, ''),
+        );
+        contentRef.current += printable;
+        enforceScrollback();
+        if (opfsSupported && dirRef.current) {
+          writeFile('history.txt', contentRef.current, dirRef.current);
+        }
+      }
+      updateOverflow();
+    },
+    [enforceScrollback, opfsSupported, stripAnsi, updateOverflow, writeFile],
+  );
+
   const runWorker = useCallback(
     async (command: string) => {
       const worker = workerRef.current;
@@ -170,9 +223,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       await new Promise<void>((resolve) => {
         worker.onmessage = ({ data }: MessageEvent<any>) => {
           if (data.type === 'data') {
-            for (const line of String(data.chunk).split('\n')) {
-              if (line) writeLine(line);
-            }
+            writeData(String(data.chunk));
           } else if (data.type === 'end') {
             resolve();
           }
@@ -184,7 +235,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         });
       });
     },
-    [writeLine],
+    [writeData],
   );
 
   contextRef.current.runWorker = runWorker;
@@ -287,6 +338,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   useImperativeHandle(ref, () => ({
     runCommand: (c: string) => runCommand(c),
     getContent: () => contentRef.current,
+    setScrollback: (n: number) => {
+      scrollbackRef.current = n;
+      if (termRef.current) termRef.current.options.scrollback = n;
+      enforceScrollback();
+    },
   }));
 
   useEffect(() => {
@@ -301,7 +357,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       if (disposed) return;
       const term = new XTerm({
         cursorBlink: true,
-        scrollback: 1000,
+        scrollback: scrollbackRef.current,
         cols: 80,
         rows: 24,
       });
@@ -407,6 +463,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           <div className="mt-10 w-80 bg-gray-800 p-4 rounded">
             <input
               autoFocus
+              aria-label="Command palette"
               className="w-full mb-2 bg-black text-white p-2"
               value={paletteInput}
               onChange={(e) => setPaletteInput(e.target.value)}
@@ -447,6 +504,18 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               <span className="text-green-400">script.sh</span>{' '}
               <span className="text-gray-300">README.md</span>
             </pre>
+            <div>
+              <label className="block mb-1">
+                Scrollback Lines
+                <input
+                  type="number"
+                  aria-label="Scrollback Lines"
+                  className="w-full bg-black text-white p-1 mt-1"
+                  value={scrollbackInput}
+                  onChange={(e) => setScrollbackInput(e.target.value)}
+                />
+              </label>
+            </div>
             <div className="flex justify-end gap-2">
               <button
                 className="px-2 py-1 bg-gray-700 rounded"
@@ -460,6 +529,12 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               <button
                 className="px-2 py-1 bg-blue-600 rounded"
                 onClick={() => {
+                  const val = parseInt(scrollbackInput, 10);
+                  if (!Number.isNaN(val) && val > 0) {
+                    scrollbackRef.current = val;
+                    if (termRef.current) termRef.current.options.scrollback = val;
+                    enforceScrollback();
+                  }
                   setSettingsOpen(false);
                   termRef.current?.focus();
                 }}

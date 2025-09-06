@@ -12,6 +12,7 @@ jest.mock(
       onPaste: jest.fn(),
       dispose: jest.fn(),
       clear: jest.fn(),
+      options: {},
     })),
   }),
   { virtual: true }
@@ -59,6 +60,22 @@ describe('Terminal component', () => {
       ref.current.runCommand('open calculator');
     });
     expect(openApp).toHaveBeenCalledWith('calculator');
+  });
+
+  it('truncates content based on scrollback limit', async () => {
+    const ref = createRef<any>();
+    render(<Terminal ref={ref} openApp={openApp} />);
+    await act(async () => {});
+    act(() => {
+      ref.current.setScrollback(2);
+    });
+    act(() => {
+      ref.current.runCommand('help');
+      ref.current.runCommand('help');
+      ref.current.runCommand('help');
+    });
+    const lines = ref.current.getContent().split('\n').filter(Boolean);
+    expect(lines.length).toBeLessThanOrEqual(2);
   });
 
   it('supports tab management shortcuts', async () => {
