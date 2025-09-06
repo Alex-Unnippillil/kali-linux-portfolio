@@ -110,7 +110,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
             item.onSelect();
             setOpen(false);
           }}
-          className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+          className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]"
         >
           {item.label}
         </button>
