@@ -9,11 +9,12 @@ interface WebVitalMetric {
 const thresholds: Record<string, number> = {
   LCP: 2500,
   INP: 200,
+  TTI: 5000,
 };
 
 export const reportWebVitals = ({ id, name, value }: WebVitalMetric): void => {
   if (process.env.NEXT_PUBLIC_VERCEL_ENV !== 'preview') return;
-  if (name !== 'LCP' && name !== 'INP') return;
+  if (name !== 'LCP' && name !== 'INP' && name !== 'TTI') return;
 
   const rounded = Math.round(value);
 

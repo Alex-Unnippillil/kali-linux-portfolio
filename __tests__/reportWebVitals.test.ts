@@ -47,4 +47,24 @@ describe('reportWebVitals', () => {
     );
     expect(warnSpy).toHaveBeenCalled();
   });
+
+  it('records TTI metric in preview', () => {
+    process.env.NEXT_PUBLIC_VERCEL_ENV = 'preview';
+    reportWebVitals({ id: '4', name: 'TTI', value: 4000 });
+    expect(mockEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'TTI' })
+    );
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('alerts when TTI exceeds threshold', () => {
+    process.env.NEXT_PUBLIC_VERCEL_ENV = 'preview';
+    reportWebVitals({ id: '5', name: 'TTI', value: 6000 });
+    expect(mockEvent).toHaveBeenCalledTimes(2);
+    expect(mockEvent).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ action: 'TTI degraded' })
+    );
+    expect(warnSpy).toHaveBeenCalled();
+  });
 });
