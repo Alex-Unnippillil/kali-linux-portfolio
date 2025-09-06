@@ -31,6 +31,8 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    focusMode,
+    setFocusMode,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -38,6 +40,7 @@ export default function Settings() {
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
+    { id: "windowManager", label: "Window Manager Tweaks" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
@@ -267,6 +270,21 @@ export default function Settings() {
             >
               Edit Shortcuts
             </button>
+          </div>
+        </>
+      )}
+      {activeTab === "windowManager" && (
+        <>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Focus Model:</span>
+            <select
+              value={focusMode}
+              onChange={(e) => setFocusMode(e.target.value)}
+              className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+            >
+              <option value="click">Click to Focus</option>
+              <option value="mouse">Focus Follows Mouse</option>
+            </select>
           </div>
         </>
       )}
