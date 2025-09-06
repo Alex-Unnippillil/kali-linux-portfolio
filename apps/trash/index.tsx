@@ -11,11 +11,12 @@ const FULL_ICON = '/themes/Yaru/status/user-trash-full-symbolic.svg';
 export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   const {
     items,
-    setItems,
     history,
     pushHistory,
     restoreFromHistory,
     restoreAllFromHistory,
+    restore: restoreItem,
+    emptyTrash,
   } = useTrashState();
   const [selected, setSelected] = useState<number | null>(null);
   const [purgeDays, setPurgeDays] = useState(30);
@@ -47,22 +48,21 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     if (selected === null) return;
     const item = items[selected];
     if (!window.confirm(`Restore ${item.title}?`)) return;
+    restoreItem(selected);
     openApp(item.id);
-    setItems(items => items.filter((_, i) => i !== selected));
     setSelected(null);
     notifyChange();
-  }, [items, selected, openApp, setItems]);
+  }, [items, selected, openApp, restoreItem]);
 
   const remove = useCallback(() => {
     if (selected === null) return;
     const item = items[selected];
     if (!window.confirm(`Delete ${item.title}?`)) return;
-    const next = items.filter((_, i) => i !== selected);
-    setItems(next);
+    restoreItem(selected);
     pushHistory(item);
     setSelected(null);
     notifyChange();
-  }, [items, selected, setItems, pushHistory]);
+  }, [items, selected, restoreItem, pushHistory]);
 
   const purge = useCallback(() => {
     if (selected === null) return;
@@ -73,16 +73,16 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
       )
     )
       return;
-    setItems(items => items.filter((_, i) => i !== selected));
+    restoreItem(selected);
     setSelected(null);
     notifyChange();
-  }, [items, selected, setItems]);
+  }, [items, selected, restoreItem]);
 
   const restoreAll = () => {
     if (items.length === 0) return;
     if (!window.confirm('Restore all windows?')) return;
     items.forEach(item => openApp(item.id));
-    setItems([]);
+    emptyTrash();
     setSelected(null);
     notifyChange();
   };
@@ -96,8 +96,8 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
       count -= 1;
       if (count <= 0) {
         clearInterval(timer);
-        pushHistory(items);
-        setItems([]);
+        const removed = emptyTrash();
+        pushHistory(removed);
         setSelected(null);
         setEmptyCountdown(null);
         notifyChange();
