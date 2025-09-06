@@ -1,4 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import {
+  setState as setNowPlaying,
+  subscribeControl,
+} from '../../utils/nowPlaying';
 
 interface Track {
   title: string;
@@ -40,6 +44,7 @@ export default function MediaPlayerApp() {
 
   useEffect(() => {
     document.title = `${current.title} - Media Player`;
+    setNowPlaying({ track: current.title });
   }, [current]);
 
   useEffect(() => {
@@ -62,8 +67,14 @@ export default function MediaPlayerApp() {
     const audio = audioRef.current;
     if (!audio) return;
     const handleEnded = () => next();
-    const handlePlay = () => setPlaying(true);
-    const handlePause = () => setPlaying(false);
+    const handlePlay = () => {
+      setPlaying(true);
+      setNowPlaying({ playing: true });
+    };
+    const handlePause = () => {
+      setPlaying(false);
+      setNowPlaying({ playing: false });
+    };
     audio.addEventListener('ended', handleEnded);
     audio.addEventListener('play', handlePlay);
     audio.addEventListener('pause', handlePause);
@@ -79,6 +90,20 @@ export default function MediaPlayerApp() {
     if (!audio) return;
     audio.load();
   }, [index]);
+
+  useEffect(() => {
+    const unsub = subscribeControl((action) => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      if (action === 'play') audio.play();
+      else if (action === 'pause') audio.pause();
+      else if (action === 'next') next();
+      else if (action === 'prev') prev();
+    });
+    return unsub;
+  }, [next, prev]);
+
+  useEffect(() => () => setNowPlaying({ track: null, playing: false }), []);
 
   return (
     <div className={`h-full w-full ${mini ? 'flex items-center justify-center' : 'flex'} bg-black bg-opacity-30 text-white`}>
