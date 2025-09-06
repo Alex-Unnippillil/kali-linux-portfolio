@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
+import useFocusTrap from '../../../hooks/useFocusTrap';
+import useRovingTabIndex from '../../../hooks/useRovingTabIndex';
 
 export interface DesktopContextMenuProps {
   /** Position where the menu should appear. `null` hides the menu. */
@@ -42,7 +44,25 @@ export const DesktopContextMenu: React.FC<DesktopContextMenuProps> = ({
   onToggleFullScreen,
   onClearSession,
 }) => {
+  const menuRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(menuRef, !!position);
+  useRovingTabIndex(menuRef, !!position, 'vertical');
+
+  useEffect(() => {
+    if (position && menuRef.current) {
+      const first = menuRef.current.querySelector<HTMLElement>('[role="menuitem"], [role="menuitemcheckbox"]');
+      first?.focus();
+    }
+  }, [position]);
+
   if (!position) return null;
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      onClose();
+    }
+  };
 
   const handle = (cb?: () => void) => () => {
     cb?.();
@@ -52,6 +72,8 @@ export const DesktopContextMenu: React.FC<DesktopContextMenuProps> = ({
   return (
     <div
       role="menu"
+      ref={menuRef}
+      onKeyDown={handleKeyDown}
       className="absolute z-50 w-52 cursor-default select-none rounded border border-gray-700 bg-gray-800 text-sm text-white shadow-lg"
       style={{ top: position.y, left: position.x }}
     >
