@@ -1046,7 +1046,9 @@ export class Desktop extends Component {
                 />
 
                 {/* Desktop Apps */}
-                {this.renderDesktopApps()}
+                <div className="left-stack-icons">
+                    {this.renderDesktopApps()}
+                </div>
 
                 {/* Context Menus */}
                 <DesktopMenu
