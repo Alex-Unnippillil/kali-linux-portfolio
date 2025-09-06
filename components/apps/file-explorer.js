@@ -5,6 +5,8 @@ import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
 import PropertiesDialog from '../ui/PropertiesDialog';
+import Sidebar from '../filemanager/Sidebar';
+import Toast from '../ui/Toast';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -107,6 +109,8 @@ export default function FileExplorer({ openApp }) {
   const [results, setResults] = useState([]);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
+  const [devices, setDevices] = useState([]);
+  const [toast, setToast] = useState('');
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -125,6 +129,26 @@ export default function FileExplorer({ openApp }) {
     const ok = !!window.showDirectoryPicker;
     setSupported(ok);
     if (ok) getRecentDirs().then(setRecent);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key !== 'volume-event' || !e.newValue) return;
+      try {
+        const data = JSON.parse(e.newValue);
+        if (data.type === 'insert') {
+          setDevices((d) => [...d, { id: data.id, name: data.label }]);
+          setToast(`Mounted ${data.label}`);
+          if (data.open) {
+            // Placeholder for opening folder logic
+          }
+        } else if (data.type === 'eject') {
+          setDevices((d) => d.filter((dev) => dev.id !== data.id));
+        }
+      } catch {}
+    };
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
   }, []);
 
   useEffect(() => {
@@ -363,6 +387,15 @@ export default function FileExplorer({ openApp }) {
           )}
         </div>
         <div className="flex flex-1 overflow-hidden">
+          <Sidebar devices={devices} onEject={(id) => {
+            setDevices((d) => d.filter((dev) => dev.id !== id));
+            if (typeof window !== 'undefined') {
+              window.localStorage.setItem(
+                'volume-event',
+                JSON.stringify({ type: 'eject', id }),
+              );
+            }
+          }} />
           <div className="w-40 overflow-auto border-r border-gray-600">
             <div className="p-2 font-bold">Recent</div>
             {recent.map((r, i) => (
@@ -444,6 +477,7 @@ export default function FileExplorer({ openApp }) {
           }}
         />
       )}
+      {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </>
   );
 }
