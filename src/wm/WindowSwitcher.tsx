@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import keybindingManager from './keybindingManager';
 
 export interface WindowInfo {
@@ -17,6 +17,7 @@ export default function WindowSwitcher({ windows, onSelect }: Props) {
   const [visible, setVisible] = useState(false);
   const [index, setIndex] = useState(0);
   const [cycleAll, setCycleAll] = useState(false);
+  const cancelRef = useRef(false);
 
   useEffect(() => {
     const handleAltTab = () => {
@@ -27,18 +28,25 @@ export default function WindowSwitcher({ windows, onSelect }: Props) {
     keybindingManager.register('Alt+Tab', handleAltTab);
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (visible && e.key === 'Alt') {
+      if (visible && !cancelRef.current && e.key === 'Alt') {
         setVisible(false);
         onSelect?.(windows[index]?.id);
         setIndex(0);
       }
+      cancelRef.current = false;
     };
 
     window.addEventListener('keyup', handleKeyUp);
+    const handleMouseDown = () => {
+      cancelRef.current = true;
+      if (visible) setVisible(false);
+    };
+    window.addEventListener('mousedown', handleMouseDown);
 
     return () => {
       keybindingManager.unregister('Alt+Tab', handleAltTab);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('mousedown', handleMouseDown);
     };
   }, [visible, windows, index, onSelect]);
 

@@ -26,6 +26,7 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 import { addRecentApp, getRecentApps } from '../../utils/recent';
+import wmEvents from '@/src/wm/eventLayer';
 
 export class Desktop extends Component {
     constructor() {
@@ -99,6 +100,8 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        wmEvents.on('focus', this.handleWMFocus);
+        wmEvents.on('raise', this.handleWMRaise);
     }
 
     componentWillUnmount() {
@@ -106,6 +109,8 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        wmEvents.off('focus', this.handleWMFocus);
+        wmEvents.off('raise', this.handleWMRaise);
     }
 
     checkForNewFolders = () => {
@@ -277,7 +282,7 @@ export class Desktop extends Component {
 
     selectWindow = (id) => {
         this.setState({ showWindowSwitcher: false, switcherWindows: [] }, () => {
-            this.openApp(id);
+            this.openApp(id, 'keyboard');
         });
     }
 
@@ -649,7 +654,13 @@ export class Desktop extends Component {
         }
     }
 
-    openApp = (objId) => {
+    handleWMFocus = ({ id }) => {
+        if (id) this.focus(id);
+    }
+
+    handleWMRaise = () => { }
+
+    openApp = (objId, source = 'mouse') => {
 
         // google analytics
         ReactGA.event({
@@ -674,14 +685,16 @@ export class Desktop extends Component {
         if (this.state.closed_windows[objId] === false) {
             // if it's minimised, restore its last position
             if (this.state.minimized_windows[objId]) {
-                this.focus(objId);
+                wmEvents.raise({ id: objId });
+                wmEvents.focus({ id: objId, source });
                 var r = document.querySelector("#" + objId);
                 r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
                 let minimized_windows = this.state.minimized_windows;
                 minimized_windows[objId] = false;
                 this.setState({ minimized_windows: minimized_windows }, this.saveSession);
             } else {
-                this.focus(objId);
+                wmEvents.raise({ id: objId });
+                wmEvents.focus({ id: objId, source });
                 this.saveSession();
             }
             return;
@@ -726,7 +739,8 @@ export class Desktop extends Component {
                 closed_windows[objId] = false; // openes app's window
                 window_workspaces[objId] = this.state.currentWorkspace;
                 this.setState({ closed_windows, favourite_apps, window_workspaces, allAppsView: false }, () => {
-                    this.focus(objId);
+                    wmEvents.raise({ id: objId });
+                    wmEvents.focus({ id: objId, source });
                     this.saveSession();
                 });
                 this.app_stack.push(objId);
