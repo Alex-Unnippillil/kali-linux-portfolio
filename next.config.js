@@ -149,6 +149,7 @@ module.exports = withBundleAnalyzer(
         'openweathermap.org',
         'staticmap.openstreetmap.de',
         'data.typeracer.com',
+        'img.shields.io',
         'images.credly.com',
       ],
       deviceSizes: [640, 750, 828, 1080, 1200, 1280, 1920, 2048, 3840],
