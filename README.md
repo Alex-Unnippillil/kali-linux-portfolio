@@ -102,6 +102,15 @@ See `.env.local.example` for the full list.
 
 ---
 
+## App Finder
+
+- Press **Ctrl+Space** to open a compact run dialog.
+- The expanded view organizes results into categories and favorites.
+- Drag a search result onto the panel to create a launcher.
+- Press **Esc** to close the finder.
+
+---
+
 ## Speed Insights
 
 - Enable Speed Insights in the Vercel project dashboard.

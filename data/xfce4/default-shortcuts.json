@@ -1,5 +1,5 @@
 [
-  { "command": "xfce4-appfinder", "keys": "Alt+F2" },
+  { "command": "xfce4-appfinder", "keys": "Ctrl+Space" },
   { "command": "xfce4-terminal", "keys": "Ctrl+Alt+T" },
   { "command": "thunar", "keys": "Super+E" },
   { "command": "xfce4-session-logout", "keys": "Ctrl+Alt+Delete" },
