@@ -77,3 +77,11 @@ html[data-theme='matrix'] {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
+
+/* When CSS compositor effects are disabled */
+.compositor-css-disabled *,
+.compositor-css-disabled *::before,
+.compositor-css-disabled *::after {
+  animation: none !important;
+  transition: none !important;
+}
