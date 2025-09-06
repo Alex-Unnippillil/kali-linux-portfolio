@@ -64,7 +64,7 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 const withPWA = require('@ducanh2912/next-pwa').default({
   dest: 'public',
   sw: 'sw.js',
-  disable: process.env.NODE_ENV === 'development',
+  disable: process.env.VERCEL_ENV !== 'production',
   buildExcludes: [/dynamic-css-manifest\.json$/],
   workboxOptions: {
     navigateFallback: '/offline.html',
