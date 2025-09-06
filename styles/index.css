@@ -110,6 +110,12 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     -moz-box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
 }
 
+.compositor-disabled .window-shadow {
+    box-shadow: none;
+    -webkit-box-shadow: none;
+    -moz-box-shadow: none;
+}
+
 .closed-window {
     animation: closeWindow 200ms 1 forwards;
 }
@@ -377,6 +383,13 @@ dialog {
         backdrop-filter: blur(10px);
         background-color: color-mix(in srgb, var(--color-bg), transparent 60%);
     }
+}
+
+.compositor-disabled .context-menu-bg,
+.compositor-disabled .windowMainScreen {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background-color: var(--color-bg);
 }
 
 .emoji-list>li {
