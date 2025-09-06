@@ -245,6 +245,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
         writeLine(
           'Example scripts: https://github.com/unnippillil/kali-linux-portfolio/tree/main/scripts/examples',
         );
+        writeLine('Note: command output is simulated.');
       },
       ls: () => writeLine(Object.keys(filesRef.current).join('  ')),
       clear: () => {
@@ -467,6 +468,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
             <input
               autoFocus
               className="w-full mb-2 bg-black text-white p-2"
+              aria-label="command palette"
               value={paletteInput}
               onChange={(e) => setPaletteInput(e.target.value)}
               onKeyDown={(e) => {
