@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
 import Head from 'next/head';
+import Script from 'next/script';
 import ReactGA from 'react-ga4';
 import GitHubStars from '../../GitHubStars';
 import Certs from '../certs';
@@ -113,12 +114,14 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
       <main className="w-full h-full flex bg-ub-cool-grey text-white select-none relative">
         <Head>
           <title>About</title>
-          <script
-            type="application/ld+json"
-            nonce={nonce}
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
-          />
         </Head>
+        <Script
+          id="about-ld-json"
+          type="application/ld+json"
+          nonce={nonce}
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
+        />
         <div
           className="md:flex hidden flex-col w-1/4 md:w-1/5 text-sm overflow-y-auto windowMainScreen border-r border-black"
           role="tablist"
@@ -349,13 +352,14 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
   return (
     <div className="px-2 w-full">
       <div className="text-sm text-center md:text-base font-bold">{title}</div>
-      <input
-        type="text"
-        placeholder="Filter..."
-        className="mt-2 w-full px-2 py-1 rounded text-black"
-        value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-      />
+        <input
+          type="text"
+          placeholder="Filter..."
+          aria-label="Filter badges"
+          className="mt-2 w-full px-2 py-1 rounded text-black"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        />
       <div className="flex flex-wrap justify-center items-start w-full mt-2">
         {filteredBadges.map((badge) => (
           <img
