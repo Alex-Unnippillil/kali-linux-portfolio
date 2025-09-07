@@ -5,5 +5,7 @@ export default defineConfig({
   testMatch: /.*\.spec\.(ts|tsx)/,
   use: {
     baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    headless: true,
+    trace: process.env.CI ? 'on' : 'retain-on-failure',
   },
 });
