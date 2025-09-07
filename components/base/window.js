@@ -19,6 +19,10 @@ const debounce = (fn, delay) => {
 };
 
 export class Window extends Component {
+    static defaultProps = {
+        isFocused: true,
+        zIndex: 1,
+    };
     constructor(props) {
         super(props);
         this.id = null;
@@ -52,6 +56,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this.rootRef = React.createRef();
     }
 
     componentDidMount() {
@@ -203,6 +208,10 @@ export class Window extends Component {
             this._menuOpener.focus();
         }
         this._menuOpener = null;
+    }
+
+    focusSelf = () => {
+        this.rootRef.current?.focus();
     }
 
     changeCursorToMove = () => {
@@ -502,6 +511,7 @@ export class Window extends Component {
 
     focusWindow = () => {
         this.props.focus(this.id);
+        this.focusSelf();
     }
 
     minimizeWindow = () => {
@@ -768,7 +778,8 @@ export class Window extends Component {
                     bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
                 >
                     <div
-                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
+                        ref={this.rootRef}
+                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%`, zIndex: (this.props.zIndex || 0) + (this.state.alwaysOnTop ? 1000 : 0) }}
                         className={
                             this.state.cursorType + " " +
                             (this.state.closed ? " closed-window " : "") +
@@ -776,16 +787,16 @@ export class Window extends Component {
                             (this.props.minimized ? " opacity-0 invisible duration-200 " : "") +
                             (this.state.grabbed ? " opacity-70 " : "") +
                             (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") +
-                            (this.props.isFocused
-                                ? (this.state.alwaysOnTop ? " z-50 " : " z-30 ")
-                                : (this.state.alwaysOnTop ? " z-40 " : " z-20 notFocused")) +
+                            (this.props.isFocused ? "" : " notFocused") +
                             " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                         id={this.id}
                         data-context="window"
                         data-app-id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
-                        tabIndex={0}
+                        aria-selected={this.props.isFocused}
+                        aria-hidden={!this.props.isFocused}
+                        tabIndex={this.props.isFocused ? 0 : -1}
                         onKeyDown={this.handleKeyDown}
                     >
                         {this.props.resizable !== false && <WindowYBorder resize={this.debouncedHandleHorizontalResize} />}
