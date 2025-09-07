@@ -9,6 +9,10 @@ module.exports = {
     './apps/**/*.{js,ts,jsx,tsx}',
     './hooks/**/*.{js,ts,jsx,tsx}',
   ],
+  safelist: [
+    { pattern: /^cursor-/ },
+    { pattern: /^selection:bg-/ },
+  ],
   theme: {
     extend: {
       screens: {

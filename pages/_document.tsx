@@ -34,7 +34,9 @@ class MyDocument extends Document<Props> {
           <meta name="theme-color" content="#0f1317" />
           <script nonce={nonce} src="/theme.js" async />
         </Head>
-        <body className={ubuntu.className}>
+        <body
+          className={`${ubuntu.className} cursor-default selection:bg-[var(--color-selection)] selection:text-[var(--color-inverse)]`}
+        >
           <Main />
           <NextScript nonce={nonce} />
         </body>
