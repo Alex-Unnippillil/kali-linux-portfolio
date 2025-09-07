@@ -61,7 +61,9 @@ To send text or links directly into the Sticky Notes app:
 1. Open the site in a supported browser (Chrome, Edge, etc.).
 2. Use the browser's **Install** or **Add to Home screen** option.
 3. After installation, use the system **Share** action and select "Kali Linux Portfolio".
-4. The shared content will appear as a new note.
+4. The shared text or URL is routed through the manifest `share_target` endpoint and appears as a new Sticky Note.
+
+Tested on **Chrome** and **Edge**: sharing a snippet or link creates a note and focuses the Sticky Notes window immediately after the share completes.
 
 ### Service Worker (SW)
 
