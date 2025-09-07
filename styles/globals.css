@@ -91,20 +91,38 @@ html[data-theme='kali-light'] {
 }
 
 /* Matrix theme */
-html[data-theme='matrix'] {
-  --color-bg: #000000;
-  --color-text: #00ff00;
-  --color-primary: #00ff00;
-  --color-secondary: #001100;
-  --color-accent: #00ff00;
-  --color-muted: #003300;
-  --color-surface: #001100;
-  --color-inverse: #ffffff;
-  --color-border: #003300;
-  --color-terminal: #00ff00;
-  --color-dark: #000000;
+  html[data-theme='matrix'] {
+    --color-bg: #000000;
+    --color-text: #00ff00;
+    --color-primary: #00ff00;
+    --color-secondary: #001100;
+    --color-accent: #00ff00;
+    --color-muted: #003300;
+    --color-surface: #001100;
+    --color-inverse: #ffffff;
+    --color-border: #003300;
+    --color-terminal: #00ff00;
+    --color-dark: #000000;
 
-}
+  }
+
+  /* High contrast theme */
+  html[data-theme='high-contrast'] {
+    --color-bg: #000000;
+    --color-text: #ffffff;
+    --color-primary: #ffff00;
+    --color-secondary: #000000;
+    --color-accent: #ffff00;
+    --color-muted: #1a1a1a;
+    --color-surface: #000000;
+    --color-inverse: #000000;
+    --color-border: #ffff00;
+    --color-terminal: #00ff00;
+    --color-dark: #000000;
+    --color-focus-ring: #ffff00;
+    --color-selection: #ffff00;
+    --color-control-accent: #ffff00;
+  }
 
 ::selection {
   background: var(--color-selection);
