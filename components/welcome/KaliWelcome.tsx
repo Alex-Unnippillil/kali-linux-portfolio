@@ -37,7 +37,9 @@ export default function KaliWelcome() {
           {step === 0 && (
             <div>
               <h2 className="text-xl mb-4">About Kali</h2>
-              <p className="mb-4">Welcome to Kali Linux Portfolio.</p>
+              <p className="mb-4">
+                Welcome to Kali Linux Portfolio—an unofficial project not affiliated with Kali Linux or Offensive Security.
+              </p>
               <div className="flex gap-2 mb-4">
                 <button
                   type="button"
