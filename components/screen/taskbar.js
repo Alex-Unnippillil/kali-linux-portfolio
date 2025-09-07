@@ -69,7 +69,7 @@ export default function Taskbar(props) {
                     data-app-id={app.id}
                     onClick={() => handleClick(app)}
                     className={(props.focused_windows[app.id] && !props.minimized_windows[app.id] ? ' bg-white bg-opacity-20 ' : ' ') +
-                        'relative flex items-center mx-1 px-2 py-1 rounded hover:bg-white hover:bg-opacity-10'}
+                        'group relative flex items-center mx-1 px-2 py-1 rounded hover:bg-white hover:bg-opacity-10 active:bg-white active:bg-opacity-20 cursor-pointer transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2'}
                 >
                     <Image
                         width={24}
@@ -81,7 +81,7 @@ export default function Taskbar(props) {
                     />
                     <span className="ml-1 text-sm text-white whitespace-nowrap">{app.title}</span>
                     {!props.focused_windows[app.id] && !props.minimized_windows[app.id] && (
-                        <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-0.5 bg-white rounded" />
+                        <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-0.5 bg-white rounded opacity-80 transition-opacity group-hover:opacity-100 group-active:opacity-100 group-focus-visible:opacity-100" />
                     )}
                 </button>
             ))}
