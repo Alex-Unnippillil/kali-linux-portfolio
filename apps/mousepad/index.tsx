@@ -48,7 +48,7 @@ export default function MousepadPreferences() {
               max={8}
               value={tabWidth}
               onChange={(e) => setTabWidth(parseInt(e.target.value, 10))}
-              className="w-16 text-black rounded px-1 py-[2px]"
+              className="w-16 text-black rounded px-1 py-0.5"
             />
           </label>
         </div>
