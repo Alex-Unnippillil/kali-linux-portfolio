@@ -347,8 +347,28 @@ export class Window extends Component {
             transform = `translate(${window.innerWidth / 2}px,-2pt)`;
         } else if (position === 'top') {
             newWidth = 100.2;
-            newHeight = 96.3;
+            newHeight = 50;
             transform = 'translate(-1pt,-2pt)';
+        } else if (position === 'bottom') {
+            newWidth = 100.2;
+            newHeight = 50;
+            transform = `translate(-1pt,${window.innerHeight / 2}px)`;
+        } else if (position === 'top-left') {
+            newWidth = 50;
+            newHeight = 50;
+            transform = 'translate(-1pt,-2pt)';
+        } else if (position === 'top-right') {
+            newWidth = 50;
+            newHeight = 50;
+            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
+        } else if (position === 'bottom-left') {
+            newWidth = 50;
+            newHeight = 50;
+            transform = `translate(-1pt,${window.innerHeight / 2}px)`;
+        } else if (position === 'bottom-right') {
+            newWidth = 50;
+            newHeight = 50;
+            transform = `translate(${window.innerWidth / 2}px,${window.innerHeight / 2}px)`;
         }
         if (r && transform) {
             r.style.transform = transform;
@@ -398,17 +418,41 @@ export class Window extends Component {
         var rect = r.getBoundingClientRect();
         const threshold = 30;
         let snap = null;
-        if (rect.left <= threshold) {
+        const nearLeft = rect.left <= threshold;
+        const nearRight = rect.right >= window.innerWidth - threshold;
+        const nearTop = rect.top <= threshold;
+        const nearBottom = rect.bottom >= window.innerHeight - threshold;
+        if (nearLeft && nearTop) {
+            snap = { left: '0', top: '0', width: '50%', height: '50%' };
+            this.setState({ snapPreview: snap, snapPosition: 'top-left' });
+        }
+        else if (nearRight && nearTop) {
+            snap = { left: '50%', top: '0', width: '50%', height: '50%' };
+            this.setState({ snapPreview: snap, snapPosition: 'top-right' });
+        }
+        else if (nearLeft && nearBottom) {
+            snap = { left: '0', top: '50%', width: '50%', height: '50%' };
+            this.setState({ snapPreview: snap, snapPosition: 'bottom-left' });
+        }
+        else if (nearRight && nearBottom) {
+            snap = { left: '50%', top: '50%', width: '50%', height: '50%' };
+            this.setState({ snapPreview: snap, snapPosition: 'bottom-right' });
+        }
+        else if (nearLeft) {
             snap = { left: '0', top: '0', width: '50%', height: '100%' };
             this.setState({ snapPreview: snap, snapPosition: 'left' });
         }
-        else if (rect.right >= window.innerWidth - threshold) {
+        else if (nearRight) {
             snap = { left: '50%', top: '0', width: '50%', height: '100%' };
             this.setState({ snapPreview: snap, snapPosition: 'right' });
         }
-        else if (rect.top <= threshold) {
-            snap = { left: '0', top: '0', width: '100%', height: '100%' };
+        else if (nearTop) {
+            snap = { left: '0', top: '0', width: '100%', height: '50%' };
             this.setState({ snapPreview: snap, snapPosition: 'top' });
+        }
+        else if (nearBottom) {
+            snap = { left: '0', top: '50%', width: '100%', height: '50%' };
+            this.setState({ snapPreview: snap, snapPosition: 'bottom' });
         }
         else {
             if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
@@ -600,6 +644,12 @@ export class Window extends Component {
     }
 
     handleKeyDown = (e) => {
+        if (this.state.snapPreview && e.key === 'Escape') {
+            e.preventDefault?.();
+            e.stopPropagation?.();
+            this.setState({ snapPreview: null, snapPosition: null });
+            return;
+        }
         if (this.state.resizing) {
             const step = 1;
             if (e.key === 'Enter' || e.key === 'Escape') {
