@@ -20,6 +20,7 @@ import { TrayProvider } from '../hooks/useTray';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import useReportWebVitals from '../hooks/useReportWebVitals';
 
 
 let SpeedInsights = () => null;
@@ -35,6 +36,8 @@ function MyApp(props) {
   const { Component, pageProps } = props;
   const { asPath, locales, defaultLocale } = useRouter();
   const path = asPath.split('?')[0];
+
+  useReportWebVitals();
 
   useEffect(() => {
     void import('@xterm/xterm/css/xterm.css');
