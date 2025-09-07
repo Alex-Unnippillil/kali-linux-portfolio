@@ -28,7 +28,11 @@ import {
   setSymbolicTrayIcons as saveSymbolicTrayIcons,
   defaults,
 } from '../utils/settingsStore';
-import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import {
+  getTheme as loadTheme,
+  setTheme as saveTheme,
+  isDarkTheme,
+} from '../utils/theme';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -252,8 +256,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.classList.toggle('high-contrast', highContrast);
+    document.documentElement.dataset.theme = highContrast ? 'high-contrast' : theme;
+    document.documentElement.classList.toggle(
+      'dark',
+      highContrast || isDarkTheme(theme),
+    );
     saveHighContrast(highContrast);
-  }, [highContrast]);
+  }, [highContrast, theme]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('large-hit-area', largeHitAreas);
