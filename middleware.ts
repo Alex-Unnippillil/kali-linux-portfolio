@@ -1,5 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
+const locales = ['en', 'es'];
+const defaultLocale = 'en';
+const PUBLIC_FILE = /\.(.*)$/;
+
 function nonce() {
   const arr = crypto.getRandomValues(new Uint8Array(16));
   let str = '';
@@ -10,6 +14,18 @@ function nonce() {
 }
 
 export function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  if (
+    !PUBLIC_FILE.test(pathname) &&
+    !pathname.startsWith('/_next') &&
+    !pathname.includes('/api') &&
+    !locales.some((loc) => pathname === `/${loc}` || pathname.startsWith(`/${loc}/`))
+  ) {
+    const language = req.headers.get('accept-language')?.split(',')[0].split('-')[0];
+    const locale = locales.includes(language ?? '') ? language! : defaultLocale;
+    return NextResponse.redirect(new URL(`/${locale}${pathname}`, req.url));
+  }
+
   const n = nonce();
   const csp = [
     "default-src 'self'",
