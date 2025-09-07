@@ -82,8 +82,7 @@ const NetworkAttackStepper: React.FC = () => {
               y1={75}
               x2={to.x}
               y2={75}
-              stroke={active ? '#f87171' : '#9ca3af'}
-              strokeWidth={active ? 4 : 2}
+              className={active ? 'stroke-warning stroke-[4]' : 'stroke-muted stroke-[2]'}
             />
           );
         })}
@@ -93,8 +92,7 @@ const NetworkAttackStepper: React.FC = () => {
             <g key={n.id} transform={`translate(${n.x},75)`}>
               <circle
                 r={25}
-                fill={active ? '#fca5a5' : '#e5e7eb'}
-                stroke="#4b5563"
+                className={active ? 'fill-warning/40 stroke-warning' : 'fill-muted/40 stroke-muted'}
                 strokeWidth={2}
               />
               <text textAnchor="middle" dy=".3em" className="text-xs">
@@ -109,7 +107,7 @@ const NetworkAttackStepper: React.FC = () => {
         <p>{current.description}</p>
       </div>
       <div className="space-y-2">
-        <div className="bg-green-100 border-l-4 border-green-500 p-2">
+        <div className="bg-success/20 border-l-4 border-success p-2">
           <strong>Mitigation:</strong> {current.mitigation}
         </div>
         <WarningBanner>{current.warning}</WarningBanner>
@@ -118,14 +116,14 @@ const NetworkAttackStepper: React.FC = () => {
         <button
           onClick={() => setStep((s) => Math.max(0, s - 1))}
           disabled={step === 0}
-          className="px-4 py-2 bg-ubt-gray text-white rounded disabled:opacity-50"
+          className="px-4 py-2 bg-panel text-text rounded disabled:opacity-50"
         >
           Previous
         </button>
         <button
           onClick={() => setStep((s) => Math.min(steps.length - 1, s + 1))}
           disabled={step === steps.length - 1}
-          className="px-4 py-2 bg-ubt-blue text-white rounded disabled:opacity-50"
+          className="px-4 py-2 bg-accent text-text rounded disabled:opacity-50"
         >
           Next
         </button>

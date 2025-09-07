@@ -25,6 +25,9 @@
   --color-ub-dark-grey: #2a2e36;
   --color-bg: #0f1317;
   --color-text: #F5F5F5;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
 
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;

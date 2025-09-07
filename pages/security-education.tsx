@@ -15,7 +15,7 @@ const InfoFrame = ({ title, link, description }: FrameProps) => (
     allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture"
     referrerPolicy="no-referrer"
     srcDoc={`<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'></head><body><h2>${title}</h2><p>${description}</p><p><a href='${link}' target='_blank' rel='noopener noreferrer'>Official Documentation</a></p></body></html>`}
-    style={{ width: '100%', border: '1px solid #ccc', height: '200px' }}
+    className="w-full border border-muted h-[200px]"
   />
 );
 
@@ -23,14 +23,7 @@ const SecurityEducation = () => (
   <WindowMainScreen
     screen={() => (
       <div>
-        <div
-          style={{
-            backgroundColor: '#fcd34d',
-            padding: '1rem',
-            textAlign: 'center',
-            fontWeight: 'bold',
-          }}
-        >
+        <div className="bg-warning text-surface p-4 text-center font-bold">
           Use Kali Linux and related tools legally and ethically with proper authorization.
         </div>
         <div className="grid gap-4 p-4 md:grid-cols-2">
