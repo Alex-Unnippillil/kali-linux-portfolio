@@ -1,7 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const budgets = JSON.parse(fs.readFileSync(new URL('../bundle-budgets.json', import.meta.url)));
+// Budget thresholds for client bundle chunks are defined in bundle-budgets.json.
+// CI uses this script to enforce those limits after a build.
+const budgets = JSON.parse(
+  fs.readFileSync(new URL('../bundle-budgets.json', import.meta.url), 'utf8'),
+);
 const statsPath = path.join(process.cwd(), '.next', 'analyze', 'client.json');
 const stats = JSON.parse(fs.readFileSync(statsPath, 'utf8'));
 
