@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useId } from 'react';
+import Modal from '@/components/base/Modal';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -19,15 +20,21 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onConfirm,
   onCancel,
 }) => {
-  if (!open) return null;
+  const headingId = useId();
+
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
+    <Modal
+      isOpen={open}
+      onClose={onCancel}
+      ariaLabelledby={title ? headingId : undefined}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
     >
       <div className="bg-gray-800 text-white p-4 rounded shadow-lg w-80 max-w-full">
-        {title && <h2 className="text-lg mb-2">{title}</h2>}
+        {title && (
+          <h2 id={headingId} className="text-lg mb-2">
+            {title}
+          </h2>
+        )}
         <div className="mb-4 text-sm">{message}</div>
         <div className="flex justify-end space-x-2">
           <button
@@ -44,8 +51,9 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };
 
 export default ConfirmDialog;
+
