@@ -56,9 +56,27 @@ export default function Meta() {
                 dangerouslySetInnerHTML={{
                     __html: JSON.stringify({
                         "@context": "https://schema.org",
-                        "@type": "Person",
-                        name: "Alex Unnippillil",
-                        url: "https://unnippillil.com/",
+                        "@graph": [
+                            {
+                                "@type": "Person",
+                                "@id": "https://unnippillil.com/#person",
+                                name: "Alex Unnippillil",
+                                url: "https://unnippillil.com/",
+                                image: "https://unnippillil.com/images/logos/logo_1024.png",
+                                sameAs: [
+                                    "https://github.com/unnippillil",
+                                    "https://www.linkedin.com/in/alex-unnippillil",
+                                ],
+                            },
+                            {
+                                "@type": "Organization",
+                                "@id": "https://unnippillil.com/#organization",
+                                name: "Alex Unnippillil",
+                                url: "https://unnippillil.com/",
+                                logo: "https://unnippillil.com/images/logos/logo_1200.png",
+                                founder: { "@id": "https://unnippillil.com/#person" },
+                            },
+                        ],
                     }),
                 }}
             />
