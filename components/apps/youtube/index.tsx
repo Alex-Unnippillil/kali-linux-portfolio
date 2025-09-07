@@ -122,12 +122,12 @@ function Sidebar({
       role="complementary"
       data-testid="playlist-sidebar"
     >
-      <h2 className="mb-[6px] text-lg font-semibold">Playlist</h2>
+      <h2 className="mb-1.5 text-lg font-semibold">Playlist</h2>
       <div data-testid="queue-list">
         {queue.map((v) => (
           <div
             key={v.id}
-            className="mb-[6px] cursor-pointer"
+            className="mb-1.5 cursor-pointer"
             onClick={() => onPlay(v)}
           >
             <img src={v.thumbnail} alt="" className="h-24 w-full rounded object-cover" />
@@ -136,12 +136,12 @@ function Sidebar({
         ))}
         {!queue.length && <div className="text-ubt-grey">Empty</div>}
       </div>
-      <h2 className="mb-[6px] mt-[24px] text-lg font-semibold">Watch Later</h2>
+      <h2 className="mb-1.5 mt-6 text-lg font-semibold">Watch Later</h2>
       <div data-testid="watch-later-list">
         {watchLater.map((v, i) => (
           <div
             key={`${v.id}-${v.start ?? 0}-${v.end ?? 0}`}
-            className="mb-[6px] cursor-pointer"
+            className="mb-1.5 cursor-pointer"
             onClick={() => onPlay(v)}
             draggable
             onDragStart={(e) => e.dataTransfer.setData('text/plain', String(i))}
@@ -235,18 +235,18 @@ function VirtualGrid({
                     alt={v.title}
                     className="h-[162px] w-full rounded object-cover"
                   />
-                  <div className="absolute bottom-[6px] right-[6px] flex gap-[6px] text-[12px]">
+                  <div className="absolute bottom-1.5 right-1.5 flex gap-1.5 text-[12px]">
                     <span className="bg-black/70 px-1 text-white">CC</span>
                     <span className="bg-black/70 px-1 text-white">HD</span>
                   </div>
                 </div>
-                <div className="mt-[6px] text-sm line-clamp-2">
+                <div className="mt-1.5 text-sm line-clamp-2">
                   {truncateTitle(v.title)}
                 </div>
               </div>
-              <div className="mt-[6px] flex justify-between text-xs">
+              <div className="mt-1.5 flex justify-between text-xs">
                 <ChannelHovercard id={v.channelId} name={v.channelName} />
-                <div className="space-x-[6px]">
+                <div className="space-x-1.5">
                   <button onClick={() => onQueue(v)}>Queue</button>
                   <button onClick={() => onWatchLater(v)}>Later</button>
                 </div>
@@ -588,7 +588,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
               className={`${playerReady ? '' : 'hidden'} ${miniPlayer ? 'h-full w-full' : 'aspect-video w-full'}`}
             />
             <div
-              className={`sticky top-0 z-10 flex items-center gap-[6px] p-[6px] transition-colors ${solidHeader ? 'bg-ub-cool-grey' : 'bg-transparent'}`}
+              className={`sticky top-0 z-10 flex items-center gap-1.5 p-1.5 transition-colors ${solidHeader ? 'bg-ub-cool-grey' : 'bg-transparent'}`}
             >
               <button
                 onClick={togglePlay}
