@@ -1,8 +1,12 @@
 "use client";
 
 import { type ReactNode, useEffect, useState } from "react";
+import Image from "next/image";
 import DOMPurify from "dompurify";
 import { XMLParser } from "fast-xml-parser";
+
+const BLUR_DATA_URL =
+  "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
 interface GenMonProps {
   code: string;
@@ -109,7 +113,15 @@ export default function GenMon({ code, interval = 60 }: GenMonProps) {
   return (
     <div className="flex items-center gap-2">
       {icon && (
-        <img src={icon} alt="" className="w-4 h-4" width={16} height={16} />
+        <Image
+          src={icon}
+          alt=""
+          className="w-4 h-4"
+          width={16}
+          height={16}
+          placeholder="blur"
+          blurDataURL={BLUR_DATA_URL}
+        />
       )}
       {text && <span>{text}</span>}
       {bar !== null && (
