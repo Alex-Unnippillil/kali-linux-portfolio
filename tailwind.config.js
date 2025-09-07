@@ -96,6 +96,7 @@ module.exports = {
     },
   },
   plugins: [
+    require('@tailwindcss/typography'),
     plugin(function ({ addUtilities }) {
       const cols = {};
       for (let i = 1; i <= 12; i++) {
