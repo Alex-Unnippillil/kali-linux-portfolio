@@ -1,6 +1,5 @@
 'use client';
 
-import Head from 'next/head';
 import Image from 'next/image';
 import ExternalFrame from '../../components/ExternalFrame';
 import { CloseIcon, MaximizeIcon, MinimizeIcon } from '../../components/ToolbarIcons';
@@ -10,9 +9,6 @@ import { SIDEBAR_WIDTH, ICON_SIZE } from './utils';
 export default function VsCode() {
   return (
     <>
-      <Head>
-        <link rel="preconnect" href="https://stackblitz.com" />
-      </Head>
       <div
         className="flex flex-col min-[1366px]:flex-row h-full w-full max-w-full"
         style={{ backgroundColor: kaliTheme.background, color: kaliTheme.text }}

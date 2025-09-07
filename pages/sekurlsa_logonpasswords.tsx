@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react';
-import Meta from '../components/SEO/Meta';
+import { baseMetadata } from '../lib/metadata';
+
+export const metadata = baseMetadata;
 
 const rawOutput = `Authentication Id : 0 ; 123 (00000000:0000007B)
 Session           : Interactive from 1
@@ -71,7 +73,6 @@ const SekurlsaLogonpasswords = () => {
   const sessions = useMemo(() => parseSessions(rawOutput), []);
   return (
     <>
-      <Meta />
       <div style={{ backgroundColor: '#fcd34d', padding: '1rem', textAlign: 'center', fontWeight: 'bold' }}>
         Sanitized credential data for educational use only.
       </div>

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import Meta from '../components/SEO/Meta';
+import { baseMetadata } from '../lib/metadata';
+
+export const metadata = baseMetadata;
 
 const NetworkTopology: React.FC = () => {
   const [mitigated, setMitigated] = useState(false);
 
   return (
     <>
-      <Meta />
       <main className="bg-ub-cool-grey text-white min-h-screen p-4 space-y-4">
         <button
           onClick={() => setMitigated((m) => !m)}
