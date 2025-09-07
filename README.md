@@ -254,19 +254,19 @@ These external domains are whitelisted in the default CSP. Update this list when
 
 | Domain | Purpose |
 | --- | --- |
-| `platform.twitter.com` | Twitter widgets and scripts |
-| `syndication.twitter.com` | Twitter embed scripts |
-| `cdn.syndication.twimg.com` | Twitter asset CDN |
-| `*.twitter.com` | Additional Twitter content |
+| `*.twitter.com` | Twitter widgets and scripts |
+| `*.twimg.com` | Twitter asset CDN |
 | `*.x.com` | X (Twitter) domain equivalents |
 | `*.google.com` | Google services and Chrome app favicons |
 | `example.com` | Chrome app demo origin |
-| `developer.mozilla.org` | Chrome app demo origin |
-| `en.wikipedia.org` | Chrome app demo origin |
+| `openweathermap.org` | Weather widget images |
+| `ghchart.rshah.org` | GitHub contribution charts |
+| `data.typeracer.com` | Typing race data |
+| `images.credly.com` | Certification badges |
+| `staticmap.openstreetmap.de` | Static map images |
 | `cdn.jsdelivr.net` | Math.js library |
 | `cdnjs.cloudflare.com` | PDF.js worker |
 | `stackblitz.com` | StackBlitz IDE embeds |
-| `www.youtube.com` | YouTube IFrame API |
 | `www.youtube-nocookie.com` | YouTube video embeds (privacy-enhanced) |
 | `open.spotify.com` | Spotify embeds |
 | `react.dev` | React documentation embeds |
@@ -276,7 +276,6 @@ These external domains are whitelisted in the default CSP. Update this list when
 
 **Notes for prod hardening**
 - Review `connect-src` and `frame-src` to ensure only required domains are present for your deployment.
-- Consider removing `'unsafe-inline'` from `style-src` once all inline styles are eliminated.
 - If deploying on a domain that serves a PDF resume via `<object>`, keep `X-Frame-Options: SAMEORIGIN`. Otherwise you can rely on CSP `frame-ancestors` instead.
 
 ---

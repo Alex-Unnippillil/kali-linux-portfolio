@@ -25,7 +25,7 @@ interface Favorite {
 const FAVORITE_DOMAINS = [
   'https://github.com',
   'https://google.com',
-  'https://developer.mozilla.org',
+  'https://example.com',
 ];
 
 const fetchSuggestions = async (term: string): Promise<string[]> => {
