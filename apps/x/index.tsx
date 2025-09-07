@@ -299,6 +299,8 @@ export default function XTimeline() {
       <Script
         src="https://platform.twitter.com/widgets.js"
         strategy="lazyOnload"
+        crossOrigin="anonymous"
+        integrity="sha384-2tybKFlI8VO9WeecxiJMRsCpfm6xp0mNzAuAFOxtqzenagQgy+bKmARu8EXVJhPu"
         onLoad={() => {
           setScriptLoaded(true);
           if (loaded) loadTimeline();
