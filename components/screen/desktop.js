@@ -29,6 +29,7 @@ import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 import { addRecentApp, getRecentApps } from '../../utils/recent';
 import osdService from '../../utils/osdService';
+import DesktopTour from '../welcome/DesktopTour';
 
 export class Desktop extends Component {
     constructor() {
@@ -1179,6 +1180,8 @@ export class Desktop extends Component {
                         windows={this.state.switcherWindows}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
+
+                <DesktopTour showAllApps={this.showAllApps} />
 
             </main>
         )
