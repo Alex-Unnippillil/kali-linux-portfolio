@@ -18,6 +18,7 @@ import { TrayProvider } from '../hooks/useTray';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import useReportWebVitals from '../hooks/useReportWebVitals';
 
 
 let SpeedInsights = () => null;
@@ -31,6 +32,8 @@ if (process.env.NODE_ENV === 'production') {
 
 function MyApp(props) {
   const { Component, pageProps } = props;
+
+  useReportWebVitals();
 
   useEffect(() => {
     void import('@xterm/xterm/css/xterm.css');
