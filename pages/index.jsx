@@ -1,7 +1,9 @@
 import dynamic from "next/dynamic";
-import Meta from "../components/SEO/Meta";
+import { baseMetadata } from "../lib/metadata";
 import BetaBadge from "../components/BetaBadge";
 import useSession from "../hooks/useSession";
+
+export const metadata = baseMetadata;
 
 const Ubuntu = dynamic(
   () =>
@@ -36,7 +38,6 @@ const App = () => {
       <a href="#window-area" className="sr-only focus:not-sr-only">
         Skip to content
       </a>
-      <Meta />
       <Ubuntu
         session={session}
         setSession={setSession}
