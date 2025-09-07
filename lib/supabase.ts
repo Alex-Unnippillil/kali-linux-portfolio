@@ -11,15 +11,18 @@ export function getServiceSupabase() {
     from(table: string) {
       return {
         insert(values: unknown) {
-          return fetch(`${url}/rest/v1/${table}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              apikey: key,
-              Authorization: `Bearer ${key}`,
-            },
-            body: JSON.stringify(values),
-          });
+          if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+            return fetch(`${url}/rest/v1/${table}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                apikey: key,
+                Authorization: `Bearer ${key}`,
+              },
+              body: JSON.stringify(values),
+            });
+          }
+          return Promise.resolve(null);
         },
       };
     },
@@ -39,16 +42,19 @@ export function getAnonSupabaseServer() {
     from(table: string) {
       return {
         async select() {
-          const res = await fetch(`${url}/rest/v1/${table}?select=*`, {
-            headers: { apikey: key, Authorization: `Bearer ${key}` },
-          });
-          if (!res.ok) {
-            const error = await res.text();
-            return { data: null, error };
-          }
-          const data = await res.json();
+          if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+            const res = await fetch(`${url}/rest/v1/${table}?select=*`, {
+              headers: { apikey: key, Authorization: `Bearer ${key}` },
+            });
+            if (!res.ok) {
+              const error = await res.text();
+              return { data: null, error };
+            }
+            const data = await res.json();
 
-          return { data, error: null };
+            return { data, error: null };
+          }
+          return { data: null, error: 'Static export mode' };
         },
       };
     },

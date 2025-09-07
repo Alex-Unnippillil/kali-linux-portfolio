@@ -8,15 +8,21 @@ const GitHubStars = ({ user, repo }) => {
   const [loading, setLoading] = useState(stars === null);
 
   const fetchStars = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(`https://api.github.com/repos/${user}/${repo}`);
-      if (!res.ok) throw new Error('Request failed');
-      const data = await res.json();
-      setStars(data.stargazers_count || 0);
-    } catch (e) {
-      console.error('Failed to fetch star count', e);
-    } finally {
+    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+      try {
+        setLoading(true);
+        const res = await fetch(
+          `https://api.github.com/repos/${user}/${repo}`,
+        );
+        if (!res.ok) throw new Error('Request failed');
+        const data = await res.json();
+        setStars(data.stargazers_count || 0);
+      } catch (e) {
+        console.error('Failed to fetch star count', e);
+      } finally {
+        setLoading(false);
+      }
+    } else {
       setLoading(false);
     }
   }, [user, repo, setStars]);

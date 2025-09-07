@@ -7,12 +7,16 @@ const SessionManager: React.FC = () => {
   const [toast, setToast] = useState("");
 
   const handleClear = async () => {
-    try {
-      const res = await fetch("/api/clear-sessions", { method: "POST" });
-      if (!res.ok) throw new Error("Failed");
-      setToast("Sessions cleared");
-    } catch {
-      setToast("Failed to clear sessions");
+    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+      try {
+        const res = await fetch("/api/clear-sessions", { method: "POST" });
+        if (!res.ok) throw new Error("Failed");
+        setToast("Sessions cleared");
+      } catch {
+        setToast("Failed to clear sessions");
+      }
+    } else {
+      setToast("Unavailable in static export");
     }
   };
 
