@@ -40,6 +40,8 @@ export default function SideBar(props) {
     return (
         <>
             <nav
+                id="dock"
+                tabIndex={-1}
                 aria-label="Dock"
                 className={(props.hide ? " -translate-x-full " : "") +
                     " absolute transform duration-300 select-none z-40 left-0 top-0 h-full min-h-screen flex flex-col justify-start items-center pt-7 border-black border-opacity-60"}
