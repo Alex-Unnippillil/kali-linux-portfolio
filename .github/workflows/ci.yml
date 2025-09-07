@@ -64,7 +64,13 @@ jobs:
       - run: |
           yarn dev &
           npx wait-on http://localhost:3000
-      - run: npx playwright test tests/e2e
+      - run: npx playwright test tests/e2e --trace on
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-traces
+          path: test-results/**/*.zip
+          if-no-files-found: ignore
 
   pa11y:
     runs-on: ubuntu-latest
