@@ -3,12 +3,10 @@
 // Allows external badges and same-origin PDF embedding.
 // Update README (section "CSP External Domains") when editing domains below.
 
-let validateEnv;
+let validateEnv = null;
 try {
   ({ validateServerEnv: validateEnv } = require('./lib/validate'));
-} catch {
-  validateEnv = () => {};
-}
+} catch {}
 
 
 const ContentSecurityPolicy = [
@@ -99,12 +97,8 @@ const withPWA = require('@ducanh2912/next-pwa').default({
 const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 const isProd = process.env.NODE_ENV === 'production';
 
-if (isProd) {
-  try {
-    validateServerEnv(process.env);
-  } catch {
-    console.warn('Missing env vars; running without validation');
-  }
+if (isProd && typeof validateEnv === 'function') {
+  validateEnv(process.env);
 }
 
 // Merge experiment settings and production optimizations into a single function.
