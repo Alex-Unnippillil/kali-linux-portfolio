@@ -70,6 +70,22 @@ To send text or links directly into the Sticky Notes app:
 - Dynamic routes or API responses are not cached.
 - Future work may use `injectManifest` for finer control.
 
+### Bundle size budgets
+
+Client bundle size is tracked using `@next/bundle-analyzer`. Thresholds defined in
+[`bundle-budgets.json`](./bundle-budgets.json) are enforced in CI and can be
+verified locally:
+
+```bash
+ANALYZE=true yarn build
+yarn check-budgets
+```
+
+Current limits:
+
+- `^chunks/framework`: 300000 bytes
+- `^chunks/main-app`: 350000 bytes
+
 ---
 
 ## Environment Variables
@@ -94,6 +110,7 @@ See `.env.local.example` for the full list.
 - `yarn test` – run the test suite.
 - `yarn lint` – check code for linting issues.
 - `yarn export` – generate a static export in the `out/` directory.
+- `yarn check-budgets` – verify client bundle size against configured limits.
 
 ---
 
