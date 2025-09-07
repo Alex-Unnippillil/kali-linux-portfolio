@@ -549,12 +549,16 @@ export class Window extends Component {
 
     closeWindow = () => {
         this.setWinowsPosition();
+        const prefersReducedMotion =
+            window.matchMedia &&
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const delay = prefersReducedMotion ? 0 : 300;
         this.setState({ closed: true }, () => {
             this.deactivateOverlay();
             this.props.hideSideBar(this.id, false);
             setTimeout(() => {
                 this.props.closed(this.id)
-            }, 300) // after 300ms this window will be unmounted from parent (Desktop)
+            }, delay); // skip delay when reduced motion is preferred
         });
     }
 
