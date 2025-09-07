@@ -6,8 +6,6 @@ import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
  */
 
 export const chromeDefaultTiles = [
-  { title: 'MDN', url: 'https://developer.mozilla.org/' },
-  { title: 'Wikipedia', url: 'https://en.wikipedia.org' },
   { title: 'Example', url: 'https://example.com' },
 ];
 

@@ -31,11 +31,7 @@ const STORAGE_KEY = 'chrome-tabs';
 const HOME_URL = 'home://start';
 const SANDBOX_FLAGS = ['allow-scripts', 'allow-forms', 'allow-popups'] as const;
 const CSP = "default-src 'self'; script-src 'none'; connect-src 'none';";
-const DEMO_ORIGINS = [
-  'https://example.com',
-  'https://developer.mozilla.org',
-  'https://en.wikipedia.org',
-];
+const DEMO_ORIGINS = ['https://example.com'];
 
 const formatUrl = (value: string) => {
   let url = value.trim();
