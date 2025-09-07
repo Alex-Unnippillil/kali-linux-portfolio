@@ -67,10 +67,10 @@ export class UbuntuApp extends Component {
                 id={"app-" + this.props.id}
                 onDoubleClick={this.openApp}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openApp(); } }}
-                tabIndex={this.props.disabled ? -1 : 0}
+                tabIndex={this.props.disabled ? -1 : (this.props.tabIndex ?? 0)}
                 onMouseEnter={this.startPrefetchTimer}
                 onMouseLeave={this.clearPrefetchTimer}
-                onFocus={this.startPrefetchTimer}
+                onFocus={(e) => { this.startPrefetchTimer(); this.props.onFocus && this.props.onFocus(e); }}
                 onBlur={this.clearPrefetchTimer}
             >
                 <Image
