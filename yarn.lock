@@ -4652,6 +4652,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@xterm/addon-web-links@npm:^0.11.0":
+  version: 0.11.0
+  resolution: "@xterm/addon-web-links@npm:0.11.0"
+  peerDependencies:
+    "@xterm/xterm": ^5.0.0
+  checksum: 10c0/9426bed80afa954b0ea97771d041eb44e77a64e560ce8b8ef507a5d3a763979af18ae9f74ed54007bb7e235d0daf035be2a33f90d8edfecb431caf8ba0b0664e
+  languageName: node
+  linkType: hard
+
 "@xterm/xterm@npm:^5.5.0":
   version: 5.5.0
   resolution: "@xterm/xterm@npm:5.5.0"
@@ -14557,6 +14566,7 @@ __metadata:
     "@vercel/toolbar": "npm:^0.1.38"
     "@xterm/addon-fit": "npm:^0.10.0"
     "@xterm/addon-search": "npm:^0.15.0"
+    "@xterm/addon-web-links": "npm:^0.11.0"
     "@xterm/xterm": "npm:^5.5.0"
     "@zxing/browser": "npm:^0.1.5"
     "@zxing/library": "npm:^0.21.3"
@@ -14640,6 +14650,7 @@ __metadata:
     turndown: "npm:^7.2.1"
     typescript: "npm:5.8.2"
     wait-on: "npm:^8.0.4"
+    web-vitals: "npm:^5.1.0"
     webpack: "npm:^5.92.0"
     workbox-build: "npm:7.1.1"
     ws: "npm:^8.18.0"
@@ -14838,6 +14849,13 @@ __metadata:
     glob-to-regexp: "npm:^0.4.1"
     graceful-fs: "npm:^4.1.2"
   checksum: 10c0/6c0901f75ce245d33991225af915eea1c5ae4ba087f3aee2b70dd377d4cacb34bef02a48daf109da9d59b2d31ec6463d924a0d72f8618ae1643dd07b95de5275
+  languageName: node
+  linkType: hard
+
+"web-vitals@npm:^5.1.0":
+  version: 5.1.0
+  resolution: "web-vitals@npm:5.1.0"
+  checksum: 10c0/1af22ddbe2836ba880fcb492cfba24c3349f4760ebb5e92f38324ea67bca3c4dbb9c86f1a32af4795b6115cdaf98b90000cf3a7402bffef6e8c503f0d1b2e706
   languageName: node
   linkType: hard
 
