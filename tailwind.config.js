@@ -14,11 +14,11 @@ module.exports = {
       screens: {
         '3xl': '1920px',
       },
-      colors: {
-        'ub-grey': 'var(--color-ub-grey)',
-        'ub-warm-grey': 'var(--color-ub-warm-grey)',
-        'ub-cool-grey': 'var(--color-ub-cool-grey)',
-        'ub-orange': 'var(--color-ub-orange)',
+        colors: {
+          'ub-grey': 'var(--color-ub-grey)',
+          'ub-warm-grey': 'var(--color-ub-warm-grey)',
+          'ub-cool-grey': 'var(--color-ub-cool-grey)',
+          'ub-orange': 'var(--color-ub-orange)',
         'ub-lite-abrgn': 'var(--color-ub-lite-abrgn)',
         'ub-med-abrgn': 'var(--color-ub-med-abrgn)',
         'ub-drk-abrgn': 'var(--color-ub-drk-abrgn)',
@@ -37,9 +37,15 @@ module.exports = {
         'ub-border-orange': 'var(--color-ub-border-orange)',
         'ub-dark-grey': 'var(--color-ub-dark-grey)',
       },
-      fontFamily: {
-        ubuntu: ['Ubuntu', 'sans-serif'],
-      },
+        fontFamily: {
+          ubuntu: ['Ubuntu', 'sans-serif'],
+        },
+        fontSize: {
+          base: ['1rem', { lineHeight: '1.5' }],
+          h1: ['clamp(1.875rem, 1.5rem + 1vw, 2.25rem)', { lineHeight: '1.2' }],
+          h2: ['clamp(1.5rem, 1.25rem + 0.5vw, 1.875rem)', { lineHeight: '1.3' }],
+          h3: ['clamp(1.25rem, 1rem + 0.5vw, 1.5rem)', { lineHeight: '1.4' }],
+        },
       minWidth: {
         '0': '0',
         '1/4': '25%',
