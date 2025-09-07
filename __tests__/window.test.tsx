@@ -42,6 +42,26 @@ describe('Window lifecycle', () => {
   });
 });
 
+it('hides inactive windows from accessibility tree', () => {
+  render(
+    <Window
+      id="inactive"
+      title="Test"
+      screen={() => <div>content</div>}
+      focus={() => {}}
+      hasMinimised={() => {}}
+      closed={() => {}}
+      hideSideBar={() => {}}
+      openApp={() => {}}
+      isFocused={false}
+    />
+  );
+
+  const winEl = document.getElementById('inactive')!;
+  expect(winEl).toHaveAttribute('aria-hidden', 'true');
+  expect(winEl).toHaveAttribute('tabindex', '-1');
+});
+
 describe('Window snapping preview', () => {
   it('shows preview when dragged near left edge', () => {
     const ref = React.createRef<Window>();
