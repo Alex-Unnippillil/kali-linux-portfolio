@@ -1,7 +1,6 @@
 "use client";
 
 import { isBrowser } from '@/utils/env';
-import { get, set, del } from 'idb-keyval';
 import { getTheme, setTheme } from './theme';
 import { safeLocalStorage } from './safeStorage';
 
@@ -22,22 +21,24 @@ const DEFAULT_SETTINGS = {
 
 export async function getAccent() {
   if (!isBrowser()) return DEFAULT_SETTINGS.accent;
-  return (await get('accent')) || DEFAULT_SETTINGS.accent;
+  const stored = window.localStorage.getItem('accent');
+  return stored ? JSON.parse(stored) : DEFAULT_SETTINGS.accent;
 }
 
 export async function setAccent(accent) {
   if (!isBrowser()) return;
-  await set('accent', accent);
+  window.localStorage.setItem('accent', JSON.stringify(accent));
 }
 
 export async function getWallpaper() {
   if (!isBrowser()) return DEFAULT_SETTINGS.wallpaper;
-  return (await get('bg-image')) || DEFAULT_SETTINGS.wallpaper;
+  const stored = window.localStorage.getItem('bg-image');
+  return stored ? JSON.parse(stored) : DEFAULT_SETTINGS.wallpaper;
 }
 
 export async function setWallpaper(wallpaper) {
   if (!isBrowser()) return;
-  await set('bg-image', wallpaper);
+  window.localStorage.setItem('bg-image', JSON.stringify(wallpaper));
 }
 
 export async function getDensity() {
@@ -149,10 +150,8 @@ export async function setSymbolicTrayIcons(value) {
 
 export async function resetSettings() {
   if (!isBrowser()) return;
-  await Promise.all([
-    del('accent'),
-    del('bg-image'),
-  ]);
+  window.localStorage.removeItem('accent');
+  window.localStorage.removeItem('bg-image');
   window.localStorage.removeItem('density');
   window.localStorage.removeItem('reduced-motion');
   window.localStorage.removeItem('font-scale');
