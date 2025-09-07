@@ -27,7 +27,7 @@ class MyDocument extends Document<Props> {
   render() {
     const { nonce } = this.props;
     return (
-      <Html lang="en" data-csp-nonce={nonce}>
+      <Html lang={this.props.locale || 'en'} data-csp-nonce={nonce}>
         <Head>
           <link rel="icon" href="/favicon.ico" />
           <link rel="manifest" href="/manifest.webmanifest" />
