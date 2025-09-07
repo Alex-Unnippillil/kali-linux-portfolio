@@ -62,6 +62,10 @@ const securityHeaders = [
     key: 'X-Frame-Options',
     value: 'SAMEORIGIN',
   },
+  {
+    key: 'Strict-Transport-Security',
+    value: 'max-age=31536000; includeSubDomains',
+  },
 ];
 
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
