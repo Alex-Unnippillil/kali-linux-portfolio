@@ -98,14 +98,14 @@ export default function AppGrid({ openApp }) {
 
   const Cell = ({ columnIndex, rowIndex, style, data }) => {
     const index = rowIndex * data.columnCount + columnIndex;
-    if (index >= data.items.length) return null;
-    const app = data.items[index];
     const ref = useRef(null);
     const isVisible = useIntersection(ref);
+    const app = data.items[index];
 
     useEffect(() => {
       if (
         isVisible &&
+        app &&
         app.screen?.prefetch &&
         !prefetchedRef.current.has(app.id)
       ) {
@@ -116,6 +116,8 @@ export default function AppGrid({ openApp }) {
         return () => clearTimeout(timer);
       }
     }, [isVisible, app]);
+
+    if (!app) return null;
 
     return (
       <div
@@ -135,13 +137,24 @@ export default function AppGrid({ openApp }) {
           displayName={<>{app.nodes}</>}
           openApp={() => openApp && openApp(app.id)}
           prefetch={app.screen?.prefetch}
+          tabIndex={index === focusedIndex ? 0 : -1}
+          onFocus={() => setFocusedIndex(index)}
         />
       </div>
     );
   };
 
   return (
-    <div id="app-grid" className="flex flex-col items-center h-full">
+    <div
+      id="app-grid"
+      className="flex flex-col items-center h-full"
+      tabIndex={-1}
+      onKeyDown={handleKeyDown}
+      onFocus={() => {
+        const el = document.getElementById('app-' + filtered[focusedIndex]?.id);
+        el?.focus();
+      }}
+    >
       <div className="mt-4 mb-2 flex space-x-2">
         {Object.keys(categories).map((cat) => (
           <button
@@ -158,14 +171,11 @@ export default function AppGrid({ openApp }) {
       <input
         className="mb-6 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
         placeholder="Search"
+        aria-label="Search applications"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
-      <div
-        className="w-full flex-1 h-[70vh] outline-none"
-        onKeyDown={handleKeyDown}
-        tabIndex={0}
-      >
+      <div className="w-full flex-1 h-[70vh] outline-none">
         <AutoSizer>
           {({ height, width }) => {
             const columnCount = getColumnCount(width);
