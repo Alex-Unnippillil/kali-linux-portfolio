@@ -1,5 +1,6 @@
 import { isBrowser } from '@/utils/env';
 import React, { useState, useEffect, useRef } from 'react';
+import usePrefersReducedMotion from '../../../hooks/usePrefersReducedMotion';
 import progressInfo from './progress.json';
 import StatsChart from '../../StatsChart';
 
@@ -170,7 +171,7 @@ function HashcatApp() {
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState('');
   const [isCracking, setIsCracking] = useState(false);
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const prefersReducedMotion = usePrefersReducedMotion();
   const [attackMode, setAttackMode] = useState('0');
   const [mask, setMask] = useState('');
   const appendMask = (token) => setMask((m) => m + token);
@@ -217,15 +218,6 @@ function HashcatApp() {
       setGpuUsage(Math.floor(Math.random() * 100));
     }, 3000);
     return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    if (!isBrowser()) return;
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const handleChange = () => setPrefersReducedMotion(mediaQuery.matches);
-    handleChange();
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
   const startCracking = () => {

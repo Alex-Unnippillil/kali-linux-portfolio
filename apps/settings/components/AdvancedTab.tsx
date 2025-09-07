@@ -9,15 +9,14 @@ interface DomainInfo {
 }
 
 const domains: DomainInfo[] = [
-  { domain: "platform.twitter.com", allowed: true, purpose: "Twitter widgets" },
-  { domain: "syndication.twitter.com", allowed: true, purpose: "Twitter embeds" },
-  { domain: "cdn.syndication.twimg.com", allowed: true, purpose: "Twitter CDN" },
+  { domain: "*.twitter.com", allowed: true, purpose: "Twitter widgets" },
+  { domain: "*.twimg.com", allowed: true, purpose: "Twitter CDN" },
+  { domain: "*.x.com", allowed: true, purpose: "Twitter alias" },
   { domain: "stackblitz.com", allowed: true, purpose: "StackBlitz IDE" },
   { domain: "www.youtube-nocookie.com", allowed: true, purpose: "YouTube videos" },
   { domain: "open.spotify.com", allowed: true, purpose: "Spotify embeds" },
+  { domain: "*.google.com", allowed: true, purpose: "Google services" },
   { domain: "example.com", allowed: true, purpose: "Chrome demo" },
-  { domain: "developer.mozilla.org", allowed: true, purpose: "Chrome demo" },
-  { domain: "en.wikipedia.org", allowed: true, purpose: "Chrome demo" },
   { domain: "react.dev", allowed: false, purpose: "React docs" },
 ];
 
@@ -27,12 +26,11 @@ const snippet = `const ContentSecurityPolicy = [
   "form-action 'self'",
   "object-src 'none'",
   "img-src 'self' https: data:",
-  "style-src 'self' 'unsafe-inline'",
-  "style-src-elem 'self' 'unsafe-inline'",
+  "style-src 'self'",
   "font-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://vercel.live https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
-  "connect-src 'self' https://example.com https://developer.mozilla.org https://en.wikipedia.org https://www.google.com https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.google.com https://stackblitz.com",
-  "frame-src 'self' https://vercel.live https://stackblitz.com https://*.google.com https://platform.twitter.com https://syndication.twitter.com https://*.twitter.com https://*.x.com https://www.youtube-nocookie.com https://open.spotify.com https://example.com https://developer.mozilla.org https://en.wikipedia.org",
+  "script-src 'self' 'unsafe-inline' https://vercel.live https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://sdk.scdn.co",
+  "connect-src 'self' https://example.com https://*.twitter.com https://*.twimg.com https://*.x.com https://*.google.com https://stackblitz.com",
+  "frame-src 'self' https://vercel.live https://stackblitz.com https://*.google.com https://*.twitter.com https://*.x.com https://www.youtube-nocookie.com https://open.spotify.com https://react.dev https://example.com",
   "frame-ancestors 'self'",
   "upgrade-insecure-requests",
 ].join('; ');`;

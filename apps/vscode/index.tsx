@@ -1,6 +1,5 @@
 'use client';
 
-import Head from 'next/head';
 import Image from 'next/image';
 import ExternalFrame from '../../components/ExternalFrame';
 import { CloseIcon, MaximizeIcon, MinimizeIcon } from '../../components/ToolbarIcons';
@@ -10,9 +9,6 @@ import { SIDEBAR_WIDTH, ICON_SIZE } from './utils';
 export default function VsCode() {
   return (
     <>
-      <Head>
-        <link rel="preconnect" href="https://stackblitz.com" />
-      </Head>
       <div
         className="flex flex-col min-[1366px]:flex-row h-full w-full max-w-full"
         style={{ backgroundColor: kaliTheme.background, color: kaliTheme.text }}
@@ -74,7 +70,7 @@ export default function VsCode() {
             className="flex items-center gap-2 px-2 py-1 border-t border-black/20"
             style={{ backgroundColor: kaliTheme.sidebar }}
           >
-            <span className="flex items-center gap-1 text-[12px] uppercase bg-black/30 px-[6px] py-[2px] rounded-full">
+            <span className="flex items-center gap-1 text-[12px] uppercase bg-black/30 px-1.5 py-0.5 rounded-full">
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -91,7 +87,7 @@ export default function VsCode() {
               </svg>
               MAIN
             </span>
-            <span className="flex items-center gap-1 text-[12px] uppercase bg-black/30 px-[6px] py-[2px] rounded-full">
+            <span className="flex items-center gap-1 text-[12px] uppercase bg-black/30 px-1.5 py-0.5 rounded-full">
               <svg
                 viewBox="0 0 24 24"
                 fill="none"

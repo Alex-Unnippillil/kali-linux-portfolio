@@ -19,6 +19,10 @@ const debounce = (fn, delay) => {
 };
 
 export class Window extends Component {
+    static defaultProps = {
+        isFocused: true,
+        zIndex: 1,
+    };
     constructor(props) {
         super(props);
         this.id = null;
@@ -52,6 +56,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this.rootRef = React.createRef();
     }
 
     componentDidMount() {
@@ -205,6 +210,10 @@ export class Window extends Component {
         this._menuOpener = null;
     }
 
+    focusSelf = () => {
+        this.rootRef.current?.focus();
+    }
+
     changeCursorToMove = () => {
         this.focusWindow();
         if (this.state.maximized) {
@@ -347,8 +356,28 @@ export class Window extends Component {
             transform = `translate(${window.innerWidth / 2}px,-2pt)`;
         } else if (position === 'top') {
             newWidth = 100.2;
-            newHeight = 96.3;
+            newHeight = 50;
             transform = 'translate(-1pt,-2pt)';
+        } else if (position === 'bottom') {
+            newWidth = 100.2;
+            newHeight = 50;
+            transform = `translate(-1pt,${window.innerHeight / 2}px)`;
+        } else if (position === 'top-left') {
+            newWidth = 50;
+            newHeight = 50;
+            transform = 'translate(-1pt,-2pt)';
+        } else if (position === 'top-right') {
+            newWidth = 50;
+            newHeight = 50;
+            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
+        } else if (position === 'bottom-left') {
+            newWidth = 50;
+            newHeight = 50;
+            transform = `translate(-1pt,${window.innerHeight / 2}px)`;
+        } else if (position === 'bottom-right') {
+            newWidth = 50;
+            newHeight = 50;
+            transform = `translate(${window.innerWidth / 2}px,${window.innerHeight / 2}px)`;
         }
         if (r && transform) {
             r.style.transform = transform;
@@ -398,17 +427,41 @@ export class Window extends Component {
         var rect = r.getBoundingClientRect();
         const threshold = 30;
         let snap = null;
-        if (rect.left <= threshold) {
+        const nearLeft = rect.left <= threshold;
+        const nearRight = rect.right >= window.innerWidth - threshold;
+        const nearTop = rect.top <= threshold;
+        const nearBottom = rect.bottom >= window.innerHeight - threshold;
+        if (nearLeft && nearTop) {
+            snap = { left: '0', top: '0', width: '50%', height: '50%' };
+            this.setState({ snapPreview: snap, snapPosition: 'top-left' });
+        }
+        else if (nearRight && nearTop) {
+            snap = { left: '50%', top: '0', width: '50%', height: '50%' };
+            this.setState({ snapPreview: snap, snapPosition: 'top-right' });
+        }
+        else if (nearLeft && nearBottom) {
+            snap = { left: '0', top: '50%', width: '50%', height: '50%' };
+            this.setState({ snapPreview: snap, snapPosition: 'bottom-left' });
+        }
+        else if (nearRight && nearBottom) {
+            snap = { left: '50%', top: '50%', width: '50%', height: '50%' };
+            this.setState({ snapPreview: snap, snapPosition: 'bottom-right' });
+        }
+        else if (nearLeft) {
             snap = { left: '0', top: '0', width: '50%', height: '100%' };
             this.setState({ snapPreview: snap, snapPosition: 'left' });
         }
-        else if (rect.right >= window.innerWidth - threshold) {
+        else if (nearRight) {
             snap = { left: '50%', top: '0', width: '50%', height: '100%' };
             this.setState({ snapPreview: snap, snapPosition: 'right' });
         }
-        else if (rect.top <= threshold) {
-            snap = { left: '0', top: '0', width: '100%', height: '100%' };
+        else if (nearTop) {
+            snap = { left: '0', top: '0', width: '100%', height: '50%' };
             this.setState({ snapPreview: snap, snapPosition: 'top' });
+        }
+        else if (nearBottom) {
+            snap = { left: '0', top: '50%', width: '100%', height: '50%' };
+            this.setState({ snapPreview: snap, snapPosition: 'bottom' });
         }
         else {
             if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
@@ -458,6 +511,7 @@ export class Window extends Component {
 
     focusWindow = () => {
         this.props.focus(this.id);
+        this.focusSelf();
     }
 
     minimizeWindow = () => {
@@ -549,12 +603,16 @@ export class Window extends Component {
 
     closeWindow = () => {
         this.setWinowsPosition();
+        const prefersReducedMotion =
+            window.matchMedia &&
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const delay = prefersReducedMotion ? 0 : 300;
         this.setState({ closed: true }, () => {
             this.deactivateOverlay();
             this.props.hideSideBar(this.id, false);
             setTimeout(() => {
                 this.props.closed(this.id)
-            }, 300) // after 300ms this window will be unmounted from parent (Desktop)
+            }, delay); // skip delay when reduced motion is preferred
         });
     }
 
@@ -600,6 +658,12 @@ export class Window extends Component {
     }
 
     handleKeyDown = (e) => {
+        if (this.state.snapPreview && e.key === 'Escape') {
+            e.preventDefault?.();
+            e.stopPropagation?.();
+            this.setState({ snapPreview: null, snapPosition: null });
+            return;
+        }
         if (this.state.resizing) {
             const step = 1;
             if (e.key === 'Enter' || e.key === 'Escape') {
@@ -714,7 +778,8 @@ export class Window extends Component {
                     bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
                 >
                     <div
-                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
+                        ref={this.rootRef}
+                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%`, zIndex: (this.props.zIndex || 0) + (this.state.alwaysOnTop ? 1000 : 0) }}
                         className={
                             this.state.cursorType + " " +
                             (this.state.closed ? " closed-window " : "") +
@@ -722,16 +787,16 @@ export class Window extends Component {
                             (this.props.minimized ? " opacity-0 invisible duration-200 " : "") +
                             (this.state.grabbed ? " opacity-70 " : "") +
                             (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") +
-                            (this.props.isFocused
-                                ? (this.state.alwaysOnTop ? " z-50 " : " z-30 ")
-                                : (this.state.alwaysOnTop ? " z-40 " : " z-20 notFocused")) +
+                            (this.props.isFocused ? "" : " notFocused") +
                             " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                         id={this.id}
                         data-context="window"
                         data-app-id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
-                        tabIndex={0}
+                        aria-selected={this.props.isFocused}
+                        aria-hidden={!this.props.isFocused}
+                        tabIndex={this.props.isFocused ? 0 : -1}
                         onKeyDown={this.handleKeyDown}
                     >
                         {this.props.resizable !== false && <WindowYBorder resize={this.debouncedHandleHorizontalResize} />}
@@ -847,7 +912,7 @@ export function WindowEditButtons(props) {
             <button
                 type="button"
                 aria-label="Window minimize"
-                className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 active:bg-opacity-20 rounded-full flex justify-center items-center h-6 w-6 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 transition-colors"
                 onClick={props.minimize}
             >
                 <NextImage
@@ -865,7 +930,7 @@ export function WindowEditButtons(props) {
                         <button
                             type="button"
                             aria-label="Window restore"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 active:bg-opacity-20 rounded-full flex justify-center items-center h-6 w-6 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 transition-colors"
                             onClick={props.maximize}
                         >
                             <NextImage
@@ -881,7 +946,7 @@ export function WindowEditButtons(props) {
                         <button
                             type="button"
                             aria-label="Window maximize"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 active:bg-opacity-20 rounded-full flex justify-center items-center h-6 w-6 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 transition-colors"
                             onClick={props.maximize}
                         >
                             <NextImage
@@ -899,7 +964,7 @@ export function WindowEditButtons(props) {
                 type="button"
                 id={`close-${props.id}`}
                 aria-label="Window close"
-                className="mx-1 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6"
+                className="mx-1 cursor-pointer bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 active:bg-opacity-80 rounded-full flex justify-center items-center h-6 w-6 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2 transition-colors"
                 onClick={props.close}
             >
                 <NextImage

@@ -1,4 +1,5 @@
 import ReactGA from 'react-ga4';
+import { track } from '@vercel/analytics';
 import logger from './logger';
 
 interface WebVitalMetric {
@@ -39,6 +40,7 @@ export const reportWebVitals = ({ id, name, value }: WebVitalMetric): void => {
       label: id,
       value: rounded,
     });
+    track('web-vitals-alert', { name, id, value: rounded });
     if (typeof console !== 'undefined') {
       console.warn(`Web Vitals alert: ${name} ${rounded}`);
     }

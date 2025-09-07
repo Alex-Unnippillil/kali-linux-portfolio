@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import usePersistentState from '../../hooks/usePersistentState';
 import Filter from 'bad-words';
 import { toPng } from 'html-to-image';
 import offlineQuotes from '../../public/quotes/quotes.json';
@@ -76,7 +77,11 @@ export default function QuoteApp() {
   const [category, setCategory] = useState('');
   const [search, setSearch] = useState('');
   const [authorFilter, setAuthorFilter] = useState('');
-  const [favorites, setFavorites] = useState<string[]>([]);
+  const [favorites, setFavorites] = usePersistentState<string[]>(
+    'quote-favorites',
+    [],
+    (v): v is string[] => Array.isArray(v) && v.every((s) => typeof s === 'string'),
+  );
   const [dailyQuote, setDailyQuote] = useState<Quote | null>(null);
   const [posterize, setPosterize] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -88,10 +93,6 @@ export default function QuoteApp() {
   const [shuffle, setShuffle] = useState(false);
 
   useEffect(() => {
-    const fav = localStorage.getItem('quote-favorites');
-    if (fav) {
-      try { setFavorites(JSON.parse(fav)); } catch { /* ignore */ }
-    }
     const custom = localStorage.getItem('custom-quotes');
     if (custom) {
       try {
@@ -232,13 +233,9 @@ export default function QuoteApp() {
   const toggleFavorite = () => {
     if (!current) return;
     const key = keyOf(current);
-    setFavorites((favs) => {
-      const updated = favs.includes(key)
-        ? favs.filter((f) => f !== key)
-        : [...favs, key];
-      localStorage.setItem('quote-favorites', JSON.stringify(updated));
-      return updated;
-    });
+    setFavorites((favs) =>
+      favs.includes(key) ? favs.filter((f) => f !== key) : [...favs, key]
+    );
   };
 
   const importQuotes = (e: React.ChangeEvent<HTMLInputElement>) => {

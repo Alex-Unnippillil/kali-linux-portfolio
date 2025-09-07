@@ -25,7 +25,7 @@ describe('middleware CSP header', () => {
     const csp = res.headers['content-security-policy'];
     expect(csp).toBeDefined();
     expect(csp).toContain('nonce-');
-    expect(csp).toContain('https://platform.twitter.com');
+    expect(csp).toContain('https://*.twitter.com');
     expect(csp).toContain('https://cdn.jsdelivr.net');
   });
 });

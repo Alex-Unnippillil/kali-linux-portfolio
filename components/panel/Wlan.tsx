@@ -50,7 +50,7 @@ const Wlan: React.FC = () => {
         {bars.map((threshold, idx) => (
           <span
             key={threshold}
-            className={`w-1 mx-[1px] bg-current transition-opacity ${heights[idx]} ${
+            className={`w-1 mx-px bg-current transition-opacity ${heights[idx]} ${
               signal >= threshold ? "opacity-100" : "opacity-20"
             }`}
           />

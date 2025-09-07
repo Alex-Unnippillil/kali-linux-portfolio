@@ -9,7 +9,6 @@ import {
   type SVGProps,
 } from 'react';
 import DOMPurify from 'dompurify';
-import Head from 'next/head';
 import Script from 'next/script';
 import usePersistentState from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
@@ -254,9 +253,6 @@ export default function XTimeline() {
 
   return (
     <>
-      <Head>
-        <link rel="preconnect" href="https://platform.twitter.com" />
-      </Head>
       {showSetup && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
@@ -299,6 +295,8 @@ export default function XTimeline() {
       <Script
         src="https://platform.twitter.com/widgets.js"
         strategy="lazyOnload"
+        crossOrigin="anonymous"
+        integrity="sha384-2tybKFlI8VO9WeecxiJMRsCpfm6xp0mNzAuAFOxtqzenagQgy+bKmARu8EXVJhPu"
         onLoad={() => {
           setScriptLoaded(true);
           if (loaded) loadTimeline();

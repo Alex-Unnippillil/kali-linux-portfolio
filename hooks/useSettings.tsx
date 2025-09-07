@@ -2,10 +2,6 @@ import { isBrowser } from '@/utils/env';
 import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
 import usePersistentState from './usePersistentState';
 import {
-  getAccent as loadAccent,
-  setAccent as saveAccent,
-  getWallpaper as loadWallpaper,
-  setWallpaper as saveWallpaper,
   getDensity as loadDensity,
   setDensity as saveDensity,
   getReducedMotion as loadReducedMotion,
@@ -28,7 +24,7 @@ import {
   setSymbolicTrayIcons as saveSymbolicTrayIcons,
   defaults,
 } from '../utils/settingsStore';
-import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import { THEME_KEY, getTheme as getStoredTheme, setTheme as applyTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -116,8 +112,21 @@ export const SettingsContext = createContext<SettingsContextValue>({
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [accent, setAccent] = useState<string>(defaults.accent);
-  const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
+  const [accent, setAccent] = usePersistentState<string>(
+    'accent',
+    defaults.accent,
+    (v): v is string => typeof v === 'string',
+  );
+  const [wallpaper, setWallpaper] = usePersistentState<string>(
+    'bg-image',
+    defaults.wallpaper,
+    (v): v is string => typeof v === 'string',
+  );
+  const [theme, setTheme] = usePersistentState<string>(
+    THEME_KEY,
+    () => getStoredTheme(),
+    (v): v is string => typeof v === 'string',
+  );
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
@@ -128,7 +137,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [networkTime, setNetworkTime] = useState<boolean>(defaults.networkTime);
   const [symbolicTrayIcons, setSymbolicTrayIcons] = useState<boolean>(defaults.symbolicTrayIcons);
-  const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
   const [rotationMode] = usePersistentState<'off' | 'daily' | 'login'>(
@@ -155,8 +163,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      setAccent(await loadAccent());
-      setWallpaper(await loadWallpaper());
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
       setFontScale(await loadFontScale());
@@ -167,12 +173,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setHaptics(await loadHaptics());
       setNetworkTime(await loadNetworkTime());
       setSymbolicTrayIcons(await loadSymbolicTrayIcons());
-      setTheme(loadTheme());
     })();
   }, []);
 
   useEffect(() => {
-    saveTheme(theme);
+    applyTheme(theme);
   }, [theme]);
 
   useEffect(() => {
@@ -189,12 +194,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
-    saveAccent(accent);
   }, [accent]);
 
-  useEffect(() => {
-    saveWallpaper(wallpaper);
-  }, [wallpaper]);
 
   useEffect(() => {
     if (rotationMode === 'off') return;

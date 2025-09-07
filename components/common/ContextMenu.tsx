@@ -33,6 +33,13 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
   );
 
   useEffect(() => {
+    if (open && menuRef.current) {
+      const first = menuRef.current.querySelector<HTMLElement>('[role="menuitem"], [role="menuitemcheckbox"]');
+      first?.focus();
+    }
+  }, [open]);
+
+  useEffect(() => {
     const node = targetRef.current;
     if (!node) return;
 

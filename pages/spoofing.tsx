@@ -1,5 +1,7 @@
 import React from 'react';
-import Meta from '../components/SEO/Meta';
+import { baseMetadata } from '../lib/metadata';
+
+export const metadata = baseMetadata;
 
 interface TileProps {
   title: string;
@@ -60,7 +62,6 @@ const DnsDiagram = () => (
 
 const SpoofingOverview = () => (
   <>
-    <Meta />
     <main className="p-4 grid gap-4 md:grid-cols-2 bg-ub-cool-grey min-h-screen">
       <ToolTile title="arpspoof" link="https://manpages.debian.org/unstable/dsniff/arpspoof.8.en.html">
         <ArpDiagram />

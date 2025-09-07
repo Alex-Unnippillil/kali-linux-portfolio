@@ -1,5 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
+const locales = ['en', 'es'];
+const defaultLocale = 'en';
+const PUBLIC_FILE = /\.(.*)$/;
+
 function nonce() {
   const arr = crypto.getRandomValues(new Uint8Array(16));
   let str = '';
@@ -10,15 +14,27 @@ function nonce() {
 }
 
 export function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  if (
+    !PUBLIC_FILE.test(pathname) &&
+    !pathname.startsWith('/_next') &&
+    !pathname.includes('/api') &&
+    !locales.some((loc) => pathname === `/${loc}` || pathname.startsWith(`/${loc}/`))
+  ) {
+    const language = req.headers.get('accept-language')?.split(',')[0].split('-')[0];
+    const locale = locales.includes(language ?? '') ? language! : defaultLocale;
+    return NextResponse.redirect(new URL(`/${locale}${pathname}`, req.url));
+  }
+
   const n = nonce();
   const csp = [
     "default-src 'self'",
     "img-src 'self' https: data:",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "style-src 'self' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
-    `script-src 'self' 'unsafe-inline' 'nonce-${n}' https://vercel.live https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://sdk.scdn.co https://cdn.jsdelivr.net https://cdnjs.cloudflare.com`,
-    "connect-src 'self' https://cdn.syndication.twimg.com https://*.twitter.com *.x.com https://sdk.scdn.co",
-    "frame-src 'self' https://vercel.live https://stackblitz.com https://ghbtns.com https://platform.twitter.com https://open.spotify.com https://todoist.com https://www.youtube.com https://www.youtube-nocookie.com",
+    `script-src 'self' 'unsafe-inline' 'nonce-${n}' https://vercel.live https://*.twitter.com https://*.twimg.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://sdk.scdn.co https://cdn.jsdelivr.net https://cdnjs.cloudflare.com`,
+    "connect-src 'self' https://example.com https://*.twitter.com https://*.twimg.com https://*.x.com https://*.google.com https://stackblitz.com",
+    "frame-src 'self' https://vercel.live https://stackblitz.com https://*.google.com https://*.twitter.com https://*.x.com https://www.youtube-nocookie.com https://open.spotify.com https://react.dev https://example.com",
     "frame-ancestors 'self'",
     "object-src 'none'",
     "base-uri 'self'",
@@ -34,6 +50,7 @@ export function middleware(req: NextRequest) {
   });
   res.headers.set('x-csp-nonce', n);
   res.headers.set('Content-Security-Policy', csp);
+  res.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   if (req.headers.get('accept')?.includes('text/html')) {
     res.headers.set('X-Content-Type-Options', 'nosniff');
   }

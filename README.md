@@ -61,7 +61,9 @@ To send text or links directly into the Sticky Notes app:
 1. Open the site in a supported browser (Chrome, Edge, etc.).
 2. Use the browser's **Install** or **Add to Home screen** option.
 3. After installation, use the system **Share** action and select "Kali Linux Portfolio".
-4. The shared content will appear as a new note.
+4. The shared text or URL is routed through the manifest `share_target` endpoint and appears as a new Sticky Note.
+
+Tested on **Chrome** and **Edge**: sharing a snippet or link creates a note and focuses the Sticky Notes window immediately after the share completes.
 
 ### Service Worker (SW)
 
@@ -69,6 +71,22 @@ To send text or links directly into the Sticky Notes app:
 - Only assets under `public/` are precached.
 - Dynamic routes or API responses are not cached.
 - Future work may use `injectManifest` for finer control.
+
+### Bundle size budgets
+
+Client bundle size is tracked using `@next/bundle-analyzer`. Thresholds defined in
+[`bundle-budgets.json`](./bundle-budgets.json) are enforced in CI and can be
+verified locally:
+
+```bash
+ANALYZE=true yarn build
+yarn check-budgets
+```
+
+Current limits:
+
+- `^chunks/framework`: 300000 bytes
+- `^chunks/main-app`: 350000 bytes
 
 ---
 
@@ -94,6 +112,7 @@ See `.env.local.example` for the full list.
 - `yarn test` – run the test suite.
 - `yarn lint` – check code for linting issues.
 - `yarn export` – generate a static export in the `out/` directory.
+- `yarn check-budgets` – verify client bundle size against configured limits.
 
 ---
 
@@ -245,7 +264,7 @@ Defined in `next.config.js`. See [CSP External Domains](#csp-external-domains) f
 - **Content-Security-Policy (CSP)** (string built from `ContentSecurityPolicy[]`; see [CSP External Domains](#csp-external-domains))
 - `X-Content-Type-Options: nosniff`
 - `Referrer-Policy: strict-origin-when-cross-origin`
-- `Permissions-Policy: camera=(), microphone=(), geolocation=*, interest-cohort=()`
+- `Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()`
 - `X-Frame-Options: SAMEORIGIN`
 
 ### CSP External Domains
@@ -254,19 +273,19 @@ These external domains are whitelisted in the default CSP. Update this list when
 
 | Domain | Purpose |
 | --- | --- |
-| `platform.twitter.com` | Twitter widgets and scripts |
-| `syndication.twitter.com` | Twitter embed scripts |
-| `cdn.syndication.twimg.com` | Twitter asset CDN |
-| `*.twitter.com` | Additional Twitter content |
+| `*.twitter.com` | Twitter widgets and scripts |
+| `*.twimg.com` | Twitter asset CDN |
 | `*.x.com` | X (Twitter) domain equivalents |
 | `*.google.com` | Google services and Chrome app favicons |
 | `example.com` | Chrome app demo origin |
-| `developer.mozilla.org` | Chrome app demo origin |
-| `en.wikipedia.org` | Chrome app demo origin |
+| `openweathermap.org` | Weather widget images |
+| `ghchart.rshah.org` | GitHub contribution charts |
+| `data.typeracer.com` | Typing race data |
+| `images.credly.com` | Certification badges |
+| `staticmap.openstreetmap.de` | Static map images |
 | `cdn.jsdelivr.net` | Math.js library |
 | `cdnjs.cloudflare.com` | PDF.js worker |
 | `stackblitz.com` | StackBlitz IDE embeds |
-| `www.youtube.com` | YouTube IFrame API |
 | `www.youtube-nocookie.com` | YouTube video embeds (privacy-enhanced) |
 | `open.spotify.com` | Spotify embeds |
 | `react.dev` | React documentation embeds |
@@ -276,7 +295,6 @@ These external domains are whitelisted in the default CSP. Update this list when
 
 **Notes for prod hardening**
 - Review `connect-src` and `frame-src` to ensure only required domains are present for your deployment.
-- Consider removing `'unsafe-inline'` from `style-src` once all inline styles are eliminated.
 - If deploying on a domain that serves a PDF resume via `<object>`, keep `X-Frame-Options: SAMEORIGIN`. Otherwise you can rely on CSP `frame-ancestors` instead.
 
 ---

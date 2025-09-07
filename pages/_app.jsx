@@ -6,6 +6,8 @@ import { isBrowser } from '@/utils/env';
 import { useEffect } from 'react';
 import { Analytics } from '@vercel/analytics/next';
 import dynamic from 'next/dynamic';
+import Head from 'next/head';
+import { useRouter } from 'next/router';
 import '../styles/tailwind.css';
 import '../styles/globals.css';
 import '../styles/index.css';
@@ -18,6 +20,7 @@ import { TrayProvider } from '../hooks/useTray';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import useReportWebVitals from '../hooks/useReportWebVitals';
 
 
 let SpeedInsights = () => null;
@@ -31,6 +34,10 @@ if (process.env.NODE_ENV === 'production') {
 
 function MyApp(props) {
   const { Component, pageProps } = props;
+  const { asPath, locales, defaultLocale } = useRouter();
+  const path = asPath.split('?')[0];
+
+  useReportWebVitals();
 
   useEffect(() => {
     void import('@xterm/xterm/css/xterm.css');
@@ -218,42 +225,49 @@ function MyApp(props) {
   }, []);
 
   return (
-    <ErrorBoundary>
-      <Script src="/a2hs.js" strategy="beforeInteractive" />
-      <div>
-        <a
-          href="#app-grid"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"
-        >
-          Skip to app grid
-        </a>
-        <SettingsProvider>
-          <TrayProvider>
-            <PipPortalProvider>
-              <div aria-live="polite" id="live-region" />
-              <Component {...pageProps} />
-              <ShortcutOverlay />
-              {process.env.VERCEL_ANALYTICS_ID && (
-                <>
-                  <Analytics
-                    beforeSend={(e) => {
-                      if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-                      const evt = e;
-                      if (evt.metadata?.email) delete evt.metadata.email;
-                      return e;
-                    }}
-                  />
+    <>
+      <Head>
+        {locales?.map((l) => {
+          const href = l === defaultLocale ? path : `/${l}${path === '/' ? '' : path}`;
+          return <link key={l} rel="alternate" hrefLang={l} href={href} />;
+        })}
+        <link rel="alternate" hrefLang="x-default" href={path} />
+      </Head>
+      <ErrorBoundary>
+        <Script src="/a2hs.js" strategy="beforeInteractive" />
+        <div>
+          <a
+            href="#app-grid"
+            className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"
+          >
+            Skip to app grid
+          </a>
+          <SettingsProvider>
+            <TrayProvider>
+              <PipPortalProvider>
+                <div aria-live="polite" id="live-region" />
+                <Component {...pageProps} />
+                <ShortcutOverlay />
+                {process.env.VERCEL_ANALYTICS_ID && (
+                  <>
+                    <Analytics
+                      beforeSend={(e) => {
+                        if (e.url.includes('/admin') || e.url.includes('/private')) return null;
+                        const evt = e;
+                        if (evt.metadata?.email) delete evt.metadata.email;
+                        return e;
+                      }}
+                    />
 
-                  <SpeedInsights />
-                </>
-              )}
-            </PipPortalProvider>
-          </TrayProvider>
-        </SettingsProvider>
-      </div>
-    </ErrorBoundary>
-
-
+                    <SpeedInsights />
+                  </>
+                )}
+              </PipPortalProvider>
+            </TrayProvider>
+          </SettingsProvider>
+        </div>
+      </ErrorBoundary>
+    </>
   );
 }
 

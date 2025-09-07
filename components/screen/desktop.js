@@ -29,6 +29,7 @@ import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 import { addRecentApp, getRecentApps } from '../../utils/recent';
 import osdService from '../../utils/osdService';
+import DesktopTour from '../welcome/DesktopTour';
 
 export class Desktop extends Component {
     constructor() {
@@ -557,6 +558,8 @@ export class Desktop extends Component {
             if (this.state.closed_windows[app.id] === false) {
 
                 const pos = this.state.window_positions[app.id];
+                const index = this.app_stack.indexOf(app.id);
+                const zIndex = 100 + (index === -1 ? 0 : index);
                 const props = {
                     title: app.title,
                     id: app.id,
@@ -566,6 +569,7 @@ export class Desktop extends Component {
                     openApp: this.openApp,
                     focus: this.focus,
                     isFocused: this.state.focused_windows[app.id],
+                    zIndex,
                     hideSideBar: this.hideSideBar,
                     hasMinimised: this.hasMinimised,
                     minimized: this.state.minimized_windows[app.id],
@@ -857,18 +861,23 @@ export class Desktop extends Component {
     }
 
     focus = (objId) => {
-        // removes focus from all window and 
-        // gives focus to window with 'id = objId'
-        var focused_windows = this.state.focused_windows;
+        // removes focus from all windows and gives focus to window with 'id = objId'
+        const focused_windows = { ...this.state.focused_windows };
         focused_windows[objId] = true;
-        for (let key in focused_windows) {
-            if (focused_windows.hasOwnProperty(key)) {
-                if (key !== objId) {
-                    focused_windows[key] = false;
-                }
+        for (const key in focused_windows) {
+            if (key !== objId) {
+                focused_windows[key] = false;
             }
         }
-        this.setState({ focused_windows });
+        this.setState({ focused_windows }, () => {
+            this.windowRefs[objId]?.focusSelf?.();
+        });
+
+        const index = this.app_stack.indexOf(objId);
+        if (index !== -1) {
+            this.app_stack.splice(index, 1);
+        }
+        this.app_stack.push(objId);
     }
 
     addNewFolder = () => {
@@ -1171,6 +1180,8 @@ export class Desktop extends Component {
                         windows={this.state.switcherWindows}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
+
+                <DesktopTour showAllApps={this.showAllApps} />
 
             </main>
         )

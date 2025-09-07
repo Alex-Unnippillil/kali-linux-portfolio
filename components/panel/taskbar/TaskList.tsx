@@ -1,5 +1,9 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import usePersistentState from '../../../hooks/usePersistentState';
+
+const BLUR_DATA_URL =
+  'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
 
 interface AppDefinition {
   id: string;
@@ -85,13 +89,14 @@ const TaskList: React.FC<TaskListProps> = ({ apps, onMinimizeWindow }) => {
           style={{ width: rowSize, height: rowSize }}
         >
           {app.icon ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={app.icon}
               alt=""
               className="max-w-full max-h-full"
               width={rowSize}
               height={rowSize}
+              placeholder="blur"
+              blurDataURL={BLUR_DATA_URL}
             />
           ) : (
             <span>{app.title}</span>

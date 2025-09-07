@@ -3,7 +3,7 @@
 :root {
   /* Theme colors */
   --color-ub-grey: #0f1317;
-  --color-ub-warm-grey: #7d7f83;
+  --color-ub-warm-grey: #4d4d4d;
   --color-ub-cool-grey: #1a1f26;
   --color-ub-orange: #1793d1;
   --color-ub-lite-abrgn: #22262c;
@@ -14,8 +14,8 @@
   --color-ub-gedit-light: #003B70;
   --color-ub-gedit-darker: #010D1A;
   --color-ubt-grey: #F6F6F5;
-  --color-ubt-warm-grey: #AEA79F;
-  --color-ubt-cool-grey: #333333;
+  --color-ubt-warm-grey: #F6F6F5;
+  --color-ubt-cool-grey: #b3b3b3;
   --color-ubt-blue: #62A0EA;
   --color-ubt-green: #73D216;
   --color-ubt-gedit-orange: #F39A21;
@@ -57,7 +57,7 @@
   /* Minimum interactive target size */
   --hit-area: 32px;
   /* Focus outline */
-  --focus-outline-color: var(--color-ubt-blue);
+  --focus-outline-color: var(--color-accent);
   --focus-outline-width: 2px;
 }
 

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import Meta from '../components/SEO/Meta';
+import { baseMetadata } from '../lib/metadata';
+
+export const metadata = baseMetadata;
 
 interface Step {
   title: string;
@@ -43,7 +45,6 @@ const WpsAttack = () => {
 
   return (
     <>
-      <Meta />
       <main className="bg-ub-cool-grey text-white min-h-screen p-4">
         <h1 className="text-2xl mb-4">WPS Attack Walkthrough</h1>
         <ol className="space-y-4">
