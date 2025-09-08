@@ -138,7 +138,7 @@ button, [role="button"], input[type="button"], input[type="submit"], input[type=
 
 .btn:active {
     background-color: color-mix(in srgb, var(--btn-bg), var(--color-inverse) 20%);
-    transform: scale(0.98);
+    transform: scale(0.95);
 }
 
 .btn:focus-visible {

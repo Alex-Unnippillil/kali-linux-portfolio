@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, CSSProperties } from "react";
+import { stateStyles } from "./stateStyles";
 
 export type ButtonVariant = "default" | "primary" | "secondary" | "danger";
 
@@ -34,7 +35,7 @@ export default function Button({
   const variantStyle = variantStyles[variant];
   return (
     <button
-      className={`btn ${className}`}
+      className={`btn ${stateStyles} ${className}`}
       style={{ ...variantStyle, ...style }}
       {...props}
     />
