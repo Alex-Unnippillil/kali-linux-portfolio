@@ -62,12 +62,13 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   // This avoids the "PWA support is disabled" message in local builds.
   disable: process.env.NODE_ENV !== 'production',
   buildExcludes: [/dynamic-css-manifest\.json$/],
-    fallbacks: {
-      'document': '/offline.html',
-    },
+  fallbacks: {
+    'document': '/offline.html',
+  },
   workboxOptions: {
     cacheId: buildId,
     navigateFallback: '/offline.html',
+    swSrc: 'sw.ts',
     additionalManifestEntries: [
       // Precache the main shell and tools index so they are instantly available offline
       { url: '/', revision: buildId },
@@ -75,10 +76,6 @@ const withPWA = require('@ducanh2912/next-pwa').default({
       // Include core static assets generated in the manifest
       ...precacheManifest,
     ],
-
-    // Cache only images and fonts to ensure app shell updates while assets work offline
-    runtimeCaching: require('./cache.js')(buildId),
-
   },
 });
 
