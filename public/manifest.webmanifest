@@ -44,11 +44,6 @@
       "name": "New Note",
       "short_name": "Note",
       "url": "/apps/sticky_notes/"
-    },
-    {
-      "name": "Open 2048 Daily",
-      "short_name": "2048",
-      "url": "/?open=2048&daily=true"
     }
   ]
 }

@@ -6,7 +6,6 @@ Attempted to load each route under `/apps` in Chromium, Firefox, and WebKit. All
 
 | Route | Chromium | Firefox | WebKit |
 |-------|----------|---------|--------|
-| /apps/2048 | HTTP 500 | HTTP 500 | HTTP 500 |
 | /apps/blackjack | HTTP 500 | HTTP 500 | HTTP 500 |
 | /apps/calculator | HTTP 500 | HTTP 500 | HTTP 500 |
 | /apps/checkers | HTTP 500 | HTTP 500 | HTTP 500 |

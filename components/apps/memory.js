@@ -8,7 +8,6 @@ const DEFAULT_TIME = { 2: 30, 4: 60, 6: 120 };
 // Built-in theme assets that can be used by the memory game.
 const BUILT_IN_THEMES = {
   icons: [
-    '/themes/Yaru/apps/2048.svg',
     '/themes/Yaru/apps/car-racer.svg',
     '/themes/Yaru/apps/checkers.svg',
     '/themes/Yaru/apps/flappy-bird.svg',

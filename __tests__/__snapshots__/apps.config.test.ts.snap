@@ -610,17 +610,6 @@ exports[`apps.config snapshot matches snapshot 1`] = `
       "title": "Input Lab",
     },
     {
-      "defaultHeight": 45,
-      "defaultWidth": 35,
-      "desktop_shortcut": false,
-      "disabled": false,
-      "favourite": false,
-      "icon": "/themes/Yaru/apps/2048.svg",
-      "id": "2048",
-      "screen": [Function],
-      "title": "2048",
-    },
-    {
       "defaultHeight": 60,
       "defaultWidth": 50,
       "desktop_shortcut": false,
@@ -989,17 +978,6 @@ exports[`apps.config snapshot matches snapshot 1`] = `
     "defaultWidth": 50,
   },
   "games": [
-    {
-      "defaultHeight": 45,
-      "defaultWidth": 35,
-      "desktop_shortcut": false,
-      "disabled": false,
-      "favourite": false,
-      "icon": "/themes/Yaru/apps/2048.svg",
-      "id": "2048",
-      "screen": [Function],
-      "title": "2048",
-    },
     {
       "defaultHeight": 60,
       "defaultWidth": 50,

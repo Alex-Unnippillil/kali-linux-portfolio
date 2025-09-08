@@ -13,10 +13,9 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
   ];
 
   // Add new app routes here to include them in smoke tests
-  const routes = [
-    '/apps/2048',
-    '/apps/ascii-art',
-    '/apps/autopsy',
+    const routes = [
+      '/apps/ascii-art',
+      '/apps/autopsy',
     '/apps/beef',
     '/apps/blackjack',
     '/apps/calculator',

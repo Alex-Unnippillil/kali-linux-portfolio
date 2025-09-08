@@ -430,7 +430,6 @@ play/pause and track controls include keyboard hotkeys.
 ### Games
 | Game | Route | Category |
 | --- | --- | --- |
-| 2048 | /apps/2048 | Game |
 | Asteroids | /apps/asteroids | Game |
 | Battleship | /apps/battleship | Game |
 | Blackjack | /apps/blackjack | Game |

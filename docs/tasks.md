@@ -95,7 +95,6 @@ Tools to cover: **BeEF, Ettercap, Metasploit, Wireshark, Kismet, Nikto, Autopsy,
 ## Games
 For each game below, build a canvas-based component with `requestAnimationFrame` game loop, `reset()` function, pause, sound toggle, small default window size, and localStorage highscores. Register each with `createDynamicApp('<name>','<Title>')` and `createDisplay`.
 
-- 2048
 - Asteroids
 - Battleship
 - Blackjack
