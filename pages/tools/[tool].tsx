@@ -1,4 +1,5 @@
 import CommandChip from '@/components/CommandChip';
+import CategoryBadge from '@/components/CategoryBadge';
 import toolData from '@/data/tool-details.json';
 import { GetStaticPaths, GetStaticProps } from 'next';
 
@@ -12,6 +13,7 @@ interface ToolInfo {
   description: string;
   commands: string[];
   links: LinkInfo[];
+  categories?: string[];
 }
 
 interface ToolPageProps {
@@ -22,6 +24,13 @@ export default function ToolPage({ tool }: ToolPageProps) {
   return (
     <div className="p-4 space-y-4">
       <h1 className="text-2xl font-bold">{tool.name}</h1>
+      {tool.categories && (
+        <div className="flex flex-wrap gap-2">
+          {tool.categories.map((cat) => (
+            <CategoryBadge key={cat} category={cat} />
+          ))}
+        </div>
+      )}
       <p>{tool.description}</p>
       {tool.commands.length > 0 && (
         <section>

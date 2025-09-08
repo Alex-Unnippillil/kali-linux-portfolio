@@ -1,8 +1,39 @@
 [
   {
+    "id": "nmap",
+    "name": "Nmap",
+    "summary": "Network exploration tool and security/port scanner.",
+    "categories": ["Information Gathering"],
+    "packages": [
+      { "name": "nmap" }
+    ],
+    "commands": [
+      { "label": "Install", "cmd": "apt install nmap" },
+      { "label": "Run", "cmd": "nmap -sV 192.168.0.1" }
+    ],
+    "upstream": "https://nmap.org/",
+    "related": ["hydra"]
+  },
+  {
+    "id": "hydra",
+    "name": "Hydra",
+    "summary": "Parallelized login cracker which supports numerous protocols.",
+    "categories": ["Password Attacks"],
+    "packages": [
+      { "name": "hydra" }
+    ],
+    "commands": [
+      { "label": "Install", "cmd": "apt install hydra" },
+      { "label": "Run", "cmd": "hydra -l user -P passlist.txt ftp://192.168.0.1" }
+    ],
+    "upstream": "https://github.com/vanhauser-thc/thc-hydra",
+    "related": ["nmap"]
+  },
+  {
     "id": "dirbuster",
     "name": "DirBuster",
     "summary": "DirBuster is a multi threaded java application designed to brute force directories and files names on web/application servers.",
+    "categories": ["Web Applications"],
     "packages": [
       { "name": "dirbuster", "version": "1.0-RC1" }
     ],
@@ -17,6 +48,7 @@
     "id": "gobuster",
     "name": "GoBuster",
     "summary": "Directory/file & DNS busting tool written in Go.",
+    "categories": ["Web Applications", "Information Gathering"],
     "packages": [
       { "name": "gobuster", "version": "3.5.0" }
     ],
@@ -31,6 +63,7 @@
     "id": "feroxbuster",
     "name": "Feroxbuster",
     "summary": "A simple, fast, recursive content discovery tool written in Rust.",
+    "categories": ["Web Applications"],
     "packages": [
       { "name": "feroxbuster", "version": "2.10.4" }
     ],

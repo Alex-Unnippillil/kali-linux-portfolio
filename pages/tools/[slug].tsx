@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { GetStaticPaths, GetStaticProps } from 'next';
 import tools from '../../data/tools.json';
 import copyToClipboard from '../../utils/clipboard';
+import CategoryBadge from '../../components/CategoryBadge';
 
 interface ToolCommand {
   label?: string;
@@ -17,6 +18,7 @@ interface Tool {
   id: string;
   name: string;
   summary: string;
+  categories?: string[];
   packages: ToolPackage[];
   commands: ToolCommand[];
   upstream: string;
@@ -34,7 +36,14 @@ export default function ToolPage({ tool }: Props) {
 
   return (
     <div className="p-4 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">{tool.name}</h1>
+      <h1 className="text-2xl font-bold mb-2">{tool.name}</h1>
+      {tool.categories && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          {tool.categories.map((cat) => (
+            <CategoryBadge key={cat} category={cat} />
+          ))}
+        </div>
+      )}
       <p className="mb-6">{tool.summary}</p>
 
       {tool.packages?.length > 0 && (

@@ -1,5 +1,6 @@
 import { useState, useRef, KeyboardEvent } from 'react';
-import tools from '../../data/kali-tools.json';
+import tools from '../../data/tools.json';
+import CategoryBadge from '../../components/CategoryBadge';
 
 const PAGE_SIZE = 30;
 const COLUMNS = 3; // used for keyboard navigation
@@ -58,6 +59,9 @@ export default function ToolsPage() {
             >
               <h3 className="font-semibold">{tool.name}</h3>
               <div className="mt-2 flex flex-wrap gap-2">
+                {tool.categories?.map((cat: string) => (
+                  <CategoryBadge key={cat} category={cat} />
+                ))}
                 <a
                   href={`https://gitlab.com/kalilinux/packages/${tool.id}`}
                   target="_blank"
