@@ -26,6 +26,7 @@ import NotificationCenter from '../components/common/NotificationCenter';
 import HighContrastToggle from '../components/common/HighContrastToggle';
 import { Workbox } from 'workbox-window';
 import Toast from '../components/ui/Toast';
+import useLocale from '../hooks/useLocale';
 
 
 let SpeedInsights = () => null;
@@ -45,6 +46,7 @@ function MyApp(props) {
   const [updateReady, setUpdateReady] = useState(false);
   const wbRef = useRef(null);
 
+  useLocale();
   useReportWebVitals();
 
   useEffect(() => {

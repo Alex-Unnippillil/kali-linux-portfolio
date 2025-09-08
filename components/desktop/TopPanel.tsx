@@ -18,7 +18,7 @@ interface Props {
  */
 export default function TopPanel({ title }: Props) {
   return (
-    <header className="flex items-center justify-between w-full bg-ub-grey text-ubt-grey h-8 md:h-6 lg:h-8 px-2 md:px-1 lg:px-2 text-sm md:text-xs lg:text-sm sticky top-0 z-40">
+    <header className="flex items-center justify-between w-full bg-ub-grey text-ubt-grey h-8 md:h-6 lg:h-8 px-2 md:px-1 lg:px-2 text-sm md:text-xs lg:text-sm sticky top-0 z-40 rtl:flex-row-reverse">
       {/* App menu */}
       <div className="flex items-center">
         <WhiskerMenu />
@@ -34,7 +34,7 @@ export default function TopPanel({ title }: Props) {
       </div>
 
       {/* System indicators */}
-      <div className="flex items-center space-x-2 md:space-x-1 lg:space-x-2" aria-label="System indicators">
+      <div className="flex items-center space-x-2 md:space-x-1 lg:space-x-2 rtl:flex-row-reverse rtl:space-x-reverse" aria-label="System indicators">
         <div className="hidden sm:block">
           <PanelClock />
         </div>
