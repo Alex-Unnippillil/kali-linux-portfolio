@@ -16,11 +16,14 @@ export default function Header() {
         <div
           className="relative"
           onMouseEnter={() => setDocsOpen(true)}
+          onMouseLeave={closeDocs}
         >
           <button
             type="button"
             onClick={() => setDocsOpen((v) => !v)}
             className="hover:underline"
+            aria-haspopup="true"
+            aria-expanded={docsOpen}
           >
             Documentation
           </button>
