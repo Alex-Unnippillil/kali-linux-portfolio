@@ -51,7 +51,12 @@ async function buildIndex() {
   // Tool names
   const toolsPath = path.join(process.cwd(), 'data', 'kali-tools.json');
   if (fs.existsSync(toolsPath)) {
-    const tools = JSON.parse(fs.readFileSync(toolsPath, 'utf8')) as { id: string; name: string }[];
+    const tools = JSON.parse(fs.readFileSync(toolsPath, 'utf8')) as {
+      id: string;
+      name: string;
+      version?: string;
+      updated?: boolean;
+    }[];
     for (const tool of tools) {
       idx.add({
         id: `tool-${tool.id}`,
