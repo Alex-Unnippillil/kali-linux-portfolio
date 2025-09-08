@@ -4,6 +4,11 @@ interface Platform {
   icon: string;
   title: string;
   description: string;
+  badge?: {
+    src: string;
+    href: string;
+    alt: string;
+  };
 }
 
 const platforms: Platform[] = [
@@ -26,6 +31,11 @@ const platforms: Platform[] = [
     icon: "📦",
     title: "Containers",
     description: "Run Kali in Docker and other container platforms.",
+    badge: {
+      src: "/badges/containers.svg",
+      href: "https://www.kali.org/docs/containers",
+      alt: "Containers badge",
+    },
   },
   {
     icon: "📱",
@@ -46,6 +56,11 @@ const platforms: Platform[] = [
     icon: "🪟",
     title: "WSL",
     description: "Integrate Kali with Windows Subsystem for Linux.",
+    badge: {
+      src: "/badges/wsl.svg",
+      href: "https://aka.ms/wslstorepage",
+      alt: "WSL badge",
+    },
   },
 ];
 
@@ -63,6 +78,11 @@ export default function KaliEverywhere() {
             </div>
             <h3 className="font-semibold">{p.title}</h3>
             <p className="text-sm text-muted">{p.description}</p>
+            {p.badge && (
+              <a href={p.badge.href} target="_blank" rel="noopener" className="mt-2">
+                <img src={p.badge.src} alt={p.badge.alt} className="h-6" />
+              </a>
+            )}
           </div>
         ))}
       </div>
