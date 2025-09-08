@@ -6,7 +6,7 @@ const PAGE_SIZE = 30;
 const COLUMNS = 3; // used for keyboard navigation
 
 const badgeClass =
-  'inline-block rounded bg-gray-200 px-2 py-1 text-xs font-semibold text-gray-800 dark:bg-gray-700 dark:text-gray-100';
+  'inline-block rounded-full border border-gray-300 bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-800 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100';
 
 export default function ToolsPage() {
   const [page, setPage] = useState(0);
@@ -77,6 +77,26 @@ export default function ToolsPage() {
                 >
                   Package
                 </a>
+                {tool.repo && (
+                  <a
+                    href={tool.repo}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={badgeClass}
+                  >
+                    Upstream
+                  </a>
+                )}
+                {tool.man && (
+                  <a
+                    href={tool.man}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={badgeClass}
+                  >
+                    Man
+                  </a>
+                )}
                 <span className={badgeClass}>{`$ apt install ${tool.id}`}</span>
               </div>
             </a>
