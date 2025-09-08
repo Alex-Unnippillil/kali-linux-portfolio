@@ -217,8 +217,14 @@ const Window = forwardRef<{ handleDrag: () => void; handleStop: () => void; hand
             ref={nodeRef}
             tabIndex={0}
             onKeyDown={handleKeyDown}
+            className="window"
             style={{ width: `${width}%`, height: `${height}%` }}
           >
+            <div className="window-controls">
+              <button type="button" className="window-control" aria-label="close window" />
+              <button type="button" className="window-control" aria-label="minimize window" />
+              <button type="button" className="window-control" aria-label="maximize window" />
+            </div>
             {children}
           </div>
         </Draggable>

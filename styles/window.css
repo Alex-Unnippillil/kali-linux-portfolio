@@ -1,0 +1,51 @@
+/* Window styles */
+
+.window {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.window-controls {
+  display: flex;
+  gap: var(--space-1);
+  justify-content: flex-end;
+  padding: var(--space-1);
+  background: var(--color-secondary);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.window-control {
+  width: var(--hit-area);
+  height: var(--hit-area);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-muted);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background-color var(--motion-fast);
+}
+
+.window-control:hover {
+  background: color-mix(in srgb, var(--color-muted), var(--color-inverse) 10%);
+}
+
+/* Undercover mode adjustments */
+html[data-undercover='true'] .window-controls {
+  background: var(--color-surface);
+}
+
+html[data-undercover='true'] .window-control {
+  background: var(--color-muted);
+}
+
+html[data-undercover='true'] .window-control:hover {
+  background: color-mix(in srgb, var(--color-muted), var(--color-inverse) 10%);
+}
