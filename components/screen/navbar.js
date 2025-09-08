@@ -21,6 +21,12 @@ export default class Navbar extends Component {
                                         <Image src="/themes/Yaru/status/network-wireless-signal-good-symbolic.svg" alt="network icon" width={16} height={16} className="w-4 h-4" />
                                 </div>
                                 <WhiskerMenu />
+                                <a
+                                        href="/get-involved"
+                                        className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+                                >
+                                        Community
+                                </a>
                                 <HelpMenu />
                                 <div
                                         className={
