@@ -8,6 +8,15 @@ import { getDailySeed, currentDateString } from '../../utils/dailySeed';
 import copyToClipboard from '../../utils/clipboard';
 import useToast from '../../hooks/useToast';
 import { isBrowser } from '@/utils/env';
+import {
+  moveLeft,
+  moveRight,
+  moveUp,
+  moveDown,
+  hasMoves,
+  addRandomTile,
+  checkHighest,
+} from './engine';
 
 const SIZE = 4;
 
@@ -28,63 +37,8 @@ const hashSeed = (str: string): number => {
   return h >>> 0;
 };
 
-const slideRow = (row: number[]) => {
-  const arr = row.filter((n) => n !== 0);
-  for (let i = 0; i < arr.length - 1; i += 1) {
-    const current = arr[i]!;
-    const next = arr[i + 1]!;
-    if (current === next) {
-      arr[i] = current * 2;
-      arr[i + 1] = 0;
-    }
-  }
-  const newRow = arr.filter((n) => n !== 0);
-  while (newRow.length < SIZE) newRow.push(0);
-  return newRow;
-};
-
-const transpose = (board: number[][]): number[][] => {
-  if (board.length === 0) return [];
-  return board[0].map((_, c) => board.map((row) => row[c]!));
-};
-const flip = (board: number[][]) => board.map((row) => [...row].reverse());
-
-const moveLeft = (board: number[][]) => board.map((row) => slideRow(row));
-const moveRight = (board: number[][]) => flip(moveLeft(flip(board)));
-const moveUp = (board: number[][]) => transpose(moveLeft(transpose(board)));
-const moveDown = (board: number[][]) => transpose(moveRight(transpose(board)));
-
 const boardsEqual = (a: number[][], b: number[][]) =>
   a.every((row, r) => row.every((cell, c) => cell === b[r][c]));
-
-const hasMoves = (board: number[][]) => {
-  for (let r = 0; r < SIZE; r += 1) {
-    for (let c = 0; c < SIZE; c += 1) {
-      if (board[r][c] === 0) return true;
-      if (c < SIZE - 1 && board[r][c] === board[r][c + 1]) return true;
-      if (r < SIZE - 1 && board[r][c] === board[r + 1][c]) return true;
-    }
-  }
-  return false;
-};
-
-const checkHighest = (board: number[][]) => {
-  let m = 0;
-  board.forEach((row) => row.forEach((v) => { if (v > m) m = v; }));
-  return m;
-};
-
-const addRandomTile = (b: number[][], rand: () => number) => {
-  const empty: [number, number][] = [];
-  b.forEach((row, r) =>
-    row.forEach((cell, c) => {
-      if (cell === 0) empty.push([r, c]);
-    })
-  );
-  if (empty.length === 0) return;
-  const [r, c] = empty[Math.floor(rand() * empty.length)];
-  b[r][c] = rand() < 0.9 ? 2 : 4;
-};
 
 const tileColors: Record<number, string> = {
   2: 'bg-gray-300 text-gray-800',
@@ -145,9 +99,9 @@ const Page2048 = () => {
       const s = await getDailySeed('2048');
       const seed = hashSeed(s);
       const rand = mulberry32(seed);
-      const b = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
-      addRandomTile(b, rand);
-      addRandomTile(b, rand);
+      let b = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+      b = addRandomTile(b, rand);
+      b = addRandomTile(b, rand);
       if (!mounted) return;
       setBoard(b);
       rngRef.current = rand;
@@ -193,7 +147,7 @@ const Page2048 = () => {
       if (dir === 'ArrowDown') moved = moveDown(board);
       if (!moved || boardsEqual(board, moved)) return;
       setHistory((h) => [...h, board.map((row) => [...row])]);
-      addRandomTile(moved, rngRef.current);
+      moved = addRandomTile(moved, rngRef.current);
       const newHighest = checkHighest(moved);
       if ((newHighest === 2048 || newHighest === 4096) && newHighest > highest) {
         ReactGA.event('post_score', { score: newHighest, board: boardType });
@@ -232,9 +186,9 @@ const Page2048 = () => {
   const restart = useCallback(() => {
     const rand = mulberry32(seedRef.current);
     rngRef.current = rand;
-    const b = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
-    addRandomTile(b, rand);
-    addRandomTile(b, rand);
+    let b = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+    b = addRandomTile(b, rand);
+    b = addRandomTile(b, rand);
     setBoard(b);
     setMoves([]);
     setHistory([]);
