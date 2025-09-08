@@ -1,5 +1,6 @@
 import React from 'react';
 import ia from '../../data/ia.json';
+import StatusPill from './StatusPill';
 
 interface NavItem {
   label: string;
@@ -10,7 +11,7 @@ interface NavItem {
 const Header: React.FC = () => (
   <header className="border-b border-gray-700 p-4">
     <nav aria-label="Main navigation">
-      <ul className="flex flex-wrap gap-4">
+      <ul className="flex flex-wrap items-center gap-4">
         {(ia as any).header.map((item: NavItem) => (
           <li key={item.label} className="relative">
             {item.children ? (
@@ -33,6 +34,9 @@ const Header: React.FC = () => (
             )}
           </li>
         ))}
+        <li className="ml-auto">
+          <StatusPill />
+        </li>
       </ul>
     </nav>
   </header>
