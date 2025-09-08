@@ -8,6 +8,14 @@ export default function Status() {
   const { allowNetwork, theme, symbolicTrayIcons } = useSettings();
   const { icons, register, unregister } = useTray();
   const [online, setOnline] = useState(true);
+  const [undercover, setUndercover] = useState(false);
+
+  useEffect(() => {
+    setUndercover(document.documentElement.dataset.undercover === 'true');
+    const handler = (e) => setUndercover(e.detail.value);
+    document.addEventListener('undercover-change', handler);
+    return () => document.removeEventListener('undercover-change', handler);
+  }, []);
 
   useEffect(() => {
     const pingServer = async () => {
@@ -40,19 +48,21 @@ export default function Status() {
 
   useEffect(() => {
     const id = 'network';
-    const themeDir = theme === 'kali-light' ? 'Yaru' : 'Yaru';
+    const themeDir = undercover ? 'Undercover' : 'Yaru';
+    const connected = undercover
+      ? '/themes/Undercover/status/network.svg'
+      : `/themes/${themeDir}/status/network-wireless-signal-good-symbolic.svg`;
+    const disconnected = undercover
+      ? '/themes/Undercover/status/network.svg'
+      : `/themes/${themeDir}/status/network-wireless-signal-none-symbolic.svg`;
     register({
       id,
       tooltip: online ? (allowNetwork ? 'Online' : 'Online (requests blocked)') : 'Offline',
-      sni: online
-        ? `/themes/${themeDir}/status/network-wireless-signal-good-symbolic.svg`
-        : `/themes/${themeDir}/status/network-wireless-signal-none-symbolic.svg`,
-      legacy: online
-        ? `/themes/${themeDir}/status/network-wireless-signal-good-symbolic.svg`
-        : `/themes/${themeDir}/status/network-wireless-signal-none-symbolic.svg`,
+      sni: online ? connected : disconnected,
+      legacy: online ? connected : disconnected,
     });
     return () => unregister(id);
-  }, [online, allowNetwork, register, unregister, theme]);
+  }, [online, allowNetwork, register, unregister, undercover]);
 
   useEffect(() => {
     const id = 'volume';

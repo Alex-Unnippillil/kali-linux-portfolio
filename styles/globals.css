@@ -91,8 +91,8 @@ html[data-theme='kali-light'] {
   --color-dark: var(--color-ubt-gedit-dark);
 }
 
-/* Undercover theme */
-html[data-theme='undercover'] {
+/* Undercover mode */
+html[data-undercover='true'] {
   --color-bg: #f0f0f0;
   --color-text: #000000;
   --color-primary: #0078d7;
@@ -111,12 +111,12 @@ html[data-theme='undercover'] {
   --color-ub-window-title: #0078d7;
 }
 
-html[data-theme='undercover'] .main-navbar-vp {
+html[data-undercover='true'] .main-navbar-vp {
   background: #e5e5e5;
   color: #000;
 }
 
-html[data-theme='undercover'] .window-titlebar {
+html[data-undercover='true'] .window-titlebar {
   background: #ffffff;
   color: #000;
   border-bottom: 1px solid #c0c0c0;

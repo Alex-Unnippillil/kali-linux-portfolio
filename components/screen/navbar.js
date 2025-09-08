@@ -6,23 +6,27 @@ import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
 import WhiskerMenu from '../menu/WhiskerMenu';
 import HelpMenu from '../menu/HelpMenu';
-import { getTheme, setTheme } from '../../utils/theme';
+import { getUndercover, setUndercover } from '../../utils/theme';
 
 export default class Navbar extends Component {
   constructor() {
     super();
     this.state = {
       status_card: false,
-      undercover: getTheme() === 'undercover',
+      undercover: getUndercover(),
       showTip: false,
     };
   }
 
+  componentDidMount() {
+    setUndercover(this.state.undercover);
+  }
+
   render() {
     const toggleUndercover = () => {
-      const next = this.state.undercover ? 'default' : 'undercover';
-      setTheme(next);
-      this.setState({ undercover: !this.state.undercover });
+      const next = !this.state.undercover;
+      setUndercover(next);
+      this.setState({ undercover: next });
     };
 
     return (
@@ -61,7 +65,7 @@ export default class Navbar extends Component {
               role="tooltip"
               className="absolute right-0 mt-1 w-48 p-2 text-xs text-white bg-black rounded shadow-lg"
             >
-              Windows-like theme.{' '}
+              Undercover mode – Windows-like theme.{' '}
               <Link href="/undercover" className="underline text-blue-300">
                 Read disclaimer
               </Link>

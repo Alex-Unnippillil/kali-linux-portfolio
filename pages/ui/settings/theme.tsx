@@ -85,7 +85,6 @@ export default function ThemeSettings() {
           <option value="default">Default</option>
           <option value="kali-dark">Kali Dark</option>
           <option value="kali-light">Kali Light</option>
-          <option value="undercover">Undercover</option>
           <option value="dark">Dark</option>
           <option value="neon">Neon</option>
           <option value="matrix">Matrix</option>
