@@ -56,12 +56,17 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        // Track the element that triggered this window so we can restore focus
+        this._opener = null;
         this.rootRef = React.createRef();
     }
 
     componentDidMount() {
         this.id = this.props.id;
         this.setDefaultWindowDimenstion();
+
+        // Remember the currently focused element before this window takes focus
+        this._opener = document.activeElement;
 
         // google analytics
         ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
@@ -79,6 +84,9 @@ export class Window extends Component {
         if (this.props.initialSnap) {
             this.snapWindow(this.props.initialSnap);
         }
+
+        // Move focus into the window once it is mounted
+        this.focusSelf();
     }
 
     componentWillUnmount() {
@@ -611,7 +619,12 @@ export class Window extends Component {
             this.deactivateOverlay();
             this.props.hideSideBar(this.id, false);
             setTimeout(() => {
-                this.props.closed(this.id)
+                this.props.closed(this.id);
+                // Restore focus to the element that opened this window
+                if (this._opener && typeof this._opener.focus === 'function') {
+                    this._opener.focus();
+                }
+                this._opener = null;
             }, delay); // skip delay when reduced motion is preferred
         });
     }

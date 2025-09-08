@@ -40,6 +40,43 @@ describe('Window lifecycle', () => {
     expect(closed).toHaveBeenCalledWith('test-window');
     jest.useRealTimers();
   });
+
+  it('moves focus to the window on mount and restores it on close', () => {
+    jest.useFakeTimers();
+    const closed = jest.fn();
+    const hideSideBar = jest.fn();
+
+    const trigger = document.createElement('button');
+    trigger.textContent = 'open';
+    document.body.appendChild(trigger);
+    trigger.focus();
+
+    render(
+      <Window
+        id="focus-test"
+        title="Focus Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={closed}
+        hideSideBar={hideSideBar}
+        openApp={() => {}}
+      />
+    );
+
+    const winEl = document.getElementById('focus-test')!;
+    expect(winEl).toHaveFocus();
+
+    const closeButton = screen.getByRole('button', { name: /window close/i });
+    fireEvent.click(closeButton);
+
+    act(() => {
+      jest.advanceTimersByTime(300);
+    });
+
+    expect(trigger).toHaveFocus();
+    jest.useRealTimers();
+  });
 });
 
 it('hides inactive windows from accessibility tree', () => {
