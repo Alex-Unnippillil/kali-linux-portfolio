@@ -1,8 +1,10 @@
 import Image from "next/image";
 import { decode } from "blurhash";
 import { PNG } from "pngjs";
+import { useEffect, useState } from "react";
 import desktopsData from "../content/desktops.json";
 import { baseMetadata } from "../lib/metadata";
+import ReleaseNotesModal from "../components/ReleaseNotesModal";
 
 export const metadata = baseMetadata;
 
@@ -26,6 +28,12 @@ export async function getStaticProps() {
  * @returns {JSX.Element}
  */
 export default function Home({ desktops }) {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    setOpen(true);
+  }, []);
+
   return (
     <main className="p-4">
       <h1 className="mb-4 text-2xl font-bold sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl">Choose the desktop you prefer</h1>
@@ -45,6 +53,7 @@ export default function Home({ desktops }) {
           </div>
         ))}
       </div>
+      <ReleaseNotesModal isOpen={open} onClose={() => setOpen(false)} />
     </main>
   );
 }
