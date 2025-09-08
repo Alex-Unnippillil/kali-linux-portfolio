@@ -88,7 +88,9 @@ const precacheManifest = require('./precache-manifest.json');
 const withPWA = require('@ducanh2912/next-pwa').default({
   dest: 'public',
   sw: 'service-worker.js',
-  disable: process.env.VERCEL_ENV !== 'production',
+  // Enable the service worker for all production builds, even when not on Vercel.
+  // This avoids the "PWA support is disabled" message in local builds.
+  disable: process.env.NODE_ENV !== 'production',
   buildExcludes: [/dynamic-css-manifest\.json$/],
     fallbacks: {
       'document': '/offline.html',
@@ -143,9 +145,9 @@ module.exports = withBundleAnalyzer(
     ...(isStaticExport && { output: 'export' }),
     webpack: configureWebpack,
 
-    // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
+    // Run ESLint during builds so linting problems surface in CI and local builds.
     eslint: {
-      ignoreDuringBuilds: true,
+      ignoreDuringBuilds: false,
     },
     images: {
       unoptimized: true,
