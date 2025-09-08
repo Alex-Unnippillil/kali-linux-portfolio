@@ -122,14 +122,14 @@ const WhiskerMenu: React.FC = () => {
         onClick={() => setOpen(o => !o)}
         className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
       >
-        <Icon name="menu" className="inline mr-1 w-4 h-4" />
+        <Icon name="menu" className="inline mr-1 w-4 h-4 rtl:ml-1 rtl:mr-0" />
         Applications
       </button>
       {open && (
-        <div
-          ref={menuRef}
-          className="absolute left-0 mt-1 z-50 flex bg-ub-grey text-white shadow-lg"
-          tabIndex={-1}
+          <div
+            ref={menuRef}
+            className="absolute left-0 mt-1 z-50 flex bg-ub-grey text-white shadow-lg rtl:left-auto rtl:right-0"
+            tabIndex={-1}
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
               setOpen(false);
@@ -140,7 +140,7 @@ const WhiskerMenu: React.FC = () => {
             {CATEGORIES.map(cat => (
               <button
                 key={cat.id}
-                className={`text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
+                className={`text-left px-2 py-1 rounded mb-1 rtl:text-right ${category === cat.id ? 'bg-gray-700' : ''}`}
                 onClick={() => setCategory(cat.id)}
               >
                 {cat.label}

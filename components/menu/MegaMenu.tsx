@@ -55,7 +55,7 @@ export default function MegaMenu() {
 
   return (
     <div className="relative" onMouseEnter={handleMenuEnter} onMouseLeave={handleMenuLeave}>
-      <ul className="flex gap-4">
+        <ul className="flex gap-4 rtl:flex-row-reverse">
         {SECTIONS.map((section, idx) => (
           <li
             key={section.label}
@@ -66,7 +66,7 @@ export default function MegaMenu() {
               {section.label}
             </button>
             {active === idx && (
-              <div className="absolute left-0 top-full mt-1 bg-ub-grey text-white shadow-lg p-4">
+                <div className="absolute left-0 top-full mt-1 bg-ub-grey text-white shadow-lg p-4 rtl:left-auto rtl:right-0">
                 <ul className="grid gap-2 sm:grid-cols-2">
                   {section.links.map((link) => (
                     <li key={link.href}>

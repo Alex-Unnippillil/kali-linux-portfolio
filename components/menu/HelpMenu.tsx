@@ -33,16 +33,16 @@ const HelpMenu: React.FC = () => {
         Help
       </button>
       {open && (
-        <div
-          ref={menuRef}
-          className="absolute left-0 mt-1 z-50 bg-ub-grey text-white shadow-lg p-2"
-          tabIndex={-1}
-        >
-          <button
-            type="button"
-            className="block px-2 py-1 text-left hover:underline"
-            onClick={showTour}
+          <div
+            ref={menuRef}
+            className="absolute left-0 mt-1 z-50 bg-ub-grey text-white shadow-lg p-2 rtl:left-auto rtl:right-0"
+            tabIndex={-1}
           >
+            <button
+              type="button"
+              className="block px-2 py-1 text-left hover:underline rtl:text-right"
+              onClick={showTour}
+            >
             Show Welcome Tour
           </button>
         </div>
