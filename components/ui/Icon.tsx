@@ -5,7 +5,11 @@ export type IconName = 'close' | 'minimize' | 'maximize' | 'menu' | 'grid';
 interface IconProps {
   name: IconName;
   /**
-   * Export scale: 1x = 24px, 2x = 48px, 3x = 72px
+   * Icon base size in pixels
+   */
+  size?: 20 | 24;
+  /**
+   * Device pixel ratio: 1x = 24px, 2x = 48px, 3x = 72px
    */
   scale?: 1 | 2 | 3;
   className?: string;
@@ -37,20 +41,22 @@ const paths: Record<IconName, React.ReactNode> = {
   ),
 };
 
-export function Icon({ name, scale = 1, className }: IconProps) {
-  const size = 24 * scale;
+export function Icon({ name, size = 24, scale = 1, className }: IconProps) {
+  const pixelSize = size * scale;
+  const strokeWidth = size === 20 ? 1.5 : 2;
+  const baseClass = size === 20 ? 'w-5 h-5' : 'w-6 h-6';
   return (
     <svg
-      width={size}
-      height={size}
+      width={pixelSize}
+      height={pixelSize}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={2}
+      strokeWidth={strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"
       vectorEffect="non-scaling-stroke"
-      className={className}
+      className={`${baseClass} ${className || ''}`.trim()}
     >
       {paths[name]}
     </svg>
