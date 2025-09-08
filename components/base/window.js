@@ -94,6 +94,14 @@ export class Window extends Component {
         }
     }
 
+    componentDidUpdate(prevProps, prevState) {
+        if (prevState.width !== this.state.width || prevState.height !== this.state.height) {
+            if (this.props.onSizeChange) {
+                this.props.onSizeChange(this.state.width, this.state.height);
+            }
+        }
+    }
+
     setDefaultWindowDimenstion = () => {
         if (this.props.defaultHeight && this.props.defaultWidth) {
             this.setState(

@@ -84,11 +84,12 @@ export class Desktop extends Component {
             }
 
             if (session.windows && session.windows.length) {
-                session.windows.forEach(({ id, x, y, snap }) => {
-                    positions[id] = { x, y, snap };
+                const ordered = [...session.windows].sort((a, b) => (a.order || 0) - (b.order || 0));
+                ordered.forEach(({ id, x, y, width, height, snap }) => {
+                    positions[id] = { x, y, width, height, snap };
                 });
                 this.setState({ window_positions: positions }, () => {
-                    session.windows.forEach(({ id }) => this.openApp(id));
+                    ordered.forEach(({ id }) => this.openApp(id));
                 });
             } else {
                 this.openApp('about-alex');
@@ -575,12 +576,13 @@ export class Desktop extends Component {
                     minimized: this.state.minimized_windows[app.id],
                     resizable: app.resizable,
                     allowMaximize: app.allowMaximize,
-                    defaultWidth: app.defaultWidth,
-                    defaultHeight: app.defaultHeight,
+                    defaultWidth: pos && pos.width !== undefined ? pos.width : app.defaultWidth,
+                    defaultHeight: pos && pos.height !== undefined ? pos.height : app.defaultHeight,
                     initialX: pos ? pos.x : undefined,
                     initialY: pos ? pos.y : undefined,
                     initialSnap: pos ? pos.snap : undefined,
                     onPositionChange: (x, y, snap) => this.updateWindowPosition(app.id, x, y, snap),
+                    onSizeChange: (w, h) => this.updateWindowSize(app.id, w, h),
                     snapEnabled: this.props.snapEnabled,
                 }
 
@@ -603,20 +605,38 @@ export class Desktop extends Component {
         this.setState(prev => ({
             window_positions: {
                 ...prev.window_positions,
-                [id]: { x: snap(x), y: snap(y), snap: snapPos }
+                [id]: { ...(prev.window_positions[id] || {}), x: snap(x), y: snap(y), snap: snapPos }
+            }
+        }), this.saveSession);
+    }
+
+    updateWindowSize = (id, width, height) => {
+        this.setState(prev => ({
+            window_positions: {
+                ...prev.window_positions,
+                [id]: { ...(prev.window_positions[id] || {}), width, height }
             }
         }), this.saveSession);
     }
 
     saveSession = () => {
-        if (!this.props.setSession) return;
+        if (!this.props || !this.props.setSession) return;
         const openWindows = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
-        const windows = openWindows.map(id => ({
-            id,
-            x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
-            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10,
-            snap: this.state.window_positions[id] ? this.state.window_positions[id].snap : null,
-        }));
+        const windows = openWindows.map(id => {
+            const pos = this.state.window_positions[id] || {};
+            const ref = this.windowRefs[id];
+            const width = pos.width !== undefined ? pos.width : ref?.state.width;
+            const height = pos.height !== undefined ? pos.height : ref?.state.height;
+            return {
+                id,
+                x: pos.x !== undefined ? pos.x : 60,
+                y: pos.y !== undefined ? pos.y : 10,
+                width: width !== undefined ? width : 60,
+                height: height !== undefined ? height : 85,
+                snap: pos.snap !== undefined ? pos.snap : null,
+                order: this.app_stack.indexOf(id),
+            };
+        });
         const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
         this.props.setSession({ ...this.props.session, windows, dock });
     }
@@ -878,6 +898,7 @@ export class Desktop extends Component {
             this.app_stack.splice(index, 1);
         }
         this.app_stack.push(objId);
+        this.saveSession();
     }
 
     addNewFolder = () => {

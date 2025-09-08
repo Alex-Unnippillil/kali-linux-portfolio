@@ -5,7 +5,10 @@ export interface SessionWindow {
   id: string;
   x: number;
   y: number;
-  snap?: 'left' | 'right' | 'top' | null;
+  width: number;
+  height: number;
+  order: number;
+  snap?: 'left' | 'right' | 'top' | 'bottom' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | null;
 }
 
 export interface DesktopSession {
@@ -31,11 +34,19 @@ function isSession(value: unknown): value is DesktopSession {
         typeof w.id === 'string' &&
         typeof w.x === 'number' &&
         typeof w.y === 'number' &&
+        typeof w.width === 'number' &&
+        typeof w.height === 'number' &&
+        typeof w.order === 'number' &&
         (w.snap === undefined ||
           w.snap === null ||
           w.snap === 'left' ||
           w.snap === 'right' ||
-          w.snap === 'top'),
+          w.snap === 'top' ||
+          w.snap === 'bottom' ||
+          w.snap === 'top-left' ||
+          w.snap === 'top-right' ||
+          w.snap === 'bottom-left' ||
+          w.snap === 'bottom-right'),
     ) &&
     typeof s.wallpaper === 'string' &&
     Array.isArray(s.dock)
