@@ -8,6 +8,7 @@ import * as Cloud from '../content/get-kali/cloud.mdx';
 import * as Containers from '../content/get-kali/containers.mdx';
 import * as Live from '../content/get-kali/live.mdx';
 import * as WSL from '../content/get-kali/wsl.mdx';
+import * as WinKex from '../content/get-kali/win-kex.mdx';
 import * as Purple from '../content/get-kali/purple.mdx';
 import * as Docs from '../content/get-kali/docs.mdx';
 
@@ -28,6 +29,11 @@ const platforms: Platform[] = [
   { slug: 'containers', ...(Containers as any) },
   { slug: 'live', ...(Live as any) },
   { slug: 'wsl', ...(WSL as any) },
+  {
+    slug: 'win-kex',
+    url: 'https://www.kali.org/docs/wsl/win-kex/',
+    ...(WinKex as any),
+  },
   { slug: 'purple', ...(Purple as any) },
   { slug: 'docs', url: 'https://www.kali.org/docs/', ...(Docs as any) },
 ];
