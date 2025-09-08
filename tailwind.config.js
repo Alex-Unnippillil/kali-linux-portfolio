@@ -38,7 +38,7 @@ module.exports = {
         'ub-dark-grey': 'var(--color-ub-dark-grey)',
       },
         fontFamily: {
-          ubuntu: ['Ubuntu', 'sans-serif'],
+          ubuntu: ['var(--font-ubuntu)', 'sans-serif'],
         },
         fontSize: {
           base: ['1rem', { lineHeight: '1.5' }],

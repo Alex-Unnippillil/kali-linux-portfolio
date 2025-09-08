@@ -39,8 +39,8 @@ export function middleware(req: NextRequest | { headers: Headers; nextUrl?: URL;
   const csp = [
     "default-src 'self'",
     "img-src 'self' https: data:",
-    "style-src 'self' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
+    "style-src 'self'",
+    "font-src 'self'",
     `script-src 'self' 'unsafe-inline' 'nonce-${n}' https://vercel.live https://*.twitter.com https://*.twimg.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://sdk.scdn.co https://cdn.jsdelivr.net https://cdnjs.cloudflare.com`,
     "connect-src 'self' https://example.com https://*.twitter.com https://*.twimg.com https://*.x.com https://*.google.com https://stackblitz.com",
     "frame-src 'self' https://vercel.live https://stackblitz.com https://*.google.com https://*.twitter.com https://*.x.com https://www.youtube-nocookie.com https://open.spotify.com https://react.dev https://example.com",
