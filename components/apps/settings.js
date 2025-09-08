@@ -238,24 +238,25 @@ export function Settings() {
             <div className="flex flex-wrap justify-center items-center border-t border-gray-900">
                 { 
                     wallpapers.map((name, index) => (
-                        <div
+                        <button
                             key={name}
-                            role="button"
+                            type="button"
                             aria-label={`Select ${name.replace('wall-', 'wallpaper ')}`}
                             aria-pressed={name === wallpaper}
-                            tabIndex="0"
                             onClick={changeBackgroundImage}
                             onFocus={changeBackgroundImage}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                    e.preventDefault();
-                                    changeBackgroundImage(e);
-                                }
-                            }}
                             data-path={name}
-                            className={((name === wallpaper) ? " border-yellow-700 " : " border-transparent ") + " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"}
-                            style={{ backgroundImage: `url(/wallpapers/${name}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}
-                        ></div>
+                            className={
+                                ((name === wallpaper) ? " border-yellow-700 " : " border-transparent ") +
+                                " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 border-4 border-opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]"
+                            }
+                            style={{
+                                backgroundImage: `url(/wallpapers/${name}.webp)`,
+                                backgroundSize: "cover",
+                                backgroundRepeat: "no-repeat",
+                                backgroundPosition: "center center",
+                            }}
+                        ></button>
                     ))
                 }
             </div>
