@@ -48,8 +48,9 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
   analyzerMode: 'json',
 });
 
-// Prefix all PWA caches with the current build ID so that each deployment
-// uses its own set of caches and outdated entries are naturally discarded.
+// Prefix PWA caches with the current build ID so each deployment gets its own
+// cache namespace. The service worker reads this via NEXT_PUBLIC_BUILD_ID and
+// calls setCacheNameDetails to apply the prefix.
 const buildId =
   process.env.NEXT_BUILD_ID || process.env.BUILD_ID || 'dev';
 
@@ -66,8 +67,6 @@ const withPWA = require('@ducanh2912/next-pwa').default({
     'document': '/offline.html',
   },
   workboxOptions: {
-    cacheId: buildId,
-    navigateFallback: '/offline.html',
     swSrc: 'sw.ts',
     additionalManifestEntries: [
       // Precache the main shell and tools index so they are instantly available offline
@@ -119,6 +118,7 @@ function configureWebpack(config, { isServer }) {
 module.exports = withBundleAnalyzer(
   withPWA({
     ...(isStaticExport && { output: 'export' }),
+    env: { NEXT_PUBLIC_BUILD_ID: buildId },
     serverExternalPackages: [
       '@supabase/supabase-js',
       '@tinyhttp/cookie-signature',
