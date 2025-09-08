@@ -17,7 +17,7 @@ const payloads: Payload[] = [
 ];
 
 export default function PayloadBuilder() {
-  const [selected, setSelected] = useState<Payload>(payloads[0]);
+  const [selected, setSelected] = useState<Payload>(payloads[0]!);
   const [copied, setCopied] = useState(false);
 
   const page = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>Payload</title></head><body><script>${selected.code}</script></body></html>`;
@@ -34,7 +34,7 @@ export default function PayloadBuilder() {
 
   const handleSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const next = payloads.find((p) => p.name === e.target.value);
-    setSelected(next || payloads[0]);
+    setSelected(next ?? payloads[0]!);
   };
 
   return (
