@@ -34,6 +34,14 @@ if (process.env.NODE_ENV === 'production') {
   );
 }
 
+let GridOverlay = () => null;
+if (process.env.NODE_ENV !== 'production') {
+  GridOverlay = dynamic(
+    () => import('../components/common/GridOverlay'),
+    { ssr: false },
+  );
+}
+
 
 function MyApp(props) {
   const { Component, pageProps, nonce } = props;
@@ -253,6 +261,7 @@ function MyApp(props) {
                   <div aria-live="polite" id="live-region" />
                   <Component {...pageProps} />
                   <ShortcutOverlay />
+                  <GridOverlay />
                   {process.env.VERCEL_ANALYTICS_ID && (
                     <>
                       <Analytics
