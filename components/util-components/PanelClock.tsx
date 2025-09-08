@@ -8,6 +8,9 @@ export default function PanelClock() {
   const [now, setNow] = useState<Date | null>(null);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dayRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [focusedIdx, setFocusedIdx] = useState(-1);
 
   useEffect(() => {
     const tick = () => setNow(new Date());
@@ -25,6 +28,24 @@ export default function PanelClock() {
     document.addEventListener('click', handle);
     return () => document.removeEventListener('click', handle);
   }, [open]);
+
+  useEffect(() => {
+    if (open) {
+      const index = weeks
+        .flat()
+        .findIndex((d) => d === now?.getDate());
+      const firstValid = weeks.flat().findIndex((d) => d !== null);
+      const idx = index >= 0 ? index : firstValid;
+      setFocusedIdx(idx);
+      // focus will be applied in effect below
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (open && focusedIdx >= 0) {
+      dayRefs.current[focusedIdx]?.focus();
+    }
+  }, [open, focusedIdx]);
 
   if (!now) return <span suppressHydrationWarning />;
 
@@ -52,6 +73,50 @@ export default function PanelClock() {
     weeks.push(week);
   }
 
+  const total = 42;
+  const move = (delta: number) => {
+    let idx = focusedIdx;
+    do {
+      idx = (idx + delta + total) % total;
+    } while (!dayRefs.current[idx]);
+    setFocusedIdx(idx);
+  };
+
+  const handleKey = (e: React.KeyboardEvent) => {
+    if (!open) return;
+    switch (e.key) {
+      case 'ArrowRight':
+        e.preventDefault();
+        move(1);
+        break;
+      case 'ArrowLeft':
+        e.preventDefault();
+        move(-1);
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        move(7);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        move(-7);
+        break;
+      case 'Enter':
+        e.preventDefault();
+        dayRefs.current[focusedIdx]?.click();
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setOpen(false);
+        buttonRef.current?.focus();
+        break;
+      case 'Tab':
+        e.preventDefault();
+        move(e.shiftKey ? -1 : 1);
+        break;
+    }
+  };
+
   return (
     <div className="relative" ref={ref}>
       <button
@@ -59,11 +124,15 @@ export default function PanelClock() {
         title={tooltip}
         onClick={() => setOpen((o) => !o)}
         className="outline-none"
+        ref={buttonRef}
       >
         {timeStr}
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 p-2 bg-ub-grey text-ubt-grey rounded shadow-lg">
+        <div
+          className="absolute right-0 mt-2 p-2 bg-ub-grey text-ubt-grey rounded shadow-lg"
+          onKeyDown={handleKey}
+        >
           <div className="text-center mb-2">
             {now.toLocaleString([], { month: 'long', year: 'numeric' })}
           </div>
@@ -80,16 +149,41 @@ export default function PanelClock() {
             <tbody>
               {weeks.map((week, idx) => (
                 <tr key={idx}>
-                  {week.map((d, i) => (
-                    <td
-                      key={i}
-                      className={`p-1 text-center ${
-                        d === now.getDate() ? 'bg-ubt-blue text-ub-grey rounded' : ''
-                      }`}
-                    >
-                      {d ?? ''}
-                    </td>
-                  ))}
+                  {week.map((d, i) => {
+                    const cellIndex = idx * 7 + i;
+                    const label = d
+                      ? new Date(year, month, d).toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          month: 'long',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })
+                      : undefined;
+                    if (!d) {
+                      dayRefs.current[cellIndex] = null;
+                      return (
+                        <td key={i} className="p-1 text-center">
+                          <span />
+                        </td>
+                      );
+                    }
+                    return (
+                      <td key={i} className="p-1 text-center">
+                        <button
+                          ref={(el) => (dayRefs.current[cellIndex] = el)}
+                          tabIndex={cellIndex === focusedIdx ? 0 : -1}
+                          aria-label={label}
+                          className={`w-6 h-6 rounded ${
+                            d === now.getDate()
+                              ? 'bg-ubt-blue text-ub-grey'
+                              : ''
+                          }`}
+                        >
+                          {d}
+                        </button>
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>

@@ -64,12 +64,21 @@ export default function CalendarPopup() {
           const date = d ? new Date(year, month, d) : null;
           const key = date ? date.toISOString().slice(0,10) : null;
           const has = key && eventsMap[key];
+          const label = date
+            ? date.toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric',
+              })
+            : undefined;
           return (
             <button
               key={`${i}-${j}`}
               className={`w-8 h-8 relative rounded ${d ? 'hover:bg-neutral-700 focus:bg-neutral-700' : ''}`}
               disabled={!d}
               onClick={() => date && setSelected(date)}
+              aria-label={label}
             >
               {d || ''}
               {has && <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-red-500"></span>}
