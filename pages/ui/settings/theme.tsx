@@ -47,6 +47,8 @@ export default function ThemeSettings({ wallpapers }: ThemeSettingsProps) {
     setTheme,
     highContrast,
     setHighContrast,
+    colorBlind,
+    setColorBlind,
     accent,
     setAccent,
     wallpaper,
@@ -112,42 +114,54 @@ export default function ThemeSettings({ wallpapers }: ThemeSettingsProps) {
           <label htmlFor="theme-high-contrast">High Contrast</label>
         </div>
 
+        <div className="mt-4 flex items-center gap-2">
+          <input
+            id="theme-color-blind"
+            type="checkbox"
+            aria-label="Color Blind Palette"
+            checked={colorBlind}
+            onChange={(e) => setColorBlind(e.target.checked)}
+          />
+          <label htmlFor="theme-color-blind">Color Blind Palette</label>
+        </div>
+
         <div className="mt-6">
           <h2 className="text-lg mb-2">Accent Color</h2>
           <div role="radiogroup" className="flex gap-2">
-            {ACCENT_OPTIONS.map((c) => (
-              <button
-                key={c}
-                role="radio"
-                aria-checked={accent === c}
-                onClick={() => setAccent(c)}
-                className={`w-6 h-6 rounded-full border-2 ${
-                  accent === c ? 'border-white' : 'border-transparent'
-                }`}
-                style={{ backgroundColor: c }}
-              />
-            ))}
+              {ACCENT_OPTIONS.map((c) => (
+                <button
+                  key={c}
+                  role="radio"
+                  aria-label={`select accent ${c}`}
+                  aria-checked={accent === c}
+                  onClick={() => setAccent(c)}
+                  className={`w-6 h-6 rounded-full border-2 ${
+                    accent === c ? 'border-white' : 'border-transparent'
+                  }`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
           </div>
-        </div>
 
         <div className="mt-6">
           <h2 className="text-lg mb-2">Wallpapers</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {wallpapers.map((src) => {
               const base = src.replace(/^\/wallpapers\//, '').replace(/\.[^.]+$/, '');
-              return (
-                <button
-                  key={src}
-                  onClick={() => setWallpaper(base)}
-                  className={`relative border-2 ${
-                    wallpaper === base ? 'border-ubt-blue' : 'border-transparent'
-                  }`}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt="" className="w-full h-24 object-cover" />
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={src}
+                    aria-label={`select wallpaper ${base}`}
+                    onClick={() => setWallpaper(base)}
+                    className={`relative border-2 ${
+                      wallpaper === base ? 'border-ubt-blue' : 'border-transparent'
+                    }`}
+                  >
+                    <img src={src} alt="" className="w-full h-24 object-cover" />
+                  </button>
+                );
+              })}
           </div>
         </div>
 

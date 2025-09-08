@@ -11,6 +11,7 @@ const DEFAULT_SETTINGS = {
   reducedMotion: false,
   fontScale: 1,
   highContrast: false,
+  colorBlind: false,
   largeHitAreas: false,
   pongSpin: true,
   allowNetwork: false,
@@ -86,6 +87,16 @@ export async function setHighContrast(value) {
   window.localStorage.setItem('high-contrast', value ? 'true' : 'false');
 }
 
+export async function getColorBlind() {
+  if (!isBrowser()) return DEFAULT_SETTINGS.colorBlind;
+  return window.localStorage.getItem('color-blind') === 'true';
+}
+
+export async function setColorBlind(value) {
+  if (!isBrowser()) return;
+  window.localStorage.setItem('color-blind', value ? 'true' : 'false');
+}
+
 export async function getLargeHitAreas() {
   if (!isBrowser()) return DEFAULT_SETTINGS.largeHitAreas;
   return window.localStorage.getItem('large-hit-areas') === 'true';
@@ -156,6 +167,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('reduced-motion');
   window.localStorage.removeItem('font-scale');
   window.localStorage.removeItem('high-contrast');
+  window.localStorage.removeItem('color-blind');
   window.localStorage.removeItem('large-hit-areas');
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
@@ -172,6 +184,7 @@ export async function exportSettings() {
     reducedMotion,
     fontScale,
     highContrast,
+    colorBlind,
     largeHitAreas,
     pongSpin,
     allowNetwork,
@@ -185,6 +198,7 @@ export async function exportSettings() {
     getReducedMotion(),
     getFontScale(),
     getHighContrast(),
+    getColorBlind(),
     getLargeHitAreas(),
     getPongSpin(),
     getAllowNetwork(),
@@ -200,6 +214,7 @@ export async function exportSettings() {
     reducedMotion,
     fontScale,
     highContrast,
+    colorBlind,
     largeHitAreas,
     pongSpin,
     allowNetwork,
@@ -226,6 +241,7 @@ export async function importSettings(json) {
     reducedMotion,
     fontScale,
     highContrast,
+    colorBlind,
     largeHitAreas,
     pongSpin,
     allowNetwork,
@@ -240,6 +256,7 @@ export async function importSettings(json) {
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
   if (fontScale !== undefined) await setFontScale(fontScale);
   if (highContrast !== undefined) await setHighContrast(highContrast);
+  if (colorBlind !== undefined) await setColorBlind(colorBlind);
   if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas);
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);

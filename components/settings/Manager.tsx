@@ -47,6 +47,7 @@ export default function Manager() {
       reducedMotion: settingsCtx.setReducedMotion,
       fontScale: settingsCtx.setFontScale,
       highContrast: settingsCtx.setHighContrast,
+      colorBlind: settingsCtx.setColorBlind,
       largeHitAreas: settingsCtx.setLargeHitAreas,
       pongSpin: settingsCtx.setPongSpin,
       allowNetwork: settingsCtx.setAllowNetwork,
@@ -82,6 +83,7 @@ export default function Manager() {
           type="file"
           accept="application/zip"
           className="hidden"
+          aria-label="restore backup file"
           onChange={(e) => {
             const f = e.target.files?.[0];
             e.target.value = '';
