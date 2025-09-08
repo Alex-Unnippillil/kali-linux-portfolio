@@ -2,6 +2,9 @@ import Head from 'next/head';
 import { useState } from 'react';
 import tools from '../../../data/kali-tools.json';
 
+const badgeClass =
+  'inline-block rounded bg-gray-200 px-2 py-0.5 text-xs font-semibold leading-tight text-gray-800 transition-colors hover:bg-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600';
+
 const KaliToolsPage = () => {
   const [query, setQuery] = useState('');
   const filteredTools = tools.filter((tool) =>
@@ -46,9 +49,20 @@ const KaliToolsPage = () => {
               href={`https://www.kali.org/tools/${tool.id}/`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex flex-col items-center rounded border p-4 text-center focus:outline-none focus:ring"
+              className="flex flex-col items-center rounded border p-4 text-center leading-tight hover:bg-gray-50 focus:outline-none focus:ring dark:hover:bg-gray-800"
             >
-              <span>{tool.name}</span>
+              <span className="font-semibold leading-tight">{tool.name}</span>
+              <div className="mt-2 flex flex-wrap justify-center gap-2">
+                <a
+                  href={`https://www.kali.org/tools/${tool.id}/`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={badgeClass}
+                >
+                  Package
+                </a>
+                <span className={badgeClass}>{`$ apt install ${tool.id}`}</span>
+              </div>
             </a>
           ))}
         </div>
