@@ -28,8 +28,10 @@ const hashSeed = (str: string): number => {
 const slideRow = (row: number[]) => {
   const arr = row.filter((n) => n !== 0);
   for (let i = 0; i < arr.length - 1; i += 1) {
-    if (arr[i] === arr[i + 1]) {
-      arr[i] *= 2;
+    const current = arr[i]!;
+    const next = arr[i + 1]!;
+    if (current === next) {
+      arr[i] = current * 2;
       arr[i + 1] = 0;
     }
   }
