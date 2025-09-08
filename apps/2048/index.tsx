@@ -1,9 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import ReactGA from 'react-ga4';
+import { useSwipeable } from 'react-swipeable';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
-import { getDailySeed } from '../../utils/dailySeed';
+import { getDailySeed, currentDateString } from '../../utils/dailySeed';
+import copyToClipboard from '../../utils/clipboard';
+import useToast from '../../hooks/useToast';
 import { isBrowser } from '@/utils/env';
 import {
   moveLeft,
@@ -87,12 +90,14 @@ const Page2048 = () => {
   const [won, setWon] = useState(false);
   const [lost, setLost] = useState(false);
   const [history, setHistory] = useState<number[][][]>([]);
+  const [seedStr, setSeedStr] = useState('');
+  const toast = useToast();
 
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const seedStr = await getDailySeed('2048');
-      const seed = hashSeed(seedStr);
+      const s = await getDailySeed('2048');
+      const seed = hashSeed(s);
       const rand = mulberry32(seed);
       let b = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
       b = addRandomTile(b, rand);
@@ -101,6 +106,7 @@ const Page2048 = () => {
       setBoard(b);
       rngRef.current = rand;
       seedRef.current = seed;
+      setSeedStr(s);
     })();
     return () => {
       mounted = false;
@@ -156,6 +162,13 @@ const Page2048 = () => {
     [board, won, lost, highest, boardType, resetTimer]
   );
 
+  const swipeHandlers = useSwipeable({
+    onSwipedLeft: () => handleMove('ArrowLeft'),
+    onSwipedRight: () => handleMove('ArrowRight'),
+    onSwipedUp: () => handleMove('ArrowUp'),
+    onSwipedDown: () => handleMove('ArrowDown'),
+  });
+
   const handleUndo = useCallback(() => {
     setHistory((h) => {
       if (!h.length) return h;
@@ -185,6 +198,14 @@ const Page2048 = () => {
     resetTimer();
   }, [resetTimer]);
 
+  const handleShare = useCallback(async () => {
+    const date = currentDateString();
+    const url = `${window.location.origin}${window.location.pathname}?seed=${seedStr}`;
+    const summary = `2048 ${date} Score:${highest} Moves:${moves.length} Seed:${seedStr} ${url}`;
+    const ok = await copyToClipboard(summary);
+    toast(ok ? 'Copied to clipboard!' : 'Copy failed');
+  }, [seedStr, highest, moves, toast]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
@@ -205,17 +226,43 @@ const Page2048 = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, [handleMove, restart, handleUndo]);
 
-  const close = () => {
+  const close = useCallback(() => {
     if (isBrowser()) {
       document.getElementById('close-2048')?.click();
     }
-  };
+  }, []);
 
-  const displayCell = (v: number) => {
-    if (v === 0) return '';
-    if (boardType === 'hex') return v.toString(16).toUpperCase();
-    return v;
-  };
+  const displayCell = useCallback(
+    (v: number) => {
+      if (v === 0) return '';
+      if (boardType === 'hex') return v.toString(16).toUpperCase();
+      return v;
+    },
+    [boardType]
+  );
+
+  const renderedBoard = useMemo(
+    () =>
+      board.map((row, rIdx) =>
+        row.map((cell, cIdx) => (
+          <div
+            key={`${rIdx}-${cIdx}`}
+            className={`w-full aspect-square ${
+              prefersReducedMotion ? '' : 'transition-transform transition-opacity'
+            }`}
+          >
+            <div
+              className={`h-full w-full flex items-center justify-center text-2xl font-bold rounded ${
+                cell ? tileColors[cell] || 'bg-gray-700' : 'bg-gray-800'
+              }`}
+            >
+              {displayCell(cell)}
+            </div>
+          </div>
+        ))
+      ),
+    [board, prefersReducedMotion, displayCell]
+  );
 
   useEffect(() => {
     if (won || lost) {
@@ -235,7 +282,7 @@ const Page2048 = () => {
   }, [won, lost, moves, boardType, hard, highest]);
 
   return (
-    <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
+    <div {...swipeHandlers} className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
       <div className="flex space-x-2">
         <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={restart}>
           Restart
@@ -244,14 +291,19 @@ const Page2048 = () => {
           Undo
         </button>
         <label className="flex items-center space-x-1 px-2">
-          <input type="checkbox" checked={hard} onChange={(e) => setHard(e.target.checked)} />
-          <span>Hard</span>
-        </label>
-        <select
-          className="text-black px-1 rounded"
-          value={boardType}
-          onChange={(e) => setBoardType(e.target.value as any)}
-        >
+        <input
+          type="checkbox"
+          aria-label="Hard"
+          checked={hard}
+          onChange={(e) => setHard(e.target.checked)}
+        />
+        <span>Hard</span>
+      </label>
+      <select
+        className="text-black px-1 rounded"
+        value={boardType}
+        onChange={(e) => setBoardType(e.target.value as any)}
+      >
           <option value="classic">Classic</option>
           <option value="hex">Hex 2048</option>
         </select>
@@ -260,23 +312,19 @@ const Page2048 = () => {
         </button>
         {hard && <div className="ml-2">{timer}</div>}
       </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="px-4 py-2 bg-gray-700 rounded">Score: {highest}</div>
+        <div className="px-4 py-2 bg-gray-700 rounded">Moves: {moves.length}</div>
+        <div className="px-4 py-2 bg-gray-700 rounded">Seed: {seedStr}</div>
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={handleShare}
+        >
+          Share
+        </button>
+      </div>
       <div className="grid w-full max-w-sm grid-cols-4 gap-2">
-        {board.map((row, rIdx) =>
-          row.map((cell, cIdx) => (
-            <div
-              key={`${rIdx}-${cIdx}`}
-              className={`w-full aspect-square ${prefersReducedMotion ? '' : 'transition-transform transition-opacity'}`}
-            >
-              <div
-                className={`h-full w-full flex items-center justify-center text-2xl font-bold rounded ${
-                  cell ? tileColors[cell] || 'bg-gray-700' : 'bg-gray-800'
-                }`}
-              >
-                {displayCell(cell)}
-              </div>
-            </div>
-          ))
-        )}
+        {renderedBoard}
       </div>
       {(won || lost) && (
         <div className="mt-4 text-xl">{won ? 'You win!' : 'Game over'}</div>

@@ -6,6 +6,7 @@ export const slideRow = (row: number[]): number[] => {
   for (let i = 0; i < arr.length - 1; i += 1) {
     if (arr[i] === arr[i + 1]) {
       arr[i] = arr[i]! * 2;
+
       arr[i + 1] = 0;
     }
   }
@@ -35,6 +36,7 @@ export const hasMoves = (board: Board): boolean => {
       if (v === 0) return true;
       if (c < size - 1 && v === board[r][c + 1]) return true;
       if (r < size - 1 && v === board[r + 1][c]) return true;
+
     }
   }
   return false;
@@ -56,3 +58,4 @@ export const addRandomTile = (board: Board, rand: () => number): Board => {
 
 export const checkHighest = (board: Board): number =>
   board.reduce((max, row) => Math.max(max, ...row), 0);
+

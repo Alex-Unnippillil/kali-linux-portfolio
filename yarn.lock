@@ -12715,6 +12715,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"react-swipeable@npm:^7.0.2":
+  version: 7.0.2
+  resolution: "react-swipeable@npm:7.0.2"
+  peerDependencies:
+    react: ^16.8.3 || ^17 || ^18 || ^19.0.0 || ^19.0.0-rc
+  checksum: 10c0/cca3ec9e6321f73d187a8ac4beece2ad8cce1f4efa0215de93e2635492e7c514ccbc30311bb0e88bafb79d302916550603cdcd44ac81054a8c0f6679b18eb04d
+  languageName: node
+  linkType: hard
+
 "react-transition-group@npm:^4.4.5":
   version: 4.4.5
   resolution: "react-transition-group@npm:4.4.5"
@@ -14847,6 +14856,7 @@ __metadata:
     react-ga4: "npm:^2.1.0"
     react-github-calendar: "npm:^4.5.9"
     react-leaflet: "npm:^5.0.0"
+    react-swipeable: "npm:^7.0.2"
     react-transition-group: "npm:^4.4.5"
     react-virtualized-auto-sizer: "npm:^1.0.26"
     react-window: "npm:^2.0.2"
