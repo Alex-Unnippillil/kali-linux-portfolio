@@ -1,6 +1,7 @@
 import { useState, useRef, KeyboardEvent } from 'react';
 import tools from '../../data/kali-tools.json';
 import Pagination from '../../components/ui/Pagination';
+import ToolSearch from '../../components/ToolSearch';
 
 const PAGE_SIZE = 30;
 const COLUMNS = 3; // used for keyboard navigation
@@ -46,6 +47,7 @@ export default function ToolsPage() {
 
   return (
     <div className="p-4">
+      <ToolSearch />
       <ul
         className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
         onKeyDown={handleKeyDown}
