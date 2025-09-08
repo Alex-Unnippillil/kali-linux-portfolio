@@ -59,12 +59,22 @@
   /* Focus outline */
   --focus-outline-color: var(--color-accent);
   --focus-outline-width: 2px;
+  --focus-outline-style: solid;
 }
 
 /* High contrast theme */
 .high-contrast {
   --color-bg: #000000;
   --color-text: #ffffff;
+  --color-primary: #ffff00;
+  --color-secondary: #000000;
+  --color-accent: #ffff00;
+  --color-muted: #000000;
+  --color-surface: #000000;
+  --color-inverse: #000000;
+  --color-border: #ffff00;
+  --color-info: #00ffff;
+  --color-success: #00ff00;
   --color-ub-grey: #000000;
   --color-ub-cool-grey: #000000;
   --color-ubt-grey: #ffffff;
@@ -73,6 +83,8 @@
   --color-ub-lite-abrgn: #00ffff;
   --color-ub-border-orange: #ffff00;
   --focus-outline-color: #ffff00;
+  --focus-outline-width: 3px;
+  --focus-outline-style: solid;
   --game-color-secondary: #ffff00;
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
