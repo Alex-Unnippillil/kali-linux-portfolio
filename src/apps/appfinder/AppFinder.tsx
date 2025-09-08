@@ -1,6 +1,6 @@
 import { isBrowser } from '@/utils/env';
 import React, { useEffect, useState } from 'react';
-import logger from '../../../utils/logger';
+import { logger } from '../../../utils/logger';
 
 // Representation of a parsed .desktop entry
 export interface DesktopEntry {

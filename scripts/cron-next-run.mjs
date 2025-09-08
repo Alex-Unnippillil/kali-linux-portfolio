@@ -1,5 +1,5 @@
 import { CronExpressionParser } from 'cron-parser';
-import logger from '../utils/logger';
+import { logger } from '../utils/logger';
 
 
 const expression = process.argv[2];

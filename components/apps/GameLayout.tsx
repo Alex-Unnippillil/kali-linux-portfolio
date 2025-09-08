@@ -15,7 +15,7 @@ import {
   serialize as serializeRng,
   deserialize as deserializeRng,
 } from '../../apps/games/rng';
-import logger from '../../utils/logger';
+import { logger } from '../../utils/logger';
 
 interface GameLayoutProps {
   gameId?: string;

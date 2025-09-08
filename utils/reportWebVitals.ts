@@ -1,6 +1,6 @@
 import ReactGA from 'react-ga4';
 import { track } from '@vercel/analytics';
-import logger from './logger';
+import { logger } from './logger';
 
 interface WebVitalMetric {
   id: string;
