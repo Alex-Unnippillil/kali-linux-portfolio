@@ -1,4 +1,4 @@
-import React from "react";
+import SectionDivider from "../ui/SectionDivider";
 
 interface Platform {
   icon: string;
@@ -51,20 +51,23 @@ const platforms: Platform[] = [
 
 export default function KaliEverywhere() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {platforms.map((p) => (
-        <div
-          key={p.title}
-          className="flex flex-col items-center p-4 border rounded text-center bg-white"
-        >
-          <div className="text-4xl mb-2" aria-hidden>
-            {p.icon}
+    <>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {platforms.map((p) => (
+          <div
+            key={p.title}
+            className="Surface flex flex-col items-center rounded p-4 text-center"
+          >
+            <div className="mb-2 text-4xl" aria-hidden>
+              {p.icon}
+            </div>
+            <h3 className="font-semibold">{p.title}</h3>
+            <p className="text-sm text-muted">{p.description}</p>
           </div>
-          <h3 className="font-semibold">{p.title}</h3>
-          <p className="text-sm text-gray-600">{p.description}</p>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+      <SectionDivider className="my-8" />
+    </>
   );
 }
 
