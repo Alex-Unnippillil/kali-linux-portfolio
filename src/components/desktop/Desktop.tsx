@@ -3,6 +3,7 @@ import DesktopContextMenu from './DesktopContextMenu';
 import Dock from './Dock';
 import Panel from '../panel/Panel';
 import HotCorner from './HotCorner';
+import ShortcutModal from '@/components/keyboard/ShortcutModal';
 
 export interface DesktopIcon {
   id: string;
@@ -34,6 +35,7 @@ export const Desktop: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [icons, setIcons] = useState<DesktopIcon[]>([]);
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   // Example icons for demonstration
   useEffect(() => {
@@ -56,35 +58,52 @@ export const Desktop: React.FC = () => {
     setIcons((prev) => arrangeIconsToGrid(prev, width));
   }, []);
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === '?') {
+        e.preventDefault();
+        setShortcutsOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
   return (
-    <div
-      ref={containerRef}
-      className="relative w-full h-full overflow-hidden"
-      onContextMenu={handleContextMenu}
-      onClick={closeMenu}
-    >
-      <div className="absolute top-0 left-0 right-0 z-50">
-        <Panel />
-      </div>
-      {icons.map((icon) => (
-        <div
-          key={icon.id}
-          className="absolute text-center text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]"
-          style={{ left: icon.x, top: icon.y, width: 80 }}
-          tabIndex={0}
-        >
-          <div className="h-16 w-16 rounded bg-black bg-opacity-20" />
-          <div>{icon.title}</div>
+    <>
+      <div
+        ref={containerRef}
+        className="relative w-full h-full overflow-hidden"
+        onContextMenu={handleContextMenu}
+        onClick={closeMenu}
+      >
+        <div className="absolute top-0 left-0 right-0 z-50">
+          <Panel />
         </div>
-      ))}
-      <Dock />
-      <HotCorner />
-      <DesktopContextMenu
-        position={menuPos}
-        onClose={closeMenu}
-        onArrange={handleArrange}
+        {icons.map((icon) => (
+          <div
+            key={icon.id}
+            className="absolute text-center text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]"
+            style={{ left: icon.x, top: icon.y, width: 80 }}
+            tabIndex={0}
+          >
+            <div className="h-16 w-16 rounded bg-black bg-opacity-20" />
+            <div>{icon.title}</div>
+          </div>
+        ))}
+        <Dock />
+        <HotCorner />
+        <DesktopContextMenu
+          position={menuPos}
+          onClose={closeMenu}
+          onArrange={handleArrange}
+        />
+      </div>
+      <ShortcutModal
+        isOpen={shortcutsOpen}
+        onClose={() => setShortcutsOpen(false)}
       />
-    </div>
+    </>
   );
 };
 
