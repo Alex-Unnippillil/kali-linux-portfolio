@@ -13,6 +13,7 @@ import usePersistentState from '../../hooks/usePersistentState';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
 import { exoOpen } from '../../src/lib/exo-open';
+import { TERMINAL_THEMES } from './themes';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -80,13 +81,6 @@ export interface TerminalHandle {
 const files: Record<string, string> = {
   'README.md': 'Welcome to the web terminal.\nThis is a fake file used for demos.',
 };
-
-const THEME_PRESETS = {
-  'Kali-Dark': { background: '#0f1317', foreground: '#f5f5f5' },
-  'Kali-Light': { background: '#f5f5f5', foreground: '#0f1317' },
-  Solarized: { background: '#002b36', foreground: '#839496' },
-  Dracula: { background: '#282a36', foreground: '#f8f8f2' },
-} as const;
 
 const hexToRgba = (hex: string, alpha: number) => {
   const sanitized = hex.replace('#', '');
@@ -238,13 +232,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
 
   useEffect(() => {
     if (!termRef.current || !containerRef.current) return;
-    const preset = THEME_PRESETS[scheme as keyof typeof THEME_PRESETS];
+    const preset = TERMINAL_THEMES[scheme as keyof typeof TERMINAL_THEMES];
     const bg = hexToRgba(preset.background, opacity);
-    termRef.current.options.theme = {
-      background: bg,
-      foreground: preset.foreground,
-      cursor: preset.foreground,
-    };
+    termRef.current.options.theme = { ...preset, background: bg };
     containerRef.current.style.backgroundColor = bg;
     containerRef.current.style.color = preset.foreground;
   }, [scheme, opacity]);
@@ -416,13 +406,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
       const textarea = term.textarea;
       textarea?.addEventListener('paste', handlePasteEvent);
       container?.addEventListener('contextmenu', handleLinkContext);
-      const preset = THEME_PRESETS[scheme as keyof typeof THEME_PRESETS];
+      const preset = TERMINAL_THEMES[scheme as keyof typeof TERMINAL_THEMES];
       const bg = hexToRgba(preset.background, opacity);
-      term.options.theme = {
-        background: bg,
-        foreground: preset.foreground,
-        cursor: preset.foreground,
-      };
+      term.options.theme = { ...preset, background: bg };
       container.style.backgroundColor = bg;
       container.style.color = preset.foreground;
       if (opfsSupported) {
@@ -610,7 +596,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
                 value={settingsScheme}
                 onChange={(e) => setSettingsScheme(e.target.value)}
               >
-                {Object.keys(THEME_PRESETS).map((name) => (
+                {Object.keys(TERMINAL_THEMES).map((name) => (
                   <option key={name} value={name}>
                     {name}
                   </option>
