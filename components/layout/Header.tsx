@@ -2,10 +2,13 @@
 
 import { useState } from 'react';
 import DocMegaMenu from './DocMegaMenu';
+import AboutMegaMenu from './AboutMegaMenu';
 
 export default function Header() {
   const [docsOpen, setDocsOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const closeDocs = () => setDocsOpen(false);
+  const closeAbout = () => setAboutOpen(false);
 
   return (
     <header className="relative bg-gray-900 text-white rtl:text-right">
@@ -25,6 +28,19 @@ export default function Header() {
             Documentation
           </button>
           {docsOpen && <DocMegaMenu onClose={closeDocs} />}
+        </div>
+        <div
+          className="relative"
+          onMouseEnter={() => setAboutOpen(true)}
+        >
+          <button
+            type="button"
+            onClick={() => setAboutOpen((v) => !v)}
+            className="hover:underline"
+          >
+            About
+          </button>
+          {aboutOpen && <AboutMegaMenu onClose={closeAbout} />}
         </div>
       </nav>
     </header>
