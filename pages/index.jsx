@@ -1,9 +1,13 @@
 import dynamic from "next/dynamic";
-import { baseMetadata } from "../lib/metadata";
+import { createMetadata } from "../lib/metadata";
 import BetaBadge from "../components/BetaBadge";
 import useSession from "../hooks/useSession";
 
-export const metadata = baseMetadata;
+export const metadata = createMetadata({
+  title: "Alex Unnippillil's Portfolio",
+  description: 'Personal portfolio showcasing security tools and demos.',
+  path: '/',
+});
 
 const Ubuntu = dynamic(
   () =>
