@@ -47,6 +47,7 @@ export default function WeatherPopover({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search location"
+          aria-label="Search location"
           className="w-full mb-1 px-2 py-1 bg-gray-700 rounded text-sm"
         />
         {query && (
@@ -66,7 +67,7 @@ export default function WeatherPopover({
             {filtered.length === 0 && (
               <li className="p-4">
                 <EmptyState
-                  icon={<span>📍</span>}
+                  variant="search"
                   headline="No results"
                   helperText="Try another location"
                 />

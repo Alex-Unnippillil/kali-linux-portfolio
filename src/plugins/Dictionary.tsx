@@ -83,7 +83,7 @@ export default function Dictionary() {
             {loading && <p>Loading...</p>}
             {error && (
               <EmptyState
-                icon={<span>📖</span>}
+                variant="search"
                 headline={error}
                 helperText="Try another word"
               />
