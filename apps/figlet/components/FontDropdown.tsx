@@ -69,7 +69,7 @@ const FontDropdown: React.FC<Props> = ({ fonts, value, onChange }) => {
     <div className="relative" ref={containerRef}>
       <button
         type="button"
-        className="px-1 bg-gray-700 text-white min-w-[6rem] text-left"
+        className="surface-100 px-1 min-w-[6rem] text-left text-text"
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
@@ -82,7 +82,7 @@ const FontDropdown: React.FC<Props> = ({ fonts, value, onChange }) => {
           role="listbox"
           ref={listRef}
           tabIndex={-1}
-          className="absolute z-10 bg-gray-800 text-white max-h-60 overflow-auto w-full"
+          className="surface-300 absolute z-10 text-text max-h-60 overflow-auto w-full"
           onKeyDown={handleKey}
         >
           {fonts.map((f, i) => (

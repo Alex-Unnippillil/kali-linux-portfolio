@@ -119,6 +119,7 @@ const Window = forwardRef<{ handleDrag: () => void; handleStop: () => void; hand
             ref={nodeRef}
             tabIndex={0}
             onKeyDown={handleKeyDown}
+            className="surface-300"
             style={{ width: `${width}%`, height: `${height}%` }}
           >
             {children}
