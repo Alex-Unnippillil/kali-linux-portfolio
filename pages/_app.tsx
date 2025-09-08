@@ -1,6 +1,9 @@
 "use client";
 
+/* eslint-disable @next/next/no-before-interactive-script-outside-document */
 /* global clients */
+
+declare const clients: any;
 
 import { isBrowser } from '@/utils/env';
 import { useEffect } from 'react';
@@ -35,7 +38,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 
-function MyApp(props) {
+function MyApp(props: any) {
   const { Component, pageProps, nonce } = props;
   const { asPath, locales, defaultLocale } = useRouter();
   const path = asPath.split('?')[0];
@@ -45,6 +48,17 @@ function MyApp(props) {
   useEffect(() => {
     void import('@xterm/xterm/css/xterm.css');
     void import('leaflet/dist/leaflet.css');
+  }, []);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'development') return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.altKey && e.key.toLowerCase() === 'g') {
+        void import('@/utils/gridOverlay').then((m) => m.toggleGridOverlay());
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, []);
 
   useEffect(() => {
@@ -281,7 +295,7 @@ export default MyApp;
 
 export { reportWebVitalsUtil as reportWebVitals };
 
-MyApp.getInitialProps = async (appContext) => {
+MyApp.getInitialProps = async (appContext: any) => {
   const appProps = await App.getInitialProps(appContext);
   const nonce = appContext.ctx.req?.headers['x-csp-nonce'];
   return { ...appProps, nonce };
