@@ -55,10 +55,26 @@ module.exports = {
         },
         fontSize: {
           base: ['1rem', { lineHeight: '1.5' }],
-          h1: ['clamp(1.875rem, 1.5rem + 1vw, 2.25rem)', { lineHeight: '1.2' }],
-          h2: ['clamp(1.5rem, 1.25rem + 0.5vw, 1.875rem)', { lineHeight: '1.3' }],
+          h1: ['var(--h1-size)', { lineHeight: 'var(--h1-line-height)', letterSpacing: 'var(--h1-tracking)' }],
+          h2: ['var(--h2-size)', { lineHeight: 'var(--h2-line-height)', letterSpacing: 'var(--h2-tracking)' }],
           h3: ['clamp(1.25rem, 1rem + 0.5vw, 1.5rem)', { lineHeight: '1.4' }],
         },
+        typography: (theme) => ({
+          DEFAULT: {
+            css: {
+              h1: {
+                fontSize: 'var(--h1-size)',
+                letterSpacing: 'var(--h1-tracking)',
+                lineHeight: 'var(--h1-line-height)',
+              },
+              h2: {
+                fontSize: 'var(--h2-size)',
+                letterSpacing: 'var(--h2-tracking)',
+                lineHeight: 'var(--h2-line-height)',
+              },
+            },
+          },
+        }),
       minWidth: {
         '0': '0',
         '1/4': '25%',
