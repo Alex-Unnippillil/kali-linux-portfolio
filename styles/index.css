@@ -15,7 +15,12 @@ body{
 
 /* Heading scale for vertical rhythm */
 h1, h2, h3, h4, h5, h6 {
-    line-height: 1.2;
+    @apply leading-tight;
+}
+
+ul,
+ol {
+    @apply space-y-tight;
 }
 
 h1 {
@@ -530,9 +535,10 @@ dialog {
 
 /* Ensure monospace layout for app outputs */
 textarea,
-pre {
+pre,
+code {
     font-family: monospace;
-    line-height: 1.2;
+    @apply leading-tight;
 }
 
 /* Visible focus rings for copy buttons and text areas */
