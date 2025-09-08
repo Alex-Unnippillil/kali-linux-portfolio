@@ -16,7 +16,7 @@ export default class Navbar extends Component {
 
         render() {
                 return (
-                        <div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
+                        <nav aria-label="Main navigation" className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
                                 <div className="pl-3 pr-1">
                                         <Image src="/themes/Yaru/status/network-wireless-signal-good-symbolic.svg" alt="network icon" width={16} height={16} className="w-4 h-4" />
                                 </div>
@@ -47,7 +47,7 @@ export default class Navbar extends Component {
                                                 logOut={this.props.logOut}
                                         />
                                 </button>
-                        </div>
+                        </nav>
                 );
         }
 }

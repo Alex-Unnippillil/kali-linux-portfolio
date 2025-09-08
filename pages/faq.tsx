@@ -2,7 +2,7 @@ import React from 'react';
 
 const FaqPage: React.FC = () => {
   return (
-    <div className="p-8 max-w-3xl mx-auto">
+    <main className="p-8 max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">FAQ</h1>
 
       <section className="mb-8">
@@ -34,7 +34,7 @@ const FaqPage: React.FC = () => {
         </select>
         <p className="text-sm text-gray-500 mt-1">Manual mirror selection coming soon.</p>
       </section>
-    </div>
+    </main>
   );
 };
 
