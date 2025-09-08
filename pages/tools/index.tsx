@@ -46,7 +46,7 @@ export default function ToolsPage() {
   return (
     <div className="p-4">
       <ul
-        className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
         onKeyDown={handleKeyDown}
       >
         {pageTools.map((tool, i) => (
@@ -56,7 +56,7 @@ export default function ToolsPage() {
               className="block rounded border p-4 focus:outline-none focus:ring"
               ref={(el) => (itemRefs.current[i] = el)}
             >
-              <h3 className="font-semibold">{tool.name}</h3>
+              <h3 className="font-semibold text-base sm:text-lg md:text-xl">{tool.name}</h3>
               <div className="mt-2 flex flex-wrap gap-2">
                 <a
                   href={`https://gitlab.com/kalilinux/packages/${tool.id}`}
