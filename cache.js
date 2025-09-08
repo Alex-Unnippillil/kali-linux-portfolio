@@ -34,14 +34,15 @@ module.exports = function(buildId = 'dev') {
         }
       }
     },
+    // Cache locally hosted font files with a cache-first strategy so they work offline
     {
       urlPattern: /\.(?:eot|otf|ttc|ttf|woff|woff2|font.css)$/i,
-      handler: 'StaleWhileRevalidate',
+      handler: 'CacheFirst',
       options: {
         cacheName: withPrefix('static-font-assets'),
         expiration: {
           maxEntries: 4,
-          maxAgeSeconds: 7 * 24 * 60 * 60 // 7 days
+          maxAgeSeconds: 365 * 24 * 60 * 60 // 365 days
         }
       }
     },
@@ -56,6 +57,7 @@ module.exports = function(buildId = 'dev') {
         }
       }
     },
+    // Runtime cache for images from any origin, keeping the most recent copy fresh
     {
       urlPattern: /\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i,
       handler: 'StaleWhileRevalidate',
