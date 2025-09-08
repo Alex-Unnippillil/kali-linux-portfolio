@@ -33,12 +33,25 @@
   --game-color-danger: #b91c1c;
 
   /* Spacing scale */
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.5rem;
-  --space-6: 2rem;
+  --space-cozy-1: 0.25rem;
+  --space-cozy-2: 0.5rem;
+  --space-cozy-3: 0.75rem;
+  --space-cozy-4: 1rem;
+  --space-cozy-5: 1.5rem;
+  --space-cozy-6: 2rem;
+  --space-compact-1: 0.125rem;
+  --space-compact-2: 0.25rem;
+  --space-compact-3: 0.5rem;
+  --space-compact-4: 0.75rem;
+  --space-compact-5: 1rem;
+  --space-compact-6: 1.5rem;
+  /* Default spacing (cozy) */
+  --space-1: var(--space-cozy-1);
+  --space-2: var(--space-cozy-2);
+  --space-3: var(--space-cozy-3);
+  --space-4: var(--space-cozy-4);
+  --space-5: var(--space-cozy-5);
+  --space-6: var(--space-cozy-6);
 
   /* Radius */
   --radius-sm: 2px;

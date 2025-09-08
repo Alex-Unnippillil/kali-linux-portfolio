@@ -7,14 +7,12 @@ export default function DpiSettings() {
       <h1 className="text-xl mb-4">Display</h1>
       <div className="flex items-center gap-2">
         <span>Interface density</span>
-        <select
-          value={density}
-          onChange={(e) => setDensity(e.target.value as any)}
+        <button
+          onClick={() => setDensity(density === 'cozy' ? 'compact' : 'cozy')}
           className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
         >
-          <option value="regular">Regular</option>
-          <option value="compact">Compact</option>
-        </select>
+          {density === 'cozy' ? 'Cozy' : 'Compact'}
+        </button>
       </div>
     </div>
   );

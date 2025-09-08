@@ -199,14 +199,12 @@ export default function Settings() {
           </div>
           <div className="flex justify-center my-4">
             <label className="mr-2 text-ubt-grey">Density:</label>
-            <select
-              value={density}
-              onChange={(e) => setDensity(e.target.value as any)}
+            <button
+              onClick={() => setDensity(density === 'cozy' ? 'compact' : 'cozy')}
               className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
             >
-              <option value="regular">Regular</option>
-              <option value="compact">Compact</option>
-            </select>
+              {density === 'cozy' ? 'Cozy' : 'Compact'}
+            </button>
           </div>
           <div className="flex justify-center my-4 items-center">
             <span className="mr-2 text-ubt-grey">Reduced Motion:</span>
