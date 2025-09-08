@@ -1,0 +1,5 @@
+.wallpaper-gradient {
+  background-image: var(--wallpaper-gradient);
+  background-repeat: no-repeat;
+  background-size: cover;
+}
