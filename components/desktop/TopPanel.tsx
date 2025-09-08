@@ -18,7 +18,7 @@ interface Props {
  */
 export default function TopPanel({ title }: Props) {
   return (
-    <header className="flex items-center justify-between w-full bg-ub-grey text-ubt-grey h-8 md:h-6 lg:h-8 px-2 md:px-1 lg:px-2 text-sm md:text-xs lg:text-sm sticky top-0 z-40">
+    <header className="flex items-center justify-between w-full bg-ub-grey supports-[backdrop-filter:blur(8px)]:bg-opacity-90 supports-[backdrop-filter:blur(8px)]:backdrop-blur supports-[backdrop-filter:blur(8px)]:opacity-90 text-ubt-grey h-8 md:h-6 lg:h-8 px-2 md:px-1 lg:px-2 text-sm md:text-xs lg:text-sm sticky top-0 z-40">
       {/* App menu */}
       <div className="flex items-center">
         <WhiskerMenu />
