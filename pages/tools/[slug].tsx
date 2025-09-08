@@ -89,16 +89,23 @@ export default function ToolPage({ tool }: Props) {
       {tool.related && tool.related.length > 0 && (
         <section className="mb-6">
           <h2 className="text-xl font-semibold mb-2">Related Tools</h2>
-          <ul className="list-disc list-inside">
-            {tool.related.map((slug) => {
-              const relatedTool = tools.find((t) => t.id === slug);
-              return (
-                <li key={slug}>
-                  <Link href={`/tools/${slug}`}>{relatedTool?.name || slug}</Link>
-                </li>
-              );
-            })}
-          </ul>
+          <div className="overflow-x-auto">
+            <ul className="flex gap-4 whitespace-nowrap list-none">
+              {tool.related.map((slug) => {
+                const relatedTool = tools.find((t) => t.id === slug);
+                return (
+                  <li key={slug}>
+                    <Link
+                      href={`/tools/${slug}`}
+                      className="relative inline-block after:absolute after:left-0 after:-bottom-0.5 after:h-0.5 after:w-0 after:bg-current after:transition-all hover:after:w-full"
+                    >
+                      {relatedTool?.name || slug}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         </section>
       )}
     </div>
