@@ -4,8 +4,9 @@
       "args": ["--no-sandbox"]
     },
     "runners": ["axe", "htmlcs"],
-    "standard": "WCAG2AA",
+    "standard": "WCAG2.2AA",
     "includeNotices": true,
+    "includeWarnings": true,
     "axe": {
       "rules": {
         "color-contrast": { "enabled": true },

@@ -9,6 +9,8 @@
 - Replaced generic elements with semantic buttons for app icons and window title bars.
   - `components/base/ubuntu_app.js`
   - `components/base/window.js`
+- Updated wallpaper picker to use semantic buttons.
+  - `components/apps/settings.js`
 - Added automated axe CLI and Playwright checks under `__tests__/`.
 
 ## Before / After Examples
@@ -19,4 +21,8 @@
 ```diff
 - <div role="button" ...>
 + <button type="button" ...>
+```
+```diff
+- <div role="button" aria-label={`Select ${name.replace('wall-', 'wallpaper ')}`} ...></div>
++ <button type="button" aria-label={`Select ${name.replace('wall-', 'wallpaper ')}`} ...></button>
 ```
