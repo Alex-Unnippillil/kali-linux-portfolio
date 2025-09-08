@@ -23,7 +23,6 @@ const ConnectFourApp = createDynamicApp('connect-four', 'Connect Four');
 const HangmanApp = createDynamicApp('hangman', 'Hangman');
 const FroggerApp = createDynamicApp('frogger', 'Frogger');
 const FlappyBirdApp = createDynamicApp('flappy-bird', 'Flappy Bird');
-const Game2048App = createDynamicApp('2048', '2048');
 const SnakeApp = createDynamicApp('snake', 'Snake');
 const MemoryApp = createDynamicApp('memory', 'Memory');
 // Classic puzzle where players clear a minefield.
@@ -139,7 +138,6 @@ const displayConnectFour = createDisplay(ConnectFourApp);
 const displayHangman = createDisplay(HangmanApp);
 const displayFrogger = createDisplay(FroggerApp);
 const displayFlappyBird = createDisplay(FlappyBirdApp);
-const displayGame2048 = createDisplay(Game2048App);
 const displaySnake = createDisplay(SnakeApp);
 const displayMemory = createDisplay(MemoryApp);
 const displayMinesweeper = createDisplay(MinesweeperApp);
@@ -325,17 +323,6 @@ export const gameDefaults = {
 
 // Games list used for the "Games" folder on the desktop
 const gameList = [
-  {
-    id: '2048',
-    title: '2048',
-    icon: '/themes/Yaru/apps/2048.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayGame2048,
-    defaultWidth: 35,
-    defaultHeight: 45,
-  },
   {
     id: 'asteroids',
     title: 'Asteroids',

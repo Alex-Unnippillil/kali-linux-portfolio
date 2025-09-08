@@ -10,7 +10,7 @@ export default async function handler(
     return;
   }
 
-  const game = typeof req.query.game === 'string' ? req.query.game : '2048';
+    const game = typeof req.query.game === 'string' ? req.query.game : 'snake';
   const limit = Number(req.query.limit ?? 10);
 
   const url = process.env.SUPABASE_URL;
