@@ -293,7 +293,7 @@ function getLastResult() {
   return lastResult;
 }
 
-module.exports = {
+export {
   tokenize,
   toRPN,
   evalRPN,
