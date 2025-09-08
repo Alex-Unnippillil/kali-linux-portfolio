@@ -3,7 +3,7 @@
 /* global clients */
 
 import { isBrowser } from '@/utils/env';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Analytics } from '@vercel/analytics/next';
 import dynamic from 'next/dynamic';
 import Head from 'next/head';
@@ -24,6 +24,8 @@ import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals
 import useReportWebVitals from '../hooks/useReportWebVitals';
 import NotificationCenter from '../components/common/NotificationCenter';
 import HighContrastToggle from '../components/common/HighContrastToggle';
+import { Workbox } from 'workbox-window';
+import Toast from '../components/ui/Toast';
 
 
 let SpeedInsights = () => null;
@@ -39,6 +41,9 @@ function MyApp(props) {
   const { Component, pageProps, nonce } = props;
   const { asPath, locales, defaultLocale } = useRouter();
   const path = asPath.split('?')[0];
+
+  const [updateReady, setUpdateReady] = useState(false);
+  const wbRef = useRef(null);
 
   useReportWebVitals();
 
@@ -69,28 +74,18 @@ function MyApp(props) {
       process.env.VERCEL_ENV === 'production' &&
       'serviceWorker' in navigator
     ) {
+      wbRef.current = new Workbox('/service-worker.js');
+      const wb = wbRef.current;
+      wb.addEventListener('waiting', () => {
+        setUpdateReady(true);
+      });
+      wb.addEventListener('controlling', () => {
+        window.location.reload();
+      });
       const register = async () => {
         try {
-          const registration = await navigator.serviceWorker.register('/service-worker.js');
-
-          window.manualRefresh = () => {
-            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-            clients.claim();
-          };
-
-          registration.addEventListener('updatefound', () => {
-            const installing = registration.installing;
-            if (!installing) return;
-            installing.addEventListener('statechange', () => {
-              if (
-                installing.state === 'installed' &&
-                navigator.serviceWorker.controller
-              ) {
-                registration.update();
-              }
-            });
-          });
-
+          const registration = await wb.register();
+          window.manualRefresh = () => wb.messageSkipWaiting();
           if ('periodicSync' in registration) {
             try {
               if (
@@ -253,6 +248,14 @@ function MyApp(props) {
                   <div aria-live="polite" id="live-region" />
                   <Component {...pageProps} />
                   <ShortcutOverlay />
+                  {updateReady && (
+                    <Toast
+                      message="Update available"
+                      actionLabel="Reload"
+                      onAction={() => wbRef.current?.messageSkipWaiting()}
+                      onClose={() => setUpdateReady(false)}
+                    />
+                  )}
                   {process.env.VERCEL_ANALYTICS_ID && (
                     <>
                       <Analytics
