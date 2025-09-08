@@ -28,10 +28,7 @@ const InstallButton = dynamic(
   },
 );
 
-/**
- * @returns {JSX.Element}
- */
-const App = () => {
+const App = (): JSX.Element => {
   const { session, setSession, resetSession } = useSession();
   return (
     <>
@@ -45,6 +42,18 @@ const App = () => {
       />
       <BetaBadge />
       <InstallButton />
+      <section className="prose p-tight">
+        <h1 className="leading-tight">Sample Heading</h1>
+        <ul className="space-y-tight">
+          <li>First item</li>
+          <li>Second item</li>
+        </ul>
+        <pre className="leading-tight p-tight">
+          <code>{`const greet = (name: string) => {
+  console.log('Hello, ' + name);
+};`}</code>
+        </pre>
+      </section>
     </>
   );
 };
