@@ -17,6 +17,7 @@ import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
 import { TrayProvider } from '../hooks/useTray';
+import { ShortcutsProvider } from '../hooks/useShortcuts';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
@@ -245,23 +246,25 @@ function MyApp(props) {
           <SettingsProvider>
             <TrayProvider>
               <PipPortalProvider>
-                <div aria-live="polite" id="live-region" />
-                <Component {...pageProps} />
-                <ShortcutOverlay />
-                {process.env.VERCEL_ANALYTICS_ID && (
-                  <>
-                    <Analytics
-                      beforeSend={(e) => {
-                        if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-                        const evt = e;
-                        if (evt.metadata?.email) delete evt.metadata.email;
-                        return e;
-                      }}
-                    />
+                <ShortcutsProvider>
+                  <div aria-live="polite" id="live-region" />
+                  <Component {...pageProps} />
+                  <ShortcutOverlay />
+                  {process.env.VERCEL_ANALYTICS_ID && (
+                    <>
+                      <Analytics
+                        beforeSend={(e) => {
+                          if (e.url.includes('/admin') || e.url.includes('/private')) return null;
+                          const evt = e;
+                          if (evt.metadata?.email) delete evt.metadata.email;
+                          return e;
+                        }}
+                      />
 
-                    <SpeedInsights />
-                  </>
-                )}
+                      <SpeedInsights />
+                    </>
+                  )}
+                </ShortcutsProvider>
               </PipPortalProvider>
             </TrayProvider>
           </SettingsProvider>
