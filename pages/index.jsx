@@ -1,52 +1,50 @@
-import dynamic from "next/dynamic";
+import Image from "next/image";
+import { decode } from "blurhash";
+import { PNG } from "pngjs";
+import desktopsData from "../content/desktops.json";
 import { baseMetadata } from "../lib/metadata";
-import BetaBadge from "../components/BetaBadge";
-import useSession from "../hooks/useSession";
 
 export const metadata = baseMetadata;
 
-const Ubuntu = dynamic(
-  () =>
-    import("../components/screen/ubuntu").catch((err) => {
-      console.error("Failed to load Ubuntu component", err);
-      throw err;
-    }),
-  {
-    ssr: false,
-    loading: () => <p>Loading Ubuntu...</p>,
-  },
-);
-const InstallButton = dynamic(
-  () =>
-    import("../components/InstallButton").catch((err) => {
-      console.error("Failed to load InstallButton component", err);
-      throw err;
-    }),
-  {
-    ssr: false,
-    loading: () => <p>Loading install options...</p>,
-  },
-);
+function blurHashToDataURL(blurhash) {
+  const pixels = decode(blurhash, 32, 32);
+  const png = new PNG({ width: 32, height: 32 });
+  png.data = Buffer.from(pixels);
+  return `data:image/png;base64,${PNG.sync.write(png).toString("base64")}`;
+}
+
+export async function getStaticProps() {
+  const desktops = desktopsData.map((d) => ({
+    ...d,
+    blurDataURL: blurHashToDataURL(d.blurhash),
+  }));
+  return { props: { desktops } };
+}
 
 /**
+ * @param {{ desktops: { name: string; image: string; blurDataURL: string }[] }} props
  * @returns {JSX.Element}
  */
-const App = () => {
-  const { session, setSession, resetSession } = useSession();
+export default function Home({ desktops }) {
   return (
-    <>
-      <a href="#window-area" className="sr-only focus:not-sr-only">
-        Skip to content
-      </a>
-      <Ubuntu
-        session={session}
-        setSession={setSession}
-        resetSession={resetSession}
-      />
-      <BetaBadge />
-      <InstallButton />
-    </>
+    <main className="p-4">
+      <h1 className="text-xl font-bold mb-4">Choose the desktop you prefer</h1>
+      <div className="grid gap-4 sm:grid-cols-3">
+        {desktops.map((d) => (
+          <div key={d.name} className="text-center">
+            <Image
+              src={d.image}
+              alt={d.name}
+              width={320}
+              height={200}
+              placeholder="blur"
+              blurDataURL={d.blurDataURL}
+              className="rounded"
+            />
+            <p className="mt-2">{d.name}</p>
+          </div>
+        ))}
+      </div>
+    </main>
   );
-};
-
-export default App;
+}
