@@ -1,0 +1,6 @@
+[
+  { "name": "Nmap", "package": "nmap", "command": "nmap" },
+  { "name": "Hydra", "package": "hydra", "command": "hydra" },
+  { "name": "John the Ripper", "package": "john", "command": "john" },
+  { "name": "Sqlmap", "package": "sqlmap", "command": "sqlmap" }
+]
