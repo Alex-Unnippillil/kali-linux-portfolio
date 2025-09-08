@@ -165,12 +165,6 @@ const parsePcapNg = (buf: ArrayBuffer): Packet[] => {
 };
 
 const parseWithWasm = async (buf: ArrayBuffer): Promise<Packet[]> => {
-  try {
-    // Attempt to load wasm parser via its JS wrapper; fall back to JS parsing
-    await import('https://unpkg.com/pcap.js@latest/pcap.js');
-  } catch {
-    // Ignore errors and use JS parser
-  }
   const magic = new DataView(buf).getUint32(0, false);
   return magic === 0x0a0d0d0a ? parsePcapNg(buf) : parsePcap(buf);
 };
