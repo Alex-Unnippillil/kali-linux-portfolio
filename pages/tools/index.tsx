@@ -5,7 +5,7 @@ const PAGE_SIZE = 30;
 const COLUMNS = 3; // used for keyboard navigation
 
 const badgeClass =
-  'inline-block rounded bg-gray-200 px-2 py-1 text-xs font-semibold text-gray-800 dark:bg-gray-700 dark:text-gray-100';
+  'inline-block rounded bg-gray-200 px-2 py-0.5 text-xs font-semibold leading-tight text-gray-800 transition-colors hover:bg-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600';
 
 export default function ToolsPage() {
   const [page, setPage] = useState(0);
@@ -53,10 +53,10 @@ export default function ToolsPage() {
           <li key={tool.id}>
             <a
               href={`https://www.kali.org/tools/${tool.id}/`}
-              className="block rounded border p-4 focus:outline-none focus:ring"
+              className="block rounded border p-4 leading-tight hover:bg-gray-50 focus:outline-none focus:ring dark:hover:bg-gray-800"
               ref={(el) => (itemRefs.current[i] = el)}
             >
-              <h3 className="font-semibold">{tool.name}</h3>
+              <h3 className="font-semibold leading-tight">{tool.name}</h3>
               <div className="mt-2 flex flex-wrap gap-2">
                 <a
                   href={`https://gitlab.com/kalilinux/packages/${tool.id}`}
