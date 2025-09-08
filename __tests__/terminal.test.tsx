@@ -12,6 +12,8 @@ jest.mock(
       onPaste: jest.fn(),
       dispose: jest.fn(),
       clear: jest.fn(),
+      options: {},
+      buffer: { active: { viewportY: 0, baseY: 0 } },
     })),
   }),
   { virtual: true }

@@ -13,6 +13,7 @@ import usePersistentState from '../../hooks/usePersistentState';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
 import { exoOpen } from '../../src/lib/exo-open';
+import { usePromptPreset, PROMPT_PRESETS } from './state';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -99,6 +100,7 @@ const hexToRgba = (hex: string, alpha: number) => {
 
 const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
   ({ openApp, scheme = 'Kali-Dark', opacity = 1, onSettingsChange }, ref) => {
+  const [promptPreset] = usePromptPreset();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<any>(null);
   const fitRef = useRef<any>(null);
@@ -189,10 +191,10 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
 
   const prompt = useCallback(() => {
     if (termRef.current) {
-      termRef.current.write('┌──(🦊 kali)\r\n└─❯ ');
+      termRef.current.write(PROMPT_PRESETS[promptPreset]);
       renderHint();
     }
-  }, [renderHint]);
+  }, [renderHint, promptPreset]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(contentRef.current).catch(() => {});
