@@ -46,7 +46,7 @@ const PropertiesDialog: React.FC<Props> = ({ item, onClose, onRenamed }) => {
       role="dialog"
       aria-modal="true"
     >
-      <div className="bg-ub-cool-grey p-4 rounded border border-window shadow-window text-white w-64">
+      <div className="bg-ub-cool-grey p-4 rounded border border-elevation-300 shadow-elevation-300 text-white w-64">
         <div className="flex items-center mb-4">
           <img
             src={iconSrc}
