@@ -96,5 +96,10 @@
       {"label": "Newsletter", "href": "https://www.kali.org/newsletter/"},
       {"label": "RSS", "href": "https://www.kali.org/rss.xml"}
     ]
+  },
+  "releasePill": {
+    "enabled": true,
+    "href": "https://www.kali.org/blog/kali-linux-2025-2-release/",
+    "label": "2025.2 Released"
   }
 }
