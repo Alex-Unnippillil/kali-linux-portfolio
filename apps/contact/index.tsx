@@ -126,7 +126,7 @@ const ContactApp: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4">
       {demoMode && (
-        <div className="mb-4 rounded bg-yellow-700 p-2 text-sm text-yellow-100">
+        <div className="mb-4 rounded bg-warning p-2 text-sm text-black">
           Demo mode: messages are not stored.
         </div>
       )}

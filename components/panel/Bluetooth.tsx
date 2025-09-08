@@ -91,13 +91,13 @@ const BluetoothPanel: React.FC = () => {
                 </button>
                 <button
                   onClick={() => toggleTrust(d.id)}
-                  className="rounded bg-green-600 px-2 py-1 text-xs"
+                  className="rounded bg-success px-2 py-1 text-xs"
                 >
                   {d.trusted ? 'Untrust' : 'Trust'}
                 </button>
                 <button
                   onClick={() => removeDevice(d.id)}
-                  className="rounded bg-red-600 px-2 py-1 text-xs"
+                  className="rounded bg-danger px-2 py-1 text-xs"
                 >
                   Remove
                 </button>

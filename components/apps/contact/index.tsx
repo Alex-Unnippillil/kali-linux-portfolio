@@ -267,14 +267,14 @@ const ContactApp: React.FC = () => {
     <div className="min-h-screen bg-gray-900 text-white p-6">
       <h1 className="mb-6 text-2xl">Contact</h1>
       {demoMode && (
-        <div className="mb-6 rounded bg-yellow-700 p-3 text-sm text-yellow-100">
+        <div className="mb-6 rounded bg-warning p-3 text-sm text-black">
           Demo mode: messages are not stored.
         </div>
       )}
       {banner && (
         <div
           className={`mb-6 rounded p-3 text-sm ${
-            banner.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+            banner.type === 'success' ? 'bg-success' : 'bg-danger'
           }`}
         >
           {banner.message}
