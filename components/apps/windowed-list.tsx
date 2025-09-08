@@ -3,6 +3,7 @@
 import React from "react";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { FixedSizeList as List } from "react-window";
+import type { ListChildComponentProps } from "react-window";
 
 export interface WindowedListProps<T> {
   items: T[];
@@ -43,7 +44,7 @@ export default function WindowedList<T>({
             overscanCount={5}
             itemKey={(index) => (itemKey ? itemKey(index, items[index]) : index)}
           >
-            {({ index, style }) => (
+            {({ index, style }: ListChildComponentProps) => (
               <div style={style}>{renderItem(items[index], index)}</div>
             )}
           </List>

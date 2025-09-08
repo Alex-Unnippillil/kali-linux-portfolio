@@ -15,7 +15,7 @@ const opfsSupported = (() => {
   );
 })();
 
-let directoryHandlePromise: Promise<FileSystemDirectoryHandle | null> | null = null;
+let directoryHandlePromise: Promise<FileSystemDirectoryHandle | null> | undefined;
 const getDirectoryHandle = (): Promise<FileSystemDirectoryHandle | null> => {
   if (directoryHandlePromise) return directoryHandlePromise;
   if (!opfsSupported) {
@@ -25,7 +25,7 @@ const getDirectoryHandle = (): Promise<FileSystemDirectoryHandle | null> => {
       .getDirectory()
       .catch(() => null);
   }
-  return directoryHandlePromise;
+  return directoryHandlePromise!;
 };
 
 export const loadLocalPacks = async (): Promise<LevelPack[]> => {

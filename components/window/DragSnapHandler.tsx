@@ -21,7 +21,7 @@ const DragSnapHandler: React.FC<DragSnapHandlerProps> = ({ children }) => {
   const [snapPreview, setSnapPreview] = useState<SnapPreview | null>(null);
   const [snapPosition, setSnapPosition] = useState<SnapPosition>(null);
 
-  const checkSnapPreview: DraggableEventHandler = () => {
+  const checkSnapPreview: DraggableEventHandler = (_e, _data) => {
     const node = nodeRef.current;
     if (!node) return;
     const rect = node.getBoundingClientRect();
@@ -41,13 +41,13 @@ const DragSnapHandler: React.FC<DragSnapHandlerProps> = ({ children }) => {
     }
   };
 
-  const dragTimeout = useRef<number>();
+  const dragTimeout = useRef<number | undefined>(undefined);
   const handleDrag: DraggableEventHandler = (...args) => {
     if (dragTimeout.current) window.clearTimeout(dragTimeout.current);
     dragTimeout.current = window.setTimeout(() => checkSnapPreview(...args), 50);
   };
 
-  const handleStop: DraggableEventHandler = () => {
+  const handleStop: DraggableEventHandler = (_e, _data) => {
     const node = nodeRef.current;
     if (!node) return;
 

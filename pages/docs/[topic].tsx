@@ -55,7 +55,8 @@ export const getStaticProps: GetStaticProps<DocProps> = async ({ params }) => {
   const md = fs.readFileSync(filePath, 'utf8');
   const tokens = marked.lexer(md);
 
-  const tocSlugger = new marked.Slugger();
+  const { Slugger, Renderer } = marked as any;
+  const tocSlugger = new Slugger();
   const toc: TocItem[] = tokens
     .filter((t) => t.type === 'heading' && (t as any).depth && ((t as any).depth === 2 || (t as any).depth === 3))
     .map((t) => ({
@@ -64,9 +65,9 @@ export const getStaticProps: GetStaticProps<DocProps> = async ({ params }) => {
       depth: (t as any).depth,
     }));
 
-  const renderer = new marked.Renderer();
-  const renderSlugger = new marked.Slugger();
-  renderer.heading = (text, level) => {
+  const renderer = new Renderer();
+  const renderSlugger = new Slugger();
+  (renderer.heading as any) = (text: string, level: number) => {
     const id = renderSlugger.slug(text);
     return `<h${level} id="${id}">${text}</h${level}>`;
   };

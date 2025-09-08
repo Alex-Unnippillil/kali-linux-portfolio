@@ -73,6 +73,6 @@ export default function ResourceBars() {
   );
 }
 
-export const displayResourceBars = (addFolder: any, openApp: any) => (
-  <ResourceBars addFolder={addFolder} openApp={openApp} />
+export const displayResourceBars = (_addFolder: any, _openApp: any) => (
+  <ResourceBars />
 );

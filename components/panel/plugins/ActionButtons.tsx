@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import type { JSX } from 'react';
 import Modal from '@/components/base/Modal';
 
 type Action = 'lock' | 'logout' | 'suspend' | 'restart' | 'shutdown';

@@ -1,4 +1,8 @@
-const BUILD_ID = (self as any).BUILD_ID || "0";
+/// <reference lib="webworker" />
+
+const sw = self as unknown as ServiceWorkerGlobalScope;
+
+const BUILD_ID = (sw as any).BUILD_ID || "0";
 const CACHE_NAME = `KLP_v${BUILD_ID}-periodic-cache-v1`;
 
 const ASSETS = [
@@ -40,38 +44,39 @@ async function cleanupOldCaches(): Promise<void> {
   await Promise.all(old.map((name) => caches.delete(name)));
 }
 
-self.addEventListener("install", (event: ExtendableEvent) => {
+sw.addEventListener("install", (event: ExtendableEvent) => {
   event.waitUntil(prefetchAssets());
 });
 
-self.addEventListener("activate", (event: ExtendableEvent) => {
+sw.addEventListener("activate", (event: ExtendableEvent) => {
   event.waitUntil(
     (async () => {
       await cleanupOldCaches();
-      await self.clients.claim();
+      await sw.clients.claim();
     })(),
   );
 });
 
-self.addEventListener("periodicsync", (event: any) => {
+sw.addEventListener("periodicsync", (event: any) => {
   if (event.tag === "content-sync") {
     event.waitUntil(prefetchAssets());
   }
 });
 
-self.addEventListener("message", (event: any) => {
+sw.addEventListener("message", (event: any) => {
   if (event.data && event.data.type === "refresh") {
     event.waitUntil(prefetchAssets());
   }
 });
 
-self.addEventListener("fetch", (event: FetchEvent) => {
+sw.addEventListener("fetch", (event: FetchEvent) => {
   const { request } = event;
   const url = new URL(request.url);
 
   if (url.pathname.startsWith("/apps/")) {
     event.respondWith(
-      caches.open(CACHE_NAME).then(async (cache) => {
+      (async () => {
+        const cache = await caches.open(CACHE_NAME);
         try {
           const response = await fetch(request);
           if (response.ok) {
@@ -79,21 +84,21 @@ self.addEventListener("fetch", (event: FetchEvent) => {
           }
           return response;
         } catch {
-          return cache.match(request) as Promise<Response | undefined>;
+          return (await cache.match(request)) || Response.error();
         }
-      }),
+      })(),
     );
     return;
   }
 
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request).catch(() => caches.match("/offline.html")),
+      fetch(request).catch(() => caches.match("/offline.html") as Promise<Response>),
     );
     return;
   }
 
   event.respondWith(
-    caches.match(request).then((cached) => cached || fetch(request)),
+    (async () => (await caches.match(request)) || fetch(request))(),
   );
 });

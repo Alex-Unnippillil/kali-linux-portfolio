@@ -1,26 +1,26 @@
-type Callback = (data: unknown) => void;
+type Callback<T> = (data: T) => void;
 
 interface PubSub {
-  publish: (topic: string, data: unknown) => void;
-  subscribe: (topic: string, cb: Callback) => () => void;
+  publish<T>(topic: string, data: T): void;
+  subscribe<T>(topic: string, cb: Callback<T>): () => void;
 }
 
 function createPubSub(): PubSub {
-  const channels = new Map<string, Set<Callback>>();
+  const channels = new Map<string, Set<Callback<any>>>();
   return {
-    publish(topic, data) {
+    publish<T>(topic: string, data: T) {
       const subs = channels.get(topic);
-      if (subs) subs.forEach((cb) => cb(data));
+      if (subs) subs.forEach((cb) => (cb as Callback<T>)(data));
     },
-    subscribe(topic, cb) {
+    subscribe<T>(topic: string, cb: Callback<T>) {
       let subs = channels.get(topic);
       if (!subs) {
         subs = new Set();
         channels.set(topic, subs);
       }
-      subs.add(cb);
+      subs.add(cb as Callback<any>);
       return () => {
-        subs!.delete(cb);
+        subs!.delete(cb as Callback<any>);
       };
     },
   };

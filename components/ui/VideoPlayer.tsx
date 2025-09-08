@@ -22,7 +22,7 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
   const [docPipSupported, setDocPipSupported] = useState(false);
   const [isPip, setIsPip] = useState(false);
 
-  useWakeLockOnFullscreen(videoRef);
+  useWakeLockOnFullscreen(videoRef as React.RefObject<HTMLElement>);
 
   useEffect(() => {
     const video = videoRef.current;

@@ -410,15 +410,17 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
       term.loadAddon(fit);
       term.loadAddon(search);
       term.loadAddon(webLinks);
-      term.open(container!);
+      const container = containerRef.current;
+      if (!container) return;
+      term.open(container);
       fit.fit();
       term.focus();
       const textarea = term.textarea;
       textarea?.addEventListener('paste', handlePasteEvent);
-      container?.addEventListener('contextmenu', handleLinkContext);
+      container.addEventListener('contextmenu', handleLinkContext);
       const preset = THEME_PRESETS[scheme as keyof typeof THEME_PRESETS];
       const bg = hexToRgba(preset.background, opacity);
-      term.setOption?.('theme', {
+      (term as any).setOption?.('theme', {
         background: bg,
         foreground: preset.foreground,
         cursor: preset.foreground,
