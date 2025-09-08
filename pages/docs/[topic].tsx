@@ -2,6 +2,7 @@ import { isBrowser } from '@/utils/env';
 import fs from 'fs';
 import path from 'path';
 import { GetStaticPaths, GetStaticProps } from 'next';
+import Head from 'next/head';
 import { marked } from 'marked';
 import { useEffect } from 'react';
 
@@ -14,9 +15,11 @@ interface TocItem {
 interface DocProps {
   html: string;
   toc: TocItem[];
+  title: string;
+  topic: string;
 }
 
-export default function DocPage({ html, toc }: DocProps) {
+export default function DocPage({ html, toc, title, topic }: DocProps) {
   useEffect(() => {
     if (isBrowser() && window.location.hash) {
       const el = document.getElementById(window.location.hash.slice(1));
@@ -24,8 +27,47 @@ export default function DocPage({ html, toc }: DocProps) {
     }
   }, []);
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com';
+
   return (
-    <div className="flex flex-col md:flex-row p-4">
+    <>
+      <Head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'WebSite',
+              url: siteUrl,
+              name: 'Kali Linux Portfolio',
+            }),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'BreadcrumbList',
+              itemListElement: [
+                {
+                  '@type': 'ListItem',
+                  position: 1,
+                  name: 'Docs',
+                  item: `${siteUrl}/docs`,
+                },
+                {
+                  '@type': 'ListItem',
+                  position: 2,
+                  name: title,
+                  item: `${siteUrl}/docs/${topic}`,
+                },
+              ],
+            }),
+          }}
+        />
+      </Head>
+      <div className="flex flex-col md:flex-row p-4">
       <nav className="md:w-1/4 md:pr-4">
         <ul>
           {toc.map(({ id, text, depth }) => (
@@ -36,7 +78,8 @@ export default function DocPage({ html, toc }: DocProps) {
         </ul>
       </nav>
       <article className="prose flex-1" dangerouslySetInnerHTML={{ __html: html }} />
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -55,6 +98,11 @@ export const getStaticProps: GetStaticProps<DocProps> = async ({ params }) => {
   const md = fs.readFileSync(filePath, 'utf8');
   const tokens = marked.lexer(md);
 
+  const titleToken = tokens.find(
+    (t) => t.type === 'heading' && (t as any).depth === 1,
+  ) as any;
+  const title = titleToken ? titleToken.text : topic;
+
   const tocSlugger = new marked.Slugger();
   const toc: TocItem[] = tokens
     .filter((t) => t.type === 'heading' && (t as any).depth && ((t as any).depth === 2 || (t as any).depth === 3))
@@ -72,5 +120,5 @@ export const getStaticProps: GetStaticProps<DocProps> = async ({ params }) => {
   };
 
   const html = marked.parse(md, { renderer }) as string;
-  return { props: { html, toc } };
+  return { props: { html, toc, title, topic } };
 };
