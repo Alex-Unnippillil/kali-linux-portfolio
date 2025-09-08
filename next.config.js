@@ -147,6 +147,9 @@ module.exports = withBundleAnalyzer(
     eslint: {
       ignoreDuringBuilds: true,
     },
+    typescript: {
+      ignoreBuildErrors: false,
+    },
     images: {
       unoptimized: true,
       domains: [
