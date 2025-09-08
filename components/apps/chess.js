@@ -338,7 +338,7 @@ const ChessGame = () => {
 
   useEffect(() => {
     if (!isBrowser()) return;
-    import("stockfish")
+    import("stockfish/src/stockfish-nnue-16-single.js")
       .then(() => setHasStockfish(true))
       .catch(() => setHasStockfish(false));
   }, []);
