@@ -20,7 +20,9 @@ export function useFormulas() {
 
 export function validateFormula(expr: string): boolean {
   try {
-    evaluate(expr);
+    const sanitized = expr.replace(/\s+/g, '');
+    if (/(?:[+\-*\/]{2,})/.test(sanitized)) return false;
+    evaluate(sanitized);
     return true;
   } catch {
     return false;
