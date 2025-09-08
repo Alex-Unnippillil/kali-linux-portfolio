@@ -16,7 +16,7 @@ const SizeSelector: React.FC<SizeSelectorProps> = ({ value, onChange }) => {
       <span className="text-sm">Grid</span>
       <select
         aria-label="Grid size"
-        className="px-2 py-1 rounded bg-gray-700 text-white"
+        className="surface-100 px-2 py-1 rounded text-text"
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
       >

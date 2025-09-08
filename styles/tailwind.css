@@ -33,4 +33,20 @@
     stroke-width: 2;
     stroke: url(#sparkline-fire);
   }
+
+  .surface-0 {
+    @apply bg-surface shadow-none;
+  }
+
+  .surface-100 {
+    @apply bg-surface shadow-sm;
+  }
+
+  .surface-200 {
+    @apply bg-surface shadow;
+  }
+
+  .surface-300 {
+    @apply bg-surface shadow-lg;
+  }
 }

@@ -115,7 +115,7 @@ const Window: React.FC<WindowProps> = ({
         height: size.h,
         zIndex,
       }}
-      className={`absolute bg-white shadow-lg rounded-lg border border-gray-300 overflow-hidden ${focused ? "" : "opacity-90"}`}
+      className={`absolute surface-300 rounded-lg border border-border overflow-hidden ${focused ? "" : "opacity-90"}`}
     >
       <div
         className="h-8 bg-gray-200 flex items-center cursor-move rounded-t-lg select-none"
