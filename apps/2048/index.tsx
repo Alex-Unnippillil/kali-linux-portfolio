@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ReactGA from 'react-ga4';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import usePersistentState from '../../hooks/usePersistentState';
 import { getDailySeed } from '../../utils/dailySeed';
 import { isBrowser } from '@/utils/env';
 
@@ -133,6 +134,9 @@ const Page2048 = () => {
   const [won, setWon] = useState(false);
   const [lost, setLost] = useState(false);
   const [history, setHistory] = useState<number[][][]>([]);
+  const [playerName, setPlayerName] = usePersistentState<string>('leaderboard:name', '');
+  const [leaderboard, setLeaderboard] = useState<{ username: string; score: number }[]>([]);
+  const [lbError, setLbError] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -231,6 +235,24 @@ const Page2048 = () => {
     resetTimer();
   }, [resetTimer]);
 
+  const loadLeaderboard = useCallback(async () => {
+    try {
+      setLbError(false);
+      const res = await fetch('/api/leaderboard/top?game=2048&limit=10');
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+      if (Array.isArray(data)) setLeaderboard(data);
+      else setLeaderboard([]);
+    } catch {
+      setLbError(true);
+      setLeaderboard([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadLeaderboard();
+  }, [loadLeaderboard]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
@@ -265,20 +287,27 @@ const Page2048 = () => {
 
   useEffect(() => {
     if (won || lost) {
+      let name = playerName;
+      if (!name && isBrowser()) {
+        name = window.prompt('Enter your name')?.trim() || '';
+        setPlayerName(name);
+      }
       saveReplay({ date: new Date().toISOString(), moves, boardType, hard });
       fetch('/api/leaderboard/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           game: '2048',
-          username: 'Anonymous',
+          username: name || 'Anonymous',
           score: highest,
         }),
-      }).catch(() => {
-        // ignore network errors
-      });
+      })
+        .then(() => loadLeaderboard())
+        .catch(() => {
+          // ignore network errors
+        });
     }
-  }, [won, lost, moves, boardType, hard, highest]);
+  }, [won, lost, moves, boardType, hard, highest, playerName, setPlayerName, loadLeaderboard]);
 
   return (
     <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
@@ -301,6 +330,12 @@ const Page2048 = () => {
           <option value="classic">Classic</option>
           <option value="hex">Hex 2048</option>
         </select>
+        <input
+          className="text-black px-1 rounded"
+          placeholder="Name"
+          value={playerName}
+          onChange={(e) => setPlayerName(e.target.value)}
+        />
         <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={close}>
           Close
         </button>
@@ -327,6 +362,22 @@ const Page2048 = () => {
       {(won || lost) && (
         <div className="mt-4 text-xl">{won ? 'You win!' : 'Game over'}</div>
       )}
+      <div className="mt-4">
+        <h2 className="font-bold">Leaderboard</h2>
+        {lbError ? (
+          <div className="text-sm">Failed to load leaderboard</div>
+        ) : leaderboard.length === 0 ? (
+          <div className="text-sm">No scores yet</div>
+        ) : (
+          <ol className="list-decimal list-inside">
+            {leaderboard.map((entry, i) => (
+              <li key={i}>
+                {entry.username}: {entry.score}
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
     </div>
   );
 };
