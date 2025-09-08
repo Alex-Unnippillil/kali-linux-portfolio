@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
+import copyToClipboard from '../../../utils/clipboard';
 
-const algorithms = ['MD5', 'SHA-1', 'SHA-256'];
+const algorithms = ['SHA-256'];
 
 const PAGE_SIZE = 10;
 
@@ -12,6 +13,8 @@ const HashConverter = () => {
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState([]);
   const [page, setPage] = useState(0);
+  const [announce, setAnnounce] = useState('');
+  const announceTimer = useRef(null);
 
   useEffect(() => {
     workerRef.current = new Worker(
@@ -61,7 +64,13 @@ const HashConverter = () => {
 
   const preventDefault = (e) => e.preventDefault();
 
-  const copy = (val) => navigator.clipboard?.writeText(val);
+  const copy = async (val, alg) => {
+    if (!val) return;
+    const success = await copyToClipboard(val);
+    setAnnounce(success ? `${alg} checksum copied` : `Failed to copy ${alg}`);
+    clearTimeout(announceTimer.current);
+    announceTimer.current = setTimeout(() => setAnnounce(''), 2000);
+  };
 
   const totalPages = Math.ceil(results.length / PAGE_SIZE);
   const pageResults = results.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -119,24 +128,32 @@ const HashConverter = () => {
               {pageResults.map((r, idx) => (
                 <tr key={`${r.name}-${idx}`}>
                   <td className="pr-2 align-top break-all">{r.name}</td>
-                  {algorithms.map((alg) => (
-                    <td key={alg} className="pr-2 align-top">
-                      <div className="flex items-center gap-2">
-                        <input
-                          className="text-black flex-1 p-1 rounded"
-                          value={r[alg] || ''}
-                          readOnly
-                          aria-label={`${alg} checksum`}
-                        />
-                        <button
-                          className="bg-gray-600 px-2 py-1 rounded"
-                          onClick={() => copy(r[alg])}
-                        >
-                          Copy
-                        </button>
-                      </div>
-                    </td>
-                  ))}
+                  {algorithms.map((alg) => {
+                    const val = r[alg];
+                    return (
+                      <td key={alg} className="pr-2 align-top">
+                        <div className="flex items-center gap-2">
+                          <input
+                            className="font-mono text-black flex-1 p-1 rounded"
+                            value={val || ''}
+                            readOnly
+                            aria-label={`${alg} checksum`}
+                          />
+                          <button
+                            className="bg-ubt-blue text-white px-2 py-1 rounded disabled:opacity-50"
+                            onClick={() => copy(val, alg)}
+                            aria-label={`Copy ${alg} checksum for ${r.name}`}
+                            disabled={!val}
+                          >
+                            Copy
+                          </button>
+                        </div>
+                        {val === undefined && (
+                          <span className="text-red-500 text-xs">Error</span>
+                        )}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>
@@ -166,6 +183,7 @@ const HashConverter = () => {
           )}
         </>
       )}
+      <div aria-live="polite" className="h-4 text-sm mt-1">{announce}</div>
     </div>
   );
 };
