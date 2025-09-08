@@ -1,0 +1,10 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`adwaita icon pack matches expected file list 1`] = `
+[
+  "audio-volume-medium-symbolic.svg",
+  "battery-good-symbolic.svg",
+  "network-wireless-signal-good-symbolic.svg",
+  "network-wireless-signal-none-symbolic.svg",
+]
+`;

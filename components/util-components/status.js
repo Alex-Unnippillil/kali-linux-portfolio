@@ -5,7 +5,7 @@ import { useSettings } from '../../hooks/useSettings';
 import { useTray } from '../../hooks/useTray';
 
 export default function Status() {
-  const { allowNetwork, theme, symbolicTrayIcons } = useSettings();
+  const { allowNetwork, symbolicTrayIcons } = useSettings();
   const { icons, register, unregister } = useTray();
   const [online, setOnline] = useState(true);
   const [undercover, setUndercover] = useState(false);
@@ -48,13 +48,12 @@ export default function Status() {
 
   useEffect(() => {
     const id = 'network';
-    const themeDir = undercover ? 'Undercover' : 'Yaru';
     const connected = undercover
       ? '/themes/Undercover/status/network.svg'
-      : `/themes/${themeDir}/status/network-wireless-signal-good-symbolic.svg`;
+      : '/icons/adwaita/network-wireless-signal-good-symbolic.svg';
     const disconnected = undercover
       ? '/themes/Undercover/status/network.svg'
-      : `/themes/${themeDir}/status/network-wireless-signal-none-symbolic.svg`;
+      : '/icons/adwaita/network-wireless-signal-none-symbolic.svg';
     register({
       id,
       tooltip: online ? (allowNetwork ? 'Online' : 'Online (requests blocked)') : 'Offline',
@@ -66,19 +65,17 @@ export default function Status() {
 
   useEffect(() => {
     const id = 'volume';
-    const themeDir = theme === 'kali-light' ? 'Yaru' : 'Yaru';
-    const icon = `/themes/${themeDir}/status/audio-volume-medium-symbolic.svg`;
+    const icon = '/icons/adwaita/audio-volume-medium-symbolic.svg';
     register({ id, tooltip: 'Volume', sni: icon, legacy: icon });
     return () => unregister(id);
-  }, [register, unregister, theme]);
+  }, [register, unregister]);
 
   useEffect(() => {
     const id = 'battery';
-    const themeDir = theme === 'kali-light' ? 'Yaru' : 'Yaru';
-    const icon = `/themes/${themeDir}/status/battery-good-symbolic.svg`;
+    const icon = '/icons/adwaita/battery-good-symbolic.svg';
     register({ id, tooltip: 'Battery', sni: icon, legacy: icon });
     return () => unregister(id);
-  }, [register, unregister, theme]);
+  }, [register, unregister]);
 
   return (
     <div className="flex items-center gap-2 md:gap-1 lg:gap-2" role="group" aria-label="System tray">
