@@ -12,6 +12,8 @@ interface Props {
 }
 const WEB_IDE_BASE =
   'https://gitlab.com/-/ide/project/kalilinux/documentation/kali-docs/edit/master/-/';
+const WEB_VIEW_BASE =
+  'https://gitlab.com/kalilinux/documentation/kali-docs/-/blob/master/';
 
 const PencilIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -54,9 +56,27 @@ const PlusIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+const LinkIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    {...props}
+  >
+    <path
+      d="M13.828 10.172a4 4 0 015.657 5.656l-3 3a4 4 0 01-5.657-5.656m-3.657-3.657a4 4 0 015.657-5.656l3 3a4 4 0 01-5.657 5.656"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 const MDXPageHeader: React.FC<Props> = ({ breadcrumbs, filePath }) => {
   const docsPath = filePath.replace(/^content\//, '').replace(/\.mdx?$/, '.md');
   const editUrl = `${WEB_IDE_BASE}${docsPath}`;
+  const viewUrl = `${WEB_VIEW_BASE}${docsPath}`;
   const newUrl = `${WEB_IDE_BASE}${docsPath.substring(0, docsPath.lastIndexOf('/') + 1)}`;
   return (
     <div className="flex flex-col sm:flex-row sm:items-center mb-4">
@@ -78,10 +98,19 @@ const MDXPageHeader: React.FC<Props> = ({ breadcrumbs, filePath }) => {
       </nav>
       <div className="mt-2 sm:mt-0 flex gap-2 w-full sm:w-auto justify-end sm:ml-auto">
         <a
+          href={viewUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="p-2 text-gray-600 hover:text-gray-800"
+          aria-label="View source"
+        >
+          <LinkIcon className="w-5 h-5" />
+        </a>
+        <a
           href={editUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="p-2 text-gray-600 hover:text-gray-900"
+          className="p-2 text-gray-600 hover:text-gray-800"
           aria-label="Edit this page"
         >
           <PencilIcon className="w-5 h-5" />
@@ -90,7 +119,7 @@ const MDXPageHeader: React.FC<Props> = ({ breadcrumbs, filePath }) => {
           href={newUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="p-2 text-gray-600 hover:text-gray-900"
+          className="p-2 text-gray-600 hover:text-gray-800"
           aria-label="Create a new page"
         >
           <PlusIcon className="w-5 h-5" />
