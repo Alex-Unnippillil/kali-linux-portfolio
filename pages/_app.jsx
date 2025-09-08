@@ -21,6 +21,7 @@ import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 import useReportWebVitals from '../hooks/useReportWebVitals';
+import ThemeToggle from '../components/ui/ThemeToggle';
 
 
 let SpeedInsights = () => null;
@@ -248,6 +249,9 @@ function MyApp(props) {
                 <div aria-live="polite" id="live-region" />
                 <Component {...pageProps} />
                 <ShortcutOverlay />
+                <footer className="fixed bottom-4 right-4">
+                  <ThemeToggle />
+                </footer>
                 {process.env.VERCEL_ANALYTICS_ID && (
                   <>
                     <Analytics
