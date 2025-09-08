@@ -1,6 +1,6 @@
 import dynamic from "next/dynamic";
 import { baseMetadata } from "../lib/metadata";
-import BetaBadge from "../components/BetaBadge";
+import { BetaBadge } from "../components/BetaBadge";
 import useSession from "../hooks/useSession";
 
 export const metadata = baseMetadata;

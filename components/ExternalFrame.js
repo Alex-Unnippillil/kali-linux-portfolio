@@ -15,7 +15,7 @@ const isAllowed = (src) => {
  * Iframe wrapper for allowed external sources.
  * Optionally prefetches the iframe source.
  */
-export default function ExternalFrame({ src, title, prefetch = false, onLoad: onLoadProp, ...props }) {
+export function ExternalFrame({ src, title, prefetch = false, onLoad: onLoadProp, ...props }) {
   const [cookiesBlocked, setCookiesBlocked] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
   const [loaded, setLoaded] = useState(false);

@@ -5,7 +5,7 @@ interface TerminalOutputProps {
   ariaLabel?: string;
 }
 
-export default function TerminalOutput({ text, ariaLabel }: TerminalOutputProps) {
+export function TerminalOutput({ text, ariaLabel }: TerminalOutputProps) {
   const lines = text.split('\n');
   const copyLine = async (line: string) => {
     try {
