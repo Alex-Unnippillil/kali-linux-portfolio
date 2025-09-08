@@ -9,11 +9,17 @@ interface VerifyDownloadModalProps {
 }
 
 const STEPS = ["Download", "Checksum", "Signature"];
-const EXPECTED_CHECKSUM = "abc123";
+const ALGORITHMS = ["SHA256", "SHA1", "MD5"];
+const EXPECTED_CHECKSUMS: Record<string, string> = {
+  SHA256: "abc123",
+  SHA1: "def456",
+  MD5: "789abc",
+};
 const EXPECTED_SIGNATURE = "signed";
 
 const VerifyDownloadModal = ({ isOpen, onClose }: VerifyDownloadModalProps) => {
   const [step, setStep] = useState(0);
+  const [algorithm, setAlgorithm] = useState("SHA256");
   const [checksum, setChecksum] = useState("");
   const [signature, setSignature] = useState("");
   const [checksumResult, setChecksumResult] = useState<null | boolean>(null);
@@ -21,6 +27,7 @@ const VerifyDownloadModal = ({ isOpen, onClose }: VerifyDownloadModalProps) => {
 
   const reset = () => {
     setStep(0);
+    setAlgorithm("SHA256");
     setChecksum("");
     setSignature("");
     setChecksumResult(null);
@@ -33,11 +40,17 @@ const VerifyDownloadModal = ({ isOpen, onClose }: VerifyDownloadModalProps) => {
   };
 
   const verifyChecksum = () => {
-    setChecksumResult(checksum.trim() === EXPECTED_CHECKSUM);
+    setChecksumResult(checksum.trim() === EXPECTED_CHECKSUMS[algorithm]);
   };
 
   const verifySignature = () => {
     setSignatureResult(signature.trim() === EXPECTED_SIGNATURE);
+  };
+
+  const selectAlgorithm = (alg: string) => {
+    setAlgorithm(alg);
+    setChecksum("");
+    setChecksumResult(null);
   };
 
   return (
@@ -88,13 +101,29 @@ const VerifyDownloadModal = ({ isOpen, onClose }: VerifyDownloadModalProps) => {
           {step === 1 && (
             <div>
               <p className="mb-2">
-                Paste the SHA256 checksum you generated from the download.
+                Paste the {algorithm} checksum you generated from the download.
               </p>
+              <div className="flex gap-2 mb-2">
+                {ALGORITHMS.map((alg) => (
+                  <button
+                    key={alg}
+                    onClick={() => selectAlgorithm(alg)}
+                    className={`px-2 py-1 rounded border ${
+                      alg === algorithm
+                        ? "bg-ubt-blue text-white"
+                        : "opacity-50"
+                    }`}
+                  >
+                    {alg}
+                  </button>
+                ))}
+              </div>
               <input
                 value={checksum}
                 onChange={(e) => setChecksum(e.target.value)}
                 className="w-full border p-2 mb-2"
-                placeholder="Checksum"
+                placeholder={`${algorithm} checksum`}
+                aria-label={`${algorithm} checksum input`}
               />
               {checksumResult !== null && (
                 <p
@@ -133,13 +162,14 @@ const VerifyDownloadModal = ({ isOpen, onClose }: VerifyDownloadModalProps) => {
           {step === 2 && (
             <div>
               <p className="mb-2">
-                Paste the GPG signature and verify it with Kali's signing key.
+                Paste the GPG signature and verify it with Kali&apos;s signing key.
               </p>
               <input
                 value={signature}
                 onChange={(e) => setSignature(e.target.value)}
                 className="w-full border p-2 mb-2"
                 placeholder="Signature"
+                aria-label="Signature"
               />
               {signatureResult !== null && (
                 <p
