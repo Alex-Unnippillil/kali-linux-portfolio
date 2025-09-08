@@ -67,7 +67,7 @@ export default function Bluetooth() {
               ))}
             </ul>
           ) : (
-            <p className="text-gray-400">Bluetooth is off</p>
+            <p className="text-gray-600 dark:text-gray-400">Bluetooth is off</p>
           )}
         </div>
       )}

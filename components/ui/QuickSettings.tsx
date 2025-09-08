@@ -80,7 +80,7 @@ const QuickSettings = ({ open, lockScreen, logOut }: Props) => {
         </button>
         <button
           type="button"
-          className="w-full text-left text-gray-400 cursor-not-allowed"
+          className="w-full text-left text-gray-600 dark:text-gray-400 cursor-not-allowed"
           disabled
           title="Restart is disabled in this demo"
           aria-disabled="true"
@@ -89,7 +89,7 @@ const QuickSettings = ({ open, lockScreen, logOut }: Props) => {
         </button>
         <button
           type="button"
-          className="w-full text-left text-gray-400 cursor-not-allowed"
+          className="w-full text-left text-gray-600 dark:text-gray-400 cursor-not-allowed"
           disabled
           title="Shut Down is disabled in this demo"
           aria-disabled="true"

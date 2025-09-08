@@ -33,6 +33,11 @@ Attempted to load each route under `/apps` in Chromium, Firefox, and WebKit. All
 - Latest versions (`@puppeteer/browsers@2.10.8`, `tar-fs@3.1.0`) still depend on `bare-fs@4.2.1`, so the warning remains.
 - `puppeteer` and `puppeteer-core` require this chain; removing them would break existing tooling, so the warning is ignored.
 
+## Accessibility contrast checks (2025-09-08)
+
+- `text-gray-400` on light backgrounds failed WCAG AA contrast in several components (QuickSettings, Network Manager, Gigolo, Bluetooth panel).
+- Updated disabled and empty-state text to use `text-gray-600 dark:text-gray-400` for sufficient contrast in both light and dark themes.
+
 ## Sticky Notes share target (2025-02-14)
 
 - Verified the manifest `share_target` flow on Chrome and Edge.
