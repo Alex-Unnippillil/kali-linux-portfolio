@@ -6,8 +6,8 @@ import {
   onFetchProxy,
   getActiveFetches,
   FetchEntry,
-} from '../../../lib/fetchProxy';
-import { exportMetrics } from '../export';
+} from '@/app/_client/fetchProxy';
+import { exportMetrics } from '@/app/_client/network-export';
 import RequestChart from './RequestChart';
 
 const HISTORY_KEY = 'network-insights-history';
