@@ -151,11 +151,11 @@ export default class Ubuntu extends Component {
 	render() {
 		return (
 			<div className="w-screen h-screen overflow-hidden" id="monitor-screen">
-				<LockScreen
-					isLocked={this.state.screen_locked}
-					bgImgName={this.state.bg_image_name}
-					unLockScreen={this.unLockScreen}
-				/>
+                                <LockScreen
+                                        mode="lock"
+                                        isLocked={this.state.screen_locked}
+                                        onSubmit={this.unLockScreen}
+                                />
 				<BootingScreen
 					visible={this.state.booting_screen}
 					isShutDown={this.state.shutDownScreen}
