@@ -3,6 +3,7 @@ import { decode } from "blurhash";
 import { PNG } from "pngjs";
 import desktopsData from "../content/desktops.json";
 import { baseMetadata } from "../lib/metadata";
+import BlogHighlights from "../components/kali/BlogHighlights";
 
 export const metadata = baseMetadata;
 
@@ -45,6 +46,7 @@ export default function Home({ desktops }) {
           </div>
         ))}
       </div>
+      <BlogHighlights />
     </main>
   );
 }
