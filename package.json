@@ -29,7 +29,7 @@
     "postinstall": "simple-git-hooks"
   },
   "engines": {
-    "node": "22.x"
+    "node": "20.x"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm -w typecheck && tsc --noEmit -p packages/*"
