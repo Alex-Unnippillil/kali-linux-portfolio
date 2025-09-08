@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
+import { Icon } from '../ui/Icon';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 
@@ -122,13 +122,7 @@ const WhiskerMenu: React.FC = () => {
         onClick={() => setOpen(o => !o)}
         className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
       >
-        <Image
-          src="/themes/Yaru/status/decompiler-symbolic.svg"
-          alt="Menu"
-          width={16}
-          height={16}
-          className="inline mr-1"
-        />
+        <Icon name="menu" className="inline mr-1 w-4 h-4" />
         Applications
       </button>
       {open && (
@@ -157,6 +151,7 @@ const WhiskerMenu: React.FC = () => {
             <input
               className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
               placeholder="Search"
+              aria-label="Search applications"
               value={query}
               onChange={e => setQuery(e.target.value)}
               autoFocus

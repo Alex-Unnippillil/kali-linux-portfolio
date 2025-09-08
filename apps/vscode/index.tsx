@@ -1,8 +1,7 @@
 'use client';
 
-import Image from 'next/image';
 import ExternalFrame from '../../components/ExternalFrame';
-import { CloseIcon, MaximizeIcon, MinimizeIcon } from '../../components/ToolbarIcons';
+import { Icon } from '../../components/ui/Icon';
 import { kaliTheme } from '../../styles/themes/kali';
 import { SIDEBAR_WIDTH, ICON_SIZE } from './utils';
 
@@ -40,13 +39,13 @@ export default function VsCode() {
             style={{ backgroundColor: kaliTheme.background }}
           >
             <button aria-label="Minimize">
-              <MinimizeIcon />
+              <Icon name="minimize" />
             </button>
             <button aria-label="Maximize">
-              <MaximizeIcon />
+              <Icon name="maximize" />
             </button>
             <button aria-label="Close">
-              <CloseIcon />
+              <Icon name="close" />
             </button>
           </div>
           <div className="relative flex-1" style={{ backgroundColor: kaliTheme.background }}>
@@ -57,12 +56,7 @@ export default function VsCode() {
               onLoad={() => {}}
             />
             <div className="absolute top-4 left-4 flex items-center gap-4 bg-black/50 p-4 rounded">
-              <Image
-                src="/themes/Yaru/system/view-app-grid-symbolic.svg"
-                alt="Open Folder"
-                width={64}
-                height={64}
-              />
+              <Icon name="grid" scale={2} className="w-16 h-16" />
               <span className="text-lg">Open Folder</span>
             </div>
           </div>
