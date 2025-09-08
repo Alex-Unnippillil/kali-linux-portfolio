@@ -1,4 +1,5 @@
 import { useState, ChangeEvent } from 'react';
+import DensityWrapper from '../ui/DensityWrapper';
 
 interface Shortcut {
   id: number;
@@ -81,6 +82,7 @@ const KeyboardShortcuts = () => {
   };
 
   return (
+    <DensityWrapper>
     <div>
       {warning && (
         <div role="alert" className="text-red-500 mb-2">
@@ -125,6 +127,7 @@ const KeyboardShortcuts = () => {
         </label>
       </div>
     </div>
+    </DensityWrapper>
   );
 };
 

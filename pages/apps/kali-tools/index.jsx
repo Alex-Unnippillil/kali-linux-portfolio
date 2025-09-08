@@ -1,6 +1,7 @@
 import Head from 'next/head';
 import { useMemo, useState } from 'react';
 import tools from '../../../data/kali-tools.json';
+import DensityWrapper from '../../../components/ui/DensityWrapper';
 
 const letters = Array.from({ length: 26 }, (_, i) =>
   String.fromCharCode(65 + i),
@@ -48,6 +49,7 @@ const KaliToolsPage = () => {
           }}
         />
       </Head>
+      <DensityWrapper>
       <div className="relative p-4">
         <label htmlFor="tool-search" className="sr-only">
           Search tools
@@ -64,14 +66,14 @@ const KaliToolsPage = () => {
           grouped[letter] ? (
             <section key={letter} id={`section-${letter}`} className="mb-8">
               <h2 className="mb-2 text-xl font-bold">{letter}</h2>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+              <div className="tools-grid grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                 {grouped[letter].map((tool) => (
                   <a
                     key={tool.id}
                     href={`https://www.kali.org/tools/${tool.id}/`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex flex-col items-center rounded border p-4 text-center focus:outline-none focus:ring"
+                    className="tools-card flex flex-col items-center rounded border p-4 text-center focus:outline-none focus:ring"
                   >
                     <span>{tool.name}</span>
                   </a>
@@ -109,6 +111,7 @@ const KaliToolsPage = () => {
           </ul>
         </nav>
       </div>
+      </DensityWrapper>
     </>
   );
 };
