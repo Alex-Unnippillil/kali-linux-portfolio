@@ -13,17 +13,26 @@ function nonce() {
   return btoa(str);
 }
 
-export function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+export function middleware(req: NextRequest | { headers: Headers; nextUrl?: URL; url?: string }) {
+  const url =
+    (req as any).nextUrl ?? new URL((req as any).url || '/', 'http://localhost');
+  const { pathname } = url;
+  const shouldRedirect = Boolean((req as any).nextUrl);
   if (
+    shouldRedirect &&
     !PUBLIC_FILE.test(pathname) &&
     !pathname.startsWith('/_next') &&
     !pathname.includes('/api') &&
     !locales.some((loc) => pathname === `/${loc}` || pathname.startsWith(`/${loc}/`))
   ) {
-    const language = req.headers.get('accept-language')?.split(',')[0].split('-')[0];
+    const language = req.headers
+      .get('accept-language')
+      ?.split(',')[0]
+      .split('-')[0];
     const locale = locales.includes(language ?? '') ? language! : defaultLocale;
-    return NextResponse.redirect(new URL(`/${locale}${pathname}`, req.url));
+    return NextResponse.redirect(
+      new URL(`/${locale}${pathname}`, (req as any).url || 'http://localhost')
+    );
   }
 
   const n = nonce();
