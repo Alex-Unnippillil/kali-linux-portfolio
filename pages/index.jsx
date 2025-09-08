@@ -2,6 +2,7 @@ import dynamic from "next/dynamic";
 import { baseMetadata } from "../lib/metadata";
 import BetaBadge from "../components/BetaBadge";
 import useSession from "../hooks/useSession";
+import KaliBlogPosts from "../components/KaliBlogPosts";
 
 export const metadata = baseMetadata;
 
@@ -45,6 +46,17 @@ const App = () => {
       />
       <BetaBadge />
       <InstallButton />
+      <KaliBlogPosts />
+      <footer className="mt-8 text-center text-xs text-gray-400">
+        <a
+          href="https://www.kali.org/rss.xml"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:underline"
+        >
+          Kali Blog RSS
+        </a>
+      </footer>
     </>
   );
 };
