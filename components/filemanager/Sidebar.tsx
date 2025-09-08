@@ -15,7 +15,7 @@ interface SidebarProps {
 
 export default function Sidebar({ devices, onEject }: SidebarProps) {
   return (
-    <aside className="p-2 w-48 bg-gray-100" aria-label="device sidebar">
+    <aside className="p-2 w-48 bg-gray-100 rtl:text-right" aria-label="device sidebar">
       <ul>
         {devices.map((device) => (
           <li key={device.id} className="mb-1 flex items-center justify-between">

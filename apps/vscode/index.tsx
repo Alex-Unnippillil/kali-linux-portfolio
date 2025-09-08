@@ -36,7 +36,7 @@ export default function VsCode() {
         </aside>
         <div className="flex-1 flex flex-col border border-black/20 rounded-md overflow-hidden">
           <div
-            className="flex items-center justify-end gap-2 px-2 py-1 border-b border-black/20"
+            className="flex items-center justify-end gap-2 px-2 py-1 border-b border-black/20 rtl:justify-start"
             style={{ backgroundColor: kaliTheme.background }}
           >
             <button aria-label="Minimize">

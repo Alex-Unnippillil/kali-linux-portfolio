@@ -23,7 +23,7 @@ export default function DocMegaMenu({ onClose }: DocMegaMenuProps) {
   return (
     <div
       ref={ref}
-      className="fixed left-0 top-12 z-50 w-full bg-white shadow-lg p-4"
+      className="fixed left-0 top-12 z-50 w-full bg-white shadow-lg p-4 rtl:left-auto rtl:right-0"
     >
       <ul className="grid gap-2 sm:grid-cols-2">
         <li>
