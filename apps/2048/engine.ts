@@ -38,12 +38,14 @@ export const moveDown = (board: Board): Board =>
 export const hasMoves = (board: Board): boolean => {
   const size = board.length;
   for (let r = 0; r < size; r += 1) {
+    const row = board[r];
+    if (!row) continue;
     for (let c = 0; c < size; c += 1) {
-      const row = board[r]!;
-      const v = row[c]!;
+      const v = row[c];
       if (v === 0) return true;
-      if (c < size - 1 && v === row[c + 1]!) return true;
-      if (r < size - 1 && v === board[r + 1]![c]!) return true;
+      if (c < size - 1 && v === row[c + 1]) return true;
+      if (r < size - 1 && v === board[r + 1]?.[c]) return true;
+
     }
   }
   return false;
@@ -59,7 +61,8 @@ export const addRandomTile = (board: Board, rand: () => number): Board => {
   if (empty.length === 0) return board.map((row) => [...row]);
   const [r, c] = empty[Math.floor(rand() * empty.length)]!;
   const newBoard = board.map((row) => [...row]);
-  newBoard[r][c] = rand() < 0.9 ? 2 : 4;
+  const rowAt = newBoard[r]!;
+  rowAt[c] = rand() < 0.9 ? 2 : 4;
   return newBoard;
 };
 
