@@ -78,6 +78,11 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   },
 });
 
+let withExportImages = (config) => config;
+try {
+  withExportImages = require('next-export-optimize-images');
+} catch {}
+
 const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -116,28 +121,29 @@ function configureWebpack(config, { isServer }) {
 
 
 module.exports = withBundleAnalyzer(
-  withPWA({
-    ...(isStaticExport && { output: 'export' }),
-    env: { NEXT_PUBLIC_BUILD_ID: buildId },
-    serverExternalPackages: [
-      '@supabase/supabase-js',
-      '@tinyhttp/cookie-signature',
-    ],
-    webpack: configureWebpack,
+  withExportImages(
+    withPWA({
+      ...(isStaticExport && { output: 'export' }),
+      env: { NEXT_PUBLIC_BUILD_ID: buildId },
+      serverExternalPackages: [
+        '@supabase/supabase-js',
+        '@tinyhttp/cookie-signature',
+      ],
+      webpack: configureWebpack,
 
-    // Run ESLint during builds so linting problems surface in CI and local builds.
-    eslint: {
-      ignoreDuringBuilds: false,
-    },
-    typescript: {
-      ignoreBuildErrors: false,
-    },
-    experimental: {
-      optimizeCss: true,
-    },
-    images: {
-      unoptimized: true,
-      domains: [
+      // Run ESLint during builds so linting problems surface in CI and local builds.
+      eslint: {
+        ignoreDuringBuilds: false,
+      },
+      typescript: {
+        ignoreBuildErrors: false,
+      },
+      experimental: {
+        optimizeCss: true,
+      },
+      images: {
+        unoptimized: true,
+        domains: [
         'opengraph.githubassets.com',
         'raw.githubusercontent.com',
         'avatars.githubusercontent.com',
@@ -258,6 +264,7 @@ module.exports = withBundleAnalyzer(
           },
         }
       : {}),
-  })
+    })
+  )
 );
 

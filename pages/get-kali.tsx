@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import Callout from '../components/ui/Callout';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
@@ -63,7 +64,7 @@ const GetKali: React.FC = () => (
                   return (
                     <li key={badge} className="flex items-center justify-center">
                       {icon ? (
-                        <img src={icon} alt={badge} className="h-6 w-6" />
+                        <Image src={icon} alt={badge} width={24} height={24} className="h-6 w-6" />
                       ) : (
                         <span className="bg-gray-200 text-gray-800 px-2 py-1 rounded text-xs">
                           {badge}

@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import Callout from '../components/ui/Callout';
 
 const InstallOptions: React.FC = () => (
@@ -23,9 +24,9 @@ const InstallOptions: React.FC = () => (
         <h2 className="text-xl font-semibold mb-2">Cloud</h2>
         <p className="mb-4">Deploy Kali on popular cloud providers for on-demand access from anywhere.</p>
         <div className="mb-4 flex gap-2">
-          <img src="/icons/providers/aws.svg" alt="AWS" className="h-6 w-6" />
-          <img src="/icons/providers/azure.svg" alt="Azure" className="h-6 w-6" />
-          <img src="/icons/providers/gcp.svg" alt="GCP" className="h-6 w-6" />
+          <Image src="/icons/providers/aws.svg" alt="AWS" width={24} height={24} className="h-6 w-6" />
+          <Image src="/icons/providers/azure.svg" alt="Azure" width={24} height={24} className="h-6 w-6" />
+          <Image src="/icons/providers/gcp.svg" alt="GCP" width={24} height={24} className="h-6 w-6" />
         </div>
         <Link href="/platforms/cloud" className="text-blue-500 hover:underline mt-auto">
           Learn more
