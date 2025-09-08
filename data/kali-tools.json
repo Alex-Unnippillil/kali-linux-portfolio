@@ -1,7 +1,12 @@
 [
-  { "id": "aircrack-ng", "name": "Aircrack-ng" },
-  { "id": "amap", "name": "Amap" },
-  { "id": "armitage", "name": "Armitage" },
+  { "id": "aircrack-ng", "name": "Aircrack-ng", "version": "1.7" },
+  { "id": "amap", "name": "Amap", "updated": true },
+  {
+    "id": "armitage",
+    "name": "Armitage",
+    "version": "2023.1",
+    "updated": true
+  },
   { "id": "autopsy", "name": "Autopsy" },
   { "id": "bettercap", "name": "Bettercap" },
   { "id": "burpsuite", "name": "Burpsuite" },

@@ -6,6 +6,9 @@ const letters = Array.from({ length: 26 }, (_, i) =>
   String.fromCharCode(65 + i),
 );
 
+const metaBadgeClass =
+  'ml-1 rounded bg-gray-200 px-1 text-[0.65rem] font-medium text-gray-700';
+
 const KaliToolsPage = () => {
   const [query, setQuery] = useState('');
   const filteredTools = useMemo(
@@ -73,7 +76,15 @@ const KaliToolsPage = () => {
                     rel="noopener noreferrer"
                     className="flex flex-col items-center rounded border p-4 text-center focus:outline-none focus:ring"
                   >
-                    <span>{tool.name}</span>
+                    <span className="flex items-center justify-center">
+                      {tool.name}
+                      {tool.version && (
+                        <span className={metaBadgeClass}>{`v${tool.version}`}</span>
+                      )}
+                      {tool.updated && (
+                        <span className={metaBadgeClass}>Updated</span>
+                      )}
+                    </span>
                   </a>
                 ))}
               </div>
