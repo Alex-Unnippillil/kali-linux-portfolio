@@ -40,8 +40,10 @@ const slideRow = (row: number[]) => {
   return newRow;
 };
 
-const transpose = (board: number[][]) =>
-  board.length === 0 ? [] : board[0].map((_, c) => board.map((row) => row[c]));
+const transpose = (board: number[][]): number[][] => {
+  if (board.length === 0) return [];
+  return board[0].map((_, c) => board.map((row) => row[c]));
+};
 const flip = (board: number[][]) => board.map((row) => [...row].reverse());
 
 const moveLeft = (board: number[][]) => board.map((row) => slideRow(row));
