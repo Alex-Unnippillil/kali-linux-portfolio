@@ -51,6 +51,17 @@
   --motion-medium: 300ms;
   --motion-slow: 500ms;
 
+  /* Blur */
+  --blur-sm: 4px;
+  --blur-md: 8px;
+  --blur-lg: 16px;
+
+  /* Shadows */
+  --shadow-color: color-mix(in srgb, var(--color-inverse), transparent 80%);
+  --shadow-sm: 0 1px 2px var(--shadow-color);
+  --shadow-md: 0 4px 6px var(--shadow-color);
+  --shadow-lg: 0 8px 12px var(--shadow-color);
+
   /* Fonts */
   --font-family-base: 'Ubuntu', sans-serif;
   --font-multiplier: 1;

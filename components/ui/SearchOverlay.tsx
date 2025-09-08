@@ -67,6 +67,7 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
       <div
         ref={nodeRef}
         className="fixed inset-0 bg-black/70 flex flex-col p-4"
+        style={{ backdropFilter: 'blur(var(--blur-lg))' }}
         role="dialog"
         aria-modal="true"
       >
@@ -74,6 +75,7 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
           ref={inputRef}
           type="text"
           className="w-full p-3 text-lg rounded"
+          style={{ boxShadow: 'var(--shadow-sm)' }}
           placeholder="Search..."
           value={query}
           aria-label="Search query"
