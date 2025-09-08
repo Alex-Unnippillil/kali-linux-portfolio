@@ -81,11 +81,11 @@ export default function Status() {
   }, [register, unregister, theme]);
 
   return (
-    <div className="flex items-center gap-2" role="group" aria-label="System tray">
+    <div className="flex items-center gap-2 md:gap-1 lg:gap-2" role="group" aria-label="System tray">
       {icons.map((icon) => (
         <span
           key={icon.id}
-          className="relative flex items-center justify-center w-5 h-5"
+          className="relative flex items-center justify-center w-5 h-5 md:w-4 md:h-4 lg:w-5 lg:h-5"
           title={icon.tooltip}
         >
           <Image
@@ -97,7 +97,7 @@ export default function Status() {
                 : icon.legacy || icon.sni
             }
             alt={icon.tooltip || icon.id}
-            className="status-symbol w-5 h-5"
+            className="status-symbol w-5 h-5 md:w-4 md:h-4 lg:w-5 lg:h-5"
             sizes="20px"
           />
           {icon.id === 'network' && !allowNetwork && (
@@ -105,7 +105,7 @@ export default function Status() {
           )}
         </span>
       ))}
-      <span className="flex items-center justify-center w-5 h-5">
+      <span className="flex items-center justify-center w-5 h-5 md:w-4 md:h-4 lg:w-5 lg:h-5">
         <SmallArrow angle="down" className="status-symbol" />
       </span>
     </div>
