@@ -1,19 +1,5 @@
 import usePersistentState from '../../hooks/usePersistentState';
-
-export interface Shortcut {
-  description: string;
-  keys: string;
-}
-
-const DEFAULT_SHORTCUTS: Shortcut[] = [
-  { description: 'Show keyboard shortcuts', keys: '?' },
-  { description: 'Open settings', keys: 'Ctrl+,' },
-  { description: 'Window switcher', keys: 'Alt+Tab' },
-  { description: 'Focus panel', keys: 'Ctrl+Alt+Tab' },
-  { description: 'Close window', keys: 'Alt+F4' },
-  { description: 'Switch workspace left', keys: 'Ctrl+Alt+ArrowLeft' },
-  { description: 'Switch workspace right', keys: 'Ctrl+Alt+ArrowRight' },
-];
+import { GLOBAL_SHORTCUTS } from '../../data/shortcuts';
 
 const validator = (value: unknown): value is Record<string, string> => {
   return (
@@ -27,7 +13,7 @@ const validator = (value: unknown): value is Record<string, string> => {
 };
 
 export function useKeymap() {
-  const initial = DEFAULT_SHORTCUTS.reduce<Record<string, string>>(
+  const initial = GLOBAL_SHORTCUTS.reduce<Record<string, string>>(
     (acc, s) => {
       acc[s.description] = s.keys;
       return acc;
@@ -41,7 +27,7 @@ export function useKeymap() {
     validator
   );
 
-  const shortcuts = DEFAULT_SHORTCUTS.map(({ description, keys }) => ({
+  const shortcuts = GLOBAL_SHORTCUTS.map(({ description, keys }) => ({
     description,
     keys: map[description] || keys,
   }));

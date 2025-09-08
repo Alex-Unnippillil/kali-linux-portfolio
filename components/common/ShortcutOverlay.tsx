@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import useKeymap from '../../apps/settings/keymapRegistry';
+import { useShortcutsContext } from '../../hooks/useShortcuts';
 
 const formatEvent = (e: KeyboardEvent) => {
   const parts = [
@@ -17,6 +18,7 @@ const formatEvent = (e: KeyboardEvent) => {
 const ShortcutOverlay: React.FC = () => {
   const [open, setOpen] = useState(false);
   const { shortcuts } = useKeymap();
+  const { appShortcuts } = useShortcutsContext();
 
   const toggle = useCallback(() => setOpen((o) => !o), []);
 
@@ -30,7 +32,7 @@ const ShortcutOverlay: React.FC = () => {
       if (isInput) return;
       const show =
         shortcuts.find((s) => s.description === 'Show keyboard shortcuts')?.keys ||
-        '?';
+        'F1';
       if (formatEvent(e) === show) {
         e.preventDefault();
         toggle();
@@ -44,7 +46,7 @@ const ShortcutOverlay: React.FC = () => {
   }, [open, toggle, shortcuts]);
 
   const handleExport = () => {
-    const data = JSON.stringify(shortcuts, null, 2);
+    const data = JSON.stringify([...shortcuts, ...appShortcuts], null, 2);
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -56,7 +58,8 @@ const ShortcutOverlay: React.FC = () => {
 
   if (!open) return null;
 
-  const keyCounts = shortcuts.reduce<Map<string, number>>((map, s) => {
+  const all = [...shortcuts, ...appShortcuts];
+  const keyCounts = all.reduce<Map<string, number>>((map, s) => {
     map.set(s.keys, (map.get(s.keys) || 0) + 1);
     return map;
   }, new Map());
@@ -106,6 +109,27 @@ const ShortcutOverlay: React.FC = () => {
             </li>
           ))}
         </ul>
+        {appShortcuts.length > 0 && (
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold mt-4">App Shortcuts</h3>
+            <ul className="space-y-1">
+              {appShortcuts.map((s, i) => (
+                <li
+                  key={`app-${i}`}
+                  data-conflict={conflicts.has(s.keys) ? 'true' : 'false'}
+                  className={
+                    conflicts.has(s.keys)
+                      ? 'flex justify-between bg-red-600/70 px-2 py-1 rounded'
+                      : 'flex justify-between px-2 py-1'
+                  }
+                >
+                  <span className="font-mono mr-4">{s.keys}</span>
+                  <span className="flex-1">{s.description}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );
