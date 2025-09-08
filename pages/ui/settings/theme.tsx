@@ -47,6 +47,8 @@ export default function ThemeSettings({ wallpapers }: ThemeSettingsProps) {
     setTheme,
     highContrast,
     setHighContrast,
+    reducedMotion,
+    setReducedMotion,
     accent,
     setAccent,
     wallpaper,
@@ -111,22 +113,33 @@ export default function ThemeSettings({ wallpapers }: ThemeSettingsProps) {
           />
           <label htmlFor="theme-high-contrast">High Contrast</label>
         </div>
+        <div className="mt-2 flex items-center gap-2">
+          <input
+            id="theme-reduced-motion"
+            type="checkbox"
+            aria-label="Reduced Motion"
+            checked={reducedMotion}
+            onChange={(e) => setReducedMotion(e.target.checked)}
+          />
+          <label htmlFor="theme-reduced-motion">Reduced Motion</label>
+        </div>
 
         <div className="mt-6">
           <h2 className="text-lg mb-2">Accent Color</h2>
           <div role="radiogroup" className="flex gap-2">
-            {ACCENT_OPTIONS.map((c) => (
-              <button
-                key={c}
-                role="radio"
-                aria-checked={accent === c}
-                onClick={() => setAccent(c)}
-                className={`w-6 h-6 rounded-full border-2 ${
-                  accent === c ? 'border-white' : 'border-transparent'
-                }`}
-                style={{ backgroundColor: c }}
-              />
-            ))}
+              {ACCENT_OPTIONS.map((c) => (
+                <button
+                  key={c}
+                  role="radio"
+                  aria-label={`accent-${c}`}
+                  aria-checked={accent === c}
+                  onClick={() => setAccent(c)}
+                  className={`w-6 h-6 rounded-full border-2 ${
+                    accent === c ? 'border-white' : 'border-transparent'
+                  }`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
           </div>
         </div>
 
@@ -135,18 +148,18 @@ export default function ThemeSettings({ wallpapers }: ThemeSettingsProps) {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {wallpapers.map((src) => {
               const base = src.replace(/^\/wallpapers\//, '').replace(/\.[^.]+$/, '');
-              return (
-                <button
-                  key={src}
-                  onClick={() => setWallpaper(base)}
-                  className={`relative border-2 ${
-                    wallpaper === base ? 'border-ubt-blue' : 'border-transparent'
-                  }`}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                return (
+                  <button
+                    key={src}
+                    aria-label={`wallpaper-${base}`}
+                    onClick={() => setWallpaper(base)}
+                    className={`relative border-2 ${
+                      wallpaper === base ? 'border-ubt-blue' : 'border-transparent'
+                    }`}
+                  >
                   <img src={src} alt="" className="w-full h-24 object-cover" />
-                </button>
-              );
+                  </button>
+                );
             })}
           </div>
         </div>

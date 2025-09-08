@@ -25,15 +25,22 @@ export class UbuntuApp extends Component {
         this.props.openApp(this.props.id);
     }
 
+    canPrefetch = () => {
+        const conn = typeof navigator !== 'undefined' && navigator.connection;
+        return (
+            typeof this.props.prefetch === 'function' &&
+            !(conn && (conn.saveData || /2g/.test(conn.effectiveType)))
+        );
+    }
+
     handlePrefetch = () => {
-        if (!this.state.prefetched && typeof this.props.prefetch === 'function') {
-            prefetchDynamicImport(this.props.prefetch, `/apps/${this.props.id}.js`);
-            this.setState({ prefetched: true });
-        }
+        if (this.state.prefetched || !this.canPrefetch()) return;
+        prefetchDynamicImport(this.props.prefetch, `/apps/${this.props.id}.js`);
+        this.setState({ prefetched: true });
     }
 
     startPrefetchTimer = () => {
-        if (this.state.prefetched || this.prefetchTimer) return;
+        if (this.state.prefetched || this.prefetchTimer || !this.canPrefetch()) return;
         this.prefetchTimer = setTimeout(() => {
             this.prefetchTimer = null;
             this.handlePrefetch();
@@ -62,9 +69,9 @@ export class UbuntuApp extends Component {
                 draggable
                 onDragStart={this.handleDragStart}
                 onDragEnd={this.handleDragEnd}
-                title={this.props.prefetch ? 'Prefetches on hover' : undefined}
+                title={this.canPrefetch() ? 'Prefetches on hover' : undefined}
                 className={(this.state.launching ? " app-icon-launch " : "") + (this.state.dragging ? " opacity-70 " : "") +
-                    " relative p-1 m-1 z-10 bg-white bg-opacity-0 hover:bg-opacity-20 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 border border-transparent rounded select-none w-20 h-20 flex flex-col justify-start items-center text-center text-xs font-normal text-white transition-colors "}
+                    " relative m-1 p-[var(--icon-spacing)] z-10 bg-white bg-opacity-0 hover:bg-opacity-20 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 border border-transparent rounded select-none w-app-icon h-app-icon flex flex-col justify-start items-center text-center text-xs font-normal text-white transition-colors "}
                 id={"app-" + this.props.id}
                 onDoubleClick={this.openApp}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openApp(); } }}
@@ -74,7 +81,7 @@ export class UbuntuApp extends Component {
                 onFocus={(e) => { this.startPrefetchTimer(); this.props.onFocus && this.props.onFocus(e); }}
                 onBlur={this.clearPrefetchTimer}
             >
-                {this.props.prefetch && (
+                {this.canPrefetch() && (
                     <span className="sr-only">Prefetches resources on hover</span>
                 )}
                 <Image

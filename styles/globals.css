@@ -27,7 +27,7 @@
   /* Kali theme helpers */
   --kali-bg: var(--color-bg);
   --kali-panel: var(--color-surface);
-  --icon-spacing: var(--space-2);
+  --icon-spacing: var(--space-1);
   --background-image: url(/wallpapers/wall-2.webp);
   /* Code block tokens */
   --code-token-comment: #6e7681;
@@ -172,7 +172,7 @@ html[data-theme='matrix'] {
 
 *:focus-visible {
   outline: var(--focus-outline-width) var(--focus-outline-style) var(--focus-outline-color);
-  outline-offset: 2px;
+  outline-offset: var(--focus-outline-offset);
 }
 
 .notification-center {

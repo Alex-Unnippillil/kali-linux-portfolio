@@ -133,7 +133,7 @@ export default function AppGrid({ openApp }) {
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          padding: 8,
+          padding: 'var(--icon-spacing)',
         }}
       >
         <UbuntuApp
@@ -194,7 +194,7 @@ export default function AppGrid({ openApp }) {
                 columnWidth={width / columnCount}
                 height={height}
                 rowCount={rowCount}
-                rowHeight={96}
+                rowHeight={88}
                 width={width}
                 className="scroll-smooth"
               >
