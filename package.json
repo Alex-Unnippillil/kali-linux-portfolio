@@ -108,6 +108,7 @@
     "react-ga4": "^2.1.0",
     "react-github-calendar": "^4.5.9",
     "react-leaflet": "^5.0.0",
+    "react-swipeable": "^7.0.2",
     "react-transition-group": "^4.4.5",
     "react-virtualized-auto-sizer": "^1.0.26",
     "react-window": "^2.0.2",
