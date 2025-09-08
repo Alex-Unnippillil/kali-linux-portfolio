@@ -19,6 +19,32 @@ interface DocProps {
   topic: string;
 }
 
+function processFootnotes(md: string): { content: string; footnotesHtml: string } {
+  const defRe = /^\[\^([^\]]+)\]:\s*(.+)$/gm;
+  const definitions: Record<string, string> = {};
+  let match;
+  while ((match = defRe.exec(md)) !== null) {
+    definitions[match[1]] = match[2].trim();
+  }
+  let content = md.replace(defRe, '').trim();
+  const order: string[] = [];
+  content = content.replace(/\[\^([^\]]+)\]/g, (_, id) => {
+    if (!order.includes(id)) order.push(id);
+    const num = order.indexOf(id) + 1;
+    return `<sup id="fnref:${id}"><a href="#fn:${id}" class="footnote-ref">${num}</a></sup>`;
+    });
+  let footnotesHtml = '';
+  if (order.length) {
+    footnotesHtml = '<section class="footnotes"><ol>';
+    for (const id of order) {
+      const text = definitions[id] || '';
+      footnotesHtml += `<li id="fn:${id}">${text} <a href="#fnref:${id}" class="footnote-backref">↩︎</a></li>`;
+    }
+    footnotesHtml += '</ol></section>';
+  }
+  return { content, footnotesHtml };
+}
+
 export default function DocPage({ html, toc, title, topic }: DocProps) {
   useEffect(() => {
     if (isBrowser() && window.location.hash) {
@@ -156,7 +182,8 @@ export const getStaticProps: GetStaticProps<DocProps> = async ({ params }) => {
   const topic = params?.topic as string;
   const filePath = path.join(process.cwd(), 'public', 'docs', 'seed', `${topic}.md`);
   const md = fs.readFileSync(filePath, 'utf8');
-  const tokens = marked.lexer(md);
+  const { content, footnotesHtml } = processFootnotes(md);
+  const tokens = marked.lexer(content);
 
   const titleToken = tokens.find(
     (t) => t.type === 'heading' && (t as any).depth === 1,
@@ -179,6 +206,6 @@ export const getStaticProps: GetStaticProps<DocProps> = async ({ params }) => {
     return `<h${level} id="${id}">${text}</h${level}>`;
   };
 
-  const html = marked.parse(md, { renderer }) as string;
-  return { props: { html, toc, title, topic } };
+  const html = marked.parse(content, { renderer }) as string;
+  return { props: { html: html + footnotesHtml, toc, title, topic } };
 };
