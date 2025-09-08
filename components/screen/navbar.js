@@ -3,7 +3,7 @@ import Image from 'next/image';
 import PanelClock from '../util-components/PanelClock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
-import WhiskerMenu from '../menu/WhiskerMenu';
+import AppMenu from '../desktop/AppMenu';
 import HelpMenu from '../menu/HelpMenu';
 
 export default class Navbar extends Component {
@@ -20,7 +20,7 @@ export default class Navbar extends Component {
                                 <div className="pl-3 pr-1">
                                         <Image src="/themes/Yaru/status/network-wireless-signal-good-symbolic.svg" alt="network icon" width={16} height={16} className="w-4 h-4" />
                                 </div>
-                                <WhiskerMenu />
+                                <AppMenu />
                                 <HelpMenu />
                                 <div
                                         className={
