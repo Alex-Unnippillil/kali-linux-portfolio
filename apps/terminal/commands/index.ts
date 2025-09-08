@@ -1,4 +1,5 @@
 import type { CommandHandler, CommandContext } from './types';
+import aptUpdate from './apt-update';
 
 async function man(args: string, ctx: CommandContext) {
   const name = args.trim();
@@ -91,11 +92,30 @@ function neofetch(_args: string, ctx: CommandContext) {
   ctx.writeLine(`${c2}Theme: Undercover (${variant})${reset}`);
 }
 
+async function apt(args: string, ctx: CommandContext) {
+  const sub = args.trim();
+  if (sub === 'update') {
+    const ctrl = aptUpdate('', ctx);
+    try {
+      await ctrl.finished;
+    } catch (e: any) {
+      if (e?.message === 'canceled') {
+        ctx.writeLine('\x1b[31mOperation canceled\x1b[0m');
+      } else {
+        throw e;
+      }
+    }
+  } else {
+    ctx.writeLine('Usage: apt update');
+  }
+}
+
 const registry: Record<string, CommandHandler> = {
   man,
   history,
   alias,
   neofetch,
+  apt,
   cat: (args, ctx) => ctx.runWorker(`cat ${args}`),
   grep: (args, ctx) => ctx.runWorker(`grep ${args}`),
   jq: (args, ctx) => ctx.runWorker(`jq ${args}`),
