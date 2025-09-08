@@ -8,6 +8,8 @@ import { Analytics } from '@vercel/analytics/next';
 import dynamic from 'next/dynamic';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import { createRoot } from 'react-dom/client';
+import OutboundLinkIcon from '@/components/OutboundLinkIcon';
 import '../styles/tailwind.css';
 import '../styles/globals.css';
 import '../styles/index.css';
@@ -59,6 +61,21 @@ function MyApp(props) {
       console.error('Analytics initialization failed', err);
     });
   }, []);
+
+  useEffect(() => {
+    const links = document.querySelectorAll('a[target="_blank"]');
+    links.forEach((link) => {
+      if (!link.rel.includes('noopener')) {
+        link.rel = `${link.rel ? link.rel + ' ' : ''}noopener noreferrer`;
+      }
+      if (!link.querySelector('.outbound-icon')) {
+        const span = document.createElement('span');
+        span.className = 'inline-block ml-1 outbound-icon';
+        link.appendChild(span);
+        createRoot(span).render(<OutboundLinkIcon />);
+      }
+    });
+  }, [path]);
 
   useEffect(() => {
     if (
