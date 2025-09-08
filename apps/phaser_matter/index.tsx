@@ -24,7 +24,12 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
     if (!gameRef.current) return;
     const scene = gameRef.current.scene.getScene('level') as Phaser.Scene & {
       matter: Phaser.Physics.Matter.MatterPhysics;
+      parallax: Phaser.GameObjects.Rectangle[];
     };
+    scene.parallax?.forEach((p) => {
+      const orig = p.getData('scrollFactor') ?? 1;
+      p.setScrollFactor(prefersReducedMotion ? 1 : orig);
+    });
     if (prefersReducedMotion) {
       scene.scene.pause();
       scene.matter.world.pause();
@@ -170,8 +175,9 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
               data.bounds.height,
               color,
             )
-            .setScrollFactor(l.scrollFactor)
             .setDepth(-100);
+          rect.setData('scrollFactor', l.scrollFactor);
+          rect.setScrollFactor(prefersRef.current ? 1 : l.scrollFactor);
           this.parallax.push(rect);
         });
 
@@ -479,15 +485,18 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
           </button>
         </div>
         <div className="pt-2">
-          Buffer:
-          <input
-            type="range"
-            min={0}
-            max={300}
-            value={bufferWindow}
-            onChange={(e) => setBufferWindow(Number(e.target.value))}
-            className="mx-1"
-          />
+          <label>
+            Buffer:
+            <input
+              type="range"
+              min={0}
+              max={300}
+              value={bufferWindow}
+              onChange={(e) => setBufferWindow(Number(e.target.value))}
+              className="mx-1"
+              aria-label="Buffer window"
+            />
+          </label>
           {bufferWindow}ms
         </div>
       </div>
