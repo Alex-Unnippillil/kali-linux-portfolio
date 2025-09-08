@@ -189,7 +189,15 @@ export default function SecurityTools() {
               <div>Sample text contains &quot;{query}&quot;</div>
             </div>
           )}
-            {!hasResults && <div>No results found.</div>}
+            {!hasResults && (
+              <p
+                role="status"
+                aria-live="polite"
+                className="mt-2 text-center text-xs text-gray-500"
+              >
+                No results found.
+              </p>
+            )}
           </div>
         ) : (
           <>
