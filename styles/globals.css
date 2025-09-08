@@ -29,6 +29,15 @@
   --kali-panel: var(--color-surface);
   --icon-spacing: var(--space-2);
   --background-image: url(/wallpapers/wall-2.webp);
+  /* Code block tokens */
+  --code-token-comment: #6e7681;
+  --code-token-string: #a5d6ff;
+  --code-token-keyword: #ff7b72;
+  --code-token-function: #d2a8ff;
+  --code-token-number: #ffa657;
+  --code-gutter-bg: var(--color-secondary);
+  --code-gutter-border: var(--color-border);
+  --code-gutter-text: var(--color-muted);
 }
 
 /* Dark theme */
@@ -89,6 +98,15 @@ html[data-theme='kali-light'] {
   --color-border: var(--color-ubt-cool-grey);
   --color-terminal: #00ff00;
   --color-dark: var(--color-ubt-gedit-dark);
+  /* Code block tokens */
+  --code-token-comment: #6a737d;
+  --code-token-string: #22863a;
+  --code-token-keyword: #d73a49;
+  --code-token-function: #6f42c1;
+  --code-token-number: #005cc5;
+  --code-gutter-bg: var(--color-muted);
+  --code-gutter-border: var(--color-border);
+  --code-gutter-text: var(--color-ubt-cool-grey);
 }
 
 /* Undercover theme */
@@ -109,6 +127,15 @@ html[data-theme='undercover'] {
   --color-ub-cool-grey: #e5e5e5;
   --color-ub-orange: #0078d7;
   --color-ub-window-title: #0078d7;
+  /* Code block tokens */
+  --code-token-comment: #6a737d;
+  --code-token-string: #22863a;
+  --code-token-keyword: #d73a49;
+  --code-token-function: #6f42c1;
+  --code-token-number: #005cc5;
+  --code-gutter-bg: var(--color-muted);
+  --code-gutter-border: var(--color-border);
+  --code-gutter-text: #666666;
 }
 
 html[data-theme='undercover'] .main-navbar-vp {
