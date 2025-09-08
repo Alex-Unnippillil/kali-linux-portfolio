@@ -15,18 +15,24 @@ export const slideRow = (row: number[]): number[] => {
   return newRow;
 };
 
-export const flip = (board: Board): Board => board.map((row) => [...row].reverse());
+export const flip = (board: Board): Board =>
+  board.map((row) => [...row].reverse());
 
-export const transpose = (board: Board): Board =>
-  board.length ? board[0].map((_, c) => board.map((row) => row[c])) : [];
+export const transpose = (board: Board): Board => {
+  if (board.length === 0) return [];
+  return board[0].map((_, c) => board.map((row) => row[c]));
+};
 
-export const moveLeft = (board: Board): Board => board.map((row) => slideRow(row));
+export const moveLeft = (board: Board): Board =>
+  board.map((row) => slideRow(row));
 
 export const moveRight = (board: Board): Board => flip(moveLeft(flip(board)));
 
-export const moveUp = (board: Board): Board => transpose(moveLeft(transpose(board)));
+export const moveUp = (board: Board): Board =>
+  transpose(moveLeft(transpose(board)));
 
-export const moveDown = (board: Board): Board => transpose(moveRight(transpose(board)));
+export const moveDown = (board: Board): Board =>
+  transpose(moveRight(transpose(board)));
 
 export const hasMoves = (board: Board): boolean => {
   const size = board.length;
@@ -36,7 +42,6 @@ export const hasMoves = (board: Board): boolean => {
       if (v === 0) return true;
       if (c < size - 1 && v === board[r][c + 1]) return true;
       if (r < size - 1 && v === board[r + 1][c]) return true;
-
     }
   }
   return false;
@@ -47,7 +52,7 @@ export const addRandomTile = (board: Board, rand: () => number): Board => {
   board.forEach((row, r) =>
     row.forEach((cell, c) => {
       if (cell === 0) empty.push([r, c]);
-    })
+    }),
   );
   if (empty.length === 0) return board.map((row) => [...row]);
   const [r, c] = empty[Math.floor(rand() * empty.length)];
@@ -58,4 +63,3 @@ export const addRandomTile = (board: Board, rand: () => number): Board => {
 
 export const checkHighest = (board: Board): number =>
   board.reduce((max, row) => Math.max(max, ...row), 0);
-
