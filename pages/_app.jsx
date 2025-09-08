@@ -21,6 +21,7 @@ import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 import useReportWebVitals from '../hooks/useReportWebVitals';
+import Meta from '@/seo/Meta';
 
 
 let SpeedInsights = () => null;
@@ -226,6 +227,7 @@ function MyApp(props) {
 
   return (
     <>
+      <Meta />
       <Head>
         {locales?.map((l) => {
           const href = l === defaultLocale ? path : `/${l}${path === '/' ? '' : path}`;

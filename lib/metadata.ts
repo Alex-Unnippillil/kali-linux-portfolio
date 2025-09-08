@@ -24,7 +24,7 @@ export const baseMetadata: Metadata = {
     siteName: 'Alex Unnippillil Personal Portfolio',
     images: [
       {
-        url: '/images/logos/logo_1200.png',
+        url: '/api/og?title=Alex%20Unnippillil',
         width: 1200,
         height: 630,
         alt: 'Alex Unnippillil logo',
@@ -39,7 +39,7 @@ export const baseMetadata: Metadata = {
     description: 'Alex Unnippillil Personal Portfolio Website',
     site: '@alexunnippillil',
     creator: '@unnippillil',
-    images: ['/images/logos/logo_1024.png'],
+    images: ['/api/og?title=Alex%20Unnippillil'],
   },
   alternates: {
     canonical: 'https://unnippillil.com/',
