@@ -1,34 +1,27 @@
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
 
-const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'exo-open-test-'));
-const originalHome = process.env.HOME;
-process.env.HOME = tmpDir;
-jest.spyOn(os, 'homedir').mockReturnValue(tmpDir);
+describe('exo-open helper preferences', () => {
+  const STORAGE_KEY = 'xfce-helpers';
 
-afterAll(() => {
-  process.env.HOME = originalHome;
-  fs.rmSync(tmpDir, { recursive: true, force: true });
-});
+  beforeEach(() => {
+    localStorage.clear();
+    jest.resetModules();
+  });
 
-describe('exo-open helpers.rc handling', () => {
   it('reads defaults and persists selections', async () => {
     const exo = await import('../src/lib/exo-open');
     const { getPreferredApp, setPreferredApp } = exo;
-    const rcPath = path.join(tmpDir, '.config', 'xfce4', 'helpers.rc');
 
-    expect(fs.existsSync(rcPath)).toBe(false);
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+
     const def = await getPreferredApp('TerminalEmulator');
     expect(def).toBe('terminal');
-    expect(fs.existsSync(rcPath)).toBe(false);
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
 
     await setPreferredApp('TerminalEmulator', 'serial-terminal');
     const updated = await getPreferredApp('TerminalEmulator');
     expect(updated).toBe('serial-terminal');
 
-    expect(fs.existsSync(rcPath)).toBe(true);
-    const content = fs.readFileSync(rcPath, 'utf-8');
-    expect(content).toContain('TerminalEmulator=serial-terminal');
+    const saved = localStorage.getItem(STORAGE_KEY);
+    expect(saved).toContain('"TerminalEmulator":"serial-terminal"');
   });
 });
