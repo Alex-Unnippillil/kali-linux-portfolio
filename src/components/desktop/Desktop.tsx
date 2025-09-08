@@ -3,6 +3,8 @@ import DesktopContextMenu from './DesktopContextMenu';
 import Dock from './Dock';
 import Panel from '../panel/Panel';
 import HotCorner from './HotCorner';
+import AppSwitcher from './AppSwitcher';
+import { activateWindow, getWindows } from '@/lib/window-manager';
 
 export interface DesktopIcon {
   id: string;
@@ -34,6 +36,8 @@ export const Desktop: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [icons, setIcons] = useState<DesktopIcon[]>([]);
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
+  const [showSwitcher, setShowSwitcher] = useState(false);
+  const [switchIndex, setSwitchIndex] = useState(0);
 
   // Example icons for demonstration
   useEffect(() => {
@@ -55,6 +59,42 @@ export const Desktop: React.FC = () => {
     const width = containerRef.current?.clientWidth || window.innerWidth;
     setIcons((prev) => arrangeIconsToGrid(prev, width));
   }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Alt') {
+        const wins = getWindows();
+        if (wins.length) {
+          setShowSwitcher(true);
+          setSwitchIndex(0);
+        }
+      } else if (e.key === 'Tab' && showSwitcher) {
+        e.preventDefault();
+        const wins = getWindows();
+        if (wins.length) {
+          const dir = e.shiftKey ? -1 : 1;
+          setSwitchIndex((i) => (i + dir + wins.length) % wins.length);
+        }
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Alt' && showSwitcher) {
+        const wins = getWindows();
+        if (wins.length) {
+          activateWindow(wins[switchIndex].id);
+        }
+        setShowSwitcher(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [showSwitcher, switchIndex]);
 
   return (
     <div
@@ -79,6 +119,7 @@ export const Desktop: React.FC = () => {
       ))}
       <Dock />
       <HotCorner />
+      {showSwitcher && <AppSwitcher index={switchIndex} />}
       <DesktopContextMenu
         position={menuPos}
         onClose={closeMenu}
