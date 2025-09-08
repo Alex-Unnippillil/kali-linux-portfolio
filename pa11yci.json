@@ -6,6 +6,7 @@
     "runners": ["axe", "htmlcs"],
     "standard": "WCAG2AA",
     "includeNotices": true,
+    "includeWarnings": true,
     "axe": {
       "rules": {
         "color-contrast": { "enabled": true },
@@ -17,6 +18,7 @@
   "urls": [
     "http://localhost:3000/",
     "http://localhost:3000/apps",
+    "http://localhost:3000/apps/settings",
     "http://localhost:3000/apps/chess",
     "http://localhost:3000/apps/sudoku",
     "http://localhost:3000/apps/youtube",

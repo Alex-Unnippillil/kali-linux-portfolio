@@ -110,7 +110,7 @@ h3 {
     font-size: clamp(1.25rem, 1rem + 0.5vw, 1.5rem);
 }
 
-button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .hit-area {
+button, input[type="button"], input[type="submit"], input[type="reset"], .hit-area {
     min-width: var(--hit-area);
     min-height: var(--hit-area);
 }
@@ -151,7 +151,6 @@ button:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible,
-[role="button"]:focus-visible,
 [tabindex]:not([tabindex="-1"]):focus-visible {
     outline: var(--focus-outline-width) var(--focus-outline-style) var(--focus-outline-color) !important;
     outline-offset: 2px;
