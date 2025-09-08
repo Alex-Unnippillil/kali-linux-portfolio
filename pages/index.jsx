@@ -7,6 +7,7 @@ import { baseMetadata } from "../lib/metadata";
 import ReleaseNotesModal from "../components/ReleaseNotesModal";
 import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
+import SystemStatus from "../components/status/SystemStatus";
 
 export const metadata = baseMetadata;
 
@@ -40,6 +41,9 @@ export default function Home({ desktops }) {
     <>
       <Header />
       <main className="p-4">
+        <div className="mb-4">
+          <SystemStatus />
+        </div>
         <h1 className="mb-4 text-2xl font-bold sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl">
           Choose the desktop you prefer
         </h1>
