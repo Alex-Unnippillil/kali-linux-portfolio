@@ -23,6 +23,26 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
 
+  const highlight = (text: string, q: string) => {
+    if (!q) return text;
+    const escaped = q.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const regex = new RegExp(escaped, 'ig');
+    const parts = text.split(regex);
+    const matches = text.match(regex);
+    const nodes: React.ReactNode[] = [];
+    parts.forEach((part, i) => {
+      nodes.push(part);
+      if (matches && matches[i]) {
+        nodes.push(
+          <mark key={`m-${i}`} className="bg-yellow-500 text-black">
+            {matches[i]}
+          </mark>
+        );
+      }
+    });
+    return nodes;
+  };
+
   useEffect(() => {
     if (open) {
       setQuery('');
@@ -59,10 +79,18 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
     >
       <div
         ref={nodeRef}
-        className="fixed inset-0 bg-black/70 flex flex-col p-4"
+        className="fixed inset-0 z-50 bg-black/70 flex flex-col p-4"
         role="dialog"
         aria-modal="true"
       >
+        <button
+          type="button"
+          aria-label="Close search"
+          onClick={onClose}
+          className="self-end mb-2 p-2 text-white hover:bg-white/10 rounded"
+        >
+          ✕
+        </button>
         <input
           ref={inputRef}
           type="text"
@@ -71,16 +99,16 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <ul className="mt-4 text-white space-y-1 overflow-y-auto">
+        <ul className="mt-4 text-white divide-y divide-white/10 overflow-y-auto text-sm">
           {results.map((r) => (
             <li key={r.href}>
-              <a href={r.href} className="block px-2 py-1 rounded hover:bg-white/10">
-                {r.title}
+              <a href={r.href} className="block px-2 py-2 hover:bg-white/10">
+                {highlight(r.title, query)}
               </a>
             </li>
           ))}
           {query && results.length === 0 && (
-            <li className="px-2 py-1 text-gray-300">No results</li>
+            <li className="px-2 py-2 text-gray-300">No results</li>
           )}
         </ul>
       </div>
