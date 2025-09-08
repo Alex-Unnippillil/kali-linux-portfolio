@@ -25,7 +25,7 @@ import {
   defaults,
 } from '../utils/settingsStore';
 import { THEME_KEY, getTheme as getStoredTheme, setTheme as applyTheme } from '../utils/theme';
-type Density = 'regular' | 'compact';
+type Density = 'cozy' | 'compact';
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -217,21 +217,21 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {
-      regular: {
-        '--space-1': '0.25rem',
-        '--space-2': '0.5rem',
-        '--space-3': '0.75rem',
-        '--space-4': '1rem',
-        '--space-5': '1.5rem',
-        '--space-6': '2rem',
+      cozy: {
+        '--space-1': 'var(--space-cozy-1)',
+        '--space-2': 'var(--space-cozy-2)',
+        '--space-3': 'var(--space-cozy-3)',
+        '--space-4': 'var(--space-cozy-4)',
+        '--space-5': 'var(--space-cozy-5)',
+        '--space-6': 'var(--space-cozy-6)',
       },
       compact: {
-        '--space-1': '0.125rem',
-        '--space-2': '0.25rem',
-        '--space-3': '0.5rem',
-        '--space-4': '0.75rem',
-        '--space-5': '1rem',
-        '--space-6': '1.5rem',
+        '--space-1': 'var(--space-compact-1)',
+        '--space-2': 'var(--space-compact-2)',
+        '--space-3': 'var(--space-compact-3)',
+        '--space-4': 'var(--space-compact-4)',
+        '--space-5': 'var(--space-compact-5)',
+        '--space-6': 'var(--space-compact-6)',
       },
     };
     const vars = spacing[density];
