@@ -12,9 +12,6 @@ import {
   CharacteristicData,
 } from '../../utils/bleProfiles';
 
-type BluetoothDevice = any;
-type BluetoothRemoteGATTServer = any;
-
 const MAX_RETRIES = 3;
 
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
@@ -72,7 +69,7 @@ const BleSensor: React.FC = () => {
     }
 
     try {
-      const device = await (navigator as any).bluetooth.requestDevice({
+      const device = await navigator.bluetooth.requestDevice({
         acceptAllDevices: true,
         optionalServices: ['battery_service', 'device_information'],
       });
@@ -98,7 +95,7 @@ const BleSensor: React.FC = () => {
       for (const service of primServices) {
           const chars = await service.getCharacteristics();
           const charData: CharacteristicData[] = await Promise.all(
-            chars.map(async (char: any) => {
+            chars.map(async (char: BluetoothRemoteGATTCharacteristic) => {
               try {
                 const val = await char.readValue();
                 let value = '';
