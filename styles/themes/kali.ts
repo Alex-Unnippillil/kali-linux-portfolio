@@ -8,6 +8,14 @@ export const kaliTheme = {
     text: 'var(--toast-text)',
     border: 'var(--toast-border)',
   },
+  purple: {
+    button: 'var(--purple-button)',
+    link: 'var(--purple-link)',
+    badge: {
+      background: 'var(--purple-badge-bg)',
+      text: 'var(--purple-badge-text)',
+    },
+  },
 };
 
 export type KaliTheme = typeof kaliTheme;
