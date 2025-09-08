@@ -52,7 +52,8 @@
   --motion-slow: 500ms;
 
   /* Fonts */
-  --font-family-base: 'Ubuntu', sans-serif;
+  --font-family-base: 'Ubuntu', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  --font-family-heading: 'Ubuntu', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
   --font-multiplier: 1;
   /* Minimum interactive target size */
   --hit-area: 32px;
