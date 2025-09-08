@@ -22,13 +22,10 @@
       {"label": "Kali NetHunter Stats", "href": "https://nethunter.kali.org/"}
     ]},
     {"label": "About", "children": [
-      {"label": "Kali Linux Overview", "href": "https://www.kali.org/features/"},
-      {"label": "Press Pack", "href": "https://gitlab.com/kalilinux/documentation/press-pack/-/archive/main/press-pack-main.zip"},
-      {"label": "Wallpapers", "href": "https://www.kali.org/wallpapers/"},
-      {"label": "Kali Swag Store", "href": "https://offsec.usa.dowlis.com/kali/view-all.html"},
-      {"label": "Meet The Kali Team", "href": "https://www.kali.org/about-us/"},
-      {"label": "Partnerships", "href": "https://www.kali.org/partnerships/"},
-      {"label": "Contact Us", "href": "https://www.kali.org/contact/"}
+      {"label": "Overview", "href": "https://www.kali.org/features/"},
+      {"label": "Wallpapers", "href": "/wallpapers"},
+      {"label": "Contact", "href": "https://www.kali.org/contact/"},
+      {"label": "Store", "href": "#"}
     ]}
   ],
   "footer": {
