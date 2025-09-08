@@ -1,4 +1,5 @@
 import './mdx.css';
+import CommandBlock from '../components/ui/CommandBlock';
 
 export const title = 'MDX Sample';
 export const summary = 'Demonstrates list, code, and admonition styling.';
@@ -17,9 +18,11 @@ Here is a list:
 
 Inline `code` example.
 
-```bash
-echo "Hello Kali"
-```
+<CommandBlock
+  bash={`echo "Hello Kali"`}
+  zsh={`echo "Hello Kali"`}
+  powershell={`Write-Host "Hello Kali"`}
+/>
 
 <div className="admonition admonition-note">
   <p>This is a note admonition.</p>
