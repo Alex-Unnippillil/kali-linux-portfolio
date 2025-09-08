@@ -35,3 +35,8 @@ test('My App launches', async ({ page }) => {
   await expect(page.locator('[data-testid="my-app"]')).toBeVisible();
 });
 ```
+
+## WebAssembly and the App Router
+
+- WebAssembly modules may fail to load under the App Router (Next.js issue [#83046](https://github.com/vercel/next.js/issues/83046)).
+- If a WASM package fails, wrap the importing component with `'use client'` or expose it via the Pages Router instead.
