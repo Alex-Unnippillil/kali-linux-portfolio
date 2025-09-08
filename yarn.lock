@@ -14776,6 +14776,7 @@ __metadata:
     decimal.js: "npm:^10.4.3"
     diff: "npm:^8"
     dompurify: "npm:^3.2.6"
+    dotenv: "npm:^16.4.5"
     eslint: "npm:^9.13.0"
     eslint-config-next: "npm:15.5.2"
     fake-indexeddb: "npm:^6.1.0"

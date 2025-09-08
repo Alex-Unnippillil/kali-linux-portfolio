@@ -3,6 +3,14 @@
 // Allows external badges and same-origin PDF embedding.
 // Update README (section "CSP External Domains") when editing domains below.
 
+// Ensure environment variables are loaded even when a local file is absent.
+// This falls back to the example file so builds don't fail due to missing
+// secrets during development or in CI.
+try {
+  require('dotenv').config({ path: '.env.local' });
+  require('dotenv').config({ path: '.env.local.example', override: false });
+} catch {}
+
 let validateEnv = null;
 try {
   ({ validateServerEnv: validateEnv } = require('./lib/validate'));
