@@ -4,7 +4,7 @@ import React, { Component } from 'react';
 import BootingScreen from './screen/booting_screen';
 import Desktop from './screen/desktop';
 import LockScreen from './screen/lock_screen';
-import Navbar from './screen/navbar';
+import Header from './Header';
 import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
 import {
@@ -161,7 +161,7 @@ export default class Ubuntu extends Component {
 					isShutDown={this.state.shutDownScreen}
 					turnOn={this.turnOn}
 				/>
-                                <Navbar lockScreen={this.lockScreen} logOut={this.logOut} />
+                                <Header lockScreen={this.lockScreen} logOut={this.logOut} />
                                 <Desktop
                                         ref={this.desktopRef}
                                         bg_image_name={this.state.bg_image_name}
