@@ -16,6 +16,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import WallpaperPicker from "../../components/ui/WallpaperPicker";
 
 export default function Settings() {
   const {
@@ -49,18 +50,6 @@ export default function Settings() {
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
 
-  const wallpapers = [
-    "wall-1",
-    "wall-2",
-    "wall-3",
-    "wall-4",
-    "wall-5",
-    "wall-6",
-    "wall-7",
-    "wall-8",
-  ];
-
-  const changeBackground = (name: string) => setWallpaper(name);
 
   const handleExport = async () => {
     const data = await exportSettingsData();
@@ -177,54 +166,11 @@ export default function Settings() {
               ))}
             </div>
           </div>
-          <div className="flex justify-center my-4">
-            <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">Wallpaper:</label>
-            <input
-              id="wallpaper-slider"
-              type="range"
-              min="0"
-              max={wallpapers.length - 1}
-              step="1"
-              value={wallpapers.indexOf(wallpaper)}
-              onChange={(e) =>
-                changeBackground(wallpapers[parseInt(e.target.value, 10)])
-              }
-              className="ubuntu-slider"
-              aria-label="Wallpaper"
-            />
+          <div className="border-t border-gray-900">
+            <WallpaperPicker />
           </div>
           <div className="flex justify-center my-4">
             <BackgroundSlideshow />
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 justify-items-center border-t border-gray-900">
-            {wallpapers.map((name) => (
-              <div
-                key={name}
-                role="button"
-                aria-label={`Select ${name.replace("wall-", "wallpaper ")}`}
-                aria-pressed={name === wallpaper}
-                tabIndex={0}
-                onClick={() => changeBackground(name)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    changeBackground(name);
-                  }
-                }}
-                className={
-                  (name === wallpaper
-                    ? " border-yellow-700 "
-                    : " border-transparent ") +
-                  " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"
-                }
-                style={{
-                  backgroundImage: `url(/wallpapers/${name}.webp)`,
-                  backgroundSize: "cover",
-                  backgroundRepeat: "no-repeat",
-                  backgroundPosition: "center center",
-                }}
-              ></div>
-            ))}
           </div>
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
             <button
