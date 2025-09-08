@@ -1,12 +1,10 @@
 import { useState, useRef, KeyboardEvent, ChangeEvent } from "react";
 import tools from "../../data/kali-tools.json";
 import Pagination from "../../components/ui/Pagination";
+import ToolCard from "@/components/tools/ToolCard";
 
 const PAGE_SIZE_OPTIONS = [30, 60, 90];
 const COLUMNS = 3; // used for keyboard navigation
-
-const badgeClass =
-  "inline-block rounded bg-gray-200 px-2 py-1 text-xs font-semibold text-gray-800 dark:bg-gray-700 dark:text-gray-100";
 
 export default function ToolsPage() {
   const [page, setPage] = useState(0);
@@ -58,36 +56,13 @@ export default function ToolsPage() {
       >
         {pageTools.map((tool, i) => (
           <li key={tool.id}>
-            <a
-              href={`https://www.kali.org/tools/${tool.id}/`}
-              className="block rounded border p-4 focus:outline-none focus:ring"
+            <ToolCard
+              id={tool.id}
+              name={tool.name}
               ref={(el) => {
                 itemRefs.current[i] = el;
               }}
-            >
-              <h3 className="font-semibold text-base sm:text-lg md:text-xl">
-                {tool.name}
-              </h3>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <a
-                  href={`https://gitlab.com/kalilinux/packages/${tool.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={badgeClass}
-                >
-                  Source
-                </a>
-                <a
-                  href={`https://www.kali.org/tools/${tool.id}/`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={badgeClass}
-                >
-                  Package
-                </a>
-                <span className={badgeClass}>{`$ apt install ${tool.id}`}</span>
-              </div>
-            </a>
+            />
           </li>
         ))}
       </ul>
