@@ -3,6 +3,7 @@ import { decode } from "blurhash";
 import { PNG } from "pngjs";
 import desktopsData from "../content/desktops.json";
 import { baseMetadata } from "../lib/metadata";
+import PlatformLinks from "../components/home/PlatformLinks";
 
 export const metadata = baseMetadata;
 
@@ -44,6 +45,9 @@ export default function Home({ desktops }) {
             <p className="mt-2 text-sm sm:text-base md:text-lg">{d.name}</p>
           </div>
         ))}
+      </div>
+      <div className="mt-6">
+        <PlatformLinks />
       </div>
     </main>
   );
