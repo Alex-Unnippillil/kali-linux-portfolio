@@ -9,8 +9,16 @@ interface Props {
 const SettingsDrawer = ({ highScore = 0 }: Props) => {
   const [open, setOpen] = useState(false);
   const unlocked = getUnlockedThemes(highScore);
-  const { accent, setAccent, theme, setTheme, highContrast, setHighContrast } =
-    useSettings();
+  const {
+    accent,
+    setAccent,
+    autoAccent,
+    setAutoAccent,
+    theme,
+    setTheme,
+    highContrast,
+    setHighContrast,
+  } = useSettings();
 
   return (
     <div>
@@ -49,14 +57,31 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
               role="radiogroup"
               className="flex gap-2 mt-1"
             >
+              <button
+                aria-label="select-accent-auto"
+                role="radio"
+                aria-checked={autoAccent}
+                onClick={() => setAutoAccent(true)}
+                className={`w-6 h-6 rounded-full border-2 ${
+                  autoAccent ? 'border-white' : 'border-transparent'
+                }`}
+                style={{ backgroundColor: accent }}
+              />
               {ACCENT_OPTIONS.map((c) => (
                 <button
                   key={c}
                   aria-label={`select-accent-${c}`}
                   role="radio"
-                  aria-checked={accent === c}
-                  onClick={() => setAccent(c)}
-                  className={`w-6 h-6 rounded-full border-2 ${accent === c ? 'border-white' : 'border-transparent'}`}
+                  aria-checked={!autoAccent && accent === c}
+                  onClick={() => {
+                    setAutoAccent(false);
+                    setAccent(c);
+                  }}
+                  className={`w-6 h-6 rounded-full border-2 ${
+                    !autoAccent && accent === c
+                      ? 'border-white'
+                      : 'border-transparent'
+                  }`}
                   style={{ backgroundColor: c }}
                 />
               ))}

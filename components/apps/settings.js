@@ -6,7 +6,7 @@ import { isBrowser } from '../../utils/env';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme, symbolicTrayIcons, setSymbolicTrayIcons } = useSettings();
+    const { accent, setAccent, autoAccent, setAutoAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme, symbolicTrayIcons, setSymbolicTrayIcons } = useSettings();
     const [panelBehavior, setPanelBehavior] = usePersistentState('xfce.panel.autohideBehavior', 'never');
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
@@ -91,15 +91,23 @@ export function Settings() {
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Accent:</label>
-                <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
+            <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
+                    <button
+                        aria-label="select-accent-auto"
+                        role="radio"
+                        aria-checked={autoAccent}
+                        onClick={() => setAutoAccent(true)}
+                        className={`w-8 h-8 rounded-full border-2 ${autoAccent ? 'border-white' : 'border-transparent'}`}
+                        style={{ backgroundColor: accent }}
+                    />
                     {ACCENT_OPTIONS.map((c) => (
                         <button
                             key={c}
                             aria-label={`select-accent-${c}`}
                             role="radio"
-                            aria-checked={accent === c}
-                            onClick={() => setAccent(c)}
-                            className={`w-8 h-8 rounded-full border-2 ${accent === c ? 'border-white' : 'border-transparent'}`}
+                            aria-checked={!autoAccent && accent === c}
+                            onClick={() => { setAutoAccent(false); setAccent(c); }}
+                            className={`w-8 h-8 rounded-full border-2 ${!autoAccent && accent === c ? 'border-white' : 'border-transparent'}`}
                             style={{ backgroundColor: c }}
                         />
                     ))}
