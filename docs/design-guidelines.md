@@ -4,17 +4,17 @@
 
 Use the `space-*` scale to maintain an 8px rhythm across breakpoints. The tokens are available in Tailwind as margin, padding, gap and positional utilities (`p-space-2`, `mt-space-1`, etc.).
 
-| Token | Value |
-|-------|-------|
-| `space-0` | 0px |
-| `space-1` | 8px |
-| `space-2` | 16px |
-| `space-3` | 24px |
-| `space-4` | 32px |
-| `space-5` | 40px |
-| `space-6` | 48px |
-| `space-7` | 56px |
-| `space-8` | 64px |
+| Token     | Value |
+| --------- | ----- |
+| `space-0` | 0px   |
+| `space-1` | 8px   |
+| `space-2` | 16px  |
+| `space-3` | 24px  |
+| `space-4` | 32px  |
+| `space-5` | 40px  |
+| `space-6` | 48px  |
+| `space-7` | 56px  |
+| `space-8` | 64px  |
 
 Example:
 
@@ -25,3 +25,8 @@ Example:
 ```
 
 These tokens ensure that layouts snap to the 8px grid at all breakpoints.
+
+## Callouts
+
+Use **inline** callouts for quick reminders that fit within a sentence without breaking the reader's flow.
+Reach for **full-width** callouts when the message spans multiple sentences or needs extra emphasis on its own line.

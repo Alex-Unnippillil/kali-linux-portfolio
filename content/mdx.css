@@ -62,3 +62,35 @@ pre code {
   border-color: #ef4444;
   background: color-mix(in srgb, #ef4444, transparent 85%);
 }
+
+/* Inline admonitions */
+.inline-admonition {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  border: 1px solid;
+  font-size: 0.875em;
+  line-height: 1.4;
+}
+
+.inline-admonition svg {
+  width: 1em;
+  height: 1em;
+}
+
+.inline-admonition-info {
+  border-color: var(--color-info);
+  background: color-mix(in srgb, var(--color-info), transparent 85%);
+}
+
+.inline-admonition-note {
+  border-color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success), transparent 85%);
+}
+
+.inline-admonition-warning {
+  border-color: #f59e0b;
+  background: color-mix(in srgb, #f59e0b, transparent 85%);
+}

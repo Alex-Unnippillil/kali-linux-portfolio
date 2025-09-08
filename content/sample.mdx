@@ -1,7 +1,8 @@
-import './mdx.css';
+import "./mdx.css";
+import InlineAdmonition from "../components/mdx/InlineAdmonition";
 
-export const title = 'MDX Sample';
-export const summary = 'Demonstrates list, code, and admonition styling.';
+export const title = "MDX Sample";
+export const summary = "Demonstrates list, code, and admonition styling.";
 
 # MDX Sample
 
@@ -20,6 +21,8 @@ Inline `code` example.
 ```bash
 echo "Hello Kali"
 ```
+
+This sentence includes an inline callout <InlineAdmonition type="note">Remember this</InlineAdmonition> right in the flow of text.
 
 <div className="admonition admonition-note">
   <p>This is a note admonition.</p>
