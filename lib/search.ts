@@ -64,7 +64,7 @@ async function buildIndex() {
 
   // Platform slugs from apps.config
   try {
-    const apps = (await import(path.join(process.cwd(), 'apps.config.js'))).default as any[];
+    const apps = (await import('../apps.config.js')).default as any[];
     for (const app of apps) {
       idx.add({
         id: `app-${app.id}`,
