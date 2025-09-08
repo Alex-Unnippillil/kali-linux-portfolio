@@ -1,6 +1,6 @@
 import React from 'react';
 import ia from '../../data/ia.json';
-import StatusPill from './StatusPill';
+import { StatusChip } from './StatusPill';
 
 interface NavItem {
   label: string;
@@ -35,7 +35,7 @@ const Header: React.FC = () => (
           </li>
         ))}
         <li className="ml-auto">
-          <StatusPill />
+          <StatusChip />
         </li>
       </ul>
     </nav>
