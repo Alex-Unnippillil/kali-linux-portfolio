@@ -6,6 +6,7 @@ import { useDrag, useDrop } from 'react-dnd';
 import layoutData from './layout.json';
 import { usePanelPreferences } from './PanelPreferences';
 import keybindingManager from '../../wm/keybindingManager';
+import PowerMenu from './PowerMenu';
 
 interface PluginItem {
   id: string;
@@ -145,17 +146,28 @@ export default function Panel() {
         aria-label="Panel"
         tabIndex={0}
       >
-        {plugins.map((p, i) => (
-          <DraggablePlugin
-            key={p.id}
-            plugin={p}
-            index={i}
-            move={move}
-            innerRef={(el) => (pluginRefs.current[i] = el)}
-            focused={focusedIndex === i}
-            onFocus={() => setFocusedIndex(i)}
-          />
-        ))}
+        {plugins.map((p, i) =>
+          p.id === 'power' ? (
+            <PowerMenu
+              key={p.id}
+              index={i}
+              move={move}
+              innerRef={(el) => (pluginRefs.current[i] = el)}
+              focused={focusedIndex === i}
+              onFocus={() => setFocusedIndex(i)}
+            />
+          ) : (
+            <DraggablePlugin
+              key={p.id}
+              plugin={p}
+              index={i}
+              move={move}
+              innerRef={(el) => (pluginRefs.current[i] = el)}
+              focused={focusedIndex === i}
+              onFocus={() => setFocusedIndex(i)}
+            />
+          )
+        )}
       </div>
     </DndProvider>
   );

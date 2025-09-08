@@ -1,5 +1,6 @@
 [
   { "id": "plugin-a", "title": "Plugin A" },
   { "id": "plugin-b", "title": "Plugin B" },
-  { "id": "plugin-c", "title": "Plugin C" }
+  { "id": "plugin-c", "title": "Plugin C" },
+  { "id": "power", "title": "Power" }
 ]
