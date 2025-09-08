@@ -27,17 +27,19 @@ const hashSeed = (str: string): number => {
 
 const slideRow = (row: number[]) => {
   const arr = row.filter((n) => n !== 0);
+  const merged: number[] = [];
   for (let i = 0; i < arr.length - 1; i += 1) {
     const current = arr[i]!;
     const next = arr[i + 1]!;
     if (current === next) {
       arr[i] = current * 2;
       arr[i + 1] = 0;
+      merged.push(i);
     }
   }
   const newRow = arr.filter((n) => n !== 0);
   while (newRow.length < SIZE) newRow.push(0);
-  return newRow;
+  return { row: newRow, merged };
 };
 
 const transpose = (board: number[][]): number[][] => {
@@ -46,10 +48,39 @@ const transpose = (board: number[][]): number[][] => {
 };
 const flip = (board: number[][]) => board.map((row) => [...row].reverse());
 
-const moveLeft = (board: number[][]) => board.map((row) => slideRow(row));
-const moveRight = (board: number[][]) => flip(moveLeft(flip(board)));
-const moveUp = (board: number[][]) => transpose(moveLeft(transpose(board)));
-const moveDown = (board: number[][]) => transpose(moveRight(transpose(board)));
+const moveLeft = (board: number[][]) => {
+  const mergedCells: [number, number][] = [];
+  const newBoard = board.map((row, r) => {
+    const { row: newRow, merged } = slideRow(row);
+    merged.forEach((c) => mergedCells.push([r, c]));
+    return newRow;
+  });
+  return { board: newBoard, merged: mergedCells };
+};
+
+const moveRight = (board: number[][]) => {
+  const flipped = board.map((row) => [...row].reverse());
+  const result = moveLeft(flipped);
+  const newBoard = result.board.map((row) => row.reverse());
+  const merged = result.merged.map(([r, c]) => [r, SIZE - 1 - c] as [number, number]);
+  return { board: newBoard, merged };
+};
+
+const moveUp = (board: number[][]) => {
+  const trans = transpose(board);
+  const result = moveLeft(trans);
+  const newBoard = transpose(result.board);
+  const merged = result.merged.map(([r, c]) => [c, r] as [number, number]);
+  return { board: newBoard, merged };
+};
+
+const moveDown = (board: number[][]) => {
+  const trans = transpose(board);
+  const result = moveRight(trans);
+  const newBoard = transpose(result.board);
+  const merged = result.merged.map(([r, c]) => [c, r] as [number, number]);
+  return { board: newBoard, merged };
+};
 
 const boardsEqual = (a: number[][], b: number[][]) =>
   a.every((row, r) => row.every((cell, c) => cell === b[r][c]));
@@ -78,9 +109,10 @@ const addRandomTile = (b: number[][], rand: () => number) => {
       if (cell === 0) empty.push([r, c]);
     })
   );
-  if (empty.length === 0) return;
+  if (empty.length === 0) return null;
   const [r, c] = empty[Math.floor(rand() * empty.length)];
   b[r][c] = rand() < 0.9 ? 2 : 4;
+  return [r, c] as [number, number];
 };
 
 const tileColors: Record<number, string> = {
@@ -133,6 +165,8 @@ const Page2048 = () => {
   const [won, setWon] = useState(false);
   const [lost, setLost] = useState(false);
   const [history, setHistory] = useState<number[][][]>([]);
+  const [spawnCells, setSpawnCells] = useState<Set<string>>(new Set());
+  const [mergeCells, setMergeCells] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let mounted = true;
@@ -141,10 +175,14 @@ const Page2048 = () => {
       const seed = hashSeed(seedStr);
       const rand = mulberry32(seed);
       const b = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
-      addRandomTile(b, rand);
-      addRandomTile(b, rand);
+      const added: string[] = [];
+      const a1 = addRandomTile(b, rand);
+      if (a1) added.push(`${a1[0]}-${a1[1]}`);
+      const a2 = addRandomTile(b, rand);
+      if (a2) added.push(`${a2[0]}-${a2[1]}`);
       if (!mounted) return;
       setBoard(b);
+      setSpawnCells(new Set(added));
       rngRef.current = rand;
       seedRef.current = seed;
     })();
@@ -163,11 +201,11 @@ const Page2048 = () => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       setTimer((t) => {
-        if (t <= 1) {
-          if (timerRef.current) clearInterval(timerRef.current);
-          setLost(true);
-          saveReplay({ date: new Date().toISOString(), moves, boardType, hard });
-          return 0;
+      if (t <= 1) {
+        if (timerRef.current) clearInterval(timerRef.current);
+        setLost(true);
+        saveReplay({ date: new Date().toISOString(), moves, boardType, hard });
+        return 0;
         }
         return t - 1;
       });
@@ -177,17 +215,36 @@ const Page2048 = () => {
     };
   }, [hard, moves, boardType]);
 
+  useEffect(() => {
+    if (spawnCells.size > 0) {
+      const t = setTimeout(() => setSpawnCells(new Set()), 150);
+      return () => clearTimeout(t);
+    }
+  }, [spawnCells]);
+
+  useEffect(() => {
+    if (mergeCells.size > 0) {
+      const t = setTimeout(() => setMergeCells(new Set()), 300);
+      return () => clearTimeout(t);
+    }
+  }, [mergeCells]);
+
   const handleMove = useCallback(
     (dir: 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown') => {
       if (won || lost) return;
-      let moved: number[][] | undefined;
-      if (dir === 'ArrowLeft') moved = moveLeft(board);
-      if (dir === 'ArrowRight') moved = moveRight(board);
-      if (dir === 'ArrowUp') moved = moveUp(board);
-      if (dir === 'ArrowDown') moved = moveDown(board);
-      if (!moved || boardsEqual(board, moved)) return;
+      let result:
+        | { board: number[][]; merged: [number, number][] }
+        | undefined;
+      if (dir === 'ArrowLeft') result = moveLeft(board);
+      if (dir === 'ArrowRight') result = moveRight(board);
+      if (dir === 'ArrowUp') result = moveUp(board);
+      if (dir === 'ArrowDown') result = moveDown(board);
+      if (!result || boardsEqual(board, result.board)) return;
+      const moved = result.board;
       setHistory((h) => [...h, board.map((row) => [...row])]);
-      addRandomTile(moved, rngRef.current);
+      const added = addRandomTile(moved, rngRef.current);
+      if (added) setSpawnCells(new Set([`${added[0]}-${added[1]}`]));
+      setMergeCells(new Set(result.merged.map(([r, c]) => `${r}-${c}`)));
       const newHighest = checkHighest(moved);
       if ((newHighest === 2048 || newHighest === 4096) && newHighest > highest) {
         ReactGA.event('post_score', { score: newHighest, board: boardType });
@@ -212,6 +269,8 @@ const Page2048 = () => {
       setWon(false);
       setLost(false);
       resetTimer();
+      setSpawnCells(new Set());
+      setMergeCells(new Set());
       return h.slice(0, -1);
     });
   }, [resetTimer]);
@@ -220,9 +279,14 @@ const Page2048 = () => {
     const rand = mulberry32(seedRef.current);
     rngRef.current = rand;
     const b = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
-    addRandomTile(b, rand);
-    addRandomTile(b, rand);
+    const added: string[] = [];
+    const a1 = addRandomTile(b, rand);
+    if (a1) added.push(`${a1[0]}-${a1[1]}`);
+    const a2 = addRandomTile(b, rand);
+    if (a2) added.push(`${a2[0]}-${a2[1]}`);
     setBoard(b);
+    setSpawnCells(new Set(added));
+    setMergeCells(new Set());
     setMoves([]);
     setHistory([]);
     setWon(false);
@@ -290,7 +354,12 @@ const Page2048 = () => {
           Undo
         </button>
         <label className="flex items-center space-x-1 px-2">
-          <input type="checkbox" checked={hard} onChange={(e) => setHard(e.target.checked)} />
+          <input
+            type="checkbox"
+            aria-label="Hard mode"
+            checked={hard}
+            onChange={(e) => setHard(e.target.checked)}
+          />
           <span>Hard</span>
         </label>
         <select
@@ -308,20 +377,30 @@ const Page2048 = () => {
       </div>
       <div className="grid w-full max-w-sm grid-cols-4 gap-2">
         {board.map((row, rIdx) =>
-          row.map((cell, cIdx) => (
-            <div
-              key={`${rIdx}-${cIdx}`}
-              className={`w-full aspect-square ${prefersReducedMotion ? '' : 'transition-transform transition-opacity'}`}
-            >
+          row.map((cell, cIdx) => {
+            const pos = `${rIdx}-${cIdx}`;
+            const animClass = prefersReducedMotion
+              ? ''
+              : spawnCells.has(pos)
+              ? 'animate-scale-in'
+              : mergeCells.has(pos)
+              ? 'animate-merge-pulse'
+              : '';
+            return (
               <div
-                className={`h-full w-full flex items-center justify-center text-2xl font-bold rounded ${
-                  cell ? tileColors[cell] || 'bg-gray-700' : 'bg-gray-800'
-                }`}
+                key={`${pos}-${cell}`}
+                className={`w-full aspect-square ${prefersReducedMotion ? '' : 'transition-transform transition-opacity'}`}
               >
-                {displayCell(cell)}
+                <div
+                  className={`h-full w-full flex items-center justify-center text-2xl font-bold rounded ${
+                    cell ? tileColors[cell] || 'bg-gray-700' : 'bg-gray-800'
+                  } ${animClass}`}
+                >
+                  {displayCell(cell)}
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
       {(won || lost) && (

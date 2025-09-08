@@ -129,11 +129,21 @@ module.exports = {
           },
           '100%': { transform: 'translate(0,0) scale(1)', backgroundColor: 'theme("colors.red.500")' },
         },
+        'scale-in': {
+          '0%': { transform: 'scale(0)' },
+          '100%': { transform: 'scale(1)' },
+        },
+        'merge-pulse': {
+          '0%, 100%': { transform: 'scale(1)' },
+          '50%': { transform: 'scale(1.1)' },
+        },
       },
       animation: {
         glow: 'glow 1s ease-in-out infinite',
         flourish: 'flourish 0.6s ease-out',
         mine: 'mine 0.4s ease-in-out',
+        'scale-in': 'scale-in 0.15s ease-out',
+        'merge-pulse': 'merge-pulse 0.3s ease-out',
       },
     },
   },
