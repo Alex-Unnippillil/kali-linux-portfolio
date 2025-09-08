@@ -23,4 +23,16 @@ describe('IA navigation', () => {
       expect(screen.getByText(s.label)).toBeInTheDocument();
     });
   });
+
+  test('header status pill links to system status page', async () => {
+    const href = (ia as any).footer.groups
+      .flatMap((g: any) => g.items)
+      .find((i: any) => i.label === 'System Status').href;
+    (global as any).fetch = jest
+      .fn()
+      .mockResolvedValue({ json: () => Promise.resolve({ status: 'operational' }) });
+    render(<Header />);
+    const link = await screen.findByLabelText(/system status/i);
+    expect(link).toHaveAttribute('href', href);
+  });
 });
