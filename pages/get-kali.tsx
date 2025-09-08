@@ -1,5 +1,5 @@
 import React from 'react';
-import Callout from '../components/ui/Callout';
+import MirrorIntegrity from '../components/get-kali/MirrorIntegrity';
 
 import * as Installer from '../content/get-kali/installer.mdx';
 import * as VMs from '../content/get-kali/vms.mdx';
@@ -82,22 +82,10 @@ const GetKali: React.FC = () => (
       ))}
     </div>
     <div className="mt-6">
-      <Callout variant="verifyDownload">
-        <p>
-          Verify downloads using signatures or hashes.{' '}
-          <a
-            href="https://www.kali.org/docs/introduction/download-validation/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline"
-          >
-            Verification instructions
-          </a>
-          .
-        </p>
-      </Callout>
+      <MirrorIntegrity />
     </div>
   </main>
 );
 
 export default GetKali;
+
