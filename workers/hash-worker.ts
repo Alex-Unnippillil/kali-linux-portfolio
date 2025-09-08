@@ -7,6 +7,7 @@ import {
   createSHA3,
   createBLAKE3,
   createCRC32,
+  type IHasher,
 } from 'hash-wasm';
 
 export type Algorithm =
@@ -45,7 +46,7 @@ self.onmessage = async ({ data }: MessageEvent<HashWorkerRequest>) => {
   const results: Record<string, string> = {};
 
   if (file) {
-    const hashers: Record<string, any> = {};
+    const hashers: Partial<Record<Algorithm, IHasher>> = {};
 
     for (const alg of algorithms) {
       switch (alg) {
@@ -89,16 +90,17 @@ self.onmessage = async ({ data }: MessageEvent<HashWorkerRequest>) => {
       if (done) break;
       loaded += value.length;
       for (const hasher of Object.values(hashers)) {
-        hasher.update(value);
+        hasher?.update(value);
       }
-      (self as any).postMessage({
+      self.postMessage({
         type: 'progress',
         loaded,
         total: file.size,
       } as ProgressMessage);
     }
-
-    for (const [alg, hasher] of Object.entries(hashers)) {
+    for (const alg of Object.keys(hashers) as Algorithm[]) {
+      const hasher = hashers[alg];
+      if (!hasher) continue;
       if (alg === 'CRC32') {
         const num = hasher.digest();
         results[alg] = num.toString(16).padStart(8, '0');
@@ -113,7 +115,7 @@ self.onmessage = async ({ data }: MessageEvent<HashWorkerRequest>) => {
     const hashAlgs = algorithms.filter(
       (a) => !['BASE64', 'BASE64URL', 'URL'].includes(a),
     );
-    const hashers: Record<string, any> = {};
+    const hashers: Partial<Record<Algorithm, IHasher>> = {};
     for (const alg of hashAlgs) {
       switch (alg) {
         case 'MD5':
@@ -149,10 +151,12 @@ self.onmessage = async ({ data }: MessageEvent<HashWorkerRequest>) => {
     }
 
     for (const hasher of Object.values(hashers)) {
-      hasher.update(data);
+      hasher?.update(data);
     }
 
-    for (const [alg, hasher] of Object.entries(hashers)) {
+    for (const alg of Object.keys(hashers) as Algorithm[]) {
+      const hasher = hashers[alg];
+      if (!hasher) continue;
       if (alg === 'CRC32') {
         const num = hasher.digest();
         results[alg] = num.toString(16).padStart(8, '0');
@@ -171,14 +175,14 @@ self.onmessage = async ({ data }: MessageEvent<HashWorkerRequest>) => {
       results.URL = encodeURIComponent(text);
     }
 
-    (self as any).postMessage({
+    self.postMessage({
       type: 'progress',
       loaded: data.length,
       total: data.length,
     } as ProgressMessage);
   }
 
-  (self as any).postMessage({ type: 'result', results } as ResultMessage);
+  self.postMessage({ type: 'result', results } as ResultMessage);
 };
 
 export {};
