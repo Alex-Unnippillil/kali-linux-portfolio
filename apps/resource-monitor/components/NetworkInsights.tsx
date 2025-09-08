@@ -32,16 +32,16 @@ export default function NetworkInsights() {
   }, [setHistory]);
 
   return (
-    <div className="p-2 text-xs text-white bg-[var(--kali-bg)]">
+    <div className="p-2 text-xs text-white bg-kali-bg">
       <h2 className="font-bold mb-1">Active Fetches</h2>
-      <ul className="mb-2 divide-y divide-gray-700 border border-gray-700 rounded bg-[var(--kali-panel)]">
-        {active.length === 0 && <li className="p-1 text-gray-400">None</li>}
+      <ul className="mb-2 divide-y divide-gray-700 border border-gray-700 rounded bg-kali-bg-elev">
+        {active.length === 0 && <li className="p-1 text-kali-muted">None</li>}
         {active.map((f) => (
           <li key={f.id} className="p-1">
             <div className="truncate">
               {f.method} {f.url}
             </div>
-            <div className="text-gray-400">
+            <div className="text-kali-muted">
               {((typeof performance !== 'undefined' ? performance.now() : Date.now()) - f.startTime).toFixed(0)}ms elapsed
             </div>
           </li>
@@ -51,13 +51,13 @@ export default function NetworkInsights() {
         <h2 className="font-bold">History</h2>
         <button
           onClick={() => exportMetrics(history)}
-          className="ml-auto px-2 py-1 rounded bg-[var(--kali-panel)]"
+          className="ml-auto px-2 py-1 rounded bg-kali-bg-elev"
         >
           Export
         </button>
       </div>
-      <ul className="divide-y divide-gray-700 border border-gray-700 rounded bg-[var(--kali-panel)]">
-        {history.length === 0 && <li className="p-1 text-gray-400">No requests</li>}
+      <ul className="divide-y divide-gray-700 border border-gray-700 rounded bg-kali-bg-elev">
+        {history.length === 0 && <li className="p-1 text-kali-muted">No requests</li>}
         {history.map((f) => (
           <li key={f.id} className="p-1">
             <div className="truncate">
@@ -66,7 +66,7 @@ export default function NetworkInsights() {
                 <span className="ml-2 text-green-400">(SW cache)</span>
               )}
             </div>
-            <div className="text-gray-400">
+            <div className="text-kali-muted">
               {f.duration ? `${f.duration.toFixed(0)}ms` : ''} · req {formatBytes(f.requestSize)} · res {formatBytes(f.responseSize)}
             </div>
           </li>

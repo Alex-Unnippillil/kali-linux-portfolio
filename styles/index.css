@@ -1,6 +1,14 @@
 @import './globals.css';
 @import './whisker.css';
 
+:root {
+    --kali-bg: var(--color-bg);
+    --kali-bg-elev: var(--color-surface);
+    --kali-primary: var(--color-primary);
+    --kali-accent: var(--color-accent);
+    --kali-muted: var(--color-muted);
+}
+
 html {
     font-size: clamp(12px, calc(16px * var(--font-multiplier)), 24px);
 }
