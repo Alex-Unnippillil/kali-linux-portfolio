@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import DesktopContextMenu from './DesktopContextMenu';
+import Dock from './Dock';
+import Panel from '../panel/Panel';
 
 export interface DesktopIcon {
   id: string;
@@ -60,6 +62,9 @@ export const Desktop: React.FC = () => {
       onContextMenu={handleContextMenu}
       onClick={closeMenu}
     >
+      <div className="absolute top-0 left-0 right-0 z-50">
+        <Panel />
+      </div>
       {icons.map((icon) => (
         <div
           key={icon.id}
@@ -71,6 +76,7 @@ export const Desktop: React.FC = () => {
           <div>{icon.title}</div>
         </div>
       ))}
+      <Dock />
       <DesktopContextMenu
         position={menuPos}
         onClose={closeMenu}
