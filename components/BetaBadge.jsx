@@ -1,4 +1,4 @@
-export default function BetaBadge() {
+export function BetaBadge() {
   if (process.env.NEXT_PUBLIC_SHOW_BETA !== '1') return null;
   return (
     <button
