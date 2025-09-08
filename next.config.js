@@ -24,11 +24,12 @@ const securityHeaders = [
   },
   {
     key: 'Referrer-Policy',
-    value: 'strict-origin-when-cross-origin',
+    value: 'no-referrer',
   },
   {
     key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
+    value:
+      'accelerometer=(), camera=(), microphone=(), geolocation=(), interest-cohort=(), fullscreen=(), payment=()',
   },
   {
     // Allow same-origin framing so the PDF resume renders in an <object>
@@ -37,7 +38,7 @@ const securityHeaders = [
   },
   {
     key: 'Strict-Transport-Security',
-    value: 'max-age=31536000; includeSubDomains',
+    value: 'max-age=63072000; includeSubDomains; preload',
   },
 ];
 
