@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import Header from '../components/kali/Header';
 import Footer from '../components/kali/Footer';
 import ia from '../data/ia.json';
@@ -9,6 +10,14 @@ describe('IA navigation', () => {
     (ia as any).header.forEach((item: any) => {
       expect(screen.getByText(item.label)).toBeInTheDocument();
     });
+  });
+
+  test('skip link is first tabbable element', async () => {
+    render(<Header />);
+    await userEvent.tab();
+    const skip = screen.getByText(/skip to main content/i);
+    expect(skip).toHaveFocus();
+    expect(skip).toHaveAttribute('href', '#main-content');
   });
 
   test('footer renders groups and social links from ia.json', () => {
