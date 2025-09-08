@@ -30,7 +30,7 @@ export default function CommandChip({ command, className = '', ...props }: Comma
     <button
       type="button"
       onClick={copy}
-      className={`inline-flex items-center gap-1 rounded-full border border-gray-600 bg-black px-2 py-1 font-mono text-green-400 text-sm ${className}`}
+      className={`command-chip inline-flex items-center gap-1 rounded-full border border-gray-600 bg-black px-2 py-1 font-mono text-green-400 text-sm motion-reduce:transition-none ${className}`}
       aria-label={`Copy ${command}`}
       title="Copy command"
       {...props}

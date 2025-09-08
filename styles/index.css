@@ -129,7 +129,7 @@ button, [role="button"], input[type="button"], input[type="submit"], input[type=
     justify-content: center;
     font-weight: 500;
     cursor: pointer;
-    transition: background-color var(--motion-fast), transform var(--motion-fast);
+    transition: var(--transition-base);
 }
 
 .btn:hover {
@@ -155,6 +155,28 @@ select:focus-visible,
 [tabindex]:not([tabindex="-1"]):focus-visible {
     outline: var(--focus-outline-width) var(--focus-outline-style) var(--focus-outline-color) !important;
     outline-offset: 2px;
+}
+
+a,
+button,
+input,
+textarea,
+select,
+[role="button"],
+[role="tab"],
+.command-chip {
+    transition: var(--transition-base);
+}
+
+:disabled,
+[aria-disabled="true"] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+[aria-busy="true"] {
+    cursor: progress;
+    opacity: 0.7;
 }
 
 @media (prefers-reduced-motion: reduce) {
