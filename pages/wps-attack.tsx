@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { baseMetadata } from '../lib/metadata';
+import CommandChip from '../components/ui/CommandChip';
 
 export const metadata = baseMetadata;
 
@@ -57,10 +58,12 @@ const WpsAttack = () => {
             >
               <div className="font-bold">{`Step ${idx + 1}: ${s.title}`}</div>
               {idx === current && (
-                <pre className="bg-ub-black text-green-400 p-2 mt-2 text-sm overflow-auto whitespace-pre-wrap">
-{`$ ${s.command}
-${s.output}`}
-                </pre>
+                <>
+                  <CommandChip command={s.command} className="mt-2" />
+                  <pre className="bg-ub-black text-green-400 p-2 mt-2 text-sm overflow-auto whitespace-pre-wrap">
+                    {s.output}
+                  </pre>
+                </>
               )}
             </li>
           ))}

@@ -1,20 +1,7 @@
 "use client";
 
 import React from 'react';
-import copyToClipboard from '../../../utils/clipboard';
-
-const CommandBlock = ({ command }: { command: string }) => (
-  <div className="flex items-start gap-2 my-2">
-    <pre className="flex-1 overflow-x-auto rounded bg-black p-3 text-green-400 font-mono">{command}</pre>
-    <button
-      onClick={() => copyToClipboard(command)}
-      className="px-2 py-1 text-sm rounded bg-gray-700"
-      aria-label={`Copy ${command}`}
-    >
-      Copy
-    </button>
-  </div>
-);
+import CommandChip from '../../../components/ui/CommandChip';
 
 const WindowModeDiagram = () => (
   <svg viewBox="0 0 120 80" className="mx-auto mb-4 w-full h-auto max-w-[200px]">
@@ -75,7 +62,7 @@ export default function WinKexHelp() {
           Runs a full Kali desktop inside a single window. Press <kbd>F8</kbd> to release the
           pointer or toggle the control menu.
         </p>
-        <CommandBlock command="kex --win" />
+        <CommandChip command="kex --win" />
       </section>
 
       <section>
@@ -85,7 +72,7 @@ export default function WinKexHelp() {
           Integrates Kali apps directly onto the Windows desktop. Use <kbd>F8</kbd> to bring up the
           menu for moving or resizing windows.
         </p>
-        <CommandBlock command="kex --sl" />
+        <CommandChip command="kex --sl" />
       </section>
 
       <section>
@@ -95,7 +82,7 @@ export default function WinKexHelp() {
           Uses an RDP connection for features like clipboard and sound. Tap <kbd>F8</kbd> to access
           session options or send <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Del</kbd>.
         </p>
-        <CommandBlock command="kex --esm" />
+        <CommandChip command="kex --esm" />
       </section>
     </main>
   );

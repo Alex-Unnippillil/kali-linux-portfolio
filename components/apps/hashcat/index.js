@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import usePrefersReducedMotion from '../../../hooks/usePrefersReducedMotion';
 import progressInfo from './progress.json';
 import StatsChart from '../../StatsChart';
+import CommandChip from '../../ui/CommandChip';
 
 export const hashTypes = [
   {
@@ -494,34 +495,14 @@ function HashcatApp() {
       </div>
       <div className="mt-2">
         <div className="text-sm">Demo Command:</div>
-        <div className="flex items-center">
-          <code
-            className="bg-black px-2 py-1 text-xs"
-            data-testid="demo-command"
-          >
-            {`hashcat -m ${hashType} -a ${attackMode} ${
-              hashInput || 'hash.txt'
-            } ${wordlist ? `${wordlist}.txt` : 'wordlist.txt'}${
-              showMask && mask ? ` ${mask}` : ''
-            }${ruleSet !== 'none' ? ` -r ${ruleSet}.rule` : ''}`}
-          </code>
-          <button
-            className="ml-2"
-            onClick={() => {
-              if (navigator?.clipboard?.writeText) {
-                navigator.clipboard.writeText(
-                  `hashcat -m ${hashType} -a ${attackMode} ${
-                    hashInput || 'hash.txt'
-                  } ${wordlist ? `${wordlist}.txt` : 'wordlist.txt'}${
-                    showMask && mask ? ` ${mask}` : ''
-                  }${ruleSet !== 'none' ? ` -r ${ruleSet}.rule` : ''}`
-                );
-              }
-            }}
-          >
-            Copy
-          </button>
-        </div>
+        <CommandChip
+          command={`hashcat -m ${hashType} -a ${attackMode} ${
+            hashInput || 'hash.txt'
+          } ${wordlist ? `${wordlist}.txt` : 'wordlist.txt'}${
+            showMask && mask ? ` ${mask}` : ''
+          }${ruleSet !== 'none' ? ` -r ${ruleSet}.rule` : ''}`}
+          data-testid="demo-command"
+        />
       </div>
       <div className="mt-4 w-full max-w-md">
         <div className="text-sm">Sample Output:</div>
