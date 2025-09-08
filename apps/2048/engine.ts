@@ -20,7 +20,7 @@ export const flip = (board: Board): Board =>
 
 export const transpose = (board: Board): Board => {
   if (board.length === 0) return [];
-  return board[0].map((_, c) => board.map((row) => row[c]));
+  return board[0].map((_, c) => board.map((row) => row[c]!));
 };
 
 export const moveLeft = (board: Board): Board =>
