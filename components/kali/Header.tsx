@@ -5,6 +5,7 @@ import StatusPill from './StatusPill';
 interface NavItem {
   label: string;
   href?: string;
+  caption?: string;
   children?: NavItem[];
 }
 
@@ -19,18 +20,26 @@ const Header: React.FC = () => (
                 <summary className="cursor-pointer list-none">{item.label}</summary>
                 <ul className="mt-2 space-y-1">
                   {item.children.map((child) => (
-                    <li key={child.label}>
-                      <a href={child.href} className="hover:underline">
+                    <li key={child.label} className="space-y-1">
+                      <a href={child.href} className="hover:underline block">
                         {child.label}
                       </a>
+                      {child.caption && (
+                        <p className="text-xs text-gray-400">{child.caption}</p>
+                      )}
                     </li>
                   ))}
                 </ul>
               </details>
             ) : (
-              <a href={item.href} className="hover:underline">
-                {item.label}
-              </a>
+              <div className="space-y-1">
+                <a href={item.href} className="hover:underline block">
+                  {item.label}
+                </a>
+                {item.caption && (
+                  <p className="text-xs text-gray-400">{item.caption}</p>
+                )}
+              </div>
             )}
           </li>
         ))}
