@@ -134,16 +134,16 @@ const NessusReport: React.FC = () => {
   }, [counts, findings.length]);
 
   return (
-    <div className="p-4 bg-gray-900 text-white min-h-screen">
-      <h1 className="text-2xl mb-4">Sample Nessus Report</h1>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+    <div className="p-space-2 bg-gray-900 text-white min-h-screen">
+      <h1 className="text-2xl mb-space-2">Sample Nessus Report</h1>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-space-1 mb-space-2">
         {['Critical', 'High', 'Medium', 'Low'].map((sev) => (
           <div
             key={sev}
-            className="bg-gray-800 p-2 rounded flex items-center justify-between"
+            className="bg-gray-800 p-space-1 rounded flex items-center justify-between"
           >
             <span
-              className="px-2 py-0.5 rounded-full text-xs text-white"
+              className="px-space-1 py-space-1 rounded-full text-xs text-white"
               style={{ backgroundColor: severityColors[sev] }}
             >
               {sev}
@@ -153,7 +153,7 @@ const NessusReport: React.FC = () => {
         ))}
 
       </div>
-      <div className="flex items-center space-x-2 mb-4 flex-wrap">
+      <div className="flex items-center space-x-space-1 mb-space-2 flex-wrap">
         <label htmlFor="report-file" className="text-sm">
           Import report
         </label>
@@ -161,7 +161,7 @@ const NessusReport: React.FC = () => {
           id="report-file"
           type="file"
           accept=".json"
-          className="text-black p-1 rounded"
+          className="text-black p-space-1 rounded"
           onChange={handleFile}
         />
         <label htmlFor="severity-filter" className="text-sm">
@@ -169,7 +169,7 @@ const NessusReport: React.FC = () => {
         </label>
         <select
           id="severity-filter"
-          className="text-black p-1 rounded"
+          className="text-black p-space-1 rounded"
           value={severity}
           onChange={(e) => setSeverity(e.target.value)}
         >
@@ -184,7 +184,7 @@ const NessusReport: React.FC = () => {
         </label>
         <select
           id="host-filter"
-          className="text-black p-1 rounded"
+          className="text-black p-space-1 rounded"
           value={host}
           onChange={(e) => setHost(e.target.value)}
         >
@@ -199,7 +199,7 @@ const NessusReport: React.FC = () => {
         </label>
         <select
           id="family-filter"
-          className="text-black p-1 rounded"
+          className="text-black p-space-1 rounded"
           value={family}
           onChange={(e) => setFamily(e.target.value)}
         >
@@ -212,7 +212,7 @@ const NessusReport: React.FC = () => {
         <button
           type="button"
           onClick={exportCSV}
-          className="p-2 bg-blue-600 rounded"
+          className="p-space-1 bg-blue-600 rounded"
           aria-label="Export CSV"
         >
           <svg
@@ -230,26 +230,26 @@ const NessusReport: React.FC = () => {
           </svg>
         </button>
       </div>
-      <p className="text-xs text-gray-400 mb-2">
+      <p className="text-xs text-gray-400 mb-space-1">
         Only the bundled sample-report.json is supported. Files are processed locally and never uploaded.
       </p>
       <svg
         width={(radius + 20) * 2}
         height={(radius + 20) * 2}
         aria-label="CVSS severity distribution"
-        className="mx-auto mb-4"
+        className="mx-auto mb-space-2"
       >
         {segments}
       </svg>
-      <table className="w-full mb-4 text-sm">
+      <table className="w-full mb-space-2 text-sm">
         <thead>
           <tr className="text-left border-b border-gray-700 h-9">
-            <th className="px-2" scope="col">ID</th>
-            <th className="px-2" scope="col">Finding</th>
-            <th className="px-2" scope="col">CVSS</th>
-            <th className="px-2" scope="col">Severity</th>
-            <th className="px-2" scope="col">Host</th>
-            <th className="px-2" scope="col">Plugin Family</th>
+            <th className="px-space-1" scope="col">ID</th>
+            <th className="px-space-1" scope="col">Finding</th>
+            <th className="px-space-1" scope="col">CVSS</th>
+            <th className="px-space-1" scope="col">Severity</th>
+            <th className="px-space-1" scope="col">Host</th>
+            <th className="px-space-1" scope="col">Plugin Family</th>
           </tr>
         </thead>
         <tbody>
@@ -261,19 +261,19 @@ const NessusReport: React.FC = () => {
 
               onClick={() => setSelected(f)}
             >
-              <td className="px-2">{f.id}</td>
-              <td className="px-2">{f.name}</td>
-              <td className="px-2">{f.cvss}</td>
-              <td className="px-2">
+              <td className="px-space-1">{f.id}</td>
+              <td className="px-space-1">{f.name}</td>
+              <td className="px-space-1">{f.cvss}</td>
+              <td className="px-space-1">
                 <span
-                  className="px-2 py-0.5 rounded-full text-xs text-white"
+                  className="px-space-1 py-space-1 rounded-full text-xs text-white"
                   style={{ backgroundColor: severityColors[f.severity] }}
                 >
                   {f.severity}
                 </span>
               </td>
-              <td className="px-2">{f.host}</td>
-              <td className="px-2">{f.pluginFamily}</td>
+              <td className="px-space-1">{f.host}</td>
+              <td className="px-space-1">{f.pluginFamily}</td>
             </tr>
           ))}
         </tbody>
@@ -281,20 +281,20 @@ const NessusReport: React.FC = () => {
       {selected && (
         <div
           role="dialog"
-          className="fixed top-0 right-0 h-full w-80 bg-gray-800 p-4 overflow-auto shadow-lg"
+          className="fixed top-space-0 right-space-0 h-full w-80 bg-gray-800 p-space-2 overflow-auto shadow-lg"
         >
           <button
             type="button"
             onClick={() => setSelected(null)}
-            className="mb-2 text-sm bg-red-600 px-2 py-1 rounded"
+            className="mb-space-1 text-sm bg-red-600 px-space-1 py-space-1 rounded"
           >
             Close
           </button>
-          <h2 className="text-xl mb-2">{selected.name}</h2>
-          <p className="text-sm mb-2">
+          <h2 className="text-xl mb-space-1">{selected.name}</h2>
+          <p className="text-sm mb-space-1">
             CVSS {selected.cvss} ({selected.severity})
           </p>
-          <p className="mb-4 text-sm whitespace-pre-wrap">
+          <p className="mb-space-2 text-sm whitespace-pre-wrap">
             {selected.description}
           </p>
           <p className="text-xs text-gray-400">

@@ -59,6 +59,17 @@ module.exports = {
           h2: ['clamp(1.5rem, 1.25rem + 0.5vw, 1.875rem)', { lineHeight: '1.3' }],
           h3: ['clamp(1.25rem, 1rem + 0.5vw, 1.5rem)', { lineHeight: '1.4' }],
         },
+      spacing: {
+        'space-0': '0px',
+        'space-1': '8px',
+        'space-2': '16px',
+        'space-3': '24px',
+        'space-4': '32px',
+        'space-5': '40px',
+        'space-6': '48px',
+        'space-7': '56px',
+        'space-8': '64px',
+      },
       minWidth: {
         '0': '0',
         '1/4': '25%',

@@ -102,29 +102,29 @@ const ModuleWorkspace: React.FC = () => {
   }, [selected, optionValues]);
 
   return (
-    <div className="p-4 space-y-4 bg-ub-cool-grey text-white min-h-screen">
-      <section className="space-y-2">
+    <div className="p-space-2 space-y-space-2 bg-ub-cool-grey text-white min-h-screen">
+      <section className="space-y-space-1">
         <h1 className="text-xl font-semibold">Workspaces</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-space-1">
           <input
             value={newWorkspace}
             onChange={(e) => setNewWorkspace(e.target.value)}
             placeholder="New workspace"
-            className="p-1 rounded text-black"
+            className="p-space-1 rounded text-black"
           />
           <button
             onClick={addWorkspace}
-            className="px-2 py-1 bg-ub-orange rounded text-black"
+            className="px-space-1 py-space-1 bg-ub-orange rounded text-black"
           >
             Create
           </button>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-space-1">
           {workspaces.map((ws) => (
             <button
               key={ws}
               onClick={() => setCurrentWorkspace(ws)}
-              className={`px-2 py-1 rounded ${
+              className={`px-space-1 py-space-1 rounded ${
                 currentWorkspace === ws ? 'bg-blue-600' : 'bg-gray-700'
               }`}
             >
@@ -135,10 +135,10 @@ const ModuleWorkspace: React.FC = () => {
       </section>
       {currentWorkspace && (
         <>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-space-1">
             <button
               onClick={() => setFilter('')}
-              className={`px-2 py-1 text-sm rounded ${
+              className={`px-space-1 py-space-1 text-sm rounded ${
                 filter === '' ? 'bg-blue-600' : 'bg-gray-700'
               }`}
             >
@@ -148,7 +148,7 @@ const ModuleWorkspace: React.FC = () => {
               <button
                 key={t}
                 onClick={() => setFilter(t)}
-                className={`px-2 py-1 text-sm rounded ${
+                className={`px-space-1 py-space-1 text-sm rounded ${
                   filter === t ? 'bg-blue-600' : 'bg-gray-700'
                 }`}
               >
@@ -156,12 +156,12 @@ const ModuleWorkspace: React.FC = () => {
               </button>
             ))}
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-space-2 sm:grid-cols-2 lg:grid-cols-3">
             {filteredModules.map((m) => (
               <button
                 key={m.id}
                 onClick={() => selectModule(m)}
-                className="p-3 text-left bg-ub-grey rounded border border-gray-700"
+                className="p-space-3 text-left bg-ub-grey rounded border border-gray-700"
               >
                 <h3 className="font-semibold">{m.name}</h3>
                 <p className="text-sm text-gray-300">{m.description}</p>
@@ -169,7 +169,7 @@ const ModuleWorkspace: React.FC = () => {
             ))}
           </div>
           {selected && (
-            <div className="space-y-2">
+            <div className="space-y-space-1">
               <h2 className="font-semibold">Command Composer</h2>
               {selected.options.map((opt) => (
                 <div key={opt.name}>
@@ -183,21 +183,21 @@ const ModuleWorkspace: React.FC = () => {
                           [opt.name]: e.target.value,
                         })
                       }
-                      className="mt-1 w-full p-1 rounded text-black"
+                      className="mt-space-1 w-full p-space-1 rounded text-black"
                     />
                   </label>
                 </div>
               ))}
               <button
                 onClick={runCommand}
-                className="px-2 py-1 bg-green-600 rounded text-black"
+                className="px-space-1 py-space-1 bg-green-600 rounded text-black"
               >
                 Run
               </button>
               {result && (
-                <div className="flex items-start gap-2">
+                <div className="flex items-start gap-space-1">
                   <pre
-                    className="flex-1 bg-black text-green-400 p-2 overflow-auto font-mono"
+                    className="flex-1 bg-black text-green-400 p-space-1 overflow-auto font-mono"
                     role="log"
                   >
                     {result}
@@ -206,7 +206,7 @@ const ModuleWorkspace: React.FC = () => {
                     onClick={() =>
                       navigator.clipboard?.writeText(result)
                     }
-                    className="px-2 py-1 text-sm rounded bg-gray-700"
+                    className="px-space-1 py-space-1 text-sm rounded bg-gray-700"
                   >
                     Copy
                   </button>
