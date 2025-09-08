@@ -4,6 +4,7 @@ import React from "react";
 import WhiskerMenu from "../menu/WhiskerMenu";
 import PanelClock from "../util-components/PanelClock";
 import Status from "../util-components/status";
+import QuickSettings from "../panel/QuickSettings";
 
 interface Props {
   /** Optional title shown in the center of the panel */
@@ -39,6 +40,7 @@ export default function TopPanel({ title }: Props) {
           <PanelClock />
         </div>
         <Status />
+        <QuickSettings />
       </div>
     </header>
   );
