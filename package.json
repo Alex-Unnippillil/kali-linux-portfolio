@@ -60,6 +60,7 @@
     "decimal.js": "^10.4.3",
     "diff": "^8",
     "dompurify": "^3.2.6",
+    "dotenv": "^16.4.5",
     "fast-xml-parser": "^4.3.5",
     "figlet": "^1.8.2",
     "flags": "^4.0.1",
