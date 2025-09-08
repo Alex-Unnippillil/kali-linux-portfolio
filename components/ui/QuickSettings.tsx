@@ -3,6 +3,7 @@
 import usePersistentState from '../../hooks/usePersistentState';
 import { useEffect } from 'react';
 import { useTheme } from '../../hooks/useTheme';
+import Image from 'next/image';
 
 interface Props {
   open: boolean;
@@ -44,8 +45,17 @@ const QuickSettings = ({ open, lockScreen, logOut }: Props) => {
           <span>{isDark ? 'Dark' : 'Light'}</span>
         </button>
       </div>
-      <div className="px-4 pb-2 flex justify-between">
-        <span>Sound</span>
+      <div className="px-4 pb-2 flex justify-between items-center">
+        <span className="flex items-center gap-2">
+          <Image
+            src="/icons/adwaita/audio-volume-medium-symbolic.svg"
+            alt=""
+            width={16}
+            height={16}
+            className="status-symbol w-4 h-4"
+          />
+          Sound
+        </span>
         <input
           type="checkbox"
           checked={sound}
@@ -53,8 +63,17 @@ const QuickSettings = ({ open, lockScreen, logOut }: Props) => {
           aria-label="Sound"
         />
       </div>
-      <div className="px-4 pb-2 flex justify-between">
-        <span>Network</span>
+      <div className="px-4 pb-2 flex justify-between items-center">
+        <span className="flex items-center gap-2">
+          <Image
+            src="/icons/adwaita/network-wireless-signal-good-symbolic.svg"
+            alt=""
+            width={16}
+            height={16}
+            className="status-symbol w-4 h-4"
+          />
+          Network
+        </span>
         <input
           type="checkbox"
           checked={online}

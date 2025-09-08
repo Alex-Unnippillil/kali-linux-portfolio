@@ -36,7 +36,7 @@ export default class Navbar extends Component {
             src={
               this.state.undercover
                 ? '/themes/Undercover/status/network.svg'
-                : '/themes/Yaru/status/network-wireless-signal-good-symbolic.svg'
+                : '/icons/adwaita/network-wireless-signal-good-symbolic.svg'
             }
             alt="network icon"
             width={16}

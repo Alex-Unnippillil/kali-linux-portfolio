@@ -1,0 +1,12 @@
+/* Global icon styling */
+:root {
+  --icon-stroke: 1.5;
+}
+
+.status-symbol,
+svg.icon {
+  stroke-width: var(--icon-stroke);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
