@@ -1,0 +1,12 @@
+[
+  {
+    "name": "Partner One",
+    "logo": "/images/logos/logo.png",
+    "url": "https://partner.one"
+  },
+  {
+    "name": "Partner Two",
+    "logo": "/images/logos/logo_1024.png",
+    "url": "https://partner.two"
+  }
+]
