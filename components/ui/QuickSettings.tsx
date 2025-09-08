@@ -31,7 +31,7 @@ const QuickSettings = ({ open, lockScreen, logOut }: Props) => {
 
   return (
     <div
-      className={`absolute bg-ub-cool-grey rounded-md py-4 top-9 right-3 border border-card shadow-card ${
+      className={`absolute bg-ub-cool-grey rounded-md py-4 top-9 right-3 border border-100 shadow-200 ${
         open ? '' : 'hidden'
       }`}
     >
@@ -71,7 +71,7 @@ const QuickSettings = ({ open, lockScreen, logOut }: Props) => {
           aria-label="Reduced motion"
         />
       </div>
-      <div className="px-4 pt-2 border-t border-card mt-2 space-y-1">
+      <div className="px-4 pt-2 border-t border-100 mt-2 space-y-1">
         <button
           type="button"
           className="w-full text-left hover:underline"

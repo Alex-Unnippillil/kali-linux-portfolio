@@ -103,13 +103,17 @@ module.exports = {
       },
       boxShadow: {
         // eslint-disable-next-line no-top-level-window/no-top-level-window-or-document
-        window: '0 4px 8px rgba(0,0,0,0.3)',
-        card: '0 2px 4px rgba(0,0,0,0.2)',
+        0: 'var(--shadow-0)',
+        100: 'var(--shadow-100)',
+        200: 'var(--shadow-200)',
+        300: 'var(--shadow-300)',
       },
       borderColor: {
         // eslint-disable-next-line no-top-level-window/no-top-level-window-or-document
-        window: 'var(--color-border)',
-        card: 'var(--color-border)',
+        0: 'var(--border-0)',
+        100: 'var(--border-100)',
+        200: 'var(--border-200)',
+        300: 'var(--border-300)',
       },
       keyframes: {
         glow: {

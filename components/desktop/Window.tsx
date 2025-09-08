@@ -195,7 +195,7 @@ const Window: React.FC<WindowProps> = ({
               ? "none"
               : "all 0.15s ease",
         }}
-        className={`absolute bg-white shadow-lg rounded-lg border border-gray-300 overflow-hidden ${
+        className={`absolute bg-white shadow-300 rounded-lg border border-200 overflow-hidden ${
           focused ? "" : "opacity-90"
         }`}
       >
