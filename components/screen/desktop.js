@@ -16,6 +16,7 @@ import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
 import WindowSwitcher from '../screen/window-switcher'
+import WorkspaceSwitcher from './workspace-switcher'
 import LauncherCreator from './launcher-creator'
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
@@ -66,6 +67,8 @@ export class Desktop extends Component {
             showLauncherCreator: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            showWorkspaceSwitcher: false,
+            switcherWorkspaces: [],
         }
     }
 
@@ -95,6 +98,7 @@ export class Desktop extends Component {
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
+        document.addEventListener('mousedown', this.handleMouseShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
 
         // Warm commonly used modules during idle periods so the first
@@ -119,6 +123,7 @@ export class Desktop extends Component {
     componentWillUnmount() {
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
+        document.removeEventListener('mousedown', this.handleMouseShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
     }
@@ -194,6 +199,12 @@ export class Desktop extends Component {
             e.preventDefault();
             this.switchWorkspace(e.key === 'ArrowRight' ? 1 : -1);
         }
+        else if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 'w') {
+            e.preventDefault();
+            if (!this.state.showWorkspaceSwitcher) {
+                this.openWorkspaceSwitcher();
+            }
+        }
         else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
             e.preventDefault();
             this.openApp('clipboard-manager');
@@ -220,6 +231,15 @@ export class Desktop extends Component {
             if (id) {
                 const event = new CustomEvent('super-arrow', { detail: e.key });
                 document.getElementById(id)?.dispatchEvent(event);
+            }
+        }
+    }
+
+    handleMouseShortcut = (e) => {
+        if (e.ctrlKey && e.altKey && e.button === 1) {
+            e.preventDefault();
+            if (!this.state.showWorkspaceSwitcher) {
+                this.openWorkspaceSwitcher();
             }
         }
     }
@@ -271,6 +291,26 @@ export class Desktop extends Component {
         }
     }
 
+    openWorkspaceSwitcher = () => {
+        const WORKSPACE_COUNT = 3;
+        let names = [];
+        try {
+            const stored = window.localStorage.getItem('workspaces');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed)) names = parsed;
+            }
+        } catch { /* ignore */ }
+        const workspaces = Array.from({ length: WORKSPACE_COUNT }, (_, i) => ({
+            id: i,
+            name: typeof names[i] === 'string' && names[i].trim() ? names[i] : `Workspace ${i + 1}`,
+        }));
+        this.setState({
+            showWorkspaceSwitcher: true,
+            switcherWorkspaces: workspaces,
+        });
+    }
+
     switchWorkspace = (direction) => {
         const WORKSPACE_COUNT = 3;
         let nextWs = 0;
@@ -301,6 +341,35 @@ export class Desktop extends Component {
         });
     }
 
+    goToWorkspace = (index) => {
+        const WORKSPACE_COUNT = 3;
+        const target = ((index % WORKSPACE_COUNT) + WORKSPACE_COUNT) % WORKSPACE_COUNT;
+        this.setState(prev => {
+            const closed_windows = { ...prev.closed_windows };
+            const focused_windows = { ...prev.focused_windows };
+            Object.keys(prev.window_workspaces).forEach(id => {
+                const same = prev.window_workspaces[id] === target;
+                closed_windows[id] = !same;
+                if (!same) focused_windows[id] = false;
+            });
+            return { currentWorkspace: target, closed_windows, focused_windows };
+        }, () => {
+            let name = `Workspace ${target + 1}`;
+            try {
+                const stored = window.localStorage.getItem('workspaces');
+                if (stored) {
+                    const names = JSON.parse(stored);
+                    if (Array.isArray(names) && typeof names[target] === 'string' && names[target].trim()) {
+                        name = names[target];
+                    }
+                }
+            } catch { /* ignore */ }
+            const message = `Workspace ${target + 1} — ${name}`;
+            osdService.show(message, 1200);
+            this.giveFocusToLastApp();
+        });
+    }
+
     closeWindowSwitcher = () => {
         this.setState({ showWindowSwitcher: false, switcherWindows: [] });
     }
@@ -308,6 +377,16 @@ export class Desktop extends Component {
     selectWindow = (id) => {
         this.setState({ showWindowSwitcher: false, switcherWindows: [] }, () => {
             this.openApp(id);
+        });
+    }
+
+    closeWorkspaceSwitcher = () => {
+        this.setState({ showWorkspaceSwitcher: false, switcherWorkspaces: [] });
+    }
+
+    selectWorkspace = (id) => {
+        this.setState({ showWorkspaceSwitcher: false, switcherWorkspaces: [] }, () => {
+            this.goToWorkspace(id);
         });
     }
 
@@ -1188,6 +1267,13 @@ export class Desktop extends Component {
                         windows={this.state.switcherWindows}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
+
+                { this.state.showWorkspaceSwitcher ?
+                    <WorkspaceSwitcher
+                        workspaces={this.state.switcherWorkspaces}
+                        active={this.state.currentWorkspace}
+                        onSelect={this.selectWorkspace}
+                        onClose={this.closeWorkspaceSwitcher} /> : null}
 
                 <DesktopTour showAllApps={this.showAllApps} />
 
