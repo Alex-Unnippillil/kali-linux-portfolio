@@ -1,7 +1,7 @@
 import { isBrowser } from '@/utils/env';
-import { create, all } from 'mathjs';
+import { create, all, FactoryFunctionMap } from 'mathjs';
 
-const math = create(all);
+const math = create(all as FactoryFunctionMap);
 
 export interface EvalOptions {
   /** Base for numeric literals and result formatting */
