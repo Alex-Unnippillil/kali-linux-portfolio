@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import DocMegaMenu from './DocMegaMenu';
+import ReleasePill from '../Header/ReleasePill';
 
 export default function Header() {
   const [docsOpen, setDocsOpen] = useState(false);
@@ -27,6 +28,7 @@ export default function Header() {
           {docsOpen && <DocMegaMenu onClose={closeDocs} />}
         </div>
       </nav>
+      <ReleasePill />
     </header>
   );
 }
