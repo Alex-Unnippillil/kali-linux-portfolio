@@ -8,7 +8,7 @@ interface Post {
   date: string;
 }
 
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 3;
 
 const BlogFeed: React.FC = () => {
   const [page, setPage] = useState(0);
@@ -45,13 +45,24 @@ const BlogFeed: React.FC = () => {
 
   return (
     <div>
-      <div className="grid gap-4 sm:grid-cols-2" onKeyDown={handleKeyDown}>
+      <div
+        className="grid gap-4 md:grid-cols-2 md:grid-rows-2"
+        onKeyDown={handleKeyDown}
+      >
         {pagePosts.map((post: Post, i: number) => (
           <div
             key={post.link}
-            className="flex flex-col p-4 rounded bg-gray-800 text-white"
+            className={`flex flex-col p-4 rounded bg-gray-800 text-white ${
+              i === 0 ? 'md:row-span-2' : ''
+            }`}
           >
-            <h3 className="text-lg font-semibold">{post.title}</h3>
+            <h3
+              className={`${
+                i === 0 ? 'text-xl' : 'text-lg'
+              } font-semibold line-clamp-2`}
+            >
+              {post.title}
+            </h3>
             <p className="text-sm text-gray-400">
               {new Date(post.date).toLocaleDateString(undefined, {
                 year: 'numeric',
