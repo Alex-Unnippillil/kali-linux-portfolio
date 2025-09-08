@@ -4,7 +4,7 @@
 
 import { isBrowser } from '@/utils/env';
 import { useEffect, useRef, useState } from 'react';
-import { Analytics } from '@vercel/analytics/next';
+import { Analytics } from '@vercel/analytics/react';
 import dynamic from 'next/dynamic';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -256,20 +256,15 @@ function MyApp(props) {
                       onClose={() => setUpdateReady(false)}
                     />
                   )}
-                  {process.env.VERCEL_ANALYTICS_ID && (
-                    <>
-                      <Analytics
-                        beforeSend={(e) => {
-                          if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-                          const evt = e;
-                          if (evt.metadata?.email) delete evt.metadata.email;
-                          return e;
-                        }}
-                      />
-
-                      <SpeedInsights />
-                    </>
-                  )}
+                  <Analytics
+                    beforeSend={(e) => {
+                      if (e.url.includes('/admin') || e.url.includes('/private')) return null;
+                      const evt = e;
+                      if (evt.metadata?.email) delete evt.metadata.email;
+                      return e;
+                    }}
+                  />
+                  <SpeedInsights />
                 </NotificationCenter>
               </PipPortalProvider>
             </TrayProvider>
