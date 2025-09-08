@@ -1,7 +1,6 @@
 import Image from 'next/image';
-import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 
 const AppGrid = dynamic(() => import('../../components/apps/app-grid'), {
@@ -15,6 +14,9 @@ const AppsPage = () => {
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState('run');
   const [focusedIndex, setFocusedIndex] = useState(0);
+  const containerRef = useRef(null);
+  const itemRefs = useRef([]);
+  const [columnCount, setColumnCount] = useState(3);
 
   useEffect(() => {
     let isMounted = true;
@@ -56,15 +58,42 @@ const AppsPage = () => {
     }
   }, [filteredApps, focusedIndex]);
 
+  useEffect(() => {
+    const updateColumns = () => {
+      const width = containerRef.current?.clientWidth || window.innerWidth;
+      if (width >= 1024) setColumnCount(6);
+      else if (width >= 768) setColumnCount(4);
+      else if (width >= 640) setColumnCount(3);
+      else setColumnCount(2);
+    };
+    updateColumns();
+    window.addEventListener('resize', updateColumns);
+    return () => window.removeEventListener('resize', updateColumns);
+  }, []);
+
+  useEffect(() => {
+    itemRefs.current[focusedIndex]?.focus();
+  }, [focusedIndex, filteredApps]);
+
   const handleKeyDown = (e) => {
     if (mode !== 'run') return;
-    if (e.key === 'ArrowDown') {
+    if (e.key === 'ArrowRight') {
       e.preventDefault();
       setFocusedIndex((i) => Math.min(i + 1, filteredApps.length - 1));
     }
-    if (e.key === 'ArrowUp') {
+    if (e.key === 'ArrowLeft') {
       e.preventDefault();
       setFocusedIndex((i) => Math.max(i - 1, 0));
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setFocusedIndex((i) =>
+        Math.min(i + columnCount, filteredApps.length - 1),
+      );
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setFocusedIndex((i) => Math.max(i - columnCount, 0));
     }
     if (e.key === 'Enter') {
       const app = filteredApps[focusedIndex];
@@ -94,30 +123,48 @@ const AppsPage = () => {
         </button>
       </div>
       {mode === 'run' ? (
-        <ul tabIndex={0} className="outline-none">
-          {filteredApps.map((app, idx) => (
-            <li key={app.id}>
-              <Link
-                href={`/apps/${app.id}`}
-                className={`block rounded border p-2 ${
-                  idx === focusedIndex ? 'bg-gray-200' : ''
+        <div
+          ref={containerRef}
+          tabIndex={0}
+          className="outline-none flex justify-center"
+        >
+          <div
+            className="grid gap-4"
+            style={{
+              gridTemplateColumns: `repeat(${columnCount}, minmax(120px, 1fr))`,
+            }}
+          >
+            {filteredApps.map((app, idx) => (
+              <button
+                key={app.id}
+                ref={(el) => (itemRefs.current[idx] = el)}
+                className={`relative flex flex-col items-center rounded border p-4 focus:outline-none ${
+                  idx === focusedIndex ? 'ring-2 ring-blue-500' : ''
                 }`}
+                onClick={() => router.push(`/apps/${app.id}`)}
+                tabIndex={idx === focusedIndex ? 0 : -1}
+                onFocus={() => setFocusedIndex(idx)}
+                type="button"
               >
                 {app.icon && (
                   <Image
                     src={app.icon}
                     alt=""
-                    width={24}
-                    height={24}
-                    sizes="24px"
-                    className="mr-2 inline-block align-middle"
+                    width={48}
+                    height={48}
+                    sizes="48px"
                   />
                 )}
-                <span className="align-middle">{app.title}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+                <span className="mt-2 text-sm text-center">{app.title}</span>
+                {app.favourite && (
+                  <span className="absolute top-1 right-1 text-yellow-400 text-xs">
+                    ★
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
       ) : (
         <div className="h-[80vh]">
           <AppGrid openApp={(id) => router.push(`/apps/${id}`)} />
