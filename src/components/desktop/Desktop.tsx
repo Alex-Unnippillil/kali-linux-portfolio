@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import DesktopContextMenu from './DesktopContextMenu';
 import Dock from './Dock';
 import Panel from '../panel/Panel';
+import HotCorner from './HotCorner';
 
 export interface DesktopIcon {
   id: string;
@@ -77,6 +78,7 @@ export const Desktop: React.FC = () => {
         </div>
       ))}
       <Dock />
+      <HotCorner />
       <DesktopContextMenu
         position={menuPos}
         onClose={closeMenu}
