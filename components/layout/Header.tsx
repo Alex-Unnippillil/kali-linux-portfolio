@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import DocMegaMenu from './DocMegaMenu';
 
 export default function Header() {
@@ -9,10 +10,15 @@ export default function Header() {
 
   return (
     <header className="relative bg-gray-900 text-white">
-      <nav className="flex gap-4 p-4">
-        <a href="/" className="hover:underline">
-          Home
-        </a>
+      <nav className="flex flex-col items-start gap-2 p-2 text-sm sm:flex-row sm:items-center sm:gap-3 sm:p-4">
+        <Link href="/get-kali" className="hover:underline">
+          Get Kali
+        </Link>
+        <span className="hidden text-gray-600 sm:block">|</span>
+        <Link href="/blog" className="hover:underline">
+          Blog
+        </Link>
+        <span className="hidden text-gray-600 sm:block">|</span>
         <div
           className="relative"
           onMouseEnter={() => setDocsOpen(true)}
@@ -26,6 +32,18 @@ export default function Header() {
           </button>
           {docsOpen && <DocMegaMenu onClose={closeDocs} />}
         </div>
+        <span className="hidden text-gray-600 sm:block">|</span>
+        <Link href="/community" className="hover:underline">
+          Community
+        </Link>
+        <span className="hidden text-gray-600 sm:block">|</span>
+        <Link href="/developers" className="hover:underline">
+          Developers
+        </Link>
+        <span className="hidden text-gray-600 sm:block">|</span>
+        <Link href="/about" className="hover:underline">
+          About
+        </Link>
       </nav>
     </header>
   );
