@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ReactGA from 'react-ga4';
+import { useSwipeable } from 'react-swipeable';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 import { getDailySeed } from '../../utils/dailySeed';
 import { isBrowser } from '@/utils/env';
@@ -202,6 +203,13 @@ const Page2048 = () => {
     [board, won, lost, highest, boardType, resetTimer]
   );
 
+  const swipeHandlers = useSwipeable({
+    onSwipedLeft: () => handleMove('ArrowLeft'),
+    onSwipedRight: () => handleMove('ArrowRight'),
+    onSwipedUp: () => handleMove('ArrowUp'),
+    onSwipedDown: () => handleMove('ArrowDown'),
+  });
+
   const handleUndo = useCallback(() => {
     setHistory((h) => {
       if (!h.length) return h;
@@ -281,7 +289,7 @@ const Page2048 = () => {
   }, [won, lost, moves, boardType, hard, highest]);
 
   return (
-    <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
+    <div {...swipeHandlers} className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
       <div className="flex space-x-2">
         <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={restart}>
           Restart
