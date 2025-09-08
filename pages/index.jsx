@@ -1,6 +1,9 @@
 import Image from "next/image";
 import { decode } from "blurhash";
 import { PNG } from "pngjs";
+import { useEffect, useState } from "react";
+import posts from "../data/kali-blog.json";
+import ReleasePromoCard from "../components/ReleasePromoCard";
 import desktopsData from "../content/desktops.json";
 import { baseMetadata } from "../lib/metadata";
 
@@ -26,8 +29,25 @@ export async function getStaticProps() {
  * @returns {JSX.Element}
  */
 export default function Home({ desktops }) {
+  const [release, setRelease] = useState(null);
+
+  useEffect(() => {
+    const releasePost = posts.find((p) => /Release/i.test(p.title));
+    if (!releasePost) return;
+    const releaseDate = new Date(releasePost.date);
+    const now = new Date();
+    const diffDays = (now - releaseDate) / (1000 * 60 * 60 * 24);
+    if (diffDays <= 90) {
+      const match = releasePost.title.match(/(Kali Linux\s+[0-9.]+) Release\s*(?:\((.*)\))?/i);
+      const version = match ? match[1] : releasePost.title;
+      const tagline = match && match[2] ? match[2] : undefined;
+      setRelease({ version, tagline });
+    }
+  }, []);
+
   return (
     <main className="p-4">
+      {release && <ReleasePromoCard version={release.version} tagline={release.tagline} />}
       <h1 className="mb-4 text-2xl font-bold sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl">Choose the desktop you prefer</h1>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
         {desktops.map((d) => (
