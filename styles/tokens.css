@@ -135,6 +135,24 @@
   }
 }
 
+/* Keyboard key styling */
+kbd {
+  display: inline-block;
+  padding: 0 var(--space-1);
+  font-family: var(--font-family-mono, monospace);
+  font-size: 0.85em;
+  border: 1px solid var(--color-ubt-cool-grey);
+  border-radius: var(--radius-sm);
+  background: var(--color-ubt-grey);
+  color: var(--color-ub-grey);
+}
+
+.high-contrast kbd {
+  background: var(--color-bg);
+  color: var(--color-text);
+  border-color: var(--color-text);
+}
+
 /* Optional high contrast via media query */
 @media (prefers-contrast: more) {
   :root {

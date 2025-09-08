@@ -23,7 +23,7 @@ This document tracks UI polish tasks for the Kali/Ubuntu inspired desktop experi
    - **Where:** desktop drag controller.
 
 5. **Keyboard window management**
-   - **Accept:** Alt+Tab app switcher, Alt+\` intra-app cycling, Super+Arrow tiling.
+     - **Accept:** <kbd>Alt</kbd>+<kbd>Tab</kbd> app switcher, <kbd>Alt</kbd>+<kbd>`</kbd> intra-app cycling, <kbd>Super</kbd>+<kbd>Arrow</kbd> tiling.
    - **Where:** desktop keymap handler.
 
 6. **Remember window positions per app**
@@ -51,14 +51,14 @@ This document tracks UI polish tasks for the Kali/Ubuntu inspired desktop experi
     - **Where:** window chrome.
 
 12. **Workspaces (virtual desktops) MVP**
-    - **Accept:** Shortcut Ctrl+Super+Left/Right cycles 2–3 workspaces; windows are scoped.
+     - **Accept:** Shortcut <kbd>Ctrl</kbd>+<kbd>Super</kbd>+<kbd>Left</kbd>/<kbd>Right</kbd> cycles 2–3 workspaces; windows are scoped.
     - **Where:** desktop state machine.
 
 13. **Window min size constraints**
     - **Accept:** Apps cannot resize below content-fit minimums; aspect guard keeps within ~1.6:1 golden ratio band for dialogs.
     - **Where:** window constraints.
 
-14. **Alt-Tab overlay polish**
+14. **<kbd>Alt</kbd>+<kbd>Tab</kbd> overlay polish**
     - **Accept:** Smooth 150–200 ms fade and scale in, row of app icons with labels.
     - **Where:** overlay component; follow motion ranges.
 
@@ -175,7 +175,7 @@ This document tracks UI polish tasks for the Kali/Ubuntu inspired desktop experi
 ## E) Accessibility
 
 41. **Keyboard-first navigation**
-    - **Accept:** Full desktop and app grid operable by keyboard (Tab, Arrow, Enter, Escape), with visible focus.
+     - **Accept:** Full desktop and app grid operable by keyboard (<kbd>Tab</kbd>, <kbd>Arrow</kbd>, <kbd>Enter</kbd>, <kbd>Escape</kbd>), with visible focus.
     - **Where:** focus management in desktop and window components.
 
 42. **ARIA for window chrome**
