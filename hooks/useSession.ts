@@ -14,6 +14,27 @@ export interface DesktopSession {
   dock: string[];
 }
 
+export type WindowAction =
+  | { type: 'add'; window: SessionWindow }
+  | { type: 'remove'; id: string }
+  | { type: 'update'; id: string; updates: Partial<SessionWindow> };
+
+export function applyWindowAction(
+  windows: SessionWindow[],
+  action: WindowAction,
+): SessionWindow[] {
+  switch (action.type) {
+    case 'add':
+      return [...windows, action.window];
+    case 'remove':
+      return windows.filter((w) => w.id !== action.id);
+    case 'update':
+      return windows.map((w) =>
+        w.id === action.id ? { ...w, ...action.updates } : w,
+      );
+  }
+}
+
 const initialSession: DesktopSession = {
   windows: [],
   wallpaper: defaults.wallpaper,
@@ -53,5 +74,11 @@ export default function useSession() {
     clear();
   };
 
-  return { session, setSession, resetSession };
+  const dispatch = (action: WindowAction) =>
+    setSession((s) => ({
+      ...s,
+      windows: applyWindowAction(s.windows, action),
+    }));
+
+  return { session, setSession, resetSession, dispatch };
 }
