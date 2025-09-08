@@ -55,9 +55,9 @@ export default function DateTimeSettings() {
   };
 
   return (
-    <div className="p-4 text-ubt-grey">
-      <h1 className="text-xl mb-4">Date &amp; Time</h1>
-      <div className="flex items-center gap-2 mb-4">
+    <div className="p-space-2 text-ubt-grey">
+      <h1 className="text-xl mb-space-2">Date &amp; Time</h1>
+      <div className="flex items-center gap-space-1 mb-space-2">
         <label htmlFor="timezone" className="w-36">
           Time zone
         </label>
@@ -65,7 +65,7 @@ export default function DateTimeSettings() {
           id="timezone"
           value={timezone}
           onChange={handleTimezone}
-          className="flex-1 bg-ub-cool-grey text-ubt-grey p-1 rounded"
+          className="flex-1 bg-ub-cool-grey text-ubt-grey p-space-1 rounded"
         >
           {tzList.map((tz) => (
             <option key={tz} value={tz}>
@@ -74,7 +74,7 @@ export default function DateTimeSettings() {
           ))}
         </select>
       </div>
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-space-1 mb-space-2">
         <span className="w-36">24-hour time</span>
         <ToggleSwitch
           checked={twentyFourHour}
@@ -82,7 +82,7 @@ export default function DateTimeSettings() {
           ariaLabel="toggle-24-hour"
         />
       </div>
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-space-1 mb-space-2">
         <span className="w-36">Show seconds</span>
         <ToggleSwitch
           checked={showSeconds}
@@ -90,7 +90,7 @@ export default function DateTimeSettings() {
           ariaLabel="toggle-seconds"
         />
       </div>
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-space-1 mb-space-2">
         <label htmlFor="first-day" className="w-36">
           First day of week
         </label>
@@ -98,7 +98,7 @@ export default function DateTimeSettings() {
           id="first-day"
           value={firstDay}
           onChange={handleFirstDay}
-          className="flex-1 bg-ub-cool-grey text-ubt-grey p-1 rounded"
+          className="flex-1 bg-ub-cool-grey text-ubt-grey p-space-1 rounded"
         >
           {days.map((d, i) => (
             <option key={d} value={i}>
@@ -107,7 +107,7 @@ export default function DateTimeSettings() {
           ))}
         </select>
       </div>
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-space-1 mb-space-2">
         <span>Use network time (NTP)</span>
         <ToggleSwitch
           checked={networkTime}
@@ -116,7 +116,7 @@ export default function DateTimeSettings() {
         />
         <span className="cursor-help" title={tooltip} aria-label="NTP info">ℹ️</span>
       </div>
-      <div className="space-y-2" aria-label="NTP commands">
+      <div className="space-y-space-1" aria-label="NTP commands">
         <CommandChip command="sudo apt install chrony" />
         <CommandChip command="sudo systemctl enable --now chrony" />
       </div>
