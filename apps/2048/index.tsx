@@ -13,8 +13,6 @@ import { isBrowser } from '@/utils/env';
 import { loadState, saveState, clearState } from './storage';
 
 
-const SIZE = 4;
-
 // simple seeded PRNG
 const mulberry32 = (seed: number) => () => {
   let t = (seed += 0x6d2b79f5);
@@ -45,8 +43,9 @@ const slideRow = (row: number[]) => {
     }
   }
   const newRow = arr.filter((n) => n !== 0);
-  while (newRow.length < SIZE) newRow.push(0);
-  return { row: newRow, merged };
+  while (newRow.length < row.length) newRow.push(0);
+  return newRow;
+
 };
 
 const transpose = (board: number[][]): number[][] => {
@@ -93,11 +92,12 @@ const boardsEqual = (a: number[][], b: number[][]) =>
   a.every((row, r) => row.every((cell, c) => cell === b[r][c]));
 
 const hasMoves = (board: number[][]) => {
-  for (let r = 0; r < SIZE; r += 1) {
-    for (let c = 0; c < SIZE; c += 1) {
+  const size = board.length;
+  for (let r = 0; r < size; r += 1) {
+    for (let c = 0; c < size; c += 1) {
       if (board[r][c] === 0) return true;
-      if (c < SIZE - 1 && board[r][c] === board[r][c + 1]) return true;
-      if (r < SIZE - 1 && board[r][c] === board[r + 1][c]) return true;
+      if (c < size - 1 && board[r][c] === board[r][c + 1]) return true;
+      if (r < size - 1 && board[r][c] === board[r + 1][c]) return true;
     }
   }
   return false;
@@ -109,7 +109,7 @@ const checkHighest = (board: number[][]) => {
   return m;
 };
 
-const addRandomTile = (b: number[][], rand: () => number) => {
+const addRandomTile = (b: number[][], rand: () => number, prob4: number) => {
   const empty: [number, number][] = [];
   b.forEach((row, r) =>
     row.forEach((cell, c) => {
@@ -118,8 +118,8 @@ const addRandomTile = (b: number[][], rand: () => number) => {
   );
   if (empty.length === 0) return null;
   const [r, c] = empty[Math.floor(rand() * empty.length)];
-  b[r][c] = rand() < 0.9 ? 2 : 4;
-  return [r, c] as [number, number];
+  b[r][c] = rand() < prob4 ? 4 : 2;
+
 };
 
 
@@ -161,8 +161,10 @@ const Page2048 = () => {
   // Skip tile transition classes if the user prefers reduced motion
   const rngRef = useRef(mulberry32(0));
   const seedRef = useRef(0);
+  const [size, setSize] = useState(4);
+  const [spawn4Prob, setSpawn4Prob] = useState(0.1);
   const [board, setBoard] = useState<number[][]>(
-    Array.from({ length: SIZE }, () => Array(SIZE).fill(0))
+    Array.from({ length: size }, () => Array(size).fill(0))
   );
   const [hard, setHard] = useState(false);
   const [timer, setTimer] = useState(3);
@@ -176,40 +178,6 @@ const Page2048 = () => {
   const [spawnCells, setSpawnCells] = useState<Set<string>>(new Set());
   const [mergeCells, setMergeCells] = useState<Set<string>>(new Set());
 
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      const s = await getDailySeed('2048');
-      const seed = hashSeed(s);
-      const rand = mulberry32(seed);
-      if (!mounted) return;
-
-      const saved = loadState();
-      if (saved) {
-        setBoard(saved.board);
-        setHighest(saved.highest);
-        setWon(saved.won);
-        setLost(saved.lost);
-      } else {
-        const b = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
-        addRandomTile(b, rand);
-        addRandomTile(b, rand);
-        setBoard(b);
-      }
-
-      rngRef.current = rand;
-      seedRef.current = seed;
-      setSeedStr(s);
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    saveState({ board, highest, won, lost });
-  }, [board, highest, won, lost]);
 
   const resetTimer = useCallback(() => {
     if (!hard) return;
@@ -262,9 +230,7 @@ const Page2048 = () => {
       if (!result || boardsEqual(board, result.board)) return;
       const moved = result.board;
       setHistory((h) => [...h, board.map((row) => [...row])]);
-      const added = addRandomTile(moved, rngRef.current);
-      if (added) setSpawnCells(new Set([`${added[0]}-${added[1]}`]));
-      setMergeCells(new Set(result.merged.map(([r, c]) => `${r}-${c}`)));
+      addRandomTile(moved, rngRef.current, spawn4Prob);
 
       const newHighest = checkHighest(moved);
       if ((newHighest === 2048 || newHighest === 4096) && newHighest > highest) {
@@ -277,7 +243,7 @@ const Page2048 = () => {
       if (newHighest >= 2048) setWon(true);
       else if (!hasMoves(moved)) setLost(true);
     },
-    [board, won, lost, highest, boardType, resetTimer]
+    [board, won, lost, highest, boardType, resetTimer, spawn4Prob]
   );
 
   const swipeHandlers = useSwipeable({
@@ -307,12 +273,9 @@ const Page2048 = () => {
     clearState();
     const rand = mulberry32(seedRef.current);
     rngRef.current = rand;
-    const b = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
-    const added: string[] = [];
-    const a1 = addRandomTile(b, rand);
-    if (a1) added.push(`${a1[0]}-${a1[1]}`);
-    const a2 = addRandomTile(b, rand);
-    if (a2) added.push(`${a2[0]}-${a2[1]}`);
+    const b = Array.from({ length: size }, () => Array(size).fill(0));
+    addRandomTile(b, rand, spawn4Prob);
+    addRandomTile(b, rand, spawn4Prob);
 
     setBoard(b);
     setSpawnCells(new Set(added));
@@ -323,7 +286,31 @@ const Page2048 = () => {
     setLost(false);
     setHighest(0);
     resetTimer();
-  }, [resetTimer]);
+  }, [resetTimer, size, spawn4Prob]);
+
+  const initialized = useRef(false);
+  useEffect(() => {
+    if (initialized.current) {
+      restart();
+    } else {
+      initialized.current = true;
+    }
+  }, [size, spawn4Prob, restart]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const seedStr = await getDailySeed('2048');
+      const seed = hashSeed(seedStr);
+      if (!mounted) return;
+      seedRef.current = seed;
+      rngRef.current = mulberry32(seed);
+      restart();
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const loadLeaderboard = useCallback(async () => {
     try {
@@ -456,29 +443,37 @@ const Page2048 = () => {
           <option value="classic">Classic</option>
           <option value="hex">Hex 2048</option>
         </select>
-        <input
+        <select
           className="text-black px-1 rounded"
-          placeholder="Name"
-          value={playerName}
-          onChange={(e) => setPlayerName(e.target.value)}
-        />
+          value={size}
+          onChange={(e) => setSize(parseInt(e.target.value, 10))}
+        >
+          {[3, 4, 5, 6].map((s) => (
+            <option key={s} value={s}>{`${s}x${s}`}</option>
+          ))}
+        </select>
+        <label className="flex items-center space-x-1 px-2">
+          <span>4%</span>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={spawn4Prob * 100}
+            onChange={(e) => setSpawn4Prob(Number(e.target.value) / 100)}
+          />
+          <span>{Math.round(spawn4Prob * 100)}</span>
+        </label>
+
         <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={close}>
           Close
         </button>
         {hard && <div className="ml-2">{timer}</div>}
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="px-4 py-2 bg-gray-700 rounded">Score: {highest}</div>
-        <div className="px-4 py-2 bg-gray-700 rounded">Moves: {moves.length}</div>
-        <div className="px-4 py-2 bg-gray-700 rounded">Seed: {seedStr}</div>
-        <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={handleShare}
-        >
-          Share
-        </button>
-      </div>
-      <div className="grid w-full max-w-sm grid-cols-4 gap-2">
+      <div
+        className="grid w-full max-w-sm gap-2"
+        style={{ gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))` }}
+      >
+
         {board.map((row, rIdx) =>
           row.map((cell, cIdx) => {
             const pos = `${rIdx}-${cIdx}`;
@@ -532,4 +527,6 @@ const Page2048 = () => {
 };
 
 export default Page2048;
+
+export { mulberry32, addRandomTile };
 
