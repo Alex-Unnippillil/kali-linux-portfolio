@@ -72,6 +72,7 @@ export const DesktopContextMenu: React.FC<DesktopContextMenuProps> = ({
   return (
     <div
       role="menu"
+      aria-label="Desktop context menu"
       ref={menuRef}
       onKeyDown={handleKeyDown}
       className="absolute z-50 w-52 cursor-default select-none rounded border border-gray-700 bg-gray-800 text-sm text-white shadow-lg"

@@ -22,6 +22,7 @@ function WindowMenu(props) {
         <div
             id="window-menu"
             role="menu"
+            aria-label="Window context menu"
             aria-hidden={!props.active}
             ref={menuRef}
             onKeyDown={handleKeyDown}

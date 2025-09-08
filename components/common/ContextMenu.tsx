@@ -12,6 +12,10 @@ interface ContextMenuProps {
   targetRef: React.RefObject<HTMLElement>;
   /** Menu items to render */
   items: MenuItem[];
+  /** Optional accessible label for the menu */
+  ariaLabel?: string;
+  /** ID of element that labels the menu */
+  ariaLabelledBy?: string;
 }
 
 /**
@@ -20,7 +24,12 @@ interface ContextMenuProps {
  * dispatches global events when opened/closed so backgrounds can
  * be made inert.
  */
-const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
+const ContextMenu: React.FC<ContextMenuProps> = ({
+  targetRef,
+  items,
+  ariaLabel = 'Context menu',
+  ariaLabelledBy,
+}) => {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
@@ -104,6 +113,9 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
       role="menu"
       ref={menuRef}
       aria-hidden={!open}
+      {...(ariaLabelledBy
+        ? { 'aria-labelledby': ariaLabelledBy }
+        : { 'aria-label': ariaLabel })}
       style={{ left: pos.x, top: pos.y }}
       className={(open ? 'block ' : 'hidden ') +
         'cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm'}

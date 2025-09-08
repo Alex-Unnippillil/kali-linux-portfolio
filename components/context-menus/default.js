@@ -17,6 +17,7 @@ function DefaultMenu(props) {
         <div
             id="default-menu"
             role="menu"
+            aria-label="Default context menu"
             aria-hidden={!props.active}
             ref={menuRef}
             onKeyDown={handleKeyDown}
