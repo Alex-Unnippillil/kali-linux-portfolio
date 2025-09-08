@@ -590,10 +590,22 @@ dialog {
 }
 
 /* Ensure monospace layout for app outputs */
-textarea,
-pre {
-    font-family: monospace;
+textarea {
+    font-family: var(--font-family-mono, monospace);
     line-height: 1.2;
+}
+
+/* Monospaced elements */
+code,
+kbd,
+pre {
+    font-family: var(--font-family-mono, monospace);
+}
+
+pre {
+    line-height: 1.2;
+    padding: var(--space-2);
+    overflow-x: auto;
 }
 
 /* Visible focus rings for copy buttons and text areas */
