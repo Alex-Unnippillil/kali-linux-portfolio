@@ -45,6 +45,7 @@ export const hasMoves = (board: Board): boolean => {
       if (v === 0) return true;
       if (c < size - 1 && v === row[c + 1]) return true;
       if (r < size - 1 && v === board[r + 1]?.[c]) return true;
+
     }
   }
   return false;
