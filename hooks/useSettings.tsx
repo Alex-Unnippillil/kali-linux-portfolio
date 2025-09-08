@@ -10,6 +10,8 @@ import {
   setFontScale as saveFontScale,
   getHighContrast as loadHighContrast,
   setHighContrast as saveHighContrast,
+  getColorBlind as loadColorBlind,
+  setColorBlind as saveColorBlind,
   getLargeHitAreas as loadLargeHitAreas,
   setLargeHitAreas as saveLargeHitAreas,
   getPongSpin as loadPongSpin,
@@ -60,6 +62,7 @@ interface SettingsContextValue {
   reducedMotion: boolean;
   fontScale: number;
   highContrast: boolean;
+  colorBlind: boolean;
   largeHitAreas: boolean;
   pongSpin: boolean;
   allowNetwork: boolean;
@@ -73,6 +76,7 @@ interface SettingsContextValue {
   setReducedMotion: (value: boolean) => void;
   setFontScale: (value: number) => void;
   setHighContrast: (value: boolean) => void;
+  setColorBlind: (value: boolean) => void;
   setLargeHitAreas: (value: boolean) => void;
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
@@ -89,6 +93,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   reducedMotion: defaults.reducedMotion,
   fontScale: defaults.fontScale,
   highContrast: defaults.highContrast,
+  colorBlind: defaults.colorBlind,
   largeHitAreas: defaults.largeHitAreas,
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
@@ -102,6 +107,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setReducedMotion: () => {},
   setFontScale: () => {},
   setHighContrast: () => {},
+  setColorBlind: () => {},
   setLargeHitAreas: () => {},
   setPongSpin: () => {},
   setAllowNetwork: () => {},
@@ -131,6 +137,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
   const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
+  const [colorBlind, setColorBlind] = useState<boolean>(defaults.colorBlind);
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
@@ -167,6 +174,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setReducedMotion(await loadReducedMotion());
       setFontScale(await loadFontScale());
       setHighContrast(await loadHighContrast());
+      setColorBlind(await loadColorBlind());
       setLargeHitAreas(await loadLargeHitAreas());
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
@@ -212,7 +220,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setWallpaper(base);
       setRotationIndex((index + 1) % rotationSet.length);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rotationMode, rotationSet]);
 
   useEffect(() => {
@@ -255,6 +262,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     document.documentElement.classList.toggle('high-contrast', highContrast);
     saveHighContrast(highContrast);
   }, [highContrast]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('colorblind', colorBlind);
+    saveColorBlind(colorBlind);
+  }, [colorBlind]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('large-hit-area', largeHitAreas);
@@ -312,6 +324,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         reducedMotion,
         fontScale,
         highContrast,
+        colorBlind,
         largeHitAreas,
         pongSpin,
         allowNetwork,
@@ -325,6 +338,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setReducedMotion,
         setFontScale,
         setHighContrast,
+        setColorBlind,
         setLargeHitAreas,
         setPongSpin,
         setAllowNetwork,

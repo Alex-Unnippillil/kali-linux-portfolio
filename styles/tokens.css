@@ -91,6 +91,21 @@
   --game-color-danger: #ff0000;
 }
 
+/* Color-blind friendly palette using Okabe-Ito colors */
+.colorblind {
+  --color-primary: #0072b2;
+  --color-secondary: #e69f00;
+  --color-accent: #56b4e9;
+  --color-info: #56b4e9;
+  --color-success: #009e73;
+  --color-warning: #f0e442;
+  --color-danger: #d55e00;
+  --game-color-secondary: #0072b2;
+  --game-color-success: #009e73;
+  --game-color-warning: #f0e442;
+  --game-color-danger: #d55e00;
+}
+
 /* Dyslexia-friendly fonts */
 .dyslexia {
   --font-family-base: 'OpenDyslexic', 'Comic Sans MS', Arial, sans-serif;

@@ -32,6 +32,8 @@ export default function Settings() {
     setFontScale,
     highContrast,
     setHighContrast,
+    colorBlind,
+    setColorBlind,
     haptics,
     setHaptics,
     theme,
@@ -75,6 +77,8 @@ export default function Settings() {
       if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
+      if (parsed.colorBlind !== undefined)
+        setColorBlind(parsed.colorBlind);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
     } catch (err) {
       console.error("Invalid settings", err);
@@ -113,6 +117,7 @@ export default function Settings() {
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
+    setColorBlind(defaults.colorBlind);
     setTheme("default");
   };
 
@@ -222,6 +227,14 @@ export default function Settings() {
               checked={highContrast}
               onChange={setHighContrast}
               ariaLabel="High Contrast"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Color Blind Palette:</span>
+            <ToggleSwitch
+              checked={colorBlind}
+              onChange={setColorBlind}
+              ariaLabel="Color Blind Palette"
             />
           </div>
           <div className="flex justify-center my-4 items-center">

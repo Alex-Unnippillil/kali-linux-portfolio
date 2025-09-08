@@ -9,8 +9,16 @@ interface Props {
 const SettingsDrawer = ({ highScore = 0 }: Props) => {
   const [open, setOpen] = useState(false);
   const unlocked = getUnlockedThemes(highScore);
-  const { accent, setAccent, theme, setTheme, highContrast, setHighContrast } =
-    useSettings();
+  const {
+    accent,
+    setAccent,
+    theme,
+    setTheme,
+    highContrast,
+    setHighContrast,
+    colorBlind,
+    setColorBlind,
+  } = useSettings();
 
   return (
     <div>
@@ -33,15 +41,26 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
               ))}
             </select>
           </label>
-          <label className="mt-2 flex items-center gap-2">
+          <div className="mt-2 flex items-center gap-2">
             <input
               id="settings-high-contrast"
               type="checkbox"
+              aria-label="High Contrast"
               checked={highContrast}
               onChange={(e) => setHighContrast(e.target.checked)}
             />
-            <span>High Contrast</span>
-          </label>
+            <label htmlFor="settings-high-contrast">High Contrast</label>
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            <input
+              id="settings-color-blind"
+              type="checkbox"
+              aria-label="Color Blind Palette"
+              checked={colorBlind}
+              onChange={(e) => setColorBlind(e.target.checked)}
+            />
+            <label htmlFor="settings-color-blind">Color Blind Palette</label>
+          </div>
           <label>
             Accent
             <div

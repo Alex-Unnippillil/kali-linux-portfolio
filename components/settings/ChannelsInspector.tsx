@@ -15,6 +15,7 @@ export default function ChannelsInspector() {
     reducedMotion,
     fontScale,
     highContrast,
+    colorBlind,
     largeHitAreas,
     pongSpin,
     allowNetwork,
@@ -26,7 +27,7 @@ export default function ChannelsInspector() {
   const channels = useMemo(
     () => ({
       appearance: { accent, wallpaper, density, fontScale, theme },
-      accessibility: { reducedMotion, highContrast, largeHitAreas, haptics },
+      accessibility: { reducedMotion, highContrast, colorBlind, largeHitAreas, haptics },
       gameplay: { pongSpin },
       privacy: { allowNetwork },
     }),
@@ -38,6 +39,7 @@ export default function ChannelsInspector() {
       theme,
       reducedMotion,
       highContrast,
+      colorBlind,
       largeHitAreas,
       haptics,
       pongSpin,
