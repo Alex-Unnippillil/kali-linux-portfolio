@@ -16,7 +16,7 @@ function tokenize(expr: string): Token[] {
   const tokens: Token[] = [];
   let i = 0;
   while (i < expr.length) {
-    const ch = expr[i];
+    const ch = expr.charAt(i);
     if (/\s/.test(ch)) {
       i += 1;
       continue;
@@ -30,8 +30,8 @@ function tokenize(expr: string): Token[] {
       let num = '-';
       const start = i;
       i += 1;
-      while (i < expr.length && /[0-9.]/.test(expr[i])) {
-        num += expr[i];
+      while (i < expr.length && /[0-9.]/.test(expr.charAt(i))) {
+        num += expr.charAt(i);
         i += 1;
       }
       tokens.push({ type: 'number', value: num, start });
@@ -41,8 +41,8 @@ function tokenize(expr: string): Token[] {
       let num = ch;
       const start = i;
       i += 1;
-      while (i < expr.length && /[0-9.]/.test(expr[i])) {
-        num += expr[i];
+      while (i < expr.length && /[0-9.]/.test(expr.charAt(i))) {
+        num += expr.charAt(i);
         i += 1;
       }
       tokens.push({ type: 'number', value: num, start });
@@ -52,7 +52,7 @@ function tokenize(expr: string): Token[] {
       const start = i;
       const id = expr.slice(i).match(/^[A-Za-z]+/)! [0];
       i += id.length;
-      if (expr[i] === '(') tokens.push({ type: 'func', value: id, start });
+      if (expr.charAt(i) === '(') tokens.push({ type: 'func', value: id, start });
       else tokens.push({ type: 'id', value: id, start });
       continue;
     }
