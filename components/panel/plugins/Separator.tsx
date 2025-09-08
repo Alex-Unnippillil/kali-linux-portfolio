@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 
 export type SeparatorStyle = "transparent" | "line" | "handle" | "dots";
