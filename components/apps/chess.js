@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useRef, useEffect, useState } from "react";
 import { Chess } from "chess.js";
 import { suggestMoves } from "../../games/chess/engine/wasmEngine";
