@@ -5,6 +5,11 @@ const CloudPage: React.FC = () => (
   <main className="p-4 space-y-4">
     <h1 className="text-2xl font-semibold">Cloud</h1>
     <p>Deploy Kali on popular cloud providers for on-demand access from anywhere.</p>
+    <ul className="list-disc pl-6 space-y-1">
+      <li>☁️ Account with a supported provider</li>
+      <li>🌐 Reliable internet connection</li>
+      <li>💾 Instance with at least 20 GB storage</li>
+    </ul>
     <Callout variant="readDocs">
       <p>
         Read the{' '}
