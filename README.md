@@ -91,6 +91,11 @@ Current limits:
 - `^chunks/framework`: 300000 bytes
 - `^chunks/main-app`: 350000 bytes
 
+### Viewing CI reports
+
+Accessibility and performance checks run for every pull request.
+Open the PR's **Checks** tab and download the `accessibility-report` or `lighthouse-report` artifacts to view the HTML results.
+
 ---
 
 ## Environment Variables
