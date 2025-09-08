@@ -139,7 +139,9 @@ module.exports = {
   },
   plugins: [
     require('@tailwindcss/typography'),
-    plugin(function ({ addUtilities }) {
+    plugin(function ({ addUtilities, addVariant }) {
+      addVariant('hc', '.high-contrast &');
+      addVariant('rm', '.reduced-motion &');
       const cols = {};
       for (let i = 1; i <= 12; i++) {
         const width = `${(i / 12) * 100}%`;

@@ -109,11 +109,17 @@ export default function AppGrid({ openApp }) {
         app.screen?.prefetch &&
         !prefetchedRef.current.has(app.id)
       ) {
+        let raf;
         const timer = setTimeout(() => {
-          prefetchDynamicImport(app.screen.prefetch, `/apps/${app.id}.js`);
-          prefetchedRef.current.add(app.id);
+          raf = requestAnimationFrame(() => {
+            prefetchDynamicImport(app.screen.prefetch, `/apps/${app.id}.js`);
+            prefetchedRef.current.add(app.id);
+          });
         }, 200);
-        return () => clearTimeout(timer);
+        return () => {
+          clearTimeout(timer);
+          if (raf) cancelAnimationFrame(raf);
+        };
       }
     }, [isVisible, app]);
 
@@ -127,7 +133,7 @@ export default function AppGrid({ openApp }) {
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          padding: 12,
+          padding: 8,
         }}
       >
         <UbuntuApp
@@ -188,7 +194,7 @@ export default function AppGrid({ openApp }) {
                 columnWidth={width / columnCount}
                 height={height}
                 rowCount={rowCount}
-                rowHeight={112}
+                rowHeight={96}
                 width={width}
                 className="scroll-smooth"
               >
