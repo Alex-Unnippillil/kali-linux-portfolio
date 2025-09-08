@@ -22,6 +22,7 @@
     "module-report": "node --import tsx/esm scripts/generate-module-report.mjs",
     "analyze": "ANALYZE=true yarn build",
     "check-budgets": "node scripts/check-bundle-budgets.mjs",
+    "perf:check": "node scripts/perf-check.mjs",
     "preinstall": "corepack enable && corepack prepare yarn@4.9.2 --activate",
     "verify:all": "node --import tsx/esm scripts/verify.mjs",
     "validate:apps": "node --import tsx/esm scripts/validate-apps.mjs"

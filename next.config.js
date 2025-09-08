@@ -138,6 +138,7 @@ module.exports = withBundleAnalyzer(
       ],
       deviceSizes: [640, 750, 828, 1080, 1200, 1280, 1920, 2048, 3840],
       imageSizes: [16, 32, 48, 64, 96, 128, 256],
+      formats: ['image/avif', 'image/webp'],
     },
     async rewrites() {
       return [
@@ -152,6 +153,28 @@ module.exports = withBundleAnalyzer(
       ? {
           async headers() {
             return [
+              {
+                source: '/:path*',
+                headers: [
+                  {
+                    key: 'Link',
+                    value: '<https://fonts.googleapis.com>; rel=preconnect; crossorigin',
+                  },
+                  {
+                    key: 'Link',
+                    value: '<https://fonts.gstatic.com>; rel=preconnect; crossorigin',
+                  },
+                ],
+              },
+              {
+                source: '/_next/static/:path*',
+                headers: [
+                  {
+                    key: 'Cache-Control',
+                    value: 'public, max-age=31536000, immutable',
+                  },
+                ],
+              },
               {
                 source: '/(.*)',
                 headers: securityHeaders,
