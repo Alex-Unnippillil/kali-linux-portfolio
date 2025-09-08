@@ -13,8 +13,11 @@
     --color-border: #2a2e36;
     --color-terminal: #00ff00;
     --color-dark: #0c0f12;
-    --color-info: #3b82f6;
-    --color-success: #10b981;
+
+    --kali-info: #3b82f6;
+    --kali-success: #10b981;
+    --kali-warning: #f59e0b;
+    --kali-danger: #ef4444;
 }
 
 html {

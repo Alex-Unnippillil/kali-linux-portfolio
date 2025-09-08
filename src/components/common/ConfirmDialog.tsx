@@ -45,7 +45,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           </button>
           <button
             onClick={onConfirm}
-            className="px-3 py-1 rounded bg-red-600 hover:bg-red-500"
+            className="px-3 py-1 rounded bg-danger hover:bg-danger"
           >
             {confirmLabel}
           </button>
