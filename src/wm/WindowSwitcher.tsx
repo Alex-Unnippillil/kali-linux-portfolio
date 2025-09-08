@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import keybindingManager from './keybindingManager';
+import keybindingManager from '@/app/_client/keybindingManager';
 
 export interface WindowInfo {
   id: string;

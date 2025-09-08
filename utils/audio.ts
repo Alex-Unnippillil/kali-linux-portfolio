@@ -3,7 +3,7 @@
  * Provides precise tone playback per color and helpers for scheduling.
  */
 
-import { getAudioContext } from "../player";
+import { getAudioContext } from '@/app/_client/player';
 
 const TONE_FREQUENCIES = [329.63, 261.63, 220, 164.81];
 

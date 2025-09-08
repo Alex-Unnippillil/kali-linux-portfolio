@@ -5,7 +5,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useDrag, useDrop } from 'react-dnd';
 import layoutData from './layout.json';
 import { usePanelPreferences } from './PanelPreferences';
-import keybindingManager from '../../wm/keybindingManager';
+import keybindingManager from '@/app/_client/keybindingManager';
 
 interface PluginItem {
   id: string;

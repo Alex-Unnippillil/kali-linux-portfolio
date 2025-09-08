@@ -2,7 +2,7 @@
 
 import { isBrowser } from '@/utils/env';
 import { useState, useEffect } from 'react';
-import { migrate, settings } from '../lib/migrations';
+import { migrate, settings } from '@/app/_client/migrations';
 import { logEvent } from '../utils/analytics';
 
 /**

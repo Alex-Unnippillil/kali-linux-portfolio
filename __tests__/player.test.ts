@@ -22,7 +22,7 @@ describe('audio player pooling', () => {
   });
 
   test('getAudioContext returns singleton', () => {
-    const { getAudioContext } = require('../player');
+    const { getAudioContext } = require('../app/_client/player');
     const ctx1 = getAudioContext();
     const ctx2 = getAudioContext();
     expect(ctx1).toBe(ctx2);
@@ -30,7 +30,7 @@ describe('audio player pooling', () => {
   });
 
   test('players are pooled and context reused', () => {
-    const { getAudioContext, getAudioPlayer, releaseAudioPlayer } = require('../player');
+    const { getAudioContext, getAudioPlayer, releaseAudioPlayer } = require('../app/_client/player');
     const ctx1 = getAudioContext();
     const a1 = getAudioPlayer('test.mp3');
     const a2 = getAudioPlayer('test.mp3');
