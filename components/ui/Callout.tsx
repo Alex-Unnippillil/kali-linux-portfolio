@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface CalloutProps {
-  variant: 'defaultCredentials' | 'readDocs' | 'verifyDownload';
+  variant: 'defaultCredentials' | 'readDocs' | 'verifyDownload' | 'mirrorInfo';
   children: React.ReactNode;
 }
 
@@ -48,6 +48,18 @@ const ShieldCheckIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+const InfoIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+    <path
+      d="M12 9.75h.008v.008H12V9.75Zm0 2.25v3.75m9-3.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 const variants = {
   defaultCredentials: {
     icon: KeyIcon,
@@ -63,6 +75,11 @@ const variants = {
     icon: ShieldCheckIcon,
     border: 'border-green-400',
     label: 'Verify downloads',
+  },
+  mirrorInfo: {
+    icon: InfoIcon,
+    border: 'border-blue-400',
+    label: 'Mirror info',
   },
 };
 

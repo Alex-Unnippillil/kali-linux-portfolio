@@ -54,6 +54,21 @@ const GetKali: React.FC = () => (
       </div>
     </div>
     <div className="mt-6">
+      <Callout variant="mirrorInfo">
+        <p>
+          Downloads are automatically served from the nearest mirror for better
+          performance. View the{' '}
+          <a
+            href="https://http.kali.org/README.mirrorlist"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+          >
+            full mirror list
+          </a>
+          .
+        </p>
+      </Callout>
       <Callout variant="verifyDownload">
         <p>
           Verify downloads using signatures or hashes.{' '}
