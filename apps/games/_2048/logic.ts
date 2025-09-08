@@ -92,3 +92,6 @@ export const moveDown = (board: Board): MoveResult => {
 
 export const boardsEqual = (a: Board, b: Board) =>
   a.every((row, r) => row.every((cell, c) => cell === b[r][c]));
+
+export const hasWon = (board: Board) =>
+  board.some((row) => row.some((cell) => cell >= 2048));
