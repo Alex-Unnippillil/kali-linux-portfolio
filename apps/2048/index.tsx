@@ -49,8 +49,9 @@ const slideRow = (row: number[]) => {
 };
 
 const transpose = (board: number[][]): number[][] => {
-  if (board.length === 0) return [];
-  return board[0]!.map((_, c) => board.map((row) => row[c]!));
+  const firstRow = board[0];
+  if (!firstRow) return [];
+  return firstRow.map((_, c) => board.map((row) => row[c]!));
 };
 const flip = (board: number[][]) => board.map((row) => [...row].reverse());
 
@@ -453,17 +454,18 @@ const Page2048 = () => {
             <option key={s} value={s}>{`${s}x${s}`}</option>
           ))}
         </select>
-        <label className="flex items-center space-x-1 px-2">
-          <span>4%</span>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={spawn4Prob * 100}
-            onChange={(e) => setSpawn4Prob(Number(e.target.value) / 100)}
-          />
-          <span>{Math.round(spawn4Prob * 100)}</span>
-        </label>
+          <label className="flex items-center space-x-1 px-2">
+            <span>4%</span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={spawn4Prob * 100}
+              onChange={(e) => setSpawn4Prob(Number(e.target.value) / 100)}
+              aria-label="Spawn 4% probability"
+            />
+            <span>{Math.round(spawn4Prob * 100)}</span>
+          </label>
 
         <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={close}>
           Close
