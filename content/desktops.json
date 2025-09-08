@@ -2,7 +2,8 @@
   {
     "name": "Xfce",
     "image": "/wallpapers/wall-1.webp",
-    "blurhash": "U56RyHITRhtSDhx^t7WA8^axWBWAMwRPWBof"
+    "blurhash": "U56RyHITRhtSDhx^t7WA8^axWBWAMwRPWBof",
+    "default": true
   },
   {
     "name": "GNOME",

@@ -24,7 +24,7 @@ export async function getStaticProps() {
 }
 
 /**
- * @param {{ desktops: { name: string; image: string; blurDataURL: string }[] }} props
+ * @param {{ desktops: { name: string; image: string; blurDataURL: string; default?: boolean }[] }} props
  * @returns {JSX.Element}
  */
 export default function Home({ desktops }) {
@@ -36,10 +36,28 @@ export default function Home({ desktops }) {
 
   return (
     <main className="p-4">
-      <h1 className="mb-4 text-2xl font-bold sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl">Choose the desktop you prefer</h1>
+      <h1 className="mb-4 text-2xl font-bold sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl">
+        Choose the desktop you prefer
+      </h1>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
         {desktops.map((d) => (
-          <div key={d.name} className="text-center">
+          <div
+            key={d.name}
+            className="relative text-center"
+            aria-label={
+              d.default
+                ? `${d.name} desktop environment (default)`
+                : `${d.name} desktop environment`
+            }
+          >
+            {d.default && (
+              <span
+                aria-hidden="true"
+                className="absolute right-2 top-2 rounded bg-muted px-1.5 py-0.5 text-xs text-text"
+              >
+                Default
+              </span>
+            )}
             <Image
               src={d.image}
               alt={d.name}
