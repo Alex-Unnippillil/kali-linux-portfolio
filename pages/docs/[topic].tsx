@@ -5,6 +5,7 @@ import { GetStaticPaths, GetStaticProps } from 'next';
 import Head from 'next/head';
 import { marked } from 'marked';
 import { useEffect, useState } from 'react';
+import DocsLayout from './layout';
 
 interface TocItem {
   id: string;
@@ -62,14 +63,14 @@ export default function DocPage({ html, toc, title, topic }: DocProps) {
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com';
 
-  return (
-    <>
-      <Head>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              '@context': 'https://schema.org',
+    return (
+      <DocsLayout>
+        <Head>
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                '@context': 'https://schema.org',
               '@type': 'WebSite',
               url: siteUrl,
               name: 'Kali Linux Portfolio',
@@ -99,9 +100,9 @@ export default function DocPage({ html, toc, title, topic }: DocProps) {
             }),
           }}
         />
-      </Head>
-      <div className="flex flex-col lg:flex-row p-4">
-        <nav className="lg:w-1/4 lg:min-w-[12rem] lg:max-w-[20rem] lg:flex-shrink-0 lg:pr-4 lg:sticky lg:top-0">
+        </Head>
+        <div className="flex flex-col lg:flex-row p-4">
+          <nav className="lg:w-1/4 lg:min-w-[12rem] lg:max-w-[20rem] lg:flex-shrink-0 lg:pr-4 lg:sticky lg:top-0">
           <button
             className="lg:hidden mb-2 flex items-center"
             onClick={() => setShowToc((v) => !v)}
@@ -137,11 +138,11 @@ export default function DocPage({ html, toc, title, topic }: DocProps) {
             ))}
           </div>
         </nav>
-        <article className="prose flex-1" dangerouslySetInnerHTML={{ __html: html }} />
-      </div>
-    </>
-  );
-}
+          <article className="prose flex-1" dangerouslySetInnerHTML={{ __html: html }} />
+        </div>
+      </DocsLayout>
+    );
+  }
 
 export const getStaticPaths: GetStaticPaths = async () => {
   const dir = path.join(process.cwd(), 'public', 'docs', 'seed');
