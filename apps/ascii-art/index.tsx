@@ -4,6 +4,7 @@ import { isBrowser } from '@/utils/env';
 import { useState, useEffect, useRef, useCallback, ChangeEvent } from 'react';
 import figlet from 'figlet';
 import type { FontName } from 'figlet';
+
 import Standard from 'figlet/importable-fonts/Standard.js';
 import Slant from 'figlet/importable-fonts/Slant.js';
 import Big from 'figlet/importable-fonts/Big.js';
@@ -72,6 +73,7 @@ const AsciiArtApp = () => {
   const [text, setText] = useState('');
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const [font, setFont] = useState<FontName>('Standard');
+
   const [output, setOutput] = useState('');
   const [fgColor, setFgColor] = useState('#00ff00');
   const [bgColor, setBgColor] = useState('#000000');
@@ -95,6 +97,7 @@ const AsciiArtApp = () => {
     const { t, f, b, c } = router.query;
     if (typeof t === 'string') setText(t);
       if (typeof f === 'string' && fontList.includes(f as FontName)) setFont(f as FontName);
+
     if (typeof b === 'string') {
       const br = parseFloat(b);
       if (!Number.isNaN(br) && br >= -1 && br <= 1) setBrightness(br);
@@ -264,6 +267,7 @@ const AsciiArtApp = () => {
           <select
             value={font}
             onChange={(e) => setFont(e.target.value as FontName)}
+
             className="px-2 py-1 text-black rounded"
           >
             {fontList.map((f) => (
