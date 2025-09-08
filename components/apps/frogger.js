@@ -266,8 +266,8 @@ const Frogger = () => {
         else if (dy < -30) moveFrog(0, -1);
       }
     };
-    container?.addEventListener('touchstart', handleStart);
-    container?.addEventListener('touchend', handleEnd);
+    container?.addEventListener('touchstart', handleStart, { passive: true });
+    container?.addEventListener('touchend', handleEnd, { passive: true });
     return () => {
       container?.removeEventListener('touchstart', handleStart);
       container?.removeEventListener('touchend', handleEnd);
