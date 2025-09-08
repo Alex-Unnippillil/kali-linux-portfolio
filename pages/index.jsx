@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import desktopsData from "../content/desktops.json";
 import { baseMetadata } from "../lib/metadata";
 import ReleaseNotesModal from "../components/ReleaseNotesModal";
+import Header from "../components/layout/Header";
+import Footer from "../components/layout/Footer";
 
 export const metadata = baseMetadata;
 
@@ -35,10 +37,12 @@ export default function Home({ desktops }) {
   }, []);
 
   return (
-    <main className="p-4">
-      <h1 className="mb-4 text-2xl font-bold sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl">
-        Choose the desktop you prefer
-      </h1>
+    <>
+      <Header />
+      <main className="p-4">
+        <h1 className="mb-4 text-2xl font-bold sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl">
+          Choose the desktop you prefer
+        </h1>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
         {desktops.map((d) => (
           <div
@@ -72,6 +76,8 @@ export default function Home({ desktops }) {
         ))}
       </div>
       <ReleaseNotesModal isOpen={open} onClose={() => setOpen(false)} />
-    </main>
+      </main>
+      <Footer />
+    </>
   );
 }
