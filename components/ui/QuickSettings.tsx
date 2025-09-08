@@ -1,8 +1,12 @@
 "use client";
 
 import usePersistentState from '../../hooks/usePersistentState';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTheme } from '../../hooks/useTheme';
+import {
+  getUndercover,
+  setUndercover as setUndercoverTheme,
+} from '../../utils/theme';
 
 interface Props {
   open: boolean;
@@ -13,6 +17,7 @@ interface Props {
 const QuickSettings = ({ open, lockScreen, logOut }: Props) => {
   const { theme, setTheme } = useTheme();
   const isDark = theme === 'dark';
+  const [undercover, setUndercover] = useState(getUndercover());
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState(
@@ -21,6 +26,7 @@ const QuickSettings = ({ open, lockScreen, logOut }: Props) => {
   );
 
   const toggleTheme = () => setTheme(isDark ? 'light' : 'dark');
+  const toggleUndercover = () => setUndercover((u) => !u);
   const toggleSound = () => setSound((s) => !s);
   const toggleOnline = () => setOnline((o) => !o);
   const toggleReduceMotion = () => setReduceMotion((r) => !r);
@@ -28,6 +34,10 @@ const QuickSettings = ({ open, lockScreen, logOut }: Props) => {
   useEffect(() => {
     document.documentElement.classList.toggle('reduce-motion', reduceMotion);
   }, [reduceMotion]);
+
+  useEffect(() => {
+    setUndercoverTheme(undercover);
+  }, [undercover]);
 
   return (
     <div
@@ -43,6 +53,15 @@ const QuickSettings = ({ open, lockScreen, logOut }: Props) => {
           <span>Theme</span>
           <span>{isDark ? 'Dark' : 'Light'}</span>
         </button>
+      </div>
+      <div className="px-4 pb-2 flex justify-between">
+        <span>Undercover mode</span>
+        <input
+          type="checkbox"
+          checked={undercover}
+          onChange={toggleUndercover}
+          aria-label="Undercover mode"
+        />
       </div>
       <div className="px-4 pb-2 flex justify-between">
         <span>Sound</span>
