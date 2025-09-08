@@ -119,6 +119,10 @@ function configureWebpack(config, { isServer }) {
 module.exports = withBundleAnalyzer(
   withPWA({
     ...(isStaticExport && { output: 'export' }),
+    serverExternalPackages: [
+      '@supabase/supabase-js',
+      '@tinyhttp/cookie-signature',
+    ],
     webpack: configureWebpack,
 
     // Run ESLint during builds so linting problems surface in CI and local builds.
