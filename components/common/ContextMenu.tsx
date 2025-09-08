@@ -102,7 +102,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
                 <button
                   role="menuitem"
                   tabIndex={-1}
-                  className="flex w-full items-center justify-between rounded-sm px-4 py-1 text-left hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]"
+                  className="focus-outline flex w-full items-center justify-between rounded-sm px-4 py-1 text-left hover:bg-gray-700"
                   onClick={(e) => {
                     if (item.submenu) {
                       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();

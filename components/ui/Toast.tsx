@@ -49,7 +49,7 @@ const Toast: React.FC<ToastProps> = ({
       {onAction && actionLabel && (
         <button
           onClick={onAction}
-          className="ml-4 underline focus:outline-none"
+          className="ml-4 underline focus-outline"
         >
           {actionLabel}
         </button>
