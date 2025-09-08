@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Modal from "../../components/base/Modal";
+import EmptyState from "../../components/ui/EmptyState";
 import {
   Definition,
   fetchDefinitions,
@@ -80,7 +81,13 @@ export default function Dictionary() {
               </button>
             </form>
             {loading && <p>Loading...</p>}
-            {error && <p>{error}</p>}
+            {error && (
+              <EmptyState
+                icon={<span>📖</span>}
+                headline={error}
+                helperText="Try another word"
+              />
+            )}
             {!loading && !error && results.length > 0 && (
               <ul className="list-disc pl-5 max-h-64 overflow-auto">
                 {results.map((r, i) => (

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { CSSTransition } from 'react-transition-group';
+import EmptyState from './EmptyState';
 
 interface SearchOverlayProps {
   open: boolean;
@@ -80,7 +81,13 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
             </li>
           ))}
           {query && results.length === 0 && (
-            <li className="px-2 py-1 text-gray-300">No results</li>
+            <li className="py-8">
+              <EmptyState
+                icon={<span>🔍</span>}
+                headline="No results"
+                helperText="Try a different search term"
+              />
+            </li>
           )}
         </ul>
       </div>
