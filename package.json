@@ -25,10 +25,14 @@
     "perf:check": "node scripts/perf-check.mjs",
     "preinstall": "corepack enable && corepack prepare yarn@4.9.2 --activate",
     "verify:all": "node --import tsx/esm scripts/verify.mjs",
-    "validate:apps": "node --import tsx/esm scripts/validate-apps.mjs"
+    "validate:apps": "node --import tsx/esm scripts/validate-apps.mjs",
+    "postinstall": "simple-git-hooks"
   },
   "engines": {
     "node": "22.x"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm -w typecheck && tsc --noEmit -p packages/*"
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
@@ -155,6 +159,7 @@
     "node-mocks-http": "1.17.2",
     "pa11y": "^9.0.0",
     "playwright-core": "^1.55.0",
+    "simple-git-hooks": "^2.13.1",
     "supertest": "^6.3.3",
     "test-exclude": "7.0.1",
     "tsx": "^4.20.5",

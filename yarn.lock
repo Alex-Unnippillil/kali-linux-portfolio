@@ -13470,6 +13470,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"simple-git-hooks@npm:^2.13.1":
+  version: 2.13.1
+  resolution: "simple-git-hooks@npm:2.13.1"
+  bin:
+    simple-git-hooks: cli.js
+  checksum: 10c0/09631ce2cce5c6cf91f5a990bbefce88f95589ce112a601e2745b8e10ea951668c13f89b3fab2044506646380dcc91b618bb400d35142873a1990c4528b456bb
+  languageName: node
+  linkType: hard
+
 "simple-swizzle@npm:^0.2.2":
   version: 0.2.2
   resolution: "simple-swizzle@npm:0.2.2"
@@ -14860,6 +14869,7 @@ __metadata:
     rrule: "npm:2.7.2"
     seedrandom: "npm:^3.0.5"
     sharp: "npm:^0.34.3"
+    simple-git-hooks: "npm:^2.13.1"
     stockfish: "npm:^16.0.0"
     supertest: "npm:^6.3.3"
     swr: "npm:^2.2.5"
