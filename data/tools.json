@@ -1,0 +1,33 @@
+[
+  {
+    "name": "Nmap",
+    "packages": ["nmap"],
+    "commands": ["nmap -sV target"],
+    "category": "Information Gathering",
+    "short": "Network exploration tool and security scanner.",
+    "links": [
+      "https://nmap.org",
+      "https://nmap.org/book/man.html"
+    ]
+  },
+  {
+    "name": "John the Ripper",
+    "packages": ["john"],
+    "commands": ["john --wordlist=password.lst hash.txt"],
+    "category": "Password Attacks",
+    "short": "Popular password cracking tool.",
+    "links": [
+      "https://www.openwall.com/john/"
+    ]
+  },
+  {
+    "name": "Metasploit Framework",
+    "packages": ["metasploit-framework"],
+    "commands": ["msfconsole"],
+    "category": "Exploitation",
+    "short": "Comprehensive penetration testing framework.",
+    "links": [
+      "https://www.metasploit.com/"
+    ]
+  }
+]
