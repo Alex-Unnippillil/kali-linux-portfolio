@@ -84,17 +84,17 @@ const addRandomTile = (b: number[][], rand: () => number) => {
 };
 
 const tileColors: Record<number, string> = {
-  2: 'bg-gray-300 text-gray-800',
-  4: 'bg-gray-400 text-gray-800',
-  8: 'bg-yellow-400 text-white',
-  16: 'bg-yellow-500 text-white',
-  32: 'bg-orange-500 text-white',
-  64: 'bg-orange-600 text-white',
-  128: 'bg-red-500 text-white',
-  256: 'bg-red-600 text-white',
-  512: 'bg-red-700 text-white',
-  1024: 'bg-green-500 text-white',
-  2048: 'bg-green-600 text-white',
+  2: 'bg-[#eee4da] text-[#776e65]',
+  4: 'bg-[#ede0c8] text-[#776e65]',
+  8: 'bg-[#f2b179] text-[#f9f6f2]',
+  16: 'bg-[#f59563] text-[#f9f6f2]',
+  32: 'bg-[#f67c5f] text-[#f9f6f2]',
+  64: 'bg-[#f65e3b] text-[#f9f6f2]',
+  128: 'bg-[#edcf72] text-[#f9f6f2]',
+  256: 'bg-[#edcc61] text-[#f9f6f2]',
+  512: 'bg-[#edc850] text-[#f9f6f2]',
+  1024: 'bg-[#edc53f] text-[#f9f6f2]',
+  2048: 'bg-[#edc22e] text-[#f9f6f2]',
 };
 
 const DB_NAME = '2048';
@@ -289,10 +289,15 @@ const Page2048 = () => {
         <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={handleUndo}>
           Undo
         </button>
-        <label className="flex items-center space-x-1 px-2">
-          <input type="checkbox" checked={hard} onChange={(e) => setHard(e.target.checked)} />
-          <span>Hard</span>
-        </label>
+          <label className="flex items-center space-x-1 px-2">
+            <input
+              type="checkbox"
+              aria-label="Toggle hard mode"
+              checked={hard}
+              onChange={(e) => setHard(e.target.checked)}
+            />
+            <span>Hard</span>
+          </label>
         <select
           className="text-black px-1 rounded"
           value={boardType}
