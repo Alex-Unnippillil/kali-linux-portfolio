@@ -23,11 +23,22 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
   const nodeRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
+  const [showHint, setShowHint] = useState(false);
 
   useEffect(() => {
     if (open) {
       setQuery('');
       inputRef.current?.focus();
+      if (typeof window !== 'undefined') {
+        const key = 'tool-search-hint-uses';
+        const uses = Number(window.localStorage.getItem(key) || '0');
+        if (uses < 2) {
+          setShowHint(true);
+          window.localStorage.setItem(key, String(uses + 1));
+        } else {
+          setShowHint(false);
+        }
+      }
     }
   }, [open]);
 
@@ -70,6 +81,23 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
         role="dialog"
         aria-modal="true"
       >
+        {showHint && (
+          <div
+            className="mb-3 flex justify-center gap-4 text-sm text-white/70"
+            aria-hidden="true"
+          >
+            <span>
+              <kbd className="rounded bg-white/20 px-1">↑</kbd>
+              <kbd className="ml-1 rounded bg-white/20 px-1">↓</kbd> to navigate
+            </span>
+            <span>
+              <kbd className="rounded bg-white/20 px-1">Enter</kbd> to open
+            </span>
+            <span>
+              <kbd className="rounded bg-white/20 px-1">Esc</kbd> to close
+            </span>
+          </div>
+        )}
         <input
           ref={inputRef}
           type="text"
