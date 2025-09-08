@@ -14,7 +14,7 @@ export default function Header() {
       <Link href="/" className="p-4 hover:underline md:hidden">
         Home
       </Link>
-      <nav className="hidden md:flex gap-4 p-4 rtl:flex-row-reverse">
+      <nav role="navigation" className="hidden md:flex gap-4 p-4 rtl:flex-row-reverse">
         <Link href="/" className="hover:underline">
           Home
         </Link>

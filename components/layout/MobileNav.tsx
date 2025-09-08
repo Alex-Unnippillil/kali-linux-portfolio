@@ -92,7 +92,7 @@ export default function MobileNav({ className }: Props) {
               className="w-full p-2 rounded bg-gray-800"
             />
           </div>
-          <nav className="flex-1 overflow-y-auto" aria-label="Mobile navigation">
+          <nav role="navigation" className="flex-1 overflow-y-auto" aria-label="Mobile navigation">
             {filteredSections.map((section) => (
               <div key={section.label} className="p-4 border-b border-gray-800">
                 {section.children && section.children.length > 0 ? (
