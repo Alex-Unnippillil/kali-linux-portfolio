@@ -38,6 +38,11 @@ const GetKali: React.FC = () => (
       <div className="flex flex-col rounded border p-4">
         <h2 className="mb-2 text-xl font-semibold">Cloud</h2>
         <p className="mb-4">Deploy Kali on popular cloud providers for on-demand access from anywhere.</p>
+        <div className="mb-4 flex gap-2">
+          <img src="/icons/providers/aws.svg" alt="AWS" className="h-6 w-6" />
+          <img src="/icons/providers/azure.svg" alt="Azure" className="h-6 w-6" />
+          <img src="/icons/providers/gcp.svg" alt="GCP" className="h-6 w-6" />
+        </div>
         <a
           href="https://www.kali.org/get-kali/#kali-cloud"
           target="_blank"
