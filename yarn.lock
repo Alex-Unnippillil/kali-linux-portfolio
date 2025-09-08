@@ -4061,24 +4061,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/web-bluetooth@npm:^0.0.21":
-  version: 0.0.21
-  resolution: "@types/web-bluetooth@npm:0.0.21"
-  checksum: 10c0/5f47c5ec452ca31e6a9b44c8aaa54b66c4f57d4aca00166c45902a3883139580e14b254b774172ff982ba4458cc444b5aa59bb4573c2fd34562cfa599721f8e4
-  languageName: node
-  linkType: hard
-
 "@types/webxr@npm:*":
   version: 0.5.23
   resolution: "@types/webxr@npm:0.5.23"
   checksum: 10c0/4108d29844cbbae2e765df2948b7af1db5dcf1fd15f10c300186e1a711c0eb5ca2d9e0205c58043b35d46474e1405805c11381bb12318e15ff77cb57243767e1
-  languageName: node
-  linkType: hard
-
-"@types/wicg-file-system-access@npm:^2023.10.6":
-  version: 2023.10.6
-  resolution: "@types/wicg-file-system-access@npm:2023.10.6"
-  checksum: 10c0/6d1086450b28351ea5c8c6078411930984a16588b40d999f9abdc42c9bff63de93101bd7b1edcaba5c5c9ea83acdeb277bcaff913f39f6dac12091459974631f
   languageName: node
   linkType: hard
 
@@ -14785,8 +14771,6 @@ __metadata:
     "@types/seedrandom": "npm:^3"
     "@types/supertest": "npm:^6"
     "@types/three": "npm:^0.179.0"
-    "@types/web-bluetooth": "npm:^0.0.21"
-    "@types/wicg-file-system-access": "npm:^2023.10.6"
     "@vercel/analytics": "npm:^1.5.0"
     "@vercel/speed-insights": "npm:^1.2.0"
     "@vercel/toolbar": "npm:^0.1.38"
