@@ -42,7 +42,7 @@ const slideRow = (row: number[]) => {
 
 const transpose = (board: number[][]): number[][] => {
   if (board.length === 0) return [];
-  return board[0].map((_, c) => board.map((row) => row[c]));
+  return board[0]!.map((_, c) => board.map((row) => row[c]!));
 };
 const flip = (board: number[][]) => board.map((row) => [...row].reverse());
 
@@ -52,14 +52,15 @@ const moveUp = (board: number[][]) => transpose(moveLeft(transpose(board)));
 const moveDown = (board: number[][]) => transpose(moveRight(transpose(board)));
 
 const boardsEqual = (a: number[][], b: number[][]) =>
-  a.every((row, r) => row.every((cell, c) => cell === b[r][c]));
+  a.every((row, r) => row.every((cell, c) => cell === b[r]![c]!));
 
 const hasMoves = (board: number[][]) => {
   for (let r = 0; r < SIZE; r += 1) {
     for (let c = 0; c < SIZE; c += 1) {
-      if (board[r][c] === 0) return true;
-      if (c < SIZE - 1 && board[r][c] === board[r][c + 1]) return true;
-      if (r < SIZE - 1 && board[r][c] === board[r + 1][c]) return true;
+      const cell = board[r]![c]!;
+      if (cell === 0) return true;
+      if (c < SIZE - 1 && cell === board[r]![c + 1]!) return true;
+      if (r < SIZE - 1 && cell === board[r + 1]![c]!) return true;
     }
   }
   return false;
@@ -80,7 +81,7 @@ const addRandomTile = (b: number[][], rand: () => number) => {
   );
   if (empty.length === 0) return;
   const [r, c] = empty[Math.floor(rand() * empty.length)];
-  b[r][c] = rand() < 0.9 ? 2 : 4;
+  b[r]![c]! = rand() < 0.9 ? 2 : 4;
 };
 
 const tileColors: Record<number, string> = {
@@ -205,7 +206,7 @@ const Page2048 = () => {
   const handleUndo = useCallback(() => {
     setHistory((h) => {
       if (!h.length) return h;
-      const prev = h[h.length - 1];
+      const prev = h[h.length - 1]!;
       setBoard(prev.map((row) => [...row]));
       setMoves((m) => m.slice(0, -1));
       setHighest(checkHighest(prev));
