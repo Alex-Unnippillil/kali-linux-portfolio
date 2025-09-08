@@ -34,7 +34,7 @@ const QuickSettings = ({ open, lockScreen, logOut }: Props) => {
 
   return (
     <div
-      className={`absolute bg-ub-cool-grey rounded-md py-4 top-9 right-3 shadow border-black border border-opacity-20 ${
+      className={`absolute bg-surface-200 rounded-md py-4 top-9 right-3 shadow border-black border border-opacity-20 ${
         open ? '' : 'hidden'
       }`}
     >

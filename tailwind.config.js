@@ -36,6 +36,10 @@ module.exports = {
         'ubt-gedit-dark': 'var(--color-ubt-gedit-dark)',
         'ub-border-orange': 'var(--color-ub-border-orange)',
         'ub-dark-grey': 'var(--color-ub-dark-grey)',
+        'surface-0': 'var(--surface-0)',
+        'surface-100': 'var(--surface-100)',
+        'surface-200': 'var(--surface-200)',
+        'surface-300': 'var(--surface-300)',
       },
         fontFamily: {
           ubuntu: ['Ubuntu', 'sans-serif'],
