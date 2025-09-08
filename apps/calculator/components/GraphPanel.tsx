@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { create, all } from 'mathjs';
+import { create, all, type FactoryFunctionMap } from 'mathjs';
 
-const math = create(all);
+// mathjs `all` can be undefined in type definitions, assert the map exists
+const math = create(all as FactoryFunctionMap);
 
 type Token = {
   type: 'number' | 'id' | 'func' | 'operator' | 'paren' | 'comma';
@@ -324,6 +325,13 @@ export default function GraphPanel({
     };
   }, []);
 
-  return <canvas ref={canvasRef} width={width} height={height} />;
-}
+    return (
+      <canvas
+        ref={canvasRef}
+        width={width}
+        height={height}
+        aria-label="graph"
+      />
+    );
+  }
 
