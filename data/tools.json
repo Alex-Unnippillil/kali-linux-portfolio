@@ -3,6 +3,9 @@
     "id": "dirbuster",
     "name": "DirBuster",
     "summary": "DirBuster is a multi threaded java application designed to brute force directories and files names on web/application servers.",
+    "category": "web",
+    "platforms": ["linux", "windows"],
+    "tags": ["directory", "java"],
     "packages": [
       { "name": "dirbuster", "version": "1.0-RC1" }
     ],
@@ -17,6 +20,9 @@
     "id": "gobuster",
     "name": "GoBuster",
     "summary": "Directory/file & DNS busting tool written in Go.",
+    "category": "dns",
+    "platforms": ["linux", "mac"],
+    "tags": ["directory", "go", "dns"],
     "packages": [
       { "name": "gobuster", "version": "3.5.0" }
     ],
@@ -31,6 +37,9 @@
     "id": "feroxbuster",
     "name": "Feroxbuster",
     "summary": "A simple, fast, recursive content discovery tool written in Rust.",
+    "category": "web",
+    "platforms": ["linux"],
+    "tags": ["directory", "rust"],
     "packages": [
       { "name": "feroxbuster", "version": "2.10.4" }
     ],
