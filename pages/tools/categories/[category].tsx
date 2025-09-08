@@ -4,6 +4,7 @@ import categories, { ToolCategory } from '../../../data/tool-categories';
 import toolData from '../../../data/tools.json';
 import Hero from '../../../components/ui/Hero';
 import CommandChip from '../../../components/ui/CommandChip';
+import ToolCard from '../../../components/tools/ToolCard';
 
 interface ToolInfo {
   id: string;
@@ -24,11 +25,10 @@ export default function CategoryPage({ category, tools }: CategoryPageProps) {
         <h2 className="text-xl font-semibold mb-4">Popular Tools</h2>
         <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {tools.map((tool) => (
-            <li key={tool.id} className="border rounded p-4 space-y-2">
-              <h3 className="font-semibold">
-                <Link href={`/tools/${tool.id}`}>{tool.name}</Link>
-              </h3>
-              {tool.install && <CommandChip command={tool.install} />}
+            <li key={tool.id}>
+              <ToolCard name={tool.name} category={category.id}>
+                {tool.install && <CommandChip command={tool.install} />}
+              </ToolCard>
             </li>
           ))}
         </ul>
