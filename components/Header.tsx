@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import SearchOverlay from './ui/SearchOverlay';
+import DevelopersMenu from './Header/DevelopersMenu';
 
 export default function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
 
   return (
     <header className="flex items-center justify-between p-2 bg-gray-800 text-white">
-      <div className="font-bold">Kali Linux Portfolio</div>
+      <div className="flex items-center space-x-4">
+        <div className="font-bold">Kali Linux Portfolio</div>
+        <DevelopersMenu />
+      </div>
       <button
         type="button"
         aria-label="Search"
