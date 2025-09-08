@@ -49,6 +49,8 @@ export default function ThemeSettings({ wallpapers }: ThemeSettingsProps) {
     setHighContrast,
     accent,
     setAccent,
+    autoAccent,
+    setAutoAccent,
     wallpaper,
     setWallpaper,
   } = useSettings();
@@ -115,14 +117,26 @@ export default function ThemeSettings({ wallpapers }: ThemeSettingsProps) {
         <div className="mt-6">
           <h2 className="text-lg mb-2">Accent Color</h2>
           <div role="radiogroup" className="flex gap-2">
+            <button
+              role="radio"
+              aria-checked={autoAccent}
+              onClick={() => setAutoAccent(true)}
+              className={`w-6 h-6 rounded-full border-2 ${
+                autoAccent ? 'border-white' : 'border-transparent'
+              }`}
+              style={{ backgroundColor: accent }}
+            />
             {ACCENT_OPTIONS.map((c) => (
               <button
                 key={c}
                 role="radio"
-                aria-checked={accent === c}
-                onClick={() => setAccent(c)}
+                aria-checked={!autoAccent && accent === c}
+                onClick={() => {
+                  setAutoAccent(false);
+                  setAccent(c);
+                }}
                 className={`w-6 h-6 rounded-full border-2 ${
-                  accent === c ? 'border-white' : 'border-transparent'
+                  !autoAccent && accent === c ? 'border-white' : 'border-transparent'
                 }`}
                 style={{ backgroundColor: c }}
               />

@@ -1,6 +1,7 @@
 import { isBrowser } from '@/utils/env';
 import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
 import usePersistentState from './usePersistentState';
+import { loadWallpaper } from '../lib/wallpaper';
 import {
   getDensity as loadDensity,
   setDensity as saveDensity,
@@ -37,24 +38,9 @@ export const ACCENT_OPTIONS = [
   '#ed64a6', // pink
 ];
 
-// Utility to lighten or darken a hex color by a percentage
-const shadeColor = (color: string, percent: number): string => {
-  const f = parseInt(color.slice(1), 16);
-  const t = percent < 0 ? 0 : 255;
-  const p = Math.abs(percent);
-  const R = f >> 16;
-  const G = (f >> 8) & 0x00ff;
-  const B = f & 0x0000ff;
-  const newR = Math.round((t - R) * p) + R;
-  const newG = Math.round((t - G) * p) + G;
-  const newB = Math.round((t - B) * p) + B;
-  return `#${(0x1000000 + newR * 0x10000 + newG * 0x100 + newB)
-    .toString(16)
-    .slice(1)}`;
-};
-
 interface SettingsContextValue {
   accent: string;
+  autoAccent: boolean;
   wallpaper: string;
   density: Density;
   reducedMotion: boolean;
@@ -68,6 +54,7 @@ interface SettingsContextValue {
   theme: string;
   symbolicTrayIcons: boolean;
   setAccent: (accent: string) => void;
+  setAutoAccent: (value: boolean) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
   setReducedMotion: (value: boolean) => void;
@@ -84,6 +71,7 @@ interface SettingsContextValue {
 
 export const SettingsContext = createContext<SettingsContextValue>({
   accent: defaults.accent,
+  autoAccent: defaults.autoAccent,
   wallpaper: defaults.wallpaper,
   density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
@@ -97,6 +85,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   theme: 'default',
   symbolicTrayIcons: defaults.symbolicTrayIcons,
   setAccent: () => {},
+  setAutoAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
   setReducedMotion: () => {},
@@ -116,6 +105,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     'accent',
     defaults.accent,
     (v): v is string => typeof v === 'string',
+  );
+  const [autoAccent, setAutoAccent] = usePersistentState<boolean>(
+    'auto-accent',
+    defaults.autoAccent,
+    (v): v is boolean => typeof v === 'boolean',
   );
   const [wallpaper, setWallpaper] = usePersistentState<string>(
     'bg-image',
@@ -181,20 +175,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [theme]);
 
   useEffect(() => {
-    const border = shadeColor(accent, -0.2);
-    const vars: Record<string, string> = {
-      '--color-ub-orange': accent,
-      '--color-ub-border-orange': border,
-      '--color-primary': accent,
-      '--color-accent': accent,
-      '--color-focus-ring': accent,
-      '--color-selection': accent,
-      '--color-control-accent': accent,
-    };
-    Object.entries(vars).forEach(([key, value]) => {
-      document.documentElement.style.setProperty(key, value);
-    });
-  }, [accent]);
+    (async () => {
+      const applied = await loadWallpaper(wallpaper, autoAccent ? undefined : accent);
+      if (autoAccent && applied) setAccent(applied);
+    })();
+  }, [wallpaper, accent, autoAccent]);
 
 
   useEffect(() => {
@@ -307,6 +292,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     <SettingsContext.Provider
       value={{
         accent,
+        autoAccent,
         wallpaper,
         density,
         reducedMotion,
@@ -320,6 +306,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         symbolicTrayIcons,
         theme,
         setAccent,
+        setAutoAccent,
         setWallpaper,
         setDensity,
         setReducedMotion,

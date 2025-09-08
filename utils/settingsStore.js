@@ -6,6 +6,7 @@ import { safeLocalStorage } from './safeStorage';
 
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
+  autoAccent: true,
   wallpaper: 'wall-2',
   density: 'regular',
   reducedMotion: false,
@@ -28,6 +29,17 @@ export async function getAccent() {
 export async function setAccent(accent) {
   if (!isBrowser()) return;
   window.localStorage.setItem('accent', JSON.stringify(accent));
+}
+
+export async function getAutoAccent() {
+  if (!isBrowser()) return DEFAULT_SETTINGS.autoAccent;
+  const stored = window.localStorage.getItem('auto-accent');
+  return stored === null ? DEFAULT_SETTINGS.autoAccent : stored === 'true';
+}
+
+export async function setAutoAccent(val) {
+  if (!isBrowser()) return;
+  window.localStorage.setItem('auto-accent', val ? 'true' : 'false');
 }
 
 export async function getWallpaper() {
