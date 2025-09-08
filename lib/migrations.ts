@@ -10,9 +10,9 @@ const renamedKeys: Record<string, string> = {
  * Migrates renamed localStorage keys to their new names.
  * Returns true when a migration was applied.
  */
-export function migrate(key: string, storage: Storage = window.localStorage): boolean {
+export function migrate(key: string, storage?: Storage): boolean {
   const legacy = renamedKeys[key];
-  if (!legacy) return false;
+  if (!legacy || !storage) return false;
   try {
     const value = storage.getItem(legacy);
     if (value === null) return false;

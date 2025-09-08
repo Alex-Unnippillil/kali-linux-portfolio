@@ -25,7 +25,7 @@ export default function usePersistentState<T>(
     try {
       const prev = window.localStorage.getItem('settings.version');
       if (prev !== String(settings.version)) {
-        const migrated = migrate(key);
+        const migrated = migrate(key, window.localStorage);
         if (migrated) {
           logEvent({ category: 'settings', action: 'migrated', label: key });
         }
