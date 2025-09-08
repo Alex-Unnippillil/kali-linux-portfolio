@@ -2,6 +2,7 @@
   {
     "id": "dirbuster",
     "name": "DirBuster",
+    "category": "Information Gathering",
     "summary": "DirBuster is a multi threaded java application designed to brute force directories and files names on web/application servers.",
     "packages": [
       { "name": "dirbuster", "version": "1.0-RC1" }
@@ -16,6 +17,7 @@
   {
     "id": "gobuster",
     "name": "GoBuster",
+    "category": "Information Gathering",
     "summary": "Directory/file & DNS busting tool written in Go.",
     "packages": [
       { "name": "gobuster", "version": "3.5.0" }
@@ -30,6 +32,7 @@
   {
     "id": "feroxbuster",
     "name": "Feroxbuster",
+    "category": "Information Gathering",
     "summary": "A simple, fast, recursive content discovery tool written in Rust.",
     "packages": [
       { "name": "feroxbuster", "version": "2.10.4" }

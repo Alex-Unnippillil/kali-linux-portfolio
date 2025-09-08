@@ -1,95 +1,128 @@
-import { useState, useRef, KeyboardEvent } from 'react';
-import tools from '../../data/kali-tools.json';
-import Pagination from '../../components/ui/Pagination';
+import { useState } from 'react';
+import tools from '../../data/tools.json';
 
-const PAGE_SIZE = 30;
-const COLUMNS = 3; // used for keyboard navigation
+interface Tool {
+  id: string;
+  name: string;
+  category: string;
+  packages: { name: string; version?: string }[];
+  commands: { label?: string; cmd: string }[];
+}
 
-const badgeClass =
-  'inline-block rounded bg-gray-200 px-2 py-1 text-xs font-semibold text-gray-800 dark:bg-gray-700 dark:text-gray-100';
+type View = 'card' | 'table';
 
 export default function ToolsPage() {
-  const [page, setPage] = useState(0);
-  const itemRefs = useRef<Array<HTMLAnchorElement | null>>([]);
+  const [view, setView] = useState<View>('card');
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
-  const pageCount = Math.ceil(tools.length / PAGE_SIZE);
-  const pageTools = tools.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const toolsData = tools as Tool[];
+  const categories = Array.from(new Set(toolsData.map((t) => t.category)));
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLUListElement>) => {
-    const currentIndex = itemRefs.current.findIndex(
-      (el) => el === document.activeElement,
-    );
+  const categoryCounts = categories.map((cat) => ({
+    cat,
+    count: toolsData.filter((t) => t.category === cat).length,
+  }));
 
-    if (currentIndex === -1) return;
-
-    let nextIndex = currentIndex;
-    switch (e.key) {
-      case 'ArrowRight':
-        nextIndex = Math.min(currentIndex + 1, pageTools.length - 1);
-        break;
-      case 'ArrowLeft':
-        nextIndex = Math.max(currentIndex - 1, 0);
-        break;
-      case 'ArrowDown':
-        nextIndex = Math.min(currentIndex + COLUMNS, pageTools.length - 1);
-        break;
-      case 'ArrowUp':
-        nextIndex = Math.max(currentIndex - COLUMNS, 0);
-        break;
-      default:
-        return;
-    }
-
-    e.preventDefault();
-    itemRefs.current[nextIndex]?.focus();
-  };
+  const filtered = toolsData.filter((t) =>
+    activeCategory ? t.category === activeCategory : true,
+  );
 
   return (
     <div className="p-4">
-      <ul
-        className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
-        onKeyDown={handleKeyDown}
-      >
-        {pageTools.map((tool, i) => (
-          <li key={tool.id}>
-            <a
-              href={`https://www.kali.org/tools/${tool.id}/`}
-              className="block rounded border p-4 focus:outline-none focus:ring"
-              ref={(el) => {
-                itemRefs.current[i] = el;
-              }}
-            >
-              <h3 className="font-semibold text-base sm:text-lg md:text-xl">{tool.name}</h3>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <a
-                  href={`https://gitlab.com/kalilinux/packages/${tool.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={badgeClass}
-                >
-                  Source
-                </a>
-                <a
-                  href={`https://www.kali.org/tools/${tool.id}/`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={badgeClass}
-                >
-                  Package
-                </a>
-                <span className={badgeClass}>{`$ apt install ${tool.id}`}</span>
-              </div>
-            </a>
-          </li>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {categoryCounts.map(({ cat, count }) => (
+          <button
+            key={cat}
+            onClick={() => setActiveCategory(cat)}
+            className={`rounded border px-2 py-1 text-sm ${
+              activeCategory === cat ? 'bg-blue-600 text-white' : ''
+            }`}
+          >
+            {cat} ({count})
+          </button>
         ))}
-      </ul>
-      <div className="mt-4 flex justify-center">
-        <Pagination
-          currentPage={page}
-          totalPages={pageCount}
-          onPageChange={setPage}
-        />
+        <div className="ml-auto flex gap-2">
+          <button
+            aria-label="Card view"
+            onClick={() => setView('card')}
+            className={`rounded border px-2 py-1 text-sm ${
+              view === 'card' ? 'bg-gray-200' : ''
+            }`}
+          >
+            Card
+          </button>
+          <button
+            aria-label="Table view"
+            onClick={() => setView('table')}
+            className={`rounded border px-2 py-1 text-sm ${
+              view === 'table' ? 'bg-gray-200' : ''
+            }`}
+          >
+            Table
+          </button>
+        </div>
       </div>
+
+      {view === 'card' ? (
+        <ul
+          id="tools-grid"
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3"
+        >
+          {filtered.map((tool) => (
+            <li key={tool.id} className="rounded border p-4">
+              <h3 className="font-semibold">{tool.name}</h3>
+              <p className="mt-1 text-sm">Category: {tool.category}</p>
+              {tool.packages && tool.packages.length > 0 && (
+                <p className="mt-2 text-sm">
+                  Packages: {tool.packages.map((p) => p.name).join(', ')}
+                </p>
+              )}
+              {tool.commands && tool.commands.length > 0 && (
+                <ul className="mt-2 space-y-1 text-sm">
+                  {tool.commands.map((c, i) => (
+                    <li key={i}>
+                      <code>{c.cmd}</code>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className="overflow-x-auto">
+          <table id="tools-grid" className="min-w-full border-collapse">
+            <thead>
+              <tr>
+                <th className="border px-2 py-1 text-left">Name</th>
+                <th className="border px-2 py-1 text-left">Category</th>
+                <th className="border px-2 py-1 text-left">Packages</th>
+                <th className="border px-2 py-1 text-left">Commands</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((tool) => (
+                <tr key={tool.id}>
+                  <td className="border px-2 py-1">{tool.name}</td>
+                  <td className="border px-2 py-1">{tool.category}</td>
+                  <td className="border px-2 py-1">
+                    {tool.packages.map((p) => p.name).join(', ')}
+                  </td>
+                  <td className="border px-2 py-1">
+                    <ul className="space-y-1">
+                      {tool.commands.map((c, i) => (
+                        <li key={i}>
+                          <code>{c.cmd}</code>
+                        </li>
+                      ))}
+                    </ul>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
