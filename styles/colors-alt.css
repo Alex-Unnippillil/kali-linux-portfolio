@@ -1,0 +1,14 @@
+/* Alternative color palette */
+.alt-palette {
+    --color-bg: #fdf6e3;
+    --color-text: #073642;
+    --color-primary: #b58900;
+    --color-secondary: #eee8d5;
+    --color-accent: #268bd2;
+    --color-muted: #e0dbd1;
+    --color-surface: #eee8d5;
+    --color-inverse: #fdf6e3;
+    --color-border: #d3c6aa;
+    --color-terminal: #00ff00;
+    --color-dark: #002b36;
+}
