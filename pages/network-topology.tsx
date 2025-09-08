@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
-import { baseMetadata } from '../lib/metadata';
+import { createMetadata } from '../lib/metadata';
 
-export const metadata = baseMetadata;
+export const metadata = createMetadata({
+  title: 'Network Topology Visualization',
+  description: 'Interactive network topology demonstrating mitigation effects.',
+  path: '/network-topology',
+});
 
 const NetworkTopology: React.FC = () => {
   const [mitigated, setMitigated] = useState(false);

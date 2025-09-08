@@ -49,4 +49,36 @@ export const baseMetadata: Metadata = {
   },
 };
 
+export function createMetadata({
+  title,
+  description,
+  path,
+}: {
+  title: string;
+  description: string;
+  path: string;
+}): Metadata {
+  const url = new URL(path, baseMetadata.metadataBase).toString();
+  return {
+    ...baseMetadata,
+    title,
+    description,
+    openGraph: {
+      ...baseMetadata.openGraph,
+      title,
+      description,
+      url,
+    },
+    twitter: {
+      ...baseMetadata.twitter,
+      title,
+      description,
+    },
+    alternates: {
+      ...(baseMetadata.alternates || {}),
+      canonical: url,
+    },
+  };
+}
+
 export default baseMetadata;

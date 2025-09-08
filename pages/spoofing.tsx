@@ -1,7 +1,11 @@
 import React from 'react';
-import { baseMetadata } from '../lib/metadata';
+import { createMetadata } from '../lib/metadata';
 
-export const metadata = baseMetadata;
+export const metadata = createMetadata({
+  title: 'ARP & DNS Spoofing Tools',
+  description: 'Quick references for performing ARP and DNS spoofing attacks.',
+  path: '/spoofing',
+});
 
 interface TileProps {
   title: string;

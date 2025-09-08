@@ -1,7 +1,11 @@
 import React, { useMemo } from 'react';
-import { baseMetadata } from '../lib/metadata';
+import { createMetadata } from '../lib/metadata';
 
-export const metadata = baseMetadata;
+export const metadata = createMetadata({
+  title: 'Mimikatz sekurlsa::logonpasswords Output',
+  description: 'Sample output of the Mimikatz sekurlsa::logonpasswords command.',
+  path: '/sekurlsa_logonpasswords',
+});
 
 const rawOutput = `Authentication Id : 0 ; 123 (00000000:0000007B)
 Session           : Interactive from 1

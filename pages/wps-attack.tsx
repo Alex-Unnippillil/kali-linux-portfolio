@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
-import { baseMetadata } from '../lib/metadata';
+import { createMetadata } from '../lib/metadata';
 
-export const metadata = baseMetadata;
+export const metadata = createMetadata({
+  title: 'WPS Attack Walkthrough',
+  description: 'Step-by-step simulation of cracking a WPS-enabled access point.',
+  path: '/wps-attack',
+});
 
 interface Step {
   title: string;
