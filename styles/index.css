@@ -1,6 +1,7 @@
 @import './globals.css';
 @import './whisker.css';
 @import './colors-alt.css';
+@import './watermarks.css';
 
 :root {
     --color-bg: #0f1317;
