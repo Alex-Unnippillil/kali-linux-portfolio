@@ -262,6 +262,18 @@ function MyApp(props) {
                     <SpeedInsights />
                   </>
                 )}
+                <footer className="mt-4 text-center text-xs text-gray-400">
+                  Kali Linux® is a registered trademark of Offensive Security; this project adheres to the{' '}
+                  <a
+                    href="https://www.kali.org/trademark-policy/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline"
+                  >
+                    Kali Linux trademark policy
+                  </a>
+                  .
+                </footer>
               </PipPortalProvider>
             </TrayProvider>
           </SettingsProvider>
