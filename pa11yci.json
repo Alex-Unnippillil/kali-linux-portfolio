@@ -5,9 +5,12 @@
     },
     "runners": ["axe", "htmlcs"],
     "standard": "WCAG2AA",
+    "includeNotices": true,
     "axe": {
       "rules": {
-        "color-contrast": { "enabled": true }
+        "color-contrast": { "enabled": true },
+        "label": { "enabled": true },
+        "focus-order-semantics": { "enabled": true }
       }
     }
   },

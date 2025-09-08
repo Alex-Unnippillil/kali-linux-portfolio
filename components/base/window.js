@@ -833,16 +833,16 @@ export default Window
 // Window's title bar
 export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
     return (
-        <div
+        <button
+            type="button"
             className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
             tabIndex={0}
-            role="button"
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
-        </div>
+        </button>
     )
 }
 
