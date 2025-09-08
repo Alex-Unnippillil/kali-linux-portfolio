@@ -1,6 +1,7 @@
 @import './globals.css';
 @import './whisker.css';
 @import './colors-alt.css';
+@import './wallpaper-gradients.css';
 
 :root {
     --color-bg: #0f1317;
