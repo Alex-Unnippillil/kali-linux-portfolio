@@ -32,6 +32,11 @@ export default function ToolPage({ tool }: Props) {
     copyToClipboard(cmd);
   };
 
+  const relatedTools = (tool.related ?? [])
+    .map((slug) => tools.find((t) => t.id === slug))
+    .filter((t): t is Tool => Boolean(t))
+    .slice(0, 6);
+
   return (
     <div className="p-4 max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">{tool.name}</h1>
@@ -86,26 +91,22 @@ export default function ToolPage({ tool }: Props) {
         </section>
       )}
 
-      {tool.related && tool.related.length > 0 && (
+      {relatedTools.length > 0 && (
         <section className="mb-6">
           <h2 className="text-xl font-semibold mb-2">Related Tools</h2>
-          <div className="overflow-x-auto">
-            <ul className="flex gap-4 whitespace-nowrap list-none">
-              {tool.related.map((slug) => {
-                const relatedTool = tools.find((t) => t.id === slug);
-                return (
-                  <li key={slug}>
-                    <Link
-                      href={`/tools/${slug}`}
-                      className="relative inline-block after:absolute after:left-0 after:-bottom-0.5 after:h-0.5 after:w-0 after:bg-current after:transition-all hover:after:w-full"
-                    >
-                      {relatedTool?.name || slug}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+            {relatedTools.map((t) => (
+              <li key={t.id}>
+                <Link
+                  href={`/tools/${t.id}`}
+                  className="block rounded border p-4 focus:outline-none focus:ring"
+                >
+                  <h3 className="font-semibold text-base sm:text-lg">{t.name}</h3>
+                  <p className="mt-2 text-sm line-clamp-1">{t.summary}</p>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
     </div>
