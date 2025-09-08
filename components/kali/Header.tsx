@@ -1,6 +1,7 @@
 import React from 'react';
 import ia from '../../data/ia.json';
 import StatusPill from './StatusPill';
+import Badge from '../ui/Badge';
 
 interface NavItem {
   label: string;
@@ -16,7 +17,9 @@ const Header: React.FC = () => (
           <li key={item.label} className="relative">
             {item.children ? (
               <details>
-                <summary className="cursor-pointer list-none">{item.label}</summary>
+                <summary className="cursor-pointer list-none">
+                  <Badge>{item.label}</Badge>
+                </summary>
                 <ul className="mt-2 space-y-1">
                   {item.children.map((child) => (
                     <li key={child.label}>
