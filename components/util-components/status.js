@@ -81,28 +81,32 @@ export default function Status() {
   }, [register, unregister, theme]);
 
   return (
-    <div className="flex justify-center items-center" role="group" aria-label="System tray">
+    <div className="flex items-center gap-2" role="group" aria-label="System tray">
       {icons.map((icon) => (
-        <span key={icon.id} className="mx-1.5 relative" title={icon.tooltip}>
+        <span
+          key={icon.id}
+          className="relative flex items-center justify-center w-5 h-5"
+          title={icon.tooltip}
+        >
           <Image
-            width={16}
-            height={16}
+            width={20}
+            height={20}
             src={
               symbolicTrayIcons
                 ? icon.sni || icon.legacy
                 : icon.legacy || icon.sni
             }
             alt={icon.tooltip || icon.id}
-            className="inline status-symbol w-4 h-4"
-            sizes="16px"
+            className="status-symbol w-5 h-5"
+            sizes="20px"
           />
           {icon.id === 'network' && !allowNetwork && (
             <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
           )}
         </span>
       ))}
-      <span className="mx-1">
-        <SmallArrow angle="down" className=" status-symbol" />
+      <span className="flex items-center justify-center w-5 h-5">
+        <SmallArrow angle="down" className="status-symbol" />
       </span>
     </div>
   );
