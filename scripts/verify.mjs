@@ -55,6 +55,10 @@ const getPort = () =>
       logger.info(`✓ ${route}`);
     }
 
+    await run('yarn', ['smoke'], {
+      env: { ...process.env, BASE_URL: `http://localhost:${port}` },
+    });
+
     logger.info('verify: PASS');
     server.kill();
   } catch (err) {
