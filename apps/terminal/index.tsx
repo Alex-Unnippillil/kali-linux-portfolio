@@ -240,11 +240,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
     if (!termRef.current || !containerRef.current) return;
     const preset = THEME_PRESETS[scheme as keyof typeof THEME_PRESETS];
     const bg = hexToRgba(preset.background, opacity);
-    termRef.current.setOption?.('theme', {
+    termRef.current.options.theme = {
       background: bg,
       foreground: preset.foreground,
       cursor: preset.foreground,
-    });
+    };
     containerRef.current.style.backgroundColor = bg;
     containerRef.current.style.color = preset.foreground;
   }, [scheme, opacity]);
@@ -418,11 +418,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
       container?.addEventListener('contextmenu', handleLinkContext);
       const preset = THEME_PRESETS[scheme as keyof typeof THEME_PRESETS];
       const bg = hexToRgba(preset.background, opacity);
-      term.setOption?.('theme', {
+      term.options.theme = {
         background: bg,
         foreground: preset.foreground,
         cursor: preset.foreground,
-      });
+      };
       container.style.backgroundColor = bg;
       container.style.color = preset.foreground;
       if (opfsSupported) {
