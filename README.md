@@ -46,12 +46,15 @@ After the server starts, exercise an API route to confirm server-side functional
 curl -X POST http://localhost:3000/api/dummy
 ```
 
-### Static Export (for GitHub Pages / S3 Websites)
+### Static Export (for GitHub Pages / S3 + CloudFront)
 This project supports static export. Serverless API routes will not be available; the UI falls back to demo data or hides features.
 ```bash
 yarn export && npx serve out
 
 ```
+For production hosting, upload the `out/` directory to a **private** S3 bucket behind CloudFront.
+See [deployment docs](./docs/deployment.md) for Terraform and upload steps.
+All access should go through CloudFront – the S3 website endpoint remains disabled.
 Verify that features relying on `/api/*` return 404 or other placeholders when served statically.
 
 ### Install as PWA for Sharing
