@@ -12,17 +12,26 @@ export const createDynamicApp = (id, title) => {
         let mod;
         try {
           mod = await import(
-            /* webpackChunkName: "[request]", webpackPrefetch: true */ `${APP_DIR}/${id}`
+            /* webpackInclude: /\.(js|jsx|ts|tsx)$/,
+               webpackExclude: /\.test\.(js|jsx|ts|tsx)$/,
+               webpackChunkName: "[request]",
+               webpackPrefetch: true */ `../apps/${id}`
           );
         } catch {
           try {
             mod = await import(
-              /* webpackChunkName: "[request]", webpackPrefetch: true */ `${APP_DIR}/${id}/index`
+              /* webpackInclude: /\.(js|jsx|ts|tsx)$/,
+                 webpackExclude: /\.test\.(js|jsx|ts|tsx)$/,
+                 webpackChunkName: "[request]",
+                 webpackPrefetch: true */ `../apps/${id}/index`
             );
           } catch {
             try {
               mod = await import(
-                /* webpackChunkName: "[request]", webpackPrefetch: true */ `${APP_DIR}/${id.replace('_', '-')}`
+                /* webpackInclude: /\.(js|jsx|ts|tsx)$/,
+                   webpackExclude: /\.test\.(js|jsx|ts|tsx)$/,
+                   webpackChunkName: "[request]",
+                   webpackPrefetch: true */ `../apps/${id.replace('_', '-')}`
               );
             } catch {
               console.warn(
@@ -35,24 +44,24 @@ export const createDynamicApp = (id, title) => {
         logEvent({ category: 'Application', action: `Loaded ${title}` });
         return mod.default;
       } catch (err) {
-        console.error(`Failed to load ${title}`, err);
-        const Fallback = () => {
-          const handleRetry = () => window.location.reload();
-          return (
-            <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white">
-              <p className="mb-2">{`Unable to load ${title}.`}</p>
-              <button
-                type="button"
-                onClick={handleRetry}
-                className="px-3 py-1 bg-ub-orange text-black rounded"
-              >
-                Retry
-              </button>
-            </div>
-          );
-        };
-        Fallback.displayName = 'DynamicAppError';
-        return Fallback;
+          console.error(`Failed to load ${title}`, err);
+          const Fallback = () => {
+            const handleRetry = () => window.location.reload();
+            return (
+              <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white">
+                <p className="mb-2">{`Unable to load ${title}.`}</p>
+                <button
+                  type="button"
+                  onClick={handleRetry}
+                  className="px-3 py-1 bg-ub-orange text-black rounded"
+                >
+                  Retry
+                </button>
+              </div>
+            );
+          };
+          Fallback.displayName = 'DynamicAppError';
+          return Fallback;
       }
     },
     {
