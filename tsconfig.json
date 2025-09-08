@@ -35,6 +35,27 @@
   ,
   "overrides": [
     {
+      "files": [
+        "scripts/**/*.ts",
+        "tests/**/*.ts",
+        "tests/**/*.tsx",
+        "pages/api/**/*.ts",
+        "pages/docs/**/*.tsx",
+        "src/lib/**/*.ts",
+        "src/lib/**/*.tsx",
+        "src/plugins/**/*.ts",
+        "src/plugins/**/*.tsx",
+        "src/utils/desktopIconSettings.ts",
+        "src/components/settings/WMKeyboard.tsx",
+        "src/tumbler/**/*.ts",
+        "jest.setup.ts",
+        "playwright.config.ts"
+      ],
+      "compilerOptions": {
+        "types": ["node"]
+      }
+    },
+    {
       "files": ["apps/games/**/*.ts", "games/**/*.ts"],
       "compilerOptions": {
         "noImplicitAny": true
