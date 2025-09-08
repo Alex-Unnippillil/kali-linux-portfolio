@@ -2,40 +2,57 @@ import React, { useState } from 'react'
 import Image from 'next/image'
 import SideBarApp from '../base/side_bar_app';
 
-let renderApps = (props) => {
-    let sideBarAppsJsx = [];
-    props.apps.forEach((app, index) => {
-        if (props.favourite_apps[app.id] === false) return;
-        sideBarAppsJsx.push(
-            <SideBarApp
-                key={app.id}
-                id={app.id}
-                title={app.title}
-                icon={app.icon}
-                isClose={props.closed_windows}
-                isFocus={props.focused_windows}
-                openApp={props.openAppByAppId}
-                isMinimized={props.isMinimized}
-                openFromMinimised={props.openFromMinimised}
-                notifications={app.notifications}
-                tasks={app.tasks}
-            />
-        );
-    });
-    return sideBarAppsJsx;
-}
-
 export default function SideBar(props) {
 
-    function showSideBar() {
-        props.hideSideBar(null, false);
-    }
+    const [dragging, setDragging] = useState(null);
 
-    function hideSideBar() {
+    const showSideBar = () => {
+        props.hideSideBar(null, false);
+    };
+
+    const hideSideBar = () => {
         setTimeout(() => {
             props.hideSideBar(null, true);
         }, 2000);
-    }
+    };
+
+    const handleDragStart = (e, id) => {
+        setDragging(id);
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDrop = (e, id) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (dragging === null || dragging === id) return;
+        const dock = [...props.dock];
+        const from = dock.indexOf(dragging);
+        const to = dock.indexOf(id);
+        if (from === -1 || to === -1) return;
+        dock.splice(from, 1);
+        dock.splice(to, 0, dragging);
+        props.reorderDock && props.reorderDock(dock);
+        setDragging(null);
+    };
+
+    const handleNavDrop = (e) => {
+        e.preventDefault();
+        if (dragging === null) return;
+        const dock = props.dock.filter(id => id !== dragging);
+        dock.push(dragging);
+        props.reorderDock && props.reorderDock(dock);
+        setDragging(null);
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+    };
+
+    const openUnpinned = props.apps
+        .filter(app => props.closed_windows[app.id] === false && !props.dock.includes(app.id))
+        .map(app => app.id);
+
+    const order = [...props.dock, ...openUnpinned];
 
     return (
         <>
@@ -49,14 +66,37 @@ export default function SideBar(props) {
                     opacity: 'var(--menu-opacity)',
                     borderRadius: 'var(--menu-border-radius)'
                 }}
+                onDragOver={handleDragOver}
+                onDrop={handleNavDrop}
             >
-                {
-                    (
-                        Object.keys(props.closed_windows).length !== 0
-                            ? renderApps(props)
-                            : null
-                    )
-                }
+                {order.map(id => {
+                    const app = props.apps.find(a => a.id === id);
+                    if (!app) return null;
+                    const pinned = props.dock.includes(id);
+                    return (
+                        <div
+                            key={id}
+                            draggable={pinned}
+                            onDragStart={pinned ? (e) => handleDragStart(e, id) : undefined}
+                            onDragEnd={() => setDragging(null)}
+                            onDrop={pinned ? (e) => handleDrop(e, id) : undefined}
+                            onDragOver={pinned ? handleDragOver : undefined}
+                        >
+                            <SideBarApp
+                                id={app.id}
+                                title={app.title}
+                                icon={app.icon}
+                                isClose={props.closed_windows}
+                                isFocus={props.focused_windows}
+                                openApp={props.openAppByAppId}
+                                isMinimized={props.isMinimized}
+                                openFromMinimised={props.openFromMinimised}
+                                notifications={app.notifications}
+                                tasks={app.tasks}
+                            />
+                        </div>
+                    );
+                })}
                 <AllApps showApps={props.showAllApps} />
             </nav>
             <div onMouseEnter={showSideBar} onMouseLeave={hideSideBar} className={"w-1 h-full absolute top-0 left-0 bg-transparent z-50"}></div>
