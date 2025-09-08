@@ -19,6 +19,21 @@ const USBLivePage: React.FC = () => (
         .
       </p>
     </Callout>
+    <Callout variant="mirrorInfo">
+      <p>
+        Downloads are served from the nearest mirror for best performance. See
+        the{' '}
+        <a
+          href="https://http.kali.org/README.mirrorlist"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline"
+        >
+          mirror locations
+        </a>
+        .
+      </p>
+    </Callout>
     <Callout variant="verifyDownload">
       <p>
         Verify the image after downloading using signatures or hashes.{' '}
