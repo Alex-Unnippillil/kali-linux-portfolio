@@ -13,6 +13,7 @@ export default async function handler(req, res) {
   const missingSupabase =
     !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY;
   const missingRateLimit = !process.env.RATE_LIMIT_SECRET;
+  const missingRecaptcha = missingRecaptchaSecret || missingRecaptchaSiteKey;
 
   if (missingRecaptcha || missingSupabase || missingRateLimit) {
 
