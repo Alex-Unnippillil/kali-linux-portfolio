@@ -32,21 +32,24 @@ const statusLink = (() => {
   return undefined;
 })();
 
-export default function StatusPill() {
+function useStatus(): StatusState {
   const [status, setStatus] = useState<StatusState>('unknown');
 
   useEffect(() => {
-    const endpoint = process.env.NEXT_PUBLIC_STATUS_ENDPOINT;
-    if (!endpoint) return;
+    const endpoint = process.env.NEXT_PUBLIC_STATUS_ENDPOINT || '/api/status';
     let active = true;
     const fetchStatus = async () => {
       try {
         const res = await fetch(endpoint);
         const json = await res.json();
-        const raw = json.status?.indicator ?? json.status ?? json.indicator;
+        const raw =
+          json.status?.indicator ??
+          json.status ??
+          json.indicator ??
+          process.env.NEXT_PUBLIC_STATUS;
         if (active) setStatus(normalize(raw));
       } catch {
-        if (active) setStatus('unknown');
+        if (active) setStatus(normalize(process.env.NEXT_PUBLIC_STATUS));
       }
     };
     fetchStatus();
@@ -54,6 +57,41 @@ export default function StatusPill() {
       active = false;
     };
   }, []);
+
+  return status;
+}
+
+export function StatusChip() {
+  const status = useStatus();
+  if (!statusLink) return null;
+
+  const label =
+    status === 'unknown'
+      ? 'Status Unknown'
+      : status === 'operational'
+      ? 'Operational'
+      : status === 'degraded'
+      ? 'Degraded'
+      : 'Down';
+
+  return (
+    <a
+      href={statusLink}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={`System status: ${label}`}
+      className="relative z-10 flex items-center"
+    >
+      <span className="sr-only">{label}</span>
+      <span
+        className={`h-3 w-3 rounded-full ring-2 ring-black/20 ${colorMap[status]}`}
+      />
+    </a>
+  );
+}
+
+export default function StatusPill() {
+  const status = useStatus();
 
   if (!statusLink) return null;
   const label =
