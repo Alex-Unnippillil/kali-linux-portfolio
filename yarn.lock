@@ -3939,7 +3939,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react-dom@npm:19.1.9":
+"@types/react-dom@npm:^18 || ^19":
   version: 19.1.9
   resolution: "@types/react-dom@npm:19.1.9"
   peerDependencies:
@@ -3957,7 +3957,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react@npm:*, @types/react@npm:19.1.12, @types/react@npm:>=16.9.11":
+"@types/react@npm:*, @types/react@npm:>=16.9.11, @types/react@npm:^18 || ^19":
   version: 19.1.12
   resolution: "@types/react@npm:19.1.12"
   dependencies:
@@ -12596,7 +12596,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-dom@npm:19.1.1":
+"react-dom@npm:^18 || ^19":
   version: 19.1.1
   resolution: "react-dom@npm:19.1.1"
   dependencies:
@@ -12741,7 +12741,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react@npm:19.1.1":
+"react@npm:^18 || ^19":
   version: 19.1.1
   resolution: "react@npm:19.1.1"
   checksum: 10c0/8c9769a2dfd02e603af6445058325e6c8a24b47b185d0e461f66a6454765ddcaecb3f0a90184836c68bb509f3c38248359edbc42f0d07c23eb500a5c30c87b4e
@@ -14746,9 +14746,9 @@ __metadata:
     "@types/matter-js": "npm:0.20.0"
     "@types/node": "npm:20.16.0"
     "@types/qrcode": "npm:^1.5.5"
-    "@types/react": "npm:19.1.12"
+    "@types/react": "npm:^18 || ^19"
     "@types/react-cytoscapejs": "npm:^1.2.5"
-    "@types/react-dom": "npm:19.1.9"
+    "@types/react-dom": "npm:^18 || ^19"
     "@types/react-transition-group": "npm:^4"
     "@types/seedrandom": "npm:^3"
     "@types/supertest": "npm:^6"
@@ -14817,13 +14817,13 @@ __metadata:
     prop-types: "npm:^15.8.1"
     qrcode: "npm:^1.5.4"
     rc-virtual-list: "npm:3.19.1"
-    react: "npm:19.1.1"
+    react: "npm:^18 || ^19"
     react-activity-calendar: "npm:^2.7.13"
     react-bootstrap: "npm:^2.10.4"
     react-cytoscapejs: "npm:^2.0.0"
     react-dnd: "npm:^16.0.1"
     react-dnd-html5-backend: "npm:^16.0.1"
-    react-dom: "npm:19.1.1"
+    react-dom: "npm:^18 || ^19"
     react-draggable: "npm:^4.4.5"
     react-force-graph: "npm:^1.45.0"
     react-ga4: "npm:^2.1.0"
