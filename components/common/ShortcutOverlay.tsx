@@ -2,17 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import useKeymap from '../../apps/settings/keymapRegistry';
-
-const formatEvent = (e: KeyboardEvent) => {
-  const parts = [
-    e.ctrlKey ? 'Ctrl' : '',
-    e.altKey ? 'Alt' : '',
-    e.shiftKey ? 'Shift' : '',
-    e.metaKey ? 'Meta' : '',
-    e.key.length === 1 ? e.key.toUpperCase() : e.key,
-  ];
-  return parts.filter(Boolean).join('+');
-};
+import formatKeyboardEvent from '../../utils/formatKeyboardEvent';
 
 const ShortcutOverlay: React.FC = () => {
   const [open, setOpen] = useState(false);
@@ -31,7 +21,7 @@ const ShortcutOverlay: React.FC = () => {
       const show =
         shortcuts.find((s) => s.description === 'Show keyboard shortcuts')?.keys ||
         '?';
-      if (formatEvent(e) === show) {
+      if (formatKeyboardEvent(e) === show) {
         e.preventDefault();
         toggle();
       } else if (e.key === 'Escape' && open) {
