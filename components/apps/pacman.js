@@ -707,7 +707,7 @@ const Pacman = () => {
 
     window.addEventListener('keydown', handleKey);
     canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
-    canvas.addEventListener('touchend', handleTouchEnd);
+    canvas.addEventListener('touchend', handleTouchEnd, { passive: true });
 
     let id;
     const loop = () => {
