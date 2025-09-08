@@ -116,7 +116,7 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
           {query && results.length === 0 && (
             <li className="py-8">
               <EmptyState
-                icon={<span>🔍</span>}
+                variant="search"
                 headline="No results"
                 helperText="Try a different search term"
               />

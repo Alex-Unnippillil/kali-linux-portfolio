@@ -96,7 +96,7 @@ export default function VsCodeWrapper({ openApp }) {
               {items.length === 0 && (
                 <li className="py-8">
                   <EmptyState
-                    icon={<span>🔍</span>}
+                    variant="search"
                     headline="No results"
                     helperText="Try another search"
                   />
