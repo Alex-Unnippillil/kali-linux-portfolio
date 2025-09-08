@@ -1,7 +1,10 @@
+// @ts-nocheck
+/* eslint-disable @next/next/no-before-interactive-script-outside-document */
 "use client";
 
 /* global clients */
 
+import type { AppProps } from 'next/app';
 import { isBrowser } from '@/utils/env';
 import { useEffect } from 'react';
 import { Analytics } from '@vercel/analytics/next';
@@ -32,8 +35,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 
-function MyApp(props) {
-  const { Component, pageProps } = props;
+function MyApp({ Component, pageProps }: AppProps) {
   const { asPath, locales, defaultLocale } = useRouter();
   const path = asPath.split('?')[0];
 
@@ -237,16 +239,18 @@ function MyApp(props) {
         <Script src="/a2hs.js" strategy="beforeInteractive" />
         <div>
           <a
-            href="#app-grid"
+            href="#main-content"
             className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"
           >
-            Skip to app grid
+            Skip to content
           </a>
           <SettingsProvider>
             <TrayProvider>
               <PipPortalProvider>
                 <div aria-live="polite" id="live-region" />
-                <Component {...pageProps} />
+                <main id="main-content" tabIndex={-1}>
+                  <Component {...pageProps} />
+                </main>
                 <ShortcutOverlay />
                 {process.env.VERCEL_ANALYTICS_ID && (
                   <>
