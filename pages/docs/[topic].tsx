@@ -14,9 +14,10 @@ interface TocItem {
 interface DocProps {
   html: string;
   toc: TocItem[];
+  githubUrl: string;
 }
 
-export default function DocPage({ html, toc }: DocProps) {
+export default function DocPage({ html, toc, githubUrl }: DocProps) {
   useEffect(() => {
     if (isBrowser() && window.location.hash) {
       const el = document.getElementById(window.location.hash.slice(1));
@@ -35,7 +36,19 @@ export default function DocPage({ html, toc }: DocProps) {
           ))}
         </ul>
       </nav>
-      <article className="prose flex-1" dangerouslySetInnerHTML={{ __html: html }} />
+      <div className="flex-1">
+        <article className="prose" dangerouslySetInnerHTML={{ __html: html }} />
+        <div className="mt-8">
+          <a
+            href={githubUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+          >
+            View on GitHub
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
@@ -72,5 +85,9 @@ export const getStaticProps: GetStaticProps<DocProps> = async ({ params }) => {
   };
 
   const html = marked.parse(md, { renderer }) as string;
-  return { props: { html, toc } };
+
+  const relativePath = path.posix.join('public', 'docs', 'seed', `${topic}.md`);
+  const githubUrl = `https://github.com/unnippillil/kali-linux-portfolio/blob/main/${relativePath}`;
+
+  return { props: { html, toc, githubUrl } };
 };
