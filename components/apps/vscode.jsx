@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import apps from '../../apps.config';
+import EmptyState from '../ui/EmptyState';
 
 // Load the actual VSCode app lazily so no editor dependencies are required
 const VsCode = dynamic(
@@ -93,7 +94,13 @@ export default function VsCodeWrapper({ openApp }) {
                 </li>
               ))}
               {items.length === 0 && (
-                <li className="px-2 py-1 text-sm text-gray-400">No results</li>
+                <li className="py-8">
+                  <EmptyState
+                    icon={<span>🔍</span>}
+                    headline="No results"
+                    helperText="Try another search"
+                  />
+                </li>
               )}
             </ul>
           </div>
