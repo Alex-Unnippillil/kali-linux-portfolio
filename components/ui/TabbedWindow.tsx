@@ -164,7 +164,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
 
   return (
     <div
-      className={`flex flex-col w-full h-full border border-window shadow-window ${className}`.trim()}
+      className={`flex flex-col w-full h-full border border-elevation-300 shadow-elevation-300 ${className}`.trim()}
       tabIndex={0}
       onKeyDown={onKeyDown}
     >

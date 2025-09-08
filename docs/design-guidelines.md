@@ -25,3 +25,22 @@ Example:
 ```
 
 These tokens ensure that layouts snap to the 8px grid at all breakpoints.
+
+## Elevation Tokens
+
+Use elevation tokens to convey surface hierarchy with shadows and borders. Apply the utilities `shadow-elevation-*` and `border-elevation-*`.
+
+| Token | Typical use |
+|-------|-------------|
+| `elevation-0` | Flat surfaces |
+| `elevation-100` | Cards |
+| `elevation-200` | Menus |
+| `elevation-300` | Toasts and windows |
+
+Example:
+
+```html
+<div class="border border-elevation-100 shadow-elevation-100">
+  <!-- card content -->
+</div>
+```

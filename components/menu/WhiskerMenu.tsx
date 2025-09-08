@@ -128,7 +128,7 @@ const WhiskerMenu: React.FC = () => {
       {open && (
         <div
           ref={menuRef}
-          className="absolute left-0 mt-1 z-50 flex bg-ub-grey text-white shadow-lg"
+          className="absolute left-0 mt-1 z-50 flex bg-ub-grey text-white border border-elevation-200 shadow-elevation-200"
           tabIndex={-1}
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {

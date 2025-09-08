@@ -51,7 +51,7 @@ export default function ProgressDialog({ isOpen, onCancel }: ProgressDialogProps
 
   return (
     <Modal isOpen={isOpen} onClose={handleCancel}>
-      <div className="p-4 bg-white rounded border border-window shadow-window w-64 text-center space-y-4">
+      <div className="p-4 bg-white rounded border border-elevation-300 shadow-elevation-300 w-64 text-center space-y-4">
         <div>Processing… {Math.round(progress)}%</div>
         <ProgressBar progress={progress} className="w-full" />
         <button

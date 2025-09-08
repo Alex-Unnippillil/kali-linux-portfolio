@@ -102,14 +102,16 @@ module.exports = {
         'tray-icon-lg': '32px',
       },
       boxShadow: {
-        // eslint-disable-next-line no-top-level-window/no-top-level-window-or-document
-        window: '0 4px 8px rgba(0,0,0,0.3)',
-        card: '0 2px 4px rgba(0,0,0,0.2)',
+        'elevation-0': 'var(--elevation-0-shadow)',
+        'elevation-100': 'var(--elevation-100-shadow)',
+        'elevation-200': 'var(--elevation-200-shadow)',
+        'elevation-300': 'var(--elevation-300-shadow)',
       },
       borderColor: {
-        // eslint-disable-next-line no-top-level-window/no-top-level-window-or-document
-        window: 'var(--color-border)',
-        card: 'var(--color-border)',
+        'elevation-0': 'var(--elevation-0-border)',
+        'elevation-100': 'var(--elevation-100-border)',
+        'elevation-200': 'var(--elevation-200-border)',
+        'elevation-300': 'var(--elevation-300-border)',
       },
       keyframes: {
         glow: {

@@ -46,6 +46,16 @@
   --radius-lg: 8px;
   --radius-round: 9999px;
 
+  /* Elevation */
+  --elevation-0-shadow: none;
+  --elevation-0-border: var(--color-border);
+  --elevation-100-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --elevation-100-border: var(--color-border);
+  --elevation-200-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  --elevation-200-border: var(--color-border);
+  --elevation-300-shadow: 0 8px 10px rgba(0, 0, 0, 0.35);
+  --elevation-300-border: var(--color-border);
+
   /* Motion durations */
   --motion-fast: 150ms;
   --motion-medium: 300ms;
