@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import ToggleSwitch from "./ToggleSwitch";
 
 const ALT_KEY = "alt-palette";
+const EVENT_NAME = "theme-change";
 
 export default function ThemeSwitcher() {
   const [enabled, setEnabled] = useState(false);
@@ -13,6 +14,12 @@ export default function ThemeSwitcher() {
     if (stored === "true") {
       setEnabled(true);
     }
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<boolean>).detail;
+      setEnabled(detail);
+    };
+    window.addEventListener(EVENT_NAME, handler);
+    return () => window.removeEventListener(EVENT_NAME, handler);
   }, []);
 
   useEffect(() => {
@@ -22,6 +29,7 @@ export default function ThemeSwitcher() {
       window.localStorage.removeItem(ALT_KEY);
     }
     document.documentElement.classList.toggle("alt-palette", enabled);
+    window.dispatchEvent(new CustomEvent(EVENT_NAME, { detail: enabled }));
   }, [enabled]);
 
   return (
