@@ -2,7 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "functions": {
-    "pages/api/**/*.{js,ts}": { "runtime": "nodejs22.x" },
-    "app/api/**/route.{js,ts}": { "runtime": "nodejs22.x" }
+    "nodeVersion": { "range": "22.x" },
+    "pages/api/**/*.js": { "runtime": "nodejs22.x" },
+    "pages/api/**/*.ts": { "runtime": "nodejs22.x" },
+    "app/api/**/route.js": { "runtime": "nodejs22.x" },
+    "app/api/**/route.ts": { "runtime": "nodejs22.x" }
   }
 }
