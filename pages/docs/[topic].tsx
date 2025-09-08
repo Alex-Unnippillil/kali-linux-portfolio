@@ -47,7 +47,7 @@ export default function DocPage({ html, toc, title, topic }: DocProps) {
 
   useEffect(() => {
     if (!isBrowser()) return;
-    const isDesktop = window.matchMedia('(min-width: 768px)').matches;
+    const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
     if (isDesktop) {
       setOpenSections(sections.map((s) => s.id));
       setShowToc(true);
@@ -100,16 +100,16 @@ export default function DocPage({ html, toc, title, topic }: DocProps) {
           }}
         />
       </Head>
-      <div className="flex flex-col md:flex-row p-4">
-        <nav className="md:w-1/4 md:pr-4 md:sticky md:top-0">
+      <div className="flex flex-col lg:flex-row p-4">
+        <nav className="lg:w-1/4 lg:min-w-[12rem] lg:max-w-[20rem] lg:flex-shrink-0 lg:pr-4 lg:sticky lg:top-0">
           <button
-            className="md:hidden mb-2 flex items-center"
+            className="lg:hidden mb-2 flex items-center"
             onClick={() => setShowToc((v) => !v)}
             aria-label="Toggle table of contents"
           >
             Table of Contents {showToc ? '▲' : '▼'}
           </button>
-          <div className={`${showToc ? '' : 'hidden'} md:block`}> 
+          <div className={`${showToc ? '' : 'hidden'} lg:block`}>
             {sections.map((section) => (
               <div key={section.id} className="mb-2">
                 <div className="flex items-center text-sm font-medium">
