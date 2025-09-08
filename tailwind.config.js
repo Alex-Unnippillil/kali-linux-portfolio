@@ -149,7 +149,7 @@ module.exports = {
   },
   plugins: [
     require('@tailwindcss/typography'),
-    plugin(function ({ addUtilities, addVariant }) {
+    plugin(function ({ addUtilities, addVariant, addBase }) {
       addVariant('hc', '.high-contrast &');
       addVariant('rm', '.reduced-motion &');
       const cols = {};
@@ -161,6 +161,11 @@ module.exports = {
         }
       }
       addUtilities(cols, ['responsive']);
+      addBase({
+        'a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, [role="button"]:focus-visible, [tabindex]:not([tabindex="-1"]):focus-visible': {
+          '@apply focus-ring': {},
+        },
+      });
     }),
   ],
 };
