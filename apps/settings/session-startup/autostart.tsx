@@ -36,12 +36,12 @@ export default function AutostartSettings() {
         const res = await fetch('/fixtures/autostart-user.json');
         user = await res.json();
       }
-      user = user.map((e) => ({ trigger: 'login', ...e }));
+      user = user.map((e) => ({ ...e, trigger: 'login' }));
       setUserEntries(user);
       setInitialUser(JSON.parse(JSON.stringify(user)));
 
       const sysRes = await fetch('/fixtures/autostart-system.json');
-      const sys = (await sysRes.json()).map((e: Entry) => ({ trigger: 'login', ...e }));
+      const sys = (await sysRes.json()).map((e: Entry) => ({ ...e, trigger: 'login' }));
       setSystemEntries(sys);
     }
     load();
@@ -104,6 +104,7 @@ export default function AutostartSettings() {
                 type="checkbox"
                 checked={e.enabled}
                 onChange={(ev) => updateUser(i, { enabled: ev.target.checked })}
+                aria-label="Enable autostart entry"
               />
               <div className="flex gap-1">
                 {chip('login', e.trigger, () => updateUser(i, { trigger: 'login' }))}
@@ -114,11 +115,13 @@ export default function AutostartSettings() {
                 value={e.name}
                 onChange={(ev) => updateUser(i, { name: ev.target.value })}
                 className="bg-ub-cool-grey text-white px-1 py-0.5 rounded w-1/4"
+                aria-label="Entry name"
               />
               <input
                 value={e.exec}
                 onChange={(ev) => updateUser(i, { exec: ev.target.value })}
                 className="bg-ub-cool-grey text-white px-1 py-0.5 rounded flex-grow"
+                aria-label="Command to execute"
               />
             </li>
           ))}
@@ -133,7 +136,12 @@ export default function AutostartSettings() {
               data-testid="autostart-system-entry"
               className="flex items-center gap-2 italic opacity-75"
             >
-              <input type="checkbox" checked={e.enabled} disabled />
+              <input
+                type="checkbox"
+                checked={e.enabled}
+                disabled
+                aria-label="Enable autostart entry"
+              />
               <div className="flex gap-1">
                 {chip('login', e.trigger)}
                 {chip('suspend', e.trigger)}
