@@ -2,6 +2,7 @@ import dynamic from "next/dynamic";
 import { baseMetadata } from "../lib/metadata";
 import BetaBadge from "../components/BetaBadge";
 import useSession from "../hooks/useSession";
+import Header from "../components/Header";
 
 export const metadata = baseMetadata;
 
@@ -38,6 +39,7 @@ const App = () => {
       <a href="#window-area" className="sr-only focus:not-sr-only">
         Skip to content
       </a>
+      <Header />
       <Ubuntu
         session={session}
         setSession={setSession}
