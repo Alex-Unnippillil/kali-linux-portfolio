@@ -165,6 +165,10 @@
     "ws": "^8.18.0"
   },
   "resolutions": {
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "@types/react": "19.1.12",
+    "@types/react-dom": "19.1.9",
     "source-map": "^0.7.6",
     "test-exclude": "7.0.1",
     "webpack": "^5.92.0",
