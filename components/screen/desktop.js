@@ -3,7 +3,7 @@
 import { isBrowser } from '@/utils/env';
 import React, { Component } from 'react';
 import dynamic from 'next/dynamic';
-import logger from '../../utils/logger';
+import { logger } from '../../utils/logger';
 
 const BackgroundImage = dynamic(
     () => import('../util-components/background-image'),

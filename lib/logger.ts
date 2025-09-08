@@ -1,4 +1,4 @@
-import logger from '../utils/logger';
+import { logger } from '../utils/logger';
 
 const SENSITIVE_KEYS = new Set(['password', 'secret', 'token', 'key']);
 

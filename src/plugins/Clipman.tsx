@@ -2,7 +2,7 @@ import { isBrowser } from '@/utils/env';
 import { useEffect, useState } from 'react';
 import fs from 'fs';
 import path from 'path';
-import logger from '../../utils/logger';
+import { logger } from '../../utils/logger';
 
 interface ClipmanSettings {
   syncSelections: boolean;

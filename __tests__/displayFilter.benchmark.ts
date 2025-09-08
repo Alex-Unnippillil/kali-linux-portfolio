@@ -2,7 +2,7 @@
 // Baseline before caching: ~29.66ms for 100k calls
 // After caching optimization: ~26.32ms for 100k calls
 import { matchesDisplayFilter, getRowColor } from '../components/apps/wireshark/utils';
-import logger from '../utils/logger';
+import { logger } from '../utils/logger';
 
 describe('display filter benchmark', () => {
   const packets = Array.from({ length: 1000 }, (_, i) => ({

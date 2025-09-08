@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import logger from '../utils/logger';
+import { logger } from '../utils/logger';
 
 
 function renderProgressBar(completed, total) {

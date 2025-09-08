@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import logger from '../../utils/logger'
+import { logger } from '../../utils/logger'
 import PolicyKitPrompt from '../common/PolicyKitPrompt'
 import useFocusTrap from '../../hooks/useFocusTrap'
 import useRovingTabIndex from '../../hooks/useRovingTabIndex'

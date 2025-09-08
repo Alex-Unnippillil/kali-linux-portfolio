@@ -1,6 +1,6 @@
 import fs from 'fs';
 import pa11y from 'pa11y';
-import logger from '../utils/logger';
+import { logger } from '../utils/logger';
 
 
 const configPath = new URL('../pa11yci.json', import.meta.url);

@@ -2,7 +2,7 @@
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { parsePotfile } from '../components/apps/john/utils.js';
-import logger from '../utils/logger';
+import { logger } from '../utils/logger';
 
 
 function main() {

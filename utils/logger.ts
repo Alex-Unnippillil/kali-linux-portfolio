@@ -22,7 +22,7 @@ function shouldLog(level: LogLevel) {
   return levelOrder[level] <= levelOrder[activeLevel];
 }
 
-const logger = {
+export const logger = {
   error: (...args: any[]) => {
     if (isProd) return;
     if (shouldLog('error')) console.error(...args);
@@ -45,4 +45,3 @@ const logger = {
   },
 };
 
-export default logger;
