@@ -5,10 +5,15 @@ export function stripFormatting(html: string): string {
   return div.textContent || div.innerText || '';
 }
 
+interface ReadableClipboard extends Clipboard {
+  read: () => Promise<ClipboardItem[]>;
+}
+
 export async function pastePlainText(): Promise<string> {
   try {
-    if (navigator.clipboard && (navigator.clipboard as any).read) {
-      const items = await (navigator.clipboard as any).read();
+    if (navigator.clipboard && 'read' in navigator.clipboard) {
+      const clipboard = navigator.clipboard as ReadableClipboard;
+      const items = await clipboard.read();
       for (const item of items) {
         if (item.types.includes('text/plain')) {
           const blob = await item.getType('text/plain');
