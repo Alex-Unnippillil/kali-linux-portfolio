@@ -49,13 +49,21 @@ const Window: React.FC<WindowProps> = ({
   const [zIndex, setZIndex] = useState(++zCounter);
   const [focused, setFocused] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const shakeData = useRef({ lastX: 0, lastDir: 0, count: 0 });
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setPrefersReducedMotion(media.matches);
+    const update = () =>
+      setPrefersReducedMotion(
+        media.matches || document.documentElement.classList.contains("reduced-motion")
+      );
     update();
     media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
+    window.addEventListener("storage", update);
+    return () => {
+      media.removeEventListener("change", update);
+      window.removeEventListener("storage", update);
+    };
   }, []);
 
   const bringToFront = useCallback(() => {
@@ -77,6 +85,7 @@ const Window: React.FC<WindowProps> = ({
     bringToFront();
     setDragging(true);
     dragOffset.current = { x: e.clientX - pos.x, y: e.clientY - pos.y };
+    shakeData.current = { lastX: e.clientX, lastDir: 0, count: 0 };
     e.preventDefault();
   };
 
@@ -123,13 +132,44 @@ const Window: React.FC<WindowProps> = ({
     []
   );
 
+  const triggerShake = useCallback(() => {
+    if (prefersReducedMotion) return;
+    if (!winRef.current) return;
+    winRef.current.classList.add("window-shake");
+    const others = document.querySelectorAll('[data-window]');
+    others.forEach((el) => {
+      if (el !== winRef.current) {
+        (el as HTMLElement).classList.add("window-dimmed");
+      }
+    });
+    setTimeout(() => {
+      winRef.current?.classList.remove("window-shake");
+      others.forEach((el) => (el as HTMLElement).classList.remove("window-dimmed"));
+    }, 500);
+  }, [prefersReducedMotion]);
+
   useEffect(() => {
+    const detectShake = (e: PointerEvent) => {
+      const dx = e.clientX - shakeData.current.lastX;
+      const dir = Math.sign(dx);
+      if (dir !== 0 && dir !== shakeData.current.lastDir && Math.abs(dx) > 20) {
+        shakeData.current.count += 1;
+        shakeData.current.lastDir = dir;
+        if (shakeData.current.count >= 3) {
+          triggerShake();
+          shakeData.current.count = 0;
+        }
+      }
+      shakeData.current.lastX = e.clientX;
+    };
+
     const handleMove = (e: PointerEvent) => {
       if (dragging) {
         const newX = e.clientX - dragOffset.current.x;
         const newY = e.clientY - dragOffset.current.y;
         checkSnapPreview(newX, newY);
         setPos({ x: newX, y: newY });
+        if (focused && !prefersReducedMotion) detectShake(e);
       } else if (resizeDir) {
         setSize((prev) => {
           let { w, h } = prev;
@@ -158,6 +198,7 @@ const Window: React.FC<WindowProps> = ({
       setResizeDir(null);
       setSnapPreview(null);
       setSnapPosition(null);
+      shakeData.current.count = 0;
     };
 
     window.addEventListener("pointermove", handleMove);
@@ -166,7 +207,7 @@ const Window: React.FC<WindowProps> = ({
       window.removeEventListener("pointermove", handleMove);
       window.removeEventListener("pointerup", handleUp);
     };
-  }, [dragging, resizeDir, pos, snapPosition, snapWindow]);
+  }, [dragging, resizeDir, pos, snapPosition, snapWindow, focused, prefersReducedMotion, triggerShake]);
 
   return (
     <>
@@ -181,6 +222,7 @@ const Window: React.FC<WindowProps> = ({
       )}
       <div
         ref={winRef}
+        data-window
         onPointerDown={bringToFront}
         style={{
           top: pos.y,
