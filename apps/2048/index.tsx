@@ -5,6 +5,7 @@ import ReactGA from 'react-ga4';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 import { getDailySeed } from '../../utils/dailySeed';
 import { isBrowser } from '@/utils/env';
+import { loadState, saveState, clearState } from './storage';
 
 const SIZE = 4;
 
@@ -140,11 +141,20 @@ const Page2048 = () => {
       const seedStr = await getDailySeed('2048');
       const seed = hashSeed(seedStr);
       const rand = mulberry32(seed);
-      const b = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
-      addRandomTile(b, rand);
-      addRandomTile(b, rand);
       if (!mounted) return;
-      setBoard(b);
+
+      const saved = loadState();
+      if (saved) {
+        setBoard(saved.board);
+        setHighest(saved.highest);
+        setWon(saved.won);
+        setLost(saved.lost);
+      } else {
+        const b = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+        addRandomTile(b, rand);
+        addRandomTile(b, rand);
+        setBoard(b);
+      }
       rngRef.current = rand;
       seedRef.current = seed;
     })();
@@ -152,6 +162,10 @@ const Page2048 = () => {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    saveState({ board, highest, won, lost });
+  }, [board, highest, won, lost]);
 
   const resetTimer = useCallback(() => {
     if (!hard) return;
@@ -217,6 +231,7 @@ const Page2048 = () => {
   }, [resetTimer]);
 
   const restart = useCallback(() => {
+    clearState();
     const rand = mulberry32(seedRef.current);
     rngRef.current = rand;
     const b = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
@@ -289,10 +304,15 @@ const Page2048 = () => {
         <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={handleUndo}>
           Undo
         </button>
-        <label className="flex items-center space-x-1 px-2">
-          <input type="checkbox" checked={hard} onChange={(e) => setHard(e.target.checked)} />
-          <span>Hard</span>
-        </label>
+          <label className="flex items-center space-x-1 px-2">
+            <input
+              type="checkbox"
+              aria-label="Hard mode"
+              checked={hard}
+              onChange={(e) => setHard(e.target.checked)}
+            />
+            <span>Hard</span>
+          </label>
         <select
           className="text-black px-1 rounded"
           value={boardType}
