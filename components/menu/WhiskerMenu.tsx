@@ -3,6 +3,8 @@ import UbuntuApp from '../base/ubuntu_app';
 import { Icon } from '../ui/Icon';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import taxonomy from '../../data/tools-taxonomy.json';
+import fuzzySearch from '../../utils/fuzzySearch';
 
 type AppMeta = {
   id: string;
@@ -12,13 +14,13 @@ type AppMeta = {
   favourite?: boolean;
 };
 
-const CATEGORIES = [
+const DEFAULT_CATEGORIES = [
   { id: 'all', label: 'All' },
   { id: 'favorites', label: 'Favorites' },
   { id: 'recent', label: 'Recent' },
-  { id: 'utilities', label: 'Utilities' },
-  { id: 'games', label: 'Games' }
 ];
+
+const CATEGORIES = [...DEFAULT_CATEGORIES, ...(taxonomy as { id: string; label: string }[])];
 
 const WhiskerMenu: React.FC = () => {
   const [open, setOpen] = useState(false);
@@ -59,11 +61,7 @@ const WhiskerMenu: React.FC = () => {
       default:
         list = allApps;
     }
-    if (query) {
-      const q = query.toLowerCase();
-      list = list.filter(a => a.title.toLowerCase().includes(q));
-    }
-    return list;
+    return fuzzySearch(list, query, (a) => a.title);
   }, [category, query, allApps, favoriteApps, recentApps, utilityApps, gameApps]);
 
   useEffect(() => {
@@ -130,16 +128,19 @@ const WhiskerMenu: React.FC = () => {
           ref={menuRef}
           className="absolute left-0 mt-1 z-50 flex bg-ub-grey text-white shadow-lg"
           tabIndex={-1}
+          role="menu"
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
               setOpen(false);
             }
           }}
         >
-          <div className="flex flex-col bg-gray-800 p-2">
+          <div className="flex flex-col bg-gray-800 p-2" role="menu" aria-label="Categories">
             {CATEGORIES.map(cat => (
               <button
                 key={cat.id}
+                role="menuitem"
+                aria-selected={category === cat.id}
                 className={`text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
                 onClick={() => setCategory(cat.id)}
               >
@@ -156,7 +157,7 @@ const WhiskerMenu: React.FC = () => {
               onChange={e => setQuery(e.target.value)}
               autoFocus
             />
-            <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+            <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto" role="menu" aria-label="Applications">
               {currentApps.map((app, idx) => (
                 <div key={app.id} className={idx === highlight ? 'ring-2 ring-ubb-orange' : ''}>
                   <UbuntuApp
@@ -165,6 +166,8 @@ const WhiskerMenu: React.FC = () => {
                     name={app.title}
                     openApp={() => openSelectedApp(app.id)}
                     disabled={app.disabled}
+                    role="menuitem"
+                    aria-selected={idx === highlight}
                   />
                 </div>
               ))}
