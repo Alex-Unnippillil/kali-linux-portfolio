@@ -1,8 +1,6 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Readability } from '@mozilla/readability';
-import DOMPurify from 'dompurify';
 import { createStore, set as idbSet } from 'idb-keyval';
 import usePersistentState from '../../../hooks/usePersistentState';
 
@@ -27,10 +25,16 @@ const ReadingMode = () => {
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
-    const doc = document.cloneNode(true) as Document;
-    const article = new Readability(doc).parse();
-    const cleaned = DOMPurify.sanitize(article?.content ?? '');
-    setContent(cleaned);
+    (async () => {
+      const [{ Readability }, { default: DOMPurify }] = await Promise.all([
+        import('@mozilla/readability'),
+        import('dompurify'),
+      ]);
+      const doc = document.cloneNode(true) as Document;
+      const article = new Readability(doc).parse();
+      const cleaned = DOMPurify.sanitize(article?.content ?? '');
+      setContent(cleaned);
+    })();
   }, []);
 
   const saveSnapshot = useCallback(async () => {
