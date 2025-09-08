@@ -2,85 +2,92 @@
 
 /* global clients */
 
-import { isBrowser } from '@/utils/env';
-import { useEffect } from 'react';
-import { Analytics } from '@vercel/analytics/next';
-import dynamic from 'next/dynamic';
-import Head from 'next/head';
-import { useRouter } from 'next/router';
-import '../styles/tailwind.css';
-import '../styles/globals.css';
-import '../styles/index.css';
-import '../styles/resume-print.css';
-import '../styles/print.css';
-import { SettingsProvider } from '../hooks/useSettings';
-import ShortcutOverlay from '../components/common/ShortcutOverlay';
-import PipPortalProvider from '../components/common/PipPortal';
-import { TrayProvider } from '../hooks/useTray';
-import ErrorBoundary from '../components/core/ErrorBoundary';
-import Script from 'next/script';
-import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
-import useReportWebVitals from '../hooks/useReportWebVitals';
-
+import { isBrowser } from "@/utils/env";
+import { useEffect } from "react";
+import { Analytics } from "@vercel/analytics/next";
+import dynamic from "next/dynamic";
+import Head from "next/head";
+import { useRouter } from "next/router";
+import type { AppProps } from "next/app";
+import { Inter, Rajdhani } from "next/font/google";
+import "../styles/tailwind.css";
+import "../styles/globals.css";
+import "../styles/index.css";
+import "../styles/resume-print.css";
+import "../styles/print.css";
+import { SettingsProvider } from "../hooks/useSettings";
+import ShortcutOverlay from "../components/common/ShortcutOverlay";
+import PipPortalProvider from "../components/common/PipPortal";
+import { TrayProvider } from "../hooks/useTray";
+import ErrorBoundary from "../components/core/ErrorBoundary";
+import Script from "next/script";
+import { reportWebVitals as reportWebVitalsUtil } from "../utils/reportWebVitals";
+import useReportWebVitals from "../hooks/useReportWebVitals";
 
 let SpeedInsights = () => null;
-if (process.env.NODE_ENV === 'production') {
+if (process.env.NODE_ENV === "production") {
   SpeedInsights = dynamic(
-    () => import('@vercel/speed-insights/next').then((m) => m.SpeedInsights),
+    () => import("@vercel/speed-insights/next").then((m) => m.SpeedInsights),
     { ssr: false },
   );
 }
 
+const bodyFont = Inter({ subsets: ["latin"], variable: "--font-body" });
+const headingFont = Rajdhani({
+  subsets: ["latin"],
+  weight: ["700"],
+  variable: "--font-heading",
+});
 
-function MyApp(props) {
-  const { Component, pageProps } = props;
+function MyApp({ Component, pageProps }: AppProps) {
   const { asPath, locales, defaultLocale } = useRouter();
-  const path = asPath.split('?')[0];
+  const path = asPath.split("?")[0];
 
   useReportWebVitals();
 
   useEffect(() => {
-    void import('@xterm/xterm/css/xterm.css');
-    void import('leaflet/dist/leaflet.css');
+    void import("@xterm/xterm/css/xterm.css");
+    void import("leaflet/dist/leaflet.css");
   }, []);
 
   useEffect(() => {
-    if (isBrowser() && typeof window.initA2HS === 'function') {
+    if (isBrowser() && typeof window.initA2HS === "function") {
       window.initA2HS();
     }
     const initAnalytics = async () => {
       const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
       if (trackingId) {
-        const { default: ReactGA } = await import('react-ga4');
+        const { default: ReactGA } = await import("react-ga4");
         ReactGA.initialize(trackingId);
       }
     };
     initAnalytics().catch((err) => {
-      console.error('Analytics initialization failed', err);
+      console.error("Analytics initialization failed", err);
     });
   }, []);
 
   useEffect(() => {
     if (
-      process.env.NODE_ENV === 'production' &&
-      process.env.VERCEL_ENV === 'production' &&
-      'serviceWorker' in navigator
+      process.env.NODE_ENV === "production" &&
+      process.env.VERCEL_ENV === "production" &&
+      "serviceWorker" in navigator
     ) {
       const register = async () => {
         try {
-          const registration = await navigator.serviceWorker.register('/service-worker.js');
+          const registration =
+            await navigator.serviceWorker.register("/service-worker.js");
 
           window.manualRefresh = () => {
-            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+            registration.waiting.postMessage({ type: "SKIP_WAITING" });
             clients.claim();
           };
 
-          registration.addEventListener('updatefound', () => {
+          registration.addEventListener("updatefound", () => {
             const installing = registration.installing;
             if (!installing) return;
-            installing.addEventListener('statechange', () => {
+            installing.addEventListener("statechange", () => {
               if (
-                installing.state === 'installed' &&
+                installing.state === "installed" &&
                 navigator.serviceWorker.controller
               ) {
                 registration.update();
@@ -88,17 +95,17 @@ function MyApp(props) {
             });
           });
 
-          if ('periodicSync' in registration) {
+          if ("periodicSync" in registration) {
             try {
               if (
-                'permissions' in navigator &&
-                typeof navigator.permissions.query === 'function'
+                "permissions" in navigator &&
+                typeof navigator.permissions.query === "function"
               ) {
                 const status = await navigator.permissions.query({
-                  name: 'periodic-background-sync',
+                  name: "periodic-background-sync",
                 });
-                if (status.state === 'granted') {
-                  await registration.periodicSync.register('content-sync', {
+                if (status.state === "granted") {
+                  await registration.periodicSync.register("content-sync", {
                     minInterval: 24 * 60 * 60 * 1000,
                   });
                 } else {
@@ -114,22 +121,22 @@ function MyApp(props) {
             registration.update();
           }
         } catch (err) {
-          console.error('Service worker registration failed', err);
+          console.error("Service worker registration failed", err);
         }
       };
       register().catch((err) => {
-        console.error('Service worker setup failed', err);
+        console.error("Service worker setup failed", err);
       });
     }
   }, []);
 
   useEffect(() => {
     let active = true;
-    import('web-vitals/attribution')
+    import("web-vitals/attribution")
       .then(({ onTTI }) => {
         onTTI(({ value, id }) => {
           if (active) {
-            reportWebVitalsUtil({ id, name: 'TTI', value });
+            reportWebVitalsUtil({ id, name: "TTI", value });
           }
         });
       })
@@ -140,45 +147,45 @@ function MyApp(props) {
   }, []);
 
   useEffect(() => {
-    const liveRegion = document.getElementById('live-region');
+    const liveRegion = document.getElementById("live-region");
     if (!liveRegion) return;
 
     const update = (message) => {
-      liveRegion.textContent = '';
+      liveRegion.textContent = "";
       setTimeout(() => {
         liveRegion.textContent = message;
       }, 100);
     };
 
-    const handleCopy = () => update('Copied to clipboard');
-    const handleCut = () => update('Cut to clipboard');
-    const handlePaste = () => update('Pasted from clipboard');
+    const handleCopy = () => update("Copied to clipboard");
+    const handleCut = () => update("Cut to clipboard");
+    const handlePaste = () => update("Pasted from clipboard");
 
-    window.addEventListener('copy', handleCopy);
-    window.addEventListener('cut', handleCut);
-    window.addEventListener('paste', handlePaste);
+    window.addEventListener("copy", handleCopy);
+    window.addEventListener("cut", handleCut);
+    window.addEventListener("paste", handlePaste);
 
     const { clipboard } = navigator;
     const originalWrite = clipboard?.writeText?.bind(clipboard);
     const originalRead = clipboard?.readText?.bind(clipboard);
     if (originalWrite) {
       clipboard.writeText = async (text) => {
-        update('Copied to clipboard');
+        update("Copied to clipboard");
         return originalWrite(text);
       };
     }
     if (originalRead) {
       clipboard.readText = async () => {
         const text = await originalRead();
-        update('Pasted from clipboard');
+        update("Pasted from clipboard");
         return text;
       };
     }
 
     return () => {
-      window.removeEventListener('copy', handleCopy);
-      window.removeEventListener('cut', handleCut);
-      window.removeEventListener('paste', handlePaste);
+      window.removeEventListener("copy", handleCopy);
+      window.removeEventListener("cut", handleCut);
+      window.removeEventListener("paste", handlePaste);
       if (clipboard) {
         if (originalWrite) clipboard.writeText = originalWrite;
         if (originalRead) clipboard.readText = originalRead;
@@ -187,13 +194,13 @@ function MyApp(props) {
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
 
-    const liveRegion = document.getElementById('live-region');
+    const liveRegion = document.getElementById("live-region");
     if (!liveRegion) return;
 
     const update = (message) => {
-      liveRegion.textContent = '';
+      liveRegion.textContent = "";
       setTimeout(() => {
         liveRegion.textContent = message;
       }, 100);
@@ -203,15 +210,14 @@ function MyApp(props) {
     if (!OriginalNotification) return;
 
     const WrappedNotification = function (title, options) {
-      update(`${title}${options?.body ? ' ' + options.body : ''}`);
+      update(`${title}${options?.body ? " " + options.body : ""}`);
       return new OriginalNotification(title, options);
     };
 
-    WrappedNotification.requestPermission = OriginalNotification.requestPermission.bind(
-      OriginalNotification,
-    );
+    WrappedNotification.requestPermission =
+      OriginalNotification.requestPermission.bind(OriginalNotification);
 
-    Object.defineProperty(WrappedNotification, 'permission', {
+    Object.defineProperty(WrappedNotification, "permission", {
       get: () => OriginalNotification.permission,
     });
 
@@ -228,14 +234,17 @@ function MyApp(props) {
     <>
       <Head>
         {locales?.map((l) => {
-          const href = l === defaultLocale ? path : `/${l}${path === '/' ? '' : path}`;
+          const href =
+            l === defaultLocale ? path : `/${l}${path === "/" ? "" : path}`;
           return <link key={l} rel="alternate" hrefLang={l} href={href} />;
         })}
         <link rel="alternate" hrefLang="x-default" href={path} />
       </Head>
       <ErrorBoundary>
         <Script src="/a2hs.js" strategy="beforeInteractive" />
-        <div>
+        <div
+          className={`${bodyFont.variable} ${headingFont.variable} font-body`}
+        >
           <a
             href="#app-grid"
             className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"
@@ -252,7 +261,11 @@ function MyApp(props) {
                   <>
                     <Analytics
                       beforeSend={(e) => {
-                        if (e.url.includes('/admin') || e.url.includes('/private')) return null;
+                        if (
+                          e.url.includes("/admin") ||
+                          e.url.includes("/private")
+                        )
+                          return null;
                         const evt = e;
                         if (evt.metadata?.email) delete evt.metadata.email;
                         return e;
@@ -274,4 +287,3 @@ function MyApp(props) {
 export default MyApp;
 
 export { reportWebVitalsUtil as reportWebVitals };
-
