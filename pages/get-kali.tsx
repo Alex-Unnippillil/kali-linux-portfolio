@@ -1,5 +1,6 @@
 import React from 'react';
 import Callout from '../components/ui/Callout';
+import TrustBanner from '../components/home/TrustBanner';
 
 import * as Installer from '../content/get-kali/installer.mdx';
 import * as VMs from '../content/get-kali/vms.mdx';
@@ -47,6 +48,7 @@ const platforms: Platform[] = [
 
 const GetKali: React.FC = () => (
   <main className="p-4">
+    <TrustBanner />
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {platforms.map(({ slug, title, summary, badges, url }) => (
         <div key={slug} className="border rounded p-4 flex flex-col">

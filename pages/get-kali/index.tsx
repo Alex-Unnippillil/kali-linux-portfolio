@@ -1,9 +1,11 @@
 import React from 'react';
 import Link from 'next/link';
 import Callout from '../../components/ui/Callout';
+import TrustBanner from '../../components/home/TrustBanner';
 
 const GetKali: React.FC = () => (
   <main className="p-4">
+    <TrustBanner />
     <div className="mb-6 flex items-center justify-between rounded bg-purple-600 p-4 text-white">
       <span className="text-lg">New to Kali Linux? Learn how to get started.</span>
       <Link href="/install-options" className="rounded bg-white px-4 py-2 font-semibold text-purple-700 hover:bg-purple-50">
