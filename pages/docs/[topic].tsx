@@ -6,6 +6,7 @@ import Head from 'next/head';
 import { marked } from 'marked';
 import { useEffect, useState } from 'react';
 import '@/styles/docs.css';
+import DocsLayout from '@/layouts/DocsLayout';
 
 interface TocItem {
   id: string;
@@ -62,6 +63,10 @@ export default function DocPage({ html, toc, title, topic }: DocProps) {
   };
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com';
+  const breadcrumbs = [
+    { href: '/docs', label: 'Docs' },
+    { href: `/docs/${topic}`, label: title },
+  ];
 
   return (
     <>
@@ -101,8 +106,9 @@ export default function DocPage({ html, toc, title, topic }: DocProps) {
           }}
         />
       </Head>
-      <div className="flex flex-col lg:flex-row p-4">
-        <nav className="lg:w-1/4 lg:min-w-[12rem] lg:max-w-[20rem] lg:flex-shrink-0 lg:pr-4 lg:sticky lg:top-0">
+      <DocsLayout items={breadcrumbs}>
+        <div className="flex flex-col lg:flex-row">
+          <nav className="lg:w-1/4 lg:min-w-[12rem] lg:max-w-[20rem] lg:flex-shrink-0 lg:pr-4 lg:sticky lg:top-0">
           <button
             className="lg:hidden mb-2 flex items-center"
             onClick={() => setShowToc((v) => !v)}
@@ -137,12 +143,13 @@ export default function DocPage({ html, toc, title, topic }: DocProps) {
               </div>
             ))}
           </div>
-        </nav>
-        <article
-          className="prose docs-content flex-1"
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
-      </div>
+          </nav>
+          <article
+            className="prose docs-content flex-1"
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        </div>
+      </DocsLayout>
     </>
   );
 }
