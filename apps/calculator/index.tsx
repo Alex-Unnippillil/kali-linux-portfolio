@@ -6,6 +6,7 @@ import ModeSwitcher from './components/ModeSwitcher';
 import MemorySlots from './components/MemorySlots';
 import FormulaEditor from './components/FormulaEditor';
 import Tape from './components/Tape';
+import useRegisterShortcuts from '../../hooks/useShortcuts';
 
 export default function Calculator() {
   const HISTORY_LIMIT = 10;
@@ -25,6 +26,11 @@ export default function Calculator() {
 
   const btnCls =
     'btn min-h-12 w-12 transition-transform duration-150 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-white';
+
+  useRegisterShortcuts([
+    { description: 'Toggle history', keys: 'Alt+H' },
+    { description: 'Toggle formulas', keys: 'Alt+F' },
+  ]);
 
   useEffect(() => {
     let evaluate: any;
