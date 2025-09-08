@@ -9,7 +9,6 @@ jest.mock('react-draggable', () => ({
 
 describe('Window snap interactions', () => {
   it('shows snap preview near left edge and snaps on stop', () => {
-    jest.useFakeTimers();
     const ref = React.createRef<any>();
     render(
       <Window ref={ref}>
@@ -33,7 +32,6 @@ describe('Window snap interactions', () => {
 
     act(() => {
       ref.current.handleDrag();
-      jest.runAllTimers();
     });
     expect(screen.getByTestId('snap-preview')).toBeInTheDocument();
 
@@ -42,7 +40,40 @@ describe('Window snap interactions', () => {
     });
     expect(winEl.style.width).toBe('50%');
     expect(winEl.style.height).toBe('100%');
-    jest.useRealTimers();
+  });
+
+  it('snaps to center third when dragged to middle', () => {
+    const ref = React.createRef<any>();
+    render(
+      <Window ref={ref}>
+        <div>content</div>
+      </Window>
+    );
+
+    const winEl = screen.getByText('content').parentElement as HTMLElement;
+    const third = window.innerWidth / 3;
+    winEl.getBoundingClientRect = () => ({
+      left: third + 10,
+      top: 100,
+      right: third + 110,
+      bottom: 200,
+      width: 100,
+      height: 100,
+      x: third + 10,
+      y: 100,
+      toJSON: () => {},
+    } as any);
+
+    act(() => {
+      ref.current.handleDrag();
+    });
+
+    act(() => {
+      ref.current.handleStop();
+    });
+
+    expect(winEl.style.width).toBe('33.33%');
+    expect(winEl.style.height).toBe('100%');
   });
 
   it('snaps right with Alt+ArrowRight', () => {
