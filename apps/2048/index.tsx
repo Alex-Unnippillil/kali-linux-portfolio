@@ -6,9 +6,9 @@ import Replays from './replays';
 import ReactGA from 'react-ga4';
 import { useSwipeable } from 'react-swipeable';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
-import { getDailySeed, currentDateString } from '../../utils/dailySeed';
-import copyToClipboard from '../../utils/clipboard';
-import useToast from '../../hooks/useToast';
+import usePersistentState from '../../hooks/usePersistentState';
+import { getDailySeed } from '../../utils/dailySeed';
+
 import { isBrowser } from '@/utils/env';
 import {
   moveLeft,
@@ -92,7 +92,9 @@ const Page2048 = () => {
   const [won, setWon] = useState(false);
   const [lost, setLost] = useState(false);
   const [history, setHistory] = useState<number[][][]>([]);
-  const [showReplays, setShowReplays] = useState(false);
+  const [playerName, setPlayerName] = usePersistentState<string>('leaderboard:name', '');
+  const [leaderboard, setLeaderboard] = useState<{ username: string; score: number }[]>([]);
+  const [lbError, setLbError] = useState(false);
 
 
   useEffect(() => {
@@ -200,13 +202,24 @@ const Page2048 = () => {
     resetTimer();
   }, [resetTimer]);
 
-  const handleShare = useCallback(async () => {
-    const date = currentDateString();
-    const url = `${window.location.origin}${window.location.pathname}?seed=${seedStr}`;
-    const summary = `2048 ${date} Score:${highest} Moves:${moves.length} Seed:${seedStr} ${url}`;
-    const ok = await copyToClipboard(summary);
-    toast(ok ? 'Copied to clipboard!' : 'Copy failed');
-  }, [seedStr, highest, moves, toast]);
+  const loadLeaderboard = useCallback(async () => {
+    try {
+      setLbError(false);
+      const res = await fetch('/api/leaderboard/top?game=2048&limit=10');
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+      if (Array.isArray(data)) setLeaderboard(data);
+      else setLeaderboard([]);
+    } catch {
+      setLbError(true);
+      setLeaderboard([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadLeaderboard();
+  }, [loadLeaderboard]);
+
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -268,30 +281,29 @@ const Page2048 = () => {
 
   useEffect(() => {
     if (won || lost) {
-      const frames = [
-        ...history.map((h) => h.map((row) => [...row])),
-        board.map((row) => [...row]),
-      ];
-      saveReplay({
-        date: new Date().toISOString(),
-        moves,
-        boardType,
-        hard,
-        frames,
-      });
+      let name = playerName;
+      if (!name && isBrowser()) {
+        name = window.prompt('Enter your name')?.trim() || '';
+        setPlayerName(name);
+      }
+      saveReplay({ date: new Date().toISOString(), moves, boardType, hard });
+
       fetch('/api/leaderboard/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           game: '2048',
-          username: 'Anonymous',
+          username: name || 'Anonymous',
           score: highest,
         }),
-      }).catch(() => {
-        // ignore network errors
-      });
+      })
+        .then(() => loadLeaderboard())
+        .catch(() => {
+          // ignore network errors
+        });
     }
-  }, [won, lost, moves, boardType, hard, highest, history, board]);
+  }, [won, lost, moves, boardType, hard, highest, playerName, setPlayerName, loadLeaderboard]);
+
 
   return (
     <div {...swipeHandlers} className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
@@ -328,6 +340,12 @@ const Page2048 = () => {
           <option value="classic">Classic</option>
           <option value="hex">Hex 2048</option>
         </select>
+        <input
+          className="text-black px-1 rounded"
+          placeholder="Name"
+          value={playerName}
+          onChange={(e) => setPlayerName(e.target.value)}
+        />
         <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={close}>
           Close
         </button>
@@ -350,7 +368,23 @@ const Page2048 = () => {
       {(won || lost) && (
         <div className="mt-4 text-xl">{won ? 'You win!' : 'Game over'}</div>
       )}
-      {showReplays && <Replays onClose={() => setShowReplays(false)} />}
+      <div className="mt-4">
+        <h2 className="font-bold">Leaderboard</h2>
+        {lbError ? (
+          <div className="text-sm">Failed to load leaderboard</div>
+        ) : leaderboard.length === 0 ? (
+          <div className="text-sm">No scores yet</div>
+        ) : (
+          <ol className="list-decimal list-inside">
+            {leaderboard.map((entry, i) => (
+              <li key={i}>
+                {entry.username}: {entry.score}
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+
     </div>
   );
 };
