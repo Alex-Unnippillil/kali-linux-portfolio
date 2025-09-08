@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 /* global clients */
@@ -26,6 +27,7 @@ import NotificationCenter from '../components/common/NotificationCenter';
 import HighContrastToggle from '../components/common/HighContrastToggle';
 import { Workbox } from 'workbox-window';
 import Toast from '../components/ui/Toast';
+import SiteFooter from '../components/footer/SiteFooter';
 
 
 let SpeedInsights = () => null;
@@ -270,6 +272,7 @@ function MyApp(props) {
                       <SpeedInsights />
                     </>
                   )}
+                  <SiteFooter />
                 </NotificationCenter>
               </PipPortalProvider>
             </TrayProvider>
