@@ -13,7 +13,7 @@ export interface PanelProfile {
   };
 }
 
-const bar = "#666";
+const bar = "var(--color-muted)";
 
 export const PANEL_PROFILES: readonly PanelProfile[] = [
   {

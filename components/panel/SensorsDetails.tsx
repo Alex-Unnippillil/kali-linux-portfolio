@@ -45,7 +45,8 @@ function HistoryGraph({ data, label }: { data: number[]; label: string }) {
 
     if (data.length > 0) {
       const maxVal = Math.max(...data);
-      ctx.strokeStyle = '#00ff00';
+      const style = getComputedStyle(document.documentElement);
+      ctx.strokeStyle = style.getPropertyValue('--color-terminal');
       ctx.lineWidth = 2;
       ctx.beginPath();
       data.forEach((v, i) => {
@@ -57,7 +58,9 @@ function HistoryGraph({ data, label }: { data: number[]; label: string }) {
       ctx.stroke();
     }
 
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue(
+      '--color-text'
+    );
     ctx.font = '10px sans-serif';
     ctx.fillText(label, 4, 12);
   }, [data, label]);
