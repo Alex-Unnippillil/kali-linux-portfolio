@@ -1,0 +1,23 @@
+/* Styles for documentation footnotes */
+
+sup {
+  font-size: 0.75em;
+  vertical-align: super;
+}
+
+.footnote-ref {
+  text-decoration: none;
+}
+
+.footnote-ref:hover {
+  text-decoration: underline;
+}
+
+.footnote-backref {
+  margin-left: 0.25rem;
+  text-decoration: none;
+}
+
+.footnote-backref:hover {
+  text-decoration: underline;
+}
