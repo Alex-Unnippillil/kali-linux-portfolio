@@ -16,6 +16,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import { z } from "zod";
 
 export default function Settings() {
   const {
@@ -61,6 +62,8 @@ export default function Settings() {
   ];
 
   const changeBackground = (name: string) => setWallpaper(name);
+
+  const densitySchema = z.enum(["regular", "compact"]);
 
   const handleExport = async () => {
     const data = await exportSettingsData();
@@ -120,7 +123,7 @@ export default function Settings() {
     window.localStorage.clear();
     setAccent(defaults.accent);
     setWallpaper(defaults.wallpaper);
-    setDensity(defaults.density as any);
+    setDensity(densitySchema.parse(defaults.density));
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
@@ -255,7 +258,7 @@ export default function Settings() {
             <label className="mr-2 text-ubt-grey">Density:</label>
             <select
               value={density}
-              onChange={(e) => setDensity(e.target.value as any)}
+              onChange={(e) => setDensity(densitySchema.parse(e.target.value))}
               className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
             >
               <option value="regular">Regular</option>
