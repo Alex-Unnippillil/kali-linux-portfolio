@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Image from 'next/image';
 
 export interface AvatarProps {
   src?: string;
@@ -26,7 +27,7 @@ export default function Avatar({
 
   if (src && !error) {
     return (
-      <img
+      <Image
         src={src}
         alt={name}
         width={size}
