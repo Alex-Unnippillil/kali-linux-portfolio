@@ -18,6 +18,9 @@ class OSDService {
     if (!this.el) {
       this.el = document.createElement('div');
       this.el.dataset.osd = 'true';
+      this.el.setAttribute('role', 'status');
+      this.el.setAttribute('aria-live', 'polite');
+      this.el.setAttribute('aria-label', 'Notification');
       Object.assign(this.el.style, {
         position: 'fixed',
         top: '20px',

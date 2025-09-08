@@ -54,10 +54,14 @@ const Clipman: React.FC = () => {
       {menu && (
         <ul
           data-testid="context-menu"
+          role="menu"
+          aria-label="Clipboard actions"
           className="absolute bg-gray-800 text-white p-2 z-50"
           style={{ top: menu.y, left: menu.x }}
         >
           <li
+            role="menuitem"
+            tabIndex={-1}
             className="cursor-pointer px-2 py-1 hover:bg-gray-700"
             onClick={paste}
           >

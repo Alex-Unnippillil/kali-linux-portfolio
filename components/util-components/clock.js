@@ -105,6 +105,7 @@ export default function Clock({ onlyTime, onlyDay }) {
       {open && (
         <div
           role="menu"
+          aria-label="Clock menu"
           className="absolute right-0 mt-2 w-48 bg-neutral-900 text-white rounded shadow-lg z-50"
         >
           <button

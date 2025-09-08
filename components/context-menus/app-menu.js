@@ -40,6 +40,7 @@ function AppMenu(props) {
         <div
             id="app-menu"
             role="menu"
+            aria-label="App context menu"
             aria-hidden={!props.active}
             ref={menuRef}
             onKeyDown={handleKeyDown}
