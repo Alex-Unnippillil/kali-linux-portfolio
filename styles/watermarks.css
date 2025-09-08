@@ -1,0 +1,6 @@
+.dragon-watermark {
+  background: url('/images/dragon-watermark.png') no-repeat center;
+  background-size: contain;
+  opacity: 0.05;
+  pointer-events: none;
+}
