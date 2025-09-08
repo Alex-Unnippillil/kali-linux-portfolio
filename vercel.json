@@ -1,7 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "speedInsights": { "source": "auto" },
   "functions": {
     "pages/api/**/*.{js,ts}": { "runtime": "@vercel/node@5.3.21" },
     "app/api/**/route.{js,ts}": { "runtime": "@vercel/node@5.3.21" }
