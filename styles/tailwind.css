@@ -9,6 +9,10 @@
   .transition-active {
     @apply transition ease-out duration-100;
   }
+  .focus-ring {
+    outline: var(--focus-outline-width) solid var(--focus-outline-color);
+    outline-offset: 2px;
+  }
 }
 
 @layer base {

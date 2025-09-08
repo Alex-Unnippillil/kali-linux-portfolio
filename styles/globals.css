@@ -16,7 +16,6 @@
   --color-border: #2a2e36; /* subtle borders */
   --color-terminal: #00ff00; /* terminal green */
   --color-dark: #0c0f12; /* card back */
-  --color-focus-ring: var(--color-accent);
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
   /* Toast bubble theme variables */
@@ -144,8 +143,7 @@ html[data-theme='matrix'] {
 }
 
 *:focus-visible {
-  outline: var(--focus-outline-width) solid var(--focus-outline-color);
-  outline-offset: 2px;
+  @apply focus-ring;
 }
 
 .notification-center {
