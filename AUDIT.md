@@ -1,98 +1,183 @@
 # Architecture Map
 
 ## Windowing System
-- `components/base/window.js` – class-based window component handling drag, snap and analytics reporting.
-- `src/wm/WindowSwitcher.tsx` – Alt+Tab overlay with keyboard navigation for open windows.
-- `src/wm/placement.ts` and `keybindingManager.ts` – helpers for window placement and shortcuts.
+- `components/base/window.js` – draggable, resizable window shell with analytics hooks.
+- `src/wm/WindowSwitcher.tsx` – Alt+Tab overlay for switching between open windows.
+- `src/wm/placement.ts` and `src/wm/keybindingManager.ts` – helpers for window placement and shortcuts.
 
 ## Dynamic App Loader
-- `utils/createDynamicApp.js` – wraps `next/dynamic` imports with error boundaries and retry UI.
-- `utils/prefetchDynamicImport.js` – network-aware prefetch helper limiting downloads to small bundles.
+- `utils/createDynamicApp.js` – wraps `next/dynamic` with error boundaries and retry UI.
+- `utils/prefetchDynamicImport.js` – HEAD-prefetch helper that skips large bundles.
 
 ## SEO / Meta
-- README references `components/SEO/Meta.js` for meta tags and JSON‑LD, but the file is absent, suggesting SEO handling is currently fragmented.
+- No central `components/SEO/Meta.js`; meta tags are scattered across pages.
 
 ## Service Worker & PWA
-- `worker/index.ts` – custom offline/cache logic and periodic sync prefetching.
-- `pages/_app.jsx` – registers the service worker and handles periodic sync permissions.
-- `next.config.js` – integrates `@ducanh2912/next-pwa` and sets build‑time CSP headers.
+- `worker/index.ts` – offline cache, periodicSync and custom fetch handlers.
+- `pages/_app.jsx` – registers the service worker and periodic sync permissions.
+- `next.config.js` – integrates `@ducanh2912/next-pwa` and precache manifest.
 
 ## Middleware & CSP
-- `middleware.ts` – locale redirects, runtime nonce generation, and Content‑Security‑Policy injection.
-- `next.config.js` – static security headers applied in production builds.
+- `middleware.ts` – locale redirect, nonce generation and CSP header injection.
+- `next.config.js` – additional static security headers.
 
 ## Tests & Verification
-- Unit tests under `__tests__/` run with Jest; Playwright E2E tests in `tests/`.
-- Accessibility tests configured in `pa11yci.json`.
-- Bundle size limits enforced by `bundle-budgets.json`.
+- Jest unit tests under `__tests__`; Playwright E2E tests in `tests/`.
+- `pa11yci.json` – accessibility scans with axe and HTMLCS.
+- `bundle-budgets.json` – per-chunk size limits enforced in CI.
 
 # Findings
 
-| # | Issue | Sev. | Effort | Impact |
-|---|-------|------|--------|--------|
-|1|CSP in `middleware.ts` uses `'unsafe-inline'`.|🔥 High|💡 S|💥 H|
-|2|CSP in `next.config.js` also uses `'unsafe-inline'`.|🔥 High|💡 M|💥 H|
-|3|No `worker-src` directive in CSP.|🔥 Med.|💡 S|💥 Med.|
-|4|Service worker prefetch list is hardcoded.|🔥 Med.|💡 M|💥 Med.|
-|5|SW `fetch` handler handles all methods.|🔥 Med.|💡 S|💥 Med.|
-|6|`manualRefresh` assumes registration is ready.|🔥 Low|💡 S|💥 Med.|
-|7|No user notice when a new SW takes control.|🔥 Med.|💡 M|💥 Med.|
-|8|Dynamic app loader logs only to console.|🔥 Med.|💡 S|💥 Med.|
-|9|Retry in loader reloads entire page.|🔥 Low|💡 S|💥 Med.|
-|10|Prefetch helper unused in loader.|🔥 Low|💡 S|💥 Low|
-|11|WindowSwitcher icons lack alt text.|🔥 Low|💡 S|💥 Med.|
-|12|WindowSwitcher lacks dialog roles.|🔥 Low|💡 S|💥 Low|
-|13|`window.js` remains class‑based JS.|🔥 Med.|💡 L|💥 H|
-|14|Event listeners in `window.js` managed manually.|🔥 Low|💡 M|💥 Med.|
-|15|Central SEO component missing.|🔥 Med.|💡 M|💥 H|
-|16|Bundle budgets ignore vendor chunk.|🔥 Low|💡 S|💥 Med.|
-|17|Accessibility script not part of verify pipeline.|🔥 Med.|💡 S|💥 Med.|
-|18|No Jest coverage for SW offline path.|🔥 Low|💡 M|💥 Med.|
-|19|SW prefetch failures are silent.|🔥 Low|💡 S|💥 Low|
-|20|`pa11yci.json` misses key routes.|🔥 Low|💡 S|💥 Med.|
+| # | Issue | Severity | Effort | Impact |
+|---|-------|----------|--------|--------|
+|1|Missing `worker-src` directive in CSP|High|S|High|
+|2|Placeholder domains (`example.com`) in CSP|Medium|S|Medium|
+|3|AdvancedTab CSP snippet still uses `'unsafe-inline'`|Medium|S|Medium|
+|4|Plugin manager iframe CSP uses `'unsafe-inline'`|High|M|High|
+|5|`manualRefresh` references `clients` in page context|Medium|S|Medium|
+|6|No user notification when new service worker installed|Medium|M|Medium|
+|7|Service worker `fetch` handles non‑GET requests|Medium|S|Medium|
+|8|Service worker caches cross-origin requests|High|S|High|
+|9|Hardcoded prefetch asset list in service worker|Medium|M|Medium|
+|10|Prefetch assets lack timeout/abort|Low|S|Low|
+|11|Dynamic app loader retry reloads entire page|Medium|M|Medium|
+|12|Dynamic loader failure not reported to analytics|Low|S|Low|
+|13|`prefetchDynamicImport` missing abort controller|Low|S|Low|
+|14|`pa11yci.json` hardcodes `http://localhost:3000`|Low|S|Low|
+|15|`bundle-budgets.json` not integrated in verify script|Medium|S|Medium|
+|16|Missing centralized SEO meta component|Medium|M|Medium|
+|17|Window component written in class-based JS|Low|L|Medium|
+|18|Window component relies on manual DOM queries|Medium|M|Medium|
+|19|AdvancedTab includes sample domain `example.com`|Low|S|Low|
+|20|No automated test for service worker offline fallback|Medium|M|Medium|
 
-### Suggested Diffs
+## Issue Details
 
-<details><summary>1. Remove `'unsafe-inline'` in middleware CSP</summary>
-
-```diff
---- a/middleware.ts
-+++ b/middleware.ts
-@@
--      `script-src 'self' 'unsafe-inline' 'nonce-${n}' https://vercel.live https://*.twitter.com https://*.twimg.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://sdk.scdn.co https://cdn.jsdelivr.net https://cdnjs.cloudflare.com`,
-+      `script-src 'self' 'nonce-${n}' https://vercel.live https://*.twitter.com https://*.twimg.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://sdk.scdn.co https://cdn.jsdelivr.net https://cdnjs.cloudflare.com`,
-```
-</details>
-
-<details><summary>2. Remove `'unsafe-inline'` in `next.config.js`</summary>
+<details><summary>1. Add `worker-src` to CSP</summary>
 
 ```diff
---- a/next.config.js
-+++ b/next.config.js
-@@
--  "script-src 'self' 'unsafe-inline' https://vercel.live https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://sdk.scdn.co",
-+  "script-src 'self' https://vercel.live https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://sdk.scdn.co",
-```
-</details>
-
-<details><summary>3. Add `worker-src` directive</summary>
-
-```diff
---- a/middleware.ts
-+++ b/middleware.ts
+--- middleware.ts
 @@
 -    "form-action 'self'"
 +    "form-action 'self'",
 +    "worker-src 'self'"
-     ].join('; ');
+   ].join('; ');
 ```
+
 </details>
 
-<details><summary>4. Generate SW asset list</summary>
+<details><summary>2. Remove placeholder domains from CSP</summary>
 
 ```diff
---- a/worker/index.ts
-+++ b/worker/index.ts
+--- middleware.ts
+@@
+-    "connect-src 'self' https://example.com https://*.twitter.com https://*.twimg.com https://*.x.com https://*.google.com https://stackblitz.com",
++    "connect-src 'self' https://*.twitter.com https://*.twimg.com https://*.x.com https://*.google.com https://stackblitz.com",
+@@
+-    "frame-src 'self' https://vercel.live https://stackblitz.com https://*.google.com https://*.twitter.com https://*.x.com https://www.youtube-nocookie.com https://open.spotify.com https://react.dev https://example.com",
++    "frame-src 'self' https://vercel.live https://stackblitz.com https://*.google.com https://*.twitter.com https://*.x.com https://www.youtube-nocookie.com https://open.spotify.com https://react.dev",
+```
+
+</details>
+
+<details><summary>3. Update AdvancedTab snippet to drop `'unsafe-inline'`</summary>
+
+```diff
+--- apps/settings/components/AdvancedTab.tsx
+@@
+-  "script-src 'self' 'unsafe-inline' https://vercel.live https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://sdk.scdn.co",
++  "script-src 'self' 'nonce-<nonce>' https://vercel.live https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://sdk.scdn.co",
+```
+
+</details>
+
+<details><summary>4. Restrict plugin manager iframe CSP</summary>
+
+```diff
+--- components/apps/plugin-manager/index.tsx
+@@
+-      const html = `<!DOCTYPE html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; connect-src 'none';"></head><body><script>${manifest.code}<\\/script></body></html>`;
++      const html = `<!DOCTYPE html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; connect-src 'none';"></head><body><script src="plugin.js"><\\/script></body></html>`;
++      const scriptBlob = new Blob([manifest.code], { type: 'text/javascript' });
++      const scriptURL = URL.createObjectURL(scriptBlob);
++      const sanitized = html.replace('plugin.js', scriptURL);
+```
+
+</details>
+
+<details><summary>5. Guard `manualRefresh` against missing registration</summary>
+
+```diff
+--- pages/_app.jsx
+@@
+-          window.manualRefresh = () => {
+-            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+-            clients.claim();
+-          };
++          window.manualRefresh = () => {
++            if (registration.waiting) {
++              registration.waiting.postMessage({ type: 'SKIP_WAITING' });
++            }
++          };
+```
+
+</details>
+
+<details><summary>6. Notify users when a new service worker is installed</summary>
+
+```diff
+--- pages/_app.jsx
+@@
+-              if (
+-                installing.state === 'installed' &&
+-                navigator.serviceWorker.controller
+-              ) {
+-                registration.update();
+-              }
++              if (
++                installing.state === 'installed' &&
++                navigator.serviceWorker.controller
++              ) {
++                alert('A new version is available. Refresh to update.');
++              }
+             });
+```
+
+</details>
+
+<details><summary>7. Ignore non‑GET requests in service worker</summary>
+
+```diff
+--- worker/index.ts
+@@
+ self.addEventListener("fetch", (event: FetchEvent) => {
+   const { request } = event;
+-  const url = new URL(request.url);
+-
+-  if (url.pathname.startsWith("/apps/")) {
++  const url = new URL(request.url);
++  if (request.method !== "GET") return;
++  if (url.pathname.startsWith("/apps/")) {
+```
+
+</details>
+
+<details><summary>8. Restrict caching to same-origin requests</summary>
+
+```diff
+--- worker/index.ts
+@@
+-  if (request.mode === "navigate") {
++  if (url.origin !== self.location.origin) return;
++  if (request.mode === "navigate") {
+```
+
+</details>
+
+<details><summary>9. Load prefetch asset list from build manifest</summary>
+
+```diff
+--- worker/index.ts
 @@
 -const ASSETS = [
 -  "/apps/weather.js",
@@ -109,319 +194,201 @@
 -  "/offline.js",
 -  "/manifest.webmanifest",
 -];
-+import precacheManifest from '../precache-manifest.json';
-+const ASSETS = precacheManifest.map(({ url }) => url);
++const ASSETS: string[] = (self as any).__WB_MANIFEST || [];
 ```
+
 </details>
 
-<details><summary>5. Restrict SW fetch to GET</summary>
+<details><summary>10. Abort long-running prefetch requests</summary>
 
 ```diff
---- a/worker/index.ts
-+++ b/worker/index.ts
+--- worker/index.ts
 @@
--  const { request } = event;
--  const url = new URL(request.url);
-+  const { request } = event;
-+  if (request.method !== 'GET') return;
-+  const url = new URL(request.url);
+-        const response = await fetch(url, { cache: "no-cache" });
++        const controller = new AbortController();
++        const response = await fetch(url, { cache: "no-cache", signal: controller.signal });
++        setTimeout(() => controller.abort(), 10000);
 ```
+
 </details>
 
-<details><summary>6. Await service worker readiness</summary>
+<details><summary>11. Retry dynamic app loading without full page reload</summary>
 
 ```diff
---- a/pages/_app.jsx
-+++ b/pages/_app.jsx
+--- utils/createDynamicApp.js
 @@
--          const registration = await navigator.serviceWorker.register('/service-worker.js');
--
--          window.manualRefresh = () => {
--            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
--            clients.claim();
--          };
-+          const registration = await navigator.serviceWorker.register('/service-worker.js');
-+          await navigator.serviceWorker.ready;
-+          window.manualRefresh = () => {
-+            registration.waiting?.postMessage({ type: 'SKIP_WAITING' });
-+            clients.claim();
-+          };
-```
-</details>
-
-<details><summary>7. Notify users of SW updates</summary>
-
-```diff
---- a/pages/_app.jsx
-+++ b/pages/_app.jsx
-@@
-           registration.addEventListener('updatefound', () => {
-             const installing = registration.installing;
-             if (!installing) return;
-             installing.addEventListener('statechange', () => {
-               if (
-                 installing.state === 'installed' &&
-                 navigator.serviceWorker.controller
-               ) {
-                 registration.update();
-               }
-             });
-           });
-+
-+          registration.addEventListener('controllerchange', () => {
-+            window.dispatchEvent(new Event('sw-update'));
-+          });
-```
-</details>
-
-<details><summary>8. Structured error logging in loader</summary>
-
-```diff
---- a/utils/createDynamicApp.js
-+++ b/utils/createDynamicApp.js
-@@
--        logEvent({ category: 'Application', action: `Loaded ${title}` });
--        return mod.default;
--      } catch (err) {
--          console.error(`Failed to load ${title}`, err);
-+        logEvent({ category: 'Application', action: `Loaded ${title}` });
-+        return mod.default;
-+      } catch (err) {
-+          logEvent({ category: 'Application', action: `Load failed: ${title}`, label: err?.message });
-+          console.error(`Failed to load ${title}`, err);
-```
-</details>
-
-<details><summary>9. Retry without full reload</summary>
-
-```diff
---- a/utils/createDynamicApp.js
-+++ b/utils/createDynamicApp.js
-@@
--          const Fallback = () => {
 -            const handleRetry = () => window.location.reload();
-+          const Fallback = () => {
-+            const handleRetry = () => DynamicApp.preload?.();
-             return (
++            const handleRetry = () => DynamicApp.preload();
 ```
+
 </details>
 
-<details><summary>10. Use prefetch helper</summary>
+<details><summary>12. Report dynamic loader failures to analytics</summary>
 
 ```diff
---- a/utils/createDynamicApp.js
-+++ b/utils/createDynamicApp.js
+--- utils/createDynamicApp.js
 @@
--import { logEvent } from './analytics';
-+import { logEvent } from './analytics';
-+import prefetchDynamicImport from './prefetchDynamicImport';
-@@
-   const DynamicApp = dynamic(
-@@
-   );
-+  if (typeof window !== 'undefined') {
-+    prefetchDynamicImport(DynamicApp.preload, `/apps/${id}.js`);
-+  }
+-          console.error(`Failed to load ${title}`, err);
++          console.error(`Failed to load ${title}`, err);
++          logEvent({ category: 'Application', action: `Error ${title}` });
 ```
+
 </details>
 
-<details><summary>11. Alt text for WindowSwitcher icons</summary>
+<details><summary>13. Use `AbortController` in `prefetchDynamicImport`</summary>
 
 ```diff
---- a/src/wm/WindowSwitcher.tsx
-+++ b/src/wm/WindowSwitcher.tsx
+--- utils/prefetchDynamicImport.js
 @@
--            <img src={win.icon} alt="" style={{ width: '32px', height: '32px' }} />
-+            <img src={win.icon} alt={`${win.title} icon`} style={{ width: '32px', height: '32px' }} />
-```
-</details>
-
-<details><summary>12. Dialog semantics for WindowSwitcher</summary>
-
-```diff
---- a/src/wm/WindowSwitcher.tsx
-+++ b/src/wm/WindowSwitcher.tsx
+-  fetch(url, { method: 'HEAD' })
++  const controller = new AbortController();
++  fetch(url, { method: 'HEAD', signal: controller.signal })
 @@
--      <div
--        className="window-switcher-overlay"
-+      <div
-+        className="window-switcher-overlay"
-+        role="dialog"
-+        aria-modal="true"
-         style={{
+-    .catch(() => schedulePrefetch(prefetchFn));
++    .catch(() => schedulePrefetch(prefetchFn));
++  setTimeout(() => controller.abort(), 5000);
 ```
+
 </details>
 
-<details><summary>13. Convert window component to functional TypeScript</summary>
+<details><summary>14. Parameterize base URL in pa11y config</summary>
 
 ```diff
--// components/base/window.js
--class Window extends Component {
--  // ...
--}
-+// components/base/window.tsx
-+export function Window(props: WindowProps) {
-+  const [state, setState] = useState(/* ... */);
-+  // ...
-+}
+--- pa11yci.json
+@@
+-    "http://localhost:3000/",
+-    "http://localhost:3000/apps",
++    "${BASE_URL}/",
++    "${BASE_URL}/apps",
 ```
+
 </details>
 
-<details><summary>14. Manage listeners with `useEffect`</summary>
+<details><summary>15. Enforce bundle budgets in verification script</summary>
 
 ```diff
--  componentDidMount() {
--    window.addEventListener('resize', this.debouncedResizeBoundries);
--    // ...
--  }
--  componentWillUnmount() {
--    window.removeEventListener('resize', this.debouncedResizeBoundries);
--  }
-+  useEffect(() => {
-+    window.addEventListener('resize', debouncedResizeBoundries);
-+    return () => window.removeEventListener('resize', debouncedResizeBoundries);
-+  }, [debouncedResizeBoundries]);
+--- package.json
+@@
+-    "verify:all": "node --import tsx/esm scripts/verify.mjs",
++    "verify:all": "node --import tsx/esm scripts/verify.mjs && yarn check-budgets",
 ```
+
 </details>
 
-<details><summary>15. Central SEO meta component</summary>
+<details><summary>16. Add central SEO `Meta` component</summary>
 
 ```diff
 +// components/SEO/Meta.tsx
-+import Head from 'next/head';
-+
-+export default function Meta({ title, description, url }) {
++export default function Meta({ title, description }: { title: string; description: string }) {
 +  return (
-+    <Head>
++    <>
 +      <title>{title}</title>
 +      <meta name="description" content={description} />
-+      <link rel="canonical" href={url} />
-+      <meta property="og:title" content={title} />
-+      <meta property="og:description" content={description} />
-+      <meta property="og:url" content={url} />
-+    </Head>
++    </>
 +  );
 +}
 ```
+
 </details>
 
-<details><summary>16. Expand bundle budgets</summary>
+<details><summary>17. Convert window component to TypeScript function</summary>
 
 ```diff
---- a/bundle-budgets.json
-+++ b/bundle-budgets.json
+--- components/base/window.js
++++ components/base/Window.tsx
 @@
-   "^chunks/framework": 300000,
--  "^chunks/main-app": 350000
-+  "^chunks/main-app": 350000,
-+  "^chunks/react": 150000
- }
-```
-</details>
-
-<details><summary>17. Include a11y in verify pipeline</summary>
-
-```diff
---- a/package.json
-+++ b/package.json
+-import { isBrowser } from '@/utils/env';
+-import React, { Component } from 'react';
++import { isBrowser } from '@/utils/env';
++import { useEffect, useRef, useState } from 'react';
 @@
--    "verify:all": "node --import tsx/esm scripts/verify.mjs",
-+    "verify:all": "node --import tsx/esm scripts/verify.mjs && yarn a11y",
+-export class Window extends Component {
+-    static defaultProps = { isFocused: true, zIndex: 1 };
+-    constructor(props) { /* ... */ }
+-    componentDidMount() { /* ... */ }
+-    /* ... */
+-}
++export function Window(props: WindowProps) {
++  const rootRef = useRef<HTMLDivElement>(null);
++  const [state, setState] = useState({ /* ... */ });
++  useEffect(() => { /* mount logic */ }, []);
++  return <div ref={rootRef}>{props.children}</div>;
++}
 ```
+
 </details>
 
-<details><summary>18. Jest test for SW offline path</summary>
+<details><summary>18. Replace manual DOM queries with refs</summary>
 
 ```diff
-+// __tests__/service-worker.offline.test.ts
-+import { readFileSync } from 'fs';
-+
-+test('offline fallback is referenced', () => {
-+  const sw = readFileSync('worker/index.ts', 'utf8');
-+  expect(sw).toContain('/offline.html');
+--- components/base/window.js
+@@
+-        const root = document.getElementById(this.id);
++        const root = this.rootRef.current;
+```
+
+</details>
+
+<details><summary>19. Drop `example.com` from domain list</summary>
+
+```diff
+--- apps/settings/components/AdvancedTab.tsx
+@@
+-  { domain: "example.com", allowed: true, purpose: "Chrome demo" },
+```
+
+</details>
+
+<details><summary>20. Add offline fallback test</summary>
+
+```diff
++// tests/offline.spec.ts
++import { test, expect } from '@playwright/test';
++test('offline fallback renders', async ({ page }) => {
++  await page.goto('/offline.html');
++  await expect(page.locator('body')).toContainText('Offline');
 +});
 ```
-</details>
 
-<details><summary>19. Log SW prefetch errors</summary>
-
-```diff
---- a/worker/index.ts
-+++ b/worker/index.ts
-@@
--      } catch {
--        // Ignore individual failures
--      }
-+      } catch (err) {
-+        console.warn('SW prefetch failed', url, err);
-+      }
-     }),
-```
-</details>
-
-<details><summary>20. Add route to `pa11yci.json`</summary>
-
-```diff
---- a/pa11yci.json
-+++ b/pa11yci.json
-@@
-     "http://localhost:3000/apps/todoist",
-+    "http://localhost:3000/daily-quote"
-   ],
-```
 </details>
 
 # Milestones
 
-## Milestone 1 – Security & Reliability
-**Scope:** Issues 1–7, 16, 19.
+## Milestone 1 – Security & CSP
+- [ ] Issues 1–5, 14, 15, 19
+- **Exit check:** production build sends CSP without `example.com`, includes `worker-src`, and `yarn verify:all` passes including budgets.
 
-**Acceptance Criteria**
-- CSP headers contain no `'unsafe-inline'` and include `worker-src`.
-- Service worker loads asset list from manifest and handles non‑GET requests.
-- Bundle budget check passes with new vendor rule.
-- Prefetch failures logged in development.
+## Milestone 2 – PWA & Performance
+- [ ] Issues 6–10, 20
+- **Exit check:** service worker passes manual update test, offline test succeeds, and no non‑GET or cross-origin requests cached.
 
-**Exit Checks**
-- `curl -I` shows updated CSP.
-- `yarn check-budgets` succeeds.
-- Offline navigation works after `yarn build && yarn start` and logs on failures.
-
-## Milestone 2 – UX & Accessibility
-**Scope:** Issues 7, 10–12, 15, 20.
-
-**Acceptance Criteria**
-- WindowSwitcher announces icons and acts as a modal dialog.
-- Meta component applied to main pages with correct tags.
-- pa11y covers the new route and passes in default & high‑contrast modes.
-
-**Exit Checks**
-- `yarn a11y` reports zero violations.
-- Manual test shows SW update toast when a new worker activates.
-- `View Source` includes canonical and OG meta tags.
-
-## Milestone 3 – Maintainability & Testing
-**Scope:** Issues 8–9, 13–14, 17–18.
-
-**Acceptance Criteria**
-- Dynamic app loader logs structured errors and retries without page reload.
-- Window component rewritten to functional TypeScript with hook‑based listeners.
-- `verify:all` runs unit, a11y and bundle checks.
-- New Jest test passes and increases coverage.
-
-**Exit Checks**
-- `yarn verify:all` succeeds.
-- `git grep class Window` returns no matches in `components/base`.
-- Jest coverage report includes `service-worker.offline.test.ts`.
+## Milestone 3 – UX & Maintainability
+- [ ] Issues 11–13, 16–18
+- **Exit check:** dynamic apps retry without reload, Meta component used by pages, window refactor compiles under `tsc`.
 
 # Risk Log
-- Removing `'unsafe-inline'` may break inline scripts; audit all `<Script>` usages.
-- Service worker refactor could invalidate caches for existing users.
-- Converting the window component may introduce regression in drag/snap behaviors; requires thorough manual testing.
-- Expanding test suite increases CI time; consider parallelization.
 
-# How to Verify
-1. `yarn lint`
-2. `yarn test`
-3. `yarn a11y`
-4. `yarn check-budgets`
+| Risk | Mitigation |
+|------|------------|
+| Removing domains from CSP could break embedded content | Verify external embeds after each change |
+| Dynamic import retries may still fail on network errors | Log errors and surface to user |
+| Window refactor may introduce regressions | Convert incrementally and add tests |
+
+# How to verify
+
+```bash
+# install deps
+corepack enable && yarn install
+
+# type checking and lint
+yarn typecheck
+
+# run unit tests
+yarn test
+
+# accessibility scan
+BASE_URL=http://localhost:3000 yarn a11y
+
+# bundle size budgets
+yarn check-budgets
+```
