@@ -2,6 +2,7 @@ import React from 'react';
 import Callout from '../components/ui/Callout';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
+import ImageWizard from '../components/downloads/ImageWizard';
 
 import * as Installer from '../content/get-kali/installer.mdx';
 import * as VMs from '../content/get-kali/vms.mdx';
@@ -51,6 +52,7 @@ const GetKali: React.FC = () => (
   <>
     <Header />
     <main className="p-4">
+      <ImageWizard />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {platforms.map(({ slug, title, summary, badges, url }) => (
           <div key={slug} className="border rounded p-4 flex flex-col">
