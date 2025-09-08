@@ -1,7 +1,17 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import usePersistentState from "../../hooks/usePersistentState";
+import usePersistentState from '../../hooks/usePersistentState';
+
+type KeyAction = 'up' | 'down' | 'left' | 'right' | 'action' | 'pause';
+type Keymap = Record<KeyAction, string>;
+
+interface Props {
+  onApplyKeymap?: (map: Keymap) => void;
+  getSnapshot?: () => unknown;
+  loadSnapshot?: (data: unknown) => void;
+  currentScore?: number;
+}
 
 /**
  * Generic game settings panel providing common functionality for browser games.
@@ -15,26 +25,26 @@ export default function GameSettingsPanel({
   getSnapshot,
   loadSnapshot,
   currentScore,
-}) {
+}: Props) {
   // --- Controls -----------------------------------------------------------
-  const [keymap, setKeymap] = usePersistentState("game-keymap", {
-    up: "ArrowUp",
-    down: "ArrowDown",
-    left: "ArrowLeft",
-    right: "ArrowRight",
-    action: "Space",
-    pause: "Escape",
+  const [keymap, setKeymap] = usePersistentState<Keymap>('game-keymap', {
+    up: 'ArrowUp',
+    down: 'ArrowDown',
+    left: 'ArrowLeft',
+    right: 'ArrowRight',
+    action: 'Space',
+    pause: 'Escape',
   });
-  const [waitingFor, setWaitingFor] = useState(null);
+  const [waitingFor, setWaitingFor] = useState<KeyAction | null>(null);
 
   const assignKey = useCallback(
-    (e) => {
+    (e: KeyboardEvent) => {
       if (!waitingFor) return;
       e.preventDefault();
       setKeymap({ ...keymap, [waitingFor]: e.key });
       setWaitingFor(null);
     },
-    [waitingFor, keymap, setKeymap]
+    [waitingFor, keymap, setKeymap],
   );
 
   useEffect(() => {
@@ -50,13 +60,13 @@ export default function GameSettingsPanel({
 
   const [gamepadConnected, setGamepadConnected] = useState(false);
   useEffect(() => {
-    const connect = () => setGamepadConnected(true);
-    const disconnect = () => setGamepadConnected(false);
-    window.addEventListener("gamepadconnected", connect);
-    window.addEventListener("gamepaddisconnected", disconnect);
+    const connect = (_e: GamepadEvent) => setGamepadConnected(true);
+    const disconnect = (_e: GamepadEvent) => setGamepadConnected(false);
+    window.addEventListener('gamepadconnected', connect);
+    window.addEventListener('gamepaddisconnected', disconnect);
     return () => {
-      window.removeEventListener("gamepadconnected", connect);
-      window.removeEventListener("gamepaddisconnected", disconnect);
+      window.removeEventListener('gamepadconnected', connect);
+      window.removeEventListener('gamepaddisconnected', disconnect);
     };
   }, []);
 
@@ -77,39 +87,39 @@ export default function GameSettingsPanel({
 
   const loadSnapshotClick = () => {
     if (loadSnapshot) {
-      const data = window.localStorage.getItem("game-snapshot");
+      const data = window.localStorage.getItem('game-snapshot');
       if (data) loadSnapshot(JSON.parse(data));
     }
   };
 
-  const [highScore, setHighScore] = usePersistentState("game-highscore", 0);
+  const [highScore, setHighScore] = usePersistentState<number>('game-highscore', 0);
   useEffect(() => {
     if (typeof currentScore === "number" && currentScore > highScore) {
       setHighScore(currentScore);
     }
   }, [currentScore, highScore, setHighScore]);
 
-  const [achievements, setAchievements] = usePersistentState(
-    "game-achievements",
-    []
+  const [achievements, setAchievements] = usePersistentState<string[]>(
+    'game-achievements',
+    [],
   );
-  const unlockAchievement = (name) => {
+  const unlockAchievement = (name: string) => {
     setAchievements((a) => (a.includes(name) ? a : [...a, name]));
   };
 
   // --- Display -----------------------------------------------------------
-  const [palette, setPalette] = usePersistentState("game-palette", "default");
-  const [highContrast, setHighContrast] = usePersistentState(
-    "game-high-contrast",
-    false
+  const [palette, setPalette] = usePersistentState<string>('game-palette', 'default');
+  const [highContrast, setHighContrast] = usePersistentState<boolean>(
+    'game-high-contrast',
+    false,
   );
-  const [screenShake, setScreenShake] = usePersistentState(
-    "game-screen-shake",
-    true
+  const [screenShake, setScreenShake] = usePersistentState<boolean>(
+    'game-screen-shake',
+    true,
   );
 
   // --- Input Latency Tester ---------------------------------------------
-  const [latency, setLatency] = useState(null);
+  const [latency, setLatency] = useState<number | null>(null);
   const startLatencyTest = () => {
     const start = performance.now();
     const handler = () => {
@@ -140,14 +150,15 @@ export default function GameSettingsPanel({
         <h3>Gameplay</h3>
         <label className="block">
           Speed:
-          <input
-            type="range"
-            min="0.5"
-            max="2"
-            step="0.5"
-            value={speed}
-            onChange={(e) => setSpeed(parseFloat(e.target.value))}
-          />
+            <input
+              type="range"
+              min="0.5"
+              max="2"
+              step="0.5"
+              value={speed}
+              onChange={(e) => setSpeed(parseFloat(e.target.value))}
+              aria-label="Speed"
+            />
           <span className="ml-2">{speed.toFixed(1)}x</span>
         </label>
         <button onClick={toggleMute} className="mt-2">
@@ -183,19 +194,21 @@ export default function GameSettingsPanel({
           </select>
         </label>
         <label className="flex items-center gap-2 mb-2">
-          <input
-            type="checkbox"
-            checked={highContrast}
-            onChange={(e) => setHighContrast(e.target.checked)}
-          />
+            <input
+              type="checkbox"
+              checked={highContrast}
+              onChange={(e) => setHighContrast(e.target.checked)}
+              aria-label="High Contrast"
+            />
           High Contrast
         </label>
         <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={screenShake}
-            onChange={(e) => setScreenShake(e.target.checked)}
-          />
+            <input
+              type="checkbox"
+              checked={screenShake}
+              onChange={(e) => setScreenShake(e.target.checked)}
+              aria-label="Screen Shake"
+            />
           Screen Shake
         </label>
       </section>

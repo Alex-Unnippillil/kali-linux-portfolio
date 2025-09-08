@@ -2,6 +2,7 @@
 
 import { isBrowser } from '@/utils/env';
 import { useState, useEffect } from 'react';
+import { loadFromStorage, saveToStorage } from '../utils/persistent';
 import { migrate, settings } from '../lib/migrations';
 import { logEvent } from '../utils/analytics';
 
@@ -32,13 +33,7 @@ export default function usePersistentState<T>(
         window.localStorage.setItem('settings.version', String(settings.version));
       }
 
-      const stored = window.localStorage.getItem(key);
-      if (stored !== null) {
-        const parsed = JSON.parse(stored);
-        if (!validator || validator(parsed)) {
-          return parsed as T;
-        }
-      }
+      return loadFromStorage<T>(key, getInitial(), validator);
     } catch {
       // ignore parsing errors and fall back
     }
@@ -46,11 +41,7 @@ export default function usePersistentState<T>(
   });
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem(key, JSON.stringify(state));
-    } catch {
-      // ignore write errors
-    }
+    saveToStorage(key, state);
   }, [key, state]);
 
   const reset = () => setState(getInitial());

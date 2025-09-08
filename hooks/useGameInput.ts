@@ -11,13 +11,25 @@ const DEFAULT_MAP = {
   right: 'ArrowRight',
   action: 'Space',
   pause: 'Escape',
-};
+} as const;
+
+type Action = keyof typeof DEFAULT_MAP;
+
+interface InputEvent {
+  action: Action;
+  type: 'keydown' | 'keyup';
+}
+
+interface Options {
+  onInput?: (event: InputEvent) => void;
+  game?: string;
+}
 
 // Keyboard input handler that respects user remapping. It emits high level
 // actions like `up`/`down`/`pause` instead of raw keyboard events. A `game`
 // identifier can be provided to scope bindings per game.
-export default function useGameInput({ onInput, game } = {}) {
-  const mapRef = useRef(DEFAULT_MAP);
+export default function useGameInput({ onInput, game }: Options = {}) {
+  const mapRef = useRef<Record<Action, string>>(DEFAULT_MAP);
 
   // Load mapping once on mount or when game changes
   useEffect(() => {
@@ -33,11 +45,11 @@ export default function useGameInput({ onInput, game } = {}) {
   }, [game]);
 
   useEffect(() => {
-    const handle = (e) => {
+    const handle = (e: KeyboardEvent) => {
       const map = mapRef.current;
-      const action = Object.keys(map).find((k) => map[k] === e.key);
+      const action = (Object.keys(map) as Action[]).find((k) => map[k] === e.key);
       if (action && onInput) {
-        onInput({ action, type: e.type });
+        onInput({ action, type: e.type as InputEvent['type'] });
         e.preventDefault();
       }
     };

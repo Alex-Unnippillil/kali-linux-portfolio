@@ -72,7 +72,9 @@ export type GamepadEventMap = {
 type Listener<T> = (event: T) => void;
 
 class GamepadManager {
-  private listeners: Record<keyof GamepadEventMap, Set<Listener<any>>> = {
+  private listeners: {
+    [K in keyof GamepadEventMap]: Set<Listener<GamepadEventMap[K]>>;
+  } = {
     connected: new Set(),
     disconnected: new Set(),
     button: new Set(),
@@ -87,11 +89,11 @@ class GamepadManager {
     this.deadzone = deadzone;
 
     if (isBrowser()) {
-      window.addEventListener('gamepadconnected', (e) =>
-        this.emit('connected', (e as GamepadEvent).gamepad)
+      window.addEventListener('gamepadconnected', (e: GamepadEvent) =>
+        this.emit('connected', e.gamepad)
       );
-      window.addEventListener('gamepaddisconnected', (e) =>
-        this.emit('disconnected', (e as GamepadEvent).gamepad)
+      window.addEventListener('gamepaddisconnected', (e: GamepadEvent) =>
+        this.emit('disconnected', e.gamepad)
       );
     }
   }
