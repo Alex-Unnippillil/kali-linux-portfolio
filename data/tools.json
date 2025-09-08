@@ -1,0 +1,44 @@
+[
+  {
+    "id": "dirbuster",
+    "name": "DirBuster",
+    "summary": "DirBuster is a multi threaded java application designed to brute force directories and files names on web/application servers.",
+    "packages": [
+      { "name": "dirbuster", "version": "1.0-RC1" }
+    ],
+    "commands": [
+      { "label": "Install", "cmd": "apt install dirbuster" },
+      { "label": "Run", "cmd": "dirbuster" }
+    ],
+    "upstream": "https://www.owasp.org/index.php/Category:OWASP_DirBuster_Project",
+    "related": ["gobuster", "feroxbuster"]
+  },
+  {
+    "id": "gobuster",
+    "name": "GoBuster",
+    "summary": "Directory/file & DNS busting tool written in Go.",
+    "packages": [
+      { "name": "gobuster", "version": "3.5.0" }
+    ],
+    "commands": [
+      { "label": "Install", "cmd": "apt install gobuster" },
+      { "label": "Run", "cmd": "gobuster dir -u https://example.com -w wordlist.txt" }
+    ],
+    "upstream": "https://github.com/OJ/gobuster",
+    "related": ["dirbuster", "feroxbuster"]
+  },
+  {
+    "id": "feroxbuster",
+    "name": "Feroxbuster",
+    "summary": "A simple, fast, recursive content discovery tool written in Rust.",
+    "packages": [
+      { "name": "feroxbuster", "version": "2.10.4" }
+    ],
+    "commands": [
+      { "label": "Install", "cmd": "apt install feroxbuster" },
+      { "label": "Run", "cmd": "feroxbuster -u https://example.com" }
+    ],
+    "upstream": "https://github.com/epi052/feroxbuster",
+    "related": ["dirbuster", "gobuster"]
+  }
+]
