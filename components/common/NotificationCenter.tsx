@@ -19,8 +19,10 @@ interface LogEntry extends AppNotification {
 
 interface NotificationsContextValue {
   notifications: Record<string, AppNotification[]>;
+  log: LogEntry[];
   pushNotification: (appId: string, message: string) => void;
   clearNotifications: (appId?: string) => void;
+  clearLog: () => void;
 }
 
 export const NotificationsContext = createContext<NotificationsContextValue | null>(
@@ -36,7 +38,10 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({
   const [notifications, setNotifications] = useState<
     Record<string, AppNotification[]>
   >({});
-  const [log, setLog] = useState<LogEntry[]>([]);
+  const [log, setLog] = usePersistentState<LogEntry[]>(
+    'notification-log',
+    [],
+  );
   const [activeTab, setActiveTab] = useState<Tab>('general');
   const [doNotDisturb, setDoNotDisturb] = usePersistentState<boolean>(
     'notifications-dnd',
@@ -128,6 +133,10 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({
     });
   }, []);
 
+  const clearLog = useCallback(() => {
+    setLog([]);
+  }, [setLog]);
+
   const totalCount = Object.values(notifications).reduce(
     (sum, list) => sum + list.length,
     0
@@ -214,7 +223,7 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({
 
   return (
     <NotificationsContext.Provider
-      value={{ notifications, pushNotification, clearNotifications }}
+      value={{ notifications, log, pushNotification, clearNotifications, clearLog }}
     >
       {children}
       <div className={`notification-center ${position}`}>
