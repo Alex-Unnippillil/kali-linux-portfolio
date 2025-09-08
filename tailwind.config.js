@@ -37,6 +37,9 @@ module.exports = {
         'ub-border-orange': 'var(--color-ub-border-orange)',
         'ub-dark-grey': 'var(--color-ub-dark-grey)',
       },
+        backgroundImage: {
+          'kali-hero': 'var(--kali-hero-radial)',
+        },
         fontFamily: {
           ubuntu: ['Ubuntu', 'sans-serif'],
         },
