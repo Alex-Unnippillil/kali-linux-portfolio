@@ -8,4 +8,4 @@
 - [ ] No new `use client` without justification
 - [ ] Browser-only APIs isolated in client modules
 - [ ] `.d.ts` added/updated for Web API gaps
-- [ ] Tested on Node 22 locally; Vercel target 22.x
+- [ ] Tested on Node 20 locally; Vercel target 20.x
