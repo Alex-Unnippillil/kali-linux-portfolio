@@ -1,5 +1,14 @@
 import React from 'react';
 import Callout from '../../components/ui/Callout';
+import HashRow from '../../components/get-kali/HashRow';
+
+const downloads = [
+  {
+    label: 'Kali Live USB Image',
+    href: '#',
+    hash: '00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff',
+  },
+];
 
 const USBLivePage: React.FC = () => (
   <main className="p-4 space-y-4">
@@ -10,6 +19,16 @@ const USBLivePage: React.FC = () => (
       <li>🖥️ BIOS/UEFI that supports booting from USB</li>
       <li>🌐 Internet connection for updates</li>
     </ul>
+    <section className="grid gap-4 sm:grid-cols-2">
+      {downloads.map((d) => (
+        <div key={d.label} className="border rounded p-4 flex flex-col">
+          <a href={d.href} className="text-blue-500 hover:underline mb-2">
+            {d.label}
+          </a>
+          {d.hash && <HashRow hash={d.hash} />}
+        </div>
+      ))}
+    </section>
     <Callout variant="readDocs">
       <p>
         Create a persistent live USB by following the{' '}
