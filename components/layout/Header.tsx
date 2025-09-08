@@ -1,18 +1,23 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import DocMegaMenu from './DocMegaMenu';
+import MobileNav from './MobileNav';
 
 export default function Header() {
   const [docsOpen, setDocsOpen] = useState(false);
   const closeDocs = () => setDocsOpen(false);
 
   return (
-    <header className="relative bg-gray-900 text-white rtl:text-right">
-      <nav className="flex gap-4 p-4 rtl:flex-row-reverse">
-        <a href="/" className="hover:underline">
+    <header className="relative bg-gray-900 text-white rtl:text-right flex items-center justify-between">
+      <Link href="/" className="p-4 hover:underline md:hidden">
+        Home
+      </Link>
+      <nav className="hidden md:flex gap-4 p-4 rtl:flex-row-reverse">
+        <Link href="/" className="hover:underline">
           Home
-        </a>
+        </Link>
         <div
           className="relative"
           onMouseEnter={() => setDocsOpen(true)}
@@ -27,6 +32,7 @@ export default function Header() {
           {docsOpen && <DocMegaMenu onClose={closeDocs} />}
         </div>
       </nav>
+      <MobileNav className="md:hidden" />
     </header>
   );
 }
