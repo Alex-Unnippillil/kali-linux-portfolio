@@ -1,5 +1,5 @@
 import usePersistentState from '../../hooks/usePersistentState';
-import { evaluate } from './main';
+import { evaluate } from './utils/parser';
 
 export interface Formula {
   name: string;
