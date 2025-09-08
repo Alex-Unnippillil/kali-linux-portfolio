@@ -56,6 +56,8 @@ export class UbuntuApp extends Component {
             <button
                 type="button"
                 aria-label={this.props.name}
+                role={this.props.role}
+                aria-selected={this.props['aria-selected']}
                 disabled={this.props.disabled}
                 data-context="app"
                 data-app-id={this.props.id}
