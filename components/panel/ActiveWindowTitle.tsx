@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { isBrowser } from '@/utils/env';
+import { useSettings } from '../../hooks/useSettings';
 
 const BLUR_DATA_URL =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
@@ -61,6 +62,9 @@ export default function ActiveWindowTitle({
   const app = apps.find((a) => a.id === activeId);
   if (!app) return null;
 
+  const { theme } = useSettings();
+  const iconBase = theme === 'undercover' ? '/themes/Windows/window' : '/themes/Yaru/window';
+
   return (
     <div className="flex items-center space-x-2 text-white" data-testid="active-window-title">
       <span className="truncate">{app.title}</span>
@@ -72,7 +76,7 @@ export default function ActiveWindowTitle({
           onClick={() => minimize(activeId)}
         >
           <Image
-            src="/themes/Yaru/window/window-minimize-symbolic.svg"
+            src={`${iconBase}/window-minimize-symbolic.svg`}
             alt="Kali window minimize"
             className="h-3 w-3"
             width={12}
@@ -90,7 +94,7 @@ export default function ActiveWindowTitle({
           onClick={() => maximize(activeId)}
         >
           <Image
-            src="/themes/Yaru/window/window-maximize-symbolic.svg"
+            src={`${iconBase}/window-maximize-symbolic.svg`}
             alt="Kali window maximize"
             className="h-3 w-3"
             width={12}
@@ -108,7 +112,7 @@ export default function ActiveWindowTitle({
           onClick={() => close(activeId)}
         >
           <Image
-            src="/themes/Yaru/window/window-close-symbolic.svg"
+            src={`${iconBase}/window-close-symbolic.svg`}
             alt="Kali window close"
             className="h-3 w-3"
             width={12}
