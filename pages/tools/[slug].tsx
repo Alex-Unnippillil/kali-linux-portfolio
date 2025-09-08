@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { GetStaticPaths, GetStaticProps } from 'next';
 import tools from '../../data/tools.json';
 import copyToClipboard from '../../utils/clipboard';
+import ToolHeader from '../../components/tools/ToolHeader';
 
 interface ToolCommand {
   label?: string;
@@ -21,6 +22,7 @@ interface Tool {
   commands: ToolCommand[];
   upstream: string;
   related?: string[];
+  updated?: string;
 }
 
 interface Props {
@@ -39,7 +41,11 @@ export default function ToolPage({ tool }: Props) {
 
   return (
     <div className="p-4 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">{tool.name}</h1>
+      <ToolHeader
+        name={tool.name}
+        version={tool.packages?.[0]?.version}
+        updated={tool.updated}
+      />
       <p className="mb-6">{tool.summary}</p>
 
       {tool.packages?.length > 0 && (
