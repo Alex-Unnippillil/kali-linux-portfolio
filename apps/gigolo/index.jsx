@@ -78,7 +78,7 @@ const GigoloApp = () => {
         <div className="flex-1">
           <h2 className="mb-2 text-xl">Bookmarks</h2>
           {bookmarks.length === 0 && (
-            <p className="text-sm text-gray-400">No bookmarks yet.</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">No bookmarks yet.</p>
           )}
           <ul className="space-y-2">
             {bookmarks.map((b) => (
@@ -108,7 +108,7 @@ const GigoloApp = () => {
         <div className="flex-1">
           <h2 className="mb-2 text-xl">Thunar Network</h2>
           {networkEntries.length === 0 && (
-            <p className="text-sm text-gray-400">No active connections.</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">No active connections.</p>
           )}
           <ul className="space-y-2">
             {networkEntries.map((n) => (
