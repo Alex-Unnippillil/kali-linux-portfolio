@@ -7998,6 +7998,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"flexsearch@npm:0.7.31":
+  version: 0.7.31
+  resolution: "flexsearch@npm:0.7.31"
+  checksum: 10c0/d465770d9bbfabcd1628b1c5e6acbb2b283c7e473d79b0c59f1ccbd3d13e392be98943e71a3dc4b311e6d901e5528a640b5ae914fbee603f0c14692720714f11
+  languageName: node
+  linkType: hard
+
 "float-tooltip@npm:^1.7":
   version: 1.7.5
   resolution: "float-tooltip@npm:1.7.5"
@@ -14786,6 +14793,7 @@ __metadata:
     fast-xml-parser: "npm:^4.3.5"
     figlet: "npm:^1.8.2"
     flags: "npm:^4.0.1"
+    flexsearch: "npm:0.7.31"
     fuse.js: "npm:^6.6.2"
     hash-wasm: "npm:^4.12.0"
     howler: "npm:^2.2.4"
