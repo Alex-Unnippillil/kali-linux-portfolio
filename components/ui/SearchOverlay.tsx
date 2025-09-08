@@ -7,16 +7,20 @@ interface SearchOverlayProps {
   onClose: () => void;
 }
 
-const pages = [
-  { title: 'Home', href: '/', category: 'Pages' },
-  { title: 'Docs', href: '/docs', category: 'Pages' },
-  { title: 'Apps', href: '/apps', category: 'Pages' },
-];
-
-const tools = [
+const items = [
+  // Tools
   { title: 'Nmap', href: '/apps/nmap', category: 'Tools' },
   { title: 'Hydra', href: '/apps/hydra', category: 'Tools' },
   { title: 'Nikto', href: '/apps/nikto', category: 'Tools' },
+  // Docs
+  { title: 'Documentation', href: '/docs', category: 'Docs' },
+  { title: 'API Reference', href: '/docs/api', category: 'Docs' },
+  // Platforms
+  { title: 'Kali Linux', href: '/platforms/kali-linux', category: 'Platforms' },
+  { title: 'Ubuntu', href: '/platforms/ubuntu', category: 'Platforms' },
+  // Blog
+  { title: 'Blog', href: '/blog', category: 'Blog' },
+  { title: 'Release Notes', href: '/blog/releases', category: 'Blog' },
 ];
 
 export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
@@ -41,7 +45,7 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
     }
   }, [open, onClose]);
 
-  const results = [...pages, ...tools].filter((item) =>
+  const results = items.filter((item) =>
     item.title.toLowerCase().includes(query.toLowerCase())
   );
 
@@ -66,63 +70,65 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
     >
       <div
         ref={nodeRef}
-        className="fixed inset-0 bg-black/70 flex flex-col p-4"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
         role="dialog"
         aria-modal="true"
       >
-        <input
-          ref={inputRef}
-          type="text"
-          className="w-full p-3 text-lg rounded"
-          placeholder="Search..."
-          value={query}
-          aria-label="Search query"
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        <ul className="mt-4 text-white space-y-4 overflow-y-auto">
-          {Object.entries(grouped).map(([category, items]) => (
-            <li key={category}>
-              <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-white/50">
-                {category}
-              </h2>
-              <ul className="space-y-1">
-                {items.map((r) => {
-                  const segments =
-                    r.href === '/' ? ['home'] : r.href.split('/').filter(Boolean);
-                  return (
-                    <li key={r.href}>
-                      <a
-                        href={r.href}
-                        className="flex items-center justify-between px-2 py-1 rounded hover:bg-white/10 focus:outline-none focus-visible:ring focus-visible:ring-white/50"
-                      >
-                        <span>{r.title}</span>
-                        <span className="flex gap-1">
-                          {segments.map((seg) => (
-                            <span
-                              key={seg}
-                              className="rounded bg-white/20 px-1 text-xs capitalize"
-                            >
-                              {seg}
-                            </span>
-                          ))}
-                        </span>
-                      </a>
-                    </li>
-                  );
-                })}
-              </ul>
-            </li>
-          ))}
-          {query && results.length === 0 && (
-            <li className="py-8">
-              <EmptyState
-                icon={<span>🔍</span>}
-                headline="No results"
-                helperText="Try a different search term"
-              />
-            </li>
-          )}
-        </ul>
+        <div className="w-full max-w-xl text-white">
+          <input
+            ref={inputRef}
+            type="text"
+            className="w-full rounded bg-white/10 p-3 text-lg"
+            placeholder="Search..."
+            value={query}
+            aria-label="Search query"
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <ul className="mt-4 max-h-[60vh] space-y-4 overflow-y-auto">
+            {Object.entries(grouped).map(([category, items]) => (
+              <li key={category}>
+                <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-white/50">
+                  {category}
+                </h2>
+                <ul className="space-y-1 text-sm">
+                  {items.map((r) => {
+                    const segments =
+                      r.href === '/' ? ['home'] : r.href.split('/').filter(Boolean);
+                    return (
+                      <li key={r.href}>
+                        <a
+                          href={r.href}
+                          className="flex items-center justify-between rounded px-2 py-1 hover:bg-white/10 focus:outline-none focus-visible:ring focus-visible:ring-white/50"
+                        >
+                          <span>{r.title}</span>
+                          <span className="flex gap-1">
+                            {segments.map((seg) => (
+                              <span
+                                key={seg}
+                                className="rounded bg-white/20 px-1 text-xs capitalize"
+                              >
+                                {seg}
+                              </span>
+                            ))}
+                          </span>
+                        </a>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </li>
+            ))}
+            {query && results.length === 0 && (
+              <li className="py-8">
+                <EmptyState
+                  icon={<span>🔍</span>}
+                  headline="No results"
+                  helperText="Try a different search term"
+                />
+              </li>
+            )}
+          </ul>
+        </div>
       </div>
     </CSSTransition>
   );
