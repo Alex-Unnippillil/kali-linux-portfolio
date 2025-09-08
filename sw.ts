@@ -56,6 +56,33 @@ registerRoute(
   }),
 );
 
+// Cache-first for image requests
+registerRoute(
+  ({ request }) => request.destination === 'image',
+  new CacheFirst({
+    cacheName: 'images',
+    plugins: [new ExpirationPlugin({ maxEntries: 60, maxAgeSeconds: 30 * 24 * 60 * 60 })],
+  }),
+);
+
+// Stale-while-revalidate for JSON feeds
+registerRoute(
+  ({ url }) => url.pathname.endsWith('.json') && url.pathname !== '/projects.json',
+  new StaleWhileRevalidate({
+    cacheName: 'json-feeds',
+    plugins: [new ExpirationPlugin({ maxEntries: 30, maxAgeSeconds: 24 * 60 * 60 })],
+  }),
+);
+
+// Network-first for docs pages to enable offline access
+registerRoute(
+  ({ url }) => url.pathname.startsWith('/docs/'),
+  new NetworkFirst({
+    cacheName: 'docs',
+    plugins: [new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 7 * 24 * 60 * 60 })],
+  }),
+);
+
 // Offline fallback for navigation requests
 setCatchHandler(async ({ event }) => {
   if (event.request.mode === 'navigate') {
