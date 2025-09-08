@@ -50,6 +50,7 @@
     "antd": "5.27.2",
     "autoprefixer": "^10.4.13",
     "bad-words": "^3.0.4",
+    "blurhash": "^2.0.5",
     "canvas-confetti": "1.9.3",
     "capstone-wasm": "^1.0.3",
     "chess.js": "^1.0.0",
