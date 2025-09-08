@@ -19,8 +19,9 @@ export const flip = (board: Board): Board =>
   board.map((row) => [...row].reverse());
 
 export const transpose = (board: Board): Board => {
-  if (board.length === 0) return [];
-  return board[0].map((_, c) => board.map((row) => row[c]!));
+  const firstRow = board[0];
+  if (!firstRow) return [];
+  return firstRow.map((_, c) => board.map((row) => row[c]!));
 };
 
 export const moveLeft = (board: Board): Board =>
