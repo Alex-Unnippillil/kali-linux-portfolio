@@ -237,16 +237,18 @@ function MyApp(props) {
         <Script src="/a2hs.js" strategy="beforeInteractive" />
         <div>
           <a
-            href="#app-grid"
+            href="#main-content"
             className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"
           >
-            Skip to app grid
+            Skip to content
           </a>
           <SettingsProvider>
             <TrayProvider>
               <PipPortalProvider>
                 <div aria-live="polite" id="live-region" />
-                <Component {...pageProps} />
+                <div id="main-content" tabIndex={-1}>
+                  <Component {...pageProps} />
+                </div>
                 <ShortcutOverlay />
                 {process.env.VERCEL_ANALYTICS_ID && (
                   <>

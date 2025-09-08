@@ -35,9 +35,6 @@ const App = () => {
   const { session, setSession, resetSession } = useSession();
   return (
     <>
-      <a href="#window-area" className="sr-only focus:not-sr-only">
-        Skip to content
-      </a>
       <Ubuntu
         session={session}
         setSession={setSession}
