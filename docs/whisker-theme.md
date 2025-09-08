@@ -9,3 +9,5 @@ Adjusting these values updates the appearance of the interface without modifying
 - `--menu-opacity`: Overall opacity for menu and sidebar backgrounds. Defaults to `0.9`.
 
 Override these variables in a global stylesheet or within the `:root` selector to customize themes.
+
+For examples of accessible color combinations, see the [color contrast swatches](/styleguide) page.
