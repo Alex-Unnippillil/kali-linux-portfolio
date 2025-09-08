@@ -16,6 +16,8 @@ import '../styles/resume-print.css';
 import '../styles/print.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
+import ShortcutFooter from '../components/common/ShortcutFooter';
+import GlobalShortcuts from '../components/common/GlobalShortcuts';
 import PipPortalProvider from '../components/common/PipPortal';
 import { TrayProvider } from '../hooks/useTray';
 import ErrorBoundary from '../components/core/ErrorBoundary';
@@ -253,6 +255,8 @@ function MyApp(props) {
                   <div aria-live="polite" id="live-region" />
                   <Component {...pageProps} />
                   <ShortcutOverlay />
+                  <GlobalShortcuts />
+                  <ShortcutFooter />
                   {process.env.VERCEL_ANALYTICS_ID && (
                     <>
                       <Analytics
