@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { GetStaticPaths, GetStaticProps } from 'next';
 import tools from '../../data/tools.json';
-import copyToClipboard from '../../utils/clipboard';
+import CommandChip from '@/components/CommandChip';
 
 interface ToolCommand {
   label?: string;
@@ -28,10 +28,6 @@ interface Props {
 }
 
 export default function ToolPage({ tool }: Props) {
-  const handleCopy = (cmd: string) => {
-    copyToClipboard(cmd);
-  };
-
   const relatedTools = (tool.related ?? [])
     .map((slug) => tools.find((t) => t.id === slug))
     .filter((t): t is Tool => Boolean(t))
@@ -59,18 +55,10 @@ export default function ToolPage({ tool }: Props) {
       {tool.commands?.length > 0 && (
         <section className="mb-6">
           <h2 className="text-xl font-semibold mb-2">Commands</h2>
-          <ul className="space-y-2">
+          <ul className="flex flex-wrap gap-2">
             {tool.commands.map((c, i) => (
-              <li key={i} className="flex items-center gap-2">
-                <code className="flex-1 bg-gray-100 dark:bg-gray-800 rounded px-2 py-1 text-sm">
-                  {c.cmd}
-                </code>
-                <button
-                  onClick={() => handleCopy(c.cmd)}
-                  className="px-2 py-1 text-sm border rounded"
-                >
-                  Copy
-                </button>
+              <li key={i}>
+                <CommandChip command={c.cmd} />
               </li>
             ))}
           </ul>
