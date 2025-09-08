@@ -26,6 +26,7 @@ import NotificationCenter from '../components/common/NotificationCenter';
 import HighContrastToggle from '../components/common/HighContrastToggle';
 import { Workbox } from 'workbox-window';
 import Toast from '../components/ui/Toast';
+import ToastProvider from '../components/notifications/ToastProvider';
 
 
 let SpeedInsights = () => null;
@@ -244,33 +245,35 @@ function MyApp(props) {
             <HighContrastToggle />
             <TrayProvider>
               <PipPortalProvider>
-                <NotificationCenter>
-                  <div aria-live="polite" id="live-region" />
-                  <Component {...pageProps} />
-                  <ShortcutOverlay />
-                  {updateReady && (
-                    <Toast
-                      message="Update available"
-                      actionLabel="Reload"
-                      onAction={() => wbRef.current?.messageSkipWaiting()}
-                      onClose={() => setUpdateReady(false)}
-                    />
-                  )}
-                  {process.env.VERCEL_ANALYTICS_ID && (
-                    <>
-                      <Analytics
-                        beforeSend={(e) => {
-                          if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-                          const evt = e;
-                          if (evt.metadata?.email) delete evt.metadata.email;
-                          return e;
-                        }}
+                <ToastProvider>
+                  <NotificationCenter>
+                    <div aria-live="polite" id="live-region" />
+                    <Component {...pageProps} />
+                    <ShortcutOverlay />
+                    {updateReady && (
+                      <Toast
+                        message="Update available"
+                        actionLabel="Reload"
+                        onAction={() => wbRef.current?.messageSkipWaiting()}
+                        onClose={() => setUpdateReady(false)}
                       />
+                    )}
+                    {process.env.VERCEL_ANALYTICS_ID && (
+                      <>
+                        <Analytics
+                          beforeSend={(e) => {
+                            if (e.url.includes('/admin') || e.url.includes('/private')) return null;
+                            const evt = e;
+                            if (evt.metadata?.email) delete evt.metadata.email;
+                            return e;
+                          }}
+                        />
 
-                      <SpeedInsights />
-                    </>
-                  )}
-                </NotificationCenter>
+                        <SpeedInsights />
+                      </>
+                    )}
+                  </NotificationCenter>
+                </ToastProvider>
               </PipPortalProvider>
             </TrayProvider>
           </SettingsProvider>

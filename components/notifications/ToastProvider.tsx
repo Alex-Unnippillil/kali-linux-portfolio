@@ -1,35 +1,35 @@
 import React, {
   createContext,
   useCallback,
+  useEffect,
   useRef,
   useState,
   ReactNode,
 } from 'react';
 import { kaliTheme } from '../../styles/themes/kali';
 
-interface ToastItem {
-  id: number;
-  message: string;
-  duration: number;
-  leaving?: boolean;
+interface ToastOptions {
+  duration?: number;
   actionLabel?: string;
   onAction?: () => void;
   icon?: ReactNode;
 }
 
+interface ToastItem extends ToastOptions {
+  id: number;
+  message: string;
+  leaving?: boolean;
+}
+
+export type ToastFn = (message: string, options?: ToastOptions) => void;
+
 interface ToastContextValue {
-  toast: (
-    message: string,
-    options?: {
-      duration?: number;
-      actionLabel?: string;
-      onAction?: () => void;
-      icon?: ReactNode;
-    },
-  ) => void;
+  toast: ToastFn;
 }
 
 export const ToastContext = createContext<ToastContextValue | null>(null);
+
+let externalToast: ToastFn = () => {};
 
 export const ToastProvider = ({ children }: { children: ReactNode }) => {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
@@ -39,28 +39,13 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
     setToasts(t => t.filter(toast => toast.id !== id));
   }, []);
 
-  const toast = useCallback(
-    (
-      message: string,
-      options: {
-        duration?: number;
-        actionLabel?: string;
-        onAction?: () => void;
-        icon?: ReactNode;
-      } = {},
-    ) => {
+  const toast = useCallback<ToastFn>(
+    (message, options = {}) => {
       const id = ++counter.current;
       const duration = options.duration ?? 4000;
       setToasts(t => [
         ...t,
-        {
-          id,
-          message,
-          duration,
-          actionLabel: options.actionLabel,
-          onAction: options.onAction,
-          icon: options.icon,
-        },
+        { id, message, duration, actionLabel: options.actionLabel, onAction: options.onAction, icon: options.icon },
       ]);
       setTimeout(() => {
         setToasts(t =>
@@ -74,6 +59,13 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
     [remove],
   );
 
+  useEffect(() => {
+    externalToast = toast;
+    return () => {
+      externalToast = () => {};
+    };
+  }, [toast]);
+
   return (
     <ToastContext.Provider value={{ toast }}>
       {children}
@@ -84,9 +76,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
             role="status"
             aria-live="polite"
             className={`relative px-4 py-3 shadow-md transition-all duration-300 transform pointer-events-auto ${
-              t.leaving
-                ? 'opacity-0 blur-md translate-x-2'
-                : 'opacity-100 blur-0 translate-x-0'
+              t.leaving ? 'opacity-0 blur-md translate-x-2' : 'opacity-100 blur-0 translate-x-0'
             }`}
             style={{
               background: kaliTheme.bubble.background,
@@ -138,6 +128,10 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
       `}</style>
     </ToastContext.Provider>
   );
+};
+
+export const toast: ToastFn = (message, options) => {
+  externalToast(message, options);
 };
 
 export default ToastProvider;
