@@ -3,6 +3,8 @@ import DesktopContextMenu from './DesktopContextMenu';
 import Dock from './Dock';
 import Panel from '../panel/Panel';
 import HotCorner from './HotCorner';
+import ScreenshotHUD from '../screenshot/ScreenshotHUD';
+import html2canvas from 'html2canvas';
 
 export interface DesktopIcon {
   id: string;
@@ -34,6 +36,7 @@ export const Desktop: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [icons, setIcons] = useState<DesktopIcon[]>([]);
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
+  const [showHud, setShowHud] = useState(false);
 
   // Example icons for demonstration
   useEffect(() => {
@@ -55,6 +58,34 @@ export const Desktop: React.FC = () => {
     const width = containerRef.current?.clientWidth || window.innerWidth;
     setIcons((prev) => arrangeIconsToGrid(prev, width));
   }, []);
+
+  const downloadCanvas = useCallback((canvas: HTMLCanvasElement) => {
+    const url = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'screenshot.png';
+    link.click();
+  }, []);
+
+  const captureFullScreen = useCallback(async () => {
+    const canvas = await html2canvas(document.body);
+    downloadCanvas(canvas);
+  }, [downloadCanvas]);
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'PrintScreen') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          setShowHud(true);
+        } else {
+          captureFullScreen();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [captureFullScreen]);
 
   return (
     <div
@@ -84,6 +115,7 @@ export const Desktop: React.FC = () => {
         onClose={closeMenu}
         onArrange={handleArrange}
       />
+      {showHud && <ScreenshotHUD onClose={() => setShowHud(false)} />}
     </div>
   );
 };
