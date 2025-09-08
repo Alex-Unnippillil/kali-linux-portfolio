@@ -3957,7 +3957,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react@npm:*, @types/react@npm:19.1.12, @types/react@npm:>=16.9.11":
+"@types/react@npm:19.1.12":
   version: 19.1.12
   resolution: "@types/react@npm:19.1.12"
   dependencies:
@@ -7746,6 +7746,15 @@ __metadata:
   version: 6.2.2
   resolution: "fake-indexeddb@npm:6.2.2"
   checksum: 10c0/5ad98f05beb22d8591af1bcf8500d1a92d9a17b3e2c380dfa669770b4fecdbadc1ccd9c8ba5429a92a30fd2562f6ab24238992522a8574ffd365d7b809677f0a
+  languageName: node
+  linkType: hard
+
+"fast-check@npm:^3.14.0":
+  version: 3.23.2
+  resolution: "fast-check@npm:3.23.2"
+  dependencies:
+    pure-rand: "npm:^6.1.0"
+  checksum: 10c0/16fcff3c80321ee765e23c3aebd0f6427f175c9c6c1753104ec658970162365dc2d56bda046d815e8f2e90634c07ba7d6f0bcfd327fbd576d98c56a18a9765ed
   languageName: node
   linkType: hard
 
@@ -11914,6 +11923,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"pure-rand@npm:^6.1.0":
+  version: 6.1.0
+  resolution: "pure-rand@npm:6.1.0"
+  checksum: 10c0/1abe217897bf74dcb3a0c9aba3555fe975023147b48db540aa2faf507aee91c03bf54f6aef0eb2bf59cc259a16d06b28eca37f0dc426d94f4692aeff02fb0e65
+  languageName: node
+  linkType: hard
+
 "pure-rand@npm:^7.0.0":
   version: 7.0.1
   resolution: "pure-rand@npm:7.0.1"
@@ -14799,6 +14815,7 @@ __metadata:
     eslint: "npm:^9.13.0"
     eslint-config-next: "npm:15.5.2"
     fake-indexeddb: "npm:^6.1.0"
+    fast-check: "npm:^3.14.0"
     fast-glob: "npm:^3.3.3"
     fast-xml-parser: "npm:^4.3.5"
     figlet: "npm:^1.8.2"
