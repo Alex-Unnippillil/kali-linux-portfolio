@@ -38,11 +38,10 @@ const Toast: React.FC<ToastProps> = ({
     <div
       role="status"
       aria-live="polite"
-      className={`fixed top-4 left-1/2 -translate-x-1/2 transform px-4 py-3 shadow-md flex items-center transition-transform duration-300 ease-in-out ${visible ? 'translate-y-0' : '-translate-y-full'}`}
+      className={`fixed top-4 left-1/2 -translate-x-1/2 transform px-4 py-3 border border-card shadow-card flex items-center transition-transform duration-300 ease-in-out ${visible ? 'translate-y-0' : '-translate-y-full'}`}
       style={{
         background: kaliTheme.bubble.background,
         color: kaliTheme.bubble.text,
-        border: `1px solid ${kaliTheme.bubble.border}`,
         borderRadius: 'var(--radius-md)',
       }}
     >
