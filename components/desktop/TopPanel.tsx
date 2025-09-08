@@ -4,6 +4,7 @@ import React from "react";
 import WhiskerMenu from "../menu/WhiskerMenu";
 import PanelClock from "../util-components/PanelClock";
 import Status from "../util-components/status";
+import WorkspaceSwitcher from "../util-components/WorkspaceSwitcher";
 
 interface Props {
   /** Optional title shown in the center of the panel */
@@ -35,6 +36,7 @@ export default function TopPanel({ title }: Props) {
 
       {/* System indicators */}
       <div className="flex items-center space-x-2 md:space-x-1 lg:space-x-2" aria-label="System indicators">
+        <WorkspaceSwitcher />
         <div className="hidden sm:block">
           <PanelClock />
         </div>
