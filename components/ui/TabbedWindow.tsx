@@ -168,12 +168,12 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
-      <div className="flex flex-shrink-0 bg-gray-800 text-white text-sm overflow-x-auto">
+      <div className="flex flex-shrink-0 bg-surface-200 text-white text-sm overflow-x-auto">
         {tabs.map((t, i) => (
           <div
             key={t.id}
             className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none ${
-              t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
+              t.id === activeId ? 'bg-surface-300' : 'bg-surface-200'
             }`}
             draggable
             onDragStart={handleDragStart(i)}
@@ -198,7 +198,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         ))}
         {onNewTab && (
           <button
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700"
+            className="px-2 py-1 bg-surface-200 hover:bg-surface-300"
             onClick={addTab}
             aria-label="New Tab"
           >
