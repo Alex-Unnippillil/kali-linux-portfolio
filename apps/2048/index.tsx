@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import ReactGA from 'react-ga4';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 import { getDailySeed } from '../../utils/dailySeed';
@@ -251,17 +251,43 @@ const Page2048 = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, [handleMove, restart, handleUndo]);
 
-  const close = () => {
+  const close = useCallback(() => {
     if (isBrowser()) {
       document.getElementById('close-2048')?.click();
     }
-  };
+  }, []);
 
-  const displayCell = (v: number) => {
-    if (v === 0) return '';
-    if (boardType === 'hex') return v.toString(16).toUpperCase();
-    return v;
-  };
+  const displayCell = useCallback(
+    (v: number) => {
+      if (v === 0) return '';
+      if (boardType === 'hex') return v.toString(16).toUpperCase();
+      return v;
+    },
+    [boardType]
+  );
+
+  const renderedBoard = useMemo(
+    () =>
+      board.map((row, rIdx) =>
+        row.map((cell, cIdx) => (
+          <div
+            key={`${rIdx}-${cIdx}`}
+            className={`w-full aspect-square ${
+              prefersReducedMotion ? '' : 'transition-transform transition-opacity'
+            }`}
+          >
+            <div
+              className={`h-full w-full flex items-center justify-center text-2xl font-bold rounded ${
+                cell ? tileColors[cell] || 'bg-gray-700' : 'bg-gray-800'
+              }`}
+            >
+              {displayCell(cell)}
+            </div>
+          </div>
+        ))
+      ),
+    [board, prefersReducedMotion, displayCell]
+  );
 
   useEffect(() => {
     if (won || lost) {
@@ -307,22 +333,7 @@ const Page2048 = () => {
         {hard && <div className="ml-2">{timer}</div>}
       </div>
       <div className="grid w-full max-w-sm grid-cols-4 gap-2">
-        {board.map((row, rIdx) =>
-          row.map((cell, cIdx) => (
-            <div
-              key={`${rIdx}-${cIdx}`}
-              className={`w-full aspect-square ${prefersReducedMotion ? '' : 'transition-transform transition-opacity'}`}
-            >
-              <div
-                className={`h-full w-full flex items-center justify-center text-2xl font-bold rounded ${
-                  cell ? tileColors[cell] || 'bg-gray-700' : 'bg-gray-800'
-                }`}
-              >
-                {displayCell(cell)}
-              </div>
-            </div>
-          ))
-        )}
+        {renderedBoard}
       </div>
       {(won || lost) && (
         <div className="mt-4 text-xl">{won ? 'You win!' : 'Game over'}</div>
