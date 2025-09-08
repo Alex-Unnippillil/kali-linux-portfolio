@@ -28,6 +28,12 @@ export default function Pagination({
       case "ArrowLeft":
         nextIndex = Math.max(currentIndex - 1, 0);
         break;
+      case "Home":
+        nextIndex = 0;
+        break;
+      case "End":
+        nextIndex = btnRefs.current.length - 1;
+        break;
       default:
         return;
     }
