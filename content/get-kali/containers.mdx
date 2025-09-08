@@ -1,3 +1,10 @@
+import MDXPageHeader from '../../components/ui/MDXPageHeader';
+
+<MDXPageHeader
+  breadcrumbs={[{ label: 'Home', href: '/' }, { label: 'Get Kali', href: '/get-kali' }, { label: 'Containers' }]}
+  filePath="content/get-kali/containers.mdx"
+/>
+
 export const title = 'Containers';
 export const summary = 'Docker and LXC/LXD container images.';
 export const badges = ['docker', 'lxc'];
