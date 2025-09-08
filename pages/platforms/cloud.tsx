@@ -1,5 +1,14 @@
 import React from 'react';
 import Callout from '../../components/ui/Callout';
+import HashRow from '../../components/get-kali/HashRow';
+
+const downloads = [
+  {
+    label: 'Kali Cloud Image',
+    href: '#',
+    hash: 'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210',
+  },
+];
 
 const CloudPage: React.FC = () => (
   <main className="p-4 space-y-4">
@@ -10,6 +19,16 @@ const CloudPage: React.FC = () => (
       <li>🌐 Reliable internet connection</li>
       <li>💾 Instance with at least 20 GB storage</li>
     </ul>
+    <section className="grid gap-4 sm:grid-cols-2">
+      {downloads.map((d) => (
+        <div key={d.label} className="border rounded p-4 flex flex-col">
+          <a href={d.href} className="text-blue-500 hover:underline mb-2">
+            {d.label}
+          </a>
+          {d.hash && <HashRow hash={d.hash} />}
+        </div>
+      ))}
+    </section>
     <Callout variant="readDocs">
       <p>
         Read the{' '}
