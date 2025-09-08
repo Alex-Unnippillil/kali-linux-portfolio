@@ -1,6 +1,7 @@
 import Head from 'next/head';
 import { useMemo, useState } from 'react';
 import tools from '../../../data/kali-tools.json';
+import LetterRail from '../../../components/tools/LetterRail';
 
 const letters = Array.from({ length: 26 }, (_, i) =>
   String.fromCharCode(65 + i),
@@ -29,11 +30,6 @@ const KaliToolsPage = () => {
     name: tool.name,
     url: `https://www.kali.org/tools/${tool.id}/`,
   }));
-
-  const handleScroll = (letter) => {
-    const el = document.getElementById(`section-${letter}`);
-    if (el) el.scrollIntoView({ behavior: 'smooth' });
-  };
 
   return (
     <>
@@ -80,34 +76,7 @@ const KaliToolsPage = () => {
             </section>
           ) : null,
         )}
-        <nav
-          aria-label="Alphabet navigation"
-          className="fixed right-2 top-1/2 -translate-y-1/2"
-        >
-          <ul className="flex flex-col items-center space-y-1">
-            {letters.map((letter) => {
-              const disabled = !grouped[letter];
-              return (
-                <li key={letter}>
-                  <button
-                    type="button"
-                    aria-label={`Jump to ${letter} section`}
-                    aria-disabled={disabled}
-                    disabled={disabled}
-                    onClick={() => !disabled && handleScroll(letter)}
-                    className={`h-6 w-6 text-xs ${
-                      disabled
-                        ? 'cursor-default text-gray-400'
-                        : 'text-blue-600 hover:underline'
-                    }`}
-                  >
-                    {letter}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
+        <LetterRail letters={letters} grouped={grouped} />
       </div>
     </>
   );
