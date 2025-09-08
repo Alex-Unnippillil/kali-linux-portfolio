@@ -18,6 +18,7 @@ import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
 import { TrayProvider } from '../hooks/useTray';
 import ErrorBoundary from '../components/core/ErrorBoundary';
+import Header from '../components/layout/Header';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 import useReportWebVitals from '../hooks/useReportWebVitals';
@@ -246,6 +247,7 @@ function MyApp(props) {
             <TrayProvider>
               <PipPortalProvider>
                 <div aria-live="polite" id="live-region" />
+                <Header />
                 <Component {...pageProps} />
                 <ShortcutOverlay />
                 {process.env.VERCEL_ANALYTICS_ID && (
