@@ -161,7 +161,11 @@ export default class Ubuntu extends Component {
 					isShutDown={this.state.shutDownScreen}
 					turnOn={this.turnOn}
 				/>
-                                <Navbar lockScreen={this.lockScreen} logOut={this.logOut} />
+                                <Navbar
+                                        lockScreen={this.lockScreen}
+                                        logOut={this.logOut}
+                                        promoMessages={this.props.promoMessages || []}
+                                />
                                 <Desktop
                                         ref={this.desktopRef}
                                         bg_image_name={this.state.bg_image_name}

@@ -7,6 +7,7 @@ import QuickSettings from '../ui/QuickSettings';
 import WhiskerMenu from '../menu/WhiskerMenu';
 import HelpMenu from '../menu/HelpMenu';
 import { getTheme, setTheme } from '../../utils/theme';
+import PromoBanner from './PromoBanner';
 
 export default class Navbar extends Component {
   constructor() {
@@ -15,6 +16,7 @@ export default class Navbar extends Component {
       status_card: false,
       undercover: getTheme() === 'undercover',
       showTip: false,
+      bannerDismissed: false,
     };
   }
 
@@ -25,8 +27,20 @@ export default class Navbar extends Component {
       this.setState({ undercover: !this.state.undercover });
     };
 
+    const messages = this.props.promoMessages || [];
+    const bannerVisible = messages.length > 0 && !this.state.bannerDismissed;
+
     return (
-      <div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
+      <>
+        {bannerVisible && (
+          <PromoBanner
+            messages={messages}
+            onDismiss={() => this.setState({ bannerDismissed: true })}
+          />
+        )}
+        <div
+          className={`main-navbar-vp absolute right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50 ${bannerVisible ? 'top-10' : 'top-0'}`}
+        >
         <div className="pl-3 pr-1">
           <Image
             src={
@@ -87,7 +101,8 @@ export default class Navbar extends Component {
             logOut={this.props.logOut}
           />
         </button>
-      </div>
+        </div>
+      </>
     );
   }
 }
