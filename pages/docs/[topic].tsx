@@ -4,7 +4,8 @@ import path from 'path';
 import { GetStaticPaths, GetStaticProps } from 'next';
 import Head from 'next/head';
 import { marked } from 'marked';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import StickyToc from '@/components/docs/StickyToc';
 
 interface TocItem {
   id: string;
@@ -26,39 +27,6 @@ export default function DocPage({ html, toc, title, topic }: DocProps) {
       el?.scrollIntoView();
     }
   }, []);
-
-  interface TocSection {
-    id: string;
-    text: string;
-    children: TocItem[];
-  }
-
-  const sections: TocSection[] = toc.reduce((acc: TocSection[], item) => {
-    if (item.depth === 2) {
-      acc.push({ id: item.id, text: item.text, children: [] });
-    } else if (item.depth === 3 && acc.length > 0) {
-      acc[acc.length - 1].children.push(item);
-    }
-    return acc;
-  }, []);
-
-  const [openSections, setOpenSections] = useState<string[]>([]);
-  const [showToc, setShowToc] = useState(false);
-
-  useEffect(() => {
-    if (!isBrowser()) return;
-    const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
-    if (isDesktop) {
-      setOpenSections(sections.map((s) => s.id));
-      setShowToc(true);
-    }
-  }, [sections]);
-
-  const toggleSection = (id: string) => {
-    setOpenSections((prev) =>
-      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
-    );
-  };
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com';
 
@@ -101,42 +69,7 @@ export default function DocPage({ html, toc, title, topic }: DocProps) {
         />
       </Head>
       <div className="flex flex-col lg:flex-row p-4">
-        <nav className="lg:w-1/4 lg:min-w-[12rem] lg:max-w-[20rem] lg:flex-shrink-0 lg:pr-4 lg:sticky lg:top-0">
-          <button
-            className="lg:hidden mb-2 flex items-center"
-            onClick={() => setShowToc((v) => !v)}
-            aria-label="Toggle table of contents"
-          >
-            Table of Contents {showToc ? '▲' : '▼'}
-          </button>
-          <div className={`${showToc ? '' : 'hidden'} lg:block`}>
-            {sections.map((section) => (
-              <div key={section.id} className="mb-2">
-                <div className="flex items-center text-sm font-medium">
-                  <button
-                    onClick={() => toggleSection(section.id)}
-                    className="mr-1"
-                    aria-label={`Toggle ${section.text}`}
-                  >
-                    {openSections.includes(section.id) ? '▼' : '▶'}
-                  </button>
-                  <a href={`#${section.id}`}>{section.text}</a>
-                </div>
-                {section.children.length > 0 && openSections.includes(section.id) && (
-                  <ul className="ml-4 mt-1 space-y-1">
-                    {section.children.map((child) => (
-                      <li key={child.id}>
-                        <a href={`#${child.id}`} className="text-sm">
-                          {child.text}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            ))}
-          </div>
-        </nav>
+        <StickyToc toc={toc} />
         <article className="prose flex-1" dangerouslySetInnerHTML={{ __html: html }} />
       </div>
     </>
