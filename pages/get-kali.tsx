@@ -11,6 +11,12 @@ import * as WSL from '../content/get-kali/wsl.mdx';
 import * as Purple from '../content/get-kali/purple.mdx';
 import * as Docs from '../content/get-kali/docs.mdx';
 
+const badgeIcons: Record<string, string> = {
+  aws: '/icons/providers/aws.svg',
+  azure: '/icons/providers/azure.svg',
+  gcp: '/icons/providers/gcp.svg',
+};
+
 type Platform = {
   slug: string;
   title: string;
@@ -41,14 +47,20 @@ const GetKali: React.FC = () => (
           <p className="mb-4">{summary}</p>
           {badges?.length > 0 && (
             <ul className="flex flex-wrap gap-2 mb-4">
-              {badges.map((badge) => (
-                <li
-                  key={badge}
-                  className="bg-gray-200 text-gray-800 px-2 py-1 rounded text-xs"
-                >
-                  {badge}
-                </li>
-              ))}
+              {badges.map((badge) => {
+                const icon = badgeIcons[badge];
+                return (
+                  <li key={badge} className="flex items-center justify-center">
+                    {icon ? (
+                      <img src={icon} alt={badge} className="h-6 w-6" />
+                    ) : (
+                      <span className="bg-gray-200 text-gray-800 px-2 py-1 rounded text-xs">
+                        {badge}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
           <a
