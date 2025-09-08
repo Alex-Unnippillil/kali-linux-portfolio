@@ -25,6 +25,9 @@ interface ContextMenuProps {
   ariaLabelledBy?: string;
 }
 
+const OPEN_DELAY = 200;
+const CLOSE_DELAY = 300;
+
 /**
  * Accessible context menu that supports right click and Shift+F10
  * activation. Uses roving tab index for keyboard navigation and
@@ -60,6 +63,15 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   /** Recursively renders a panel of menu items. */
   const MenuPanel: React.FC<{ items: MenuItem[] }> = ({ items }) => {
     const [subIndex, setSubIndex] = useState<number | null>(null);
+    const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+      return () => {
+        if (openTimer.current) clearTimeout(openTimer.current);
+        if (closeTimer.current) clearTimeout(closeTimer.current);
+      };
+    }, []);
 
     return (
       <div className="cursor-default w-52 rounded-md border border-gray-700 context-menu-bg text-left text-white shadow-lg">
@@ -71,8 +83,22 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
               <li
                 key={i}
                 className="relative"
-                onMouseEnter={() => item.submenu && setSubIndex(i)}
-                onMouseLeave={() => setSubIndex((prev) => (prev === i ? null : prev))}
+                onMouseEnter={() => {
+                  if (closeTimer.current) clearTimeout(closeTimer.current);
+                  if (openTimer.current) clearTimeout(openTimer.current);
+                  if (item.submenu) {
+                    openTimer.current = setTimeout(() => setSubIndex(i), OPEN_DELAY);
+                  } else {
+                    setSubIndex(null);
+                  }
+                }}
+                onMouseLeave={() => {
+                  if (openTimer.current) clearTimeout(openTimer.current);
+                  closeTimer.current = setTimeout(
+                    () => setSubIndex((prev) => (prev === i ? null : prev)),
+                    CLOSE_DELAY,
+                  );
+                }}
               >
                 <button
                   role="menuitem"
