@@ -155,6 +155,26 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
     });
   };
 
+  const clearAllFilters = () => {
+    setSearch('');
+    setStack('');
+    setYear('');
+    setType('');
+    setTags([]);
+  };
+
+  const activeFilters = [
+    stack && { label: stack, remove: () => setStack('') },
+    year && { label: year, remove: () => setYear('') },
+    type && { label: type, remove: () => setType('') },
+    ...tags.map((t) => ({
+      label: t,
+      remove: () =>
+        setTags((prev) => prev.filter((tag) => tag !== t)),
+    })),
+    search && { label: `Search: ${search}`, remove: () => setSearch('') },
+  ].filter(Boolean) as { label: string; remove: () => void }[];
+
   return (
     <div className="p-4 h-full flex flex-col bg-ub-cool-grey text-white">
       <div className="flex flex-wrap gap-2 mb-4">
@@ -226,6 +246,31 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
           </label>
         ))}
       </div>
+      {activeFilters.length > 0 && (
+        <div className="mb-4 overflow-x-auto" aria-label="Active filters">
+          <div className="flex items-center gap-2 w-max">
+            {activeFilters.map((f) => (
+              <button
+                key={f.label}
+                onClick={f.remove}
+                className="bg-gray-700 text-xs px-2 py-1 rounded-full flex items-center whitespace-nowrap focus:outline-none focus:ring"
+                aria-label={`Remove filter ${f.label}`}
+              >
+                {f.label}
+                <span aria-hidden="true" className="ml-1">
+                  ×
+                </span>
+              </button>
+            ))}
+            <button
+              onClick={clearAllFilters}
+              className="text-xs text-blue-400 whitespace-nowrap flex-shrink-0 hover:underline"
+            >
+              Clear All
+            </button>
+          </div>
+        </div>
+      )}
       {selected.length === 2 && (
         <div className="mb-4 overflow-auto">
           <table className="w-full text-sm text-left" role="table">
