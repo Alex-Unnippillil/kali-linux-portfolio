@@ -7,7 +7,7 @@ import { safeLocalStorage } from './safeStorage';
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
   wallpaper: 'wall-2',
-  density: 'regular',
+  density: 'cozy',
   reducedMotion: false,
   fontScale: 1,
   highContrast: false,
