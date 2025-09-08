@@ -60,6 +60,23 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   /** Recursively renders a panel of menu items. */
   const MenuPanel: React.FC<{ items: MenuItem[] }> = ({ items }) => {
     const [subIndex, setSubIndex] = useState<number | null>(null);
+    const [submenuDir, setSubmenuDir] = useState<'left' | 'right'>('right');
+    const [submenuOffset, setSubmenuOffset] = useState(0);
+    const submenuRef = useRef<HTMLDivElement>(null);
+    const SUBMENU_WIDTH = 208; // w-52
+
+    useEffect(() => {
+      if (subIndex === null) return;
+      const rect = submenuRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      let offset = 0;
+      if (rect.bottom > window.innerHeight) {
+        offset = window.innerHeight - rect.bottom - 8;
+      } else if (rect.top < 0) {
+        offset = -rect.top + 8;
+      }
+      setSubmenuOffset(offset);
+    }, [subIndex, submenuDir]);
 
     return (
       <div className="cursor-default w-52 rounded-md border border-gray-700 context-menu-bg text-left text-white shadow-lg">
@@ -71,15 +88,27 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
               <li
                 key={i}
                 className="relative"
-                onMouseEnter={() => item.submenu && setSubIndex(i)}
+                onMouseEnter={(e) => {
+                  if (item.submenu) {
+                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                    setSubmenuDir(
+                      window.innerWidth - rect.right < SUBMENU_WIDTH ? 'left' : 'right',
+                    );
+                    setSubIndex(i);
+                  }
+                }}
                 onMouseLeave={() => setSubIndex((prev) => (prev === i ? null : prev))}
               >
                 <button
                   role="menuitem"
                   tabIndex={-1}
                   className="flex w-full items-center justify-between rounded-sm px-4 py-1 text-left hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]"
-                  onClick={() => {
+                  onClick={(e) => {
                     if (item.submenu) {
+                      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                      setSubmenuDir(
+                        window.innerWidth - rect.right < SUBMENU_WIDTH ? 'left' : 'right',
+                      );
                       setSubIndex(i);
                     } else {
                       item.onSelect?.();
@@ -87,15 +116,31 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
                     }
                   }}
                   onKeyDown={(e) => {
-                    if (e.key === 'ArrowRight' && item.submenu) setSubIndex(i);
+                    if (e.key === 'ArrowRight' && item.submenu) {
+                      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                      setSubmenuDir(
+                        window.innerWidth - rect.right < SUBMENU_WIDTH ? 'left' : 'right',
+                      );
+                      setSubIndex(i);
+                    }
                     if (e.key === 'ArrowLeft') setSubIndex(null);
                   }}
                 >
                   {item.label}
-                  {item.submenu && <span className="ml-2">▶</span>}
+                  {item.submenu && (
+                    <span className="ml-2">
+                      {subIndex === i && submenuDir === 'left' ? '◀' : '▶'}
+                    </span>
+                  )}
                 </button>
                 {item.submenu && subIndex === i && (
-                  <div className="absolute left-full top-0 ml-1">
+                  <div
+                    ref={submenuRef}
+                    className={`absolute top-0 ${
+                      submenuDir === 'right' ? 'left-full ml-1' : 'right-full mr-1'
+                    }`}
+                    style={{ top: submenuOffset }}
+                  >
                     <MenuPanel items={item.submenu} />
                   </div>
                 )}
@@ -166,6 +211,21 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
       document.removeEventListener('keydown', handleEscape);
     };
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !menuRef.current) return;
+    const rect = menuRef.current.getBoundingClientRect();
+    const padding = 8;
+    let x = pos.x;
+    let y = pos.y;
+    if (rect.right > window.innerWidth)
+      x = Math.max(padding, window.innerWidth - rect.width - padding);
+    if (rect.bottom > window.innerHeight)
+      y = Math.max(padding, window.innerHeight - rect.height - padding);
+    if (rect.left < padding) x = padding;
+    if (rect.top < padding) y = padding;
+    if (x !== pos.x || y !== pos.y) setPos({ x, y });
+  }, [open, pos]);
 
   return (
     <div
