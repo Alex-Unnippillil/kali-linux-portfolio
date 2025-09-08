@@ -1,5 +1,5 @@
 import { useState, useRef, KeyboardEvent, ChangeEvent } from "react";
-import tools from "../../data/kali-tools.json";
+import type { GetStaticProps } from "next";
 import Pagination from "../../components/ui/Pagination";
 import DensityWrapper from "../../components/ui/DensityWrapper";
 
@@ -9,7 +9,16 @@ const COLUMNS = 3; // used for keyboard navigation
 const badgeClass =
   "inline-block rounded bg-gray-200 px-2 py-1 text-xs font-semibold text-gray-800 dark:bg-gray-700 dark:text-gray-100";
 
-export default function ToolsPage() {
+interface Tool {
+  id: string;
+  name: string;
+}
+
+interface ToolsPageProps {
+  tools: Tool[];
+}
+
+export default function ToolsPage({ tools }: ToolsPageProps) {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
   const itemRefs = useRef<Array<HTMLAnchorElement | null>>([]);
@@ -121,3 +130,9 @@ export default function ToolsPage() {
     </DensityWrapper>
   );
 }
+
+export const getStaticProps: GetStaticProps<ToolsPageProps> = async () => {
+  const res = await fetch("https://www.kali.org/tools/kali-tools.json");
+  const tools = (await res.json()) as Tool[];
+  return { props: { tools }, revalidate: 7200 };
+};
