@@ -213,6 +213,26 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     filter: brightness(90%);
 }
 
+.window-titlebar {
+    color: var(--color-inverse);
+}
+
+.window-titlebar-active {
+    background: linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--color-ub-window-title), white 10%),
+        color-mix(in srgb, var(--color-ub-window-title), black 10%)
+    );
+}
+
+.window-titlebar-inactive {
+    background: linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--color-ub-window-title), white 30%),
+        color-mix(in srgb, var(--color-ub-window-title), black 5%)
+    );
+}
+
 .root,
 #root,
 #docs-root {

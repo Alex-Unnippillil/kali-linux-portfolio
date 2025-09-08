@@ -116,8 +116,14 @@ html[data-theme='undercover'] .main-navbar-vp {
   color: #000;
 }
 
-html[data-theme='undercover'] .window-titlebar {
-  background: #ffffff;
+html[data-theme='undercover'] .window-titlebar-active {
+  background: linear-gradient(to bottom, #ffffff, #e5e5e5);
+  color: #000;
+  border-bottom: 1px solid #c0c0c0;
+}
+
+html[data-theme='undercover'] .window-titlebar-inactive {
+  background: linear-gradient(to bottom, #f7f7f7, #e0e0e0);
   color: #000;
   border-bottom: 1px solid #c0c0c0;
 }

@@ -812,13 +812,22 @@ export class Window extends Component {
                         tabIndex={this.props.isFocused ? 0 : -1}
                         onKeyDown={this.handleKeyDown}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.debouncedHandleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.debouncedHandleVerticleResize} />}
+                        {this.props.resizable !== false && (
+                            <>
+                                <WindowYBorder resize={this.debouncedHandleHorizontalResize} />
+                                <WindowXBorder resize={this.debouncedHandleVerticleResize} />
+                                <div className={`${styles.windowCorner} ${styles.nw}`}></div>
+                                <div className={`${styles.windowCorner} ${styles.ne}`}></div>
+                                <div className={`${styles.windowCorner} ${styles.sw}`}></div>
+                                <div className={`${styles.windowCorner} ${styles.se}`}></div>
+                            </>
+                        )}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
+                            isFocused={this.props.isFocused}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -844,11 +853,11 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, isFocused }) {
     return (
         <button
             type="button"
-            className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
+            className={`relative window-titlebar ${isFocused ? 'window-titlebar-active' : 'window-titlebar-inactive'} border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11`}
             tabIndex={0}
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
@@ -904,7 +913,11 @@ export function WindowEditButtons(props) {
     const { togglePin } = useDocPiP(props.pip || (() => null));
     const pipSupported = isBrowser() && !!window.documentPictureInPicture;
     return (
-        <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center h-11 min-w-[8.25rem]">
+        <div
+            className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center h-11 min-w-[8.25rem]"
+            role="group"
+            aria-label="Window controls"
+        >
             {pipSupported && props.pip && (
                 <button
                     type="button"
@@ -914,11 +927,12 @@ export function WindowEditButtons(props) {
                 >
                     <NextImage
                         src="/themes/Yaru/window/window-pin-symbolic.svg"
-                        alt="Kali window pin"
+                        alt=""
                         className="h-4 w-4 inline"
                         width={16}
                         height={16}
                         sizes="16px"
+                        aria-hidden="true"
                     />
                 </button>
             )}
@@ -930,11 +944,12 @@ export function WindowEditButtons(props) {
             >
                 <NextImage
                     src="/themes/Yaru/window/window-minimize-symbolic.svg"
-                    alt="Kali window minimize"
+                    alt=""
                     className="h-4 w-4 inline"
                     width={16}
                     height={16}
                     sizes="16px"
+                    aria-hidden="true"
                 />
             </button>
             {props.allowMaximize && (
@@ -948,11 +963,12 @@ export function WindowEditButtons(props) {
                         >
                             <NextImage
                                 src="/themes/Yaru/window/window-restore-symbolic.svg"
-                                alt="Kali window restore"
+                                alt=""
                                 className="h-4 w-4 inline"
                                 width={16}
                                 height={16}
                                 sizes="16px"
+                                aria-hidden="true"
                             />
                         </button>
                     ) : (
@@ -964,11 +980,12 @@ export function WindowEditButtons(props) {
                         >
                             <NextImage
                                 src="/themes/Yaru/window/window-maximize-symbolic.svg"
-                                alt="Kali window maximize"
+                                alt=""
                                 className="h-4 w-4 inline"
                                 width={16}
                                 height={16}
                                 sizes="16px"
+                                aria-hidden="true"
                             />
                         </button>
                     )
@@ -982,11 +999,12 @@ export function WindowEditButtons(props) {
             >
                 <NextImage
                     src="/themes/Yaru/window/window-close-symbolic.svg"
-                    alt="Kali window close"
+                    alt=""
                     className="h-4 w-4 inline"
                     width={16}
                     height={16}
                     sizes="16px"
+                    aria-hidden="true"
                 />
             </button>
         </div>
