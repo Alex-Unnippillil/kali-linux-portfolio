@@ -7,8 +7,6 @@ import React, {
   useMemo,
 } from 'react';
 import { toPng } from 'html-to-image';
-import { Readability } from '@mozilla/readability';
-import DOMPurify from 'dompurify';
 import AddressBar from './AddressBar';
 import { getCachedFavicon, cacheFavicon } from './bookmarks';
 
@@ -152,11 +150,6 @@ const Chrome: React.FC = () => {
     }
   }, []);
   const [articles, setArticles] = useState<Record<number, string>>({});
-  const sanitizedArticle = useMemo(
-    () =>
-      articles[activeId] ? DOMPurify.sanitize(articles[activeId]) : '',
-    [articles, activeId],
-  );
 
   const updateFavicon = useCallback(
     async (url: string) => {
@@ -216,13 +209,11 @@ const Chrome: React.FC = () => {
 
   const fetchArticle = useCallback(async (tabId: number, url: string) => {
     try {
-      const res = await fetch(url);
-      const html = await res.text();
-      const doc = new DOMParser().parseFromString(html, 'text/html');
-      const reader = new Readability(doc);
-      const parsed = reader.parse();
-      if (parsed) {
-        setArticles((prev) => ({ ...prev, [tabId]: parsed.content ?? '' }));
+      const apiUrl = `/api/reader?url=${encodeURIComponent(url)}`;
+      const res = await fetch(apiUrl);
+      const data = await res.json();
+      if (data && data.content) {
+        setArticles((prev) => ({ ...prev, [tabId]: data.content }));
       }
     } catch {
       setArticles((prev) => ({ ...prev, [tabId]: '' }));
@@ -777,7 +768,7 @@ const Chrome: React.FC = () => {
           ) : articles[activeId] ? (
             <main
               style={{ maxInlineSize: '60ch', margin: 'auto' }}
-              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(articles[activeId] ?? '') }}
+              dangerouslySetInnerHTML={{ __html: articles[activeId] ?? '' }}
             />
           ) : activeTab.blocked ? (
             blockedView
