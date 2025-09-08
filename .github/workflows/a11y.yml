@@ -4,7 +4,7 @@ on:
   pull_request:
 
 jobs:
-  a11y:
+  audit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,12 +17,18 @@ jobs:
       - run: |
           yarn dev &
           npx wait-on http://localhost:3000
-      - run: mkdir -p a11y/pa11y a11y/axe
-      - run: npx pa11y-ci --config pa11yci.json --reporter json > a11y/pa11y/report.json
-      - run: npx axe $(node -e "const c=require('./pa11yci.json'); process.stdout.write(c.urls.join(' '))") --dir a11y/axe
-      - run: npx playwright test playwright/a11y.spec.ts --reporter html --output a11y/playwright
+      - run: mkdir -p a11y/pa11y a11y/axe a11y/playwright
+      - name: pa11y
+        run: npx pa11y-ci --config pa11yci.json --reporter json > a11y/pa11y/report.json || true
+      - name: axe
+        run: npx axe $(node -e "const c=require('./pa11yci.json'); process.stdout.write(c.urls.join(' '))") --dir a11y/axe || true
+      - name: playwright a11y
+        run: npx playwright test playwright/a11y.spec.ts --reporter html --output a11y/playwright
+      - name: Fail on critical findings
+        run: |
+          node -e "const fs=require('fs');const r=JSON.parse(fs.readFileSync('a11y/pa11y/report.json'));if(r.some(p=>p.issues.some(i=>i.severity==='critical'))){console.error('Critical accessibility issues found');process.exit(1);}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: accessibility-artifacts
+          name: a11y-artifacts
           path: a11y

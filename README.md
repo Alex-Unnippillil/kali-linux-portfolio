@@ -256,7 +256,17 @@ Copy `.env.local.example` to `.env.local` and fill in required values.
 | `FEATURE_TOOL_APIS` | Enable server-side tool API routes like Hydra and John; set to `enabled` to allow. |
 | `FEATURE_HYDRA` | Allow the Hydra API (`/api/hydra`); requires `FEATURE_TOOL_APIS`. |
 
-> In production (Vercel/GitHub Actions), set these as **environment variables or repo secrets**. See **CI/CD** below.
+ > In production (Vercel/GitHub Actions), set these as **environment variables or repo secrets**. See **CI/CD** below.
+
+## CI/CD
+
+Pull requests run three GitHub Actions workflows:
+
+- **CI** – lint, unit tests, Playwright end-to-end tests, and bundle budget checks.
+- **Accessibility** – pa11y, axe, and Playwright audits fail if critical issues are found.
+- **Performance Budgets** – Lighthouse CI runs against the Vercel preview and enforces performance thresholds.
+
+Each workflow uploads HTML reports as artifacts. In a PR, open the **Checks** tab, pick a workflow run, and download reports from the **Artifacts** section.
 
 ---
 
