@@ -59,12 +59,17 @@ export function middleware(req: NextRequest | { headers: Headers; nextUrl?: URL;
   });
   res.headers.set('x-csp-nonce', n);
   res.headers.set('Content-Security-Policy', csp);
-  res.headers.set(
-    'Strict-Transport-Security',
-    'max-age=63072000; includeSubDomains; preload'
-  );
   if (req.headers.get('accept')?.includes('text/html')) {
+    res.headers.set(
+      'Strict-Transport-Security',
+      'max-age=63072000; includeSubDomains; preload'
+    );
     res.headers.set('X-Content-Type-Options', 'nosniff');
+    res.headers.set('Referrer-Policy', 'same-origin');
+    res.headers.set(
+      'Permissions-Policy',
+      'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()'
+    );
   }
 
   return res;
