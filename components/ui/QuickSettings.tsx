@@ -2,6 +2,7 @@
 
 import usePersistentState from '../../hooks/usePersistentState';
 import { useEffect } from 'react';
+import { useTheme } from '../../hooks/useTheme';
 
 interface Props {
   open: boolean;
@@ -10,7 +11,8 @@ interface Props {
 }
 
 const QuickSettings = ({ open, lockScreen, logOut }: Props) => {
-  const [theme, setTheme] = usePersistentState('qs-theme', 'light');
+  const { theme, setTheme } = useTheme();
+  const isDark = theme === 'dark';
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState(
@@ -18,15 +20,10 @@ const QuickSettings = ({ open, lockScreen, logOut }: Props) => {
     false,
   );
 
-  const toggleTheme = () =>
-    setTheme((t) => (t === 'light' ? 'dark' : 'light'));
+  const toggleTheme = () => setTheme(isDark ? 'light' : 'dark');
   const toggleSound = () => setSound((s) => !s);
   const toggleOnline = () => setOnline((o) => !o);
   const toggleReduceMotion = () => setReduceMotion((r) => !r);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-  }, [theme]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('reduce-motion', reduceMotion);
@@ -44,7 +41,7 @@ const QuickSettings = ({ open, lockScreen, logOut }: Props) => {
           onClick={toggleTheme}
         >
           <span>Theme</span>
-          <span>{theme === 'light' ? 'Light' : 'Dark'}</span>
+          <span>{isDark ? 'Dark' : 'Light'}</span>
         </button>
       </div>
       <div className="px-4 pb-2 flex justify-between">
