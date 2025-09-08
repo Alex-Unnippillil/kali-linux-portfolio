@@ -3,7 +3,7 @@ import Link from 'next/link';
 import categories, { ToolCategory } from '../../../data/tool-categories';
 import toolData from '../../../data/tools.json';
 import Hero from '../../../components/ui/Hero';
-import CommandChip from '../../../components/ui/CommandChip';
+import CommandChip from '@/components/CommandChip';
 
 interface ToolInfo {
   id: string;

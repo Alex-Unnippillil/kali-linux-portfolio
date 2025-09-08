@@ -1,3 +1,3 @@
 'use client';
 
-export { default } from './ui/CommandChip';
+export { default, type CommandChipProps } from './ui/CommandChip';
