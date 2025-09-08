@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { usePanelPreferences } from './PanelPreferences';
+import LockScreen from '@/components/screen/LockScreen';
 
 interface Props {
   index: number;
@@ -35,6 +36,7 @@ export default function PowerMenu({ index, move, innerRef, focused, onFocus }: P
   drag(drop(ref));
 
   const [open, setOpen] = useState(false);
+  const [lockedScreen, setLockedScreen] = useState(false);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   useEffect(() => {
@@ -119,6 +121,18 @@ export default function PowerMenu({ index, move, innerRef, focused, onFocus }: P
             onKeyDown={handleItemKey}
             onClick={() => {
               setOpen(false);
+              setLockedScreen(true);
+            }}
+            className="px-2 py-1 text-left hover:bg-gray-700"
+          >
+            Lock
+          </button>
+          <button
+            role="menuitem"
+            ref={(el) => (itemRefs.current[2] = el)}
+            onKeyDown={handleItemKey}
+            onClick={() => {
+              setOpen(false);
               logOut();
               ref.current?.focus();
             }}
@@ -128,7 +142,7 @@ export default function PowerMenu({ index, move, innerRef, focused, onFocus }: P
           </button>
           <button
             role="menuitem"
-            ref={(el) => (itemRefs.current[2] = el)}
+            ref={(el) => (itemRefs.current[3] = el)}
             onKeyDown={handleItemKey}
             onClick={() => {
               setOpen(false);
@@ -141,6 +155,13 @@ export default function PowerMenu({ index, move, innerRef, focused, onFocus }: P
           </button>
         </div>
       )}
+      <LockScreen
+        open={lockedScreen}
+        onClose={() => {
+          setLockedScreen(false);
+          ref.current?.focus();
+        }}
+      />
     </div>
   );
 }
