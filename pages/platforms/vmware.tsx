@@ -5,6 +5,11 @@ const VMwarePage: React.FC = () => (
   <main className="p-4 space-y-4">
     <h1 className="text-2xl font-semibold">VMware</h1>
     <p>Run Kali in a VMware virtual machine and use snapshots to save and revert your setup anytime.</p>
+    <ul className="list-disc pl-6 space-y-1">
+      <li>🖥️ Virtualization enabled in BIOS/UEFI</li>
+      <li>💾 At least 20 GB free disk space</li>
+      <li>🐏 4 GB RAM or more</li>
+    </ul>
     <Callout variant="readDocs">
       <p>
         For setup instructions, read the{' '}

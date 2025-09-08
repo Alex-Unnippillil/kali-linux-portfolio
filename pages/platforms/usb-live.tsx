@@ -5,6 +5,11 @@ const USBLivePage: React.FC = () => (
   <main className="p-4 space-y-4">
     <h1 className="text-2xl font-semibold">USB Live</h1>
     <p>Boot from a portable USB drive and run Kali without touching your system&apos;s disk.</p>
+    <ul className="list-disc pl-6 space-y-1">
+      <li>💾 USB drive with at least 8 GB capacity</li>
+      <li>🖥️ BIOS/UEFI that supports booting from USB</li>
+      <li>🌐 Internet connection for updates</li>
+    </ul>
     <Callout variant="readDocs">
       <p>
         Create a persistent live USB by following the{' '}
