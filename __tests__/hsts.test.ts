@@ -17,7 +17,7 @@ describe('Strict-Transport-Security header', () => {
     const req = { headers: new Headers({ accept: 'text/html' }) } as any;
     const res = middleware(req);
     expect(res.headers.get('Strict-Transport-Security')).toBe(
-      'max-age=31536000; includeSubDomains'
+      'max-age=63072000; includeSubDomains; preload'
     );
   });
 
@@ -33,7 +33,7 @@ describe('Strict-Transport-Security header', () => {
       headers.some(
         (h: any) =>
           h.key === 'Strict-Transport-Security' &&
-          h.value === 'max-age=31536000; includeSubDomains'
+          h.value === 'max-age=63072000; includeSubDomains; preload'
       )
     );
     expect(hasHsts).toBe(true);
