@@ -61,7 +61,8 @@ export const addRandomTile = (board: Board, rand: () => number): Board => {
   if (empty.length === 0) return board.map((row) => [...row]);
   const [r, c] = empty[Math.floor(rand() * empty.length)]!;
   const newBoard = board.map((row) => [...row]);
-  const rowAt = newBoard[r]!;
+  const rowAt = newBoard[r];
+  if (!rowAt) return newBoard;
   rowAt[c] = rand() < 0.9 ? 2 : 4;
   return newBoard;
 };
