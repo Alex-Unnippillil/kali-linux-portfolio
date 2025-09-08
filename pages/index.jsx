@@ -39,7 +39,7 @@ export default function Home({ desktops }) {
   return (
     <>
       <Header />
-      <main className="p-4">
+      <main id="main" role="main" className="p-4">
         <h1 className="mb-4 text-2xl font-bold sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl">
           Choose the desktop you prefer
         </h1>

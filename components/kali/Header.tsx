@@ -16,7 +16,7 @@ const Header: React.FC = () => (
       backdropFilter: 'blur(var(--blur-sm))',
     }}
   >
-    <nav aria-label="Main navigation">
+    <nav role="navigation" aria-label="Main navigation">
       <ul className="flex flex-wrap items-center gap-4">
         {(ia as any).header.map((item: NavItem) => (
           <li key={item.label} className="relative">

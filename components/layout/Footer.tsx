@@ -53,7 +53,7 @@ const sections = [
 
 export default function Footer() {
   return (
-    <footer className="bg-gray-900 text-gray-300 mt-16">
+    <footer role="contentinfo" className="bg-gray-900 text-gray-300 mt-16">
       <div className="max-w-screen-xl mx-auto px-4 py-8">
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-8">
           {sections.map((section) => (

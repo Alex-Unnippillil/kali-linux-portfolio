@@ -14,6 +14,7 @@ import '../styles/globals.css';
 import '../styles/index.css';
 import '../styles/resume-print.css';
 import '../styles/print.css';
+import '../styles/a11y.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
@@ -234,6 +235,7 @@ function MyApp(props) {
       <ErrorBoundary>
         <Script src="/a2hs.js" strategy="beforeInteractive" nonce={nonce} />
         <div>
+          <a href="#main" className="skip-link">Skip to content</a>
           <a
             href="#app-grid"
             className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"
