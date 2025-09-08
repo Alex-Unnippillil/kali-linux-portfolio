@@ -158,6 +158,8 @@
     "pa11y": "^9.0.0",
     "playwright-core": "^1.55.0",
     "simple-git-hooks": "^2.13.1",
+    "stylelint": "^16.24.0",
+    "stylelint-config-standard": "^39.0.0",
     "supertest": "^6.3.3",
     "test-exclude": "7.0.1",
     "tsx": "^4.20.5",

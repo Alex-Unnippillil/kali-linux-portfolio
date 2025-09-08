@@ -1,0 +1,10 @@
+@layer utilities {
+  /* Accessible focus ring ensuring at least 3:1 contrast against the background */
+  .focus-ring {
+    @apply outline-2 outline-transparent ring-2 ring-[var(--color-focus-ring)];
+  }
+
+  .focus-ring-offset {
+    @apply outline-2 outline-transparent ring-2 ring-[var(--color-focus-ring)] ring-offset-2 ring-offset-[var(--color-bg)];
+  }
+}
