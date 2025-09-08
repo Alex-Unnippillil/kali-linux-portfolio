@@ -10,15 +10,15 @@ const GhidraApp = dynamic(() => import('../../../components/apps/ghidra'), {
 });
 
 export default function DemoRunner() {
-  const wasmUrl = process.env.NEXT_PUBLIC_GHIDRA_WASM;
+  const wrapperUrl = process.env.NEXT_PUBLIC_GHIDRA_WASM;
   const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
-    if (!wasmUrl) {
+    if (!wrapperUrl) {
       return;
     }
     let mounted = true;
-    WebAssembly.instantiateStreaming(fetch(wasmUrl), {})
+    import(/* webpackIgnore: true */ wrapperUrl)
       .then(() => {
         if (mounted) {
           setEnabled(true);
@@ -32,7 +32,7 @@ export default function DemoRunner() {
     return () => {
       mounted = false;
     };
-  }, [wasmUrl]);
+  }, [wrapperUrl]);
 
   if (!enabled) {
     return (

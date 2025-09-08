@@ -166,11 +166,8 @@ const parsePcapNg = (buf: ArrayBuffer): Packet[] => {
 
 const parseWithWasm = async (buf: ArrayBuffer): Promise<Packet[]> => {
   try {
-    // Attempt to load wasm parser; fall back to JS parsing
-    await WebAssembly.instantiateStreaming(
-      fetch('https://unpkg.com/pcap.js@latest/pcap.wasm'),
-      {}
-    );
+    // Attempt to load wasm parser via its JS wrapper; fall back to JS parsing
+    await import('https://unpkg.com/pcap.js@latest/pcap.js');
   } catch {
     // Ignore errors and use JS parser
   }
