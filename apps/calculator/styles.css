@@ -11,7 +11,7 @@ body {
 .calculator {
   background: var(--color-surface);
   padding: 1rem;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 2px 10px color-mix(in srgb, var(--color-inverse), transparent 90%);
   width: 100%;
   max-width: 240px;
@@ -25,7 +25,7 @@ body {
   padding: 0.5rem;
   text-align: right;
   font-size: 1.2rem;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   overflow-x: auto;
   width: 100%;
   box-sizing: border-box;
@@ -41,7 +41,7 @@ body {
   padding: 0.5rem;
   border: none;
   background: var(--color-muted);
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   cursor: pointer;
 }
 
@@ -68,7 +68,7 @@ body {
   padding: 0.75rem;
   background: var(--color-muted);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   font-size: 1rem;
   cursor: pointer;
   min-height: 48px;
