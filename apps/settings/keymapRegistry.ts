@@ -9,6 +9,7 @@ const DEFAULT_SHORTCUTS: Shortcut[] = [
   { description: 'Show keyboard shortcuts', keys: '?' },
   { description: 'Open settings', keys: 'Ctrl+,' },
   { description: 'Window switcher', keys: 'Alt+Tab' },
+  { description: 'Workspace switcher', keys: 'Ctrl+Alt+W' },
   { description: 'Focus panel', keys: 'Ctrl+Alt+Tab' },
   { description: 'Close window', keys: 'Alt+F4' },
   { description: 'Switch workspace left', keys: 'Ctrl+Alt+ArrowLeft' },
