@@ -78,6 +78,20 @@ select:focus-visible,
     scroll-behavior: auto !important;
 }
 
+@media (prefers-reduced-motion: reduce) {
+    .all-apps-anim,
+    .app-icon-launch,
+    .scalable-app-icon.scale {
+        animation: none !important;
+    }
+}
+
+.reduced-motion .all-apps-anim,
+.reduced-motion .app-icon-launch,
+.reduced-motion .scalable-app-icon.scale {
+    animation: none !important;
+}
+
 /* Top NavBar styling */
 
 .top-arrow-up {
