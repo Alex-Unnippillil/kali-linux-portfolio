@@ -1,4 +1,5 @@
 import CommandChip from '@/components/CommandChip';
+import ToolHeader from '@/components/tools/ToolHeader';
 import toolData from '@/data/tool-details.json';
 import { GetStaticPaths, GetStaticProps } from 'next';
 
@@ -15,14 +16,14 @@ interface ToolInfo {
 }
 
 interface ToolPageProps {
+  id: string;
   tool: ToolInfo;
 }
 
-export default function ToolPage({ tool }: ToolPageProps) {
+export default function ToolPage({ id, tool }: ToolPageProps) {
   return (
     <div className="p-4 space-y-4">
-      <h1 className="text-2xl font-bold">{tool.name}</h1>
-      <p>{tool.description}</p>
+      <ToolHeader id={id} name={tool.name} description={tool.description} />
       {tool.commands.length > 0 && (
         <section>
           <h2 className="text-xl font-semibold mb-2">Commands</h2>
@@ -68,5 +69,5 @@ export const getStaticPaths: GetStaticPaths = async () => {
 export const getStaticProps: GetStaticProps<ToolPageProps> = async ({ params }) => {
   const id = params?.tool as string;
   const tool = tools[id];
-  return { props: { tool } };
+  return { props: { id, tool } };
 };
