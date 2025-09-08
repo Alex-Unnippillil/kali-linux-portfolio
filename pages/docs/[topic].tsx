@@ -5,6 +5,7 @@ import { GetStaticPaths, GetStaticProps } from 'next';
 import Head from 'next/head';
 import { marked } from 'marked';
 import { useEffect, useState } from 'react';
+import '@/styles/docs.css';
 
 interface TocItem {
   id: string;
@@ -137,7 +138,10 @@ export default function DocPage({ html, toc, title, topic }: DocProps) {
             ))}
           </div>
         </nav>
-        <article className="prose flex-1" dangerouslySetInnerHTML={{ __html: html }} />
+        <article
+          className="prose docs-content flex-1"
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
       </div>
     </>
   );
