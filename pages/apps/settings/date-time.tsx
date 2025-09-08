@@ -1,6 +1,7 @@
 import ToggleSwitch from '../../../components/ToggleSwitch';
 import { useSettings } from '../../../hooks/useSettings';
 import usePersistentState from '../../../hooks/usePersistentState';
+import CommandChip from '../../../components/ui/CommandChip';
 import type { ChangeEvent } from 'react';
 
 export default function DateTimeSettings() {
@@ -115,12 +116,10 @@ export default function DateTimeSettings() {
         />
         <span className="cursor-help" title={tooltip} aria-label="NTP info">ℹ️</span>
       </div>
-      <textarea
-        readOnly
-        value={`sudo apt install chrony\nsudo systemctl enable --now chrony`}
-        className="w-full bg-ub-cool-grey text-ubt-grey p-2 rounded"
-        aria-label="NTP commands"
-      />
+      <div className="space-y-2" aria-label="NTP commands">
+        <CommandChip command="sudo apt install chrony" />
+        <CommandChip command="sudo systemctl enable --now chrony" />
+      </div>
     </div>
   );
 }

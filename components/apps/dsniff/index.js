@@ -3,6 +3,7 @@ import urlsnarfFixture from '../../../public/demo-data/dsniff/urlsnarf.json';
 import arpspoofFixture from '../../../public/demo-data/dsniff/arpspoof.json';
 import pcapFixture from '../../../public/demo-data/dsniff/pcap.json';
 import TerminalOutput from '../../TerminalOutput';
+import CommandChip from '../../ui/CommandChip';
 
 // Simple parser that attempts to extract protocol, host and remaining details
 // Each parsed line is also given a synthetic timestamp for display purposes
@@ -235,12 +236,6 @@ const Dsniff = () => {
   const sampleCommand = 'urlsnarf -i eth0';
   const sampleOutput = urlsnarfLines.slice(0, 1).join('\n');
 
-  const copySampleCommand = () => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(sampleCommand);
-    }
-  };
-
   const copySelectedPacket = () => {
     if (selectedPacket !== null && navigator.clipboard) {
       const pkt = pcapSummary[selectedPacket];
@@ -439,17 +434,9 @@ const Dsniff = () => {
         <div className="md:w-1/2 bg-black p-2 flex flex-col">
           <div className="flex items-center justify-between mb-2">
             <span className="font-bold text-sm">Sample command</span>
-            <button
-              onClick={copySampleCommand}
-              className="px-2 py-1 bg-ub-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400"
-            >
-              Copy sample command
-            </button>
+            <CommandChip command={sampleCommand} />
           </div>
-          <TerminalOutput
-            text={`${sampleCommand}\n${sampleOutput}`}
-            ariaLabel="sample command output"
-          />
+          <TerminalOutput text={sampleOutput} ariaLabel="sample command output" />
         </div>
       </div>
       <div className="mb-4" data-testid="pcap-demo">

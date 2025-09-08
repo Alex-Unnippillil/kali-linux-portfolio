@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from 'react';
 import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
+import CommandChip from '../../components/ui/CommandChip';
 
 const HTTPBuilder: React.FC = () => {
   const [method, setMethod] = useState('GET');
@@ -55,9 +56,13 @@ const HTTPBuilder: React.FC = () => {
       </form>
       <div>
         <h2 className="mb-2 text-lg">Command Preview</h2>
-        <pre className="overflow-auto rounded bg-black p-2 font-mono text-green-400">
-          {command || '# Fill in the form to generate a command'}
-        </pre>
+        {command ? (
+          <CommandChip command={command} />
+        ) : (
+          <pre className="overflow-auto rounded bg-black p-2 font-mono text-green-400">
+            # Fill in the form to generate a command
+          </pre>
+        )}
       </div>
     </div>
   );

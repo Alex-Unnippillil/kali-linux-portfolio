@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import HeaderLab from './components/HeaderLab';
+import CommandChip from '../../components/ui/CommandChip';
 
 interface NiktoFinding {
   path: string;
@@ -156,7 +157,7 @@ const NiktoPage: React.FC = () => {
       </form>
       <div>
         <h2 className="text-lg mb-2">Command Preview</h2>
-        <pre className="bg-black text-green-400 p-2 rounded overflow-auto">{command}</pre>
+        <CommandChip command={command} />
       </div>
       <div className="relative bg-gray-800 p-4 rounded shadow space-y-4">
         <div className="absolute top-2 right-2 bg-gray-700 text-xs px-2 py-1 rounded-full">
