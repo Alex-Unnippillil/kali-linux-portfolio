@@ -68,7 +68,13 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   workboxOptions: {
     cacheId: buildId,
     navigateFallback: '/offline.html',
-    additionalManifestEntries: precacheManifest,
+    additionalManifestEntries: [
+      // Precache the main shell and tools index so they are instantly available offline
+      { url: '/', revision: buildId },
+      { url: '/apps', revision: buildId },
+      // Include core static assets generated in the manifest
+      ...precacheManifest,
+    ],
 
     // Cache only images and fonts to ensure app shell updates while assets work offline
     runtimeCaching: require('./cache.js')(buildId),
