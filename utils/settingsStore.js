@@ -17,6 +17,7 @@ const DEFAULT_SETTINGS = {
   haptics: true,
   networkTime: false,
   symbolicTrayIcons: false,
+  analytics: false,
 };
 
 export async function getAccent() {
@@ -148,6 +149,16 @@ export async function setSymbolicTrayIcons(value) {
   window.localStorage.setItem('symbolic-tray-icons', value ? 'true' : 'false');
 }
 
+export async function getAnalytics() {
+  if (!isBrowser()) return DEFAULT_SETTINGS.analytics;
+  return window.localStorage.getItem('analytics-enabled') === 'true';
+}
+
+export async function setAnalytics(value) {
+  if (!isBrowser()) return;
+  window.localStorage.setItem('analytics-enabled', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (!isBrowser()) return;
   window.localStorage.removeItem('accent');
@@ -162,6 +173,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('network-time');
   window.localStorage.removeItem('symbolic-tray-icons');
+  window.localStorage.removeItem('analytics-enabled');
 }
 
 export async function exportSettings() {
@@ -178,6 +190,7 @@ export async function exportSettings() {
     haptics,
     networkTime,
     symbolicTrayIcons,
+    analytics,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -191,6 +204,7 @@ export async function exportSettings() {
     getHaptics(),
     getNetworkTime(),
     getSymbolicTrayIcons(),
+    getAnalytics(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -206,6 +220,7 @@ export async function exportSettings() {
     haptics,
     networkTime,
     symbolicTrayIcons,
+    analytics,
     theme,
   });
 }
@@ -232,6 +247,7 @@ export async function importSettings(json) {
     haptics,
     networkTime,
     symbolicTrayIcons,
+    analytics,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -246,6 +262,7 @@ export async function importSettings(json) {
   if (haptics !== undefined) await setHaptics(haptics);
   if (networkTime !== undefined) await setNetworkTime(networkTime);
   if (symbolicTrayIcons !== undefined) await setSymbolicTrayIcons(symbolicTrayIcons);
+  if (analytics !== undefined) await setAnalytics(analytics);
   if (theme !== undefined) setTheme(theme);
 }
 

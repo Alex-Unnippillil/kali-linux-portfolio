@@ -23,6 +23,8 @@ describe('reportWebVitals', () => {
     logSpy.mockClear();
     mockTrack.mockReset();
     process.env = { ...originalEnv };
+    process.env.NEXT_PUBLIC_ENABLE_ANALYTICS = 'true';
+    window.localStorage.setItem('analytics-enabled', 'true');
   });
 
   afterAll(() => {

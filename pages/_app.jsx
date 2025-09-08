@@ -13,7 +13,7 @@ import '../styles/globals.css';
 import '../styles/index.css';
 import '../styles/resume-print.css';
 import '../styles/print.css';
-import { SettingsProvider } from '../hooks/useSettings';
+import { SettingsProvider, useSettings } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
 import { TrayProvider } from '../hooks/useTray';
@@ -29,6 +29,40 @@ if (process.env.NODE_ENV === 'production') {
     () => import('@vercel/speed-insights/next').then((m) => m.SpeedInsights),
     { ssr: false },
   );
+}
+
+function AnalyticsConsentGate() {
+  const { analytics } = useSettings();
+
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_ENABLE_ANALYTICS !== 'true' || !analytics) return;
+    const initAnalytics = async () => {
+      const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
+      if (trackingId) {
+        const { default: ReactGA } = await import('react-ga4');
+        ReactGA.initialize(trackingId);
+      }
+    };
+    initAnalytics().catch((err) => {
+      console.error('Analytics initialization failed', err);
+    });
+  }, [analytics]);
+
+  if (process.env.NEXT_PUBLIC_ENABLE_ANALYTICS !== 'true' || !analytics) return null;
+
+  return process.env.VERCEL_ANALYTICS_ID ? (
+    <>
+      <Analytics
+        beforeSend={(e) => {
+          if (e.url.includes('/admin') || e.url.includes('/private')) return null;
+          const evt = e;
+          if (evt.metadata?.email) delete evt.metadata.email;
+          return e;
+        }}
+      />
+      <SpeedInsights />
+    </>
+  ) : null;
 }
 
 
@@ -48,16 +82,6 @@ function MyApp(props) {
     if (isBrowser() && typeof window.initA2HS === 'function') {
       window.initA2HS();
     }
-    const initAnalytics = async () => {
-      const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
-      if (trackingId) {
-        const { default: ReactGA } = await import('react-ga4');
-        ReactGA.initialize(trackingId);
-      }
-    };
-    initAnalytics().catch((err) => {
-      console.error('Analytics initialization failed', err);
-    });
   }, []);
 
   useEffect(() => {
@@ -248,20 +272,7 @@ function MyApp(props) {
                 <div aria-live="polite" id="live-region" />
                 <Component {...pageProps} />
                 <ShortcutOverlay />
-                {process.env.VERCEL_ANALYTICS_ID && (
-                  <>
-                    <Analytics
-                      beforeSend={(e) => {
-                        if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-                        const evt = e;
-                        if (evt.metadata?.email) delete evt.metadata.email;
-                        return e;
-                      }}
-                    />
-
-                    <SpeedInsights />
-                  </>
-                )}
+                <AnalyticsConsentGate />
               </PipPortalProvider>
             </TrayProvider>
           </SettingsProvider>

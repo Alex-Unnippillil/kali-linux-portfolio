@@ -6,7 +6,7 @@ import { isBrowser } from '../../utils/env';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme, symbolicTrayIcons, setSymbolicTrayIcons } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme, symbolicTrayIcons, setSymbolicTrayIcons, analytics, setAnalytics } = useSettings();
     const [panelBehavior, setPanelBehavior] = usePersistentState('xfce.panel.autohideBehavior', 'never');
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
@@ -184,6 +184,19 @@ export function Settings() {
                     Allow Network Requests
                 </label>
             </div>
+            {process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true' && (
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey flex items-center">
+                    <input
+                        type="checkbox"
+                        checked={analytics}
+                        onChange={(e) => setAnalytics(e.target.checked)}
+                        className="mr-2"
+                    />
+                    Enable Analytics
+                </label>
+            </div>
+            )}
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey flex items-center">
                     <input

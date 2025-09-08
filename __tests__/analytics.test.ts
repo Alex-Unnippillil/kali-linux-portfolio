@@ -9,6 +9,8 @@ describe('analytics utilities', () => {
   const mockEvent = ReactGA.event as jest.Mock;
 
   beforeEach(() => {
+    process.env.NEXT_PUBLIC_ENABLE_ANALYTICS = 'true';
+    window.localStorage.setItem('analytics-enabled', 'true');
     mockEvent.mockReset();
   });
 
