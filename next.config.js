@@ -97,6 +97,9 @@ function configureWebpack(config, { isServer }) {
     ...(config.resolve.fallback || {}),
     module: false,
     async_hooks: false,
+    fs: false,
+    worker_threads: false,
+    readline: false,
   };
   config.resolve.alias = {
     ...(config.resolve.alias || {}),
