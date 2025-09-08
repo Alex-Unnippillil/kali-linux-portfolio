@@ -1,0 +1,64 @@
+import Button from '../../components/ui/Button';
+import CommandChip from '../../components/ui/CommandChip';
+
+<style>
+.state-hover { filter: brightness(1.1); }
+.state-active { transform: scale(0.98); }
+.state-focus { outline: var(--focus-outline-width) var(--focus-outline-style) var(--focus-outline-color); outline-offset: 2px; }
+.state-disabled { opacity: 0.5; pointer-events: none; }
+.state-loading { opacity: 0.7; cursor: progress; }
+</style>
+
+# Interaction States
+
+Examples of interactive component states. Transitions use the shared token and respect `prefers-reduced-motion`.
+
+## Buttons
+<div className="flex flex-wrap gap-2">
+  <Button>Default</Button>
+  <Button className="state-hover">Hover</Button>
+  <Button className="state-focus">Focus</Button>
+  <Button className="state-active">Active</Button>
+  <Button disabled>Disabled</Button>
+  <Button aria-busy="true" className="state-loading">Loading</Button>
+</div>
+
+## Links
+<div className="flex flex-wrap gap-2">
+  <a href="#">Default</a>
+  <a href="#" className="state-hover">Hover</a>
+  <a href="#" className="state-focus">Focus</a>
+  <a href="#" className="state-active">Active</a>
+  <a aria-disabled="true" className="state-disabled">Disabled</a>
+  <a aria-busy="true" className="state-loading">Loading</a>
+</div>
+
+## Inputs
+<div className="flex flex-wrap gap-2">
+  <input placeholder="Default" />
+  <input placeholder="Hover" className="state-hover" />
+  <input placeholder="Focus" className="state-focus" />
+  <input placeholder="Active" className="state-active" />
+  <input placeholder="Disabled" disabled />
+  <input placeholder="Loading" aria-busy="true" className="state-loading" />
+</div>
+
+## Chips
+<div className="flex flex-wrap gap-2">
+  <CommandChip command="whoami" />
+  <CommandChip command="whoami" className="state-hover" />
+  <CommandChip command="whoami" className="state-focus" />
+  <CommandChip command="whoami" className="state-active" />
+  <CommandChip command="whoami" disabled />
+  <CommandChip command="whoami" aria-busy="true" className="state-loading" />
+</div>
+
+## Tabs
+<div className="flex flex-wrap gap-2">
+  <button role="tab" className="px-4 py-2">Default</button>
+  <button role="tab" className="px-4 py-2 state-hover">Hover</button>
+  <button role="tab" className="px-4 py-2 state-focus">Focus</button>
+  <button role="tab" className="px-4 py-2 state-active">Active</button>
+  <button role="tab" className="px-4 py-2 state-disabled" disabled>Disabled</button>
+  <button role="tab" className="px-4 py-2 state-loading" aria-busy="true">Loading</button>
+</div>

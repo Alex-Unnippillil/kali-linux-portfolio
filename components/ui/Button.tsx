@@ -34,7 +34,7 @@ export default function Button({
   const variantStyle = variantStyles[variant];
   return (
     <button
-      className={`btn ${className}`}
+      className={`btn motion-reduce:transition-none ${className}`}
       style={{ ...variantStyle, ...style }}
       {...props}
     />
