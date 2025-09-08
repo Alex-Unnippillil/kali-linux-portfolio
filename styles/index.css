@@ -659,12 +659,42 @@ code,
 kbd,
 pre {
     font-family: var(--font-family-mono, monospace);
-}
-
-pre {
     line-height: 1.2;
     padding: var(--space-2);
     overflow-x: auto;
+    position: relative;
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+}
+
+pre code {
+    display: block;
+    counter-reset: line;
+}
+
+pre code .token.comment { color: var(--code-token-comment); }
+pre code .token.string { color: var(--code-token-string); }
+pre code .token.keyword { color: var(--code-token-keyword); }
+pre code .token.function { color: var(--code-token-function); }
+pre code .token.number { color: var(--code-token-number); }
+
+pre code .line {
+    display: block;
+    padding-left: calc(var(--space-4) + 2.5rem);
+    position: relative;
+}
+
+pre code .line::before {
+    counter-increment: line;
+    content: counter(line);
+    position: absolute;
+    left: 0;
+    width: 2.5rem;
+    padding-right: var(--space-2);
+    text-align: right;
+    color: var(--code-gutter-text);
+    background: var(--code-gutter-bg);
+    border-right: 1px solid var(--code-gutter-border);
 }
 
 /* Visible focus rings for copy buttons and text areas */
