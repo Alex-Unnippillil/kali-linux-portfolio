@@ -99,7 +99,14 @@ const hexToRgba = (hex: string, alpha: number) => {
 
 const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
   ({ openApp, scheme = 'Kali-Dark', opacity = 1, onSettingsChange }, ref) => {
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<
+    (HTMLDivElement & {
+      startRecording: () => void;
+      stopRecording: () => void;
+      recordInput: (data: string) => void;
+      recordOutput: (data: string) => void;
+    }) | null
+  >(null);
   const termRef = useRef<any>(null);
   const fitRef = useRef<any>(null);
   const searchRef = useRef<any>(null);
@@ -149,16 +156,17 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
   }, []);
 
   const writeLine = useCallback(
-    (text: string) => {
-      if (termRef.current) termRef.current.writeln(text);
-      contentRef.current += `${text}\n`;
-      if (opfsSupported && dirRef.current) {
-        writeFile('history.txt', contentRef.current, dirRef.current);
-      }
-      updateOverflow();
-    },
-    [opfsSupported, updateOverflow, writeFile],
-  );
+      (text: string) => {
+        if (termRef.current) termRef.current.writeln(text);
+        contentRef.current += `${text}\n`;
+        containerRef.current?.recordOutput(text);
+        if (opfsSupported && dirRef.current) {
+          writeFile('history.txt', contentRef.current, dirRef.current);
+        }
+        updateOverflow();
+      },
+      [opfsSupported, updateOverflow, writeFile],
+    );
 
   contextRef.current.writeLine = writeLine;
 
@@ -327,6 +335,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
 
     const handleInput = useCallback(
       (data: string) => {
+        containerRef.current?.recordInput(data);
         for (const ch of data) {
           if (ch === '\r') {
             termRef.current?.writeln('');
@@ -411,6 +420,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
       term.loadAddon(search);
       term.loadAddon(webLinks);
       term.open(container!);
+      containerRef.current?.startRecording();
       fit.fit();
       term.focus();
       const textarea = term.textarea;
@@ -480,6 +490,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
       const textarea = termRef.current?.textarea;
       textarea?.removeEventListener('paste', handlePasteEvent);
       container?.removeEventListener('contextmenu', handleLinkContext);
+      containerRef.current?.stopRecording();
     };
     }, [
       opfsSupported,
