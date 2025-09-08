@@ -5,7 +5,7 @@
   /* Width of the sidebar/dock */
   --sidebar-width: 4rem;
   /* Rounded corners for menus and sidebar */
-  --menu-border-radius: 0.5rem;
+  --menu-border-radius: var(--radius-lg);
   /* Overall menu opacity (0 - 1) */
   --menu-opacity: 0.9;
 }
