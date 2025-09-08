@@ -8,6 +8,7 @@ import { Analytics } from '@vercel/analytics/next';
 import dynamic from 'next/dynamic';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import App from 'next/app';
 import '../styles/tailwind.css';
 import '../styles/globals.css';
 import '../styles/index.css';
@@ -33,7 +34,7 @@ if (process.env.NODE_ENV === 'production') {
 
 
 function MyApp(props) {
-  const { Component, pageProps } = props;
+  const { Component, pageProps, nonce } = props;
   const { asPath, locales, defaultLocale } = useRouter();
   const path = asPath.split('?')[0];
 
@@ -234,7 +235,7 @@ function MyApp(props) {
         <link rel="alternate" hrefLang="x-default" href={path} />
       </Head>
       <ErrorBoundary>
-        <Script src="/a2hs.js" strategy="beforeInteractive" />
+        <Script src="/a2hs.js" strategy="beforeInteractive" nonce={nonce} />
         <div>
           <a
             href="#app-grid"
@@ -274,4 +275,10 @@ function MyApp(props) {
 export default MyApp;
 
 export { reportWebVitalsUtil as reportWebVitals };
+
+MyApp.getInitialProps = async (appContext) => {
+  const appProps = await App.getInitialProps(appContext);
+  const nonce = appContext.ctx.req?.headers['x-csp-nonce'];
+  return { ...appProps, nonce };
+};
 

@@ -14,7 +14,7 @@ interface Props extends DocumentInitialProps {
 class MyDocument extends Document<Props> {
   static async getInitialProps(ctx: DocumentContext): Promise<Props> {
     const initial = await Document.getInitialProps(ctx);
-    const nonce = ctx.req.headers['x-csp-nonce'] as string | undefined;
+    const nonce = ctx.req.headers['x-csp-nonce'] as string | undefined; // provided by middleware
     return { ...initial, nonce };
   }
 

@@ -17,38 +17,7 @@ try {
 } catch {}
 
 
-const ContentSecurityPolicy = [
-  "default-src 'self'",
-  // Prevent injection of external base URIs
-  "base-uri 'self'",
-  // Restrict form submissions to same origin
-  "form-action 'self'",
-  // Disallow all plugins and other embedded objects
-  "object-src 'none'",
-  // Allow external images and data URIs for badges/icons
-  "img-src 'self' https: data:",
-  // Restrict styles to same origin
-  "style-src 'self'",
-  // Restrict fonts to same origin
-  "font-src 'self'",
-  // External scripts required for embedded timelines
-  "script-src 'self' 'unsafe-inline' https://vercel.live https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://sdk.scdn.co",
-  // Allow outbound connections for embeds and the in-browser Chrome app
-  "connect-src 'self' https://example.com https://*.twitter.com https://*.twimg.com https://*.x.com https://*.google.com https://stackblitz.com",
-  // Allow iframes from specific providers so the Chrome and StackBlitz apps can load allowed content
-  "frame-src 'self' https://vercel.live https://stackblitz.com https://*.google.com https://*.twitter.com https://*.x.com https://www.youtube-nocookie.com https://open.spotify.com https://react.dev https://example.com",
-
-  // Allow this site to embed its own resources (resume PDF)
-  "frame-ancestors 'self'",
-  // Enforce HTTPS for all requests
-  'upgrade-insecure-requests',
-].join('; ');
-
 const securityHeaders = [
-  {
-    key: 'Content-Security-Policy',
-    value: ContentSecurityPolicy,
-  },
   {
     key: 'X-Content-Type-Options',
     value: 'nosniff',

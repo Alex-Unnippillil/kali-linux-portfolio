@@ -110,6 +110,10 @@ export default function XTimeline() {
   const timeoutsRef = useRef<Record<string, number>>({});
   const [scheduled, setScheduled] = useScheduledTweets();
   const [showSetup, setShowSetup] = useState(true);
+  const nonce =
+    typeof document !== 'undefined'
+      ? document.documentElement.dataset.cspNonce
+      : undefined;
 
   useEffect(() => {
     const root = document.documentElement;
@@ -295,6 +299,7 @@ export default function XTimeline() {
       <Script
         src="https://platform.twitter.com/widgets.js"
         strategy="lazyOnload"
+        nonce={nonce}
         crossOrigin="anonymous"
         integrity="sha384-2tybKFlI8VO9WeecxiJMRsCpfm6xp0mNzAuAFOxtqzenagQgy+bKmARu8EXVJhPu"
         onLoad={() => {

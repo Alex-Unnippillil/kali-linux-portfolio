@@ -34,4 +34,23 @@ describe('Gedit component', () => {
     expect(send).not.toHaveBeenCalled();
     expect(screen.getByText('Name must not be empty')).toBeInTheDocument();
   });
+
+  it('sanitizes script tags from input', async () => {
+    send.mockResolvedValueOnce({});
+    render(<Gedit />);
+    fireEvent.change(screen.getByPlaceholderText('Your Email / Name :'), {
+      target: { value: '<img src=x onerror=alert(1)>' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/subject/), {
+      target: { value: 'subject' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Message'), {
+      target: { value: '<img src=x onerror=alert(1)>' },
+    });
+    fireEvent.click(screen.getByText('Send'));
+    await waitFor(() => expect(send).toHaveBeenCalled());
+    const payload = send.mock.calls[0][2];
+    expect(payload.name).not.toContain('onerror');
+    expect(payload.message).not.toContain('onerror');
+  });
 });
