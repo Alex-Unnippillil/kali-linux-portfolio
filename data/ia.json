@@ -15,11 +15,11 @@
       {"label": "Download Mirrors", "href": "https://http.kali.org/README?mirrorlist"}
     ]},
     {"label": "Developers", "children": [
-      {"label": "Git Repositories", "href": "https://gitlab.com/kalilinux"},
-      {"label": "Packages", "href": "https://pkg.kali.org/"},
-      {"label": "Auto Package Test", "href": "https://autopkgtest.kali.org/"},
-      {"label": "Bug Tracker", "href": "https://bugs.kali.org/"},
-      {"label": "Kali NetHunter Stats", "href": "https://nethunter.kali.org/"}
+      {"label": "Git Repositories", "href": "https://gitlab.com/kalilinux", "caption": "Browse Kali Linux source code"},
+      {"label": "Packages", "href": "https://pkg.kali.org/", "caption": "Track Kali packages"},
+      {"label": "Auto Package Test", "href": "https://autopkgtest.kali.org/", "caption": "Continuous integration results"},
+      {"label": "Bug Tracker", "href": "https://bugs.kali.org/", "caption": "Report and monitor issues"},
+      {"label": "Kali NetHunter Stats", "href": "https://nethunter.kali.org/", "caption": "Statistics for NetHunter"}
     ]},
     {"label": "About", "children": [
       {"label": "Kali Linux Overview", "href": "https://www.kali.org/features/"},
