@@ -1,4 +1,5 @@
 import { isBrowser } from '@/utils/env';
+import { toast } from '@/hooks/useToast';
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
   readonly userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
@@ -22,6 +23,11 @@ export async function showA2HS() {
   const promptEvent = deferredPrompt;
   deferredPrompt = null;
   await promptEvent.prompt();
-  await promptEvent.userChoice;
+  const { outcome } = await promptEvent.userChoice;
+  if (outcome === 'accepted') {
+    toast('App installed');
+  } else {
+    toast('Install dismissed');
+  }
   return true;
 }

@@ -1,3 +1,5 @@
+import { toast } from '../hooks/useToast';
+
 export const copyToClipboard = async (text: string): Promise<boolean> => {
   try {
     if (navigator?.clipboard?.writeText) {
@@ -13,8 +15,10 @@ export const copyToClipboard = async (text: string): Promise<boolean> => {
       document.execCommand('copy');
       document.body.removeChild(textarea);
     }
+    toast('Copied to clipboard');
     return true;
   } catch {
+    toast('Failed to copy');
     return false;
   }
 };
