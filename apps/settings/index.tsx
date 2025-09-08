@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import Image from "next/image";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import AdvancedTab from "./components/AdvancedTab";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
@@ -112,7 +113,7 @@ export default function Settings() {
   const handleReset = async () => {
     if (
       !window.confirm(
-        "Reset desktop to default settings? This will clear all saved data."
+        "Reset desktop to default settings? This will clear all saved data.",
       )
     )
       return;
@@ -162,7 +163,11 @@ export default function Settings() {
           </div>
           <div className="flex justify-center my-4">
             <label className="mr-2 text-ubt-grey">Accent:</label>
-            <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
+            <div
+              aria-label="Accent color picker"
+              role="radiogroup"
+              className="flex gap-2"
+            >
               {ACCENT_OPTIONS.map((c) => (
                 <button
                   key={c}
@@ -170,14 +175,16 @@ export default function Settings() {
                   role="radio"
                   aria-checked={accent === c}
                   onClick={() => setAccent(c)}
-                  className={`w-8 h-8 rounded-full border-2 ${accent === c ? 'border-white' : 'border-transparent'}`}
+                  className={`w-8 h-8 rounded-full border-2 ${accent === c ? "border-white" : "border-transparent"}`}
                   style={{ backgroundColor: c }}
                 />
               ))}
             </div>
           </div>
           <div className="flex justify-center my-4">
-            <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">Wallpaper:</label>
+            <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">
+              Wallpaper:
+            </label>
             <input
               id="wallpaper-slider"
               type="range"
@@ -214,15 +221,18 @@ export default function Settings() {
                   (name === wallpaper
                     ? " border-yellow-700 "
                     : " border-transparent ") +
-                  " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"
+                  " relative md:w-56 md:h-40 w-28 h-20 md:m-4 m-2 outline-none border-4 border-opacity-80"
                 }
-                style={{
-                  backgroundImage: `url(/wallpapers/${name}.webp)`,
-                  backgroundSize: "cover",
-                  backgroundRepeat: "no-repeat",
-                  backgroundPosition: "center center",
-                }}
-              ></div>
+              >
+                <Image
+                  src={`/wallpapers/${name}.webp`}
+                  alt=""
+                  fill
+                  sizes="(max-width: 768px) 50vw, 25vw"
+                  className="object-cover"
+                  loading="lazy"
+                />
+              </div>
             ))}
           </div>
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
@@ -238,7 +248,9 @@ export default function Settings() {
       {activeTab === "accessibility" && (
         <>
           <div className="flex justify-center my-4">
-            <label htmlFor="font-scale" className="mr-2 text-ubt-grey">Icon Size:</label>
+            <label htmlFor="font-scale" className="mr-2 text-ubt-grey">
+              Icon Size:
+            </label>
             <input
               id="font-scale"
               type="range"
@@ -297,7 +309,7 @@ export default function Settings() {
         </>
       )}
       {activeTab === "privacy" && (
-        <> 
+        <>
           <div className="flex justify-center my-4 space-x-4">
             <button
               onClick={handleExport}
@@ -330,30 +342,30 @@ export default function Settings() {
       )}
       {activeTab === "kernel" && <KernelTab />}
       {activeTab === "advanced" && <AdvancedTab />}
-        <input
-          type="file"
-          accept="application/json"
-          ref={fileInputRef}
-          aria-label="Import settings file"
-          onChange={(e) => {
-            const file = e.target.files && e.target.files[0];
-            if (file) handleImport(file);
-            e.target.value = "";
-          }}
-          className="hidden"
-        />
-        <input
-          type="file"
-          accept="application/json"
-          ref={panelFileRef}
-          aria-label="Import panel file"
-          onChange={(e) => {
-            const file = e.target.files && e.target.files[0];
-            if (file) handlePanelImport(file);
-            e.target.value = "";
-          }}
-          className="hidden"
-        />
+      <input
+        type="file"
+        accept="application/json"
+        ref={fileInputRef}
+        aria-label="Import settings file"
+        onChange={(e) => {
+          const file = e.target.files && e.target.files[0];
+          if (file) handleImport(file);
+          e.target.value = "";
+        }}
+        className="hidden"
+      />
+      <input
+        type="file"
+        accept="application/json"
+        ref={panelFileRef}
+        aria-label="Import panel file"
+        onChange={(e) => {
+          const file = e.target.files && e.target.files[0];
+          if (file) handlePanelImport(file);
+          e.target.value = "";
+        }}
+        className="hidden"
+      />
       <KeymapOverlay open={showKeymap} onClose={() => setShowKeymap(false)} />
     </div>
   );
