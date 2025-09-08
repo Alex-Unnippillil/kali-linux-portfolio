@@ -7,6 +7,10 @@ const vitals = new Set(['LCP', 'CLS', 'INP']);
 export default function useReportWebVitals(): void {
   useNextReportWebVitals((metric) => {
     const { id, name, value } = metric;
+    if (name === 'CLS') {
+      // Log CLS to monitor layout stability
+      console.log('[Web Vitals] CLS:', value);
+    }
     if (vitals.has(name)) {
       track(name, { id, value });
     }
