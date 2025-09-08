@@ -1,8 +1,7 @@
-"use client";
-
-import { ChangeEvent, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
-import { useSettings } from '../../../hooks/useSettings';
+import { useSettings, ACCENT_OPTIONS } from '../../../hooks/useSettings';
+import type { GetStaticProps } from 'next';
 import PanelProfilesDialog from '../../../src/components/panel/PanelProfilesDialog';
 import {
   DEFAULT_PANEL_LAYOUT,
@@ -38,8 +37,21 @@ function Toggle({
   );
 }
 
-export default function ThemeSettings() {
-  const { theme, setTheme, highContrast, setHighContrast } = useSettings();
+type ThemeSettingsProps = {
+  wallpapers: string[];
+};
+
+export default function ThemeSettings({ wallpapers }: ThemeSettingsProps) {
+  const {
+    theme,
+    setTheme,
+    highContrast,
+    setHighContrast,
+    accent,
+    setAccent,
+    wallpaper,
+    setWallpaper,
+  } = useSettings();
   const [panelSize, setPanelSize] = usePersistentState('app:panel-icons', 16);
   const [gridSize, setGridSize] = usePersistentState('app:grid-icons', 64);
   const [panelLayout, setPanelLayout] = useState<PanelLayout>(
@@ -58,10 +70,6 @@ export default function ThemeSettings() {
     }
   }, []);
 
-  const handleChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    setTheme(e.target.value);
-  };
-
   return (
     <>
     <div className="flex h-full">
@@ -77,19 +85,21 @@ export default function ThemeSettings() {
       </nav>
       <div className="flex-1 p-4 overflow-y-auto">
         <h1 className="text-xl mb-4">Theme</h1>
-        <select
-          value={theme}
-          onChange={handleChange}
-          className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
-        >
-          <option value="default">Default</option>
-          <option value="kali-dark">Kali Dark</option>
-          <option value="kali-light">Kali Light</option>
-          <option value="undercover">Undercover</option>
-          <option value="dark">Dark</option>
-          <option value="neon">Neon</option>
-          <option value="matrix">Matrix</option>
-        </select>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {['default', 'kali-dark', 'kali-light', 'undercover', 'dark', 'neon', 'matrix'].map(
+            (t) => (
+              <button
+                key={t}
+                onClick={() => setTheme(t)}
+                className={`p-4 rounded border text-left capitalize ${
+                  theme === t ? 'border-ubt-blue' : 'border-ubt-cool-grey'
+                }`}
+              >
+                {t.replace('-', ' ')}
+              </button>
+            ),
+          )}
+        </div>
         <div className="mt-4 flex items-center gap-2">
           <input
             id="theme-high-contrast"
@@ -99,6 +109,45 @@ export default function ThemeSettings() {
             onChange={(e) => setHighContrast(e.target.checked)}
           />
           <label htmlFor="theme-high-contrast">High Contrast</label>
+        </div>
+
+        <div className="mt-6">
+          <h2 className="text-lg mb-2">Accent Color</h2>
+          <div role="radiogroup" className="flex gap-2">
+            {ACCENT_OPTIONS.map((c) => (
+              <button
+                key={c}
+                role="radio"
+                aria-checked={accent === c}
+                onClick={() => setAccent(c)}
+                className={`w-6 h-6 rounded-full border-2 ${
+                  accent === c ? 'border-white' : 'border-transparent'
+                }`}
+                style={{ backgroundColor: c }}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <h2 className="text-lg mb-2">Wallpapers</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {wallpapers.map((src) => {
+              const base = src.replace(/^\/wallpapers\//, '').replace(/\.[^.]+$/, '');
+              return (
+                <button
+                  key={src}
+                  onClick={() => setWallpaper(base)}
+                  className={`relative border-2 ${
+                    wallpaper === base ? 'border-ubt-blue' : 'border-transparent'
+                  }`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt="" className="w-full h-24 object-cover" />
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="mt-6">
@@ -171,4 +220,17 @@ export default function ThemeSettings() {
     </>
   );
 }
+
+export const getStaticProps: GetStaticProps<ThemeSettingsProps> = async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+  let wallpapers: string[] = [];
+  try {
+    const dir = path.join(process.cwd(), 'public/wallpapers');
+    wallpapers = (await fs.readdir(dir)).map((f) => `/wallpapers/${f}`);
+  } catch {
+    // ignore
+  }
+  return { props: { wallpapers } };
+};
 
