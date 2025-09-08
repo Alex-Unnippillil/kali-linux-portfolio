@@ -1,11 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import Image from "next/image";
+import { Icon } from '../ui/Icon';
 import { isBrowser } from '@/utils/env';
-
-const BLUR_DATA_URL =
-  "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
 const PANEL_PREFIX = "xfce.panel.";
 
@@ -71,15 +68,7 @@ export default function ActiveWindowTitle({
           className="h-5 w-5 flex items-center justify-center rounded hover:bg-white hover:bg-opacity-10"
           onClick={() => minimize(activeId)}
         >
-          <Image
-            src="/themes/Yaru/window/window-minimize-symbolic.svg"
-            alt="Kali window minimize"
-            className="h-3 w-3"
-            width={12}
-            height={12}
-            placeholder="blur"
-            blurDataURL={BLUR_DATA_URL}
-          />
+          <Icon name="minimize" className="h-3 w-3" />
         </button>
       )}
       {buttons.maximize && maximize && (
@@ -89,15 +78,7 @@ export default function ActiveWindowTitle({
           className="h-5 w-5 flex items-center justify-center rounded hover:bg-white hover:bg-opacity-10"
           onClick={() => maximize(activeId)}
         >
-          <Image
-            src="/themes/Yaru/window/window-maximize-symbolic.svg"
-            alt="Kali window maximize"
-            className="h-3 w-3"
-            width={12}
-            height={12}
-            placeholder="blur"
-            blurDataURL={BLUR_DATA_URL}
-          />
+          <Icon name="maximize" className="h-3 w-3" />
         </button>
       )}
       {buttons.close && close && (
@@ -107,15 +88,7 @@ export default function ActiveWindowTitle({
           className="h-5 w-5 flex items-center justify-center rounded hover:bg-white hover:bg-opacity-10"
           onClick={() => close(activeId)}
         >
-          <Image
-            src="/themes/Yaru/window/window-close-symbolic.svg"
-            alt="Kali window close"
-            className="h-3 w-3"
-            width={12}
-            height={12}
-            placeholder="blur"
-            blurDataURL={BLUR_DATA_URL}
-          />
+          <Icon name="close" className="h-3 w-3" />
         </button>
       )}
     </div>

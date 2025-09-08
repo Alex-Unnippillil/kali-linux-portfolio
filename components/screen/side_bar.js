@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
-import Image from 'next/image'
 import SideBarApp from '../base/side_bar_app';
+import { Icon } from '../ui/Icon';
 
 export default function SideBar(props) {
 
@@ -123,14 +123,7 @@ export function AllApps(props) {
             onClick={props.showApps}
         >
             <div className="relative">
-                <Image
-                    width={28}
-                    height={28}
-                    className="w-7"
-                    src="/themes/Yaru/system/view-app-grid-symbolic.svg"
-                    alt="Ubuntu view app"
-                    sizes="28px"
-                />
+                <Icon name="grid" className="w-7 h-7" />
                 <div
                     className={
                         (title ? " visible " : " invisible ") +

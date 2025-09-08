@@ -2,9 +2,16 @@ import React, { useState, useRef, useEffect } from 'react';
 import useFocusTrap from '../../hooks/useFocusTrap';
 import useRovingTabIndex from '../../hooks/useRovingTabIndex';
 
+/** Definition of a single menu entry. */
 export interface MenuItem {
-  label: React.ReactNode;
-  onSelect: () => void;
+  /** Text or element to display for this item. */
+  label?: React.ReactNode;
+  /** Function invoked when the item is selected. */
+  onSelect?: () => void;
+  /** Child menu items to render as a submenu. */
+  submenu?: MenuItem[];
+  /** Render a visual separator when true. */
+  separator?: boolean;
 }
 
 interface ContextMenuProps {
@@ -47,6 +54,58 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
       first?.focus();
     }
   }, [open]);
+
+  const close = () => setOpen(false);
+
+  /** Recursively renders a panel of menu items. */
+  const MenuPanel: React.FC<{ items: MenuItem[] }> = ({ items }) => {
+    const [subIndex, setSubIndex] = useState<number | null>(null);
+
+    return (
+      <div className="cursor-default w-52 rounded-md border border-gray-700 context-menu-bg text-left text-white shadow-lg">
+        <ul className="py-2">
+          {items.map((item, i) =>
+            item.separator ? (
+              <li key={i} role="separator" className="mx-2 my-1 border-t border-gray-700" />
+            ) : (
+              <li
+                key={i}
+                className="relative"
+                onMouseEnter={() => item.submenu && setSubIndex(i)}
+                onMouseLeave={() => setSubIndex((prev) => (prev === i ? null : prev))}
+              >
+                <button
+                  role="menuitem"
+                  tabIndex={-1}
+                  className="flex w-full items-center justify-between rounded-sm px-4 py-1 text-left hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]"
+                  onClick={() => {
+                    if (item.submenu) {
+                      setSubIndex(i);
+                    } else {
+                      item.onSelect?.();
+                      close();
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowRight' && item.submenu) setSubIndex(i);
+                    if (e.key === 'ArrowLeft') setSubIndex(null);
+                  }}
+                >
+                  {item.label}
+                  {item.submenu && <span className="ml-2">▶</span>}
+                </button>
+                {item.submenu && subIndex === i && (
+                  <div className="absolute left-full top-0 ml-1">
+                    <MenuPanel items={item.submenu} />
+                  </div>
+                )}
+              </li>
+            ),
+          )}
+        </ul>
+      </div>
+    );
+  };
 
   useEffect(() => {
     const node = targetRef.current;
@@ -117,23 +176,9 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
         ? { 'aria-labelledby': ariaLabelledBy }
         : { 'aria-label': ariaLabel })}
       style={{ left: pos.x, top: pos.y }}
-      className={(open ? 'block ' : 'hidden ') +
-        'cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm'}
+      className={(open ? 'block ' : 'hidden ') + 'absolute z-50'}
     >
-      {items.map((item, i) => (
-        <button
-          key={i}
-          role="menuitem"
-          tabIndex={-1}
-          onClick={() => {
-            item.onSelect();
-            setOpen(false);
-          }}
-          className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]"
-        >
-          {item.label}
-        </button>
-      ))}
+      <MenuPanel items={items} />
     </div>
   );
 };

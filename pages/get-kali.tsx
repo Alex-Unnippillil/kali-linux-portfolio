@@ -9,12 +9,14 @@ import * as Containers from '../content/get-kali/containers.mdx';
 import * as Live from '../content/get-kali/live.mdx';
 import * as WSL from '../content/get-kali/wsl.mdx';
 import * as Purple from '../content/get-kali/purple.mdx';
+import * as Docs from '../content/get-kali/docs.mdx';
 
 type Platform = {
   slug: string;
   title: string;
   summary: string;
   badges: string[];
+  url?: string;
 };
 
 const platforms: Platform[] = [
@@ -27,12 +29,13 @@ const platforms: Platform[] = [
   { slug: 'live', ...(Live as any) },
   { slug: 'wsl', ...(WSL as any) },
   { slug: 'purple', ...(Purple as any) },
+  { slug: 'docs', url: 'https://www.kali.org/docs/', ...(Docs as any) },
 ];
 
 const GetKali: React.FC = () => (
   <main className="p-4">
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {platforms.map(({ slug, title, summary, badges }) => (
+      {platforms.map(({ slug, title, summary, badges, url }) => (
         <div key={slug} className="border rounded p-4 flex flex-col">
           <h2 className="text-xl font-semibold mb-2">{title}</h2>
           <p className="mb-4">{summary}</p>
@@ -49,7 +52,7 @@ const GetKali: React.FC = () => (
             </ul>
           )}
           <a
-            href={`https://www.kali.org/get-kali/#kali-${slug}`}
+            href={url ?? `https://www.kali.org/get-kali/#kali-${slug}`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-blue-500 hover:underline mt-auto"

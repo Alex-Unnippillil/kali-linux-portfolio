@@ -9,12 +9,10 @@
       {"label": "Known Issues", "href": "https://bugs.kali.org/search.php?project_id=1&category_id[]=General%20Bug&category_id[]=Kali%20Package%20Bug&category_id[]=Kali%20Package%20Improvement&status[]=30&status[]=40&status[]=50&sticky=on&sort=id%2Clast_updated&dir=DESC%2CDESC&hide_status=-2&match_type=0"}
     ]},
     {"label": "Community", "children": [
-      {"label": "Community Support", "href": "https://www.kali.org/community/"},
-      {"label": "Forums", "href": "https://forums.kali.org/"},
-      {"label": "Discord", "href": "https://discord.kali.org/"},
-      {"label": "Join Newsletter", "href": "https://www.kali.org/newsletter/"},
-      {"label": "Mirror Location", "href": "https://http.kali.org/README?mirrorlist"},
-      {"label": "Get Involved", "href": "https://www.kali.org/docs/community/contribute/"}
+      {"label": "Community Forums", "href": "https://forums.kali.org/"},
+      {"label": "Discord Chat", "href": "https://discord.kali.org/"},
+      {"label": "Email Newsletter", "href": "https://www.kali.org/newsletter/"},
+      {"label": "Download Mirrors", "href": "https://http.kali.org/README?mirrorlist"}
     ]},
     {"label": "Developers", "children": [
       {"label": "Git Repositories", "href": "https://gitlab.com/kalilinux"},

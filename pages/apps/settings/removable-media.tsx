@@ -46,7 +46,7 @@ export default function RemovableMediaPage() {
   };
 
   return (
-    <div className="p-4 text-white space-y-4">
+    <div className="p-space-2 text-white space-y-space-2">
       <div className="flex items-center justify-between">
         <span>Mount removable drives when hot-plugged</span>
         <ToggleSwitch
@@ -80,7 +80,7 @@ export default function RemovableMediaPage() {
         />
       </div>
       <div>
-        <label htmlFor="camera-import" className="block mb-1">
+        <label htmlFor="camera-import" className="block mb-space-1">
           Camera import command
         </label>
         <input
@@ -88,20 +88,20 @@ export default function RemovableMediaPage() {
           type="text"
           value={settings.cameraImportCommand}
           onChange={(e) => update({ cameraImportCommand: e.target.value })}
-          className="w-full border rounded p-1"
+          className="w-full border rounded p-space-1"
           aria-label="Camera import command"
         />
       </div>
-      <div className="flex gap-2">
+      <div className="flex gap-space-1">
         <button
           onClick={insertDevice}
-          className="px-4 py-2 rounded bg-ub-orange text-white"
+          className="px-space-2 py-space-1 rounded bg-ub-orange text-white"
         >
           Insert mock device
         </button>
         <button
           onClick={ejectDevice}
-          className="px-4 py-2 rounded bg-ubt-cool-grey text-white"
+          className="px-space-2 py-space-1 rounded bg-ubt-cool-grey text-white"
         >
           Eject device
         </button>

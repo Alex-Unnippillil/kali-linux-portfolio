@@ -100,6 +100,7 @@ export default function ThemeSettings({ wallpapers }: ThemeSettingsProps) {
             ),
           )}
         </div>
+
         <div className="mt-4 flex items-center gap-2">
           <input
             id="theme-high-contrast"

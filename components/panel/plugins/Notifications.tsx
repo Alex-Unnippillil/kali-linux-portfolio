@@ -44,7 +44,7 @@ export default function Notifications() {
       >
         🔔
         {log.length > 0 && (
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-600 text-xs rounded-full flex items-center justify-center" aria-label={"" + log.length}>
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-danger text-xs rounded-full flex items-center justify-center" aria-label={"" + log.length}>
             {log.length}
           </span>
         )}

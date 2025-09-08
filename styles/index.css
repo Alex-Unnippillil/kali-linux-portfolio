@@ -13,14 +13,47 @@
     --color-border: #2a2e36;
     --color-terminal: #00ff00;
     --color-dark: #0c0f12;
-    --color-info: #3b82f6;
-    --color-success: #10b981;
+
+    --kali-info: #3b82f6;
+    --kali-success: #10b981;
+    --kali-warning: #f59e0b;
+    --kali-danger: #ef4444;
 }
 
 html {
-    font-size: clamp(12px, calc(16px * var(--font-multiplier)), 24px);
+    font-size: calc(14px * var(--font-multiplier));
     scrollbar-width: thin;
     scrollbar-color: var(--color-border) transparent;
+}
+
+@media (min-width: 640px) {
+    html {
+        font-size: calc(16px * var(--font-multiplier));
+    }
+}
+
+@media (min-width: 768px) {
+    html {
+        font-size: calc(18px * var(--font-multiplier));
+    }
+}
+
+@media (min-width: 1024px) {
+    html {
+        font-size: calc(20px * var(--font-multiplier));
+    }
+}
+
+@media (min-width: 1280px) {
+    html {
+        font-size: calc(22px * var(--font-multiplier));
+    }
+}
+
+@media (min-width: 1536px) {
+    html {
+        font-size: calc(24px * var(--font-multiplier));
+    }
 }
 
 body{
@@ -109,7 +142,7 @@ button, [role="button"], input[type="button"], input[type="submit"], input[type=
 }
 
 .btn:focus-visible {
-    outline: var(--focus-outline-width) solid var(--focus-outline-color);
+    outline: var(--focus-outline-width) var(--focus-outline-style) var(--focus-outline-color);
     outline-offset: 2px;
 }
 
@@ -120,23 +153,21 @@ textarea:focus-visible,
 select:focus-visible,
 [role="button"]:focus-visible,
 [tabindex]:not([tabindex="-1"]):focus-visible {
-    outline: var(--focus-outline-width) solid var(--focus-outline-color) !important;
+    outline: var(--focus-outline-width) var(--focus-outline-style) var(--focus-outline-color) !important;
     outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
+        animation: none !important;
+        transition: none !important;
         scroll-behavior: auto !important;
     }
 }
 
 .reduced-motion *, .reduced-motion *::before, .reduced-motion *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    animation: none !important;
+    transition: none !important;
     scroll-behavior: auto !important;
 }
 
@@ -631,18 +662,48 @@ code,
 kbd,
 pre {
     font-family: var(--font-family-mono, monospace);
-}
-
-pre {
     line-height: 1.2;
     padding: var(--space-2);
     overflow-x: auto;
+    position: relative;
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+}
+
+pre code {
+    display: block;
+    counter-reset: line;
+}
+
+pre code .token.comment { color: var(--code-token-comment); }
+pre code .token.string { color: var(--code-token-string); }
+pre code .token.keyword { color: var(--code-token-keyword); }
+pre code .token.function { color: var(--code-token-function); }
+pre code .token.number { color: var(--code-token-number); }
+
+pre code .line {
+    display: block;
+    padding-left: calc(var(--space-4) + 2.5rem);
+    position: relative;
+}
+
+pre code .line::before {
+    counter-increment: line;
+    content: counter(line);
+    position: absolute;
+    left: 0;
+    width: 2.5rem;
+    padding-right: var(--space-2);
+    text-align: right;
+    color: var(--code-gutter-text);
+    background: var(--code-gutter-bg);
+    border-right: 1px solid var(--code-gutter-border);
 }
 
 /* Visible focus rings for copy buttons and text areas */
 button:focus-visible,
 textarea:focus-visible {
-    outline: var(--focus-outline-width) solid var(--focus-outline-color);
+    outline: var(--focus-outline-width) var(--focus-outline-style) var(--focus-outline-color);
     outline-offset: 2px;
 }
 

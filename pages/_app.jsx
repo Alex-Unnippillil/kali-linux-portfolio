@@ -23,6 +23,7 @@ import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 import useReportWebVitals from '../hooks/useReportWebVitals';
 import NotificationCenter from '../components/common/NotificationCenter';
+import HighContrastToggle from '../components/common/HighContrastToggle';
 
 
 let SpeedInsights = () => null;
@@ -245,6 +246,7 @@ function MyApp(props) {
             Skip to app grid
           </a>
           <SettingsProvider>
+            <HighContrastToggle />
             <TrayProvider>
               <PipPortalProvider>
                 <NotificationCenter>

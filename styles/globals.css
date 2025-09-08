@@ -29,6 +29,15 @@
   --kali-panel: var(--color-surface);
   --icon-spacing: var(--space-2);
   --background-image: url(/wallpapers/wall-2.webp);
+  /* Code block tokens */
+  --code-token-comment: #6e7681;
+  --code-token-string: #a5d6ff;
+  --code-token-keyword: #ff7b72;
+  --code-token-function: #d2a8ff;
+  --code-token-number: #ffa657;
+  --code-gutter-bg: var(--color-secondary);
+  --code-gutter-border: var(--color-border);
+  --code-gutter-text: var(--color-muted);
 }
 
 /* Dark theme */
@@ -89,10 +98,19 @@ html[data-theme='kali-light'] {
   --color-border: var(--color-ubt-cool-grey);
   --color-terminal: #00ff00;
   --color-dark: var(--color-ubt-gedit-dark);
+  /* Code block tokens */
+  --code-token-comment: #6a737d;
+  --code-token-string: #22863a;
+  --code-token-keyword: #d73a49;
+  --code-token-function: #6f42c1;
+  --code-token-number: #005cc5;
+  --code-gutter-bg: var(--color-muted);
+  --code-gutter-border: var(--color-border);
+  --code-gutter-text: var(--color-ubt-cool-grey);
 }
 
-/* Undercover theme */
-html[data-theme='undercover'] {
+/* Undercover mode */
+html[data-undercover='true'] {
   --color-bg: #f0f0f0;
   --color-text: #000000;
   --color-primary: #0078d7;
@@ -109,14 +127,23 @@ html[data-theme='undercover'] {
   --color-ub-cool-grey: #e5e5e5;
   --color-ub-orange: #0078d7;
   --color-ub-window-title: #0078d7;
+  /* Code block tokens */
+  --code-token-comment: #6a737d;
+  --code-token-string: #22863a;
+  --code-token-keyword: #d73a49;
+  --code-token-function: #6f42c1;
+  --code-token-number: #005cc5;
+  --code-gutter-bg: var(--color-muted);
+  --code-gutter-border: var(--color-border);
+  --code-gutter-text: #666666;
 }
 
-html[data-theme='undercover'] .main-navbar-vp {
+html[data-undercover='true'] .main-navbar-vp {
   background: #e5e5e5;
   color: #000;
 }
 
-html[data-theme='undercover'] .window-titlebar {
+html[data-undercover='true'] .window-titlebar {
   background: #ffffff;
   color: #000;
   border-bottom: 1px solid #c0c0c0;
@@ -144,7 +171,7 @@ html[data-theme='matrix'] {
 }
 
 *:focus-visible {
-  outline: var(--focus-outline-width) solid var(--focus-outline-color);
+  outline: var(--focus-outline-width) var(--focus-outline-style) var(--focus-outline-color);
   outline-offset: 2px;
 }
 
@@ -177,4 +204,34 @@ html[data-theme='matrix'] {
 }
 @keyframes fadeOut {
   to { opacity: 0; }
+}
+
+/* Global table styling */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.25rem 0.5rem;
+}
+
+tbody tr:nth-child(even) {
+  background-color: color-mix(in srgb, var(--color-muted), transparent 80%);
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-surface);
+}
+
+@media (max-width: 600px) {
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
 }

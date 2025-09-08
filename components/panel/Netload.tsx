@@ -111,13 +111,13 @@ export default function Netload() {
       <svg viewBox="0 0 120 40" className="w-full h-10">
         <polyline
           fill="none"
-          stroke="var(--color-info)"
+          stroke="var(--kali-info)"
           strokeWidth="1"
           points={rxPoints}
         />
         <polyline
           fill="none"
-          stroke="var(--color-success)"
+          stroke="var(--kali-success)"
           strokeWidth="1"
           points={txPoints}
         />
@@ -126,7 +126,7 @@ export default function Netload() {
             cx={rxPeakIndex * 4}
             cy={40 - (peakRx / max) * 40}
             r="2"
-            fill="var(--color-info)"
+            fill="var(--kali-info)"
           />
         )}
         {txPeakIndex >= 0 && (
@@ -134,7 +134,7 @@ export default function Netload() {
             cx={txPeakIndex * 4}
             cy={40 - (peakTx / max) * 40}
             r="2"
-            fill="var(--color-success)"
+            fill="var(--kali-success)"
           />
         )}
       </svg>

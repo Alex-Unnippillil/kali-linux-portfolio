@@ -4,6 +4,7 @@ import CommandBuilder from '../../CommandBuilder';
 import FixturesLoader from '../../FixturesLoader';
 import ResultViewer from '../../ResultViewer';
 import ExplainerPane from '../../ExplainerPane';
+import EmptyState from '../../ui/EmptyState';
 
 const tabs = [
   { id: 'repeater', label: 'Repeater' },
@@ -189,7 +190,13 @@ export default function SecurityTools() {
               <div>Sample text contains &quot;{query}&quot;</div>
             </div>
           )}
-            {!hasResults && <div>No results found.</div>}
+            {!hasResults && (
+              <EmptyState
+                icon={<span>🔍</span>}
+                headline="No results"
+                helperText="Try refining your query"
+              />
+            )}
           </div>
         ) : (
           <>

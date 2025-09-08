@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import EmptyState from "../ui/EmptyState";
 
 interface Props {
   location: string;
@@ -63,7 +64,13 @@ export default function WeatherPopover({
               </li>
             ))}
             {filtered.length === 0 && (
-              <li className="px-2 py-1 text-sm text-gray-300">No results</li>
+              <li className="p-4">
+                <EmptyState
+                  icon={<span>📍</span>}
+                  headline="No results"
+                  helperText="Try another location"
+                />
+              </li>
             )}
           </ul>
         )}

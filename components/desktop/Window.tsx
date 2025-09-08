@@ -16,6 +16,17 @@ interface WindowProps {
 
 let zCounter = 1;
 
+interface SnapPreview {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+type SnapPosition = "left" | "right" | "max" | null;
+
+const EDGE_THRESHOLD = 30;
+
 const Window: React.FC<WindowProps> = ({
   title,
   children,
@@ -32,9 +43,20 @@ const Window: React.FC<WindowProps> = ({
   const [size, setSize] = useState({ w: initialWidth, h: initialHeight });
   const [dragging, setDragging] = useState(false);
   const [resizeDir, setResizeDir] = useState<string | null>(null);
+  const [snapPreview, setSnapPreview] = useState<SnapPreview | null>(null);
+  const [snapPosition, setSnapPosition] = useState<SnapPosition>(null);
   const dragOffset = useRef({ x: 0, y: 0 });
   const [zIndex, setZIndex] = useState(++zCounter);
   const [focused, setFocused] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setPrefersReducedMotion(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
 
   const bringToFront = useCallback(() => {
     setZIndex(++zCounter);
@@ -65,10 +87,49 @@ const Window: React.FC<WindowProps> = ({
     e.preventDefault();
   };
 
+  const checkSnapPreview = (x: number, y: number) => {
+    const left = x;
+    const top = y;
+    const right = x + size.w;
+    if (left <= EDGE_THRESHOLD) {
+      setSnapPreview({ left: 0, top: 0, width: window.innerWidth / 2, height: window.innerHeight });
+      setSnapPosition("left");
+    } else if (right >= window.innerWidth - EDGE_THRESHOLD) {
+      setSnapPreview({ left: window.innerWidth / 2, top: 0, width: window.innerWidth / 2, height: window.innerHeight });
+      setSnapPosition("right");
+    } else if (top <= EDGE_THRESHOLD) {
+      setSnapPreview({ left: 0, top: 0, width: window.innerWidth, height: window.innerHeight });
+      setSnapPosition("max");
+    } else if (snapPreview) {
+      setSnapPreview(null);
+      setSnapPosition(null);
+    }
+  };
+
+  const snapWindow = useCallback(
+    (pos: SnapPosition) => {
+      if (!pos) return;
+      if (pos === "left") {
+        setPos({ x: 0, y: 0 });
+        setSize({ w: window.innerWidth / 2, h: window.innerHeight });
+      } else if (pos === "right") {
+        setPos({ x: window.innerWidth / 2, y: 0 });
+        setSize({ w: window.innerWidth / 2, h: window.innerHeight });
+      } else if (pos === "max") {
+        setPos({ x: 0, y: 0 });
+        setSize({ w: window.innerWidth, h: window.innerHeight });
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     const handleMove = (e: PointerEvent) => {
       if (dragging) {
-        setPos({ x: e.clientX - dragOffset.current.x, y: e.clientY - dragOffset.current.y });
+        const newX = e.clientX - dragOffset.current.x;
+        const newY = e.clientY - dragOffset.current.y;
+        checkSnapPreview(newX, newY);
+        setPos({ x: newX, y: newY });
       } else if (resizeDir) {
         setSize((prev) => {
           let { w, h } = prev;
@@ -92,8 +153,11 @@ const Window: React.FC<WindowProps> = ({
     };
 
     const handleUp = () => {
+      if (dragging) snapWindow(snapPosition);
       setDragging(false);
       setResizeDir(null);
+      setSnapPreview(null);
+      setSnapPosition(null);
     };
 
     window.addEventListener("pointermove", handleMove);
@@ -102,21 +166,39 @@ const Window: React.FC<WindowProps> = ({
       window.removeEventListener("pointermove", handleMove);
       window.removeEventListener("pointerup", handleUp);
     };
-  }, [dragging, resizeDir, pos]);
+  }, [dragging, resizeDir, pos, snapPosition, snapWindow]);
 
   return (
-    <div
-      ref={winRef}
-      onPointerDown={bringToFront}
-      style={{
-        top: pos.y,
-        left: pos.x,
-        width: size.w,
-        height: size.h,
-        zIndex,
-      }}
-      className={`absolute bg-white shadow-lg rounded-lg border border-gray-300 overflow-hidden ${focused ? "" : "opacity-90"}`}
-    >
+    <>
+      {snapPreview && (
+        <div
+          data-testid="snap-preview"
+          className={`fixed z-50 pointer-events-none border-2 border-dashed border-white bg-white/20 ${
+            prefersReducedMotion ? "" : "transition-all duration-150"
+          }`}
+          style={snapPreview}
+        />
+      )}
+      <div
+        ref={winRef}
+        onPointerDown={bringToFront}
+        style={{
+          top: pos.y,
+          left: pos.x,
+          width: size.w,
+          height: size.h,
+          zIndex,
+          transition:
+            dragging || resizeDir
+              ? "none"
+              : prefersReducedMotion
+              ? "none"
+              : "all 0.15s ease",
+        }}
+        className={`absolute bg-white shadow-lg rounded-lg border border-gray-300 overflow-hidden ${
+          focused ? "" : "opacity-90"
+        }`}
+      >
       <div
         className="h-8 bg-gray-200 flex items-center cursor-move rounded-t-lg select-none"
         onPointerDown={handleHeaderPointerDown}
@@ -149,9 +231,10 @@ const Window: React.FC<WindowProps> = ({
       <div className="absolute top-0 right-0 h-full w-2 -mr-1 cursor-e-resize" onPointerDown={startResize("right")} />
       <div className="absolute top-0 left-0 w-3 h-3 -mt-1 -ml-1 cursor-nw-resize" onPointerDown={startResize("top-left")} />
       <div className="absolute top-0 right-0 w-3 h-3 -mt-1 -mr-1 cursor-ne-resize" onPointerDown={startResize("top-right")} />
-      <div className="absolute bottom-0 left-0 w-3 h-3 -mb-1 -ml-1 cursor-sw-resize" onPointerDown={startResize("bottom-left")} />
-      <div className="absolute bottom-0 right-0 w-3 h-3 -mb-1 -mr-1 cursor-se-resize" onPointerDown={startResize("bottom-right")} />
-    </div>
+        <div className="absolute bottom-0 left-0 w-3 h-3 -mb-1 -ml-1 cursor-sw-resize" onPointerDown={startResize("bottom-left")} />
+        <div className="absolute bottom-0 right-0 w-3 h-3 -mb-1 -mr-1 cursor-se-resize" onPointerDown={startResize("bottom-right")} />
+      </div>
+    </>
   );
 };
 

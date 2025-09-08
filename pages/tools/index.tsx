@@ -1,5 +1,6 @@
 import { useState, useRef, KeyboardEvent } from 'react';
 import tools from '../../data/kali-tools.json';
+import Pagination from '../../components/ui/Pagination';
 
 const PAGE_SIZE = 30;
 const COLUMNS = 3; // used for keyboard navigation
@@ -46,7 +47,7 @@ export default function ToolsPage() {
   return (
     <div className="p-4">
       <ul
-        className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
         onKeyDown={handleKeyDown}
       >
         {pageTools.map((tool, i) => (
@@ -54,9 +55,11 @@ export default function ToolsPage() {
             <a
               href={`https://www.kali.org/tools/${tool.id}/`}
               className="block rounded border p-4 focus:outline-none focus:ring"
-              ref={(el) => (itemRefs.current[i] = el)}
+              ref={(el) => {
+                itemRefs.current[i] = el;
+              }}
             >
-              <h3 className="font-semibold">{tool.name}</h3>
+              <h3 className="font-semibold text-base sm:text-lg md:text-xl">{tool.name}</h3>
               <div className="mt-2 flex flex-wrap gap-2">
                 <a
                   href={`https://gitlab.com/kalilinux/packages/${tool.id}`}
@@ -80,24 +83,12 @@ export default function ToolsPage() {
           </li>
         ))}
       </ul>
-      <div className="mt-4 flex items-center justify-between">
-        <button
-          onClick={() => setPage((p) => Math.max(p - 1, 0))}
-          disabled={page === 0}
-          className="rounded border px-3 py-1 disabled:opacity-50"
-        >
-          Previous
-        </button>
-        <span>
-          Page {page + 1} of {pageCount}
-        </span>
-        <button
-          onClick={() => setPage((p) => Math.min(p + 1, pageCount - 1))}
-          disabled={page === pageCount - 1}
-          className="rounded border px-3 py-1 disabled:opacity-50"
-        >
-          Next
-        </button>
+      <div className="mt-4 flex justify-center">
+        <Pagination
+          currentPage={page}
+          totalPages={pageCount}
+          onPageChange={setPage}
+        />
       </div>
     </div>
   );
