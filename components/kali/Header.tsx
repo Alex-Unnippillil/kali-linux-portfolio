@@ -9,7 +9,13 @@ interface NavItem {
 }
 
 const Header: React.FC = () => (
-  <header className="border-b border-gray-700 p-4">
+  <header
+    className="border-b border-gray-700 p-4"
+    style={{
+      boxShadow: 'var(--shadow-sm)',
+      backdropFilter: 'blur(var(--blur-sm))',
+    }}
+  >
     <nav aria-label="Main navigation">
       <ul className="flex flex-wrap items-center gap-4">
         {(ia as any).header.map((item: NavItem) => (
@@ -17,7 +23,13 @@ const Header: React.FC = () => (
             {item.children ? (
               <details>
                 <summary className="cursor-pointer list-none">{item.label}</summary>
-                <ul className="mt-2 space-y-1">
+                <ul
+                  className="mt-2 space-y-1"
+                  style={{
+                    boxShadow: 'var(--shadow-lg)',
+                    backdropFilter: 'blur(var(--blur-sm))',
+                  }}
+                >
                   {item.children.map((child) => (
                     <li key={child.label}>
                       <a href={child.href} className="hover:underline">
