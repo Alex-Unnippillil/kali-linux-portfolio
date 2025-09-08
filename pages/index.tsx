@@ -2,6 +2,7 @@ import dynamic from "next/dynamic";
 import { baseMetadata } from "../lib/metadata";
 import BetaBadge from "../components/BetaBadge";
 import useSession from "../hooks/useSession";
+import ToolsStrip from "../components/home/ToolsStrip";
 
 export const metadata = baseMetadata;
 
@@ -28,10 +29,7 @@ const InstallButton = dynamic(
   },
 );
 
-/**
- * @returns {JSX.Element}
- */
-const App = () => {
+const App = (): JSX.Element => {
   const { session, setSession, resetSession } = useSession();
   return (
     <>
@@ -45,6 +43,7 @@ const App = () => {
       />
       <BetaBadge />
       <InstallButton />
+      <ToolsStrip />
     </>
   );
 };
