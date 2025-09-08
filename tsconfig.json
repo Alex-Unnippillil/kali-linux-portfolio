@@ -15,7 +15,10 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
-    "types": [],
+    "types": [
+      "./types/file-system-access",
+      "./types/web-bluetooth"
+    ],
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]
