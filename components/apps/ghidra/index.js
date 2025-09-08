@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import PseudoDisasmViewer from './PseudoDisasmViewer';
 import FunctionTree from './FunctionTree';
@@ -9,7 +11,7 @@ let Const;
 let loadCapstone;
 
 // Applies S1–S8 guidelines for responsive and accessible binary analysis UI
-const DEFAULT_WASM = '/wasm/ghidra.wasm';
+const DEFAULT_WRAPPER = '/wasm/ghidra.js';
 
 async function loadCapstoneModule() {
   if (typeof window === 'undefined') return null;
@@ -107,13 +109,14 @@ export default function GhidraApp() {
   }, []);
 
   useEffect(() => {
-    const wasmUrl = process.env.NEXT_PUBLIC_GHIDRA_WASM || DEFAULT_WASM;
+    const wrapperUrl =
+      process.env.NEXT_PUBLIC_GHIDRA_WASM || DEFAULT_WRAPPER;
     if (typeof WebAssembly === 'undefined') {
       setEngine('capstone');
       ensureCapstone();
       return;
     }
-    WebAssembly.instantiateStreaming(fetch(wasmUrl), {}).catch(() => {
+    import(/* webpackIgnore: true */ wrapperUrl).catch(() => {
       setEngine('capstone');
       ensureCapstone();
     });
