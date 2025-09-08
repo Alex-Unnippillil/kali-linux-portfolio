@@ -24,4 +24,13 @@ Example:
 </section>
 ```
 
-These tokens ensure that layouts snap to the 8px grid at all breakpoints.
+These tokens ensure that layouts snap to the 8px grid at all breakpoints.<sup id="fnref1"><a href="#fn1">1</a></sup>
+
+## Footnotes
+
+<ol>
+  <li id="fn1">
+    Using consistent spacing simplifies responsive design.
+    <a href="#fnref1">Back to text</a>
+  </li>
+</ol>

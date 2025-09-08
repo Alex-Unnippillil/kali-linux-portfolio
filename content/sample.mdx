@@ -1,8 +1,10 @@
 import './mdx.css';
+import { FootnoteProvider, Footnote } from '../components/mdx/Footnote';
 
 export const title = 'MDX Sample';
-export const summary = 'Demonstrates list, code, and admonition styling.';
+export const summary = 'Demonstrates list, code, admonition, and footnote styling.';
 
+<FootnoteProvider>
 # MDX Sample
 
 Here is a list:
@@ -32,3 +34,6 @@ echo "Hello Kali"
 <div className="admonition admonition-danger">
   <p>This is a danger admonition.</p>
 </div>
+
+Here is some text with a footnote<Footnote>Example footnote content.</Footnote>.
+</FootnoteProvider>
