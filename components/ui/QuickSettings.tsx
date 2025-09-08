@@ -34,7 +34,7 @@ const QuickSettings = ({ open, lockScreen, logOut }: Props) => {
 
   return (
     <div
-      className={`absolute bg-ub-cool-grey rounded-md py-4 top-9 right-3 shadow border-black border border-opacity-20 ${
+      className={`absolute bg-ub-cool-grey rounded-md py-4 top-9 right-3 border border-card shadow-card ${
         open ? '' : 'hidden'
       }`}
     >
@@ -49,11 +49,21 @@ const QuickSettings = ({ open, lockScreen, logOut }: Props) => {
       </div>
       <div className="px-4 pb-2 flex justify-between">
         <span>Sound</span>
-        <input type="checkbox" checked={sound} onChange={toggleSound} />
+        <input
+          type="checkbox"
+          checked={sound}
+          onChange={toggleSound}
+          aria-label="Sound"
+        />
       </div>
       <div className="px-4 pb-2 flex justify-between">
         <span>Network</span>
-        <input type="checkbox" checked={online} onChange={toggleOnline} />
+        <input
+          type="checkbox"
+          checked={online}
+          onChange={toggleOnline}
+          aria-label="Network"
+        />
       </div>
       <div className="px-4 flex justify-between">
         <span>Reduced motion</span>
@@ -61,9 +71,10 @@ const QuickSettings = ({ open, lockScreen, logOut }: Props) => {
           type="checkbox"
           checked={reduceMotion}
           onChange={toggleReduceMotion}
+          aria-label="Reduced motion"
         />
       </div>
-      <div className="px-4 pt-2 border-t border-black border-opacity-20 mt-2 space-y-1">
+      <div className="px-4 pt-2 border-t border-card mt-2 space-y-1">
         <button
           type="button"
           className="w-full text-left hover:underline"

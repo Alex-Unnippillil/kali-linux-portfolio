@@ -88,6 +88,16 @@ module.exports = {
         'tray-icon': '16px',
         'tray-icon-lg': '32px',
       },
+      boxShadow: {
+        // eslint-disable-next-line no-top-level-window/no-top-level-window-or-document
+        window: '0 4px 8px rgba(0,0,0,0.3)',
+        card: '0 2px 4px rgba(0,0,0,0.2)',
+      },
+      borderColor: {
+        // eslint-disable-next-line no-top-level-window/no-top-level-window-or-document
+        window: 'var(--color-border)',
+        card: 'var(--color-border)',
+      },
       keyframes: {
         glow: {
           '0%, 100%': { boxShadow: '0 0 0px theme("colors.amber.400")' },
