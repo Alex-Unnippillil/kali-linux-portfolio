@@ -1,5 +1,7 @@
 import React from 'react';
 import Callout from '../components/ui/Callout';
+import Header from '../components/layout/Header';
+import Footer from '../components/layout/Footer';
 
 import * as Installer from '../content/get-kali/installer.mdx';
 import * as VMs from '../content/get-kali/vms.mdx';
@@ -46,58 +48,62 @@ const platforms: Platform[] = [
 ];
 
 const GetKali: React.FC = () => (
-  <main className="p-4">
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {platforms.map(({ slug, title, summary, badges, url }) => (
-        <div key={slug} className="border rounded p-4 flex flex-col">
-          <h2 className="text-xl font-semibold mb-2">{title}</h2>
-          <p className="mb-4">{summary}</p>
-          {badges?.length > 0 && (
-            <ul className="flex flex-wrap gap-2 mb-4">
-              {badges.map((badge) => {
-                const icon = badgeIcons[badge];
-                return (
-                  <li key={badge} className="flex items-center justify-center">
-                    {icon ? (
-                      <img src={icon} alt={badge} className="h-6 w-6" />
-                    ) : (
-                      <span className="bg-gray-200 text-gray-800 px-2 py-1 rounded text-xs">
-                        {badge}
-                      </span>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          <a
-            href={url ?? `https://www.kali.org/get-kali/#kali-${slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 hover:underline mt-auto"
-          >
-            Learn more
-          </a>
-        </div>
-      ))}
-    </div>
-    <div className="mt-6">
-      <Callout variant="verifyDownload">
-        <p>
-          Verify downloads using signatures or hashes.{' '}
-          <a
-            href="https://www.kali.org/docs/introduction/download-validation/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline"
-          >
-            Verification instructions
-          </a>
-          .
-        </p>
-      </Callout>
-    </div>
-  </main>
+  <>
+    <Header />
+    <main className="p-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {platforms.map(({ slug, title, summary, badges, url }) => (
+          <div key={slug} className="border rounded p-4 flex flex-col">
+            <h2 className="text-xl font-semibold mb-2">{title}</h2>
+            <p className="mb-4">{summary}</p>
+            {badges?.length > 0 && (
+              <ul className="flex flex-wrap gap-2 mb-4">
+                {badges.map((badge) => {
+                  const icon = badgeIcons[badge];
+                  return (
+                    <li key={badge} className="flex items-center justify-center">
+                      {icon ? (
+                        <img src={icon} alt={badge} className="h-6 w-6" />
+                      ) : (
+                        <span className="bg-gray-200 text-gray-800 px-2 py-1 rounded text-xs">
+                          {badge}
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            <a
+              href={url ?? `https://www.kali.org/get-kali/#kali-${slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-500 hover:underline mt-auto"
+            >
+              Learn more
+            </a>
+          </div>
+        ))}
+      </div>
+      <div className="mt-6">
+        <Callout variant="verifyDownload">
+          <p>
+            Verify downloads using signatures or hashes{' '}
+            <a
+              href="https://www.kali.org/docs/introduction/download-validation/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
+              Verification instructions
+            </a>
+            .
+          </p>
+        </Callout>
+      </div>
+    </main>
+    <Footer />
+  </>
 );
 
 export default GetKali;
