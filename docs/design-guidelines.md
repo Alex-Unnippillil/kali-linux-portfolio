@@ -25,3 +25,24 @@ Example:
 ```
 
 These tokens ensure that layouts snap to the 8px grid at all breakpoints.
+
+## Radii Tokens
+
+Use the `radius-*` scale to apply consistent rounding across components. These tokens are available in Tailwind via the standard `rounded` utilities (`rounded-md`, `rounded-lg`, etc.).
+
+| Token | Value |
+|-------|-------|
+| `radius-none` | 0 |
+| `radius-sm` | 2px |
+| `radius-md` | 4px |
+| `radius-lg` | 8px |
+| `radius-xl` | 16px |
+| `radius-round` | 9999px |
+
+Example:
+
+```html
+<button class="px-space-2 py-space-1 rounded-md">Save</button>
+```
+
+Buttons and inputs use `radius-md`, while larger surfaces like cards, panels and windows use `radius-lg`.

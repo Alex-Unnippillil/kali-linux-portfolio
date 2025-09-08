@@ -25,7 +25,7 @@ const steps: Step[] = [
 ];
 
 const WorkflowCard: React.FC = () => (
-  <section className="p-4 rounded bg-ub-grey text-white">
+  <section className="p-4 rounded-lg bg-ub-grey text-white">
     <h2 className="text-xl font-bold mb-2">Workflow</h2>
     <ul>
       {steps.map((s) => (

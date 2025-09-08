@@ -132,6 +132,13 @@ button, [role="button"], input[type="button"], input[type="submit"], input[type=
     transition: background-color var(--motion-fast), transform var(--motion-fast);
 }
 
+.input,
+input,
+textarea,
+select {
+    border-radius: var(--radius-md);
+}
+
 .btn:hover {
     background-color: color-mix(in srgb, var(--btn-bg), var(--color-inverse) 10%);
 }

@@ -101,6 +101,15 @@ module.exports = {
         'tray-icon': '16px',
         'tray-icon-lg': '32px',
       },
+      borderRadius: {
+        none: 'var(--radius-none)',
+        sm: 'var(--radius-sm)',
+        DEFAULT: 'var(--radius-md)',
+        md: 'var(--radius-md)',
+        lg: 'var(--radius-lg)',
+        xl: 'var(--radius-xl)',
+        full: 'var(--radius-round)',
+      },
       boxShadow: {
         // eslint-disable-next-line no-top-level-window/no-top-level-window-or-document
         window: '0 4px 8px rgba(0,0,0,0.3)',
