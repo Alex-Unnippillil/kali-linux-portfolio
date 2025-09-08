@@ -2,7 +2,7 @@
 
 ## Windowing System
 - `components/desktop/Window.tsx` – resizable, draggable window component with snap preview and z-index focus management.
-- `src/wm/WindowSwitcher.tsx` – Alt+Tab overlay for switching windows.
+- `src/wm/WindowSwitcher.tsx` – <kbd>Alt</kbd>+<kbd>Tab</kbd> overlay for switching windows.
 - `src/wm/placement.ts`, `src/wm/keybindingManager.ts` – helpers for window placement and keyboard shortcuts.
 
 ## Dynamic App Loader

@@ -128,10 +128,10 @@ See `.env.local.example` for the full list.
 
 ## App Finder
 
-- Press **Ctrl+Space** to open a compact run dialog.
+ - Press <kbd>Ctrl</kbd>+<kbd>Space</kbd> to open a compact run dialog.
 - The expanded view organizes results into categories and favorites.
 - Drag a search result onto the panel to create a launcher.
-- Press **Esc** to close the finder.
+ - Press <kbd>Esc</kbd> to close the finder.
 
 ---
 
