@@ -42,7 +42,7 @@ const slideRow = (row: number[]) => {
 
 const transpose = (board: number[][]): number[][] => {
   if (board.length === 0) return [];
-  return board[0].map((_, c) => board.map((row) => row[c]));
+  return board[0].map((_, c) => board.map((row) => row[c]!));
 };
 const flip = (board: number[][]) => board.map((row) => [...row].reverse());
 
@@ -290,14 +290,19 @@ const Page2048 = () => {
           Undo
         </button>
         <label className="flex items-center space-x-1 px-2">
-          <input type="checkbox" checked={hard} onChange={(e) => setHard(e.target.checked)} />
-          <span>Hard</span>
-        </label>
-        <select
-          className="text-black px-1 rounded"
-          value={boardType}
-          onChange={(e) => setBoardType(e.target.value as any)}
-        >
+        <input
+          type="checkbox"
+          aria-label="Hard"
+          checked={hard}
+          onChange={(e) => setHard(e.target.checked)}
+        />
+        <span>Hard</span>
+      </label>
+      <select
+        className="text-black px-1 rounded"
+        value={boardType}
+        onChange={(e) => setBoardType(e.target.value as any)}
+      >
           <option value="classic">Classic</option>
           <option value="hex">Hex 2048</option>
         </select>
