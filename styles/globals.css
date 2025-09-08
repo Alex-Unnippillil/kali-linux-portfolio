@@ -144,7 +144,7 @@ html[data-theme='matrix'] {
 }
 
 *:focus-visible {
-  outline: var(--focus-outline-width) solid var(--focus-outline-color);
+  outline: var(--focus-outline-width) var(--focus-outline-style) var(--focus-outline-color);
   outline-offset: 2px;
 }
 
