@@ -25,4 +25,9 @@ jobs:
         uses: treosh/lighthouse-ci-action@v11
         with:
           configPath: perf/lhci.config.js
-          urls: ${{ steps.deploy.outputs.url }}
+          urls: |
+            ${{ steps.deploy.outputs.url }}
+            ${{ steps.deploy.outputs.url }}/apps
+            ${{ steps.deploy.outputs.url }}/apps/code-editor
+            ${{ steps.deploy.outputs.url }}/apps/monaco
+            ${{ steps.deploy.outputs.url }}/apps/chess

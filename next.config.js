@@ -123,6 +123,11 @@ module.exports = withBundleAnalyzer(
       '@supabase/supabase-js',
       '@tinyhttp/cookie-signature',
     ],
+    experimental: {
+      optimizeCss: true,
+    },
+    reactStrictMode: true,
+    swcMinify: true,
     webpack: configureWebpack,
 
     // Run ESLint during builds so linting problems surface in CI and local builds.
@@ -153,6 +158,7 @@ module.exports = withBundleAnalyzer(
       deviceSizes: [640, 750, 828, 1080, 1200, 1280, 1920, 2048, 3840],
       imageSizes: [16, 32, 48, 64, 96, 128, 256],
       formats: ['image/avif', 'image/webp'],
+      minimumCacheTTL: 31536000,
     },
     async rewrites() {
       return [
@@ -186,6 +192,24 @@ module.exports = withBundleAnalyzer(
                   {
                     key: 'Cache-Control',
                     value: 'public, max-age=31536000, immutable',
+                  },
+                ],
+              },
+              {
+                source: '/',
+                headers: [
+                  {
+                    key: 'Cache-Control',
+                    value: 'public, max-age=0, s-maxage=600, stale-while-revalidate=60',
+                  },
+                ],
+              },
+              {
+                source: '/apps',
+                headers: [
+                  {
+                    key: 'Cache-Control',
+                    value: 'public, max-age=0, s-maxage=600, stale-while-revalidate=60',
                   },
                 ],
               },

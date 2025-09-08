@@ -1,13 +1,6 @@
 module.exports = {
   ci: {
     collect: {
-      url: [
-        '/',
-        '/apps',
-        '/apps/code-editor',
-        '/apps/monaco',
-        '/apps/chess',
-      ],
       numberOfRuns: 3,
       settings: {
         preset: 'mobile',
