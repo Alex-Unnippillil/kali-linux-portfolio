@@ -83,7 +83,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
             key={t.id}
             role="status"
             aria-live="polite"
-            className={`relative px-4 py-3 shadow-md transition-all duration-300 transform pointer-events-auto ${
+            className={`relative px-4 py-3 border border-100 shadow-100 transition-all duration-300 transform pointer-events-auto ${
               t.leaving
                 ? 'opacity-0 blur-md translate-x-2'
                 : 'opacity-100 blur-0 translate-x-0'
@@ -91,7 +91,6 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
             style={{
               background: kaliTheme.bubble.background,
               color: kaliTheme.bubble.text,
-              border: `1px solid ${kaliTheme.bubble.border}`,
               borderRadius: 'var(--radius-md)',
             }}
           >

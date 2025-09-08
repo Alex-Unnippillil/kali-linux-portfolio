@@ -801,7 +801,7 @@ export class Window extends Component {
                             (this.state.grabbed ? " opacity-70 " : "") +
                             (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") +
                             (this.props.isFocused ? "" : " notFocused") +
-                            " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                            " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute shadow-300 border border-200 border-t-0 flex flex-col"}
                         id={this.id}
                         data-context="window"
                         data-app-id={this.id}

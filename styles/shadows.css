@@ -1,0 +1,14 @@
+/* Shadow and border design tokens */
+:root {
+  /* Shadow levels */
+  --shadow-0: none;
+  --shadow-100: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --shadow-200: 0 4px 8px rgba(0, 0, 0, 0.2);
+  --shadow-300: 0 8px 16px rgba(0, 0, 0, 0.3);
+
+  /* Border color levels */
+  --border-0: transparent;
+  --border-100: color-mix(in srgb, var(--color-border), transparent 50%);
+  --border-200: var(--color-border);
+  --border-300: color-mix(in srgb, var(--color-border), black 20%);
+}

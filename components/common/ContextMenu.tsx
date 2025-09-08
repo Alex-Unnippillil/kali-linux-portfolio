@@ -62,7 +62,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
     const [subIndex, setSubIndex] = useState<number | null>(null);
 
     return (
-      <div className="cursor-default w-52 rounded-md border border-gray-700 context-menu-bg text-left text-white shadow-lg">
+      <div className="cursor-default w-52 rounded-md border border-100 context-menu-bg text-left text-white shadow-200">
         <ul className="py-2">
           {items.map((item, i) =>
             item.separator ? (

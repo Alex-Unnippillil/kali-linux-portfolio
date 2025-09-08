@@ -35,7 +35,7 @@ const HelpMenu: React.FC = () => {
       {open && (
         <div
           ref={menuRef}
-          className="absolute left-0 mt-1 z-50 bg-ub-grey text-white shadow-lg p-2"
+          className="absolute left-0 mt-1 z-50 bg-ub-grey text-white border border-100 shadow-200 p-2"
           tabIndex={-1}
         >
           <button
