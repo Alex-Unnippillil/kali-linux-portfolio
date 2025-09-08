@@ -45,6 +45,7 @@ const App = () => {
       />
       <BetaBadge />
       <InstallButton />
+      <div className="bg-kali-hero h-64 w-full" />
     </>
   );
 };
