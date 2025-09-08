@@ -9,7 +9,13 @@ interface NavItem {
 }
 
 const Header: React.FC = () => (
-  <header className="border-b border-gray-700 p-4">
+  <header className="relative border-b border-gray-700 p-4">
+    <a
+      href="#main-content"
+      className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-full focus:mt-2 focus:rounded focus:bg-black focus:px-4 focus:py-2 focus:text-white"
+    >
+      Skip to main content
+    </a>
     <nav aria-label="Main navigation">
       <ul className="flex flex-wrap items-center gap-4">
         {(ia as any).header.map((item: NavItem) => (
