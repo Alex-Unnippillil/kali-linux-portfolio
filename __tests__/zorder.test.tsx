@@ -41,6 +41,7 @@ describe('z-order logic', () => {
         closed_windows={desktop.state.closed_windows}
         minimized_windows={desktop.state.minimized_windows}
         focused_windows={desktop.state.focused_windows}
+        dock={[]}
         openApp={() => {}}
         minimize={() => {}}
       />
