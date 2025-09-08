@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import emailjs from '@emailjs/browser';
+import DOMPurify from 'dompurify';
 import ProgressBar from '../ui/ProgressBar';
 import { createDisplay } from '../../utils/createDynamicApp';
 
@@ -84,9 +85,9 @@ export class Gedit extends Component {
     sendMessage = async () => {
         let { name, subject, message } = this.state;
 
-        name = name.trim();
-        subject = subject.trim();
-        message = message.trim();
+        name = DOMPurify.sanitize(name.trim());
+        subject = DOMPurify.sanitize(subject.trim());
+        message = DOMPurify.sanitize(message.trim());
 
         let error = false;
 

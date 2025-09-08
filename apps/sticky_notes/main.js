@@ -2,6 +2,7 @@
 
 import { isBrowser } from '../../utils/env';
 import { getDb } from '../../utils/safeIDB';
+import DOMPurify from 'dompurify';
 
 let notesContainer = null;
 let addNoteBtn = null;
@@ -39,6 +40,10 @@ function getDB() {
 }
 
 let notes = [];
+
+export function sanitize(input) {
+  return DOMPurify.sanitize(input);
+}
 
 async function saveNotes() {
   try {
@@ -169,7 +174,7 @@ async function init() {
     const params = new URLSearchParams(location.search);
     const sharedText = params.get('text');
     if (sharedText) {
-      addNote(sharedText);
+      addNote(sanitize(sharedText));
       history.replaceState(null, '', location.pathname);
     }
   } catch (err) {
