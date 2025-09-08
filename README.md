@@ -280,6 +280,7 @@ These external domains are whitelisted in the default CSP. Update this list when
 | `*.twimg.com` | Twitter asset CDN |
 | `*.x.com` | X (Twitter) domain equivalents |
 | `*.google.com` | Google services and Chrome app favicons |
+| `www.gstatic.com` | Google static assets |
 | `example.com` | Chrome app demo origin |
 | `openweathermap.org` | Weather widget images |
 | `ghchart.rshah.org` | GitHub contribution charts |
@@ -289,6 +290,7 @@ These external domains are whitelisted in the default CSP. Update this list when
 | `cdn.jsdelivr.net` | Math.js library |
 | `cdnjs.cloudflare.com` | PDF.js worker |
 | `stackblitz.com` | StackBlitz IDE embeds |
+| `www.youtube.com` | YouTube embeds and scripts |
 | `www.youtube-nocookie.com` | YouTube video embeds (privacy-enhanced) |
 | `open.spotify.com` | Spotify embeds |
 | `react.dev` | React documentation embeds |
