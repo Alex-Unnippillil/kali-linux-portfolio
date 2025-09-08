@@ -59,6 +59,11 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({
     'notification-quiet-end',
     '07:00',
   );
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  const toggleCollapse = useCallback((id: string) => {
+    setCollapsed(prev => ({ ...prev, [id]: !prev[id] }));
+  }, []);
 
   const isQuietHours = useCallback(() => {
     if (!quietStart || !quietEnd) return false;
@@ -142,6 +147,29 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({
     0
   );
 
+  const renderWithTimestamps = (list: AppNotification[]) => {
+    const sorted = [...list].sort((a, b) => a.date - b.date);
+    const items: React.ReactNode[] = [];
+    let lastLabel = '';
+    sorted.forEach(n => {
+      const label = new Date(n.date).toLocaleString();
+      if (label !== lastLabel) {
+        items.push(
+          <li key={`${n.id}-ts`} className="timestamp-separator">
+            {label}
+          </li>,
+        );
+        lastLabel = label;
+      }
+      items.push(
+        <li key={n.id} className={n.closing ? 'fade' : ''}>
+          {n.message}
+        </li>,
+      );
+    });
+    return items;
+  };
+
   useEffect(() => {
     const nav: any = navigator;
     if (nav && nav.setAppBadge) {
@@ -207,17 +235,50 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({
       );
     }
 
-    const list = notifications['general'] ?? [];
-    return (
-      <section className="notification-group">
-        <ul>
-          {list.map(n => (
-            <li key={n.id} className={n.closing ? 'fade' : ''}>
-              {n.message}
-            </li>
-          ))}
-        </ul>
+    const systemList =
+      notifications['system'] ?? notifications['general'] ?? [];
+    const appEntries = Object.entries(notifications).filter(
+      ([appId]) => appId !== 'system' && appId !== 'general',
+    );
+
+    const renderGroup = (
+      title: string,
+      id: string,
+      list: AppNotification[],
+    ) => (
+      <section key={id} className="notification-group">
+        <header>
+          <h3>{title}</h3>
+          <div className="notification-actions">
+            <button
+              type="button"
+              onClick={() => toggleCollapse(id)}
+              aria-expanded={!collapsed[id]}
+              aria-controls={`group-${id}`}
+            >
+              {collapsed[id] ? 'Expand' : 'Collapse'}
+            </button>
+            <button type="button" onClick={() => clearNotifications(id)}>
+              Clear
+            </button>
+          </div>
+        </header>
+        {!collapsed[id] && <ul id={`group-${id}`}>{renderWithTimestamps(list)}</ul>}
       </section>
+    );
+
+    return (
+      <>
+        {systemList.length > 0 && renderGroup('System', 'system', systemList)}
+        {appEntries.length > 0 && (
+          <section className="notification-category">
+            <h2>Apps</h2>
+            {appEntries.map(([appId, list]) =>
+              renderGroup(appId, appId, list),
+            )}
+          </section>
+        )}
+      </>
     );
   };
 

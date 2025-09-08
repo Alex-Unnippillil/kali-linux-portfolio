@@ -194,6 +194,20 @@ html[data-theme='matrix'] {
 .notification-tabs button.active {
   font-weight: bold;
 }
+.notification-group header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.notification-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+.timestamp-separator {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  margin-top: 0.5rem;
+}
 .notification-group ul {
   list-style: none;
   margin: 0;
