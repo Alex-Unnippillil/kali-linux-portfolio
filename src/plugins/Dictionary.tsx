@@ -2,13 +2,17 @@
 
 import { useState } from "react";
 import Modal from "../../components/base/Modal";
+import {
+  Definition,
+  fetchDefinitions,
+} from "../lib/dictionary";
 
 const DEFAULT_API = "https://api.dictionaryapi.dev/api/v2/entries/en";
 
 export default function Dictionary() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<string[]>([]);
+  const [results, setResults] = useState<Definition[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,22 +25,12 @@ export default function Dictionary() {
     setError(null);
     setResults([]);
     try {
-      const res = await fetch(
-        `${apiUrl}/${encodeURIComponent(query.trim())}`
-      );
-      if (!res.ok) throw new Error("Request failed");
-      const json = await res.json();
-      const definitions: string[] = [];
-      if (Array.isArray(json)) {
-        json.forEach((entry: any) => {
-          entry.meanings?.forEach((m: any) => {
-            m.definitions?.forEach((d: any) => {
-              if (d.definition) definitions.push(d.definition);
-            });
-          });
-        });
+      const defs = await fetchDefinitions(query.trim(), apiUrl);
+      if (defs.length === 0) {
+        setError("No results found");
+      } else {
+        setResults(defs);
       }
-      setResults(definitions.length ? definitions : ["No results"]);
     } catch {
       setError("No results found");
     } finally {
@@ -90,7 +84,7 @@ export default function Dictionary() {
             {!loading && !error && results.length > 0 && (
               <ul className="list-disc pl-5 max-h-64 overflow-auto">
                 {results.map((r, i) => (
-                  <li key={i}>{r}</li>
+                  <li key={i}>{r.definition}</li>
                 ))}
               </ul>
             )}
