@@ -10,15 +10,8 @@ import usePersistentState from '../../hooks/usePersistentState';
 import { getDailySeed } from '../../utils/dailySeed';
 
 import { isBrowser } from '@/utils/env';
-import {
-  moveLeft,
-  moveRight,
-  moveUp,
-  moveDown,
-  hasMoves,
-  addRandomTile,
-  checkHighest,
-} from './engine';
+import { loadState, saveState, clearState } from './storage';
+
 
 const SIZE = 4;
 
@@ -190,16 +183,21 @@ const Page2048 = () => {
       const s = await getDailySeed('2048');
       const seed = hashSeed(s);
       const rand = mulberry32(seed);
-      const b = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
-      const added: string[] = [];
-      const a1 = addRandomTile(b, rand);
-      if (a1) added.push(`${a1[0]}-${a1[1]}`);
-      const a2 = addRandomTile(b, rand);
-      if (a2) added.push(`${a2[0]}-${a2[1]}`);
-
       if (!mounted) return;
-      setBoard(b);
-      setSpawnCells(new Set(added));
+
+      const saved = loadState();
+      if (saved) {
+        setBoard(saved.board);
+        setHighest(saved.highest);
+        setWon(saved.won);
+        setLost(saved.lost);
+      } else {
+        const b = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+        addRandomTile(b, rand);
+        addRandomTile(b, rand);
+        setBoard(b);
+      }
+
       rngRef.current = rand;
       seedRef.current = seed;
       setSeedStr(s);
@@ -208,6 +206,10 @@ const Page2048 = () => {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    saveState({ board, highest, won, lost });
+  }, [board, highest, won, lost]);
 
   const resetTimer = useCallback(() => {
     if (!hard) return;
@@ -302,6 +304,7 @@ const Page2048 = () => {
   }, [resetTimer]);
 
   const restart = useCallback(() => {
+    clearState();
     const rand = mulberry32(seedRef.current);
     rngRef.current = rand;
     const b = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
@@ -434,15 +437,15 @@ const Page2048 = () => {
         <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={handleUndo}>
           Undo
         </button>
-        <label className="flex items-center space-x-1 px-2">
-          <input
-            type="checkbox"
-            aria-label="Hard mode"
-            checked={hard}
-            onChange={(e) => setHard(e.target.checked)}
-          />
-          <span>Hard</span>
-        </label>
+          <label className="flex items-center space-x-1 px-2">
+            <input
+              type="checkbox"
+              aria-label="Hard mode"
+              checked={hard}
+              onChange={(e) => setHard(e.target.checked)}
+            />
+            <span>Hard</span>
+          </label>
 
         <select
           className="text-black px-1 rounded"
