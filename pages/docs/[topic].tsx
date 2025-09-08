@@ -2,14 +2,9 @@ import { isBrowser } from '@/utils/env';
 import fs from 'fs';
 import path from 'path';
 import { GetStaticPaths, GetStaticProps } from 'next';
-import { marked } from 'marked';
 import { useEffect } from 'react';
-
-interface TocItem {
-  id: string;
-  text: string;
-  depth: number;
-}
+import TableOfContents from '@/components/ui/TableOfContents';
+import { mdxToHtmlWithToc, TocItem } from '@/utils/mdx';
 
 interface DocProps {
   html: string;
@@ -26,51 +21,32 @@ export default function DocPage({ html, toc }: DocProps) {
 
   return (
     <div className="flex flex-col md:flex-row p-4">
-      <nav className="md:w-1/4 md:pr-4">
-        <ul>
-          {toc.map(({ id, text, depth }) => (
-            <li key={id} className={depth === 3 ? 'ml-4' : ''}>
-              <a href={`#${id}`}>{text}</a>
-            </li>
-          ))}
-        </ul>
-      </nav>
-      <article className="prose flex-1" dangerouslySetInnerHTML={{ __html: html }} />
+      <TableOfContents headings={toc} className="md:w-1/4 md:pr-4" />
+      <article
+        className="prose flex-1 md:pl-8"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
     </div>
   );
 }
 
 export const getStaticPaths: GetStaticPaths = async () => {
   const dir = path.join(process.cwd(), 'public', 'docs', 'seed');
-  const files = fs.readdirSync(dir).filter((f) => f.endsWith('.md'));
+  const files = fs
+    .readdirSync(dir)
+    .filter((f) => f.endsWith('.md') || f.endsWith('.mdx'));
   return {
-    paths: files.map((name) => ({ params: { topic: name.replace(/\.md$/, '') } })),
+    paths: files.map((name) => ({ params: { topic: name.replace(/\.mdx?$/, '') } })),
     fallback: false,
   };
 };
 
 export const getStaticProps: GetStaticProps<DocProps> = async ({ params }) => {
   const topic = params?.topic as string;
-  const filePath = path.join(process.cwd(), 'public', 'docs', 'seed', `${topic}.md`);
-  const md = fs.readFileSync(filePath, 'utf8');
-  const tokens = marked.lexer(md);
-
-  const tocSlugger = new marked.Slugger();
-  const toc: TocItem[] = tokens
-    .filter((t) => t.type === 'heading' && (t as any).depth && ((t as any).depth === 2 || (t as any).depth === 3))
-    .map((t) => ({
-      id: tocSlugger.slug((t as any).text),
-      text: (t as any).text,
-      depth: (t as any).depth,
-    }));
-
-  const renderer = new marked.Renderer();
-  const renderSlugger = new marked.Slugger();
-  renderer.heading = (text, level) => {
-    const id = renderSlugger.slug(text);
-    return `<h${level} id="${id}">${text}</h${level}>`;
-  };
-
-  const html = marked.parse(md, { renderer }) as string;
+  const mdPath = path.join(process.cwd(), 'public', 'docs', 'seed', `${topic}.md`);
+  const mdxPath = path.join(process.cwd(), 'public', 'docs', 'seed', `${topic}.mdx`);
+  const filePath = fs.existsSync(mdxPath) ? mdxPath : mdPath;
+  const source = fs.readFileSync(filePath, 'utf8');
+  const { html, toc } = await mdxToHtmlWithToc(source);
   return { props: { html, toc } };
 };
