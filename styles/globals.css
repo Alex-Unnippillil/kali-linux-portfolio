@@ -90,6 +90,37 @@ html[data-theme='kali-light'] {
   --color-dark: var(--color-ubt-gedit-dark);
 }
 
+/* Undercover theme */
+html[data-theme='undercover'] {
+  --color-bg: #f0f0f0;
+  --color-text: #000000;
+  --color-primary: #0078d7;
+  --color-secondary: #e5e5e5;
+  --color-accent: #0078d7;
+  --color-muted: #d0d0d0;
+  --color-surface: #ffffff;
+  --color-inverse: #ffffff;
+  --color-border: #c0c0c0;
+  --color-terminal: #00ff00;
+  --color-dark: #0078d7;
+  --color-ub-grey: #dcdcdc;
+  --color-ubt-grey: #f7f7f7;
+  --color-ub-cool-grey: #e5e5e5;
+  --color-ub-orange: #0078d7;
+  --color-ub-window-title: #0078d7;
+}
+
+html[data-theme='undercover'] .main-navbar-vp {
+  background: #e5e5e5;
+  color: #000;
+}
+
+html[data-theme='undercover'] .window-titlebar {
+  background: #ffffff;
+  color: #000;
+  border-bottom: 1px solid #c0c0c0;
+}
+
 /* Matrix theme */
 html[data-theme='matrix'] {
   --color-bg: #000000;

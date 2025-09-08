@@ -85,19 +85,21 @@ export default function ThemeSettings() {
           <option value="default">Default</option>
           <option value="kali-dark">Kali Dark</option>
           <option value="kali-light">Kali Light</option>
+          <option value="undercover">Undercover</option>
           <option value="dark">Dark</option>
           <option value="neon">Neon</option>
           <option value="matrix">Matrix</option>
         </select>
-        <label className="mt-4 flex items-center gap-2">
+        <div className="mt-4 flex items-center gap-2">
           <input
             id="theme-high-contrast"
             type="checkbox"
+            aria-label="High Contrast"
             checked={highContrast}
             onChange={(e) => setHighContrast(e.target.checked)}
           />
-          <span>High Contrast</span>
-        </label>
+          <label htmlFor="theme-high-contrast">High Contrast</label>
+        </div>
 
         <div className="mt-6">
           <h2 className="text-lg mb-2">Panel Icons</h2>
