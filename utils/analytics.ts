@@ -3,6 +3,8 @@ import ReactGA from 'react-ga4';
 type EventInput = Parameters<typeof ReactGA.event>[0];
 
 const safeEvent = (...args: Parameters<typeof ReactGA.event>): void => {
+  if (process.env.NEXT_PUBLIC_ENABLE_ANALYTICS !== 'true') return;
+  if (typeof window !== 'undefined' && window.localStorage.getItem('analytics-enabled') !== 'true') return;
   try {
     const eventFn = ReactGA.event;
     if (typeof eventFn === 'function') {

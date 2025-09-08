@@ -22,6 +22,8 @@ import {
   setNetworkTime as saveNetworkTime,
   getSymbolicTrayIcons as loadSymbolicTrayIcons,
   setSymbolicTrayIcons as saveSymbolicTrayIcons,
+  getAnalytics as loadAnalytics,
+  setAnalytics as saveAnalytics,
   defaults,
 } from '../utils/settingsStore';
 import { THEME_KEY, getTheme as getStoredTheme, setTheme as applyTheme } from '../utils/theme';
@@ -67,6 +69,7 @@ interface SettingsContextValue {
   networkTime: boolean;
   theme: string;
   symbolicTrayIcons: boolean;
+  analytics: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -80,6 +83,7 @@ interface SettingsContextValue {
   setNetworkTime: (value: boolean) => void;
   setTheme: (value: string) => void;
   setSymbolicTrayIcons: (value: boolean) => void;
+  setAnalytics: (value: boolean) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -96,6 +100,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   networkTime: defaults.networkTime,
   theme: 'default',
   symbolicTrayIcons: defaults.symbolicTrayIcons,
+  analytics: defaults.analytics,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -109,6 +114,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setNetworkTime: () => {},
   setTheme: () => {},
   setSymbolicTrayIcons: () => {},
+  setAnalytics: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -137,6 +143,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [networkTime, setNetworkTime] = useState<boolean>(defaults.networkTime);
   const [symbolicTrayIcons, setSymbolicTrayIcons] = useState<boolean>(defaults.symbolicTrayIcons);
+  const [analytics, setAnalytics] = useState<boolean>(defaults.analytics);
   const fetchRef = useRef<typeof fetch | null>(null);
 
   const [rotationMode] = usePersistentState<'off' | 'daily' | 'login'>(
@@ -173,6 +180,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setHaptics(await loadHaptics());
       setNetworkTime(await loadNetworkTime());
       setSymbolicTrayIcons(await loadSymbolicTrayIcons());
+      setAnalytics(await loadAnalytics());
     })();
   }, []);
 
@@ -212,7 +220,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setWallpaper(base);
       setRotationIndex((index + 1) % rotationSet.length);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rotationMode, rotationSet]);
 
   useEffect(() => {
@@ -303,6 +310,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveSymbolicTrayIcons(symbolicTrayIcons);
   }, [symbolicTrayIcons]);
 
+  useEffect(() => {
+    saveAnalytics(analytics);
+  }, [analytics]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -318,6 +329,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         haptics,
         networkTime,
         symbolicTrayIcons,
+        analytics,
         theme,
         setAccent,
         setWallpaper,
@@ -332,6 +344,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setNetworkTime,
         setTheme,
         setSymbolicTrayIcons,
+        setAnalytics,
       }}
     >
       {children}

@@ -17,6 +17,8 @@ const thresholds: Record<string, number> = {
 const vitalNames = new Set(['TTFB', 'LCP', 'INP', 'CLS', 'TTI']);
 
 export const reportWebVitals = ({ id, name, value }: WebVitalMetric): void => {
+  if (process.env.NEXT_PUBLIC_ENABLE_ANALYTICS !== 'true') return;
+  if (typeof window !== 'undefined' && window.localStorage.getItem('analytics-enabled') !== 'true') return;
   if (process.env.NEXT_PUBLIC_VERCEL_ENV !== 'preview') return;
   if (!vitalNames.has(name)) return;
 

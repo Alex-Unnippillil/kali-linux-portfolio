@@ -17,6 +17,10 @@ jest.mock('@/utils/reportWebVitals', () => ({
 }));
 
 describe('useReportWebVitals', () => {
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_ENABLE_ANALYTICS = 'true';
+    window.localStorage.setItem('analytics-enabled', 'true');
+  });
   it('forwards metrics to analytics services', () => {
     const metric = { id: '1', name: 'LCP', value: 123 } as any;
     (nextUseReportWebVitals as jest.Mock).mockImplementation((cb: any) => cb(metric));
