@@ -1,21 +1,50 @@
 'use client';
 
-import { useState } from 'react';
-import DocMegaMenu from './DocMegaMenu';
+import Link from 'next/link';
+import { useEffect, useRef, useState } from 'react';
+import MegaMenu from '../Header/MegaMenu';
+
+const OPEN_DELAY = 100;
 
 export default function Header() {
   const [docsOpen, setDocsOpen] = useState(false);
-  const closeDocs = () => setDocsOpen(false);
+  const openTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const closeDocs = () => {
+    setDocsOpen(false);
+  };
+
+  const handleMouseEnter = () => {
+    if (openTimeout.current) {
+      clearTimeout(openTimeout.current);
+    }
+    openTimeout.current = setTimeout(() => setDocsOpen(true), OPEN_DELAY);
+  };
+
+  const handleMouseLeave = () => {
+    if (openTimeout.current) {
+      clearTimeout(openTimeout.current);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (openTimeout.current) {
+        clearTimeout(openTimeout.current);
+      }
+    };
+  }, []);
 
   return (
     <header className="relative bg-gray-900 text-white rtl:text-right">
       <nav className="flex gap-4 p-4 rtl:flex-row-reverse">
-        <a href="/" className="hover:underline">
+        <Link href="/" className="hover:underline">
           Home
-        </a>
+        </Link>
         <div
           className="relative"
-          onMouseEnter={() => setDocsOpen(true)}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
         >
           <button
             type="button"
@@ -24,7 +53,7 @@ export default function Header() {
           >
             Documentation
           </button>
-          {docsOpen && <DocMegaMenu onClose={closeDocs} />}
+          {docsOpen && <MegaMenu onClose={closeDocs} />}
         </div>
       </nav>
     </header>
