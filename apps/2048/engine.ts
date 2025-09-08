@@ -39,10 +39,11 @@ export const hasMoves = (board: Board): boolean => {
   const size = board.length;
   for (let r = 0; r < size; r += 1) {
     for (let c = 0; c < size; c += 1) {
-      const v = board[r][c];
+      const row = board[r]!;
+      const v = row[c]!;
       if (v === 0) return true;
-      if (c < size - 1 && v === board[r][c + 1]) return true;
-      if (r < size - 1 && v === board[r + 1][c]) return true;
+      if (c < size - 1 && v === row[c + 1]!) return true;
+      if (r < size - 1 && v === board[r + 1]![c]!) return true;
     }
   }
   return false;
