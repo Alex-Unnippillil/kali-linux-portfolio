@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ReactGA from 'react-ga4';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
-import { getDailySeed } from '../../utils/dailySeed';
+import { getDailySeed, currentDateString } from '../../utils/dailySeed';
+import copyToClipboard from '../../utils/clipboard';
+import useToast from '../../hooks/useToast';
 import { isBrowser } from '@/utils/env';
 
 const SIZE = 4;
@@ -133,12 +135,14 @@ const Page2048 = () => {
   const [won, setWon] = useState(false);
   const [lost, setLost] = useState(false);
   const [history, setHistory] = useState<number[][][]>([]);
+  const [seedStr, setSeedStr] = useState('');
+  const toast = useToast();
 
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const seedStr = await getDailySeed('2048');
-      const seed = hashSeed(seedStr);
+      const s = await getDailySeed('2048');
+      const seed = hashSeed(s);
       const rand = mulberry32(seed);
       const b = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
       addRandomTile(b, rand);
@@ -147,6 +151,7 @@ const Page2048 = () => {
       setBoard(b);
       rngRef.current = rand;
       seedRef.current = seed;
+      setSeedStr(s);
     })();
     return () => {
       mounted = false;
@@ -231,6 +236,14 @@ const Page2048 = () => {
     resetTimer();
   }, [resetTimer]);
 
+  const handleShare = useCallback(async () => {
+    const date = currentDateString();
+    const url = `${window.location.origin}${window.location.pathname}?seed=${seedStr}`;
+    const summary = `2048 ${date} Score:${highest} Moves:${moves.length} Seed:${seedStr} ${url}`;
+    const ok = await copyToClipboard(summary);
+    toast(ok ? 'Copied to clipboard!' : 'Copy failed');
+  }, [seedStr, highest, moves, toast]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
@@ -305,6 +318,17 @@ const Page2048 = () => {
           Close
         </button>
         {hard && <div className="ml-2">{timer}</div>}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="px-4 py-2 bg-gray-700 rounded">Score: {highest}</div>
+        <div className="px-4 py-2 bg-gray-700 rounded">Moves: {moves.length}</div>
+        <div className="px-4 py-2 bg-gray-700 rounded">Seed: {seedStr}</div>
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={handleShare}
+        >
+          Share
+        </button>
       </div>
       <div className="grid w-full max-w-sm grid-cols-4 gap-2">
         {board.map((row, rIdx) =>
