@@ -49,6 +49,20 @@ module.exports = {
         'ubt-gedit-dark': 'var(--color-ubt-gedit-dark)',
         'ub-border-orange': 'var(--color-ub-border-orange)',
         'ub-dark-grey': 'var(--color-ub-dark-grey)',
+        category: {
+          'information-gathering': {
+            DEFAULT: '#DBEAFE',
+            dark: '#1E3A8A',
+          },
+          'password-attacks': {
+            DEFAULT: '#FEE2E2',
+            dark: '#991B1B',
+          },
+          'web-applications': {
+            DEFAULT: '#FEF3C7',
+            dark: '#92400E',
+          },
+        },
       },
         fontFamily: {
           ubuntu: ['Ubuntu', 'sans-serif'],

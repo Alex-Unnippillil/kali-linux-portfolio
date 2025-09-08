@@ -2,6 +2,7 @@
   "nmap": {
     "name": "Nmap",
     "description": "Network exploration tool and security/port scanner.",
+    "categories": ["Information Gathering"],
     "commands": [
       "nmap -sV 192.168.0.1",
       "nmap -A 192.168.0.1"
@@ -14,6 +15,7 @@
   "hydra": {
     "name": "Hydra",
     "description": "Parallelized login cracker which supports numerous protocols.",
+    "categories": ["Password Attacks"],
     "commands": [
       "hydra -l user -P passlist.txt ftp://192.168.0.1",
       "hydra -L users.txt -P passlist.txt ssh://192.168.0.1"
