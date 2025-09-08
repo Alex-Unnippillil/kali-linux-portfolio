@@ -71,6 +71,7 @@ module.exports = {
         'space-6': '48px',
         'space-7': '56px',
         'space-8': '64px',
+        'icon': 'var(--icon-spacing)',
       },
       minWidth: {
         '0': '0',

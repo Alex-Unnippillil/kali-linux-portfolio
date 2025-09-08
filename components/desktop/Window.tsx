@@ -214,7 +214,7 @@ const Window: React.FC<WindowProps> = ({
       {snapPreview && (
         <div
           data-testid="snap-preview"
-          className={`fixed z-50 pointer-events-none border-2 border-dashed border-accent bg-accent/20 rounded ${
+          className={`fixed z-50 pointer-events-none border-2 border-dashed border-accent bg-accent/20 rounded hc:bg-accent/40 ${
             prefersReducedMotion ? "" : "transition-all duration-150"
           }`}
           style={snapPreview}
@@ -268,14 +268,14 @@ const Window: React.FC<WindowProps> = ({
       <div className="w-full h-[calc(100%-2rem)]">{children}</div>
 
       {/* Resize handles */}
-      <div className="absolute top-0 left-0 w-full h-4 -mt-2 cursor-n-resize hover:bg-accent/20" onPointerDown={startResize("top")} />
-      <div className="absolute bottom-0 left-0 w-full h-4 -mb-2 cursor-s-resize hover:bg-accent/20" onPointerDown={startResize("bottom")} />
-      <div className="absolute top-0 left-0 h-full w-4 -ml-2 cursor-w-resize hover:bg-accent/20" onPointerDown={startResize("left")} />
-      <div className="absolute top-0 right-0 h-full w-4 -mr-2 cursor-e-resize hover:bg-accent/20" onPointerDown={startResize("right")} />
-      <div className="absolute top-0 left-0 w-4 h-4 -mt-2 -ml-2 cursor-nw-resize hover:bg-accent/20" onPointerDown={startResize("top-left")} />
-      <div className="absolute top-0 right-0 w-4 h-4 -mt-2 -mr-2 cursor-ne-resize hover:bg-accent/20" onPointerDown={startResize("top-right")} />
-        <div className="absolute bottom-0 left-0 w-4 h-4 -mb-2 -ml-2 cursor-sw-resize hover:bg-accent/20" onPointerDown={startResize("bottom-left")} />
-        <div className="absolute bottom-0 right-0 w-4 h-4 -mb-2 -mr-2 cursor-se-resize hover:bg-accent/20" onPointerDown={startResize("bottom-right")} />
+      <div className="absolute top-0 left-0 w-full h-5 -mt-2 cursor-n-resize hover:bg-accent/30" onPointerDown={startResize("top")} />
+      <div className="absolute bottom-0 left-0 w-full h-5 -mb-2 cursor-s-resize hover:bg-accent/30" onPointerDown={startResize("bottom")} />
+      <div className="absolute top-0 left-0 h-full w-5 -ml-2 cursor-w-resize hover:bg-accent/30" onPointerDown={startResize("left")} />
+      <div className="absolute top-0 right-0 h-full w-5 -mr-2 cursor-e-resize hover:bg-accent/30" onPointerDown={startResize("right")} />
+      <div className="absolute top-0 left-0 w-5 h-5 -mt-2 -ml-2 cursor-nw-resize hover:bg-accent/30" onPointerDown={startResize("top-left")} />
+      <div className="absolute top-0 right-0 w-5 h-5 -mt-2 -mr-2 cursor-ne-resize hover:bg-accent/30" onPointerDown={startResize("top-right")} />
+        <div className="absolute bottom-0 left-0 w-5 h-5 -mb-2 -ml-2 cursor-sw-resize hover:bg-accent/30" onPointerDown={startResize("bottom-left")} />
+        <div className="absolute bottom-0 right-0 w-5 h-5 -mb-2 -mr-2 cursor-se-resize hover:bg-accent/30" onPointerDown={startResize("bottom-right")} />
       </div>
     </>
   );
