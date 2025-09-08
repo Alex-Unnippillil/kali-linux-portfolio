@@ -45,6 +45,38 @@ export default function Home({ desktops }) {
           </div>
         ))}
       </div>
+      <section className="mt-8">
+        <h2 className="mb-4 text-xl font-semibold sm:text-2xl md:text-3xl">Discover more</h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+          <a
+            href="https://www.kali.org/docs/"
+            className="block rounded border p-4 focus:outline-none focus:ring"
+          >
+            <h3 className="mb-2 text-lg font-semibold">Make your job easier</h3>
+            <p className="text-sm text-ubt-grey">
+              Explore documentation and tools to streamline your workflow.
+            </p>
+          </a>
+          <a
+            href="https://www.kali.org/get-kali/"
+            className="block rounded border p-4 focus:outline-none focus:ring"
+          >
+            <h3 className="mb-2 text-lg font-semibold">Kali Everywhere</h3>
+            <p className="text-sm text-ubt-grey">
+              Learn how to run Kali on desktops, servers, and the cloud.
+            </p>
+          </a>
+          <a
+            href="https://www.kali.org/docs/introduction/customizing-kali-linux/"
+            className="block rounded border p-4 focus:outline-none focus:ring"
+          >
+            <h3 className="mb-2 text-lg font-semibold">Customization</h3>
+            <p className="text-sm text-ubt-grey">
+              Tailor Kali to your needs with themes, tweaks, and personalization.
+            </p>
+          </a>
+        </div>
+      </section>
     </main>
   );
 }
