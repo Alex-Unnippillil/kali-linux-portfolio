@@ -48,7 +48,7 @@ export function useKeymap() {
   }));
 
   const updateShortcut = (description: string, keys: string) =>
-    setMap({ ...map, [description]: keys });
+    setMap((m) => ({ ...m, [description]: keys }));
 
   return { shortcuts, updateShortcut };
 }

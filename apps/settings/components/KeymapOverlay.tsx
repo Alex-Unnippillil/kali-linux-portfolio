@@ -22,18 +22,36 @@ const formatEvent = (e: KeyboardEvent) => {
 export default function KeymapOverlay({ open, onClose }: KeymapOverlayProps) {
   const { shortcuts, updateShortcut } = useKeymap();
   const [rebinding, setRebinding] = useState<string | null>(null);
+  const [conflict, setConflict] = useState<
+    | {
+        attempted: { description: string; keys: string };
+        existing: { description: string; keys: string };
+      }
+    | null
+  >(null);
 
   useEffect(() => {
     if (!rebinding) return;
     const handler = (e: KeyboardEvent) => {
       e.preventDefault();
       const combo = formatEvent(e);
-      updateShortcut(rebinding, combo);
-      setRebinding(null);
+      const existing = shortcuts.find(
+        (s) => s.keys === combo && s.description !== rebinding,
+      );
+      if (existing && rebinding) {
+        setConflict({
+          attempted: { description: rebinding, keys: combo },
+          existing,
+        });
+        setRebinding(null);
+      } else {
+        updateShortcut(rebinding, combo);
+        setRebinding(null);
+      }
     };
     window.addEventListener('keydown', handler, { once: true });
     return () => window.removeEventListener('keydown', handler);
-  }, [rebinding, updateShortcut]);
+  }, [rebinding, shortcuts, updateShortcut]);
 
   if (!open) return null;
 
@@ -90,6 +108,38 @@ export default function KeymapOverlay({ open, onClose }: KeymapOverlayProps) {
             </li>
           ))}
         </ul>
+        {conflict && (
+          <div className="bg-red-600/70 px-2 py-2 rounded space-y-2" role="alert">
+            <p>
+              {conflict.attempted.keys} is already assigned to{' '}
+              {conflict.existing.description}.
+            </p>
+            <div className="flex justify-end space-x-2">
+              <button
+                type="button"
+                onClick={() => {
+                  updateShortcut(
+                    conflict.attempted.description,
+                    conflict.attempted.keys,
+                  );
+                  updateShortcut(conflict.existing.description, '');
+                  setConflict(null);
+                  setRebinding(conflict.existing.description);
+                }}
+                className="px-2 py-1 bg-ub-orange text-white rounded text-sm"
+              >
+                Reassign {conflict.existing.description}
+              </button>
+              <button
+                type="button"
+                onClick={() => setConflict(null)}
+                className="px-2 py-1 bg-gray-700 rounded text-sm"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
