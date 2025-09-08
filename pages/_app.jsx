@@ -15,6 +15,7 @@ import '../styles/resume-print.css';
 import '../styles/print.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
+import ToolSearchOverlay from '../components/common/ToolSearchOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
 import { TrayProvider } from '../hooks/useTray';
 import ErrorBoundary from '../components/core/ErrorBoundary';
@@ -247,6 +248,7 @@ function MyApp(props) {
               <PipPortalProvider>
                 <div aria-live="polite" id="live-region" />
                 <Component {...pageProps} />
+                <ToolSearchOverlay />
                 <ShortcutOverlay />
                 {process.env.VERCEL_ANALYTICS_ID && (
                   <>
