@@ -43,6 +43,13 @@ export const slide = (row: number[]) => {
   return { row: newRow, score, merges };
 };
 
+export const slideRow = (
+  row: number[],
+): { row: number[]; merged: number[] } => {
+  const { row: newRow, merges } = slide(row);
+  return { row: newRow, merged: merges };
+};
+
 export const transpose = (board: Board) =>
   board[0].map((_, c) => board.map((row) => row[c]));
 
