@@ -132,6 +132,9 @@ module.exports = withBundleAnalyzer(
     typescript: {
       ignoreBuildErrors: false,
     },
+    experimental: {
+      optimizeCss: true,
+    },
     images: {
       unoptimized: true,
       domains: [
@@ -167,6 +170,15 @@ module.exports = withBundleAnalyzer(
       ? {
           async headers() {
             return [
+              {
+                source: '/',
+                headers: [
+                  {
+                    key: 'Link',
+                    value: '</wallpapers/wall-1.webp>; rel=preload; as=image',
+                  },
+                ],
+              },
               {
                 source: '/:path*',
                 headers: [

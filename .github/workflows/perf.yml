@@ -25,4 +25,5 @@ jobs:
         uses: treosh/lighthouse-ci-action@v11
         with:
           configPath: perf/lhci.config.js
-          urls: ${{ steps.deploy.outputs.url }}
+        env:
+          LHCI_BASE_URL: ${{ steps.deploy.outputs.url }}
