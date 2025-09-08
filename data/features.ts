@@ -20,4 +20,9 @@ export const features: Feature[] = [
     blurb: 'Boot Kali from a portable USB drive and enable persistence.',
     href: '/platforms/usb-live',
   },
+  {
+    title: 'WSL',
+    blurb: 'Run Kali Linux on Windows Subsystem for Linux with Win-KeX.',
+    href: '/platforms/wsl',
+  },
 ];

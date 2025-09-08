@@ -1,5 +1,6 @@
 import MDXPageHeader from '../../components/ui/MDXPageHeader';
 import Admonition from '../../components/mdx/Admonition';
+import WinKexTile from '../../components/platforms/WinKexTile';
 
 <MDXPageHeader
   breadcrumbs={[{ label: 'Home', href: '/' }, { label: 'Get Kali', href: '/get-kali' }, { label: 'WSL' }]}
@@ -13,6 +14,8 @@ import Admonition from '../../components/mdx/Admonition';
   <a href="/wsl-prep" className="underline">WSL preparation docs</a>
   before installation.
 </Admonition>
+
+<WinKexTile />
 
 export const title = 'WSL';
 export const summary = 'Kali Linux for Windows Subsystem for Linux.';
