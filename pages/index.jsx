@@ -28,8 +28,8 @@ export async function getStaticProps() {
 export default function Home({ desktops }) {
   return (
     <main className="p-4">
-      <h1 className="text-xl font-bold mb-4">Choose the desktop you prefer</h1>
-      <div className="grid gap-4 sm:grid-cols-3">
+      <h1 className="mb-4 text-2xl font-bold sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl">Choose the desktop you prefer</h1>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
         {desktops.map((d) => (
           <div key={d.name} className="text-center">
             <Image
@@ -41,7 +41,7 @@ export default function Home({ desktops }) {
               blurDataURL={d.blurDataURL}
               className="rounded"
             />
-            <p className="mt-2">{d.name}</p>
+            <p className="mt-2 text-sm sm:text-base md:text-lg">{d.name}</p>
           </div>
         ))}
       </div>
