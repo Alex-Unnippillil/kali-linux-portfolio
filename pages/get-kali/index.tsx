@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import Callout from '../../components/ui/Callout';
+import MirrorIntegrity from '../../components/get-kali/MirrorIntegrity';
 
 const GetKali: React.FC = () => (
   <main className="p-4">
@@ -25,7 +25,7 @@ const GetKali: React.FC = () => (
       </div>
       <div className="flex flex-col rounded border p-4">
         <h2 className="mb-2 text-xl font-semibold">USB Live</h2>
-        <p className="mb-4">Boot from a portable USB drive and run Kali without touching your system&apos;s disk.</p>
+        <p className="mb-4">Boot from a portable USB drive and run Kali without touching your system's disk.</p>
         <a
           href="https://www.kali.org/get-kali/#kali-live"
           target="_blank"
@@ -54,35 +54,7 @@ const GetKali: React.FC = () => (
       </div>
     </div>
     <div className="mt-6">
-      <Callout variant="mirrorInfo">
-        <p>
-          Downloads are automatically served from the nearest mirror for better
-          performance. View the{' '}
-          <a
-            href="https://http.kali.org/README.mirrorlist"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline"
-          >
-            full mirror list
-          </a>
-          .
-        </p>
-      </Callout>
-      <Callout variant="verifyDownload">
-        <p>
-          Verify downloads using signatures or hashes.{' '}
-          <a
-            href="https://www.kali.org/docs/introduction/download-validation/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline"
-          >
-            Verification instructions
-          </a>
-          .
-        </p>
-      </Callout>
+      <MirrorIntegrity />
     </div>
   </main>
 );
