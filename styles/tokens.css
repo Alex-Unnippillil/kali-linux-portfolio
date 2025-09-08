@@ -60,6 +60,7 @@
   --focus-outline-color: var(--color-accent);
   --focus-outline-width: 2px;
   --focus-outline-style: solid;
+  --focus-outline-offset: 2px;
 }
 
 /* High contrast theme */
@@ -85,6 +86,7 @@
   --focus-outline-color: #ffff00;
   --focus-outline-width: 3px;
   --focus-outline-style: solid;
+  --focus-outline-offset: 3px;
   --game-color-secondary: #ffff00;
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
