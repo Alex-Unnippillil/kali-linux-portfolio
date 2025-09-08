@@ -8,8 +8,8 @@ export default function Header() {
   const closeDocs = () => setDocsOpen(false);
 
   return (
-    <header className="relative bg-gray-900 text-white">
-      <nav className="flex gap-4 p-4">
+    <header className="relative bg-gray-900 text-white rtl:text-right">
+      <nav className="flex gap-4 p-4 rtl:flex-row-reverse">
         <a href="/" className="hover:underline">
           Home
         </a>
