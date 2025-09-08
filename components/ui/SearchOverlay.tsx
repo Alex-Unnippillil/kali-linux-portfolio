@@ -95,7 +95,7 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                     <li key={r.href}>
                       <a
                         href={r.href}
-                        className="flex items-center justify-between px-2 py-1 rounded hover:bg-white/10 focus:outline-none focus-visible:ring focus-visible:ring-white/50"
+                        className="focus-outline flex items-center justify-between px-2 py-1 rounded hover:bg-white/10"
                       >
                         <span>{r.title}</span>
                         <span className="flex gap-1">

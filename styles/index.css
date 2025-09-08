@@ -142,11 +142,6 @@ button, [role="button"], input[type="button"], input[type="submit"], input[type=
     transform: scale(0.98);
 }
 
-.btn:focus-visible {
-    outline: var(--focus-outline-width) var(--focus-outline-style) var(--focus-outline-color);
-    outline-offset: var(--focus-outline-offset);
-}
-
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,

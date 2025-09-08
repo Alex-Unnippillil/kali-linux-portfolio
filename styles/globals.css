@@ -172,7 +172,19 @@ html[data-theme='matrix'] {
 
 *:focus-visible {
   outline: var(--focus-outline-width) var(--focus-outline-style) var(--focus-outline-color);
-  outline-offset: 2px;
+  outline-offset: var(--focus-outline-offset);
+}
+
+.focus-outline:focus-visible {
+  outline: var(--focus-outline-width) var(--focus-outline-style) var(--focus-outline-color);
+  outline-offset: var(--focus-outline-offset);
+  transition: outline-offset var(--motion-fast);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-outline:focus-visible {
+    transition: none;
+  }
 }
 
 .notification-center {

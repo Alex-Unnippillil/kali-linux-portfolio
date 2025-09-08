@@ -49,7 +49,7 @@ export default function Button({
   const variantStyle = variantStyles[variant];
   return (
     <button
-      className={`btn ${className}`}
+      className={`btn focus-outline ${className}`}
       style={{ ...variantStyle, ...style }}
       {...props}
     />
