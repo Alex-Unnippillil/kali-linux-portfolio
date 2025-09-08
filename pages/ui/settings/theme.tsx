@@ -87,6 +87,7 @@ export default function ThemeSettings() {
           <option value="kali-light">Kali Light</option>
           <option value="dark">Dark</option>
           <option value="neon">Neon</option>
+          <option value="undercover">Undercover</option>
           <option value="matrix">Matrix</option>
         </select>
         <label className="mt-4 flex items-center gap-2">

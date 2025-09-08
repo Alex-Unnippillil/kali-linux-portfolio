@@ -6,6 +6,7 @@ export const THEME_UNLOCKS: Record<string, number> = {
   default: 0,
   'kali-light': 0,
   'kali-dark': 0,
+  undercover: 0,
   neon: 100,
   dark: 500,
   matrix: 1000,
