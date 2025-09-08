@@ -1,0 +1,50 @@
+[
+  {
+    "icon": "🦾",
+    "title": "ARM",
+    "description": "Optimized builds for ARM hardware.",
+    "href": "https://www.kali.org/docs/arm/"
+  },
+  {
+    "icon": "🛠️",
+    "title": "Bare Metal",
+    "description": "Install directly on physical machines.",
+    "href": "https://www.kali.org/docs/installation/"
+  },
+  {
+    "icon": "☁️",
+    "title": "Cloud",
+    "description": "Deploy Kali Linux in the cloud.",
+    "href": "https://www.kali.org/docs/cloud/"
+  },
+  {
+    "icon": "📦",
+    "title": "Containers",
+    "description": "Run Kali in Docker and other container platforms.",
+    "href": "https://www.kali.org/docs/containers/"
+  },
+  {
+    "icon": "📱",
+    "title": "Mobile",
+    "description": "Take Kali with you on mobile devices.",
+    "href": "https://www.kali.org/docs/nethunter/"
+  },
+  {
+    "icon": "🔌",
+    "title": "USB",
+    "description": "Boot from live USB drives anywhere.",
+    "href": "https://www.kali.org/docs/usb/"
+  },
+  {
+    "icon": "💻",
+    "title": "VMs",
+    "description": "Use Kali inside virtual machines.",
+    "href": "https://www.kali.org/docs/virtualization/"
+  },
+  {
+    "icon": "🪟",
+    "title": "WSL",
+    "description": "Integrate Kali with Windows Subsystem for Linux.",
+    "href": "https://www.kali.org/docs/wsl/"
+  }
+]
