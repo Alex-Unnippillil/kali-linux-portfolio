@@ -32,9 +32,9 @@ const ContentSecurityPolicy = [
   // Restrict fonts to same origin
   "font-src 'self'",
   // External scripts required for embedded timelines
-  "script-src 'self' 'unsafe-inline' https://vercel.live https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://sdk.scdn.co",
+  "script-src 'self' 'nonce-__CSP_NONCE__' https://vercel.live https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://sdk.scdn.co",
   // Allow outbound connections for embeds and the in-browser Chrome app
-  "connect-src 'self' https://example.com https://*.twitter.com https://*.twimg.com https://*.x.com https://*.google.com https://stackblitz.com",
+  "connect-src 'self' https://example.com https://*.twitter.com https://*.twimg.com https://*.x.com https://*.google.com https://*.googleapis.com https://stackblitz.com https://ipapi.co",
   // Allow iframes from specific providers so the Chrome and StackBlitz apps can load allowed content
   "frame-src 'self' https://vercel.live https://stackblitz.com https://*.google.com https://*.twitter.com https://*.x.com https://www.youtube-nocookie.com https://open.spotify.com https://react.dev https://example.com",
 
@@ -55,11 +55,11 @@ const securityHeaders = [
   },
   {
     key: 'Referrer-Policy',
-    value: 'strict-origin-when-cross-origin',
+    value: 'no-referrer',
   },
   {
     key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
+    value: 'camera=(), microphone=(), geolocation=()',
   },
   {
     // Allow same-origin framing so the PDF resume renders in an <object>

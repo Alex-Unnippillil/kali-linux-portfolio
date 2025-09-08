@@ -8,13 +8,14 @@ import Document, {
 } from 'next/document';
 
 interface Props extends DocumentInitialProps {
-  nonce?: string;
+  nonce: string;
 }
 
 class MyDocument extends Document<Props> {
   static async getInitialProps(ctx: DocumentContext): Promise<Props> {
     const initial = await Document.getInitialProps(ctx);
-    const nonce = ctx.req.headers['x-csp-nonce'] as string | undefined;
+    const nonce =
+      (ctx.req.headers['x-csp-nonce'] as string | undefined) || '';
     return { ...initial, nonce };
   }
 

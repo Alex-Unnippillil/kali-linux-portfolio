@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import emailjs from '@emailjs/browser';
+import DOMPurify from 'dompurify';
 import ProgressBar from '../ui/ProgressBar';
 import { createDisplay } from '../../utils/createDynamicApp';
 
@@ -65,7 +66,8 @@ export class Gedit extends Component {
     }
 
     handleChange = (field) => (e) => {
-        this.setState({ [field]: e.target.value }, () => {
+        const sanitized = DOMPurify.sanitize(e.target.value, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+        this.setState({ [field]: sanitized }, () => {
             if (this.state[`${field}Touched`]) {
                 const value = this.state[field].trim();
                 this.setState({ [`${field}Error`]: value.length === 0 });
@@ -84,9 +86,9 @@ export class Gedit extends Component {
     sendMessage = async () => {
         let { name, subject, message } = this.state;
 
-        name = name.trim();
-        subject = subject.trim();
-        message = message.trim();
+        name = DOMPurify.sanitize(name, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] }).trim();
+        subject = DOMPurify.sanitize(subject, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] }).trim();
+        message = DOMPurify.sanitize(message, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] }).trim();
 
         let error = false;
 

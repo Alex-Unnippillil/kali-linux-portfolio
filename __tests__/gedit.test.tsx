@@ -34,4 +34,16 @@ describe('Gedit component', () => {
     expect(send).not.toHaveBeenCalled();
     expect(screen.getByText('Name must not be empty')).toBeInTheDocument();
   });
+
+  it('sanitizes user input', () => {
+    render(<Gedit />);
+    fireEvent.change(screen.getByPlaceholderText('Your Email / Name :'), {
+      target: { value: '<img src=x onerror=alert(1)>' },
+    });
+    expect(screen.getByPlaceholderText('Your Email / Name :')).toHaveValue('');
+    fireEvent.change(screen.getByPlaceholderText('Message'), {
+      target: { value: '<script>alert(1)</script>Hello' },
+    });
+    expect(screen.getByPlaceholderText('Message')).toHaveValue('Hello');
+  });
 });

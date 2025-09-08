@@ -2,6 +2,7 @@
 
 import { isBrowser } from '../../utils/env';
 import { getDb } from '../../utils/safeIDB';
+import DOMPurify from 'dompurify';
 
 let notesContainer = null;
 let addNoteBtn = null;
@@ -93,9 +94,9 @@ function createNoteElement(note) {
   el.appendChild(controls);
 
   const textarea = document.createElement('textarea');
-  textarea.value = note.content;
+  textarea.value = DOMPurify.sanitize(note.content, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
   textarea.addEventListener('input', (e) => {
-    note.content = e.target.value;
+    note.content = DOMPurify.sanitize(e.target.value, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
     void saveNotes();
   });
   el.appendChild(textarea);
@@ -110,9 +111,10 @@ function createNoteElement(note) {
 }
 
 function addNote(content = '') {
+  const sanitized = DOMPurify.sanitize(content, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
   const note = {
     id: Date.now(),
-    content,
+    content: sanitized,
     x: 50,
     y: 50,
     color: '#fffa65',
@@ -187,3 +189,5 @@ if (isBrowser() && addNoteBtn) {
   addNoteBtn.addEventListener('click', addNote);
   void init();
 }
+
+export { addNote };
