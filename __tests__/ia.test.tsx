@@ -8,6 +8,11 @@ describe('IA navigation', () => {
     render(<Header />);
     (ia as any).header.forEach((item: any) => {
       expect(screen.getByText(item.label)).toBeInTheDocument();
+      if (item.children) {
+        item.children.forEach((child: any) => {
+          expect(screen.getByText(child.label)).toBeInTheDocument();
+        });
+      }
     });
   });
 
