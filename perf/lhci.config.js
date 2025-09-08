@@ -1,12 +1,14 @@
+const base = process.env.LHCI_BASE_URL || 'http://localhost:3000';
+
 module.exports = {
   ci: {
     collect: {
       url: [
-        '/',
-        '/apps',
-        '/apps/code-editor',
-        '/apps/monaco',
-        '/apps/chess',
+        `${base}/`,
+        `${base}/apps`,
+        `${base}/apps/vscode`,
+        `${base}/apps/project-gallery`,
+        `${base}/apps/chess`,
       ],
       numberOfRuns: 3,
       settings: {
@@ -15,9 +17,9 @@ module.exports = {
     },
     assert: {
       assertions: {
-        'largest-contentful-paint': ['error', {maxNumericValue: 2500, aggregationMethod: 'optimistic'}],
-        'experimental-interaction-to-next-paint': ['error', {maxNumericValue: 200, aggregationMethod: 'optimistic'}],
-        'cumulative-layout-shift': ['error', {maxNumericValue: 0.1, aggregationMethod: 'pessimistic'}],
+        'largest-contentful-paint': ['error', { maxNumericValue: 2500, aggregationMethod: 'optimistic' }],
+        'experimental-interaction-to-next-paint': ['error', { maxNumericValue: 200, aggregationMethod: 'optimistic' }],
+        'cumulative-layout-shift': ['error', { maxNumericValue: 0.1, aggregationMethod: 'pessimistic' }],
       },
     },
     upload: {

@@ -1,4 +1,4 @@
 {
-  "^chunks/framework": 250000,
-  "^chunks/main-app": 300000
+  "^chunks/framework": 200000,
+  "^chunks/main-app": 250000
 }
