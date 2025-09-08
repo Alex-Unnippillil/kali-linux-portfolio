@@ -57,8 +57,17 @@
   /* Minimum interactive target size */
   --hit-area: 32px;
   /* Focus outline */
-  --focus-outline-color: var(--color-accent);
+  --color-focus-ring-dark: var(--color-accent);
+  --color-focus-ring-light: var(--color-ubt-blue);
+  --color-focus-ring: var(--color-focus-ring-dark);
+  --focus-outline-color: var(--color-focus-ring);
   --focus-outline-width: 2px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --color-focus-ring: var(--color-focus-ring-light);
+  }
 }
 
 /* High contrast theme */
