@@ -1,6 +1,7 @@
 import { useState, useRef, KeyboardEvent, ChangeEvent } from "react";
 import tools from "../../data/kali-tools.json";
 import Pagination from "../../components/ui/Pagination";
+import DensityWrapper from "../../components/ui/DensityWrapper";
 
 const PAGE_SIZE_OPTIONS = [30, 60, 90];
 const COLUMNS = 3; // used for keyboard navigation
@@ -51,16 +52,17 @@ export default function ToolsPage() {
   };
 
   return (
-    <div className="p-4">
-      <ul
-        className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
-        onKeyDown={handleKeyDown}
-      >
-        {pageTools.map((tool, i) => (
-          <li key={tool.id}>
+    <DensityWrapper>
+      <div className="p-4">
+        <ul
+          className="tools-grid grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
+          onKeyDown={handleKeyDown}
+        >
+          {pageTools.map((tool, i) => (
+            <li key={tool.id}>
             <a
               href={`https://www.kali.org/tools/${tool.id}/`}
-              className="block rounded border p-4 focus:outline-none focus:ring"
+              className="tools-card block rounded border p-4 focus:outline-none focus:ring"
               ref={(el) => {
                 itemRefs.current[i] = el;
               }}
@@ -90,13 +92,13 @@ export default function ToolsPage() {
             </a>
           </li>
         ))}
-      </ul>
-      <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
-        <div className="flex items-center gap-2">
-          <label htmlFor="page-size" className="text-sm">
-            Results per page:
-          </label>
-          <select
+        </ul>
+        <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+          <div className="flex items-center gap-2">
+            <label htmlFor="page-size" className="text-sm">
+              Results per page:
+            </label>
+            <select
             id="page-size"
             value={pageSize}
             onChange={handlePageSizeChange}
@@ -114,7 +116,8 @@ export default function ToolsPage() {
           totalPages={pageCount}
           onPageChange={setPage}
         />
+        </div>
       </div>
-    </div>
+    </DensityWrapper>
   );
 }

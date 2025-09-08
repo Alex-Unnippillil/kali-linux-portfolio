@@ -745,3 +745,47 @@ textarea:focus-visible {
     box-shadow: 0 0 0 4px rgba(251,191,36,0.9);
     border-radius: 4px;
 }
+
+/* Density utility classes */
+.ui-cozy {
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.5rem;
+    --space-6: 2rem;
+}
+
+.ui-dense {
+    --space-1: 0.125rem;
+    --space-2: 0.25rem;
+    --space-3: 0.5rem;
+    --space-4: 0.75rem;
+    --space-5: 1rem;
+    --space-6: 1.5rem;
+}
+
+.ui-cozy .p-4 { padding: var(--space-4); }
+.ui-dense .p-4 { padding: var(--space-2); }
+
+.ui-cozy .mt-4 { margin-top: var(--space-4); }
+.ui-dense .mt-4 { margin-top: var(--space-2); }
+
+.ui-cozy .gap-4 { gap: var(--space-4); }
+.ui-dense .gap-4 { gap: var(--space-2); }
+
+.ui-cozy .px-2 { padding-left: var(--space-2); padding-right: var(--space-2); }
+.ui-dense .px-2 { padding-left: var(--space-1); padding-right: var(--space-1); }
+
+.ui-cozy table th,
+.ui-cozy table td { padding: var(--space-4); }
+
+.ui-dense table th,
+.ui-dense table td { padding: var(--space-2); }
+
+.ui-cozy .tools-grid { gap: var(--space-4); }
+.ui-dense .tools-grid { gap: var(--space-2); }
+
+.ui-cozy .tools-card { padding: var(--space-4); }
+.ui-dense .tools-card { padding: var(--space-2); }
+
