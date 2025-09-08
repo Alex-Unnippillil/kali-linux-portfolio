@@ -11,6 +11,8 @@ it('axe cli reports no violations on fixture', () => {
       html,
       '--rules',
       'label,color-contrast,focus-order-semantics',
+      '--tags',
+      'wcag2a,wcag2aa,wcag22a,wcag22aa',
       '--exit',
       '1',
     ],
