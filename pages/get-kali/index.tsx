@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import Callout from '../../components/ui/Callout';
 
 const GetKali: React.FC = () => (
   <main className="p-4">
@@ -46,6 +47,22 @@ const GetKali: React.FC = () => (
           Learn more
         </a>
       </div>
+    </div>
+    <div className="mt-6">
+      <Callout variant="verifyDownload">
+        <p>
+          Verify downloads using signatures or hashes.{' '}
+          <a
+            href="https://www.kali.org/docs/introduction/download-validation/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+          >
+            Verification instructions
+          </a>
+          .
+        </p>
+      </Callout>
     </div>
   </main>
 );

@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface CalloutProps {
-  variant: 'defaultCredentials' | 'readDocs';
+  variant: 'defaultCredentials' | 'readDocs' | 'verifyDownload';
   children: React.ReactNode;
 }
 
@@ -29,6 +29,25 @@ const BookOpenIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+const ShieldCheckIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+    <path
+      d="M12 3L3 5.25v6.75c0 5.523 3.807 10.74 9 12 5.193-1.26 9-6.477 9-12V5.25L12 3z"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M9 12l2 2 4-4"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 const variants = {
   defaultCredentials: {
     icon: KeyIcon,
@@ -39,6 +58,11 @@ const variants = {
     icon: BookOpenIcon,
     border: 'border-blue-400',
     label: 'Read the docs',
+  },
+  verifyDownload: {
+    icon: ShieldCheckIcon,
+    border: 'border-green-400',
+    label: 'Verify downloads',
   },
 };
 

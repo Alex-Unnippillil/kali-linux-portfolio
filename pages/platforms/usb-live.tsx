@@ -19,6 +19,20 @@ const USBLivePage: React.FC = () => (
         .
       </p>
     </Callout>
+    <Callout variant="verifyDownload">
+      <p>
+        Verify the image after downloading using signatures or hashes.{' '}
+        <a
+          href="https://www.kali.org/docs/introduction/download-validation/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline"
+        >
+          Verification instructions
+        </a>
+        .
+      </p>
+    </Callout>
   </main>
 );
 
