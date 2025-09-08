@@ -1,6 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import Replays from './replays';
+
 import ReactGA from 'react-ga4';
 import { useSwipeable } from 'react-swipeable';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
@@ -90,8 +92,8 @@ const Page2048 = () => {
   const [won, setWon] = useState(false);
   const [lost, setLost] = useState(false);
   const [history, setHistory] = useState<number[][][]>([]);
-  const [seedStr, setSeedStr] = useState('');
-  const toast = useToast();
+  const [showReplays, setShowReplays] = useState(false);
+
 
   useEffect(() => {
     let mounted = true;
@@ -266,7 +268,17 @@ const Page2048 = () => {
 
   useEffect(() => {
     if (won || lost) {
-      saveReplay({ date: new Date().toISOString(), moves, boardType, hard });
+      const frames = [
+        ...history.map((h) => h.map((row) => [...row])),
+        board.map((row) => [...row]),
+      ];
+      saveReplay({
+        date: new Date().toISOString(),
+        moves,
+        boardType,
+        hard,
+        frames,
+      });
       fetch('/api/leaderboard/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -279,7 +291,7 @@ const Page2048 = () => {
         // ignore network errors
       });
     }
-  }, [won, lost, moves, boardType, hard, highest]);
+  }, [won, lost, moves, boardType, hard, highest, history, board]);
 
   return (
     <div {...swipeHandlers} className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
@@ -290,15 +302,23 @@ const Page2048 = () => {
         <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={handleUndo}>
           Undo
         </button>
-          <label className="flex items-center space-x-1 px-2">
-            <input
-              type="checkbox"
-              aria-label="Toggle hard mode"
-              checked={hard}
-              onChange={(e) => setHard(e.target.checked)}
-            />
-            <span>Hard</span>
-          </label>
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={() => setShowReplays(true)}
+        >
+          Replays
+        </button>
+        <div className="flex items-center space-x-1 px-2">
+          <input
+            id="hard-mode"
+            aria-label="Hard mode"
+            type="checkbox"
+            checked={hard}
+            onChange={(e) => setHard(e.target.checked)}
+          />
+          <label htmlFor="hard-mode">Hard</label>
+        </div>
+
         <select
           className="text-black px-1 rounded"
           value={boardType}
@@ -330,6 +350,7 @@ const Page2048 = () => {
       {(won || lost) && (
         <div className="mt-4 text-xl">{won ? 'You win!' : 'Game over'}</div>
       )}
+      {showReplays && <Replays onClose={() => setShowReplays(false)} />}
     </div>
   );
 };
