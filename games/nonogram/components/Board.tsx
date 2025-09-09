@@ -7,16 +7,26 @@ interface BoardProps {
   rows: Clue[];
   cols: Clue[];
   solution: Grid;
+  /** Current state of the puzzle grid. */
+  grid: Grid;
+  /**
+   * Notify parent components when the grid state changes. The provided grid is
+   * a deep copy and can be used directly as new state.
+   */
+  onChange: (grid: Grid) => void;
 }
 
 type Cell = -1 | 0 | 1;
 
-const Board: React.FC<BoardProps> = ({ rows, cols, solution }) => {
+const Board: React.FC<BoardProps> = ({
+  rows,
+  cols,
+  solution,
+  grid,
+  onChange,
+}) => {
   const height = rows.length;
   const width = cols.length;
-  const [grid, setGrid] = useState<Grid>(
-    () => Array.from({ length: height }, () => Array(width).fill(0) as Cell[])
-  );
   const [mode, setMode] = useState<"fill" | "cross">("fill");
   const [errorCell, setErrorCell] = useState<{ i: number; j: number } | null>(
     null
@@ -24,21 +34,19 @@ const Board: React.FC<BoardProps> = ({ rows, cols, solution }) => {
   const [zoom, setZoom] = useState(1);
 
   const toggleCell = (i: number, j: number) => {
-    setGrid((g) => {
-      const ng = g.map((row) => row.slice()) as Grid;
-      const current = ng[i][j];
-      const next: Cell =
-        mode === "fill" ? (current === 1 ? 0 : 1) : current === -1 ? 0 : -1;
-      ng[i][j] = next;
-      if (
-        (next === 1 && solution[i][j] !== 1) ||
-        (next === -1 && solution[i][j] === 1)
-      ) {
-        setErrorCell({ i, j });
-        setTimeout(() => setErrorCell(null), 300);
-      }
-      return ng;
-    });
+    const ng = grid.map((row) => row.slice()) as Grid;
+    const current = ng[i][j];
+    const next: Cell =
+      mode === "fill" ? (current === 1 ? 0 : 1) : current === -1 ? 0 : -1;
+    ng[i][j] = next;
+    if (
+      (next === 1 && solution[i][j] !== 1) ||
+      (next === -1 && solution[i][j] === 1)
+    ) {
+      setErrorCell({ i, j });
+      setTimeout(() => setErrorCell(null), 300);
+    }
+    onChange(ng);
   };
 
   const total = solution.reduce(
