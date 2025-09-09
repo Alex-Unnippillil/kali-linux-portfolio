@@ -9,7 +9,6 @@ export const chromeDefaultTiles = [
 ];
 
 // TODO: restore YouTube (youtube)
-// TODO: restore Converter (converter)
 // TODO: restore Tic Tac Toe (tictactoe)
 // TODO: restore Chess (chess)
 // TODO: restore Connect Four (connect-four)
@@ -370,6 +369,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayFiglet,
+  },
+  {
+    id: 'converter',
+    title: 'Converter',
+    icon: '/themes/Yaru/apps/calc.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayConverter,
   },
   {
     id: 'quote',
