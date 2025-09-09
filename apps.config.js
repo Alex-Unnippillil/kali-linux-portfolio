@@ -54,7 +54,7 @@ const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const FileExplorerApp = createDynamicApp('file-explorer', 'Files');
 const RistrettoApp = createDynamicApp('ristretto', 'Image Viewer');
 const Radare2App = createDynamicApp('radare2', 'Radare2');
-const AboutAlexApp = createDynamicApp('alex', 'About Alex');
+const AboutAlexApp = createDynamicApp('About', 'About Alex');
 const PowerApp = createDynamicApp('power', 'Power Settings');
 
 const XApp = createDynamicApp('x', 'X');
@@ -62,9 +62,10 @@ const SpotifyApp = createDynamicApp('spotify', 'Spotify');
 const SettingsApp = createDynamicApp('settings', 'Settings');
 const ChromeApp = createDynamicApp('chrome', 'Chrome');
 const GeditApp = createDynamicApp('gedit', 'Gedit');
+const MousepadApp = createDynamicApp('mousepad', 'Mousepad Preferences');
 const TodoistApp = createDynamicApp('todoist', 'Todoist');
 const WeatherApp = createDynamicApp('weather', 'Weather');
-const ClipboardManagerApp = createDynamicApp('ClipboardManager', 'Clipboard Manager');
+const ClipboardManagerApp = createDynamicApp('clipboard_manager', 'Clipboard Manager');
 const FigletApp = createDynamicApp('figlet', 'Figlet');
 const ResourceMonitorApp = createDynamicApp('resource_monitor', 'Resource Monitor');
 const ScreenRecorderApp = createDynamicApp('screen-recorder', 'Screen Recorder');
@@ -101,10 +102,10 @@ const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
 const VolatilityApp = createDynamicApp('volatility', 'Volatility');
 
-const KismetApp = createDynamicApp('kismet.jsx', 'Kismet');
+const KismetApp = createDynamicApp('kismet', 'Kismet');
 
 const HashcatApp = createDynamicApp('hashcat', 'Hashcat');
-const MsfPostApp = createDynamicApp('msf-post', 'Metasploit Post');
+const MsfPostApp = createDynamicApp('metasploit-post', 'Metasploit Post');
 const EvidenceVaultApp = createDynamicApp('evidence-vault', 'Evidence Vault');
 const MimikatzApp = createDynamicApp('mimikatz', 'Mimikatz');
 const MimikatzOfflineApp = createDynamicApp('mimikatz/offline', 'Mimikatz Offline');
@@ -174,6 +175,7 @@ const displaySpotify = createDisplay(SpotifyApp);
 const displaySettings = createDisplay(SettingsApp);
 const displayChrome = createDisplay(ChromeApp);
 const displayGedit = createDisplay(GeditApp);
+const displayMousepad = createDisplay(MousepadApp);
 const displayTodoist = createDisplay(TodoistApp);
 const displayWeather = createDisplay(WeatherApp);
 const displayClipboardManager = createDisplay(ClipboardManagerApp);
@@ -854,6 +856,15 @@ const apps = [
     screen: displayTrash,
   },
   {
+    id: 'mousepad',
+    title: 'Mousepad Preferences',
+    icon: '/themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMousepad,
+  },
+  {
     id: 'gedit',
     title: 'Contact Me',
     icon: '/themes/Yaru/apps/gedit.png',
@@ -1082,7 +1093,7 @@ const apps = [
     screen: displayHashcat,
   },
   {
-    id: 'msf-post',
+    id: 'metasploit-post',
     title: 'Metasploit Post',
     icon: '/themes/Yaru/apps/msf-post.svg',
     disabled: false,

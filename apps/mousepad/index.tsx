@@ -40,17 +40,18 @@ export default function MousepadPreferences() {
       )}
       {activeTab === 'editor' && (
         <div className="p-4 space-y-4">
-          <label className="flex items-center gap-2">
-            <span className="text-ubt-grey">Tab width:</span>
-            <input
-              type="number"
-              min={1}
-              max={8}
-              value={tabWidth}
-              onChange={(e) => setTabWidth(parseInt(e.target.value, 10))}
-              className="w-16 text-black rounded px-1 py-0.5"
-            />
-          </label>
+            <label className="flex items-center gap-2">
+              <span className="text-ubt-grey">Tab width:</span>
+              <input
+                type="number"
+                min={1}
+                max={8}
+                value={tabWidth}
+                onChange={(e) => setTabWidth(parseInt(e.target.value, 10))}
+                className="w-16 text-black rounded px-1 py-0.5"
+                aria-label="Tab width"
+              />
+            </label>
         </div>
       )}
       {activeTab === 'fonts' && (
