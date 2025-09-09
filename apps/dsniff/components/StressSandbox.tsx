@@ -6,18 +6,24 @@ const sampleLogs = [
   { protocol: 'HTTPS', host: 'test.com', path: '/login' },
 ];
 
-type LogEntry = (typeof sampleLogs)[number] & { id: number };
+interface Log {
+  id: number;
+  protocol: string;
+  host: string;
+  path: string;
+}
 
 const StressSandbox: React.FC = () => {
   const [size, setSize] = useState(100);
-  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [logs, setLogs] = useState<Log[]>([]);
   const [captureMs, setCaptureMs] = useState(0);
   const [replayMs, setReplayMs] = useState(0);
 
   useEffect(() => {
     // Simulate capture: repeat the sample logs
     const captureStart = performance.now();
-    const newLogs = Array.from({ length: size }, (_, i) => ({
+    const newLogs: Log[] = Array.from({ length: size }, (_, i) => ({
+
       ...sampleLogs[i % sampleLogs.length]!,
 
     }));
@@ -41,6 +47,7 @@ const StressSandbox: React.FC = () => {
       </label>
       <input
         id="listSize"
+        aria-label="List size"
         type="range"
         min={1}
         max={5000}
