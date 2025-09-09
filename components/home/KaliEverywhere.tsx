@@ -1,3 +1,4 @@
+import Image from "next/image";
 import SectionDivider from "../ui/SectionDivider";
 
 interface Platform {
@@ -8,6 +9,8 @@ interface Platform {
     src: string;
     href: string;
     alt: string;
+    width: number;
+    height: number;
   };
 }
 
@@ -35,6 +38,8 @@ const platforms: Platform[] = [
       src: "/badges/containers.svg",
       href: "https://www.kali.org/docs/containers",
       alt: "Containers badge",
+      width: 120,
+      height: 20,
     },
   },
   {
@@ -60,6 +65,8 @@ const platforms: Platform[] = [
       src: "/badges/wsl.svg",
       href: "https://aka.ms/wslstorepage",
       alt: "WSL badge",
+      width: 80,
+      height: 20,
     },
   },
 ];
@@ -80,7 +87,12 @@ export default function KaliEverywhere() {
             <p className="text-sm text-muted">{p.description}</p>
             {p.badge && (
               <a href={p.badge.href} target="_blank" rel="noopener" className="mt-2">
-                <img src={p.badge.src} alt={p.badge.alt} className="h-6" />
+                <Image
+                  src={p.badge.src}
+                  alt={p.badge.alt}
+                  width={p.badge.width}
+                  height={p.badge.height}
+                />
               </a>
             )}
           </div>
