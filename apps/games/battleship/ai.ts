@@ -196,7 +196,8 @@ export class RandomSalvoAI {
     }
     const choices = Array.from(this.available);
     if (!choices.length) return null;
-    const choice = choices[Math.floor(Math.random() * choices.length)];
+    const idx = Math.floor(Math.random() * choices.length);
+    const choice = choices[idx]!;
     this.available.delete(choice);
     return choice;
   }
@@ -218,7 +219,8 @@ export class RandomAI {
   nextMove(): number | null {
     const choices = Array.from(this.available);
     if (!choices.length) return null;
-    const choice = choices[Math.floor(Math.random() * choices.length)];
+    const idx = Math.floor(Math.random() * choices.length);
+    const choice = choices[idx]!;
     this.available.delete(choice);
     return choice;
   }
