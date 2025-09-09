@@ -2,6 +2,8 @@
  * @type {import('next').NextConfig}
  */
 
+const { validateServerEnv } = require('./lib/validate');
+
 const securityHeaders = [
   {
     key: 'X-Content-Type-Options',
@@ -80,8 +82,8 @@ try {
 const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 const isProd = process.env.NODE_ENV === 'production';
 
-if (isProd && typeof validateEnv === 'function') {
-  validateEnv(process.env);
+if (isProd) {
+  validateServerEnv(process.env);
 }
 
 // Merge experiment settings and production optimizations into a single function.
