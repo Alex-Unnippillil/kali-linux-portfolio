@@ -749,6 +749,15 @@ const apps = [
     defaultHeight: 85,
   },
   {
+    id: 'chrome',
+    title: 'Chrome',
+    icon: '/themes/Yaru/apps/chrome.png',
+    disabled: false,
+    favourite: true,
+    desktop_shortcut: false,
+    screen: displayChrome,
+  },
+  {
     id: 'x',
     title: 'X',
     icon: '/themes/Yaru/apps/x.png',
@@ -765,15 +774,6 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displaySpotify,
-  },
-  {
-    id: 'youtube',
-    title: 'YouTube',
-    icon: '/themes/Yaru/apps/youtube.svg',
-    disabled: false,
-    favourite: true,
-    desktop_shortcut: false,
-    screen: displayYouTube,
   },
   {
     id: 'beef',
@@ -1258,9 +1258,5 @@ const apps = [
 
   },
 ];
-
-export const utilities = [];
-export const gameDefaults = { defaultWidth: 50, defaultHeight: 60 };
-export const games = [];
 
 export default apps;
