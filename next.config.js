@@ -120,9 +120,7 @@ function configureWebpack(config, { isServer }) {
   return config;
 }
 
-
-
-module.exports = withBundleAnalyzer(
+const nextConfig = withBundleAnalyzer(
   withExportImages({
     output: isStaticExport ? 'export' : undefined,
     serverExternalPackages: [
@@ -266,6 +264,5 @@ module.exports = withBundleAnalyzer(
       : undefined,
   })
 );
-
 
 module.exports = nextConfig;
