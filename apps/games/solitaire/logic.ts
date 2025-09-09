@@ -96,14 +96,14 @@ const cardColor = (suit: Suit) => (suit === '♥' || suit === '♦' ? 'red' : 'b
 export const canMoveToFoundation = (card: Card, foundation: Card[]) => {
   if (card.faceDown) return false;
   if (foundation.length === 0) return card.rank === 1;
-  const top = foundation[foundation.length - 1];
+  const top = foundation[foundation.length - 1]!; // length checked above
   return top.suit === card.suit && top.rank + 1 === card.rank;
 };
 
 export const canMoveToTableau = (card: Card, pile: Card[]) => {
   if (card.faceDown) return false;
   if (pile.length === 0) return card.rank === 13;
-  const top = pile[pile.length - 1];
+  const top = pile[pile.length - 1]!; // length checked above
   if (top.faceDown) return false;
   return cardColor(top.suit) !== cardColor(card.suit) && top.rank === card.rank + 1;
 };
