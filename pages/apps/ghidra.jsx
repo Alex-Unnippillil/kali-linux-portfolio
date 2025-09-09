@@ -1,3 +1,4 @@
+import Head from 'next/head';
 import dynamic from 'next/dynamic';
 
 const Ghidra = dynamic(() => import('../../apps/ghidra'), {
@@ -6,5 +7,12 @@ const Ghidra = dynamic(() => import('../../apps/ghidra'), {
 });
 
 export default function GhidraPage() {
-  return <Ghidra />;
+  return (
+    <>
+      <Head>
+        <title>Ghidra</title>
+      </Head>
+      <Ghidra />
+    </>
+  );
 }

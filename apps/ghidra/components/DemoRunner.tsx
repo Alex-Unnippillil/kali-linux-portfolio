@@ -14,21 +14,11 @@ export default function DemoRunner() {
   const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
-    if (!wrapperUrl) {
-      return;
-    }
+    if (!wrapperUrl) return;
     let mounted = true;
     import(/* webpackIgnore: true */ wrapperUrl)
-      .then(() => {
-        if (mounted) {
-          setEnabled(true);
-        }
-      })
-      .catch(() => {
-        if (mounted) {
-          setEnabled(false);
-        }
-      });
+      .then(() => mounted && setEnabled(true))
+      .catch(() => mounted && setEnabled(false));
     return () => {
       mounted = false;
     };
@@ -36,7 +26,11 @@ export default function DemoRunner() {
 
   if (!enabled) {
     return (
-      <div className="flex flex-col items-center space-y-4">
+      <div className="flex flex-col items-center space-y-4 text-center">
+        <p className="max-w-xs text-sm">
+          WebAssembly support was not detected. The interactive demo is
+          disabled, showing static previews instead.
+        </p>
         <Image
           src="/themes/Yaru/apps/ghidra.svg"
           width={256}
