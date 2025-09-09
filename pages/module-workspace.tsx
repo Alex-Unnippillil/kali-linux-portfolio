@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import usePersistentState from '../hooks/usePersistentState';
 import { setValue, getAll } from '../utils/moduleStore';
+import modulesData from '../data/module-index.json';
 
 interface ModuleOption {
   name: string;
-  required: boolean;
+  label: string;
 }
 
 interface Module {
@@ -13,38 +14,14 @@ interface Module {
   description: string;
   tags: string[];
   options: ModuleOption[];
-  sample: string;
+  log: { level: string; message: string }[];
+  results: { target: string; status: string }[];
+  data: string;
+  inputs: string[];
+  lab: string;
 }
 
-const modules: Module[] = [
-  {
-    id: 'port-scan',
-    name: 'Port Scanner',
-    description: 'Scans for open network ports',
-    tags: ['network', 'scanner'],
-    options: [{ name: 'TARGET', required: true }],
-    sample: '[+] 192.168.0.1: Ports 22,80 open',
-  },
-  {
-    id: 'bruteforce',
-    name: 'Brute Force',
-    description: 'Attempts common passwords',
-    tags: ['attack', 'password'],
-    options: [
-      { name: 'TARGET', required: true },
-      { name: 'WORDLIST', required: true },
-    ],
-    sample: '[-] No valid password found',
-  },
-  {
-    id: 'vuln-check',
-    name: 'Vuln Check',
-    description: 'Checks for known CVEs',
-    tags: ['vulnerability', 'scanner'],
-    options: [{ name: 'HOST', required: true }],
-    sample: '[+] CVE-2024-1234 present on host',
-  },
-];
+const modules: Module[] = modulesData as Module[];
 
 const ModuleWorkspace: React.FC = () => {
   const [workspaces, setWorkspaces] = usePersistentState<string[]>(
@@ -57,7 +34,9 @@ const ModuleWorkspace: React.FC = () => {
   const [filter, setFilter] = useState('');
   const [selected, setSelected] = useState<Module | null>(null);
   const [optionValues, setOptionValues] = useState<Record<string, string>>({});
-  const [result, setResult] = useState('');
+  const [command, setCommand] = useState('');
+  const [logOutput, setLogOutput] = useState<Module['log']>([]);
+  const [scanResults, setScanResults] = useState<Module['results']>([]);
   const [storeData, setStoreData] = useState<Record<string, string>>({});
 
   const tags = useMemo(
@@ -86,7 +65,9 @@ const ModuleWorkspace: React.FC = () => {
       initial[o.name] = '';
     });
     setOptionValues(initial);
-    setResult('');
+    setCommand('');
+    setLogOutput([]);
+    setScanResults([]);
   }, []);
 
   const runCommand = useCallback(() => {
@@ -95,9 +76,10 @@ const ModuleWorkspace: React.FC = () => {
       .map((o) => `${o.name}=${optionValues[o.name] || ''}`)
       .join(' ');
     const cmd = `${selected.id} ${opts}`.trim();
-    const res = `$ ${cmd}\n${selected.sample}`;
-    setResult(res);
-    setValue(selected.id, res);
+    setCommand(cmd);
+    setLogOutput(selected.log);
+    setScanResults(selected.results);
+    setValue(selected.id, cmd);
     setStoreData(getAll());
   }, [selected, optionValues]);
 
@@ -174,7 +156,7 @@ const ModuleWorkspace: React.FC = () => {
               {selected.options.map((opt) => (
                 <div key={opt.name}>
                   <label className="block text-sm">
-                    {opt.name} {opt.required ? '*' : ''}
+                    {opt.label.toUpperCase()}
                     <input
                       value={optionValues[opt.name]}
                       onChange={(e) =>
@@ -194,22 +176,65 @@ const ModuleWorkspace: React.FC = () => {
               >
                 Run
               </button>
-              {result && (
+              {command && (
                 <div className="flex items-start gap-space-1">
-                  <pre
-                    className="flex-1 bg-black text-green-400 p-space-1 overflow-auto font-mono"
-                    role="log"
-                  >
-                    {result}
+                  <pre className="flex-1 bg-black text-green-400 p-space-1 overflow-auto font-mono">
+                    $ {command}
                   </pre>
                   <button
-                    onClick={() =>
-                      navigator.clipboard?.writeText(result)
-                    }
+                    onClick={() => navigator.clipboard?.writeText(command)}
                     className="px-space-1 py-space-1 text-sm rounded bg-gray-700"
                   >
                     Copy
                   </button>
+                </div>
+              )}
+              {logOutput.length > 0 && (
+                <ul
+                  className="bg-black text-xs p-space-1 font-mono space-y-0.5"
+                  role="log"
+                >
+                  {logOutput.map((l, i) => (
+                    <li key={i}>{l.message}</li>
+                  ))}
+                </ul>
+              )}
+              {scanResults.length > 0 && (
+                <table className="w-full text-xs" role="table">
+                  <thead>
+                    <tr>
+                      <th className="text-left">Target</th>
+                      <th className="text-left">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {scanResults.map((r, i) => (
+                      <tr key={i}>
+                        <td className="pr-space-1">{r.target}</td>
+                        <td>{r.status}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              {selected && (
+                <div className="space-y-space-1">
+                  <p>{selected.data}</p>
+                  <ul className="list-disc list-inside text-xs">
+                    {selected.inputs.map((i) => (
+                      <li key={i}>{i}</li>
+                    ))}
+                  </ul>
+                  {selected.lab && (
+                    <a
+                      href={selected.lab}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-400 underline text-xs"
+                    >
+                      Practice Lab
+                    </a>
+                  )}
                 </div>
               )}
               {Object.keys(storeData).length > 0 && (
