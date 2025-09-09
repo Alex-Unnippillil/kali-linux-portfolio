@@ -1,7 +1,7 @@
 import dynamic from 'next/dynamic';
 import Head from 'next/head';
 
-const ProjectGalleryApp = dynamic(() => import('../../apps/project-gallery/pages'), {
+const ProjectGalleryApp = dynamic(() => import('../../apps/project-gallery'), {
   ssr: false,
   loading: () => <p>Loading...</p>,
   webpackPrefetch: false,
