@@ -48,6 +48,7 @@ const config = [
       'import/no-anonymous-default-export': 'off',
       'import/no-cycle': 'warn',
       'import/no-unresolved': 'error',
+      'no-restricted-imports': ['error', { patterns: ['**/*.mdx'] }],
     },
   }),
 ];

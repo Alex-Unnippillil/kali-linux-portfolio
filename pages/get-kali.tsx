@@ -5,17 +5,7 @@ import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import ImageWizard from '../components/downloads/ImageWizard';
 
-import * as Installer from '../content/get-kali/installer.tsx';
-import * as VMs from '../content/get-kali/vms.tsx';
-import * as ARM from '../content/get-kali/arm.tsx';
-import * as Mobile from '../content/get-kali/mobile.tsx';
-import * as Cloud from '../content/get-kali/cloud.tsx';
-import * as Containers from '../content/get-kali/containers.tsx';
-import * as Live from '../content/get-kali/live.tsx';
-import * as WSL from '../content/get-kali/wsl.tsx';
-import * as WinKex from '../content/get-kali/win-kex.tsx';
-import * as Purple from '../content/get-kali/purple.tsx';
-import * as Docs from '../content/get-kali/docs.tsx';
+
 
 const badgeIcons: Record<string, string> = {
   aws: '/icons/providers/aws.svg',
@@ -32,21 +22,74 @@ type Platform = {
 };
 
 const platforms: Platform[] = [
-  { slug: 'installer', ...(Installer as any) },
-  { slug: 'virtual-machines', ...(VMs as any) },
-  { slug: 'arm', ...(ARM as any) },
-  { slug: 'mobile', ...(Mobile as any) },
-  { slug: 'cloud', ...(Cloud as any) },
-  { slug: 'containers', ...(Containers as any) },
-  { slug: 'live', ...(Live as any) },
-  { slug: 'wsl', ...(WSL as any) },
+  {
+    slug: 'installer',
+    title: 'Installer',
+    summary: 'Full-featured ISO for bare-metal installation.',
+    badges: ['amd64', 'arm64'],
+  },
+  {
+    slug: 'virtual-machines',
+    title: 'Virtual Machines',
+    summary: 'Pre-built images for VMware and VirtualBox.',
+    badges: ['vmware', 'virtualbox'],
+  },
+  {
+    slug: 'arm',
+    title: 'ARM',
+    summary: 'Images for ARM-based single-board computers.',
+    badges: ['arm', 'arm64'],
+  },
+  {
+    slug: 'mobile',
+    title: 'Mobile (NetHunter)',
+    summary: 'Kali NetHunter for Android devices.',
+    badges: ['android'],
+  },
+  {
+    slug: 'cloud',
+    title: 'Cloud',
+    summary: 'Images for AWS, Azure, and other cloud providers.',
+    badges: ['aws', 'azure', 'gcp'],
+  },
+  {
+    slug: 'containers',
+    title: 'Containers',
+    summary: 'Docker and LXC/LXD container images.',
+    badges: ['docker', 'lxc'],
+  },
+  {
+    slug: 'live',
+    title: 'Live',
+    summary: 'Bootable live system with optional persistence.',
+    badges: ['usb'],
+  },
+  {
+    slug: 'wsl',
+    title: 'WSL',
+    summary: 'Kali Linux for Windows Subsystem for Linux.',
+    badges: ['wsl'],
+  },
   {
     slug: 'win-kex',
+    title: 'Win-KeX',
+    summary: 'Graphical desktop experience for Kali on WSL.',
+    badges: ['wsl'],
     url: 'https://www.kali.org/docs/wsl/win-kex/',
-    ...(WinKex as any),
   },
-  { slug: 'purple', ...(Purple as any) },
-  { slug: 'docs', url: 'https://www.kali.org/docs/', ...(Docs as any) },
+  {
+    slug: 'purple',
+    title: 'Kali Purple',
+    summary: 'Security operations-focused Kali variant.',
+    badges: ['soc'],
+  },
+  {
+    slug: 'docs',
+    title: 'Documentation',
+    summary: 'Official Kali Linux guides and tutorials.',
+    badges: ['docs'],
+    url: 'https://www.kali.org/docs/',
+  },
 ];
 
 const GetKali: React.FC = () => (
