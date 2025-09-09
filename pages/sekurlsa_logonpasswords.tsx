@@ -56,7 +56,7 @@ const parseSessions = (text: string): SessionInfo[] => {
   return blocks.map((block) => {
     const get = (regex: RegExp) => {
       const match = block.match(regex);
-      return match ? match[1].trim() : '';
+      return match?.[1]?.trim() ?? '';
     };
     return {
       authId: get(/Authentication Id\s*:\s*(.*)/),

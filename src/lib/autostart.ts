@@ -56,7 +56,8 @@ export async function readAutostart(): Promise<AutostartEntry[]> {
  */
 export async function saveAutostartEntry(entry: AutostartEntry): Promise<void> {
   const { file, data, name, enabled, delay } = entry;
-  const updated = { ...data, Name: name };
+  // Explicitly type the updated object to allow dynamic property assignment.
+  const updated: Record<string, any> = { ...data, Name: name };
   updated["X-GNOME-Autostart-enabled"] = enabled;
   if (typeof delay === "number") {
     updated["X-GNOME-Autostart-Delay"] = delay;

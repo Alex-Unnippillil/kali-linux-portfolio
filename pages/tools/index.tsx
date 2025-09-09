@@ -20,7 +20,7 @@ interface ToolsPageProps {
 
 export default function ToolsPage({ tools }: ToolsPageProps) {
   const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState<number>(PAGE_SIZE_OPTIONS[0]);
+  const [pageSize, setPageSize] = useState<number>(PAGE_SIZE_OPTIONS[0]!);
   const itemRefs = useRef<Array<HTMLAnchorElement | null>>([]);
 
   const pageCount = Math.ceil(tools.length / pageSize);
