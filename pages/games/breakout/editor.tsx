@@ -1,6 +1,9 @@
 import Head from "next/head";
 import dynamic from "next/dynamic";
 
+// Breakout level editor page. Loads the actual editor lazily on the
+// client so the Next.js server doesn't attempt to render it.
+
 const BreakoutEditor = dynamic(() => import("../../../games/breakout/editor"), {
   ssr: false,
   loading: () => <p>Loading...</p>,

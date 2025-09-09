@@ -1,3 +1,6 @@
+// Helper module for the Blackjack game. It exposes a thin wrapper around
+// the core engine's basic strategy implementation so components can ask
+// for move recommendations.
 import { basicStrategy, cardValue } from '../../components/apps/blackjack/engine';
 
 export interface Card {

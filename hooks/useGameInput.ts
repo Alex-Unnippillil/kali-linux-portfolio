@@ -1,5 +1,8 @@
 "use client";
 
+// Small utility hook used by various games to translate raw keyboard
+// events into high level game actions. The implementation lives on the
+// client so we can access `window` and `localStorage` safely.
 import { useEffect, useRef } from 'react';
 
 // Default keyboard mapping. Users can override via settings stored in

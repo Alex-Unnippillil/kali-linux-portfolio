@@ -1,5 +1,8 @@
-'use client';
+"use client";
 
+// Editor component allowing players to craft and save custom sets of
+// Breakout power-ups. The sets are stored persistently so they can be
+// reused across sessions.
 import React, { useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 
