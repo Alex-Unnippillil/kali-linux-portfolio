@@ -28,7 +28,9 @@ export const checkWinner = (
 ): { winner: Player | 'draw' | null; line: number[] } => {
   const lines = generateLines(size);
   for (const line of lines) {
-    const [first, ...rest] = line;
+    const first = line[0];
+    if (first === undefined) continue;
+    const rest = line.slice(1);
     const val = board[first];
     if (val && rest.every((idx) => board[idx] === val)) {
       const winner = misere ? (val === 'X' ? 'O' : 'X') : val;
