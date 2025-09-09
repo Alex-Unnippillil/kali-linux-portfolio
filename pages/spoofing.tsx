@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { baseMetadata } from '../lib/metadata';
 
 export const metadata = baseMetadata;
@@ -22,23 +23,9 @@ const ToolTile = ({ title, link, children }: TileProps) => (
   </a>
 );
 
-const ArpDiagram = () => (
-  <svg viewBox="0 0 300 120" className="w-full h-32">
-    <defs>
-      <marker id="arrow-arp" markerWidth="10" markerHeight="10" refX="10" refY="3" orient="auto" markerUnits="strokeWidth">
-        <path d="M0,0 L0,6 L9,3 z" fill="#4ade80" />
-      </marker>
-    </defs>
-    <rect x="10" y="40" width="80" height="40" fill="#1f2937" stroke="#4ade80" />
-    <text x="50" y="65" fill="white" textAnchor="middle">Victim</text>
-    <rect x="110" y="40" width="80" height="40" fill="#1f2937" stroke="#4ade80" />
-    <text x="150" y="65" fill="white" textAnchor="middle">Attacker</text>
-    <rect x="210" y="40" width="80" height="40" fill="#1f2937" stroke="#4ade80" />
-    <text x="250" y="65" fill="white" textAnchor="middle">Gateway</text>
-    <line x1="90" y1="60" x2="110" y2="60" stroke="#4ade80" strokeWidth="2" markerEnd="url(#arrow-arp)" />
-    <line x1="190" y1="60" x2="210" y2="60" stroke="#4ade80" strokeWidth="2" markerEnd="url(#arrow-arp)" />
-  </svg>
-);
+const ArpDiagram = dynamic(() => import('@/apps/ettercap/components/ArpDiagram'), {
+  ssr: false,
+});
 
 const DnsDiagram = () => (
   <svg viewBox="0 0 300 160" className="w-full h-40">
