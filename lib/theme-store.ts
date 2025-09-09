@@ -1,8 +1,8 @@
-import { useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 
 const STORAGE_KEY = 'app:theme';
 
-let theme = (typeof window !== 'undefined' && window.localStorage.getItem(STORAGE_KEY)) || 'default';
+let theme = 'default';
 const listeners = new Set<() => void>();
 
 export const getTheme = () => theme;
@@ -25,4 +25,13 @@ export const subscribe = (fn: () => void) => {
   return () => listeners.delete(fn);
 };
 
-export const useTheme = () => useSyncExternalStore(subscribe, getTheme);
+export const useTheme = () => {
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      setTheme(stored);
+    }
+  }, []);
+  return useSyncExternalStore(subscribe, getTheme);
+};
