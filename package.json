@@ -7,7 +7,7 @@
   "scripts": {
     "build:gamepad": "tsc -p tsconfig.gamepad.json && node --import tsx/esm scripts/safe-copy.mjs",
     "typegen": "next typegen",
-    "prebuild": "rm -rf .next && yarn typegen && yarn build:gamepad",
+    "prebuild": "rm -rf .next && yarn typegen && yarn build:gamepad && node scripts/check-duplicate-exports.mjs",
     "dev": "next dev",
     "dev:turbo": "next dev --turbo",
     "build": "node scripts/build.mjs",
