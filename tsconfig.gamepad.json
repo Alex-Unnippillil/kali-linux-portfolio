@@ -5,7 +5,8 @@
     "outDir": "./dist",
     "rootDir": ".",
     "allowJs": false,
-    "tsBuildInfoFile": "./dist/tsconfig.gamepad.tsbuildinfo"
+    "tsBuildInfoFile": "./dist/tsconfig.gamepad.tsbuildinfo",
+    "noImplicitAny": true
 
   },
   "include": ["utils/gamepad.ts"]

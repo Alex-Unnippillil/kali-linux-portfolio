@@ -41,14 +41,14 @@ async function* chunkString(text: string, size = CHUNK_SIZE): Stream {
 
 function formatTable(headers: string[], rows: string[][]): string {
   const widths = headers.map((h, i) =>
-    Math.max(h.length, ...rows.map((r) => r[i].length)),
+    Math.max(h.length, ...rows.map((r) => r[i]?.length ?? 0)),
   );
   const header = headers
-    .map((h, i) => h.padEnd(widths[i]))
+    .map((h, i) => h.padEnd(widths[i]!))
     .join('  ');
   const separator = widths.map((w) => '='.repeat(w)).join('  ');
   const lines = rows.map((r) =>
-    r.map((c, i) => c.padEnd(widths[i])).join('  '),
+    r.map((c, i) => c.padEnd(widths[i]!)).join('  '),
   );
   return [separator, header, separator, ...lines, separator].join('\n') + '\n';
 }
@@ -77,6 +77,9 @@ const handlers: Record<string, CommandHandler> = {
   },
   grep: (args, input, ctx) => {
     const [pattern, file] = args;
+    if (!pattern) {
+      return textToStream('grep: search pattern required\n');
+    }
     let source: Stream;
     if (file) {
       const content = ctx.files[file];
@@ -170,7 +173,7 @@ function buildPipeline(command: string, ctx: Context): Stream {
     .filter(Boolean);
   let stream: Stream = emptyStream();
   for (const seg of segments) {
-    const [name, ...args] = seg.split(/\s+/);
+    const [name, ...args] = seg.split(/\s+/) as [string, ...string[]];
     const handler = handlers[name];
     if (handler) {
       stream = handler(args, stream, ctx);

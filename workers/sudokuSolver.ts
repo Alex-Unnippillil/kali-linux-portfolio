@@ -43,7 +43,10 @@ const gridValues = (grid: string): Record<string, string> => {
   const chars = grid.replace(/[^0-9\.]/g, '').split('');
   if (chars.length !== 81) throw new Error('Grid must be 81 chars');
   const res: Record<string, string> = {};
-  squares.forEach((s, i) => (res[s] = chars[i] === '0' || chars[i] === '.' ? '.' : chars[i]));
+  squares.forEach((s, i) => {
+    const ch = chars[i] ?? '.';
+    res[s] = ch === '0' || ch === '.' ? '.' : ch;
+  });
   return res;
 };
 
@@ -53,15 +56,17 @@ const assign = (
   d: string,
   steps?: Step[],
   technique = 'assign',
-): Record<string, string> | false => {
-  const other = values[s].replace(d, '');
-  for (const d2 of other) {
-    const res = eliminate(values, s, d2, steps);
-    if (!res) return false;
-  }
-  if (steps && technique !== 'given') steps.push({ square: s, value: d, technique });
-  return values;
-};
+  ): Record<string, string> | false => {
+    const base = values[s];
+    if (!base) return false;
+    const other = base.replace(d, '');
+    for (const d2 of other) {
+      const res = eliminate(values, s, d2, steps);
+      if (!res) return false;
+    }
+    if (steps && technique !== 'given') steps.push({ square: s, value: d, technique });
+    return values;
+  };
 
 const eliminate = (
   values: Record<string, string>,
@@ -69,22 +74,22 @@ const eliminate = (
   d: string,
   steps?: Step[],
 ): Record<string, string> | false => {
-  if (!values[s].includes(d)) return values; // already eliminated
-  values[s] = values[s].replace(d, '');
-  if (values[s].length === 0) return false;
-  if (values[s].length === 1) {
-    const d2 = values[s];
-    for (const s2 of peers[s]) {
+  if (!values[s]?.includes(d)) return values; // already eliminated
+  values[s] = values[s]!.replace(d, '');
+  if (values[s]!.length === 0) return false;
+  if (values[s]!.length === 1) {
+    const d2 = values[s]!;
+    for (const s2 of peers[s] ?? []) {
       const res = eliminate(values, s2, d2, steps);
       if (!res) return false;
     }
     if (steps) steps.push({ square: s, value: d2, technique: 'single candidate' });
   }
-  for (const u of units[s]) {
-    const places = u.filter((s2) => values[s2].includes(d));
+    for (const u of units[s] ?? []) {
+    const places = u.filter((s2) => values[s2]?.includes(d) ?? false);
     if (places.length === 0) return false;
     if (places.length === 1) {
-      if (!assign(values, places[0], d, steps, 'hidden single')) return false;
+      if (!assign(values, places[0]!, d, steps, 'hidden single')) return false;
     }
   }
   return values;
@@ -96,18 +101,19 @@ const parseGrid = (grid: string, steps?: Step[]): Record<string, string> | false
   const gridVals = gridValues(grid);
   for (const s of squares) {
     const d = gridVals[s];
-    if (digits.includes(d)) {
+    if (d && digits.includes(d)) {
       if (!assign(values, s, d, steps, 'given')) return false;
     }
   }
   return values;
 };
 
-const solved = (values: Record<string, string>): boolean => squares.every((s) => values[s].length === 1);
+const solved = (values: Record<string, string>): boolean =>
+  squares.every((s) => values[s]?.length === 1);
 
 const deepCopy = (obj: Record<string, string>): Record<string, string> => {
   const res: Record<string, string> = {};
-  for (const k in obj) res[k] = obj[k];
+  for (const k in obj) res[k] = obj[k]!;
   return res;
 };
 
@@ -117,41 +123,46 @@ const search = (
 ): Record<string, string> | false => {
   if (!values) return false;
   if (solved(values)) return values;
-  let minSq: string | null = null;
-  let minCount = 10;
-  for (const s of squares) {
-    const l = values[s].length;
-    if (l > 1 && l < minCount) {
-      minCount = l;
-      minSq = s;
+    let minSq: string | null = null;
+    let minCount = 10;
+    for (const s of squares) {
+      const l = values[s]?.length ?? 0;
+      if (l > 1 && l < minCount) {
+        minCount = l;
+        minSq = s;
+      }
     }
-  }
-  if (!minSq) return false;
-  for (const d of values[minSq]) {
-    const snapshot = steps.length;
-    steps.push({ square: minSq, value: d, technique: 'guess' });
-    const newVals = search(assign(deepCopy(values), minSq, d, steps, 'guess'), steps);
-    if (newVals) return newVals;
-    steps.splice(snapshot);
-  }
-  return false;
-};
+    if (!minSq) return false;
+    const candidates = values[minSq]!;
+    for (const d of candidates) {
+      const snapshot = steps.length;
+      steps.push({ square: minSq, value: d, technique: 'guess' });
+      const newVals = search(assign(deepCopy(values), minSq, d, steps, 'guess'), steps);
+      if (newVals) return newVals;
+      steps.splice(snapshot);
+    }
+    return false;
+  };
 
 const stringToBoard = (grid: string): number[][] => {
   const board: number[][] = [];
   for (let r = 0; r < 9; r++) {
-    board.push([]);
+    const row: number[] = [];
     for (let c = 0; c < 9; c++) {
-      const ch = grid[r * 9 + c];
-      board[r][c] = ch === '.' || ch === '0' ? 0 : parseInt(ch, 10);
+      const ch = grid[r * 9 + c] ?? '.';
+      row[c] = ch === '.' || ch === '0' ? 0 : parseInt(ch, 10);
     }
+    board.push(row);
   }
   return board;
 };
 
 const boardToString = (board: number[][]): string => board.flat().map((n) => (n === 0 ? '.' : String(n))).join('');
 
-const squareToIndices = (s: string): [number, number] => [rows.indexOf(s[0]), cols.indexOf(s[1])];
+const squareToIndices = (s: string): [number, number] => [
+  rows.indexOf(s[0] ?? ''),
+  cols.indexOf(s[1] ?? ''),
+];
 
 /**
  * Solves a Sudoku board.
@@ -195,44 +206,47 @@ export const getHint = (
   | { type: 'pair'; cells: { r: number; c: number }[]; values: number[]; technique: string }
   | null => {
   const grid = boardToString(board);
-  const values = parseGrid(grid);
-  if (!values) return null;
-  for (const s of squares) {
-    const [r, c] = squareToIndices(s);
-    if (board[r][c] === 0 && values[s].length === 1) {
-      return {
-        type: 'single',
-        r,
-        c,
-        value: parseInt(values[s], 10),
-        technique: 'single candidate',
-      };
+    const values = parseGrid(grid);
+    if (!values) return null;
+    for (const s of squares) {
+      const [r, c] = squareToIndices(s);
+      const boardVal = board[r]?.[c];
+      const val = values[s];
+      if (boardVal === 0 && val && val.length === 1) {
+        return {
+          type: 'single',
+          r,
+          c,
+          value: parseInt(val, 10),
+          technique: 'single candidate',
+        };
+      }
     }
-  }
-  for (const u of unitList) {
-    for (const d of digits) {
-      const places = u.filter((s) => values[s].includes(d));
-      if (places.length === 1) {
-        const [r, c] = squareToIndices(places[0]);
-        if (board[r][c] === 0) {
-          return {
-            type: 'single',
-            r,
-            c,
-            value: parseInt(d, 10),
-            technique: 'hidden single',
-          };
+    for (const u of unitList) {
+      for (const d of digits) {
+        const places = u.filter((s) => values[s]?.includes(d) ?? false);
+        if (places.length === 1) {
+          const [r, c] = squareToIndices(places[0]!);
+          if (board[r]?.[c] === 0) {
+            return {
+              type: 'single',
+              r,
+              c,
+              value: parseInt(d, 10),
+              technique: 'hidden single',
+            };
+          }
         }
       }
     }
-  }
   for (const u of unitList) {
-    const pairSquares = u.filter((s) => values[s].length === 2);
+    const pairSquares = u.filter((s) => values[s]?.length === 2);
     const seen: Record<string, string> = {};
     for (const s of pairSquares) {
       const val = values[s];
+      if (!val) continue;
       if (seen[val]) {
-        const other = seen[val];
+        const other = seen[val]!;
         const [r1, c1] = squareToIndices(s);
         const [r2, c2] = squareToIndices(other);
         return {

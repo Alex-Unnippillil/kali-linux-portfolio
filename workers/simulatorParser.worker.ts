@@ -50,14 +50,14 @@ self.onmessage = ({ data }: MessageEvent<SimulatorParserRequest>) => {
         self.postMessage({ type: 'cancelled' } as SimulatorParserResponse);
         return;
       }
-      const line = lines[i];
-      const [key, ...rest] = line.split(':');
-      parsed.push({
-        line: i + 1,
-        key: key.trim(),
-        value: rest.join(':').trim(),
-        raw: line,
-      });
+        const line = lines[i] ?? '';
+        const [key, ...rest] = line.split(':') as [string, ...string[]];
+        parsed.push({
+          line: i + 1,
+          key: key.trim(),
+          value: rest.join(':').trim(),
+          raw: line,
+        });
       if (i % 100 === 0) {
         const progress = (i + 1) / total;
         const elapsed = Date.now() - start;

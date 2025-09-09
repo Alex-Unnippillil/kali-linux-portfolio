@@ -101,12 +101,13 @@ self.onmessage = async ({ data }: MessageEvent<HashWorkerRequest>) => {
     for (const alg of Object.keys(hashers) as Algorithm[]) {
       const hasher = hashers[alg];
       if (!hasher) continue;
-      if (alg === 'CRC32') {
-        const num = hasher.digest();
-        results[alg] = num.toString(16).padStart(8, '0');
-      } else {
-        results[alg] = hasher.digest('hex');
-      }
+        if (alg === 'CRC32') {
+          const result = hasher.digest() as unknown;
+          results[alg] =
+            typeof result === 'number' ? result.toString(16) : String(result);
+        } else {
+          results[alg] = hasher.digest();
+        }
     }
   } else if (typeof text === 'string') {
     const data = new TextEncoder().encode(text);
@@ -157,12 +158,13 @@ self.onmessage = async ({ data }: MessageEvent<HashWorkerRequest>) => {
     for (const alg of Object.keys(hashers) as Algorithm[]) {
       const hasher = hashers[alg];
       if (!hasher) continue;
-      if (alg === 'CRC32') {
-        const num = hasher.digest();
-        results[alg] = num.toString(16).padStart(8, '0');
-      } else {
-        results[alg] = hasher.digest('hex');
-      }
+        if (alg === 'CRC32') {
+          const result = hasher.digest() as unknown;
+          results[alg] =
+            typeof result === 'number' ? result.toString(16) : String(result);
+        } else {
+          results[alg] = hasher.digest();
+        }
     }
 
     if (algorithms.includes('BASE64')) {
