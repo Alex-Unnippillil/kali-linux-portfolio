@@ -10,7 +10,6 @@ export const chromeDefaultTiles = [
 
 // TODO: restore YouTube (youtube)
 // TODO: restore Converter (converter)
-// TODO: restore Tic Tac Toe (tictactoe)
 // TODO: restore Chess (chess)
 // TODO: restore Connect Four (connect-four)
 // TODO: restore Hangman (hangman)
