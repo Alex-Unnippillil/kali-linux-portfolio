@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import Callout from '../../components/ui/Callout';
 
 const GetKali: React.FC = () => (
@@ -39,9 +40,9 @@ const GetKali: React.FC = () => (
         <h2 className="mb-2 text-xl font-semibold">Cloud</h2>
         <p className="mb-4">Deploy Kali on popular cloud providers for on-demand access from anywhere.</p>
         <div className="mb-4 flex gap-2">
-          <img src="/icons/providers/aws.svg" alt="AWS" className="h-6 w-6" />
-          <img src="/icons/providers/azure.svg" alt="Azure" className="h-6 w-6" />
-          <img src="/icons/providers/gcp.svg" alt="GCP" className="h-6 w-6" />
+          <Image src="/icons/providers/aws.svg" alt="AWS" className="h-6 w-6" width={24} height={24} />
+          <Image src="/icons/providers/azure.svg" alt="Azure" className="h-6 w-6" width={24} height={24} />
+          <Image src="/icons/providers/gcp.svg" alt="GCP" className="h-6 w-6" width={24} height={24} />
         </div>
         <a
           href="https://www.kali.org/get-kali/#kali-cloud"
