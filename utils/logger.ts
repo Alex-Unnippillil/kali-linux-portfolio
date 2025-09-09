@@ -1,4 +1,6 @@
-type LogLevel = 'error' | 'warn' | 'info' | 'debug';
+import { loadFromStorage, saveToStorage } from './persistent';
+
+export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 
 const levelOrder: Record<LogLevel, number> = {
   error: 0,
@@ -7,42 +9,68 @@ const levelOrder: Record<LogLevel, number> = {
   debug: 3,
 };
 
-function getLogLevel(): LogLevel {
+const LOG_LEVEL_KEY = 'log-level';
+
+function readInitialLevel(): LogLevel {
+  const stored = loadFromStorage<LogLevel>(
+    LOG_LEVEL_KEY,
+    'info',
+    (v: unknown): v is LogLevel => typeof v === 'string' && v in levelOrder,
+  );
   const env = process.env.LOG_LEVEL?.toLowerCase();
   if (env && env in levelOrder) {
     return env as LogLevel;
   }
-  return 'info';
+  return stored;
 }
 
-const activeLevel = getLogLevel();
+let activeLevel: LogLevel = readInitialLevel();
 const isProd = process.env.NODE_ENV === 'production';
 
-function shouldLog(level: LogLevel) {
+export function setLogLevel(level: LogLevel): void {
+  activeLevel = level;
+  saveToStorage(LOG_LEVEL_KEY, level);
+}
+
+export function getLogLevel(): LogLevel {
+  return activeLevel;
+}
+
+function shouldLog(level: LogLevel): boolean {
   return levelOrder[level] <= levelOrder[activeLevel];
 }
 
 const logger = {
-  error: (...args: any[]) => {
+  error: (...args: unknown[]) => {
     if (isProd) return;
     if (shouldLog('error')) console.error(...args);
   },
-  warn: (...args: any[]) => {
+  warn: (...args: unknown[]) => {
     if (isProd) return;
     if (shouldLog('warn')) console.warn(...args);
   },
-  info: (...args: any[]) => {
+  info: (...args: unknown[]) => {
     if (isProd) return;
     if (shouldLog('info')) console.info(...args);
   },
-  log: (...args: any[]) => {
+  log: (...args: unknown[]) => {
     if (isProd) return;
     if (shouldLog('info')) console.log(...args);
   },
-  debug: (...args: any[]) => {
+  debug: (...args: unknown[]) => {
     if (isProd) return;
     if (shouldLog('debug')) console.debug(...args);
   },
 };
+
+export function createLogger(prefix: string) {
+  return {
+    error: (...args: unknown[]) => logger.error(prefix, ...args),
+    warn: (...args: unknown[]) => logger.warn(prefix, ...args),
+    info: (...args: unknown[]) => logger.info(prefix, ...args),
+    log: (...args: unknown[]) => logger.log(prefix, ...args),
+    debug: (...args: unknown[]) => logger.debug(prefix, ...args),
+  };
+}
 
 export default logger;
