@@ -96,9 +96,10 @@ export default function Converter() {
   useEffect(() => {
     const data = rates[active as Domain];
     const units = Object.keys(data);
-    if (units.length) {
-      setFromUnit(units[0]);
-      setToUnit(units[1] || units[0]);
+    const first = units[0];
+    if (first !== undefined) {
+      setFromUnit(first);
+      setToUnit(units[1] ?? first);
     }
     setFromValue("");
     setToValue("");
@@ -127,7 +128,13 @@ export default function Converter() {
       return;
     }
     const data = rates[active as Domain];
-    const result = (n * data[toUnit]) / data[fromUnit];
+    const toRate = data[toUnit];
+    const fromRate = data[fromUnit];
+    if (toRate === undefined || fromRate === undefined) {
+      setToValue("");
+      return;
+    }
+    const result = (n * toRate) / fromRate;
     const out = result.toString();
     setToValue(out);
     addHistory(val, fromUnit, out, toUnit);
@@ -140,8 +147,14 @@ export default function Converter() {
       setFromValue("");
       return;
     }
-    const data = rates[active];
-    const result = (n * data[fromUnit]) / data[toUnit];
+    const data = rates[active as Domain];
+    const fromRate = data[fromUnit];
+    const toRate = data[toUnit];
+    if (fromRate === undefined || toRate === undefined) {
+      setFromValue("");
+      return;
+    }
+    const result = (n * fromRate) / toRate;
     const out = result.toString();
     setFromValue(out);
     addHistory(out, fromUnit, val, toUnit);
