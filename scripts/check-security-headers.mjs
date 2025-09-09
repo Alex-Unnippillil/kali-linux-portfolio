@@ -29,7 +29,7 @@ if (xcto !== 'nosniff') {
 }
 
 const referrer = res.headers.get('referrer-policy');
-if (referrer !== 'no-referrer') {
+if (referrer !== 'strict-origin-when-cross-origin') {
   fail(`Invalid Referrer-Policy: ${referrer}`);
 }
 

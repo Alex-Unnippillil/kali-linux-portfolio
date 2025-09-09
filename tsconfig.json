@@ -17,10 +17,11 @@
     "resolveJsonModule": true,
     "allowImportingTsExtensions": false,
     "isolatedModules": true,
-    // Next.js handles the JSX transform internally; preserve JSX for its compiler
     "jsx": "preserve",
     "incremental": true,
     "types": [
+      "jest",
+      "node",
       "./types/file-system-access",
       "./types/web-bluetooth"
     ],
@@ -31,15 +32,8 @@
     "noEmit": true,
     "plugins": [{ "name": "next" }]
   },
-  "include": [
-    "next-env.d.ts",
-    "sw.ts",
-    "src/plugins/Weather.tsx",
-    "src/wm/WindowSwitcher.tsx"
-  ],
-  "exclude": [
-    "node_modules"
-  ],
+  "include": ["**/*"],
+  "exclude": ["node_modules", "chrome-extension", "__tests__", "storybook"],
   "overrides": [
     {
       "files": ["apps/games/**/*.ts", "games/**/*.ts"],
