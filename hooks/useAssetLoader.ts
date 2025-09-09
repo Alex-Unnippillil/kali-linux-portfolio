@@ -22,6 +22,9 @@ export default function useAssetLoader(
 
   useEffect(() => {
     let cancelled = false;
+    // Whenever the list of assets changes start a new loading cycle.
+    // Reset the state so consumers can show loading indicators again.
+    setState({ loading: true, error: false });
 
     const loadImage = (src: string) => new Promise<void>((resolve, reject) => {
       const img = new Image();
