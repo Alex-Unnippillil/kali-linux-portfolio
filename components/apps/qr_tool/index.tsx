@@ -30,7 +30,7 @@ const QRTool: React.FC = () => {
       typeof Worker === 'function'
     ) {
       workerRef.current = new Worker(
-        new URL('../../../workers/qrEncode.worker.ts', import.meta.url),
+        new URL('../../../workers/qrEncode.worker.js', import.meta.url),
       );
     }
     return workerRef.current;
