@@ -31,11 +31,10 @@ export const createDeck = (): Card[] => {
 const shuffle = (deck: Card[]) => {
   for (let i = deck.length - 1; i > 0; i -= 1) {
     const j = Math.floor(random() * (i + 1));
-    // With `noUncheckedIndexedAccess` enabled, index access on `deck` can
-    // return `undefined`. However, during shuffle both `i` and `j` are within
-    // bounds, so the cards are guaranteed to exist. Use non-null assertions to
-    // satisfy the type checker.
-    [deck[i], deck[j]] = [deck[j]!, deck[i]!];
+    const tmp = deck[i]!;
+    deck[i] = deck[j]!;
+    deck[j] = tmp;
+
   }
 };
 
