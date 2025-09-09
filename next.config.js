@@ -68,7 +68,9 @@ const additionalManifestEntries = [
 ];
 precacheManifest.forEach((entry) => additionalManifestEntries.push(entry));
 
-const withPWA = require('@ducanh2912/next-pwa').default({
+const withPWAInit = require('@ducanh2912/next-pwa').default;
+// Enable PWA support via next-pwa
+const withPWA = withPWAInit({
   dest: 'public',
   sw: 'service-worker.js',
   // Enable the service worker for all production builds, even when not on Vercel.
@@ -76,7 +78,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   disable: process.env.NODE_ENV !== 'production',
   buildExcludes: [/dynamic-css-manifest\.json$/],
   fallbacks: {
-    'document': '/offline.html',
+    document: '/offline.html',
   },
   workboxOptions: {
     swSrc: 'sw.ts',
