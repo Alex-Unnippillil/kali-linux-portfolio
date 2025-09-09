@@ -1,21 +1,6 @@
-// @ts-check
-// Security headers configuration for Next.js.
-// Allows external badges and same-origin PDF embedding.
-// Update README (section "CSP External Domains") when editing domains below.
-
-// Ensure environment variables are loaded even when a local file is absent.
-// This falls back to the example file so builds don't fail due to missing
-// secrets during development or in CI.
-try {
-  require('dotenv').config({ path: '.env.local' });
-  require('dotenv').config({ path: '.env.local.example', override: false });
-} catch {}
-
-let validateEnv = null;
-try {
-  ({ validateServerEnv: validateEnv } = require('./lib/validate'));
-} catch {}
-
+/**
+ * @type {import('next').NextConfig}
+ */
 
 const securityHeaders = [
   {
@@ -28,11 +13,9 @@ const securityHeaders = [
   },
   {
     key: 'Permissions-Policy',
-    value:
-      'accelerometer=(), camera=(), microphone=(), geolocation=(), interest-cohort=(), fullscreen=(), payment=()',
+    value: 'accelerometer=(), camera=(), microphone=(), geolocation=()'
   },
   {
-    // Allow same-origin framing so the PDF resume renders in an <object>
     key: 'X-Frame-Options',
     value: 'SAMEORIGIN',
   },
@@ -214,3 +197,5 @@ module.exports = withBundleAnalyzer(
   })
 );
 
+
+module.exports = nextConfig;
