@@ -56,7 +56,7 @@ export default function AutostartSettings() {
   const updateUser = (idx: number, changes: Partial<Entry>) => {
     setUserEntries((prev) => {
       const next = [...prev];
-      next[idx] = { ...next[idx], ...changes };
+      next[idx] = { ...next[idx], ...changes } as Entry;
       persist(next);
       return next;
     });
