@@ -48,7 +48,7 @@ test.describe('Verve command panel', () => {
       await page.type('#cmd', `cmd${i}`);
       await page.keyboard.press('Enter');
     }
-    const history = await page.evaluate(() => window.__history);
+      const history = await page.evaluate(() => (window as any).__history);
     expect(history.length).toBe(20);
     expect(history[0]).toBe('cmd6');
     expect(history[19]).toBe('cmd25');
@@ -73,12 +73,16 @@ test.describe('Verve command panel', () => {
     await page.type('#cmd', 'hello');
     await page.keyboard.press('Shift+Enter');
     await expect(page.locator('#cmd')).toHaveValue('hello\n');
-    let active = await page.evaluate(() => document.activeElement.id);
+      let active = await page.evaluate(
+        () => (document.activeElement as HTMLElement | null)?.id || '',
+      );
     expect(active).toBe('cmd');
     await page.keyboard.press('Enter');
     await expect(page.locator('#output')).toContainText('hello');
     await expect(page.locator('#cmd')).toHaveValue('');
-    active = await page.evaluate(() => document.activeElement.id);
+      active = await page.evaluate(
+        () => (document.activeElement as HTMLElement | null)?.id || '',
+      );
     expect(active).toBe('cmd');
   });
 });

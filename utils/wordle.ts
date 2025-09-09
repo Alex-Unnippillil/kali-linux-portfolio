@@ -31,7 +31,7 @@ export function getWordOfTheDay(
 ): string {
   const wordList = dictionaries[dict];
   const seed = getDailySeed(`wordle-${dict}`, date);
-  return wordList[hash(seed) % wordList.length];
+  return wordList[hash(seed) % wordList.length]!;
 }
 
 type LetterResult = 'correct' | 'present' | 'absent';

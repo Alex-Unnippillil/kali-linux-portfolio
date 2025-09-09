@@ -51,14 +51,15 @@ function parseDesktopFile(filePath: string): DesktopEntry | null {
   const categories = data.Categories
     ? data.Categories.split(';').filter(Boolean)
     : [];
-  return {
-    name: data.Name,
-    exec: data.Exec,
-    icon: data.Icon,
-    categories,
-    actions: ACTIONS,
-  };
-}
+    const entry: DesktopEntry = {
+      name: data.Name,
+      exec: data.Exec,
+      categories,
+      actions: ACTIONS,
+    };
+    if (data.Icon) entry.icon = data.Icon;
+    return entry;
+  }
 
 export function generateMenu(
   dirs: string[] = DEFAULT_DIRS

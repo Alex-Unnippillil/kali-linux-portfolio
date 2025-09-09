@@ -12,9 +12,12 @@ test.describe('file manager open-with order', () => {
     await page.goto('https://example.com');
 
     // Seed initial order: preferred app1 followed by app2 and app3.
-    await page.evaluate(([key, initial]) => {
-      localStorage.setItem(key, JSON.stringify(initial));
-    }, STORAGE_KEY, ['app1', 'app2', 'app3']);
+      await page.evaluate(
+        ({ key, initial }) => {
+          localStorage.setItem(key, JSON.stringify(initial));
+        },
+        { key: STORAGE_KEY, initial: ['app1', 'app2', 'app3'] },
+      );
 
     // Reorder alternatives: move app3 before app2 while keeping app1 first.
     await page.evaluate((key) => {

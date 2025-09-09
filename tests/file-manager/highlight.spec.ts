@@ -1,7 +1,7 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 
 // Utility function to set color inputs and save
-async function setColors(page, foreground: string, background: string) {
+async function setColors(page: Page, foreground: string, background: string) {
   await page.fill('input[name="foreground"]', foreground);
   await page.fill('input[name="background"]', background);
   await page.click('text=Save');

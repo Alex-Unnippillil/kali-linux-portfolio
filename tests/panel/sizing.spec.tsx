@@ -26,7 +26,7 @@ test.describe('panel sizing', () => {
   }
 
   test('overflow reveals chevron menu', async ({ page }) => {
-    const size = SIZES[0];
+      const size = SIZES[0]!;
     await page.setContent(`
       <style>
         #panel { width:${size * 3}px; height:${size}px; display:flex; overflow:hidden; }

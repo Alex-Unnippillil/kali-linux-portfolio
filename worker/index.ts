@@ -1,3 +1,7 @@
+/// <reference lib="webworker" />
+export {};
+declare const self: ServiceWorkerGlobalScope;
+
 const BUILD_ID = (self as any).BUILD_ID || "0";
 const CACHE_NAME = `KLP_v${BUILD_ID}-periodic-cache-v1`;
 
@@ -79,7 +83,8 @@ self.addEventListener("fetch", (event: FetchEvent) => {
           }
           return response;
         } catch {
-          return cache.match(request) as Promise<Response | undefined>;
+          const cached = await cache.match(request);
+          return cached ?? new Response(undefined, { status: 504 });
         }
       }),
     );
@@ -88,7 +93,9 @@ self.addEventListener("fetch", (event: FetchEvent) => {
 
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request).catch(() => caches.match("/offline.html")),
+      fetch(request).catch(async () =>
+        (await caches.match("/offline.html")) || new Response("Offline", { status: 503 }),
+      ),
     );
     return;
   }
