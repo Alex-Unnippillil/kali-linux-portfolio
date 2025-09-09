@@ -12,12 +12,12 @@ test.describe('File manager thumbnails', () => {
       `,
     });
 
-    await page.evaluate(() => window.setThumbLimit(1));
-    let icon = await page.evaluate(() => window.getIconForSize(5));
+      await page.evaluate(() => (window as any).setThumbLimit(1));
+      let icon = await page.evaluate(() => (window as any).getIconForSize(5));
     expect(icon).toBe('generic');
 
-    await page.evaluate(() => window.setThumbLimit(10));
-    icon = await page.evaluate(() => window.getIconForSize(5));
+      await page.evaluate(() => (window as any).setThumbLimit(10));
+      icon = await page.evaluate(() => (window as any).getIconForSize(5));
     expect(icon).toBe('thumbnail');
   });
 });

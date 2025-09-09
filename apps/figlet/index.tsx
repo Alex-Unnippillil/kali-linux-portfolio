@@ -297,7 +297,7 @@ const FigletApp: React.FC = () => {
   const displayedFonts = fonts.filter((f) => !monoOnly || f.mono);
 
   useEffect(() => {
-    if (fonts.length && !font) setFont(fonts[0].name);
+    if (fonts.length && !font) setFont(fonts[0]?.name ?? '');
   }, [fonts, font, setFont]);
 
   useEffect(() => {

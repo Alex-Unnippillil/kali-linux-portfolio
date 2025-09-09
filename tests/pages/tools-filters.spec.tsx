@@ -15,7 +15,7 @@ test('filters tools grid by Information Gathering category', async ({ page }) =>
   expect(labelText).toBeTruthy();
   const match = labelText!.match(/\((\d+)\)/);
   expect(match).not.toBeNull();
-  const expectedCount = parseInt(match![1], 10);
+    const expectedCount = parseInt(match![1]!, 10);
   expect(expectedCount).toBeGreaterThan(0);
 
   // Apply the filter.

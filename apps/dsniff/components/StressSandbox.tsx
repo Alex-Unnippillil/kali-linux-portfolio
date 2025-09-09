@@ -6,9 +6,11 @@ const sampleLogs = [
   { protocol: 'HTTPS', host: 'test.com', path: '/login' },
 ];
 
+type LogEntry = (typeof sampleLogs)[number] & { id: number };
+
 const StressSandbox: React.FC = () => {
   const [size, setSize] = useState(100);
-  const [logs, setLogs] = useState<typeof sampleLogs>([]);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
   const [captureMs, setCaptureMs] = useState(0);
   const [replayMs, setReplayMs] = useState(0);
 
@@ -16,6 +18,7 @@ const StressSandbox: React.FC = () => {
     // Simulate capture: repeat the sample logs
     const captureStart = performance.now();
     const newLogs = Array.from({ length: size }, (_, i) => ({
+
       ...sampleLogs[i % sampleLogs.length]!,
       id: i,
     }));

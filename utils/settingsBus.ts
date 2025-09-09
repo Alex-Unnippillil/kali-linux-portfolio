@@ -15,7 +15,7 @@ export const publish = (channel: string, property: string, value: unknown): void
 };
 
 export const subscribe = (handler: (msg: SettingsMessage) => void): (() => void) =>
-  sub(TOPIC, handler);
+  sub(TOPIC, (data) => handler(data as SettingsMessage));
 
 const settingsBus = { publish, subscribe };
 
