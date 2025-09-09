@@ -1,5 +1,8 @@
 "use client";
 
+// Simple utility component used for quickly sketching small Breakout
+// levels. It encodes the grid into a sharable URL so other players can
+// try the design in their own game.
 import React, { useEffect, useState } from "react";
 
 const ROWS = 5;

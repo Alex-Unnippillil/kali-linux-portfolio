@@ -1,5 +1,8 @@
 "use client";
 
+// Interactive level editor for the Breakout game. Users can drag and
+// paint bricks on a small grid and persist their creations in
+// `localStorage`.
 import React, { useEffect, useRef, useState } from "react";
 
 const ROWS = 5;
