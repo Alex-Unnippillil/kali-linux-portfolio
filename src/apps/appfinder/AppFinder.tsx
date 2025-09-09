@@ -63,9 +63,13 @@ function parseDesktopFile(contents: string): DesktopEntry | null {
     }
     if (!inEntry) continue;
     const m = line.match(/^([^=]+)=(.*)$/);
-    if (m) {
-      const [, key, value] = m;
+    if (m && m[1] && m[2]) {
+      const key = m[1];
+      const value = m[2];
       data[key.trim()] = value.trim();
+    } else {
+      // Skip lines without a valid key/value pair
+      continue;
     }
   }
   if (!data.Name || !data.Exec) return null;
