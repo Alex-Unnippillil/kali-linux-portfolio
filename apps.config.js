@@ -72,7 +72,6 @@ export const chromeDefaultTiles = [
 // TODO: restore Serial Terminal (serial-terminal)
 // TODO: restore Network Connections (network/connections)
 // TODO: restore BLE Sensor (ble-sensor)
-// TODO: restore Bluetooth (bluetooth)
 // TODO: restore dsniff (dsniff)
 // TODO: restore BeEF (beef)
 // TODO: restore Metasploit (metasploit)
