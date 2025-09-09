@@ -33,6 +33,44 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
   analyzerMode: 'json',
 });
 
+// Prefix PWA caches with the current build ID so each deployment gets its own
+// cache namespace. The service worker reads this via NEXT_PUBLIC_BUILD_ID and
+// calls setCacheNameDetails to apply the prefix.
+const buildId =
+  process.env.NEXT_BUILD_ID || process.env.BUILD_ID || 'dev';
+
+let precacheManifest = [];
+try {
+  precacheManifest = require('./precache-manifest.json');
+} catch {
+  // The manifest is generated at build time; fall back to an empty list when absent
+}
+
+const additionalManifestEntries = [
+  // Precache the main shell and tools index so they are instantly available offline
+  { url: '/', revision: buildId },
+  { url: '/apps', revision: buildId },
+];
+precacheManifest.forEach((entry) => additionalManifestEntries.push(entry));
+
+const withPWAInit = require('@ducanh2912/next-pwa').default;
+// Enable PWA support via next-pwa
+const withPWA = withPWAInit({
+  dest: 'public',
+  sw: 'service-worker.js',
+  // Enable the service worker for all production builds, even when not on Vercel.
+  // This avoids the "PWA support is disabled" message in local builds.
+  disable: process.env.NODE_ENV !== 'production',
+  buildExcludes: [/dynamic-css-manifest\.json$/],
+  fallbacks: {
+    document: '/offline.html',
+  },
+  workboxOptions: {
+    swSrc: 'sw.ts',
+    additionalManifestEntries,
+  },
+});
+
 
 let withExportImages = (config) => config;
 try {

@@ -1,3 +1,4 @@
+// Generates a precache manifest consumed by next-pwa
 import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import { join } from 'node:path';
