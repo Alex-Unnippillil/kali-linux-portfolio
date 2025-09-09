@@ -1,21 +1,6 @@
-// @ts-check
-// Security headers configuration for Next.js.
-// Allows external badges and same-origin PDF embedding.
-// Update README (section "CSP External Domains") when editing domains below.
-
-// Ensure environment variables are loaded even when a local file is absent.
-// This falls back to the example file so builds don't fail due to missing
-// secrets during development or in CI.
-try {
-  require('dotenv').config({ path: '.env.local' });
-  require('dotenv').config({ path: '.env.local.example', override: false });
-} catch {}
-
-let validateEnv = null;
-try {
-  ({ validateServerEnv: validateEnv } = require('./lib/validate'));
-} catch {}
-
+/**
+ * @type {import('next').NextConfig}
+ */
 
 const securityHeaders = [
   {
@@ -24,15 +9,15 @@ const securityHeaders = [
   },
   {
     key: 'Referrer-Policy',
-    value: 'no-referrer',
+    value: 'strict-origin-when-cross-origin',
   },
   {
     key: 'Permissions-Policy',
     value:
-      'accelerometer=(), camera=(), microphone=(), geolocation=(), interest-cohort=(), fullscreen=(), payment=()',
+      'camera=(), microphone=(), geolocation=(), interest-cohort=()',
+
   },
   {
-    // Allow same-origin framing so the PDF resume renders in an <object>
     key: 'X-Frame-Options',
     value: 'SAMEORIGIN',
   },
@@ -86,6 +71,7 @@ const withPWA = withPWAInit({
   },
 });
 
+
 let withExportImages = (config) => config;
 try {
   withExportImages = require('next-export-optimize-images');
@@ -137,29 +123,27 @@ function configureWebpack(config, { isServer }) {
 
 
 module.exports = withBundleAnalyzer(
-  withExportImages(
-    withPWA({
-      output: isStaticExport ? 'export' : undefined,
-      env: { NEXT_PUBLIC_BUILD_ID: buildId },
-      serverExternalPackages: [
-        '@supabase/supabase-js',
-        '@tinyhttp/cookie-signature',
-      ],
-      webpack: configureWebpack,
+  withExportImages({
+    output: isStaticExport ? 'export' : undefined,
+    serverExternalPackages: [
+      '@supabase/supabase-js',
+      '@tinyhttp/cookie-signature',
+    ],
+    webpack: configureWebpack,
 
-      // Run ESLint during builds so linting problems surface in CI and local builds.
-      eslint: {
-        ignoreDuringBuilds: false,
-      },
-      typescript: {
-        ignoreBuildErrors: false,
-      },
-      experimental: {
-        optimizeCss: true,
-      },
-      images: {
-        unoptimized: true,
-        domains: [
+    // Run ESLint during builds so linting problems surface in CI and local builds.
+    eslint: {
+      ignoreDuringBuilds: false,
+    },
+    typescript: {
+      ignoreBuildErrors: false,
+    },
+    experimental: {
+      optimizeCss: true,
+    },
+    images: {
+      unoptimized: true,
+      domains: [
         'opengraph.githubassets.com',
         'raw.githubusercontent.com',
         'avatars.githubusercontent.com',
@@ -170,6 +154,18 @@ module.exports = withBundleAnalyzer(
         'data.typeracer.com',
         'images.credly.com',
         'staticmap.openstreetmap.de',
+      ],
+      remotePatterns: [
+        { protocol: 'https', hostname: 'opengraph.githubassets.com' },
+        { protocol: 'https', hostname: 'raw.githubusercontent.com' },
+        { protocol: 'https', hostname: 'avatars.githubusercontent.com' },
+        { protocol: 'https', hostname: 'i.ytimg.com' },
+        { protocol: 'https', hostname: 'yt3.ggpht.com' },
+        { protocol: 'https', hostname: 'openweathermap.org' },
+        { protocol: 'https', hostname: 'ghchart.rshah.org' },
+        { protocol: 'https', hostname: 'data.typeracer.com' },
+        { protocol: 'https', hostname: 'images.credly.com' },
+        { protocol: 'https', hostname: 'staticmap.openstreetmap.de' },
       ],
       localPatterns: [
         { pathname: '/themes/Yaru/apps/**' },
@@ -227,40 +223,7 @@ module.exports = withBundleAnalyzer(
               headers: securityHeaders,
             },
           ];
-          precacheManifest.forEach(({ url }) => {
-            result.push({
-              source: url,
-              headers: [
-                {
-                  key: 'Cache-Control',
-                  value: 'public, max-age=31536000, immutable',
-                },
-              ],
-            });
-          });
           result.push(
-            {
-              source: '/manifest.webmanifest',
-              headers: [
-                {
-                  key: 'Content-Type',
-                  value: 'application/manifest+json',
-                },
-                {
-                  key: 'Cache-Control',
-                  value: 'public, max-age=0, must-revalidate',
-                },
-              ],
-            },
-            {
-              source: '/service-worker.js',
-              headers: [
-                {
-                  key: 'Cache-Control',
-                  value: 'public, max-age=0, must-revalidate',
-                },
-              ],
-            },
             {
               source: '/fonts/:path*',
               headers: [
@@ -283,7 +246,8 @@ module.exports = withBundleAnalyzer(
           return result;
         }
       : undefined,
-    })
-  )
+  })
 );
 
+
+module.exports = nextConfig;
