@@ -1,6 +1,6 @@
 # Progressive Web App
 
-This project uses `next-pwa` with a custom service worker (`sw.ts`) built via Workbox's `injectManifest` mode. The worker allows fine grained control over how each asset is cached so new deployments remain predictable while the site stays fast offline.
+This project uses `@ducanh2912/next-pwa` (currently `^10.2.9`) with a custom service worker (`sw.ts`) built via Workbox's `injectManifest` mode. The worker allows fine-grained control over how each asset is cached so new deployments remain predictable while the site stays fast offline. Upstream recommends migrating to `@serwist/next` when feasible, so monitor its guidance and switch when appropriate.
 
 ## Caching strategy
 
