@@ -74,10 +74,13 @@ export function middleware(req: NextRequest | { headers: Headers; nextUrl?: URL;
       'max-age=63072000; includeSubDomains; preload'
     );
     res.headers.set('X-Content-Type-Options', 'nosniff');
-    res.headers.set('Referrer-Policy', 'same-origin');
+    res.headers.set(
+      'Referrer-Policy',
+      'strict-origin-when-cross-origin'
+    );
     res.headers.set(
       'Permissions-Policy',
-      'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()'
+      'camera=(), microphone=(), geolocation=(), interest-cohort=()'
     );
   }
 
