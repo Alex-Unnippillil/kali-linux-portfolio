@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 
 // Helper to normalize pointer events for both mouse and touch
 // Returns props that can be spread onto an element to handle both
