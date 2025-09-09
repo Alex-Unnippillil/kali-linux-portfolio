@@ -30,7 +30,7 @@ const Simulator: React.FC = () => {
 
   useEffect(() => {
     const worker = new Worker(
-      new URL('../../workers/simulatorParser.worker.ts', import.meta.url),
+      new URL('../../workers/simulatorParser.worker.js', import.meta.url),
     );
     workerRef.current = worker;
     worker.onmessage = (e: MessageEvent<SimulatorParserResponse>) => {

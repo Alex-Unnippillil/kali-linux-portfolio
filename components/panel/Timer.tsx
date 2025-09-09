@@ -57,7 +57,7 @@ export default function Timer() {
     setRemaining(totalSeconds);
     setRunning(true);
     workerRef.current = new Worker(
-      new URL("../../workers/timer.worker.ts", import.meta.url)
+      new URL("../../workers/timer.worker.js", import.meta.url)
     );
     workerRef.current.onmessage = () => {
       const left = Math.max(
