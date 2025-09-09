@@ -1,9 +1,9 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
-import { logEvent } from './analytics';
-import ErrorBoundary from '../components/core/ErrorBoundary';
+import { logEvent } from '@/utils/analytics';
+import ErrorBoundary from '@/components/core/ErrorBoundary';
 
-const APP_DIR = '../apps';
+const APP_DIR = '@/apps';
 
 export const createDynamicApp = (id, title) => {
   const DynamicApp = dynamic(
@@ -12,26 +12,26 @@ export const createDynamicApp = (id, title) => {
         let mod;
         try {
           mod = await import(
-            /* webpackInclude: /\.(js|jsx|ts|tsx)$/,
-               webpackExclude: /\.test\.(js|jsx|ts|tsx)$/,
-               webpackChunkName: "[request]",
-               webpackPrefetch: true */ `../apps/${id}`
+            /* webpackInclude: /\.(js|jsx|ts|tsx)$/, 
+               webpackExclude: /\.test\.(js|jsx|ts|tsx)$/, 
+               webpackChunkName: "[request]", 
+               webpackPrefetch: true */ `@/apps/${id}`
           );
         } catch {
           try {
             mod = await import(
-              /* webpackInclude: /\.(js|jsx|ts|tsx)$/,
-                 webpackExclude: /\.test\.(js|jsx|ts|tsx)$/,
-                 webpackChunkName: "[request]",
-                 webpackPrefetch: true */ `../apps/${id}/index`
+              /* webpackInclude: /\.(js|jsx|ts|tsx)$/, 
+                 webpackExclude: /\.test\.(js|jsx|ts|tsx)$/, 
+                 webpackChunkName: "[request]", 
+                 webpackPrefetch: true */ `@/apps/${id}/index`
             );
           } catch {
             try {
               mod = await import(
-                /* webpackInclude: /\.(js|jsx|ts|tsx)$/,
-                   webpackExclude: /\.test\.(js|jsx|ts|tsx)$/,
-                   webpackChunkName: "[request]",
-                   webpackPrefetch: true */ `../apps/${id.replace('_', '-')}`
+                /* webpackInclude: /\.(js|jsx|ts|tsx)$/, 
+                   webpackExclude: /\.test\.(js|jsx|ts|tsx)$/, 
+                   webpackChunkName: "[request]", 
+                   webpackPrefetch: true */ `@/apps/${id.replace('_', '-')}`
               );
             } catch {
               console.warn(
