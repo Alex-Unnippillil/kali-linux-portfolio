@@ -280,6 +280,12 @@ These external domains are whitelisted in the default CSP. Update this list when
 | `*.twimg.com` | Twitter asset CDN |
 | `*.x.com` | X (Twitter) domain equivalents |
 | `*.google.com` | Google services and Chrome app favicons |
+| `platform.twitter.com` | Twitter widgets |
+| `syndication.twitter.com` | Twitter syndication |
+| `cdn.syndication.twimg.com` | Twitter CDN |
+| `www.youtube.com` | YouTube embeds |
+| `www.google.com` | Google services |
+| `www.gstatic.com` | Google static assets |
 | `example.com` | Chrome app demo origin |
 | `openweathermap.org` | Weather widget images |
 | `ghchart.rshah.org` | GitHub contribution charts |

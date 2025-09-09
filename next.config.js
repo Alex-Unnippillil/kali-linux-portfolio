@@ -17,7 +17,19 @@ try {
 } catch {}
 
 
+const ContentSecurityPolicy = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
+  "connect-src 'self' https://platform.twitter.com https://vercel.live https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://sdk.scdn.co https://example.com https://*.twimg.com https://*.google.com https://open.spotify.com",
+  "img-src 'self' data: blob: https://stackblitz.com https://platform.twitter.com https://vercel.live https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://sdk.scdn.co https://example.com https://*.twimg.com https://*.google.com https://www.youtube-nocookie.com https://open.spotify.com https://react.dev",
+  "frame-src 'self' https://stackblitz.com https://platform.twitter.com https://vercel.live https://www.youtube.com https://www.youtube-nocookie.com https://open.spotify.com",
+].join('; ');
+
 const securityHeaders = [
+  {
+    key: 'Content-Security-Policy',
+    value: ContentSecurityPolicy,
+  },
   {
     key: 'X-Content-Type-Options',
     value: 'nosniff',
