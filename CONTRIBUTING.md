@@ -10,6 +10,13 @@
    yarn dev
    ```
 
+## Lint
+- Run ESLint before committing:
+  ```bash
+  yarn lint
+  ```
+- `.mdx` files must not be imported in code.
+
 ## Tests
 - **Unit tests**:
   ```bash
