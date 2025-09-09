@@ -20,6 +20,15 @@ export function middleware(req: NextRequest | { headers: Headers; nextUrl?: URL;
   const shouldRedirect = Boolean((req as any).nextUrl);
   if (
     shouldRedirect &&
+    (pathname === `/${defaultLocale}` || pathname.startsWith(`/${defaultLocale}/`))
+  ) {
+    const newPath = pathname.replace(`/${defaultLocale}`, '') || '/';
+    return NextResponse.redirect(
+      new URL(newPath, (req as any).url || 'http://localhost')
+    );
+  }
+  if (
+    shouldRedirect &&
     !PUBLIC_FILE.test(pathname) &&
     !pathname.startsWith('/_next') &&
     !pathname.includes('/api') &&

@@ -1,6 +1,6 @@
 import React, { useRef } from 'react'
-import useFocusTrap from '../../hooks/useFocusTrap'
-import useRovingTabIndex from '../../hooks/useRovingTabIndex'
+import useFocusTrap from '@/hooks/useFocusTrap'
+import useRovingTabIndex from '@/hooks/useRovingTabIndex'
 
 function AppMenu(props) {
     const menuRef = useRef(null)

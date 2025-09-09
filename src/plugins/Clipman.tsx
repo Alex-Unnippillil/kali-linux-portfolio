@@ -1,7 +1,5 @@
 import { isBrowser } from '@/utils/env';
 import { useEffect, useState } from 'react';
-import fs from 'fs';
-import path from 'path';
 import logger from '../../utils/logger';
 
 interface ClipmanSettings {
@@ -14,11 +12,18 @@ interface ClipmanData {
   settings: ClipmanSettings;
 }
 
-const CONFIG_PATH = path.join(__dirname, 'clipman.json');
+export const CLIPMAN_STORAGE_KEY = 'clipman';
 
 function loadData(): ClipmanData {
+  if (!isBrowser()) {
+    return {
+      history: [],
+      settings: { syncSelections: false, persistOnExit: false },
+    };
+  }
   try {
-    const raw = fs.readFileSync(CONFIG_PATH, 'utf8');
+    const raw = localStorage.getItem(CLIPMAN_STORAGE_KEY);
+    if (!raw) throw new Error('no data');
     const data = JSON.parse(raw);
     return {
       history: Array.isArray(data.history) ? data.history : [],
@@ -36,8 +41,9 @@ function loadData(): ClipmanData {
 }
 
 function saveData(data: ClipmanData) {
+  if (!isBrowser()) return;
   try {
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify(data, null, 2));
+    localStorage.setItem(CLIPMAN_STORAGE_KEY, JSON.stringify(data));
   } catch {
     /* ignore errors */
   }
@@ -118,22 +124,24 @@ export default function Clipman({
         <button onClick={addClip}>Add</button>
       </div>
       <div>
-        <label>
-          <input
-            type="checkbox"
-            checked={settings.syncSelections}
-            onChange={toggleSyncSelections}
-          />
-          Sync selections
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={settings.persistOnExit}
-            onChange={togglePersistOnExit}
-          />
-          Persist on exit
-        </label>
+          <label>
+            <input
+              type="checkbox"
+              aria-label="Sync selections"
+              checked={settings.syncSelections}
+              onChange={toggleSyncSelections}
+            />
+            Sync selections
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              aria-label="Persist on exit"
+              checked={settings.persistOnExit}
+              onChange={togglePersistOnExit}
+            />
+            Persist on exit
+          </label>
       </div>
       <ul>
         {history.map((h, i) => (

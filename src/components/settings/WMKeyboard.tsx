@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import path from 'path';
 import defaultShortcuts from '@/data/xfce4/default-shortcuts.json';
 
 interface Shortcut {
@@ -9,12 +8,7 @@ interface Shortcut {
   keys: string;
 }
 
-const SHORTCUT_PATH = path.join(
-  process.env.HOME || '',
-  '.config',
-  'xfce4',
-  'shortcuts.json'
-);
+const STORAGE_KEY = 'xfce4_shortcuts';
 
 const formatEvent = (e: KeyboardEvent) => {
   const parts = [
@@ -33,19 +27,19 @@ export default function WMKeyboard() {
   const [rebinding, setRebinding] = useState<string | null>(null);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const fs = await import('fs/promises');
-        const data = await fs.readFile(SHORTCUT_PATH, 'utf8');
+    try {
+      const data = localStorage.getItem(STORAGE_KEY);
+      if (data) {
         const parsed = JSON.parse(data);
         if (Array.isArray(parsed)) {
           setShortcuts(parsed as Shortcut[]);
+          return;
         }
-      } catch {
-        // if file doesn't exist, initialize with defaults
-        setShortcuts(defaultShortcuts);
       }
-    })();
+      setShortcuts(defaultShortcuts);
+    } catch {
+      setShortcuts(defaultShortcuts);
+    }
   }, []);
 
   const filtered = useMemo(
@@ -56,12 +50,10 @@ export default function WMKeyboard() {
     [shortcuts, query]
   );
 
-  const saveShortcuts = async (next: Shortcut[]) => {
+  const saveShortcuts = (next: Shortcut[]) => {
     setShortcuts(next);
     try {
-      const fs = await import('fs/promises');
-      await fs.mkdir(path.dirname(SHORTCUT_PATH), { recursive: true });
-      await fs.writeFile(SHORTCUT_PATH, JSON.stringify(next, null, 2), 'utf8');
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     } catch (err) {
       console.error('Failed to save shortcuts', err);
     }
@@ -75,7 +67,7 @@ export default function WMKeyboard() {
       const updated = shortcuts.map((s) =>
         s.command === rebinding ? { ...s, keys: combo } : s
       );
-      void saveShortcuts(updated);
+      saveShortcuts(updated);
       setRebinding(null);
     };
     window.addEventListener('keydown', handler, { once: true });

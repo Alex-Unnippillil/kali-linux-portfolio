@@ -12,20 +12,12 @@ const DEFAULT_PREFS: WhiskerPrefs = {
   showRecent: true,
 };
 
-const configPath = () => {
-  const path = require('path');
-  const home = process.env.HOME || process.env.USERPROFILE || '';
-  return path.join(home, '.config', 'whisker');
-};
+const PREFS_KEY = 'whisker_prefs';
 
 function readPrefs(): WhiskerPrefs {
   try {
-    const fs = require('fs');
-    const path = require('path');
-    const dir = configPath();
-    const file = path.join(dir, 'whisker.json');
-    if (fs.existsSync(file)) {
-      const data = fs.readFileSync(file, 'utf8');
+    const data = localStorage.getItem(PREFS_KEY);
+    if (data) {
       return { ...DEFAULT_PREFS, ...JSON.parse(data) } as WhiskerPrefs;
     }
   } catch (err) {
@@ -36,12 +28,7 @@ function readPrefs(): WhiskerPrefs {
 
 function writePrefs(prefs: WhiskerPrefs) {
   try {
-    const fs = require('fs');
-    const path = require('path');
-    const dir = configPath();
-    fs.mkdirSync(dir, { recursive: true });
-    const file = path.join(dir, 'whisker.json');
-    fs.writeFileSync(file, JSON.stringify(prefs, null, 2));
+    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
   } catch (err) {
     console.error('Failed to write whisker prefs', err);
   }
@@ -52,17 +39,9 @@ export function useWhiskerPrefs() {
 
   useEffect(() => {
     setPrefs(readPrefs());
-    try {
-      const fs = require('fs');
-      const path = require('path');
-      const file = path.join(configPath(), 'whisker.json');
-      fs.watchFile(file, () => {
-        setPrefs(readPrefs());
-      });
-      return () => fs.unwatchFile(file);
-    } catch (err) {
-      console.error('Failed to watch whisker prefs', err);
-    }
+    const handleStorage = () => setPrefs(readPrefs());
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
   const update = (next: WhiskerPrefs) => {

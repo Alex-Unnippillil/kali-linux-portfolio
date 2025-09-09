@@ -54,7 +54,19 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 const buildId =
   process.env.NEXT_BUILD_ID || process.env.BUILD_ID || 'dev';
 
-const precacheManifest = require('./precache-manifest.json');
+let precacheManifest = [];
+try {
+  precacheManifest = require('./precache-manifest.json');
+} catch {
+  // The manifest is generated at build time; fall back to an empty list when absent
+}
+
+const additionalManifestEntries = [
+  // Precache the main shell and tools index so they are instantly available offline
+  { url: '/', revision: buildId },
+  { url: '/apps', revision: buildId },
+];
+precacheManifest.forEach((entry) => additionalManifestEntries.push(entry));
 
 const withPWA = require('@ducanh2912/next-pwa').default({
   dest: 'public',
@@ -68,13 +80,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   },
   workboxOptions: {
     swSrc: 'sw.ts',
-    additionalManifestEntries: [
-      // Precache the main shell and tools index so they are instantly available offline
-      { url: '/', revision: buildId },
-      { url: '/apps', revision: buildId },
-      // Include core static assets generated in the manifest
-      ...precacheManifest,
-    ],
+    additionalManifestEntries,
   },
 });
 
@@ -97,23 +103,31 @@ function configureWebpack(config, { isServer }) {
   config.experiments.asyncWebAssembly = true;
   // Prevent bundling of server-only modules in the browser
   config.resolve = config.resolve || {};
-  config.resolve.fallback = {
-    ...(config.resolve.fallback || {}),
-    module: false,
-    async_hooks: false,
-    fs: false,
-    worker_threads: false,
-    readline: false,
-  };
-  config.resolve.alias = {
-    ...(config.resolve.alias || {}),
-    'react-dom$': require('path').resolve(__dirname, 'lib/react-dom-shim.js'),
-  };
+  config.resolve.fallback = Object.assign(
+    {},
+    config.resolve.fallback,
+    {
+      module: false,
+      async_hooks: false,
+      fs: false,
+      worker_threads: false,
+      readline: false,
+    }
+  );
+  config.resolve.alias = Object.assign(
+    {},
+    config.resolve.alias,
+    {
+      'react-dom$': require('path').resolve(
+        __dirname,
+        'lib/react-dom-shim.js'
+      ),
+    }
+  );
   if (isProd) {
-    config.optimization = {
-      ...(config.optimization || {}),
+    config.optimization = Object.assign({}, config.optimization, {
       mangleExports: false,
-    };
+    });
   }
   return config;
 }
@@ -123,7 +137,7 @@ function configureWebpack(config, { isServer }) {
 module.exports = withBundleAnalyzer(
   withExportImages(
     withPWA({
-      ...(isStaticExport && { output: 'export' }),
+      output: isStaticExport ? 'export' : undefined,
       env: { NEXT_PUBLIC_BUILD_ID: buildId },
       serverExternalPackages: [
         '@supabase/supabase-js',
@@ -172,98 +186,101 @@ module.exports = withBundleAnalyzer(
       ];
     },
     // Apply security headers only in production.
-    ...(isProd
-      ? {
-          async headers() {
-            return [
-              {
-                source: '/',
-                headers: [
-                  {
-                    key: 'Link',
-                    value: '</wallpapers/wall-1.webp>; rel=preload; as=image',
-                  },
-                ],
-              },
-              {
-                source: '/:path*',
-                headers: [
-                  {
-                    key: 'Link',
-                    value: '<https://fonts.googleapis.com>; rel=preconnect; crossorigin',
-                  },
-                  {
-                    key: 'Link',
-                    value: '<https://fonts.gstatic.com>; rel=preconnect; crossorigin',
-                  },
-                ],
-              },
-              {
-                source: '/_next/static/:path*',
-                headers: [
-                  {
-                    key: 'Cache-Control',
-                    value: 'public, max-age=31536000, immutable',
-                  },
-                ],
-              },
-              {
-                source: '/(.*)',
-                headers: securityHeaders,
-              },
-              ...precacheManifest.map(({ url }) => ({
-                source: url,
-                headers: [
-                  {
-                    key: 'Cache-Control',
-                    value: 'public, max-age=31536000, immutable',
-                  },
-                ],
-              })),
-              {
-                source: '/manifest.webmanifest',
-                headers: [
-                  {
-                    key: 'Content-Type',
-                    value: 'application/manifest+json',
-                  },
-                  {
-                    key: 'Cache-Control',
-                    value: 'public, max-age=0, must-revalidate',
-                  },
-                ],
-              },
-              {
-                source: '/service-worker.js',
-                headers: [
-                  {
-                    key: 'Cache-Control',
-                    value: 'public, max-age=0, must-revalidate',
-                  },
-                ],
-              },
-              {
-                source: '/fonts/:path*',
-                headers: [
-                  {
-                    key: 'Cache-Control',
-                    value: 'public, max-age=31536000, immutable',
-                  },
-                ],
-              },
-              {
-                source: '/images/:path*',
-                headers: [
-                  {
-                    key: 'Cache-Control',
-                    value: 'public, max-age=31536000, immutable',
-                  },
-                ],
-              },
-            ];
-          },
+    headers: isProd
+      ? async () => {
+          const result = [
+            {
+              source: '/',
+              headers: [
+                {
+                  key: 'Link',
+                  value: '</wallpapers/wall-1.webp>; rel=preload; as=image',
+                },
+              ],
+            },
+            {
+              source: '/:path*',
+              headers: [
+                {
+                  key: 'Link',
+                  value: '<https://fonts.googleapis.com>; rel=preconnect; crossorigin',
+                },
+                {
+                  key: 'Link',
+                  value: '<https://fonts.gstatic.com>; rel=preconnect; crossorigin',
+                },
+              ],
+            },
+            {
+              source: '/_next/static/:path*',
+              headers: [
+                {
+                  key: 'Cache-Control',
+                  value: 'public, max-age=31536000, immutable',
+                },
+              ],
+            },
+            {
+              source: '/(.*)',
+              headers: securityHeaders,
+            },
+          ];
+          precacheManifest.forEach(({ url }) => {
+            result.push({
+              source: url,
+              headers: [
+                {
+                  key: 'Cache-Control',
+                  value: 'public, max-age=31536000, immutable',
+                },
+              ],
+            });
+          });
+          result.push(
+            {
+              source: '/manifest.webmanifest',
+              headers: [
+                {
+                  key: 'Content-Type',
+                  value: 'application/manifest+json',
+                },
+                {
+                  key: 'Cache-Control',
+                  value: 'public, max-age=0, must-revalidate',
+                },
+              ],
+            },
+            {
+              source: '/service-worker.js',
+              headers: [
+                {
+                  key: 'Cache-Control',
+                  value: 'public, max-age=0, must-revalidate',
+                },
+              ],
+            },
+            {
+              source: '/fonts/:path*',
+              headers: [
+                {
+                  key: 'Cache-Control',
+                  value: 'public, max-age=31536000, immutable',
+                },
+              ],
+            },
+            {
+              source: '/images/:path*',
+              headers: [
+                {
+                  key: 'Cache-Control',
+                  value: 'public, max-age=31536000, immutable',
+                },
+              ],
+            }
+          );
+          return result;
         }
-      : {}),
+      : undefined,
     })
   )
 );

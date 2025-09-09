@@ -50,11 +50,6 @@ function MyApp(props) {
   useReportWebVitals();
 
   useEffect(() => {
-    void import('@xterm/xterm/css/xterm.css');
-    void import('leaflet/dist/leaflet.css');
-  }, []);
-
-  useEffect(() => {
     if (isBrowser() && typeof window.initA2HS === 'function') {
       window.initA2HS();
     }

@@ -1,17 +1,19 @@
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
-import fs from 'fs';
-import path from 'path';
-import Clipman from '../src/plugins/Clipman';
+import Clipman, { CLIPMAN_STORAGE_KEY } from '../src/plugins/Clipman';
 
-const CONFIG_PATH = path.join(__dirname, '..', 'src', 'plugins', 'clipman.json');
-let original: string;
+let original: string | null;
 
 beforeEach(() => {
-  original = fs.readFileSync(CONFIG_PATH, 'utf8');
+  original = window.localStorage.getItem(CLIPMAN_STORAGE_KEY);
+  window.localStorage.removeItem(CLIPMAN_STORAGE_KEY);
 });
 
 afterEach(() => {
-  fs.writeFileSync(CONFIG_PATH, original);
+  if (original === null) {
+    window.localStorage.removeItem(CLIPMAN_STORAGE_KEY);
+  } else {
+    window.localStorage.setItem(CLIPMAN_STORAGE_KEY, original);
+  }
   cleanup();
 });
 
@@ -49,7 +51,8 @@ test('updates settings and persists them', async () => {
   fireEvent.click(sync);
   fireEvent.click(persist);
   await waitFor(() => {
-    const data = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+    const raw = window.localStorage.getItem(CLIPMAN_STORAGE_KEY) || '{}';
+    const data = JSON.parse(raw);
     expect(data.settings.syncSelections).toBe(true);
     expect(data.settings.persistOnExit).toBe(true);
   });
@@ -64,7 +67,8 @@ test('persists history on exit when enabled', async () => {
   fireEvent.click(screen.getByText('Add'));
   unmount();
   await waitFor(() => {
-    const data = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+    const raw = window.localStorage.getItem(CLIPMAN_STORAGE_KEY) || '{}';
+    const data = JSON.parse(raw);
     expect(data.history[0]).toBe('hello');
   });
 });

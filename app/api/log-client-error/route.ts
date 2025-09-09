@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { sign, unsign } from '@tinyhttp/cookie-signature';
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -50,11 +50,11 @@ function applyBackoff(req: NextRequest) {
   return { allowed, cookie };
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
   const { allowed, cookie } = applyBackoff(req);
   const headers = { 'Set-Cookie': cookie };
   if (!allowed) {
-    return NextResponse.json({ ok: false, code: 'rate_limit' }, { status: 429, headers });
+    return Response.json({ ok: false, code: 'rate_limit' }, { status: 429, headers });
   }
   let body: unknown;
   try {
@@ -64,5 +64,5 @@ export async function POST(req: NextRequest) {
   }
   const sanitized = sanitize(body);
   console.error('Client error:', sanitized);
-  return NextResponse.json({ ok: true }, { headers });
+  return Response.json({ ok: true }, { headers });
 }

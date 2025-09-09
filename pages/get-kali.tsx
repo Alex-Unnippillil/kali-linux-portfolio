@@ -6,6 +6,7 @@ import Footer from '../components/layout/Footer';
 import ImageWizard from '../components/downloads/ImageWizard';
 
 
+
 const badgeIcons: Record<string, string> = {
   aws: '/icons/providers/aws.svg',
   azure: '/icons/providers/azure.svg',

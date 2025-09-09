@@ -1,12 +1,12 @@
 "use client";
 
-import usePersistentState from '../../hooks/usePersistentState';
+import usePersistentState from '@/hooks/usePersistentState';
 import { useEffect, useState } from 'react';
-import { useTheme } from '../../hooks/useTheme';
+import { useTheme } from '@/hooks/useTheme';
 import {
   getUndercover,
   setUndercover as setUndercoverTheme,
-} from '../../utils/theme';
+} from '@/utils/theme';
 
 interface Props {
   open: boolean;

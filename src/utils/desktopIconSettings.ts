@@ -1,8 +1,3 @@
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
-import { EventEmitter } from 'events';
-
 export interface DesktopIconPreferences {
   showHome: boolean;
   showTrash: boolean;
@@ -13,24 +8,36 @@ const defaultPrefs: DesktopIconPreferences = {
   showTrash: true,
 };
 
-const configPath = path.join(
-  os.homedir(),
-  '.config',
-  'xfce4',
-  'desktop-icons.json'
-);
+const STORAGE_KEY = 'desktop-icon-preferences';
 
-let current: DesktopIconPreferences = loadFromFile();
-const emitter = new EventEmitter();
+let current: DesktopIconPreferences = loadFromStorage();
+const listeners = new Set<(prefs: DesktopIconPreferences) => void>();
 
-function loadFromFile(): DesktopIconPreferences {
+function getStorage(): Storage | null {
   try {
-    const data = fs.readFileSync(configPath, 'utf-8');
-    const parsed = JSON.parse(data);
-    return { ...defaultPrefs, ...parsed };
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return window.localStorage;
+    }
   } catch {
-    return { ...defaultPrefs };
+    // ignore
   }
+  return null;
+}
+
+function loadFromStorage(): DesktopIconPreferences {
+  const storage = getStorage();
+  if (storage) {
+    try {
+      const data = storage.getItem(STORAGE_KEY);
+      if (data) {
+        const parsed = JSON.parse(data);
+        return { ...defaultPrefs, ...parsed };
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }
+  return { ...defaultPrefs };
 }
 
 export function loadPreferences(): DesktopIconPreferences {
@@ -39,17 +46,37 @@ export function loadPreferences(): DesktopIconPreferences {
 
 export function savePreferences(prefs: DesktopIconPreferences): void {
   current = { ...defaultPrefs, ...prefs };
-  fs.mkdirSync(path.dirname(configPath), { recursive: true });
-  fs.writeFileSync(configPath, JSON.stringify(current, null, 2));
-  emitter.emit('change', current);
+  const storage = getStorage();
+  if (storage) {
+    try {
+      storage.setItem(STORAGE_KEY, JSON.stringify(current));
+    } catch {
+      // ignore write errors
+    }
+  }
+  for (const listener of listeners) {
+    listener(current);
+  }
 }
 
 export function subscribe(
   listener: (prefs: DesktopIconPreferences) => void
 ): () => void {
-  emitter.on('change', listener);
-  return () => emitter.off('change', listener);
+  listeners.add(listener);
+  return () => listeners.delete(listener);
 }
 
-// Ensure current is initialized
-current = loadFromFile();
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event: StorageEvent) => {
+    if (event.key === STORAGE_KEY) {
+      const newPrefs = event.newValue
+        ? JSON.parse(event.newValue)
+        : { ...defaultPrefs };
+      current = { ...defaultPrefs, ...newPrefs };
+      for (const listener of listeners) {
+        listener(current);
+      }
+    }
+  });
+}
+

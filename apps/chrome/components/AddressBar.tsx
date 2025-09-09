@@ -46,14 +46,18 @@ export default function AddressBar({ url, onNavigate }: Props) {
     if (index <= 0) return;
     const newIndex = index - 1;
     setIndex(newIndex);
-    onNavigate(history[newIndex]);
+    if (history[newIndex]) {
+      onNavigate(history[newIndex]);
+    }
   };
 
   const goForward = () => {
     if (index >= history.length - 1) return;
     const newIndex = index + 1;
     setIndex(newIndex);
-    onNavigate(history[newIndex]);
+    if (history[newIndex]) {
+      onNavigate(history[newIndex]);
+    }
   };
 
   const addBookmark = () => {
@@ -93,6 +97,7 @@ export default function AddressBar({ url, onNavigate }: Props) {
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && go()}
+        aria-label="Address bar"
       />
       <button type="button" onClick={go} className="px-2 border rounded">
         Go

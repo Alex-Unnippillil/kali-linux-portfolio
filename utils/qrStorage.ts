@@ -7,13 +7,13 @@ const FILE_NAME = 'qr-scans.json';
 
 const getStorage = (): StorageManager => navigator.storage;
 
-const opfsSupported =
+const isOpfsSupported = (): boolean =>
   isBrowser() && 'storage' in navigator && Boolean(getStorage().getDirectory);
 
 let directoryHandlePromise: Promise<FileSystemDirectoryHandle | null> | null = null;
 const getDirectoryHandle = (): Promise<FileSystemDirectoryHandle | null> => {
   if (directoryHandlePromise) return directoryHandlePromise;
-  if (!opfsSupported) {
+  if (!isOpfsSupported()) {
     directoryHandlePromise = Promise.resolve(null);
   } else {
     directoryHandlePromise = getStorage()
