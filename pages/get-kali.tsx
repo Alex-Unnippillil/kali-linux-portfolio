@@ -1,26 +1,26 @@
-import React from 'react';
-import Image from 'next/image';
-import Callout from '../components/ui/Callout';
-import Header from '../components/layout/Header';
-import Footer from '../components/layout/Footer';
-import ImageWizard from '../components/downloads/ImageWizard';
+import React from "react";
+import Image from "next/image";
+import Callout from "../components/ui/Callout";
+import Header from "../components/layout/Header";
+import Footer from "../components/layout/Footer";
+import ImageWizard from "../components/downloads/ImageWizard";
 
-import * as Installer from '../content/get-kali/installer.mdx';
-import * as VMs from '../content/get-kali/vms.mdx';
-import * as ARM from '../content/get-kali/arm.mdx';
-import * as Mobile from '../content/get-kali/mobile.mdx';
-import * as Cloud from '../content/get-kali/cloud.mdx';
-import * as Containers from '../content/get-kali/containers.mdx';
-import * as Live from '../content/get-kali/live.mdx';
-import * as WSL from '../content/get-kali/wsl.mdx';
-import * as WinKex from '../content/get-kali/win-kex.mdx';
-import * as Purple from '../content/get-kali/purple.mdx';
-import * as Docs from '../content/get-kali/docs.mdx';
+import * as Installer from "../content/get-kali/installer";
+import * as VMs from "../content/get-kali/vms";
+import * as ARM from "../content/get-kali/arm";
+import * as Mobile from "../content/get-kali/mobile";
+import * as Cloud from "../content/get-kali/cloud";
+import * as Containers from "../content/get-kali/containers";
+import * as Live from "../content/get-kali/live";
+import * as WSL from "../content/get-kali/wsl";
+import * as WinKex from "../content/get-kali/win-kex";
+import * as Purple from "../content/get-kali/purple";
+import * as Docs from "../content/get-kali/docs";
 
 const badgeIcons: Record<string, string> = {
-  aws: '/icons/providers/aws.svg',
-  azure: '/icons/providers/azure.svg',
-  gcp: '/icons/providers/gcp.svg',
+  aws: "/icons/providers/aws.svg",
+  azure: "/icons/providers/azure.svg",
+  gcp: "/icons/providers/gcp.svg",
 };
 
 type Platform = {
@@ -32,21 +32,21 @@ type Platform = {
 };
 
 const platforms: Platform[] = [
-  { slug: 'installer', ...(Installer as any) },
-  { slug: 'virtual-machines', ...(VMs as any) },
-  { slug: 'arm', ...(ARM as any) },
-  { slug: 'mobile', ...(Mobile as any) },
-  { slug: 'cloud', ...(Cloud as any) },
-  { slug: 'containers', ...(Containers as any) },
-  { slug: 'live', ...(Live as any) },
-  { slug: 'wsl', ...(WSL as any) },
+  { slug: "installer", ...(Installer as any) },
+  { slug: "virtual-machines", ...(VMs as any) },
+  { slug: "arm", ...(ARM as any) },
+  { slug: "mobile", ...(Mobile as any) },
+  { slug: "cloud", ...(Cloud as any) },
+  { slug: "containers", ...(Containers as any) },
+  { slug: "live", ...(Live as any) },
+  { slug: "wsl", ...(WSL as any) },
   {
-    slug: 'win-kex',
-    url: 'https://www.kali.org/docs/wsl/win-kex/',
+    slug: "win-kex",
+    url: "https://www.kali.org/docs/wsl/win-kex/",
     ...(WinKex as any),
   },
-  { slug: 'purple', ...(Purple as any) },
-  { slug: 'docs', url: 'https://www.kali.org/docs/', ...(Docs as any) },
+  { slug: "purple", ...(Purple as any) },
+  { slug: "docs", url: "https://www.kali.org/docs/", ...(Docs as any) },
 ];
 
 const GetKali: React.FC = () => (
@@ -64,9 +64,18 @@ const GetKali: React.FC = () => (
                 {badges.map((badge) => {
                   const icon = badgeIcons[badge];
                   return (
-                    <li key={badge} className="flex items-center justify-center">
+                    <li
+                      key={badge}
+                      className="flex items-center justify-center"
+                    >
                       {icon ? (
-                        <Image src={icon} alt={badge} width={24} height={24} className="h-6 w-6" />
+                        <Image
+                          src={icon}
+                          alt={badge}
+                          width={24}
+                          height={24}
+                          className="h-6 w-6"
+                        />
                       ) : (
                         <span className="bg-gray-200 text-gray-800 px-2 py-1 rounded text-xs">
                           {badge}
@@ -91,7 +100,7 @@ const GetKali: React.FC = () => (
       <div className="mt-6">
         <Callout variant="verifyDownload">
           <p>
-            Verify downloads using signatures or hashes{' '}
+            Verify downloads using signatures or hashes{" "}
             <a
               href="https://www.kali.org/docs/introduction/download-validation/"
               target="_blank"
