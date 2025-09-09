@@ -11,6 +11,7 @@ export default function FixturesLoader({ onData }: LoaderProps) {
   const [worker, setWorker] = useState<Worker | null>(null);
 
   useEffect(() => {
+    if (typeof Worker === 'undefined') return;
     const w = new Worker(new URL('../workers/fixturesParser.ts', import.meta.url));
     w.onmessage = (e) => {
       const { type, payload } = e.data;
