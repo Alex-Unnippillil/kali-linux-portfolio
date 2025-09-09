@@ -96,10 +96,13 @@ export default function Converter() {
   useEffect(() => {
     const data = rates[active as Domain];
     const units = Object.keys(data);
-    const first = units[0];
-    if (first !== undefined) {
-      setFromUnit(first);
-      setToUnit(units[1] ?? first);
+    if (units.length) {
+      // `noUncheckedIndexedAccess` is enabled, so direct indexing returns
+      // `string | undefined`. However, the length check above guarantees
+      // that at least the first element exists.
+      setFromUnit(units[0]!);
+      setToUnit(units[1] ?? units[0]!);
+
     }
     setFromValue("");
     setToValue("");
