@@ -16,7 +16,7 @@ const StressSandbox: React.FC = () => {
     // Simulate capture: repeat the sample logs
     const captureStart = performance.now();
     const newLogs = Array.from({ length: size }, (_, i) => ({
-      ...sampleLogs[i % sampleLogs.length],
+      ...sampleLogs[i % sampleLogs.length]!,
       id: i,
     }));
     setLogs(newLogs);
