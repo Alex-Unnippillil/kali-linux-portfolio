@@ -9,7 +9,7 @@ interface PlatformCardProps {
 export default function PlatformCard({ title, bullets, thumbnail }: PlatformCardProps) {
   return (
     <div className="flex gap-4 rounded border p-4">
-      <Image src={thumbnail} alt="" width={64} height={64} className="rounded" />
+      <Image src={thumbnail} alt={`${title} icon`} width={64} height={64} className="rounded" />
       <div className="space-y-2">
         <h3 className="font-bold">{title}</h3>
         <ul className="list-disc list-inside text-sm space-y-1">

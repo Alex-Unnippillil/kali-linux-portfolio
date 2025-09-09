@@ -75,12 +75,10 @@ export default function Footer() {
           >
             <Image
               src={link.icon}
-              alt=""
+              alt={link.label}
               width={24}
               height={24}
-              aria-hidden="true"
             />
-            <span className="sr-only">{link.label}</span>
           </a>
         ))}
       </footer>

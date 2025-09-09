@@ -76,7 +76,7 @@ export default function Taskbar(props) {
                     height={24}
                     className="w-5 h-5 transition-transform duration-200 ease-out group-hover:scale-110"
                     src={app.icon.replace('./', '/')}
-                    alt=""
+                    alt={app.title}
                     sizes="24px"
                 />
                 <span className="ml-1 text-sm text-white whitespace-nowrap">{app.title}</span>

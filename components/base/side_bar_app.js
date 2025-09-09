@@ -109,7 +109,7 @@ export class SideBarApp extends Component {
                     height={28}
                     className="w-7"
                     src={this.props.icon.replace('./', '/')}
-                    alt="Ubuntu App Icon"
+                    alt={this.props.title}
                     sizes="28px"
                 />
                 <Image
@@ -117,7 +117,8 @@ export class SideBarApp extends Component {
                     height={28}
                     className={(this.state.scaleImage ? " scale " : "") + " scalable-app-icon w-7 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"}
                     src={this.props.icon.replace('./', '/')}
-                    alt=""
+                    alt={this.props.title}
+                    aria-hidden="true"
                     sizes="28px"
                 />
                 {

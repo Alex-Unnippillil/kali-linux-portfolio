@@ -149,7 +149,7 @@ const AppsPage = () => {
                 {app.icon && (
                   <Image
                     src={app.icon}
-                    alt=""
+                    alt={app.title}
                     width={48}
                     height={48}
                     sizes="48px"
