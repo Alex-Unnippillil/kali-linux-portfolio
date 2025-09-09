@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import usePersistentState from "../../../hooks/usePersistentState";
-import { isBrowser } from '@/utils/env';
 
 interface AlertsProps {
   latitude: number;
@@ -30,7 +29,7 @@ const Alerts = ({ latitude, longitude }: AlertsProps) => {
   );
 
   useEffect(() => {
-    if (!enabled || !isBrowser()) return;
+    if (!enabled || typeof window === "undefined") return;
     if ("Notification" in window && Notification.permission === "default") {
       void Notification.requestPermission();
     }
@@ -74,7 +73,7 @@ const Alerts = ({ latitude, longitude }: AlertsProps) => {
     const handleFocus = () => start();
     const handleBlur = () => stop();
 
-    if (document.hasFocus()) start();
+    if (typeof document !== "undefined" && document.hasFocus()) start();
 
     window.addEventListener("focus", handleFocus);
     window.addEventListener("blur", handleBlur);
@@ -88,35 +87,38 @@ const Alerts = ({ latitude, longitude }: AlertsProps) => {
 
   return (
     <div className="space-y-2 p-2">
-      <label className="flex items-center space-x-2">
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={(e) => setEnabled(e.target.checked)}
-        />
-        <span>Enable alerts</span>
-      </label>
-      <div className="flex space-x-4">
-        <label className="flex items-center space-x-1">
-          <span>Low</span>
+        <label className="flex items-center space-x-2">
           <input
-            type="number"
-            value={low}
-            onChange={(e) => setLow(Number(e.target.value))}
-            className="w-16 text-black"
+            type="checkbox"
+            checked={enabled}
+            onChange={(e) => setEnabled(e.target.checked)}
+            aria-label="Enable alerts"
           />
+          <span>Enable alerts</span>
         </label>
-        <label className="flex items-center space-x-1">
-          <span>High</span>
-          <input
-            type="number"
-            value={high}
-            onChange={(e) => setHigh(Number(e.target.value))}
-            className="w-16 text-black"
-          />
-        </label>
+        <div className="flex space-x-4">
+          <label className="flex items-center space-x-1">
+            <span>Low</span>
+            <input
+              type="number"
+              value={low}
+              onChange={(e) => setLow(Number(e.target.value))}
+              className="w-16 text-black"
+              aria-label="Low temperature"
+            />
+          </label>
+          <label className="flex items-center space-x-1">
+            <span>High</span>
+            <input
+              type="number"
+              value={high}
+              onChange={(e) => setHigh(Number(e.target.value))}
+              className="w-16 text-black"
+              aria-label="High temperature"
+            />
+          </label>
+        </div>
       </div>
-    </div>
   );
 };
 
