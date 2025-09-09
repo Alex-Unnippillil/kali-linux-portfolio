@@ -1,4 +1,4 @@
-# Kali Linux Portfolio 
+# Kali Linux Portfolio
 
 A desktop-style portfolio built with Next.js and Tailwind that emulates a Kali/Ubuntu UI with windows, a dock, context menus, and a rich catalog of **security-tool simulations**, **utilities**, and **retro games**. This README is tailored for a professional full-stack engineer preparing **production deployment** and ongoing maintenance.
 
@@ -564,4 +564,3 @@ The calculator supports a subset of math.js expressions with the following featu
 - The previous answer is accessible via `Ans`.
 
 Invalid syntax is highlighted in the calculator input, selecting the character where parsing failed.
-
