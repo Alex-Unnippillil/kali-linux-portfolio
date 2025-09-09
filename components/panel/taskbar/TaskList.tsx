@@ -91,7 +91,7 @@ const TaskList: React.FC<TaskListProps> = ({ apps, onMinimizeWindow }) => {
           {app.icon ? (
             <Image
               src={app.icon}
-              alt=""
+              alt={app.title}
               className="max-w-full max-h-full"
               width={rowSize}
               height={rowSize}
