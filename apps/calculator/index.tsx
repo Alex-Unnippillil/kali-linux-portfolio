@@ -34,6 +34,8 @@ export default function Calculator() {
     let formatBase: any;
     let getLastResult: any;
     let setBase: any;
+    let setPreciseMode: any;
+    let setProgrammerMode: any;
 
     const load = async () => {
       if (isBrowser() && !(window as any).math) {
@@ -53,6 +55,8 @@ export default function Calculator() {
       formatBase = mod.formatBase;
       getLastResult = mod.getLastResult;
       setBase = mod.setBase;
+      setPreciseMode = mod.setPreciseMode;
+      setProgrammerMode = mod.setProgrammerMode;
 
       const display = document.getElementById('display') as HTMLInputElement;
       const buttons = document.querySelectorAll<HTMLButtonElement>('.btn');
@@ -61,6 +65,11 @@ export default function Calculator() {
       const formulasToggle = document.getElementById('toggle-formulas');
       const formulasEl = document.getElementById('formulas');
       const baseSelect = document.getElementById('base-select') as HTMLSelectElement | null;
+      const preciseToggle = document.getElementById('toggle-precise');
+      const scientificToggle = document.getElementById('toggle-scientific');
+      const scientificEl = document.getElementById('scientific');
+      const programmerToggle = document.getElementById('toggle-programmer');
+      const programmerEl = document.getElementById('programmer');
 
       const insertAtCursor = (text: string) => {
         const start = display.selectionStart ?? display.value.length;
@@ -181,6 +190,24 @@ export default function Calculator() {
         const hidden = formulasEl?.classList.toggle('hidden') ?? false;
         formulasToggle?.setAttribute('aria-pressed', (!hidden).toString());
         announce(`Formulas ${hidden ? 'hidden' : 'shown'}`);
+      });
+
+      preciseToggle?.addEventListener('click', () => {
+        const on = preciseToggle.getAttribute('aria-pressed') !== 'true';
+        preciseToggle.setAttribute('aria-pressed', on.toString());
+        preciseToggle.textContent = `Precise Mode: ${on ? 'On' : 'Off'}`;
+        setPreciseMode(on);
+      });
+
+      scientificToggle?.addEventListener('click', () => {
+        const hidden = scientificEl?.classList.toggle('hidden') ?? false;
+        scientificToggle?.setAttribute('aria-pressed', (!hidden).toString());
+      });
+
+      programmerToggle?.addEventListener('click', () => {
+        const hidden = programmerEl?.classList.toggle('hidden') ?? false;
+        programmerToggle?.setAttribute('aria-pressed', (!hidden).toString());
+        setProgrammerMode(!hidden);
       });
 
       const shortcutHandler = (e: KeyboardEvent) => {
