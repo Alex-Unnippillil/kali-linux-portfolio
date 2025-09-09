@@ -8,7 +8,6 @@ export const chromeDefaultTiles = [
   { title: 'Example', url: 'https://example.com' },
 ];
 
-// TODO: restore YouTube (youtube)
 // TODO: restore Converter (converter)
 // TODO: restore Tic Tac Toe (tictactoe)
 // TODO: restore Chess (chess)
@@ -153,6 +152,7 @@ const PowerApp = createDynamicApp('power', 'Power Settings');
 
 const XApp = createDynamicApp('x', 'X');
 const SpotifyApp = createDynamicApp('spotify', 'Spotify');
+const YouTubeApp = createDynamicApp('youtube', 'YouTube');
 const SettingsApp = createDynamicApp('settings', 'Settings');
 const ChromeApp = createDynamicApp('chrome', 'Chrome');
 const GeditApp = createDynamicApp('gedit', 'Gedit');
@@ -266,6 +266,7 @@ const displayPower = createDisplay(PowerApp);
 
 const displayX = createDisplay(XApp);
 const displaySpotify = createDisplay(SpotifyApp);
+const displayYouTube = createDisplay(YouTubeApp);
 const displaySettings = createDisplay(SettingsApp);
 const displayChrome = createDisplay(ChromeApp);
 const displayGedit = createDisplay(GeditApp);
