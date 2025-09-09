@@ -188,13 +188,13 @@ export function pollTwinStick(deadzone = 0.25): TwinStickState {
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   for (const pad of pads) {
     if (!pad) continue;
-    const calib = loadCalibration(pad.id);
-    const ranges = calib?.axes || [];
-    const [lx, ly, rx, ry] = pad.axes;
-    const cx = applyCalibration(lx, ranges[0]);
-    const cy = applyCalibration(ly, ranges[1]);
-    const ax = applyCalibration(rx, ranges[2]);
-    const ay = applyCalibration(ry, ranges[3]);
+      const calib = loadCalibration(pad.id);
+      const ranges = calib?.axes || [];
+      const [lx = 0, ly = 0, rx = 0, ry = 0] = pad.axes;
+      const cx = applyCalibration(lx, ranges[0]);
+      const cy = applyCalibration(ly, ranges[1]);
+      const ax = applyCalibration(rx, ranges[2]);
+      const ay = applyCalibration(ry, ranges[3]);
     state.moveX = Math.abs(cx) > deadzone ? cx : 0;
     state.moveY = Math.abs(cy) > deadzone ? cy : 0;
     state.aimX = Math.abs(ax) > deadzone ? ax : 0;

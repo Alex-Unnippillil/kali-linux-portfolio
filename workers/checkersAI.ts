@@ -3,9 +3,15 @@ export interface Piece { color: Color; king: boolean; }
 export type Board = (Piece | null)[][];
 export interface Move { from:[number,number]; to:[number,number]; captured?:[number,number]; }
 
-const directions: Record<Color, number[][]> = {
-  red: [[-1, -1], [-1, 1]],
-  black: [[1, -1], [1, 1]],
+const directions: Record<Color, [number, number][]> = {
+  red: [
+    [-1, -1],
+    [-1, 1],
+  ],
+  black: [
+    [1, -1],
+    [1, 1],
+  ],
 };
 
 const inBounds = (r: number, c: number) => r >= 0 && r < 8 && c >= 0 && c < 8;
@@ -19,7 +25,7 @@ const getPieceMoves = (
   c: number,
   enforceCapture = true,
 ): Move[] => {
-  const piece = board[r][c];
+    const piece = board[r]?.[c];
   if (!piece) return [];
   const dirs = [...directions[piece.color]];
   if (piece.king) {
@@ -27,21 +33,21 @@ const getPieceMoves = (
   }
   const moves: Move[] = [];
   const captures: Move[] = [];
-  for (const [dr, dc] of dirs) {
-    const r1 = r + dr;
-    const c1 = c + dc;
-    if (!inBounds(r1, c1)) continue;
-    const target = board[r1][c1];
-    if (!target) {
-      moves.push({ from: [r, c], to: [r1, c1] });
-    } else if (target.color !== piece.color) {
-      const r2 = r + dr * 2;
-      const c2 = c + dc * 2;
-      if (inBounds(r2, c2) && !board[r2][c2]) {
-        captures.push({ from: [r, c], to: [r2, c2], captured: [r1, c1] });
+    for (const [dr, dc] of dirs) {
+      const r1 = r + dr;
+      const c1 = c + dc;
+      if (!inBounds(r1, c1)) continue;
+      const target = board[r1]?.[c1];
+      if (!target) {
+        moves.push({ from: [r, c], to: [r1, c1] });
+      } else if (target.color !== piece.color) {
+        const r2 = r + dr * 2;
+        const c2 = c + dc * 2;
+        if (inBounds(r2, c2) && !board[r2]?.[c2]) {
+          captures.push({ from: [r, c], to: [r2, c2], captured: [r1, c1] });
+        }
       }
     }
-  }
   return enforceCapture && captures.length ? captures : [...captures, ...moves];
 };
 
@@ -50,28 +56,31 @@ const getAllMoves = (
   color: Color,
   enforceCapture: boolean,
 ): Move[] => {
-  let result: Move[] = [];
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
-      if (board[r][c]?.color === color) {
-        const moves = getPieceMoves(board, r, c, enforceCapture);
-        if (moves.length) result = result.concat(moves);
+    let result: Move[] = [];
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        if (board[r]?.[c]?.color === color) {
+          const moves = getPieceMoves(board, r, c, enforceCapture);
+          if (moves.length) result = result.concat(moves);
+        }
       }
     }
-  }
   const anyCapture = result.some((m) => m.captured);
   return enforceCapture && anyCapture ? result.filter((m) => m.captured) : result;
 };
 
 const applyMove = (board: Board, move: Move): { board: Board } => {
-  const newBoard = cloneBoard(board);
-  const piece = newBoard[move.from[0]][move.from[1]]!;
-  newBoard[move.from[0]][move.from[1]] = null;
-  newBoard[move.to[0]][move.to[1]] = piece;
-  if (move.captured) {
-    const [cr, cc] = move.captured;
-    newBoard[cr][cc] = null;
-  }
+    const newBoard = cloneBoard(board);
+    const [fr, fc] = move.from;
+    const [tr, tc] = move.to;
+    const piece = newBoard[fr]?.[fc];
+    if (!piece) return { board: newBoard };
+    newBoard[fr]![fc] = null;
+    newBoard[tr]![tc] = piece;
+    if (move.captured) {
+      const [cr, cc] = move.captured;
+      newBoard[cr]![cc] = null;
+    }
   if (
     !piece.king &&
     ((piece.color === 'red' && move.to[0] === 0) ||
@@ -88,7 +97,7 @@ const boardToBitboards = (board: Board) => {
   let kings = 0n;
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
-      const piece = board[r][c];
+        const piece = board[r]?.[c];
       if (!piece) continue;
       const bit = 1n << BigInt((7 - r) * 8 + c);
       if (piece.color === 'red') red |= bit;
@@ -135,7 +144,7 @@ const alphaBeta = (
   const color: Color = maximizing ? 'red' : 'black';
   const moves = getAllMoves(board, color, enforceCapture);
   if (!moves.length) return { score: maximizing ? -Infinity : Infinity };
-  let bestMove = moves[0];
+    let bestMove = moves[0]!;
   for (const move of moves) {
     const next = applyMove(board, move).board;
     const { score } = alphaBeta(next, depth - 1, !maximizing, alpha, beta, enforceCapture);
@@ -166,8 +175,8 @@ const randomPlayout = (
   while (true) {
     const moves = getAllMoves(b, current, enforceCapture);
     if (moves.length === 0) return current === 'red' ? 'black' : 'red';
-    const move = moves[Math.floor(Math.random() * moves.length)];
-    b = applyMove(b, move).board;
+      const move = moves[Math.floor(Math.random() * moves.length)]!;
+      b = applyMove(b, move).board;
     current = current === 'red' ? 'black' : 'red';
   }
 };
@@ -183,8 +192,8 @@ const mcts = (
   const scores = new Array(moves.length).fill(0);
   for (let i = 0; i < iterations; i++) {
     const idx = i % moves.length;
-    const move = moves[idx];
-    const nextBoard = applyMove(board, move).board;
+      const move = moves[idx]!;
+      const nextBoard = applyMove(board, move).board;
     const winner = randomPlayout(nextBoard, color === 'red' ? 'black' : 'red', enforceCapture);
     if (winner === color) scores[idx]++;
   }
@@ -192,7 +201,7 @@ const mcts = (
   for (let i = 1; i < moves.length; i++) {
     if (scores[i] > scores[best]) best = i;
   }
-  return moves[best];
+    return moves[best] ?? null;
 };
 
 self.onmessage = (e: MessageEvent) => {
