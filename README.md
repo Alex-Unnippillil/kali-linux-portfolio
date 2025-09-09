@@ -35,6 +35,14 @@ yarn install
 yarn dev
 ```
 
+You can try the experimental Turbopack dev server for faster refreshes:
+
+```bash
+yarn dev:turbo
+```
+
+> **Limitations:** Turbopack is still in beta. Custom webpack plugins (such as the PWA service worker) and some Next.js features may not work yet. Use `yarn dev` if you hit build errors or missing functionality.
+
 ### Production Build
 Serverful deployments run the built Next.js server so all API routes are available.
 ```bash
@@ -112,6 +120,7 @@ See `.env.local.example` for the full list.
 
 - `yarn install` – install project dependencies.
 - `yarn dev` – start the development server with hot reloading.
+- `yarn dev:turbo` – start the experimental Turbopack dev server (limited feature support).
 - `yarn test` – run the test suite.
 - `yarn lint` – check code for linting issues.
 - `yarn export` – generate a static export in the `out/` directory.

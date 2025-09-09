@@ -8,8 +8,9 @@
     "typegen": "next typegen",
     "prebuild": "rm -rf .next && yarn typegen && yarn build:gamepad",
     "dev": "next dev",
-    "build": "next build",
-    "// build:pwa": "node scripts/build.mjs",
+    "dev:turbo": "next dev --turbopack",
+    "build": "node scripts/build.mjs",
+
     "postbuild": "node --import tsx/esm scripts/safe-copy.mjs",
     "start": "next start",
     "export": "NEXT_PUBLIC_STATIC_EXPORT=true next build",
