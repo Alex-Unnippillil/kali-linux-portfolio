@@ -190,7 +190,6 @@
     "@rollup/plugin-replace": "^6.0.2",
     "workbox-build@npm:7.1.0": "npm:workbox-build@7.3.0",
     "workbox-build@npm:7.1.1": "npm:workbox-build@7.3.0",
-
     "three-bmfont-text": "npm:three-bmfont-text@^3.0.1"
   },
   "packageManager": "yarn@4.9.2"
