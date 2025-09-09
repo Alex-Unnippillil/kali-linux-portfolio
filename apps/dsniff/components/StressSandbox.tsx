@@ -23,8 +23,9 @@ const StressSandbox: React.FC = () => {
     // Simulate capture: repeat the sample logs
     const captureStart = performance.now();
     const newLogs: Log[] = Array.from({ length: size }, (_, i) => ({
+
       ...sampleLogs[i % sampleLogs.length]!,
-      id: i,
+
     }));
     setLogs(newLogs);
     setCaptureMs(performance.now() - captureStart);
@@ -52,6 +53,7 @@ const StressSandbox: React.FC = () => {
         max={5000}
         value={size}
         onChange={(e) => setSize(Number(e.target.value))}
+        aria-label="List size"
         className="w-full mb-2"
       />
       <p className="text-sm mb-2">
