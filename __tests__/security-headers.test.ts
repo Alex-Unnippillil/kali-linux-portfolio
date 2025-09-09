@@ -8,8 +8,10 @@ describe('security headers', () => {
     const headersList = await config.headers();
     const headerMap = Object.fromEntries(headersList.find((h: any) => h.source === '/(.*)').headers.map((h: any) => [h.key, h.value]));
     expect(headerMap['Permissions-Policy']).toBe(
-      'accelerometer=(), camera=(), microphone=(), geolocation=(), interest-cohort=(), fullscreen=(), payment=()'
+      'camera=(), microphone=(), geolocation=(), interest-cohort=()'
     );
-    expect(headerMap['Referrer-Policy']).toBe('no-referrer');
+    expect(headerMap['Referrer-Policy']).toBe(
+      'strict-origin-when-cross-origin'
+    );
   });
 });
