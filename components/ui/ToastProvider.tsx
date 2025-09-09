@@ -5,7 +5,7 @@ import React, {
   useState,
   ReactNode,
 } from 'react';
-import { kaliTheme } from '../../styles/themes/kali';
+import { kaliTheme } from '@/styles/themes/kali';
 
 interface ToastItem {
   id: number;

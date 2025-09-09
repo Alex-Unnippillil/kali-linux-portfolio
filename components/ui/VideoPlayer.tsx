@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import PipPortalProvider, { usePipPortal } from "../common/PipPortal";
-import useWakeLockOnFullscreen from "../../hooks/useWakeLockOnFullscreen";
+import useWakeLockOnFullscreen from "@/hooks/useWakeLockOnFullscreen";
 import { isBrowser } from '@/utils/env';
 
 interface VideoPlayerProps {

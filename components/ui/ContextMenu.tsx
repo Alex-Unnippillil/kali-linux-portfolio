@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import useFocusTrap from "../../hooks/useFocusTrap";
-import useRovingTabIndex from "../../hooks/useRovingTabIndex";
+import useFocusTrap from "@/hooks/useFocusTrap";
+import useRovingTabIndex from "@/hooks/useRovingTabIndex";
 
 export interface ContextMenuItem {
   /** Text label displayed for the menu item. */

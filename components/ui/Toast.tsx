@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { kaliTheme } from '../../styles/themes/kali';
+import { kaliTheme } from '@/styles/themes/kali';
 
 interface ToastProps {
   message: string;
