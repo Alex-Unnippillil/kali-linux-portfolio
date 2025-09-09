@@ -3518,10 +3518,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tinyhttp/cookie-signature@npm:1.3.0, @tinyhttp/cookie-signature@npm:^1.3.0":
-  version: 1.3.0
-  resolution: "@tinyhttp/cookie-signature@npm:1.3.0"
-  checksum: 10c0/487534ce57bd449f79973e9e4de5aa057a67c817e5090ea614f22e562a4fb32e69f5540196b0b0d41b4482221f7e1300c301d3a615ca45ac1a54456fb6d27464
+"@tinyhttp/cookie-signature@npm:^2.1.1":
+  version: 2.1.1
+  resolution: "@tinyhttp/cookie-signature@npm:2.1.1"
+  checksum: 10c0/de125cce47c27fd3d870027c48b255b2ac3eef4051fafb94bf996603bdc43b1570e5ebdeacbe3b1526185b3821c05d8523ae0a4d5e9900db24993aadf1012f54
   languageName: node
   linkType: hard
 
@@ -14765,7 +14765,7 @@ __metadata:
     "@testing-library/jest-dom": "npm:^6.6.4"
     "@testing-library/react": "npm:^16.3.0"
     "@testing-library/user-event": "npm:^14.6.1"
-    "@tinyhttp/cookie-signature": "npm:^1.3.0"
+    "@tinyhttp/cookie-signature": "npm:^2.1.1"
     "@types/canvas-confetti": "npm:^1"
     "@types/figlet": "npm:^1"
     "@types/howler": "npm:^2"
