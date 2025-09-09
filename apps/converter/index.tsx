@@ -97,8 +97,11 @@ export default function Converter() {
     const data = rates[active as Domain];
     const units = Object.keys(data);
     if (units.length) {
-      setFromUnit(units[0]);
-      setToUnit(units[1] || units[0]);
+      // `noUncheckedIndexedAccess` is enabled, so direct indexing returns
+      // `string | undefined`. However, the length check above guarantees
+      // that at least the first element exists.
+      setFromUnit(units[0]!);
+      setToUnit(units[1] ?? units[0]!);
     }
     setFromValue("");
     setToValue("");
