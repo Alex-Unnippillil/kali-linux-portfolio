@@ -22,6 +22,7 @@
 /.next/types
 /public/sw.js
 /public/workbox-*.js
+/precache-manifest.json
 
 # production
 /build
