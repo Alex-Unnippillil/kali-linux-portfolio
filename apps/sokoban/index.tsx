@@ -362,33 +362,27 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
   }, [state, index, packIndex, warnDir, handleReset, handleUndo, handleRedo]);
 
   const handleHint = useCallback(() => {
-    setHint('...');
-    setTimeout(() => {
-      const dir = findHint(state);
-      setHint(dir ? dir.replace('Arrow', '') : 'No hint');
-    }, 0);
+    const dir = findHint(state);
+    setHint(dir ? dir.replace('Arrow', '') : 'No hint');
   }, [state]);
   
   const keyPos = useCallback((p: Position) => `${p.x},${p.y}`, []);
 
   const handlePreview = useCallback(() => {
     setSolutionPath(new Set());
-    setStatus('...');
-    setTimeout(() => {
-      const sol = findSolution(state);
-      if (!sol) {
-        setStatus('No solution');
-        return;
-      }
-      const positions: string[] = [];
-      let st = state;
-      sol.forEach((dir) => {
-        st = move(st, dir);
-        positions.push(keyPos(st.player));
-      });
-      setSolutionPath(new Set(positions));
-      setStatus('');
-    }, 0);
+    const sol = findSolution(state);
+    if (!sol) {
+      setStatus('No solution');
+      return;
+    }
+    const positions: string[] = [];
+    let st = state;
+    sol.forEach((dir) => {
+      st = move(st, dir);
+      positions.push(keyPos(st.player));
+    });
+    setSolutionPath(new Set(positions));
+    setStatus('');
   }, [state, keyPos]);
 
   const cellStyle = useMemo(
