@@ -1,0 +1,14 @@
+[
+  {
+    "id": 1,
+    "issue": "Weak SSH password policy",
+    "remediation": "Enforce strong SSH passwords and lockout policy",
+    "severity": "High"
+  },
+  {
+    "id": 2,
+    "issue": "Anonymous FTP enabled",
+    "remediation": "Disable anonymous FTP or restrict permissions",
+    "severity": "Medium"
+  }
+]

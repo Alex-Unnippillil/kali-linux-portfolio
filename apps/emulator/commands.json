@@ -1,0 +1,5 @@
+[
+  { "cmd": "sysinfo", "output": "OS: Kali Linux\nArch: x86_64" },
+  { "cmd": "getuid", "output": "uid=0, gid=0" },
+  { "cmd": "help", "output": "Available commands: sysinfo, getuid, help" }
+]
