@@ -8,6 +8,7 @@
     "typegen": "next typegen",
     "prebuild": "rm -rf .next && yarn typegen && yarn build:gamepad",
     "dev": "next dev",
+    "dev:turbo": "next dev --turbopack",
     "build": "node scripts/build.mjs",
     "postbuild": "node --import tsx/esm scripts/safe-copy.mjs",
     "start": "next start",
