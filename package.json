@@ -186,7 +186,8 @@
     "source-map": "^0.7.6",
     "test-exclude": "7.0.1",
     "webpack": "^5.92.0",
-    "glob@npm:^7.1.6": "npm:glob@^9.3.5",
+    "glob@npm:^7.1.6": "npm:glob@^11.0.3",
+    "sourcemap-codec": "npm:@jridgewell/sourcemap-codec@^1.5.5",
     "workbox-build@npm:7.1.0": "npm:workbox-build@7.1.1",
     "three-bmfont-text": "npm:three-bmfont-text@^3.0.1"
   },
