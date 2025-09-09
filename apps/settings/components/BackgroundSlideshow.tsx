@@ -38,6 +38,7 @@ export default function BackgroundSlideshow() {
     }
     const run = () => {
       const file = selected[indexRef.current % selected.length];
+      if (!file) return;
       const base = file.replace(/\.[^.]+$/, '');
       setWallpaper(base);
       indexRef.current = (indexRef.current + 1) % selected.length;
