@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import usePersistentState from '../../hooks/usePersistentState';
-import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import usePersistentState from '../../../hooks/usePersistentState';
+import usePrefersReducedMotion from '../../../hooks/usePrefersReducedMotion';
 
 const HINT_KEY = 'hot-corner-hint';
 
