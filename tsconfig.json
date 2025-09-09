@@ -15,6 +15,7 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
+    "allowImportingTsExtensions": false,
     "isolatedModules": true,
     // Next.js handles the JSX transform internally; preserve JSX for its compiler
     "jsx": "preserve",

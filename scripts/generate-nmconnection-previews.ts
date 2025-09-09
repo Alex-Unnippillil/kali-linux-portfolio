@@ -1,6 +1,6 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join, basename } from 'node:path';
-import { toKeyfile, NMConnection } from '../utils/nmconnection.ts';
+import { toKeyfile, NMConnection } from '../utils/nmconnection';
 import logger from '../utils/logger';
 
 
