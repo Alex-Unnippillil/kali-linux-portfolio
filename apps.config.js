@@ -89,7 +89,6 @@ export const chromeDefaultTiles = [
 // TODO: restore Evidence Vault (evidence-vault)
 // TODO: restore Mimikatz (mimikatz)
 // TODO: restore Mimikatz Offline (mimikatz/offline)
-// TODO: restore Ettercap (ettercap)
 // TODO: restore Reaver (reaver)
 // TODO: restore Hydra (hydra)
 // TODO: restore John the Ripper (john)
