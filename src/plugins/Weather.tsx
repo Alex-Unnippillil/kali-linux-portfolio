@@ -71,7 +71,7 @@ const providers: Provider[] = [
 
 const Weather: React.FC = () => {
   const [query, setQuery] = useState("");
-  const [provider, setProvider] = useState<Provider>(providers[0]);
+  const [provider, setProvider] = useState<Provider>(providers[0]!);
   const [location, setLocation] = useState<string>("");
   const [info, setInfo] = useState<WeatherInfo | null>(null);
   const [error, setError] = useState<string>("");
@@ -103,7 +103,7 @@ const Weather: React.FC = () => {
   const handleProviderChange = async (
     e: React.ChangeEvent<HTMLSelectElement>
   ) => {
-    const p = providers.find((pr) => pr.id === e.target.value) || providers[0];
+    const p = providers.find((pr) => pr.id === e.target.value) ?? providers[0]!;
     setProvider(p);
     // Refetch if we already have a location
     if (location) {

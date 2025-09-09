@@ -27,11 +27,12 @@ export default function WindowSwitcher({ windows, onSelect }: Props) {
     keybindingManager.register('Alt+Tab', handleAltTab);
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (visible && e.key === 'Alt') {
-        setVisible(false);
-        onSelect?.(windows[index]?.id);
-        setIndex(0);
-      }
+        if (visible && e.key === 'Alt') {
+          setVisible(false);
+          const id = windows[index]?.id;
+          if (id) onSelect?.(id);
+          setIndex(0);
+        }
     };
 
     window.addEventListener('keyup', handleKeyUp);
