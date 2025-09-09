@@ -43,7 +43,7 @@
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.56.1",
     "@tailwindcss/typography": "^0.5.16",
-    "@tinyhttp/cookie-signature": "^1.3.0",
+    "@tinyhttp/cookie-signature": "^2.1.1",
     "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",
     "@vercel/toolbar": "^0.1.38",
@@ -181,6 +181,7 @@
     "react-dom": "19.1.1",
     "@types/react": "19.1.12",
     "@types/react-dom": "19.1.9",
+    "@tinyhttp/cookie-signature": "^2.1.1",
     "source-map": "^0.7.6",
     "webpack": "^5.92.0",
     "glob@npm:^7.1.4": "npm:glob@^10.3.10",
@@ -189,6 +190,7 @@
     "@rollup/plugin-replace": "^6.0.2",
     "workbox-build@npm:7.1.0": "npm:workbox-build@7.3.0",
     "workbox-build@npm:7.1.1": "npm:workbox-build@7.3.0",
+
     "three-bmfont-text": "npm:three-bmfont-text@^3.0.1"
   },
   "packageManager": "yarn@4.9.2"
