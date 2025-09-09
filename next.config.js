@@ -260,16 +260,11 @@ module.exports = withBundleAnalyzer(
               ],
             },
             {
-              source: '/fonts/:path*',
-              headers: [
-                {
-                  key: 'Cache-Control',
-                  value: 'public, max-age=31536000, immutable',
-                },
-              ],
-            },
-            {
-              source: '/images/:path*',
+              // Cache all static assets aggressively so they can be reused
+              // between deploys. This covers files served from `public/`
+              // such as scripts, stylesheets, images and fonts.
+              source:
+                '/:all*(js|css|svg|png|jpg|jpeg|gif|ico|webp|avif|tiff|bmp|eot|otf|ttf|woff|woff2|json)',
               headers: [
                 {
                   key: 'Cache-Control',
