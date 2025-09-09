@@ -34,7 +34,12 @@ const ScrollableTimeline: React.FC = () => {
       // GroupedMilestone type requirement is satisfied and the UI gracefully
       // handles the missing data instead of causing a type error.
       const [year, month = ''] = m.date.split('-');
+
+      // If the date string somehow lacks a year portion, skip this milestone
+      // to avoid using an undefined index on the accumulator object which
+      // would otherwise trigger a type error at compile time.
       if (!year) return acc;
+
       const entry: GroupedMilestone = { ...m, month };
       (acc[year] = acc[year] || []).push(entry);
       return acc;
@@ -45,7 +50,8 @@ const ScrollableTimeline: React.FC = () => {
 
   const monthItems = useMemo(() => {
     if (!selectedYear) return [] as GroupedMilestone[];
-    return milestonesByYear[selectedYear].sort((a, b) => a.month.localeCompare(b.month));
+    const list = milestonesByYear[selectedYear] || [];
+    return [...list].sort((a, b) => a.month.localeCompare(b.month));
   }, [milestonesByYear, selectedYear]);
 
   useEffect(() => {
@@ -112,7 +118,9 @@ const ScrollableTimeline: React.FC = () => {
         <ol className="flex space-x-6">
           {view === 'year'
             ? years.map((year, index) => {
-                const first = milestonesByYear[year][0];
+                const list = milestonesByYear[year] || [];
+                const first = list[0];
+                if (!first) return null;
                 return (
                   <li
                     key={year}
