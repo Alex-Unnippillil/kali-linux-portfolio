@@ -4,6 +4,7 @@ import React, { useRef } from 'react';
 import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
 import HydraApp from '../../components/apps/hydra';
 import StrategyTrainer from './components/StrategyTrainer';
+import WordlistAtelier from './components/WordlistAtelier';
 
 const HydraPreview: React.FC = () => {
   const countRef = useRef(1);
@@ -21,6 +22,7 @@ const HydraPreview: React.FC = () => {
     <div className="min-h-screen bg-gray-900 text-white">
       <TabbedWindow initialTabs={[createTab()]} onNewTab={createTab} />
       <StrategyTrainer />
+      <WordlistAtelier />
     </div>
   );
 };
