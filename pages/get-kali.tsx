@@ -5,17 +5,17 @@ import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import ImageWizard from '../components/downloads/ImageWizard';
 
-import * as Installer from '../content/get-kali/installer.mdx';
-import * as VMs from '../content/get-kali/vms.mdx';
-import * as ARM from '../content/get-kali/arm.mdx';
-import * as Mobile from '../content/get-kali/mobile.mdx';
-import * as Cloud from '../content/get-kali/cloud.mdx';
-import * as Containers from '../content/get-kali/containers.mdx';
-import * as Live from '../content/get-kali/live.mdx';
-import * as WSL from '../content/get-kali/wsl.mdx';
-import * as WinKex from '../content/get-kali/win-kex.mdx';
-import * as Purple from '../content/get-kali/purple.mdx';
-import * as Docs from '../content/get-kali/docs.mdx';
+import * as Installer from '../content/get-kali/installer.tsx';
+import * as VMs from '../content/get-kali/vms.tsx';
+import * as ARM from '../content/get-kali/arm.tsx';
+import * as Mobile from '../content/get-kali/mobile.tsx';
+import * as Cloud from '../content/get-kali/cloud.tsx';
+import * as Containers from '../content/get-kali/containers.tsx';
+import * as Live from '../content/get-kali/live.tsx';
+import * as WSL from '../content/get-kali/wsl.tsx';
+import * as WinKex from '../content/get-kali/win-kex.tsx';
+import * as Purple from '../content/get-kali/purple.tsx';
+import * as Docs from '../content/get-kali/docs.tsx';
 
 const badgeIcons: Record<string, string> = {
   aws: '/icons/providers/aws.svg',
