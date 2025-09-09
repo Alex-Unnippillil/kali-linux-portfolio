@@ -16,8 +16,8 @@ function getPreferredApp(key: string): string | undefined {
   const cfgPath = `${os.homedir()}/.config/xfce4/helpers.rc`;
   try {
     const contents = fs.readFileSync(cfgPath, 'utf8');
-    const line = contents.split('\n').find((l) => l.startsWith(`${key}=`));
-    return line?.split('=')[1].trim();
+      const line = contents.split('\n').find((l) => l.startsWith(`${key}=`));
+      return line?.split('=')[1]?.trim();
   } catch {
     return undefined;
   }

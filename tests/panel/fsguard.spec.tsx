@@ -30,12 +30,12 @@ test('FsGuard reacts to Warning and Urgent thresholds', async ({ page }) => {
   `);
 
   // Cross into warning threshold
-  await page.evaluate(() => updateFsGuard(80));
+    await page.evaluate(() => (window as any).updateFsGuard(80));
   await expect(page.locator('#icon')).toHaveAttribute('data-state', 'warning');
   await expect(page.locator('#tooltip')).toHaveText('80 MB free');
 
   // Cross into urgent threshold
-  await page.evaluate(() => updateFsGuard(20));
+    await page.evaluate(() => (window as any).updateFsGuard(20));
   await expect(page.locator('#icon')).toHaveAttribute('data-state', 'urgent');
   await expect(page.locator('#tooltip')).toHaveText('20 MB free');
 

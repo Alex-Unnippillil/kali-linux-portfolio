@@ -23,7 +23,7 @@ export function playColorTone(
   const context = getAudioContext();
   const oscillator = context.createOscillator();
   const gain = context.createGain();
-  oscillator.frequency.value = TONE_FREQUENCIES[idx];
+    oscillator.frequency.value = TONE_FREQUENCIES[idx]!;
   oscillator.connect(gain);
   gain.connect(context.destination);
   gain.gain.setValueAtTime(0.0001, startTime);

@@ -15,8 +15,8 @@ export default function EttercapPage() {
   useEffect(() => {
     if (!started) return;
     const id = setInterval(() => {
-      const levels: LogEntry['level'][] = ['info', 'warn', 'error'];
-      const level = levels[Math.floor(Math.random() * levels.length)];
+        const levels: LogEntry['level'][] = ['info', 'warn', 'error'];
+        const level = levels[Math.floor(Math.random() * levels.length)]!;
       const message = `Sample ${level} message ${new Date().toLocaleTimeString()}`;
       setLogs((l) => [...l, { id: Date.now(), level, message }]);
     }, 2000);

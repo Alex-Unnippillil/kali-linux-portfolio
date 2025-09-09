@@ -22,9 +22,15 @@ export const logGameStart = (game: string): void => {
 };
 
 export const logGameEnd = (game: string, label?: string): void => {
-  logEvent({ category: game, action: 'end', label });
+  const event: EventInput = label
+    ? { category: game, action: 'end', label }
+    : { category: game, action: 'end' };
+  logEvent(event);
 };
 
 export const logGameError = (game: string, message?: string): void => {
-  logEvent({ category: game, action: 'error', label: message });
+  const event: EventInput = message
+    ? { category: game, action: 'error', label: message }
+    : { category: game, action: 'error' };
+  logEvent(event);
 };
