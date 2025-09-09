@@ -1,6 +1,4 @@
 import Image from "next/image";
-import { decode } from "blurhash";
-import { PNG } from "pngjs";
 import { useEffect, useState } from "react";
 import type { GetStaticProps } from "next";
 import { XMLParser } from "fast-xml-parser";
@@ -34,7 +32,9 @@ interface HomeProps {
   posts: Post[];
 }
 
-function blurHashToDataURL(blurhash: string) {
+async function blurHashToDataURL(blurhash: string) {
+  const { decode } = await import("blurhash");
+  const { PNG } = await import("pngjs");
   const pixels = decode(blurhash, 32, 32);
   const png = new PNG({ width: 32, height: 32 });
   png.data = Buffer.from(pixels);
@@ -42,10 +42,12 @@ function blurHashToDataURL(blurhash: string) {
 }
 
 export const getStaticProps: GetStaticProps<HomeProps> = async () => {
-  const desktops = (desktopsData as Desktop[]).map((d) => ({
-    ...d,
-    blurDataURL: blurHashToDataURL(d.blurhash),
-  }));
+  const desktops = await Promise.all(
+    (desktopsData as Desktop[]).map(async (d) => ({
+      ...d,
+      blurDataURL: await blurHashToDataURL(d.blurhash),
+    }))
+  );
 
   const rssRes = await fetch("https://www.kali.org/rss.xml");
   const rssText = await rssRes.text();
