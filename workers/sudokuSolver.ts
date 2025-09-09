@@ -79,7 +79,8 @@ const eliminate = (
   if (values[s]!.length === 0) return false;
   if (values[s]!.length === 1) {
     const d2 = values[s]!;
-    for (const s2 of peers[s] ?? []) {
+    const peerList = peers[s] ? Array.from(peers[s]!) : [];
+    for (const s2 of peerList) {
       const res = eliminate(values, s2, d2, steps);
       if (!res) return false;
     }

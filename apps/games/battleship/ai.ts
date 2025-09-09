@@ -94,7 +94,7 @@ function randomLayout(
 
   const allCells = new Set<number>();
   layout.forEach((sh) => sh.cells.forEach((c) => allCells.add(c)));
-  for (const h of hits) {
+  for (const h of Array.from(hits)) {
     if (!allCells.has(h)) return null;
   }
 
