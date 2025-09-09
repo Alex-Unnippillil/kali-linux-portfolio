@@ -130,7 +130,10 @@ export const applyMoveToFoundation = (
   if (move.from === 'waste') {
     state.waste.shift();
   } else {
-    state.tableau[move.fromIndex].pop();
+    const pile = state.tableau[move.fromIndex];
+    if (pile) {
+      pile.pop();
+    }
   }
   state.foundations[move.card.suit].push(move.card);
 };
@@ -139,7 +142,7 @@ export const autoMove = (state: GameState) => {
   let moved = false;
   let moves = getAutoMoves(state);
   while (moves.length) {
-    applyMoveToFoundation(state, moves[0]);
+    applyMoveToFoundation(state, moves[0]!);
     moved = true;
     moves = getAutoMoves(state);
   }
@@ -149,23 +152,28 @@ export const autoMove = (state: GameState) => {
 export const getHint = (state: GameState): string | null => {
   const auto = getAutoMoves(state);
   if (auto.length) {
-    const m = auto[0];
+    const m = auto[0]!;
     return `Move ${rankToString(m.card.rank)}${m.card.suit} to foundation`;
   }
   const wasteTop = state.waste[0];
   if (wasteTop) {
     for (let i = 0; i < state.tableau.length; i += 1) {
-      if (canMoveToTableau(wasteTop, state.tableau[i])) {
+      const pile = state.tableau[i];
+      if (pile && canMoveToTableau(wasteTop, pile)) {
         return `Move ${rankToString(wasteTop.rank)}${wasteTop.suit} to pile ${i + 1}`;
       }
     }
   }
   for (let i = 0; i < state.tableau.length; i += 1) {
-    const card = state.tableau[i][state.tableau[i].length - 1];
+    const pile = state.tableau[i];
+    const card = pile?.[pile.length - 1];
     if (card) {
       for (let j = 0; j < state.tableau.length; j += 1) {
-        if (i !== j && canMoveToTableau(card, state.tableau[j])) {
-          return `Move ${rankToString(card.rank)}${card.suit} from pile ${i + 1} to pile ${j + 1}`;
+        if (i !== j) {
+          const target = state.tableau[j];
+          if (target && canMoveToTableau(card, target)) {
+            return `Move ${rankToString(card.rank)}${card.suit} from pile ${i + 1} to pile ${j + 1}`;
+          }
         }
       }
     }
