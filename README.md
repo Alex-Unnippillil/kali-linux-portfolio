@@ -399,99 +399,113 @@ yarn lint
 
 Browse all apps, games, and security tool demos at `/apps`, which presents a searchable grid built from `apps.config.js`.
 
-### Utilities & Media
+Browse all apps at `/apps`, which presents a searchable grid built from `apps.config.js`.
+
+### Available Apps
 | App | Route | Category |
 | --- | --- | --- |
-| Alex | /apps/alex | Utility / Media |
-| Chrome | /apps/chrome | Utility / Media |
-| VS Code | /apps/vscode | StackBlitz IDE embed |
-| Spotify | /apps/spotify | Utility / Media |
-| Youtube | /apps/youtube | Utility / Media |
-| Weather | /apps/weather | Utility / Media |
-| X / Twitter | /apps/x | Utility / Media |
-| Todoist | /apps/todoist | Utility / Media |
-| Gedit | /apps/gedit | Utility / Media |
-| Settings | /apps/settings | Utility / Media |
-| Trash | /apps/trash | Utility / Media |
-| Project Gallery | /apps/project-gallery | Utility / Media |
-| Quote | /apps/quote | Utility / Media |
+| Terminal | /apps/terminal | Utility |
+| VS Code | /apps/vscode | Utility |
+| Calculator | /apps/calculator | Utility |
 
-> The VS Code app now embeds a StackBlitz IDE via iframe instead of the local Monaco editor.
-
-The Spotify app lets you customize a mood-to-playlist mapping. Use the in-app form to
-add, reorder, or delete moods; selections persist in the browser's Origin Private File
-System so your choices restore on load. The last mood played is remembered, and
-play/pause and track controls include keyboard hotkeys.
-
-### Terminal Commands
-- `clear` – clears the terminal display.
-- `help` – lists available commands.
-
-### Games
-| Game | Route | Category |
-| --- | --- | --- |
-| Asteroids | /apps/asteroids | Game |
-| Battleship | /apps/battleship | Game |
-| Blackjack | /apps/blackjack | Game |
-| Breakout | /apps/breakout | Game |
-| Candy Crush | /apps/candy-crush | Game |
-| Car Racer | /apps/car-racer | Game - ghost replays, lane assist, drift scoring |
-| Checkers | /apps/checkers | Game |
-| Chess | /apps/chess | Game |
-| Connect Four | /apps/connect-four | Game |
-| Flappy Bird | /apps/flappy-bird | Game |
-| Frogger | /apps/frogger | Game |
-| Gomoku | /apps/gomoku | Game |
-| Hangman | /apps/hangman | Game |
-| Memory | /apps/memory | Game |
-| Minesweeper | /apps/minesweeper | Game |
-| Nonogram | /apps/nonogram | Game |
-| Pacman | /apps/pacman | Game |
-| Pinball | /apps/pinball | Game |
-| Platformer | /apps/platformer | Game |
-| Pong | /apps/pong | Game |
-| Reversi | /apps/reversi | Game |
-| Simon | /apps/simon | Game |
-| Snake | /apps/snake | Game |
-| Sokoban | /apps/sokoban | Game |
-| Solitaire | /apps/solitaire | Game |
-| Space Invaders | /apps/space-invaders | Game |
-| Sudoku | /apps/sudoku | Game |
-| Tetris | /apps/tetris | Game |
-| Tic Tac Toe | /apps/tictactoe | Game |
-| Tower Defense | /apps/tower-defense | Game |
-| Word Search | /apps/word-search | Game |
-| Wordle | /apps/wordle | Game |
-
-### Security Tools (Simulated)
-| Tool | Route | Category |
-| --- | --- | --- |
-| Autopsy | /apps/autopsy | Security Tool (simulated) |
-| BeEF | /apps/beef | Security Tool (simulated) |
-| Bluetooth Tools | /apps/bluetooth | Security Tool (simulated) |
-| dsniff | /apps/dsniff | Security Tool (simulated) |
-| Ettercap | /apps/ettercap | Security Tool (simulated) |
-| Ghidra | /apps/ghidra | Security Tool (simulated) |
-| Hashcat | /apps/hashcat | Security Tool (simulated) |
-| Hydra | /apps/hydra | Security Tool (simulated) |
-| John the Ripper | /apps/john | Security Tool (simulated) |
-| Kismet | /apps/kismet | Security Tool (simulated) |
-| Metasploit | /apps/metasploit | Security Tool (simulated) |
-| Metasploit Post | /apps/metasploit-post | Security Tool (simulated) |
-| Mimikatz | /apps/mimikatz | Security Tool (simulated) |
-| Nessus | /apps/nessus | Security Tool (simulated) |
-| Nmap NSE | /apps/nmap-nse | Security Tool (simulated) |
-| OpenVAS | /apps/openvas | Security Tool (simulated) |
-| Radare2 | /apps/radare2 | Security Tool (simulated) |
-| Reaver | /apps/reaver | Security Tool (simulated) |
-| Recon-ng | /apps/reconng | Security Tool (simulated) |
-| Volatility | /apps/volatility | Security Tool (simulated) |
-| Wireshark | /apps/wireshark | Security Tool (simulated, lab use only) |
-
-> All security apps are **non-operational simulations** intended for education/demos. They **do not** execute exploits and should not be used for any unauthorized activity.
-> All reports and feed data are canned examples and not generated from live systems.
-
----
+<!-- TODO: restore YouTube (youtube) -->
+<!-- TODO: restore Converter (converter) -->
+<!-- TODO: restore Tic Tac Toe (tictactoe) -->
+<!-- TODO: restore Chess (chess) -->
+<!-- TODO: restore Connect Four (connect-four) -->
+<!-- TODO: restore Hangman (hangman) -->
+<!-- TODO: restore Frogger (frogger) -->
+<!-- TODO: restore Flappy Bird (flappy-bird) -->
+<!-- TODO: restore Snake (snake) -->
+<!-- TODO: restore Memory (memory) -->
+<!-- TODO: restore Minesweeper (minesweeper) -->
+<!-- TODO: restore Pong (pong) -->
+<!-- TODO: restore Pacman (pacman) -->
+<!-- TODO: restore Car Racer (car-racer) -->
+<!-- TODO: restore Lane Runner (lane-runner) -->
+<!-- TODO: restore Platformer (platformer) -->
+<!-- TODO: restore Battleship (battleship) -->
+<!-- TODO: restore Checkers (checkers) -->
+<!-- TODO: restore Reversi (reversi) -->
+<!-- TODO: restore Simon (simon) -->
+<!-- TODO: restore Sokoban (sokoban) -->
+<!-- TODO: restore Solitaire (solitaire/index) -->
+<!-- TODO: restore Tower Defense (tower-defense) -->
+<!-- TODO: restore Word Search (word-search) -->
+<!-- TODO: restore Wordle (wordle) -->
+<!-- TODO: restore Blackjack (blackjack) -->
+<!-- TODO: restore Breakout (breakout) -->
+<!-- TODO: restore Asteroids (asteroids) -->
+<!-- TODO: restore Sudoku (sudoku) -->
+<!-- TODO: restore Space Invaders (space-invaders) -->
+<!-- TODO: restore Nonogram (nonogram) -->
+<!-- TODO: restore Tetris (tetris) -->
+<!-- TODO: restore Candy Crush (candy-crush) -->
+<!-- TODO: restore Files (file-explorer) -->
+<!-- TODO: restore Image Viewer (ristretto) -->
+<!-- TODO: restore Radare2 (radare2) -->
+<!-- TODO: restore About Alex (alex) -->
+<!-- TODO: restore Power Settings (power) -->
+<!-- TODO: restore X (x) -->
+<!-- TODO: restore Spotify (spotify) -->
+<!-- TODO: restore Settings (settings) -->
+<!-- TODO: restore Chrome (chrome) -->
+<!-- TODO: restore Gedit (gedit) -->
+<!-- TODO: restore Todoist (todoist) -->
+<!-- TODO: restore Weather (weather) -->
+<!-- TODO: restore Clipboard Manager (ClipboardManager) -->
+<!-- TODO: restore Figlet (figlet) -->
+<!-- TODO: restore Resource Monitor (resource_monitor) -->
+<!-- TODO: restore Screen Recorder (screen-recorder) -->
+<!-- TODO: restore Task Manager (task_manager) -->
+<!-- TODO: restore Nikto (nikto) -->
+<!-- TODO: restore QR Tool (qr) -->
+<!-- TODO: restore ASCII Art (ascii_art) -->
+<!-- TODO: restore Quote (quote) -->
+<!-- TODO: restore Project Gallery (project-gallery) -->
+<!-- TODO: restore Weather Widget (weather_widget) -->
+<!-- TODO: restore Input Lab (input-lab) -->
+<!-- TODO: restore Ghidra (ghidra) -->
+<!-- TODO: restore Brasero (brasero) -->
+<!-- TODO: restore Sticky Notes (sticky_notes) -->
+<!-- TODO: restore Trash (trash) -->
+<!-- TODO: restore Serial Terminal (serial-terminal) -->
+<!-- TODO: restore Network Connections (network/connections) -->
+<!-- TODO: restore BLE Sensor (ble-sensor) -->
+<!-- TODO: restore Bluetooth (bluetooth) -->
+<!-- TODO: restore dsniff (dsniff) -->
+<!-- TODO: restore BeEF (beef) -->
+<!-- TODO: restore Metasploit (metasploit) -->
+<!-- TODO: restore Network Manager (network-manager) -->
+<!-- TODO: restore Autopsy (autopsy) -->
+<!-- TODO: restore Plugin Manager (plugin-manager) -->
+<!-- TODO: restore Panel Profiles (panel-profiles) -->
+<!-- TODO: restore Gomoku (gomoku) -->
+<!-- TODO: restore Pinball (pinball) -->
+<!-- TODO: restore Volatility (volatility) -->
+<!-- TODO: restore Kismet (kismet.jsx) -->
+<!-- TODO: restore Hashcat (hashcat) -->
+<!-- TODO: restore Metasploit Post (msf-post) -->
+<!-- TODO: restore Evidence Vault (evidence-vault) -->
+<!-- TODO: restore Mimikatz (mimikatz) -->
+<!-- TODO: restore Mimikatz Offline (mimikatz/offline) -->
+<!-- TODO: restore Ettercap (ettercap) -->
+<!-- TODO: restore Reaver (reaver) -->
+<!-- TODO: restore Hydra (hydra) -->
+<!-- TODO: restore John the Ripper (john) -->
+<!-- TODO: restore Nessus (nessus) -->
+<!-- TODO: restore Nmap NSE (nmap-nse) -->
+<!-- TODO: restore OpenVAS (openvas) -->
+<!-- TODO: restore Recon-ng (reconng) -->
+<!-- TODO: restore Kali Tools (kali-tools) -->
+<!-- TODO: restore Security Tools (security-tools) -->
+<!-- TODO: restore Kali Tweaks (kali-tweaks) -->
+<!-- TODO: restore SSH Command Builder (ssh) -->
+<!-- TODO: restore HTTP Request Builder (http) -->
+<!-- TODO: restore HTML Rewriter (html-rewriter) -->
+<!-- TODO: restore Contact (contact) -->
+<!-- TODO: restore Gigolo (gigolo) -->
+<!-- TODO: restore Wireshark (/apps/wireshark) -->
 
 ## Notable Components
 
