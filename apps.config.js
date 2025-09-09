@@ -220,6 +220,10 @@ const HtmlRewriteApp = createDynamicApp('html-rewriter', 'HTML Rewriter');
 const ContactApp = createDynamicApp('contact', 'Contact');
 const GigoloApp = createDynamicApp('gigolo', 'Gigolo');
 
+const DashboardApp = createDynamicApp('dashboard', 'Dashboard');
+const RemediationTableApp = createDynamicApp('remediation-table', 'Remediation Table');
+const EmulatorApp = createDynamicApp('emulator', 'Emulator');
+
 
 
 
@@ -328,6 +332,10 @@ const displayHtmlRewrite = createDisplay(HtmlRewriteApp);
 const displayContact = createDisplay(ContactApp);
 const displayGigolo = createDisplay(GigoloApp);
 
+const displayDashboard = createDisplay(DashboardApp);
+const displayRemediationTable = createDisplay(RemediationTableApp);
+const displayEmulator = createDisplay(EmulatorApp);
+
 const displayHashcat = createDisplay(HashcatApp);
 
 const displayKismet = createDisplay(KismetApp);
@@ -409,10 +417,10 @@ const utilityList = [
   },
 ];
 
-export const utilities = utilityList;
+export const utilityApps = utilityList;
 
 // Default window sizing for games to prevent oversized frames
-export const gameDefaults = {
+export const gameDefaultsBase = {
   defaultWidth: 50,
   defaultHeight: 60,
 };
@@ -722,7 +730,7 @@ const gameList = [
 ];
 
 /** @type {AppMetadata[]} */
-export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
+export const gamesBase = gameList.map((game) => ({ ...gameDefaultsBase, ...game }));
 
 
 /** @type {AppMetadata[]} */
@@ -1256,6 +1264,33 @@ const apps = [
     desktop_shortcut: false,
     screen: displayKaliTweaks,
 
+  },
+  {
+    id: 'dashboard',
+    title: 'Dashboard',
+    icon: '/themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayDashboard,
+  },
+  {
+    id: 'remediation-table',
+    title: 'Remediation Table',
+    icon: '/themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayRemediationTable,
+  },
+  {
+    id: 'emulator',
+    title: 'Emulator',
+    icon: '/themes/Yaru/apps/bash.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayEmulator,
   },
 ];
 
