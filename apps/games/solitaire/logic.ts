@@ -34,6 +34,7 @@ const shuffle = (deck: Card[]) => {
     const tmp = deck[i]!;
     deck[i] = deck[j]!;
     deck[j] = tmp;
+
   }
 };
 
