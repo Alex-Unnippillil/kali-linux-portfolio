@@ -29,6 +29,7 @@ const AttachmentCarousel: React.FC<AttachmentCarouselProps> = ({
   if (!attachments.length) return null;
 
   const file = attachments[index];
+  if (!file) return null;
   const url = urls[index];
   const isImage = file.type.startsWith('image/');
 
