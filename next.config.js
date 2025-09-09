@@ -54,7 +54,12 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 const buildId =
   process.env.NEXT_BUILD_ID || process.env.BUILD_ID || 'dev';
 
-const precacheManifest = require('./precache-manifest.json');
+let precacheManifest = [];
+try {
+  precacheManifest = require('./precache-manifest.json');
+} catch {
+  // The manifest is generated at build time; fall back to an empty list when absent
+}
 
 const withPWA = require('@ducanh2912/next-pwa').default({
   dest: 'public',
