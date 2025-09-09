@@ -10,14 +10,18 @@ export interface Hint {
 export const revealRandomCell = (grid: Grid, solution: Grid): Hint | null => {
   const candidates: { i: number; j: number }[] = [];
   for (let i = 0; i < solution.length; i++) {
-    for (let j = 0; j < solution[i].length; j++) {
-      if (solution[i][j] === 1 && grid[i][j] !== 1) {
+    const solRow = solution[i];
+    const gridRow = grid[i];
+    if (!solRow || !gridRow) continue;
+    for (let j = 0; j < solRow.length; j++) {
+      if (solRow[j] === 1 && gridRow[j] !== 1) {
         candidates.push({ i, j });
       }
     }
   }
   if (!candidates.length) return null;
   const pick = candidates[Math.floor(Math.random() * candidates.length)];
+  if (!pick) return null;
   return { i: pick.i, j: pick.j, value: 1 };
 };
 
