@@ -31,6 +31,7 @@ const TicTacToe = () => {
   });
 
   const lineRef = useRef(null);
+  const workerRef = useRef(null);
 
   const variantKey = `${mode}-${size}`;
   const recordResult = useCallback(
@@ -63,6 +64,15 @@ const TicTacToe = () => {
     setAriaMessage('');
   }, [size, mode]);
 
+  useEffect(() => {
+    if (typeof Worker !== 'undefined') {
+      workerRef.current = new Worker(
+        new URL('../../workers/tictactoe.worker.js', import.meta.url),
+      );
+    }
+    return () => workerRef.current?.terminate();
+  }, []);
+
   const startGame = (p) => {
     const a = p === 'X' ? 'O' : 'X';
     setPlayer(p);
@@ -80,6 +90,27 @@ const TicTacToe = () => {
     newBoard[idx] = player;
     setBoard(newBoard);
   };
+
+  const requestAIMove = useCallback(
+    (b) =>
+      new Promise((resolve) => {
+        if (!workerRef.current) {
+          resolve(minimax(b, ai, size, mode === 'misere').index);
+          return;
+        }
+        const handler = (e) => {
+          resolve(e.data.index);
+        };
+        workerRef.current.onmessage = handler;
+        workerRef.current.postMessage({
+          board: b,
+          player: ai,
+          size,
+          misere: mode === 'misere',
+        });
+      }),
+    [ai, size, mode],
+  );
 
   useEffect(() => {
     if (player === null || ai === null) return;
@@ -103,25 +134,28 @@ const TicTacToe = () => {
           .filter((v) => v !== null);
         return options[Math.floor(Math.random() * options.length)] ?? -1;
       };
-      let move = -1;
+      const makeMove = (move) => {
+        if (move >= 0) {
+          const newBoard = board.slice();
+          newBoard[move] = ai;
+          setTimeout(() => setBoard(newBoard), 200);
+        }
+      };
       if (level === 'easy') {
-        move = getRandomMove(board.slice());
+        makeMove(getRandomMove(board.slice()));
       } else if (level === 'medium') {
-        move = Math.random() < 0.5
-          ? getRandomMove(board.slice())
-          : minimax(board.slice(), ai, size, mode === 'misere').index;
+        if (Math.random() < 0.5) {
+          makeMove(getRandomMove(board.slice()));
+        } else {
+          requestAIMove(board.slice()).then(makeMove);
+        }
       } else {
-        move = minimax(board.slice(), ai, size, mode === 'misere').index;
-      }
-      if (move >= 0) {
-        const newBoard = board.slice();
-        newBoard[move] = ai;
-        setTimeout(() => setBoard(newBoard), 200);
+        requestAIMove(board.slice()).then(makeMove);
       }
     } else {
       setStatus(`${SKINS[skin][player]}'s turn`);
     }
-  }, [board, player, ai, size, skin, mode, level, recordResult]);
+  }, [board, player, ai, size, skin, mode, level, recordResult, requestAIMove]);
 
   useEffect(() => {
     if (winLine && lineRef.current) {
