@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 
 export default function CallGraph({ func, callers = [], onSelect }) {
   const size = 200;
@@ -7,12 +7,22 @@ export default function CallGraph({ func, callers = [], onSelect }) {
   const neighbors = Array.from(new Set([...(func?.calls || []), ...callers]));
   const positions = {};
   neighbors.forEach((n, i) => {
-    const angle = (2 * Math.PI * i) / neighbors.length;
+    const angle = (2 * Math.PI * i) / (neighbors.length || 1);
     positions[n] = {
       x: center.x + radius * Math.cos(angle),
       y: center.y + radius * Math.sin(angle),
     };
   });
+
+  const handleKey = useCallback(
+    (e, n) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onSelect && onSelect(n);
+      }
+    },
+    [onSelect],
+  );
 
   return (
     <svg
@@ -26,16 +36,16 @@ export default function CallGraph({ func, callers = [], onSelect }) {
           key={`out-${c}`}
           x1={center.x}
           y1={center.y}
-          x2={positions[c].x}
-          y2={positions[c].y}
+          x2={positions[c]?.x || center.x}
+          y2={positions[c]?.y || center.y}
           stroke="#4ade80"
         />
       ))}
       {callers.map((c) => (
         <line
           key={`in-${c}`}
-          x1={positions[c].x}
-          y1={positions[c].y}
+          x1={positions[c]?.x || center.x}
+          y1={positions[c]?.y || center.y}
           x2={center.x}
           y2={center.y}
           stroke="#f87171"
@@ -56,7 +66,10 @@ export default function CallGraph({ func, callers = [], onSelect }) {
         <g
           key={n}
           onClick={() => onSelect && onSelect(n)}
-          className="cursor-pointer"
+          onKeyDown={(e) => handleKey(e, n)}
+          role="button"
+          tabIndex={0}
+          className="cursor-pointer focus:outline-none"
         >
           <circle cx={positions[n].x} cy={positions[n].y} r={15} className="fill-gray-700" />
           <text

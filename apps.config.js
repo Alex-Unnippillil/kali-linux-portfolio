@@ -65,7 +65,6 @@ export const chromeDefaultTiles = [
 // TODO: restore Project Gallery (project-gallery)
 // TODO: restore Weather Widget (weather_widget)
 // TODO: restore Input Lab (input-lab)
-// TODO: restore Ghidra (ghidra)
 // TODO: restore Brasero (brasero)
 // TODO: restore Sticky Notes (sticky_notes)
 // TODO: restore Trash (trash)
@@ -1258,9 +1257,5 @@ const apps = [
 
   },
 ];
-
-export const utilities = [];
-export const gameDefaults = { defaultWidth: 50, defaultHeight: 60 };
-export const games = [];
 
 export default apps;
