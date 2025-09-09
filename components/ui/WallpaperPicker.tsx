@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useSettings } from "../../hooks/useSettings";
+import { useSettings } from "@/hooks/useSettings";
 
 const WALLPAPERS = [
   "wall-1",
