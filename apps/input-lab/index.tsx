@@ -1,6 +1,5 @@
 'use client';
 
-import { isBrowser } from '@/utils/env';
 import React, { useEffect, useState } from 'react';
 import { evaluate } from 'mathjs';
 
@@ -30,29 +29,32 @@ export default function InputLab() {
   };
 
   const exportLog = () => {
-    const blob = new Blob([JSON.stringify(eventLog, null, 2)], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'input-lab-log.json';
-    a.click();
-    URL.revokeObjectURL(url);
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      const blob = new Blob([JSON.stringify(eventLog, null, 2)], {
+        type: 'application/json',
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'input-lab-log.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   };
 
   // Load saved text on mount
   useEffect(() => {
-    if (!isBrowser()) return;
-    const saved = window.localStorage.getItem(SAVE_KEY);
-    if (saved) setText(saved);
+    if (typeof window !== 'undefined') {
+      const saved = window.localStorage.getItem(SAVE_KEY);
+      if (saved) setText(saved);
+    }
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setText(val);
     setError('');
-    if (isBrowser()) {
+    if (typeof window !== 'undefined') {
       window.localStorage.setItem(SAVE_KEY, val);
     }
   };

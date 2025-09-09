@@ -57,9 +57,11 @@ export default function FilterEditor() {
   );
 
   const saveSample = () => {
-    const name = window.prompt('Sample name');
-    if (!name) return;
-    setSamples((s) => [...s, { name, code: filterText }]);
+    if (typeof window !== 'undefined') {
+      const name = window.prompt('Sample name');
+      if (!name) return;
+      setSamples((s) => [...s, { name, code: filterText }]);
+    }
   };
 
   return (
@@ -89,6 +91,7 @@ export default function FilterEditor() {
         className="w-full h-32 border p-2 font-mono"
         value={filterText}
         onChange={(e) => setFilterText(e.target.value)}
+        aria-label="Filter code"
       />
       <div className="grid grid-cols-2 gap-4">
         <div>

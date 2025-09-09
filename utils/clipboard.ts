@@ -1,8 +1,8 @@
 export const copyToClipboard = async (text: string): Promise<boolean> => {
   try {
-    if (navigator?.clipboard?.writeText) {
+    if (typeof window !== 'undefined' && navigator?.clipboard?.writeText) {
       await navigator.clipboard.writeText(text);
-    } else {
+    } else if (typeof window !== 'undefined' && typeof document !== 'undefined') {
       const textarea = document.createElement('textarea');
       textarea.value = text;
       textarea.style.position = 'fixed';
