@@ -32,13 +32,13 @@ export const isValid = (
   num: number,
 ): boolean => {
   for (let i = 0; i < SIZE; i++) {
-    if (board[row][i] === num || board[i][col] === num) return false;
+    if (board[row]?.[i] === num || board[i]?.[col] === num) return false;
   }
   const boxRow = Math.floor(row / 3) * 3;
   const boxCol = Math.floor(col / 3) * 3;
   for (let r = 0; r < 3; r++) {
     for (let c = 0; c < 3; c++) {
-      if (board[boxRow + r][boxCol + c] === num) return false;
+      if (board[boxRow + r]?.[boxCol + c] === num) return false;
     }
   }
   return true;
@@ -53,16 +53,16 @@ const solveBoard = (
   if (idx === SIZE * SIZE) return true;
   const row = Math.floor(idx / SIZE);
   const col = idx % SIZE;
-  if (board[row][col] !== 0) return solveBoard(board, idx + 1, rng);
+  if (board[row]?.[col] !== 0) return solveBoard(board, idx + 1, rng);
   const nums = shuffle(
     range(SIZE).map((n) => n + 1),
     typeof rng === 'function' ? rng : Math.random,
   );
   for (const num of nums) {
     if (isValid(board, row, col, num)) {
-      board[row][col] = num;
+      board[row]![col]! = num;
       if (solveBoard(board, idx + 1, rng)) return true;
-      board[row][col] = 0;
+      board[row]![col]! = 0;
     }
   }
   return false;
@@ -76,13 +76,13 @@ const countSolutions = (
   if (idx === SIZE * SIZE) return 1;
   const row = Math.floor(idx / SIZE);
   const col = idx % SIZE;
-  if (board[row][col] !== 0) return countSolutions(board, idx + 1, limit);
+  if (board[row]?.[col] !== 0) return countSolutions(board, idx + 1, limit);
   let count = 0;
   for (let num = 1; num <= SIZE && count < limit; num++) {
     if (isValid(board, row, col, num)) {
-      board[row][col] = num;
+      board[row]![col]! = num;
       count += countSolutions(board, idx + 1, limit - count);
-      board[row][col] = 0;
+      board[row]![col]! = 0;
     }
   }
   return count;
@@ -98,7 +98,7 @@ export const getCandidates = (
   return cand;
 };
 
-const HOLES_BY_DIFFICULTY: Record<string, number> = {
+const HOLES_BY_DIFFICULTY: Record<'easy' | 'medium' | 'hard', number> = {
   easy: 35,
   medium: 45,
   hard: 55,
@@ -115,17 +115,17 @@ export const generateSudoku = (
   solveBoard(board, 0, rng);
   const solution = board.map((row) => row.slice());
   const puzzle = board.map((row) => row.slice());
-  let holes = HOLES_BY_DIFFICULTY[difficulty] || HOLES_BY_DIFFICULTY.easy;
+  let holes = HOLES_BY_DIFFICULTY[difficulty];
   const positions = shuffle(range(SIZE * SIZE), rng);
   for (const pos of positions) {
     if (holes === 0) break;
     const r = Math.floor(pos / SIZE);
     const c = pos % SIZE;
-    const backup = puzzle[r][c];
-    puzzle[r][c] = 0;
+    const backup = puzzle[r]?.[c] ?? 0;
+    if (puzzle[r]) puzzle[r]![c] = 0;
     const copy = puzzle.map((row) => row.slice());
     if (countSolutions(copy) !== 1) {
-      puzzle[r][c] = backup;
+      if (puzzle[r]) puzzle[r]![c] = backup;
     } else {
       holes--;
     }
@@ -141,7 +141,7 @@ export const isValidPlacement = (
 ): boolean => {
   if (!isValid(board, r, c, val)) return false;
   const copy = board.map((row) => row.slice());
-  copy[r][c] = val;
+  copy[r]![c]! = val;
   try {
     solve(copy);
     return true;
