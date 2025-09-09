@@ -10,6 +10,7 @@
     "dev": "next dev",
     "dev:turbo": "next dev --turbopack",
     "build": "node scripts/build.mjs",
+
     "postbuild": "node --import tsx/esm scripts/safe-copy.mjs",
     "start": "next start",
     "export": "NEXT_PUBLIC_STATIC_EXPORT=true next build",
