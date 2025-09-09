@@ -1,6 +1,6 @@
 import dynamic from 'next/dynamic';
 
-const BluetoothApp = dynamic(() => import('../../../apps/bluetooth'), {
+const BluetoothApp = dynamic(() => import('@/apps/bluetooth'), {
   ssr: false,
   loading: () => <p>Loading...</p>,
 });
