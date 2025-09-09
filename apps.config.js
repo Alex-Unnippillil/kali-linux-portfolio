@@ -1259,8 +1259,4 @@ const apps = [
   },
 ];
 
-export const utilities = [];
-export const gameDefaults = { defaultWidth: 50, defaultHeight: 60 };
-export const games = [];
-
 export default apps;
