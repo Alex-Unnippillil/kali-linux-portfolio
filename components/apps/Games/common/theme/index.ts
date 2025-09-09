@@ -18,7 +18,7 @@ const luminance = (hex: string): number => {
     const s = c / 255;
     return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
   };
-  const [lr, lg, lb] = [r, g, b].map(toLinear);
+  const [lr, lg, lb] = [r, g, b].map(toLinear) as [number, number, number];
   return 0.2126 * lr + 0.7152 * lg + 0.0722 * lb;
 };
 

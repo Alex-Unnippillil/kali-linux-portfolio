@@ -225,16 +225,34 @@ module.exports = withBundleAnalyzer(
           ];
           result.push(
             {
-              source: '/fonts/:path*',
+              source: '/manifest.webmanifest',
               headers: [
                 {
+                  key: 'Content-Type',
+                  value: 'application/manifest+json',
+                },
+                {
                   key: 'Cache-Control',
-                  value: 'public, max-age=31536000, immutable',
+                  value: 'public, max-age=0, must-revalidate',
                 },
               ],
             },
             {
-              source: '/images/:path*',
+              source: '/service-worker.js',
+              headers: [
+                {
+                  key: 'Cache-Control',
+                  value: 'public, max-age=0, must-revalidate',
+                },
+              ],
+            },
+            {
+              // Cache all static assets aggressively so they can be reused
+              // between deploys. This covers files served from `public/`
+              // such as scripts, stylesheets, images and fonts.
+              source:
+                '/:all*(js|css|svg|png|jpg|jpeg|gif|ico|webp|avif|tiff|bmp|eot|otf|ttf|woff|woff2|json)',
+
               headers: [
                 {
                   key: 'Cache-Control',
