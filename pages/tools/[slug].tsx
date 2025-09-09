@@ -10,7 +10,7 @@ interface ToolCommand {
 
 interface ToolPackage {
   name: string;
-  version?: string;
+  version: string;
 }
 
 interface Tool {
@@ -28,10 +28,11 @@ interface Props {
 }
 
 export default function ToolPage({ tool }: Props) {
-  const relatedTools = (tool.related ?? [])
-    .map((slug) => tools.find((t) => t.id === slug))
-    .filter((t): t is Tool => Boolean(t))
-    .slice(0, 6);
+  const relatedTools = (
+    (tool.related ?? [])
+      .map((slug) => tools.find((t) => t.id === slug))
+      .filter(Boolean) as Tool[]
+  ).slice(0, 6);
 
   return (
     <div className="p-4 max-w-3xl mx-auto">
@@ -44,8 +45,7 @@ export default function ToolPage({ tool }: Props) {
           <ul className="list-disc list-inside">
             {tool.packages.map((pkg) => (
               <li key={pkg.name}>
-                {pkg.name}
-                {pkg.version ? ` ${pkg.version}` : ''}
+                {pkg.name} {pkg.version}
               </li>
             ))}
           </ul>
