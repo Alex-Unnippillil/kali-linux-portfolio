@@ -14,10 +14,18 @@ const GigoloApp = () => {
 
   useEffect(() => {
     if (!isBrowser()) return;
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored) setBookmarks(JSON.parse(stored));
-    const net = window.localStorage.getItem(NETWORK_KEY);
-    if (net) setNetworkEntries(JSON.parse(net));
+    try {
+      const stored = window.localStorage.getItem(STORAGE_KEY);
+      if (stored) setBookmarks(JSON.parse(stored));
+    } catch {
+      console.warn('Failed to parse stored bookmarks');
+    }
+    try {
+      const net = window.localStorage.getItem(NETWORK_KEY);
+      if (net) setNetworkEntries(JSON.parse(net));
+    } catch {
+      console.warn('Failed to parse stored network entries');
+    }
   }, []);
 
   useEffect(() => {
