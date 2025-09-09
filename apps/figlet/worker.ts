@@ -48,7 +48,7 @@ self.onmessage = (e: MessageEvent<any>) => {
     const rendered = figlet.textSync(normalized, {
       font: font as FontName,
       width,
-      horizontalLayout: layout as FigletOptions['horizontalLayout'],
+      horizontalLayout: layout as NonNullable<FigletOptions['horizontalLayout']>,
     });
   self.postMessage({ type: 'render', output: rendered });
 };
