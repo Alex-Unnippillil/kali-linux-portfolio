@@ -26,7 +26,6 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]
-
     },
     "noEmit": true,
     "plugins": [{ "name": "next" }]
@@ -38,8 +37,7 @@
     "types/**/*.d.ts",
     ".next/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "__tests__", "components/apps/archive", "components/apps/kismet"]
-  ,
+  "exclude": ["node_modules", "__tests__", "components/apps/archive", "components/apps/kismet"],
   "overrides": [
     {
       "files": ["apps/games/**/*.ts", "games/**/*.ts"],
