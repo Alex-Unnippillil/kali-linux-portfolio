@@ -119,6 +119,7 @@ export default function ThemeSettings({ wallpapers }: ThemeSettingsProps) {
               <button
                 key={c}
                 role="radio"
+                aria-label={`Accent color ${c}`}
                 aria-checked={accent === c}
                 onClick={() => setAccent(c)}
                 className={`w-6 h-6 rounded-full border-2 ${
@@ -126,9 +127,9 @@ export default function ThemeSettings({ wallpapers }: ThemeSettingsProps) {
                 }`}
                 style={{ backgroundColor: c }}
               />
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
 
         <div className="mt-6">
           <h2 className="text-lg mb-2">Wallpapers</h2>
@@ -138,12 +139,12 @@ export default function ThemeSettings({ wallpapers }: ThemeSettingsProps) {
               return (
                 <button
                   key={src}
+                  aria-label={`Select wallpaper ${base}`}
                   onClick={() => setWallpaper(base)}
                   className={`relative border-2 ${
                     wallpaper === base ? 'border-ubt-blue' : 'border-transparent'
                   }`}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={src} alt="" className="w-full h-24 object-cover" />
                 </button>
               );
