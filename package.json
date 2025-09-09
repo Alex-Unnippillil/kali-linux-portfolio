@@ -96,6 +96,7 @@
     "prettier": "^3.6.2",
     "prop-types": "^15.8.1",
     "qrcode": "^1.5.4",
+    "rc-drawer": "^7.1.0",
     "rc-virtual-list": "3.19.1",
     "react": "19.1.1",
     "react-activity-calendar": "^2.7.13",

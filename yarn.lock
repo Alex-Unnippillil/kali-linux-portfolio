@@ -12047,7 +12047,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rc-drawer@npm:~7.3.0":
+"rc-drawer@npm:^7.1.0, rc-drawer@npm:~7.3.0":
   version: 7.3.0
   resolution: "rc-drawer@npm:7.3.0"
   dependencies:
@@ -14843,6 +14843,7 @@ __metadata:
     prettier: "npm:^3.6.2"
     prop-types: "npm:^15.8.1"
     qrcode: "npm:^1.5.4"
+    rc-drawer: "npm:^7.1.0"
     rc-virtual-list: "npm:3.19.1"
     react: "npm:19.1.1"
     react-activity-calendar: "npm:^2.7.13"
