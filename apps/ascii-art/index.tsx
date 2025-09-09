@@ -106,8 +106,7 @@ const AsciiArtApp = () => {
       const ct = parseFloat(c);
       if (!Number.isNaN(ct) && ct >= 0 && ct <= 2) setContrast(ct);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router.isReady]);
+    }, [router.isReady]);
 
   // update query string permalink
   useEffect(() => {
@@ -205,6 +204,11 @@ const AsciiArtApp = () => {
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
+      if (!value) {
+        canvas.width = 0;
+        canvas.height = 0;
+        return;
+      }
       const lines = value.split('\n');
       const charWidth = fontSize * 0.6;
       const width = Math.max(...lines.map((l) => l.length)) * charWidth;
@@ -262,12 +266,13 @@ const AsciiArtApp = () => {
             style={{ fontFamily: 'monospace', lineHeight: '1', fontSize: `${fontSize}px` }}
             placeholder="Enter text"
             value={text}
+            aria-label="Input text"
             onChange={(e) => setText(e.target.value)}
           />
           <select
             value={font}
             onChange={(e) => setFont(e.target.value as FontName)}
-
+            aria-label="Font"
             className="px-2 py-1 text-black rounded"
           >
             {fontList.map((f) => (
@@ -279,6 +284,7 @@ const AsciiArtApp = () => {
           <select
             value={fontSize}
             onChange={(e) => setFontSize(Number(e.target.value))}
+            aria-label="Font size"
             className="px-2 py-1 text-black rounded"
           >
             {fontSizes.map((s) => (
@@ -295,6 +301,7 @@ const AsciiArtApp = () => {
                 value={fgColor}
                 onChange={(e) => setFgColor(e.target.value)}
                 className="w-10 h-6 p-0 border-0 bg-transparent"
+                aria-label="Foreground color"
               />
             </label>
             <label className="flex items-center gap-1">
@@ -304,6 +311,7 @@ const AsciiArtApp = () => {
                 value={bgColor}
                 onChange={(e) => setBgColor(e.target.value)}
                 className="w-10 h-6 p-0 border-0 bg-transparent"
+                aria-label="Background color"
               />
             </label>
           </div>
@@ -338,6 +346,7 @@ const AsciiArtApp = () => {
             ref={displayCanvasRef}
             className="mt-2"
             style={{ imageRendering: 'pixelated' }}
+            aria-label="ASCII canvas"
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
             {samples.map((s, i) => (
@@ -353,26 +362,30 @@ const AsciiArtApp = () => {
           </div>
         </div>
       )}
-      {tab === 'image' && (
-        <div className="flex flex-col gap-2">
-          <input type="file" accept="image/*" onChange={handleImage} />
+        {tab === 'image' && (
+          <div className="flex flex-col gap-2">
+          <input type="file" accept="image/*" onChange={handleImage} aria-label="Upload image" />
           <div className="flex items-center gap-2">
-            <label className="text-sm">Brightness</label>
+            <label htmlFor="brightness" className="text-sm">Brightness</label>
             <input
+              id="brightness"
               type="range"
               min="-1"
               max="1"
               step="0.1"
               value={brightness}
+              aria-label="Brightness"
               onChange={(e) => setBrightness(Number(e.target.value))}
             />
-            <label className="text-sm">Contrast</label>
+            <label htmlFor="contrast" className="text-sm">Contrast</label>
             <input
+              id="contrast"
               type="range"
               min="0"
               max="2"
               step="0.1"
               value={contrast}
+              aria-label="Contrast"
               onChange={(e) => setContrast(Number(e.target.value))}
             />
           </div>
@@ -384,6 +397,7 @@ const AsciiArtApp = () => {
                 value={fgColor}
                 onChange={(e) => setFgColor(e.target.value)}
                 className="w-10 h-6 p-0 border-0 bg-transparent"
+                aria-label="Foreground color"
               />
             </label>
             <label className="flex items-center gap-1">
@@ -393,12 +407,14 @@ const AsciiArtApp = () => {
                 value={bgColor}
                 onChange={(e) => setBgColor(e.target.value)}
                 className="w-10 h-6 p-0 border-0 bg-transparent"
+                aria-label="Background color"
               />
             </label>
           </div>
           <select
             value={fontSize}
             onChange={(e) => setFontSize(Number(e.target.value))}
+            aria-label="Font size"
             className="px-2 py-1 text-black rounded"
           >
             {fontSizes.map((s) => (
@@ -428,18 +444,19 @@ const AsciiArtApp = () => {
               Save Image
             </button>
           </div>
-          <canvas ref={canvasRef} className="hidden" />
+            <canvas ref={canvasRef} className="hidden" aria-label="Hidden canvas" />
           <pre
             className="p-1.5 whitespace-pre overflow-auto font-mono leading-none"
             style={{ imageRendering: 'pixelated', fontSize: `${fontSize}px`, color: fgColor, backgroundColor: bgColor }}
           >
             {imgOutput}
           </pre>
-          <canvas
-            ref={displayCanvasRef}
-            className="mt-2"
-            style={{ imageRendering: 'pixelated' }}
-          />
+            <canvas
+              ref={displayCanvasRef}
+              className="mt-2"
+              style={{ imageRendering: 'pixelated' }}
+              aria-label="ASCII canvas"
+            />
         </div>
       )}
     </div>
