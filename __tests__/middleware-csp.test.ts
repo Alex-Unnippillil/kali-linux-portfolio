@@ -19,7 +19,7 @@ describe('middleware CSP header', () => {
 
   it('includes nonce and allowed hosts', async () => {
     const server = createServer();
-    const res = await request(server).get('/');
+    const res = await request(server).get('/es').set('Accept-Language', 'es');
     server.close();
 
     const csp = res.headers['content-security-policy'];
