@@ -1,5 +1,5 @@
 import { isBrowser } from '@/utils/env';
-import { create, all, FactoryFunctionMap } from 'mathjs';
+import { create, all, type FactoryFunctionMap } from 'mathjs';
 
 const math = create(all as FactoryFunctionMap);
 
