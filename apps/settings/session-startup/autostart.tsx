@@ -56,7 +56,11 @@ export default function AutostartSettings() {
   const updateUser = (idx: number, changes: Partial<Entry>) => {
     setUserEntries((prev) => {
       const next = [...prev];
-      next[idx] = { ...next[idx], ...changes };
+      // Merging in partial updates preserves required fields from the existing
+      // entry, but TypeScript loses this information when spreading the
+      // `changes` object (which marks all properties optional). Cast the
+      // result back to `Entry` to satisfy the type checker.
+      next[idx] = { ...next[idx], ...changes } as Entry;
       persist(next);
       return next;
     });
