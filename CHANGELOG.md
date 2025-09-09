@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Fixed
 - Use explicit `@vercel/node` runtime version to satisfy Vercel build requirements.
+- Define YouTube display function in app configuration to resolve missing reference errors.
 
 ## [2.1.0] - 2025-09-03
 ### Added
