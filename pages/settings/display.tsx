@@ -52,6 +52,8 @@ export default function DisplaySettings() {
   const selectedMonitor = monitors.find((m) => m.id === selected) || monitors[0];
   const primary = monitors.find((m) => m.primary) || monitors[0];
 
+  if (!selectedMonitor) return null;
+
   const updateMonitorPosition = (id: number, pos: { x: number; y: number }) => {
     setMonitors((mons) => mons.map((m) => (m.id === id ? { ...m, ...pos } : m)));
   };
@@ -77,10 +79,12 @@ export default function DisplaySettings() {
 
   const toggleMirror = (checked: boolean) => {
     setMirror(checked);
-    if (checked) {
-      const base = monitors[0];
-      setMonitors((mons) => mons.map((m) => ({ ...m, orientation: base.orientation, resolution: base.resolution })));
-    }
+    if (!checked) return;
+    const base = monitors[0];
+    if (!base) return;
+    setMonitors((mons) =>
+      mons.map((m) => ({ ...m, orientation: base.orientation, resolution: base.resolution })),
+    );
   };
 
   const identify = () => {
@@ -89,10 +93,12 @@ export default function DisplaySettings() {
   };
 
   useEffect(() => {
-    if (mirror) {
-      const base = monitors[0];
-      setMonitors((mons) => mons.map((m) => ({ ...m, orientation: base.orientation, resolution: base.resolution })));
-    }
+    if (!mirror) return;
+    const base = monitors[0];
+    if (!base) return;
+    setMonitors((mons) =>
+      mons.map((m) => ({ ...m, orientation: base.orientation, resolution: base.resolution })),
+    );
   }, [mirror, monitors]);
 
   return (
