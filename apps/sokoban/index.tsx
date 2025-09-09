@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { logEvent, logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
 import { LEVEL_PACKS, LevelPack, parseLevels } from './levels';
@@ -462,7 +464,12 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
             <option key={i} value={i}>{`Level ${i + 1}`}</option>
           ))}
         </select>
-        <input type="file" accept=".txt,.sas" onChange={handleFile} />
+         <input
+            type="file"
+            accept=".txt,.sas"
+            onChange={handleFile}
+            aria-label="upload level file"
+          />
         <button
           type="button"
           onClick={() => setShowLevels(true)}
