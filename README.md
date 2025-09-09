@@ -281,6 +281,11 @@ These external domains are whitelisted in the default CSP. Update this list when
 | `*.x.com` | X (Twitter) domain equivalents |
 | `*.google.com` | Google services and Chrome app favicons |
 | `example.com` | Chrome app demo origin |
+| `opengraph.githubassets.com` | GitHub Open Graph images |
+| `raw.githubusercontent.com` | GitHub raw content |
+| `avatars.githubusercontent.com` | GitHub avatars |
+| `i.ytimg.com` | YouTube thumbnails |
+| `yt3.ggpht.com` | YouTube channel images |
 | `openweathermap.org` | Weather widget images |
 | `ghchart.rshah.org` | GitHub contribution charts |
 | `data.typeracer.com` | Typing race data |

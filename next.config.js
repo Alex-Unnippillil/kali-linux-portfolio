@@ -24,12 +24,12 @@ const securityHeaders = [
   },
   {
     key: 'Referrer-Policy',
-    value: 'no-referrer',
+    value: 'strict-origin-when-cross-origin',
   },
   {
     key: 'Permissions-Policy',
     value:
-      'accelerometer=(), camera=(), microphone=(), geolocation=(), interest-cohort=(), fullscreen=(), payment=()',
+      'camera=(), microphone=(), geolocation=(), interest-cohort=()',
   },
   {
     // Allow same-origin framing so the PDF resume renders in an <object>
@@ -168,6 +168,18 @@ module.exports = withBundleAnalyzer(
         'data.typeracer.com',
         'images.credly.com',
         'staticmap.openstreetmap.de',
+      ],
+      remotePatterns: [
+        { protocol: 'https', hostname: 'opengraph.githubassets.com' },
+        { protocol: 'https', hostname: 'raw.githubusercontent.com' },
+        { protocol: 'https', hostname: 'avatars.githubusercontent.com' },
+        { protocol: 'https', hostname: 'i.ytimg.com' },
+        { protocol: 'https', hostname: 'yt3.ggpht.com' },
+        { protocol: 'https', hostname: 'openweathermap.org' },
+        { protocol: 'https', hostname: 'ghchart.rshah.org' },
+        { protocol: 'https', hostname: 'data.typeracer.com' },
+        { protocol: 'https', hostname: 'images.credly.com' },
+        { protocol: 'https', hostname: 'staticmap.openstreetmap.de' },
       ],
       localPatterns: [
         { pathname: '/themes/Yaru/apps/**' },
