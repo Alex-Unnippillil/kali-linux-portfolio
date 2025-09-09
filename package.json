@@ -9,9 +9,7 @@
     "prebuild": "rm -rf .next && yarn typegen && yarn build:gamepad",
     "dev": "next dev",
     "dev:turbo": "next dev --turbo",
-
     "build": "node scripts/build.mjs",
-
     "postbuild": "node --import tsx/esm scripts/safe-copy.mjs",
     "start": "next start",
     "export": "NEXT_PUBLIC_STATIC_EXPORT=true next build",
@@ -169,6 +167,11 @@
     "wait-on": "^8.0.4",
     "webpack": "^5.92.0",
     "workbox-build": "7.1.1",
+    "workbox-core": "^7.3.0",
+    "workbox-expiration": "^7.3.0",
+    "workbox-precaching": "^7.3.0",
+    "workbox-routing": "^7.3.0",
+    "workbox-strategies": "^7.3.0",
     "ws": "^8.18.0"
   },
   "resolutions": {
