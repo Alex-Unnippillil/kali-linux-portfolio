@@ -167,7 +167,7 @@ const TaskManagerApp = createDynamicApp('task_manager', 'Task Manager');
 const NiktoApp = createDynamicApp('nikto', 'Nikto');
 
 const QrApp = createDynamicApp('qr', 'QR Tool');
-const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
+const AsciiArtApp = createDynamicApp('ascii-art', 'ASCII Art');
 const QuoteApp = createDynamicApp('quote', 'Quote');
 const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery');
 const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
