@@ -29,7 +29,11 @@ const ScrollableTimeline: React.FC = () => {
 
   const milestonesByYear = useMemo(() => {
     return milestones.reduce<Record<string, GroupedMilestone[]>>((acc, m) => {
-      const [year, month] = m.date.split('-');
+      // m.date is expected to be in the format YYYY-MM. If the month
+      // portion is missing for any reason, default to an empty string so the
+      // GroupedMilestone type requirement is satisfied and the UI gracefully
+      // handles the missing data instead of causing a type error.
+      const [year, month = ''] = m.date.split('-');
       const entry: GroupedMilestone = { ...m, month };
       (acc[year] = acc[year] || []).push(entry);
       return acc;
