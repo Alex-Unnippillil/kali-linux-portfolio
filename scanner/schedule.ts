@@ -28,16 +28,17 @@ const persistSchedules = (jobs: ScheduledScan[]) => {
 
 export const cronToInterval = (expr: string): number => {
   const parts = expr.trim().split(/\s+/);
+  if (parts.length < 5) {
+    throw new Error('Unsupported cron expression');
+  }
   if (parts.length === 6) {
-    const sec = parts[0];
+    const sec = parts[0]!;
     const match = /^\*\/(\d+)$/.exec(sec);
-    if (match) return parseInt(match[1], 10) * 1000;
+    if (match) return parseInt(match[1]!, 10) * 1000;
   }
-  if (parts.length >= 5) {
-    const min = parts.length === 5 ? parts[0] : parts[1];
-    const match = /^\*\/(\d+)$/.exec(min);
-    if (match) return parseInt(match[1], 10) * 60 * 1000;
-  }
+  const min = parts.length === 5 ? parts[0]! : parts[1]!;
+  const match = /^\*\/(\d+)$/.exec(min);
+  if (match) return parseInt(match[1]!, 10) * 60 * 1000;
   throw new Error('Unsupported cron expression');
 };
 
