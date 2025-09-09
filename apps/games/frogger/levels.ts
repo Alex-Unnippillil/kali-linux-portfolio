@@ -66,5 +66,6 @@ export const LEVELS: LaneConfiguration[] = [
 ];
 
 export const getLevelConfig = (level: number): LaneConfiguration =>
-  LEVELS[(level - 1) % LEVELS.length] ?? LEVELS[0];
+  LEVELS[(level - 1) % LEVELS.length]!;
+
 
