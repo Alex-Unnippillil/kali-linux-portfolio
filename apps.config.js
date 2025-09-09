@@ -1,6 +1,5 @@
 import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
 
-
 /**
  * @typedef {import('./types/app').AppMetadata} AppMetadata
  */
@@ -9,11 +8,106 @@ export const chromeDefaultTiles = [
   { title: 'Example', url: 'https://example.com' },
 ];
 
-// Dynamic applications and games
+// TODO: restore YouTube (youtube)
+// TODO: restore Converter (converter)
+// TODO: restore Tic Tac Toe (tictactoe)
+// TODO: restore Chess (chess)
+// TODO: restore Connect Four (connect-four)
+// TODO: restore Hangman (hangman)
+// TODO: restore Frogger (frogger)
+// TODO: restore Flappy Bird (flappy-bird)
+// TODO: restore Snake (snake)
+// TODO: restore Memory (memory)
+// TODO: restore Minesweeper (minesweeper)
+// TODO: restore Pong (pong)
+// TODO: restore Pacman (pacman)
+// TODO: restore Car Racer (car-racer)
+// TODO: restore Lane Runner (lane-runner)
+// TODO: restore Platformer (platformer)
+// TODO: restore Battleship (battleship)
+// TODO: restore Checkers (checkers)
+// TODO: restore Reversi (reversi)
+// TODO: restore Simon (simon)
+// TODO: restore Sokoban (sokoban)
+// TODO: restore Solitaire (solitaire/index)
+// TODO: restore Tower Defense (tower-defense)
+// TODO: restore Word Search (word-search)
+// TODO: restore Wordle (wordle)
+// TODO: restore Blackjack (blackjack)
+// TODO: restore Breakout (breakout)
+// TODO: restore Asteroids (asteroids)
+// TODO: restore Sudoku (sudoku)
+// TODO: restore Space Invaders (space-invaders)
+// TODO: restore Nonogram (nonogram)
+// TODO: restore Tetris (tetris)
+// TODO: restore Candy Crush (candy-crush)
+// TODO: restore Files (file-explorer)
+// TODO: restore Image Viewer (ristretto)
+// TODO: restore Radare2 (radare2)
+// TODO: restore About Alex (alex)
+// TODO: restore Power Settings (power)
+// TODO: restore X (x)
+// TODO: restore Spotify (spotify)
+// TODO: restore Settings (settings)
+// TODO: restore Chrome (chrome)
+// TODO: restore Gedit (gedit)
+// TODO: restore Todoist (todoist)
+// TODO: restore Weather (weather)
+// TODO: restore Clipboard Manager (ClipboardManager)
+// TODO: restore Figlet (figlet)
+// TODO: restore Resource Monitor (resource_monitor)
+// TODO: restore Screen Recorder (screen-recorder)
+// TODO: restore Task Manager (task_manager)
+// TODO: restore Nikto (nikto)
+// TODO: restore QR Tool (qr)
+// TODO: restore ASCII Art (ascii_art)
+// TODO: restore Quote (quote)
+// TODO: restore Project Gallery (project-gallery)
+// TODO: restore Weather Widget (weather_widget)
+// TODO: restore Input Lab (input-lab)
+// TODO: restore Ghidra (ghidra)
+// TODO: restore Brasero (brasero)
+// TODO: restore Sticky Notes (sticky_notes)
+// TODO: restore Trash (trash)
+// TODO: restore Serial Terminal (serial-terminal)
+// TODO: restore Network Connections (network/connections)
+// TODO: restore BLE Sensor (ble-sensor)
+// TODO: restore Bluetooth (bluetooth)
+// TODO: restore dsniff (dsniff)
+// TODO: restore BeEF (beef)
+// TODO: restore Metasploit (metasploit)
+// TODO: restore Network Manager (network-manager)
+// TODO: restore Autopsy (autopsy)
+// TODO: restore Plugin Manager (plugin-manager)
+// TODO: restore Panel Profiles (panel-profiles)
+// TODO: restore Gomoku (gomoku)
+// TODO: restore Pinball (pinball)
+// TODO: restore Volatility (volatility)
+// TODO: restore Kismet (kismet.jsx)
+// TODO: restore Hashcat (hashcat)
+// TODO: restore Metasploit Post (msf-post)
+// TODO: restore Evidence Vault (evidence-vault)
+// TODO: restore Mimikatz (mimikatz)
+// TODO: restore Mimikatz Offline (mimikatz/offline)
+// TODO: restore Ettercap (ettercap)
+// TODO: restore Reaver (reaver)
+// TODO: restore Hydra (hydra)
+// TODO: restore John the Ripper (john)
+// TODO: restore Nessus (nessus)
+// TODO: restore Nmap NSE (nmap-nse)
+// TODO: restore OpenVAS (openvas)
+// TODO: restore Recon-ng (reconng)
+// TODO: restore Kali Tools (kali-tools)
+// TODO: restore Security Tools (security-tools)
+// TODO: restore Kali Tweaks (kali-tweaks)
+// TODO: restore SSH Command Builder (ssh)
+// TODO: restore HTTP Request Builder (http)
+// TODO: restore HTML Rewriter (html-rewriter)
+// TODO: restore Contact (contact)
+// TODO: restore Gigolo (gigolo)
+
 const TerminalApp = createDynamicApp('terminal', 'Terminal');
-// VSCode app uses a Stack iframe, so no editor dependencies are required
 const VsCodeApp = createDynamicApp('vscode', 'VsCode');
-const YouTubeApp = createDynamicApp('youtube', 'YouTube');
 const CalculatorApp = createDynamicApp('calculator', 'Calculator');
 const ConverterApp = createDynamicApp('converter', 'Converter');
 const TicTacToeApp = createDynamicApp('tictactoe', 'Tic Tac Toe');
@@ -54,7 +148,7 @@ const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const FileExplorerApp = createDynamicApp('file-explorer', 'Files');
 const RistrettoApp = createDynamicApp('ristretto', 'Image Viewer');
 const Radare2App = createDynamicApp('radare2', 'Radare2');
-const AboutAlexApp = createDynamicApp('alex', 'About Alex');
+const AboutAlexApp = createDynamicApp('About', 'About Alex');
 const PowerApp = createDynamicApp('power', 'Power Settings');
 
 const XApp = createDynamicApp('x', 'X');
@@ -62,9 +156,10 @@ const SpotifyApp = createDynamicApp('spotify', 'Spotify');
 const SettingsApp = createDynamicApp('settings', 'Settings');
 const ChromeApp = createDynamicApp('chrome', 'Chrome');
 const GeditApp = createDynamicApp('gedit', 'Gedit');
+const MousepadApp = createDynamicApp('mousepad', 'Mousepad Preferences');
 const TodoistApp = createDynamicApp('todoist', 'Todoist');
 const WeatherApp = createDynamicApp('weather', 'Weather');
-const ClipboardManagerApp = createDynamicApp('ClipboardManager', 'Clipboard Manager');
+const ClipboardManagerApp = createDynamicApp('clipboard_manager', 'Clipboard Manager');
 const FigletApp = createDynamicApp('figlet', 'Figlet');
 const ResourceMonitorApp = createDynamicApp('resource_monitor', 'Resource Monitor');
 const ScreenRecorderApp = createDynamicApp('screen-recorder', 'Screen Recorder');
@@ -101,10 +196,10 @@ const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
 const VolatilityApp = createDynamicApp('volatility', 'Volatility');
 
-const KismetApp = createDynamicApp('kismet.jsx', 'Kismet');
+const KismetApp = createDynamicApp('kismet', 'Kismet');
 
 const HashcatApp = createDynamicApp('hashcat', 'Hashcat');
-const MsfPostApp = createDynamicApp('msf-post', 'Metasploit Post');
+const MsfPostApp = createDynamicApp('metasploit-post', 'Metasploit Post');
 const EvidenceVaultApp = createDynamicApp('evidence-vault', 'Evidence Vault');
 const MimikatzApp = createDynamicApp('mimikatz', 'Mimikatz');
 const MimikatzOfflineApp = createDynamicApp('mimikatz/offline', 'Mimikatz Offline');
@@ -127,9 +222,9 @@ const GigoloApp = createDynamicApp('gigolo', 'Gigolo');
 
 
 
+
 const displayTerminal = createDisplay(TerminalApp);
 const displayVsCode = createDisplay(VsCodeApp);
-const displayYouTube = createDisplay(YouTubeApp);
 const displayCalculator = createDisplay(CalculatorApp);
 const displayConverter = createDisplay(ConverterApp);
 const displayTicTacToe = createDisplay(TicTacToeApp);
@@ -174,6 +269,7 @@ const displaySpotify = createDisplay(SpotifyApp);
 const displaySettings = createDisplay(SettingsApp);
 const displayChrome = createDisplay(ChromeApp);
 const displayGedit = createDisplay(GeditApp);
+const displayMousepad = createDisplay(MousepadApp);
 const displayTodoist = createDisplay(TodoistApp);
 const displayWeather = createDisplay(WeatherApp);
 const displayClipboardManager = createDisplay(ClipboardManagerApp);
@@ -628,30 +724,9 @@ const gameList = [
 /** @type {AppMetadata[]} */
 export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
 
+
 /** @type {AppMetadata[]} */
 const apps = [
-  {
-    id: 'chrome',
-    title: 'Google Chrome',
-    icon: '/themes/Yaru/apps/chrome.png',
-    disabled: false,
-    favourite: true,
-    desktop_shortcut: true,
-    screen: displayChrome,
-  },
-  {
-    id: 'calculator',
-    title: 'Calculator',
-    icon: '/themes/Yaru/apps/calc.png',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayCalculator,
-    resizable: false,
-    allowMaximize: false,
-    defaultWidth: 28,
-    defaultHeight: 50,
-  },
   {
     id: 'terminal',
     title: 'Terminal',
@@ -854,6 +929,15 @@ const apps = [
     screen: displayTrash,
   },
   {
+    id: 'mousepad',
+    title: 'Mousepad Preferences',
+    icon: '/themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMousepad,
+  },
+  {
     id: 'gedit',
     title: 'Contact Me',
     icon: '/themes/Yaru/apps/gedit.png',
@@ -865,6 +949,7 @@ const apps = [
   {
     id: 'converter',
     title: 'Converter',
+
     icon: '/themes/Yaru/apps/calc.png',
     disabled: false,
     favourite: false,
@@ -1082,7 +1167,7 @@ const apps = [
     screen: displayHashcat,
   },
   {
-    id: 'msf-post',
+    id: 'metasploit-post',
     title: 'Metasploit Post',
     icon: '/themes/Yaru/apps/msf-post.svg',
     disabled: false,
@@ -1170,11 +1255,12 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayKaliTweaks,
+
   },
-  // Utilities are grouped separately
-  ...utilities,
-  // Games are included so they appear alongside apps
-  ...games,
 ];
+
+export const utilities = [];
+export const gameDefaults = { defaultWidth: 50, defaultHeight: 60 };
+export const games = [];
 
 export default apps;

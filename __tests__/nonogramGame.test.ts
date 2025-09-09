@@ -19,15 +19,15 @@ describe('games/nonogram logic', () => {
   });
 
   test('loads puzzles from packs', () => {
-    const raw = `
-#..
-##.
-...
-
-.#.
-###
-.#.
-`;
+    const raw = [
+      '#..',
+      '##.',
+      '...',
+      '',
+      '.#.',
+      '###',
+      '.#.',
+    ].join('\n');
     const puzzles = parsePack(raw);
     expect(puzzles).toHaveLength(2);
     expect(puzzles[0].rows).toEqual([[1], [2], []]);
