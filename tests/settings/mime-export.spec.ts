@@ -14,13 +14,15 @@ function parseMimeApps(content: string): Record<string, string[]> {
       continue;
     }
     if (/^\s*\[.*\]\s*$/.test(line)) break;
-    if (!line.includes('=')) continue;
-    const [mime, appsStr] = line.split('=');
-    const apps = appsStr
-      .split(';')
-      .map((a) => a.trim())
-      .filter(Boolean);
-    map[mime.trim()] = apps;
+      if (!line.includes('=')) continue;
+      const [mime, appsStr = ''] = line.split('=');
+      const apps = appsStr
+        .split(';')
+        .map((a) => a.trim())
+        .filter(Boolean);
+      if (mime) {
+        map[mime.trim()] = apps;
+      }
   }
   return map;
 }

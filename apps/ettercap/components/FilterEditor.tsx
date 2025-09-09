@@ -47,7 +47,7 @@ export default function FilterEditor() {
   );
   const [filterText, setFilterText] = usePersistentState(
     'ettercap-filter-text',
-    DEFAULT_SAMPLES[0].code,
+    DEFAULT_SAMPLES[0]?.code ?? '',
   );
   const output = applyFilters(filterText, EXAMPLE_PACKETS);
 

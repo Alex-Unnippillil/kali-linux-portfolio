@@ -31,6 +31,6 @@ export class Replay<T = any> {
   }
 
   duration(): number {
-    return this.events.length ? this.events[this.events.length - 1].t : 0;
+    return this.events.length ? this.events[this.events.length - 1]!.t : 0;
   }
 }

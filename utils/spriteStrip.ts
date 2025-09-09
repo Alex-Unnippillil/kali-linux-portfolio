@@ -51,7 +51,7 @@ export const importSpriteStrip = (src: string): Promise<StripResource> => {
  */
 export const clearSpriteStripCache = () => {
   Object.keys(stripCache).forEach((k) => {
-    stripCache[k].then((res) => res.release());
+    stripCache[k]?.then((res) => res.release());
     delete stripCache[k];
   });
 };

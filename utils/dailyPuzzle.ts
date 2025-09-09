@@ -18,9 +18,9 @@ export const getDailyPuzzle = <T>(
     return defaultPuzzle;
   }
   const seed = getDailySeed(gameId, date);
-  const idx = hash(seed) % puzzles.length;
-  return puzzles[idx];
-};
+    const idx = hash(seed) % puzzles.length;
+    return puzzles[idx] ?? defaultPuzzle;
+  };
 
 const dailyPuzzle = { getDailyPuzzle };
 

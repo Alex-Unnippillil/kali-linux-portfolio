@@ -56,7 +56,7 @@ const FontDropdown: React.FC<Props> = ({ fonts, value, onChange }) => {
       setActive((a) => (a - 1 + fonts.length) % fonts.length);
       e.preventDefault();
     } else if (e.key === 'Enter') {
-      onChange(fonts[active].name);
+        onChange(fonts[active]?.name || value);
       setOpen(false);
       e.preventDefault();
     } else if (e.key === 'Escape') {

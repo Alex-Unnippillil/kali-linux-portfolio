@@ -13,21 +13,21 @@ export interface ParsedPacket {
 
 const parseEthernetIpv4 = (data: Uint8Array) => {
   if (data.length < 34) return { src: '', dest: '', protocol: 0, info: '' };
-  const etherType = (data[12] << 8) | data[13];
-  if (etherType !== 0x0800) return { src: '', dest: '', protocol: 0, info: '' };
-  const protocol = data[23];
-  const src = Array.from(data.slice(26, 30)).join('.');
-  const dest = Array.from(data.slice(30, 34)).join('.');
+    const etherType = (data[12]! << 8) | data[13]!;
+    if (etherType !== 0x0800) return { src: '', dest: '', protocol: 0, info: '' };
+    const protocol = data[23]!;
+    const src = Array.from(data.slice(26, 30)).join('.');
+    const dest = Array.from(data.slice(30, 34)).join('.');
   let info = '';
   if (protocol === 6 && data.length >= 54) {
-    const sport = (data[34] << 8) | data[35];
-    const dport = (data[36] << 8) | data[37];
+      const sport = (data[34]! << 8) | data[35]!;
+      const dport = (data[36]! << 8) | data[37]!;
     info = `TCP ${sport} → ${dport}`;
     return { src, dest, protocol, info, sport, dport };
   }
   if (protocol === 17 && data.length >= 42) {
-    const sport = (data[34] << 8) | data[35];
-    const dport = (data[36] << 8) | data[37];
+      const sport = (data[34]! << 8) | data[35]!;
+      const dport = (data[36]! << 8) | data[37]!;
     info = `UDP ${sport} → ${dport}`;
     return { src, dest, protocol, info, sport, dport };
   }
@@ -48,19 +48,20 @@ const parseClassicPcap = (buf: ArrayBuffer): ParsedPacket[] => {
     offset += 16;
     if (offset + capLen > view.byteLength) break;
     const data = new Uint8Array(buf.slice(offset, offset + capLen));
-    const meta = parseEthernetIpv4(data);
-    packets.push({
-      timestamp: `${tsSec}.${tsUsec.toString().padStart(6, '0')}`,
-      len: origLen,
-      src: meta.src,
-      dest: meta.dest,
-      protocol: meta.protocol,
-      info: meta.info || `len=${origLen}`,
-      sport: meta.sport,
-      dport: meta.dport,
-      data,
-      layers: {},
-    });
+      const meta = parseEthernetIpv4(data);
+      const pkt: ParsedPacket = {
+        timestamp: `${tsSec}.${tsUsec.toString().padStart(6, '0')}`,
+        len: origLen,
+        src: meta.src,
+        dest: meta.dest,
+        protocol: meta.protocol,
+        info: meta.info || `len=${origLen}`,
+        data,
+        layers: {},
+      };
+      if (meta.sport !== undefined) pkt.sport = meta.sport;
+      if (meta.dport !== undefined) pkt.dport = meta.dport;
+      packets.push(pkt);
     offset += capLen;
   }
   return packets;
@@ -91,22 +92,23 @@ const parsePcapNg = (buf: ArrayBuffer): ParsedPacket[] => {
       const origLen = view.getUint32(offset + 24, little);
       const dataStart = offset + 28;
       const data = new Uint8Array(buf.slice(dataStart, dataStart + capLen));
-      const meta = parseEthernetIpv4(data);
-      const ts = (BigInt(tsHigh) << 32n) + BigInt(tsLow);
-      const tsSec = Number(ts / 1000000n);
-      const tsUsec = Number(ts % 1000000n);
-      packets.push({
-        timestamp: `${tsSec}.${tsUsec.toString().padStart(6, '0')}`,
-        len: origLen,
-        src: meta.src,
-        dest: meta.dest,
-        protocol: meta.protocol,
-        info: meta.info || `len=${origLen}`,
-        sport: meta.sport,
-        dport: meta.dport,
-        data,
-        layers: {},
-      });
+        const meta = parseEthernetIpv4(data);
+        const ts = (BigInt(tsHigh) << 32n) + BigInt(tsLow);
+        const tsSec = Number(ts / 1000000n);
+        const tsUsec = Number(ts % 1000000n);
+        const pkt: ParsedPacket = {
+          timestamp: `${tsSec}.${tsUsec.toString().padStart(6, '0')}`,
+          len: origLen,
+          src: meta.src,
+          dest: meta.dest,
+          protocol: meta.protocol,
+          info: meta.info || `len=${origLen}`,
+          data,
+          layers: {},
+        };
+        if (meta.sport !== undefined) pkt.sport = meta.sport;
+        if (meta.dport !== undefined) pkt.dport = meta.dport;
+        packets.push(pkt);
     }
     offset += blockTotalLength;
   }

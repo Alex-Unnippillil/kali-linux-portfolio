@@ -4,7 +4,7 @@ import { isBrowser } from '@/utils/env';
 import { getSeed, setSeed } from './idb';
 
 function today(): string {
-  return new Date().toISOString().split('T')[0];
+  return new Date().toISOString().split('T')[0]!;
 }
 
 export async function getDailySeed(game: string): Promise<string> {
