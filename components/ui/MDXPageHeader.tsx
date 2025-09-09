@@ -74,7 +74,9 @@ const LinkIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 const MDXPageHeader: React.FC<Props> = ({ breadcrumbs, filePath }) => {
-  const docsPath = filePath.replace(/^content\//, '').replace(/\.mdx?$/, '.md');
+  const docsPath = filePath
+    .replace(/^content\//, '')
+    .replace(/\.(mdx?|tsx)$/, '.md');
   const editUrl = `${WEB_IDE_BASE}${docsPath}`;
   const viewUrl = `${WEB_VIEW_BASE}${docsPath}`;
   const newUrl = `${WEB_IDE_BASE}${docsPath.substring(0, docsPath.lastIndexOf('/') + 1)}`;
