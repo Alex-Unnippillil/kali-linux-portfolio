@@ -111,7 +111,7 @@ export default function QuoteApp() {
         .split(',')
         .map((n) => parseInt(n, 10))
         .filter((n) => !Number.isNaN(n) && n >= 0 && n < quotes.length);
-      if (ids.length > 0) {
+      if (ids.length) {
         setPlaylist(ids);
         const first = ids[0];
         if (first !== undefined) {
