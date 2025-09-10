@@ -152,8 +152,8 @@ export function move(state: State, dirKey: DirectionKey): State {
 }
 
 export function undo(state: State): State {
-  if (!state.history.length) return state;
   const prev = state.history[state.history.length - 1];
+  if (!prev) return state;
   const boxes = new Set(prev.boxes);
   const restored: State = {
     ...state,
