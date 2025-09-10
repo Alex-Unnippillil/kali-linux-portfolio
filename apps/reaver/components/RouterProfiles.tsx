@@ -48,7 +48,8 @@ const RouterProfiles: React.FC<RouterProfilesProps> = ({ onChange }) => {
   // Load persisted profile on mount
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    const profile = ROUTER_PROFILES.find((p) => p.id === stored) || ROUTER_PROFILES[0];
+    const profile =
+      ROUTER_PROFILES.find((p) => p.id === stored) ?? ROUTER_PROFILES[0]!;
     setSelected(profile);
     onChange(profile);
   }, []);
