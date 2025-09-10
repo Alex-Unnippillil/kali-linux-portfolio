@@ -115,7 +115,8 @@ export default function QuoteApp() {
         setPlaylist(ids);
         const first = ids[0];
         if (first !== undefined) {
-          setCurrent(quotes[first]);
+          const firstQuote = quotes[first];
+          if (firstQuote) setCurrent(firstQuote);
         }
       }
     }
