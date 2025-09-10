@@ -118,8 +118,8 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
       for (const gp of pads) {
         if (!gp) continue;
         for (let i = 0; i < gp.buttons.length; i++) {
-          const btn = gp.buttons[i];
-          if (btn?.pressed) {
+          if (gp.buttons[i]?.pressed) {
+
             setPadMap((prev) => ({ ...prev, [waiting.action]: i }));
             setWaiting(null);
             return;
