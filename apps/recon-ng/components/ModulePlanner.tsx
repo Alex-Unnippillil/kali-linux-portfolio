@@ -17,7 +17,7 @@ const MODULES: Record<string, ModuleDef> = {
 };
 
 const moduleNames = Object.keys(MODULES);
-const WORKSPACES = ['default', 'testing', 'production'];
+const WORKSPACES = ['default', 'testing', 'production'] as const;
 
 const ForceGraph2D = dynamic(
   () => import('react-force-graph').then((mod) => mod.ForceGraph2D),
