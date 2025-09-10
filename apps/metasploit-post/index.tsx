@@ -32,7 +32,7 @@ interface PrivNode {
 interface Evidence {
   id: number;
   note: string;
-  fileName?: string;
+  fileName?: string | undefined;
   tags: string[];
 }
 
@@ -118,7 +118,7 @@ const EvidenceVault: React.FC = () => {
     const entry: Evidence = {
       id: Date.now(),
       note,
-      ...(file ? { fileName: file.name } : {}),
+      fileName: file?.name,
       tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
     };
     setItems((prev) => [...prev, entry]);
