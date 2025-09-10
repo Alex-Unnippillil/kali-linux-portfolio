@@ -397,15 +397,16 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
 
   const useLastHint = () => {
     if (lastHints <= 0) return;
-    const remaining = placements.filter(
-      (p) =>
-        !found.has(p.word) &&
-        !hintCells.has(key(p.positions[p.positions.length - 1]))
-    );
+    const remaining = placements.filter((p) => {
+      const last = p.positions.at(-1);
+      return last ? !found.has(p.word) && !hintCells.has(key(last)) : false;
+    });
     if (!remaining.length) return;
     const target = remaining[Math.floor(Math.random() * remaining.length)];
+    const lastPos = target.positions.at(-1);
+    if (!lastPos) return;
     const newHints = new Set(hintCells);
-    newHints.add(key(target.positions[target.positions.length - 1]));
+    newHints.add(key(lastPos));
     setHintCells(newHints);
     setLastHints(lastHints - 1);
   };
