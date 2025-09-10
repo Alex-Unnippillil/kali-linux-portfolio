@@ -90,7 +90,7 @@ export default function Panel() {
     setPlugins((prev) => {
       const updated = [...prev];
       const [item] = updated.splice(from, 1);
-      updated.splice(to, 0, item);
+      updated.splice(to, 0, item!);
       return updated;
     });
   };

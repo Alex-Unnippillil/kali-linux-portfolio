@@ -73,7 +73,9 @@ function parseDesktopFile(contents: string): DesktopEntry | null {
     }
   }
   if (!data.Name || !data.Exec) return null;
-  return { name: data.Name, exec: data.Exec, icon: data.Icon };
+  const entry: DesktopEntry = { name: data.Name, exec: data.Exec };
+  if (data.Icon) entry.icon = data.Icon;
+  return entry;
 }
 
 // Resolve a command to open a directory using the user's preferred file
