@@ -5,6 +5,9 @@ interface Quote {
   author: string;
 }
 
+type Style = { name: string; bg: string; fg: string; font: string };
+const DEFAULT_STYLE: Style = { name: 'Classic', bg: '#000000', fg: '#ffffff', font: 'serif' };
+
 const hexToRgb = (hex: string) => {
   const parsed = hex.replace('#', '');
   const bigint = parseInt(parsed, 16);
@@ -40,16 +43,15 @@ const STYLES = [
 export default function Posterizer({ quote }: { quote: Quote | null }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [styleIndex, setStyleIndex] = useState(0);
-  const initial = STYLES[0] ?? { bg: '#000000', fg: '#ffffff', font: 'serif' };
-  const [bg, setBg] = useState<string>(initial.bg);
-  const [fg, setFg] = useState<string>(initial.fg);
-  const [font, setFont] = useState<string>(initial.font);
+  const [bg, setBg] = useState<string>(STYLES[0]?.bg ?? DEFAULT_STYLE.bg);
+  const [fg, setFg] = useState<string>(STYLES[0]?.fg ?? DEFAULT_STYLE.fg);
+  const [font, setFont] = useState<string>(STYLES[0]?.font ?? DEFAULT_STYLE.font);
 
 
   const cycleStyle = () => {
     const next = (styleIndex + 1) % STYLES.length;
     setStyleIndex(next);
-    const s = STYLES[next]!;
+    const s = STYLES[next] ?? DEFAULT_STYLE;
 
     setBg(s.bg);
     setFg(s.fg);
@@ -161,7 +163,7 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
         >
           Next Style
         </button>
-        <span>Style: {STYLES[styleIndex]!.name}</span>
+        <span>Style: {(STYLES[styleIndex] ?? DEFAULT_STYLE).name}</span>
 
         <button
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
