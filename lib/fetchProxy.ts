@@ -51,9 +51,9 @@ function notify(type: 'start' | 'end', record: FetchLog) {
   }
 }
 
-if (typeof globalThis.fetch === 'function' && !(globalThis as any).__fetchProxyInstalled) {
+if (typeof globalThis.fetch === 'function' && !globalThis.__fetchProxyInstalled) {
   const originalFetch = globalThis.fetch.bind(globalThis);
-  (globalThis as any).__fetchProxyInstalled = true;
+  globalThis.__fetchProxyInstalled = true;
 
   globalThis.fetch = async (
     input: RequestInfo | URL,
@@ -81,7 +81,7 @@ if (typeof globalThis.fetch === 'function' && !(globalThis as any).__fetchProxyI
     notify('start', record);
 
     try {
-      const response = await originalFetch(input as any, init);
+      const response = await originalFetch(input, init);
       const end = now();
       record.endTime = end;
       record.duration = end - record.startTime;
@@ -102,8 +102,8 @@ if (typeof globalThis.fetch === 'function' && !(globalThis as any).__fetchProxyI
       if (contentLength) {
         finalize(Number(contentLength));
       } else if (
-        typeof (response as any).clone === 'function' &&
-        typeof (response as any).arrayBuffer === 'function'
+        typeof response.clone === 'function' &&
+        typeof response.arrayBuffer === 'function'
       ) {
         try {
           response
