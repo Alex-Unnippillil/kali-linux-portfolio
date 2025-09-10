@@ -28,7 +28,7 @@ const ModulePlanner: React.FC = () => {
   const [plan, setPlan] = usePersistentState<string[]>('reconng-plan', []);
   const [workspace, setWorkspace] = usePersistentState<string>(
     'reconng-workspace',
-    WORKSPACES[0],
+    WORKSPACES[0] ?? 'default',
   );
   const [log, setLog] = useState('');
 
