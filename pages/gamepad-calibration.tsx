@@ -49,10 +49,13 @@ export default function GamepadCalibration() {
       if (!p) return;
       setAxes(Array.from(p.axes));
       setRanges((r) =>
-        r.map((rng, i) => ({
-          min: Math.min(rng.min, p.axes[i]),
-          max: Math.max(rng.max, p.axes[i]),
-        }))
+        r.map((rng, i) => {
+          const val = p.axes[i] ?? 0;
+          return {
+            min: Math.min(rng.min, val),
+            max: Math.max(rng.max, val),
+          };
+        })
       );
       raf = requestAnimationFrame(read);
     };

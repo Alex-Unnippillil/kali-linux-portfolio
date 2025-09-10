@@ -39,7 +39,7 @@ export default function DocPage({ html, toc, title, topic }: DocProps) {
     if (item.depth === 2) {
       acc.push({ id: item.id, text: item.text, children: [] });
     } else if (item.depth === 3 && acc.length > 0) {
-      acc[acc.length - 1].children.push(item);
+      acc[acc.length - 1]!.children.push(item);
     }
     return acc;
   }, []);
@@ -174,20 +174,21 @@ export const getStaticProps: GetStaticProps<DocProps> = async ({ params }) => {
   ) as any;
   const title = titleToken ? titleToken.text : topic;
 
-  const tocSlugger = new marked.Slugger();
+  const slugify = (text: string) =>
+    text.toLowerCase().trim().replace(/[^\w]+/g, '-').replace(/^-+|-+$/g, '');
+
   const toc: TocItem[] = tokens
     .filter((t) => t.type === 'heading' && (t as any).depth && ((t as any).depth === 2 || (t as any).depth === 3))
     .map((t) => ({
-      id: tocSlugger.slug((t as any).text),
+      id: slugify((t as any).text),
       text: (t as any).text,
       depth: (t as any).depth,
     }));
 
   const renderer = new marked.Renderer();
-  const renderSlugger = new marked.Slugger();
-  renderer.heading = (text, level) => {
-    const id = renderSlugger.slug(text);
-    return `<h${level} id="${id}">${text}</h${level}>`;
+  renderer.heading = ({ depth, text }) => {
+    const id = slugify(text);
+    return `<h${depth} id="${id}">${text}</h${depth}>`;
   };
 
   const html = marked.parse(md, { renderer }) as string;

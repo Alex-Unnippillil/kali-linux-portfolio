@@ -37,7 +37,8 @@ async function blurHashToDataURL(blurhash: string) {
   const { PNG } = await import("pngjs");
   const pixels = decode(blurhash, 32, 32);
   const png = new PNG({ width: 32, height: 32 });
-  png.data = Buffer.from(pixels);
+  // Convert the Uint8ClampedArray returned by decode into a Buffer-friendly Uint8Array.
+  png.data = Buffer.from(Uint8Array.from(pixels));
   return `data:image/png;base64,${PNG.sync.write(png).toString("base64")}`;
 }
 

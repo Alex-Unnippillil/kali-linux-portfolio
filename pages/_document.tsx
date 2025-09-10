@@ -8,17 +8,17 @@ import Document, {
 } from 'next/document';
 
 interface Props extends DocumentInitialProps {
-  nonce?: string;
+  nonce?: string | undefined;
 }
 
 class MyDocument extends Document<Props> {
-  static async getInitialProps(ctx: DocumentContext): Promise<Props> {
+  static override async getInitialProps(ctx: DocumentContext): Promise<Props> {
     const initial = await Document.getInitialProps(ctx);
-    const nonce = ctx.req.headers['x-csp-nonce'] as string | undefined; // provided by middleware
+    const nonce = ctx.req?.headers['x-csp-nonce'] as string | undefined; // provided by middleware
     return { ...initial, nonce };
   }
 
-  render() {
+  override render() {
     const { nonce } = this.props;
     return (
       <Html lang={this.props.locale || 'en'} data-csp-nonce={nonce}>
@@ -45,7 +45,7 @@ class MyDocument extends Document<Props> {
         </Head>
         <body className="font-ubuntu">
           <Main />
-          <NextScript nonce={nonce} />
+          {nonce ? <NextScript nonce={nonce} /> : <NextScript />}
         </body>
       </Html>
     );

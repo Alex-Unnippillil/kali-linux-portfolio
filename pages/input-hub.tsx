@@ -28,7 +28,7 @@ const InputHub = () => {
   const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [subject, setSubject] = useState(subjectTemplates[0]);
+  const [subject, setSubject] = useState(subjectTemplates[0]!);
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState('');
   const [useCaptcha, setUseCaptcha] = useState(false);
