@@ -115,7 +115,7 @@ export default function QuoteApp() {
         setPlaylist(ids);
         const first = ids[0];
         if (first !== undefined) {
-          setCurrent(quotes[first]);
+          setCurrent(quotes[first]!);
         }
       }
     }
@@ -134,7 +134,7 @@ export default function QuoteApp() {
         }
       } catch { /* ignore */ }
     }
-    const q = quotes[Math.floor(Math.random() * quotes.length)];
+    const q = quotes[Math.floor(Math.random() * quotes.length)]!;
     setDailyQuote(q);
     localStorage.setItem('daily-quote', JSON.stringify({ date: today, quote: q }));
   }, [quotes]);
@@ -169,7 +169,7 @@ export default function QuoteApp() {
       setCurrent(null);
       return;
     }
-    setCurrent(filtered[Math.floor(Math.random() * filtered.length)]);
+    setCurrent(filtered[Math.floor(Math.random() * filtered.length)] ?? null);
   };
 
   const nextQuote = useCallback(() => {
@@ -178,7 +178,7 @@ export default function QuoteApp() {
       return;
     }
     const next = (currentIndex + 1) % filtered.length;
-    setCurrent(filtered[next]);
+    setCurrent(filtered[next] ?? null);
   }, [filtered, currentIndex]);
 
   const prevQuote = useCallback(() => {
@@ -187,7 +187,7 @@ export default function QuoteApp() {
       return;
     }
     const prev = (currentIndex - 1 + filtered.length) % filtered.length;
-    setCurrent(filtered[prev]);
+    setCurrent(filtered[prev] ?? null);
   }, [filtered, currentIndex]);
 
   useEffect(() => {
@@ -228,8 +228,8 @@ export default function QuoteApp() {
   useEffect(() => {
     if (!playOrder.length) return;
     const idx = playOrder[playIndex];
-    if (idx >= 0 && idx < quotes.length) {
-      setCurrent(quotes[idx]);
+    if (idx !== undefined && idx >= 0 && idx < quotes.length) {
+      setCurrent(quotes[idx]!);
     }
   }, [playIndex, playOrder, quotes]);
 
@@ -300,7 +300,9 @@ export default function QuoteApp() {
     setPlayOrder(order);
     setPlayIndex(0);
     const idx = order[0];
-    if (idx >= 0 && idx < quotes.length) setCurrent(quotes[idx]);
+    if (idx !== undefined && idx >= 0 && idx < quotes.length) {
+      setCurrent(quotes[idx]!);
+    }
     setPlaying(true);
   };
 
