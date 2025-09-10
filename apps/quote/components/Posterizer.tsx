@@ -44,10 +44,11 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
   const [fg, setFg] = useState<string>(STYLES[0].fg);
   const [font, setFont] = useState<string>(STYLES[0].font);
 
+
   const cycleStyle = () => {
     const next = (styleIndex + 1) % STYLES.length;
     setStyleIndex(next);
-    const s = STYLES[next];
+    const s = STYLES[next] ?? DEFAULT_STYLE;
     setBg(s.bg);
     setFg(s.fg);
     setFont(s.font);
@@ -117,8 +118,7 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
         ref={canvasRef}
         width={600}
         height={400}
-        className="border"
-        aria-label="quote preview"
+        className="border"        aria-label="quote preview"
       />
       <div className="flex flex-wrap gap-2 justify-center">
         <label className="flex items-center gap-1">
@@ -128,6 +128,7 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
             value={bg}
             onChange={(e) => setBg(e.target.value)}
             aria-label="background color"
+
           />
         </label>
         <label className="flex items-center gap-1">
@@ -135,8 +136,8 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
           <input
             type="color"
             value={fg}
-            onChange={(e) => setFg(e.target.value)}
-            aria-label="foreground color"
+            onChange={(e) => setFg(e.target.value)}            aria-label="foreground color"
+
           />
         </label>
         <input
@@ -146,6 +147,7 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
           className="px-2 py-1 rounded text-black"
           placeholder="Font"
           aria-label="font family"
+
         />
         <span className={accessible ? 'text-green-400' : 'text-red-400'}>
           Contrast: {ratio.toFixed(2)}
@@ -156,7 +158,7 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
         >
           Next Style
         </button>
-        <span>Style: {STYLES[styleIndex].name}</span>
+        <span>Style: {STYLES[styleIndex]?.name ?? DEFAULT_STYLE.name}</span>
         <button
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
           onClick={download}
