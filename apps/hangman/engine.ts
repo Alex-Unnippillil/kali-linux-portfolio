@@ -32,8 +32,8 @@ export const createGame = (opts?: GameOptions): HangmanGame => {
   let hints: number | undefined;
   if (typeof opts === 'string') word = opts;
   else if (opts) ({ word, category, hints } = opts);
-  const dict = category ? DICTIONARIES[category] || allWords() : allWords();
-  const chosen = word || dict[Math.floor(Math.random() * dict.length)];
+  const dict = category ? DICTIONARIES[category] ?? allWords() : allWords();
+  const chosen = word ?? dict[Math.floor(Math.random() * dict.length)]!;
   return {
     word: chosen,
     guessed: [],
