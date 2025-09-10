@@ -117,6 +117,7 @@ export default function QuoteApp() {
         if (first !== undefined) {
           setCurrent(quotes[first]!);
 
+
         }
       }
     }
