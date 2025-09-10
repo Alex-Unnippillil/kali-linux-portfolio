@@ -46,6 +46,7 @@ const NiktoPage: React.FC = () => {
       const list = acc[f.severity] ?? [];
       list.push(f);
       acc[f.severity] = list;
+
       return acc;
     }, {});
   }, [findings]);
@@ -160,6 +161,7 @@ const NiktoPage: React.FC = () => {
           </label>
         </div>
       </form>
+
       <div>
         <h2 className="text-lg mb-2">Command Preview</h2>
         <CommandChip command={command} />
