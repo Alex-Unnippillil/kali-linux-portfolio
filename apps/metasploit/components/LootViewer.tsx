@@ -22,8 +22,15 @@ const LootViewer: React.FC = () => {
     (v): v is string[] => Array.isArray(v) && v.every((x) => typeof x === 'string'),
   );
 
-  const artifact = artifacts[index];
   const total = artifacts.length;
+  const artifact = artifacts[index];
+  if (!artifact) {
+    return (
+      <div className="p-4 text-sm bg-ub-grey flex flex-col gap-2">
+        <p>No artifacts available.</p>
+      </div>
+    );
+  }
   const isFavorite = favorites.includes(artifact.id);
 
   const prev = () => setIndex((i) => (i === 0 ? total - 1 : i - 1));
