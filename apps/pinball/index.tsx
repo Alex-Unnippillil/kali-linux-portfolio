@@ -132,12 +132,18 @@ export default function Pinball() {
       evt.pairs.forEach((pair) => {
         const bodies = [pair.bodyA, pair.bodyB];
         if (bodies.includes(ball) && bodies.includes(leftFlipper)) {
-          const { x, y } = pair.collision.supports[0];
-          sparksRef.current.push({ x, y, life: 1 });
+          const support = pair.collision.supports[0];
+          if (support) {
+            const { x, y } = support;
+            sparksRef.current.push({ x, y, life: 1 });
+          }
         }
         if (bodies.includes(ball) && bodies.includes(rightFlipper)) {
-          const { x, y } = pair.collision.supports[0];
-          sparksRef.current.push({ x, y, life: 1 });
+          const support = pair.collision.supports[0];
+          if (support) {
+            const { x, y } = support;
+            sparksRef.current.push({ x, y, life: 1 });
+          }
         }
         if (bodies.includes(ball) && bodies.includes(leftLane)) {
           laneGlowRef.current.left = true;
@@ -241,7 +247,8 @@ export default function Pinball() {
     const poll = () => {
       const gp = navigator.getGamepads ? navigator.getGamepads()[0] : null;
       if (gp) {
-        const pressed = gp.buttons[5]?.pressed || gp.axes[1] < -0.8;
+        const pressed =
+          gp.buttons[5]?.pressed || (gp.axes[1] ?? 0) < -0.8;
         if (pressed && !lastPressed) {
           tryNudge();
         }
