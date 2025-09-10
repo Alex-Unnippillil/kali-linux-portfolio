@@ -31,10 +31,9 @@ export const createDeck = (): Card[] => {
 const shuffle = (deck: Card[]) => {
   for (let i = deck.length - 1; i > 0; i -= 1) {
     const j = Math.floor(random() * (i + 1));
-    const tmp = deck[i]!;
+    const tmp: Card = deck[i]!;
     deck[i] = deck[j]!;
     deck[j] = tmp;
-
   }
 };
 
