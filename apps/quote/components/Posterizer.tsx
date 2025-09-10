@@ -37,14 +37,13 @@ const STYLES = [
   { name: 'Retro', bg: '#1e3a8a', fg: '#fef3c7', font: 'monospace' },
 ] as const;
 
-const DEFAULT_STYLE = STYLES[0]!;
-
 export default function Posterizer({ quote }: { quote: Quote | null }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [styleIndex, setStyleIndex] = useState(0);
-  const [bg, setBg] = useState<string>(DEFAULT_STYLE.bg);
-  const [fg, setFg] = useState<string>(DEFAULT_STYLE.fg);
-  const [font, setFont] = useState<string>(DEFAULT_STYLE.font);
+  const initial = STYLES[0] ?? { bg: '#000000', fg: '#ffffff', font: 'serif' };
+  const [bg, setBg] = useState<string>(initial.bg);
+  const [fg, setFg] = useState<string>(initial.fg);
+  const [font, setFont] = useState<string>(initial.font);
 
 
   const cycleStyle = () => {
@@ -143,7 +142,6 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
             value={fg}
             onChange={(e) => setFg(e.target.value)}
             aria-label="Foreground color"
-
           />
         </label>
         <input
@@ -151,8 +149,8 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
           value={font}
           onChange={(e) => setFont(e.target.value)}
           className="px-2 py-1 rounded text-black"
-          placeholder="Font"          aria-label="Font"
-
+          placeholder="Font"
+          aria-label="Font"
         />
         <span className={accessible ? 'text-green-400' : 'text-red-400'}>
           Contrast: {ratio.toFixed(2)}
