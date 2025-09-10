@@ -17,16 +17,16 @@ export const isDarkTheme = (theme: string): boolean =>
   DARK_THEMES.includes(theme as (typeof DARK_THEMES)[number]);
 
 export const getTheme = (): string => {
-  if (!isBrowser()) return 'default';
+  if (!isBrowser()) return 'kali-dark';
   try {
     const stored = window.localStorage.getItem(THEME_KEY);
     if (stored && stored !== 'undercover') return stored;
     const prefersDark = window.matchMedia?.(
       '(prefers-color-scheme: dark)'
     ).matches;
-    return prefersDark ? 'dark' : 'default';
+    return prefersDark ? 'kali-dark' : 'kali-light';
   } catch {
-    return 'default';
+    return 'kali-dark';
   }
 };
 
