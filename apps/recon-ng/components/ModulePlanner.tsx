@@ -88,6 +88,7 @@ const ModulePlanner: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {moduleNames.map((m) => {
           const mod = MODULES[m];
+          if (!mod) return null;
           const active = plan.includes(m);
           return (
             <div
