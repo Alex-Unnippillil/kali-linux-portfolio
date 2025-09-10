@@ -112,8 +112,9 @@ export function isDeadlockPosition(state: State, pos: Position): boolean {
 function computeDeadlocks(state: State): Set<string> {
   const d = new Set<string>();
   state.boxes.forEach((b) => {
-    const [x, y] = b.split(',').map(Number);
-    const pos = { x, y };
+    const [xStr, yStr] = b.split(',');
+    if (xStr === undefined || yStr === undefined) return;
+    const pos: Position = { x: Number(xStr), y: Number(yStr) };
     if (isDeadlockPosition(state, pos)) d.add(b);
   });
   return d;
