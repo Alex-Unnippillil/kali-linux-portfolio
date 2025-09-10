@@ -130,12 +130,13 @@ export default function Pinball() {
     Events.on(engine, "collisionStart", (evt) => {
       evt.pairs.forEach((pair) => {
         const bodies = [pair.bodyA, pair.bodyB];
-        if (bodies.includes(ball) && bodies.includes(leftFlipper)) {
-          const { x, y } = pair.collision.supports[0];
+        const support = pair.collision.supports[0];
+        if (support && bodies.includes(ball) && bodies.includes(leftFlipper)) {
+          const { x, y } = support;
           sparksRef.current.push({ x, y, life: 1 });
         }
-        if (bodies.includes(ball) && bodies.includes(rightFlipper)) {
-          const { x, y } = pair.collision.supports[0];
+        if (support && bodies.includes(ball) && bodies.includes(rightFlipper)) {
+          const { x, y } = support;
           sparksRef.current.push({ x, y, life: 1 });
         }
         if (bodies.includes(ball) && bodies.includes(leftLane)) {
