@@ -17,13 +17,17 @@ const AutostartManager: React.FC = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  const updateEntry = (index: number, change: Partial<AutostartEntry>) => {
-    setEntries((prev) => {
-      const next = [...prev];
-      next[index] = { ...next[index], ...change };
-      return next;
-    });
-  };
+  const updateEntry = (
+    index: number,
+    change: Partial<Omit<AutostartEntry, "file">>,
+    ) => {
+      setEntries((prev) => {
+        const next = [...prev];
+        const updated = { ...next[index], ...change } as AutostartEntry;
+        next[index] = updated;
+        return next;
+      });
+    };
 
   const handleSave = async (entry: AutostartEntry) => {
     await saveAutostartEntry(entry);

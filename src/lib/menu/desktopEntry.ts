@@ -21,7 +21,10 @@ const parseIni = (text: string): Record<string, Record<string, string>> => {
     if (!line || line.startsWith('#')) continue;
     const section = line.match(/^\[(.+)]$/);
     if (section) {
-      current = result[section[1]] = {};
+      const key = section[1];
+      if (key) {
+        current = result[key] = {};
+      }
       continue;
     }
     if (!current) continue;
@@ -43,15 +46,17 @@ export const parseDesktopEntry = async (file: string): Promise<DesktopEntry | nu
     const text = await fs.readFile(file, 'utf8');
     const data = parseIni(text)['Desktop Entry'];
     if (!data) return null;
-    return {
-      type: data.Type,
+    const entry: DesktopEntry = {
       name: data.Name || path.basename(file),
-      exec: data.Exec,
-      icon: data.Icon,
-      categories: data.Categories ? data.Categories.split(';').filter(Boolean) : undefined,
       terminal: data.Terminal === 'true',
       noDisplay: data.NoDisplay === 'true',
     };
+    if (data.Type) entry.type = data.Type;
+    if (data.Exec) entry.exec = data.Exec;
+    if (data.Icon) entry.icon = data.Icon;
+    if (data.Categories)
+      entry.categories = data.Categories.split(';').filter(Boolean);
+    return entry;
   } catch {
     return null;
   }
