@@ -24,7 +24,9 @@ export default function Visualizer({ analyser }: Props) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const barWidth = canvas.width / bufferLength;
       for (let i = 0; i < bufferLength; i++) {
-        const value = dataArray[i];
+        // With `noUncheckedIndexedAccess` enabled, direct indexing can yield
+        // `undefined`. Provide a safe fallback to keep the visualizer stable.
+        const value = dataArray[i] ?? 0;
         const barHeight = (value / 255) * canvas.height;
         ctx.fillStyle = `rgb(${value}, 100, 150)`;
         ctx.fillRect(i * barWidth, canvas.height - barHeight, barWidth - 1, barHeight);
