@@ -268,6 +268,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
                 const idx = this.coins.findIndex((c) => c.body === body);
                 if (idx >= 0) {
                   const [coin] = this.coins.splice(idx, 1);
+
                   if (coin) {
                     coin.sprite.destroy();
                     this.matter.world.remove(body);
