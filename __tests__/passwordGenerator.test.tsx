@@ -13,7 +13,7 @@ describe('PasswordGenerator', () => {
 
   it('copies password to clipboard', async () => {
     const writeText = jest.fn().mockResolvedValue(undefined);
-    // @ts-ignore
+    // @ts-expect-error clipboard mock
     Object.assign(navigator, { clipboard: { writeText } });
     const { getByText, getByTestId } = render(<PasswordGenerator />);
     fireEvent.click(getByText('Generate'));

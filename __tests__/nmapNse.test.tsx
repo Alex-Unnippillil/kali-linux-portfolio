@@ -41,7 +41,7 @@ describe('NmapNSEApp', () => {
         })
       );
     const writeText = jest.fn();
-    // @ts-ignore
+    // @ts-expect-error clipboard mock
     navigator.clipboard = { writeText };
 
     render(<NmapNSEApp />);
@@ -70,7 +70,7 @@ describe('NmapNSEApp', () => {
         })
       );
     const writeText = jest.fn();
-    // @ts-ignore
+    // @ts-expect-error clipboard mock
     navigator.clipboard = { writeText };
 
     render(<NmapNSEApp />);

@@ -2,9 +2,9 @@ import 'fake-indexeddb/auto';
 
 // Provide a lightweight structuredClone polyfill for fake-indexeddb
 // in environments where it is missing.
-// @ts-ignore
+// @ts-expect-error structuredClone missing in Node
 if (typeof globalThis.structuredClone !== 'function') {
-  // @ts-ignore
+  // @ts-expect-error structuredClone missing in Node
   globalThis.structuredClone = (val: any) => JSON.parse(JSON.stringify(val));
 }
 

@@ -45,7 +45,7 @@ describe('Autopsy plugins and timeline', () => {
         this.onload && this.onload({ target: { result: buffer } });
       }
     }
-    // @ts-ignore
+    // @ts-expect-error mock FileReader
     global.FileReader = FileReaderMock;
   });
 

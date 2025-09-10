@@ -17,7 +17,7 @@ class IO {
 describe('StickyTOC', () => {
   let observer: IO;
   beforeEach(() => {
-    // @ts-ignore
+    // @ts-expect-error mock IntersectionObserver
     global.IntersectionObserver = jest.fn((cb) => {
       observer = new IO(cb);
       return observer;

@@ -11,9 +11,9 @@ describe('audio player pooling', () => {
         this.state = 'running';
       }
     }
-    // @ts-ignore
+    // @ts-expect-error AudioContext mock
     window.AudioContext = MockAudioContext as any;
-    // @ts-ignore
+    // @ts-expect-error AudioContext mock
     window.webkitAudioContext = MockAudioContext as any;
     Object.defineProperty(window.HTMLMediaElement.prototype, 'pause', {
       configurable: true,

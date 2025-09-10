@@ -3,11 +3,11 @@ import '@testing-library/jest-dom';
 
 // Provide TextEncoder/TextDecoder in the test environment
 if (!global.TextEncoder) {
-  // @ts-ignore
+  // @ts-expect-error Polyfill for test environment
   global.TextEncoder = TextEncoder;
 }
 if (!global.TextDecoder) {
-  // @ts-ignore
+  // @ts-expect-error Polyfill for test environment
   global.TextDecoder = TextDecoder as any;
 }
 
@@ -28,14 +28,14 @@ class LocalStorageMock {
   }
 }
 const localStorageMock = new LocalStorageMock();
-// @ts-ignore
+// @ts-expect-error Polyfill for test environment
 if (!global.localStorage) {
-  // @ts-ignore
+  // @ts-expect-error Polyfill for test environment
   global.localStorage = localStorageMock;
 }
-// @ts-ignore
+// @ts-expect-error Polyfill for test environment
 if (typeof window !== 'undefined' && !window.localStorage) {
-  // @ts-ignore
+  // @ts-expect-error Polyfill for test environment
   window.localStorage = localStorageMock;
 }
 
@@ -46,21 +46,21 @@ class IntersectionObserverMock {
   unobserve() {}
   disconnect() {}
 }
-// @ts-ignore
+// @ts-expect-error Polyfill for test environment
 if (!global.IntersectionObserver) {
-  // @ts-ignore
+  // @ts-expect-error Polyfill for test environment
   global.IntersectionObserver = IntersectionObserverMock;
 }
-// @ts-ignore
+// @ts-expect-error Polyfill for test environment
 if (typeof window !== 'undefined' && !window.IntersectionObserver) {
-  // @ts-ignore
+  // @ts-expect-error Polyfill for test environment
   window.IntersectionObserver = IntersectionObserverMock;
 }
 
 // matchMedia mock for components expecting it
-// @ts-ignore
+// @ts-expect-error Polyfill for test environment
 if (typeof window !== 'undefined' && !window.matchMedia) {
-  // @ts-ignore
+  // @ts-expect-error Polyfill for test environment
   window.matchMedia = () => ({
     matches: false,
     addListener: () => {},
@@ -72,15 +72,15 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
 }
 
 // Provide a stub for fetch so tests can spy on it
-// @ts-ignore
+// @ts-expect-error Polyfill for test environment
 if (!global.fetch) {
-  // @ts-ignore
+  // @ts-expect-error Polyfill for test environment
   global.fetch = () => Promise.reject(new Error('fetch not implemented'));
 }
 
 // Canvas mock for tests relying on 2D context
 if (typeof HTMLCanvasElement !== 'undefined') {
-  // @ts-ignore
+  // @ts-expect-error Polyfill for test environment
   HTMLCanvasElement.prototype.getContext = () => ({
     fillRect: () => {},
     clearRect: () => {},

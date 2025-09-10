@@ -19,7 +19,7 @@ describe('QRTool generator', () => {
       }
       terminate() {}
     }
-    // @ts-ignore
+    // @ts-expect-error Worker not in Node
     global.Worker = MockWorker;
   });
 

@@ -9,7 +9,7 @@ describe('prefers-reduced-motion handling', () => {
   });
 
   test('detects system preference via media query', async () => {
-    // @ts-ignore
+    // @ts-expect-error mock matchMedia
     window.matchMedia = jest.fn().mockImplementation((query) => ({
       matches: query.includes('reduced-motion'),
       addEventListener: jest.fn(),

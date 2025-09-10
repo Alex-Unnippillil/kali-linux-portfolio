@@ -26,9 +26,9 @@ describe('game audio node manager', () => {
       close = close;
     }
 
-    // @ts-ignore
+    // @ts-expect-error AudioContext mock
     window.AudioContext = MockAudioContext as any;
-    // @ts-ignore
+    // @ts-expect-error AudioContext mock
     window.webkitAudioContext = MockAudioContext as any;
   });
 

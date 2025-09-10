@@ -67,11 +67,11 @@ describe('theme persistence and unlocking', () => {
 
   test('defaults to system preference when no stored theme', () => {
     // simulate dark mode preference
-    // @ts-ignore
+    // @ts-expect-error mock matchMedia
     window.matchMedia = jest.fn().mockReturnValue({ matches: true });
     expect(getTheme()).toBe('dark');
     // simulate light mode preference
-    // @ts-ignore
+    // @ts-expect-error mock matchMedia
     window.matchMedia = jest.fn().mockReturnValue({ matches: false });
     expect(getTheme()).toBe('default');
   });

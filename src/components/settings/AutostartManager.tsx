@@ -20,7 +20,7 @@ const AutostartManager: React.FC = () => {
   const updateEntry = (index: number, change: Partial<AutostartEntry>) => {
     setEntries((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], ...change };
+      next[index] = { ...next[index], ...change } as AutostartEntry;
       return next;
     });
   };

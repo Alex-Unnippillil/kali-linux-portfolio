@@ -45,8 +45,8 @@ export const DesktopContextMenu: React.FC<DesktopContextMenuProps> = ({
   onClearSession,
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
-  useFocusTrap(menuRef, !!position);
-  useRovingTabIndex(menuRef, !!position, 'vertical');
+  useFocusTrap(menuRef as unknown as React.RefObject<HTMLElement>, !!position);
+  useRovingTabIndex(menuRef as unknown as React.RefObject<HTMLElement>, !!position, 'vertical');
 
   useEffect(() => {
     if (position && menuRef.current) {
@@ -73,7 +73,7 @@ export const DesktopContextMenu: React.FC<DesktopContextMenuProps> = ({
     <div
       role="menu"
       aria-label="Desktop context menu"
-      ref={menuRef}
+        ref={menuRef}
       onKeyDown={handleKeyDown}
       className="absolute z-50 w-52 cursor-default select-none rounded border border-gray-700 bg-gray-800 text-sm text-white shadow-lg"
       style={{ top: position.y, left: position.x }}

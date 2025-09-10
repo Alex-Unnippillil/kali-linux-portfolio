@@ -6,7 +6,7 @@ test.describe('browser API fallbacks', () => {
   test('falls back when OffscreenCanvas is unsupported', async ({ browser }) => {
     const context = await browser.newContext();
     await context.addInitScript(() => {
-      // @ts-ignore
+      // @ts-expect-error force unsupported
       delete window.OffscreenCanvas;
     });
     const page = await context.newPage();
@@ -47,7 +47,7 @@ test.describe('browser API fallbacks', () => {
     const context = await browser.newContext();
     await context.addInitScript(() => {
       Object.defineProperty(document, 'pictureInPictureEnabled', { value: false });
-      // @ts-ignore
+      // @ts-expect-error force unsupported
       delete HTMLVideoElement.prototype.requestPictureInPicture;
     });
     const page = await context.newPage();

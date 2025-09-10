@@ -14,7 +14,7 @@ describe('Hydra wordlists', () => {
         if (this.onload) this.onload({ target: { result: 'user\n' } });
       }
     }
-    // @ts-ignore
+    // @ts-expect-error Mock FileReader for tests
     global.FileReader = MockFileReader;
 
     const file = new File(['user\n'], 'users.txt', { type: 'text/plain' });
@@ -59,7 +59,7 @@ describe('Hydra pause and resume', () => {
 
   it('pauses and resumes cracking progress', async () => {
     let runResolve: Function = () => {};
-    // @ts-ignore
+    // @ts-expect-error Mock fetch for tests
     global.fetch = jest.fn((url, options) => {
       if (options && options.body && options.body.includes('action')) {
         return Promise.resolve({ json: async () => ({}) });
@@ -113,7 +113,7 @@ describe('Hydra session restore', () => {
 
   it('resumes attack from saved session', async () => {
     let runResolve: Function = () => {};
-    // @ts-ignore
+    // @ts-expect-error Mock fetch for tests
     global.fetch = jest.fn((url, options) => {
       if (options && options.body && options.body.includes('resume')) {
         return Promise.resolve({ json: async () => ({ output: '' }) });

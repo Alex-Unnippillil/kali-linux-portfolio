@@ -4,7 +4,7 @@ import FlappyBird from '../components/apps/flappy-bird';
 
 beforeAll(() => {
   // Minimal ResizeObserver mock for the test environment
-  // @ts-ignore
+  // @ts-expect-error ResizeObserver not in JSDOM
   global.ResizeObserver = class {
     observe() {}
     unobserve() {}

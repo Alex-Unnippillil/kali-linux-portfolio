@@ -70,13 +70,11 @@ export const loadMenu = async (): Promise<MenuCategory[]> => {
       if (item.desktop) {
         const entry: DesktopEntry | null = await parseDesktopEntry(item.desktop);
         if (entry && !entry.noDisplay) {
-          parsedItems.push({
-            id: item.id || entry.name,
-            name: entry.name,
-            icon: entry.icon,
-            exec: entry.exec,
-            categories: entry.categories,
-          });
+          const parsed: MenuItem = { id: item.id || entry.name, name: entry.name };
+          if (entry.icon) parsed.icon = entry.icon;
+          if (entry.exec) parsed.exec = entry.exec;
+          if (entry.categories) parsed.categories = entry.categories;
+          parsedItems.push(parsed);
         }
       } else {
         parsedItems.push(item);
