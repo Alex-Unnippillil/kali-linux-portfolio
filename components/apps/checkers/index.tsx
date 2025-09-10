@@ -286,8 +286,8 @@ const Checkers = () => {
   };
 
   const undo = () => {
-    if (!history.length) return;
-    const prev = history[history.length - 1];
+    const prev = history.at(-1);
+    if (!prev) return;
     setFuture([{ board, turn, no: noCapture, move: lastMove }, ...future]);
     setBoard(prev.board);
     setTurn(prev.turn as 'red' | 'black');
