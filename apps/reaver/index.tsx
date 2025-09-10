@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import TabbedWindow, { TabDefinition } from "../../components/ui/TabbedWindow";
 import RouterProfiles, {
-  ROUTER_PROFILES,
+  DEFAULT_PROFILE,
   RouterProfile,
 } from "./components/RouterProfiles";
 import APList from "./components/APList";
@@ -68,7 +68,7 @@ const ReaverPanel: React.FC = () => {
   const [routers, setRouters] = useState<RouterMeta[]>([]);
   const [routerIdx, setRouterIdx] = useState(0);
   const [rate, setRate] = useState(1);
-  const [profile, setProfile] = useState<RouterProfile>(ROUTER_PROFILES[0]);
+  const [profile, setProfile] = useState<RouterProfile>(() => DEFAULT_PROFILE);
   const [attempts, setAttempts] = useState(0);
   const [running, setRunning] = useState(false);
   const [lockRemaining, setLockRemaining] = useState(0);
