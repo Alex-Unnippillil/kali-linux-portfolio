@@ -16,11 +16,11 @@ const hexToRgb = (hex: string) => {
 };
 
 const luminance = ({ r, g, b }: { r: number; g: number; b: number }) => {
-  const a = [r, g, b].map((v) => {
+  const [rLum, gLum, bLum] = [r, g, b].map((v) => {
     const val = v / 255;
     return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
-  });
-  return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
+  }) as [number, number, number];
+  return rLum * 0.2126 + gLum * 0.7152 + bLum * 0.0722;
 };
 
 const contrastRatio = (c1: string, c2: string) => {
