@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Readability } from '@mozilla/readability';
 import TurndownService from 'turndown';
-import createDOMPurify from 'dompurify';
+import createDOMPurify, { type WindowLike } from 'dompurify';
 import { JSDOM } from 'jsdom';
 
 export default async function handler(
@@ -23,7 +23,7 @@ export default async function handler(
       res.status(500).json({ error: 'Unable to parse article.' });
       return;
     }
-    const purify = createDOMPurify(dom.window as unknown as Window);
+    const purify = createDOMPurify(dom.window as unknown as WindowLike);
     const sanitized = purify.sanitize(parsed.content ?? '');
     const td = new TurndownService();
     const markdown = `# ${parsed.title ?? ''}\n\n${td.turndown(sanitized)}`;

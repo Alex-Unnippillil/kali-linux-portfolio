@@ -26,7 +26,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     <Modal
       isOpen={open}
       onClose={onCancel}
-      ariaLabelledby={title ? headingId : undefined}
+      {...(title ? { ariaLabelledby: headingId } : {})}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
     >
       <div className="bg-gray-800 text-white p-4 rounded shadow-lg w-80 max-w-full">

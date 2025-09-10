@@ -13,7 +13,7 @@ export default function TeamPage() {
       <ul className="space-y-4">
         {team.map((member) => (
           <li key={member.name} className="flex items-center space-x-4">
-            <Avatar src={member.src} name={member.name} size={64} />
+            <Avatar src={member.src ?? ''} name={member.name} size={64} />
             <span className="font-medium">{member.name}</span>
           </li>
         ))}
