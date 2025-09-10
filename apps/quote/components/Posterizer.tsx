@@ -37,7 +37,7 @@ const STYLES = [
   { name: 'Retro', bg: '#1e3a8a', fg: '#fef3c7', font: 'monospace' },
 ] as const;
 
-const DEFAULT_STYLE = STYLES[0]!;
+const DEFAULT_STYLE = STYLES[0];
 
 export default function Posterizer({ quote }: { quote: Quote | null }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -50,7 +50,7 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
   const cycleStyle = () => {
     const next = (styleIndex + 1) % STYLES.length;
     setStyleIndex(next);
-    const s = STYLES[next]!;
+    const s = STYLES[next] ?? DEFAULT_STYLE;
 
     setBg(s.bg);
     setFg(s.fg);
