@@ -23,7 +23,8 @@
       "jest",
       "node",
       "./types/file-system-access",
-      "./types/web-bluetooth"
+      "./types/web-bluetooth",
+      "./types/fetch-proxy"
     ],
     "baseUrl": ".",
     "paths": {
