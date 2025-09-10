@@ -41,7 +41,7 @@ describe('NmapNSEApp', () => {
         })
       );
     const writeText = jest.fn();
-    // @ts-ignore
+    // @ts-expect-error Clipboard API not available in tests
     navigator.clipboard = { writeText };
 
     render(<NmapNSEApp />);
@@ -70,7 +70,7 @@ describe('NmapNSEApp', () => {
         })
       );
     const writeText = jest.fn();
-    // @ts-ignore
+    // @ts-expect-error Clipboard API not available in tests
     navigator.clipboard = { writeText };
 
     render(<NmapNSEApp />);

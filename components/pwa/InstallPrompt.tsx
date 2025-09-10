@@ -29,7 +29,7 @@ export default function InstallPrompt() {
     if (localStorage.getItem(STORAGE_KEY)) return;
     const isStandalone =
       window.matchMedia('(display-mode: standalone)').matches ||
-      // @ts-ignore - iOS Safari
+      // @ts-expect-error standalone not in Navigator types
       (navigator.standalone === true);
     if (isStandalone) return;
 

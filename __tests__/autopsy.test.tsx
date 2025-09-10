@@ -45,7 +45,7 @@ describe('Autopsy plugins and timeline', () => {
         this.onload && this.onload({ target: { result: buffer } });
       }
     }
-    // @ts-ignore
+    // @ts-expect-error FileReader not defined in Node tests
     global.FileReader = FileReaderMock;
   });
 

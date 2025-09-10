@@ -779,7 +779,7 @@ const Chrome: React.FC = () => {
               title={activeTab.url}
               className="w-full h-full"
               sandbox={SANDBOX_FLAGS.join(' ')}
-              // @ts-ignore - CSP is a valid attribute but not in the React types
+              // @ts-expect-error CSP attribute not yet typed in React
               csp={CSP}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture; microphone; camera"
               referrerPolicy="no-referrer"

@@ -13,10 +13,10 @@ describe('OpenVASApp', () => {
 
     const notificationMock: any = jest.fn();
     (notificationMock as any).permission = 'granted';
-    // @ts-ignore
+    // @ts-expect-error Notification API not in Node tests
     global.Notification = notificationMock;
 
-    // @ts-ignore
+    // @ts-expect-error URL.createObjectURL missing in JSDOM
     global.URL.createObjectURL = jest.fn(() => 'blob:summary');
     localStorage.clear();
   });
