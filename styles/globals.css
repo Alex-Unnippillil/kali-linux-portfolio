@@ -261,3 +261,11 @@ thead th {
     white-space: nowrap;
   }
 }
+
+.font-ubuntu {
+  font-family: 'Inter', 'Cantarell', 'Ubuntu', system-ui, -apple-system, 'Segoe UI', 'Noto Sans', Arial, sans-serif;
+}
+
+.font-mono {
+  font-family: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+}

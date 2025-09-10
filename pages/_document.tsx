@@ -35,10 +35,10 @@ class MyDocument extends Document<Props> {
           <link
             rel="preload"
             as="style"
-            href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap"
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Fira+Code:wght@400;600&display=swap"
           />
           <link
-            href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap"
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Fira+Code:wght@400;600&display=swap"
             rel="stylesheet"
           />
           <script nonce={nonce} src="/theme.js" async />
