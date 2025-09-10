@@ -77,14 +77,14 @@ const JohnApp: React.FC = () => {
         setHashes((prev) => {
           const next = [...prev];
           const item = next[idx];
-          if (item.status !== 'pending') {
+          if (!item || item.status !== 'pending') {
             clearInterval(intervals[idx]);
             return next;
           }
           item.progress = Math.min(item.progress + step, 100);
           if (item.progress === 100) {
-            if (PASSWORDS[item.hash]) {
-              const pw = PASSWORDS[item.hash];
+            const pw = PASSWORDS[item.hash];
+            if (pw !== undefined) {
               item.status = 'cracked';
               item.password = pw;
               item.strength = getStrength(pw);
@@ -197,6 +197,7 @@ const JohnApp: React.FC = () => {
               type="number"
               min={1}
               max={5}
+              aria-label="Length"
               value={incLength}
               onChange={(e) => setIncLength(parseInt(e.target.value, 10) || 1)}
               className="w-16 text-black px-1 py-0.5 rounded"
