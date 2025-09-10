@@ -198,7 +198,6 @@ export default function QuoteApp() {
 
   useEffect(() => {
     changeQuote();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtered]);
 
   useEffect(() => {
@@ -423,7 +422,13 @@ export default function QuoteApp() {
           )}
           <label className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded cursor-pointer">
             Import
-            <input type="file" accept="application/json" className="hidden" onChange={importQuotes} />
+            <input
+              type="file"
+              accept="application/json"
+              className="hidden"
+              onChange={importQuotes}
+              aria-label="Import quotes"
+            />
           </label>
         </div>
         {posterize && (
@@ -437,17 +442,20 @@ export default function QuoteApp() {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search"
             className="px-2 py-1 rounded text-black"
+            aria-label="Search quotes"
           />
           <input
             value={authorFilter}
             onChange={(e) => setAuthorFilter(e.target.value)}
             placeholder="Author"
             className="px-2 py-1 rounded text-black"
+            aria-label="Author filter"
           />
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             className="px-2 py-1 rounded text-black"
+            aria-label="Category"
           >
             <option value="">All Categories</option>
             {categories.map((cat) => (
@@ -478,6 +486,7 @@ export default function QuoteApp() {
               type="checkbox"
               checked={loop}
               onChange={(e) => setLoop(e.target.checked)}
+              aria-label="Loop playlist"
             />
             <span>Loop</span>
           </label>
@@ -486,6 +495,7 @@ export default function QuoteApp() {
               type="checkbox"
               checked={shuffle}
               onChange={(e) => setShuffle(e.target.checked)}
+              aria-label="Shuffle playlist"
             />
             <span>Shuffle</span>
           </label>
