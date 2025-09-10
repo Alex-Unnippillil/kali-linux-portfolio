@@ -46,10 +46,12 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
   const [fg, setFg] = useState<string>(DEFAULT_STYLE.fg);
   const [font, setFont] = useState<string>(DEFAULT_STYLE.font);
 
+
   const cycleStyle = () => {
     const next = (styleIndex + 1) % STYLES.length;
     setStyleIndex(next);
     const s = STYLES[next]!;
+
     setBg(s.bg);
     setFg(s.fg);
     setFont(s.font);
@@ -122,6 +124,7 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
         className="border"
         role="img"
         aria-label="Poster preview"
+
       />
       <div className="flex flex-wrap gap-2 justify-center">
         <label className="flex items-center gap-1">
@@ -140,6 +143,7 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
             value={fg}
             onChange={(e) => setFg(e.target.value)}
             aria-label="Foreground color"
+
           />
         </label>
         <input
@@ -147,8 +151,8 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
           value={font}
           onChange={(e) => setFont(e.target.value)}
           className="px-2 py-1 rounded text-black"
-          placeholder="Font"
-          aria-label="Font"
+          placeholder="Font"          aria-label="Font"
+
         />
         <span className={accessible ? 'text-green-400' : 'text-red-400'}>
           Contrast: {ratio.toFixed(2)}
@@ -160,6 +164,7 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
           Next Style
         </button>
         <span>Style: {STYLES[styleIndex]!.name}</span>
+
         <button
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
           onClick={download}
