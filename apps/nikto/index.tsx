@@ -43,8 +43,7 @@ const NiktoPage: React.FC = () => {
 
   const grouped = useMemo(() => {
     return findings.reduce<Record<string, NiktoFinding[]>>((acc, f) => {
-      const list = acc[f.severity] ?? (acc[f.severity] = []);
-      list.push(f);
+      (acc[f.severity] ??= []).push(f);
       return acc;
     }, {});
   }, [findings]);
