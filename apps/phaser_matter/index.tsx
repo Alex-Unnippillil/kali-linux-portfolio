@@ -268,10 +268,12 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
                 const idx = this.coins.findIndex((c) => c.body === body);
                 if (idx >= 0) {
                   const [coin] = this.coins.splice(idx, 1);
-                  coin.sprite.destroy();
-                  this.matter.world.remove(body);
-                  const count = this.gameState.addCoin();
-                  this.coinText.setText(`Coins: ${count}`);
+                  if (coin) {
+                    coin.sprite.destroy();
+                    this.matter.world.remove(body);
+                    const count = this.gameState.addCoin();
+                    this.coinText.setText(`Coins: ${count}`);
+                  }
                 }
               }
             });
