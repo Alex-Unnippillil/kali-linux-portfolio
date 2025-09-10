@@ -18,6 +18,7 @@ const MODULES: Record<string, ModuleDef> = {
 
 const moduleNames = Object.keys(MODULES);
 const WORKSPACES = ['default', 'testing', 'production'] as const;
+const DEFAULT_WORKSPACE = WORKSPACES.at(0) ?? 'default';
 
 const ForceGraph2D = dynamic(
   () => import('react-force-graph').then((mod) => mod.ForceGraph2D),
@@ -28,7 +29,7 @@ const ModulePlanner: React.FC = () => {
   const [plan, setPlan] = usePersistentState<string[]>('reconng-plan', []);
   const [workspace, setWorkspace] = usePersistentState<string>(
     'reconng-workspace',
-    WORKSPACES[0] ?? 'default',
+    DEFAULT_WORKSPACE,
   );
   const [log, setLog] = useState('');
 
