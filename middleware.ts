@@ -13,18 +13,40 @@ function nonce() {
   return btoa(str);
 }
 
-export function middleware(req: NextRequest | { headers: Headers; nextUrl?: URL; url?: string }) {
-  const url =
-    (req as any).nextUrl ?? new URL((req as any).url || '/', 'http://localhost');
+type MiddlewareRequest = NextRequest | {
+  headers: Headers;
+  nextUrl?: URL;
+  url?: string;
+};
+
+function hasNextUrl(req: MiddlewareRequest): req is NextRequest & { nextUrl: URL } {
+  return 'nextUrl' in req && req.nextUrl !== undefined;
+}
+
+function hasUrl(req: MiddlewareRequest): req is { headers: Headers; nextUrl?: URL; url: string } {
+  return 'url' in req && typeof req.url === 'string';
+}
+
+export function middleware(req: MiddlewareRequest) {
+  const base = hasUrl(req) ? req.url : 'http://localhost';
+
+  let url: URL;
+  let shouldRedirect = false;
+  if (hasNextUrl(req)) {
+    url = req.nextUrl;
+    shouldRedirect = true;
+  } else {
+    url = new URL(base, 'http://localhost');
+  }
+
   const { pathname } = url;
-  const shouldRedirect = Boolean((req as any).nextUrl);
   if (
     shouldRedirect &&
     (pathname === `/${defaultLocale}` || pathname.startsWith(`/${defaultLocale}/`))
   ) {
     const newPath = pathname.replace(`/${defaultLocale}`, '') || '/';
     return NextResponse.redirect(
-      new URL(newPath, (req as any).url || 'http://localhost')
+      new URL(newPath, base)
     );
   }
   if (
@@ -40,7 +62,7 @@ export function middleware(req: NextRequest | { headers: Headers; nextUrl?: URL;
       .split('-')[0];
     const locale = locales.includes(language ?? '') ? language! : defaultLocale;
     return NextResponse.redirect(
-      new URL(`/${locale}${pathname}`, (req as any).url || 'http://localhost')
+      new URL(`/${locale}${pathname}`, base)
     );
   }
 
