@@ -1,6 +1,6 @@
 import React from "react";
 import { render, screen, within } from "@testing-library/react";
-import Home from "../pages/index.jsx";
+import Home from "../pages/index";
 
 describe("Choose your desktop row", () => {
   test("marks Xfce as the default desktop environment", () => {
