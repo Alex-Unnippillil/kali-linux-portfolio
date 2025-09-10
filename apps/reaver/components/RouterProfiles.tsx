@@ -14,7 +14,7 @@ export interface RouterProfile {
   lockDuration: number;
 }
 
-export const ROUTER_PROFILES: [RouterProfile, ...RouterProfile[]] = [
+export const ROUTER_PROFILES: RouterProfile[] = [
   {
     id: 'generic',
     label: 'Generic (no lockout)',
@@ -23,13 +23,13 @@ export const ROUTER_PROFILES: [RouterProfile, ...RouterProfile[]] = [
   },
   {
     id: 'netgear',
-    label: 'Netgear — lock after 5 attempts for 60s',
+    label: 'Netgear - lock after 5 attempts for 60s',
     lockAttempts: 5,
     lockDuration: 60,
   },
   {
     id: 'tplink',
-    label: 'TP-Link — lock after 3 attempts for 300s',
+    label: 'TP-Link - lock after 3 attempts for 300s',
     lockAttempts: 3,
     lockDuration: 300,
   },
@@ -41,21 +41,30 @@ interface RouterProfilesProps {
 
 const STORAGE_KEY = 'reaver-router-profile';
 
-const RouterProfiles: React.FC<RouterProfilesProps> = ({ onChange }) => {
-  // ROUTER_PROFILES always contains at least one entry, default to the first
-  const [selected, setSelected] = useState<RouterProfile>(ROUTER_PROFILES[0]!);
+// Safe default used when indexing or lookups do not find a match.
+export const DEFAULT_PROFILE: RouterProfile =
+  ROUTER_PROFILES[0] ??
+  ({
+    id: 'generic',
+    label: 'Generic (no lockout)',
+    lockAttempts: Infinity,
+    lockDuration: 0,
+  } as const);
 
-  // Load persisted profile on mount
+const RouterProfiles: React.FC<RouterProfilesProps> = ({ onChange }) => {
+  const [selected, setSelected] = useState<RouterProfile>(() => DEFAULT_PROFILE);
+
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    const profile =
-      ROUTER_PROFILES.find((p) => p.id === stored) ?? ROUTER_PROFILES[0]!;
+    const profile = ROUTER_PROFILES.find((p) => p.id === stored) ?? DEFAULT_PROFILE;
     setSelected(profile);
     onChange(profile);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const profile = ROUTER_PROFILES.find((p) => p.id === e.target.value)!;
+    const profile =
+      ROUTER_PROFILES.find((p) => p.id === e.target.value) ?? DEFAULT_PROFILE;
     setSelected(profile);
     window.localStorage.setItem(STORAGE_KEY, profile.id);
     onChange(profile);
