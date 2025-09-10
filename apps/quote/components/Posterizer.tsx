@@ -37,18 +37,21 @@ const STYLES = [
   { name: 'Retro', bg: '#1e3a8a', fg: '#fef3c7', font: 'monospace' },
 ] as const;
 
+const DEFAULT_STYLE = STYLES[0]!;
+
 export default function Posterizer({ quote }: { quote: Quote | null }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [styleIndex, setStyleIndex] = useState(0);
-  const [bg, setBg] = useState<string>(STYLES[0].bg);
-  const [fg, setFg] = useState<string>(STYLES[0].fg);
-  const [font, setFont] = useState<string>(STYLES[0].font);
+  const [bg, setBg] = useState<string>(DEFAULT_STYLE.bg);
+  const [fg, setFg] = useState<string>(DEFAULT_STYLE.fg);
+  const [font, setFont] = useState<string>(DEFAULT_STYLE.font);
 
 
   const cycleStyle = () => {
     const next = (styleIndex + 1) % STYLES.length;
     setStyleIndex(next);
-    const s = STYLES[next] ?? DEFAULT_STYLE;
+    const s = STYLES[next]!;
+
     setBg(s.bg);
     setFg(s.fg);
     setFont(s.font);
@@ -118,7 +121,10 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
         ref={canvasRef}
         width={600}
         height={400}
-        className="border"        aria-label="quote preview"
+        className="border"
+        role="img"
+        aria-label="Poster preview"
+
       />
       <div className="flex flex-wrap gap-2 justify-center">
         <label className="flex items-center gap-1">
@@ -127,8 +133,7 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
             type="color"
             value={bg}
             onChange={(e) => setBg(e.target.value)}
-            aria-label="background color"
-
+            aria-label="Background color"
           />
         </label>
         <label className="flex items-center gap-1">
@@ -136,7 +141,8 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
           <input
             type="color"
             value={fg}
-            onChange={(e) => setFg(e.target.value)}            aria-label="foreground color"
+            onChange={(e) => setFg(e.target.value)}
+            aria-label="Foreground color"
 
           />
         </label>
@@ -145,8 +151,7 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
           value={font}
           onChange={(e) => setFont(e.target.value)}
           className="px-2 py-1 rounded text-black"
-          placeholder="Font"
-          aria-label="font family"
+          placeholder="Font"          aria-label="Font"
 
         />
         <span className={accessible ? 'text-green-400' : 'text-red-400'}>
@@ -158,7 +163,8 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
         >
           Next Style
         </button>
-        <span>Style: {STYLES[styleIndex]?.name ?? DEFAULT_STYLE.name}</span>
+        <span>Style: {STYLES[styleIndex]!.name}</span>
+
         <button
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
           onClick={download}
