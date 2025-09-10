@@ -115,8 +115,8 @@ export default function QuoteApp() {
         setPlaylist(ids);
         const first = ids[0];
         if (first !== undefined) {
-          const firstQuote = quotes[first];
-          if (firstQuote) setCurrent(firstQuote);
+          setCurrent(quotes[first]!);
+
 
         }
       }
@@ -136,12 +136,10 @@ export default function QuoteApp() {
         }
       } catch { /* ignore */ }
     }
-    const idx = Math.floor(Math.random() * quotes.length);
-    const q = quotes[idx];
-    if (q) {
-      setDailyQuote(q);
-      localStorage.setItem('daily-quote', JSON.stringify({ date: today, quote: q }));
-    }
+    const q = quotes[Math.floor(Math.random() * quotes.length)]!;
+    setDailyQuote(q);
+    localStorage.setItem('daily-quote', JSON.stringify({ date: today, quote: q }));
+
   }, [quotes]);
 
   const filtered = useMemo(() => {
@@ -174,10 +172,8 @@ export default function QuoteApp() {
       setCurrent(null);
       return;
     }
-    const q = filtered[Math.floor(Math.random() * filtered.length)];
-    if (q) {
-      setCurrent(q);
-    }
+    setCurrent(filtered[Math.floor(Math.random() * filtered.length)] ?? null);
+
   };
 
   const nextQuote = useCallback(() => {
@@ -186,10 +182,8 @@ export default function QuoteApp() {
       return;
     }
     const next = (currentIndex + 1) % filtered.length;
-    const q = filtered[next];
-    if (q) {
-      setCurrent(q);
-    }
+    setCurrent(filtered[next] ?? null);
+
   }, [filtered, currentIndex]);
 
   const prevQuote = useCallback(() => {
@@ -198,10 +192,8 @@ export default function QuoteApp() {
       return;
     }
     const prev = (currentIndex - 1 + filtered.length) % filtered.length;
-    const q = filtered[prev];
-    if (q) {
-      setCurrent(q);
-    }
+    setCurrent(filtered[prev] ?? null);
+
   }, [filtered, currentIndex]);
 
   useEffect(() => {
@@ -243,10 +235,8 @@ export default function QuoteApp() {
     if (!playOrder.length) return;
     const idx = playOrder[playIndex];
     if (idx !== undefined && idx >= 0 && idx < quotes.length) {
-      const q = quotes[idx];
-      if (q) {
-        setCurrent(q);
-      }
+      setCurrent(quotes[idx]!);
+
     }
   }, [playIndex, playOrder, quotes]);
 
@@ -318,10 +308,10 @@ export default function QuoteApp() {
     setPlayIndex(0);
     const idx = order[0];
     if (idx !== undefined && idx >= 0 && idx < quotes.length) {
-      const q = quotes[idx];
-      if (q) {
-        setCurrent(q);
-      }
+
+      
+      setCurrent(quotes[idx]!);
+
     }
     setPlaying(true);
   };
