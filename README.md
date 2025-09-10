@@ -23,7 +23,9 @@ Always test inside controlled labs and obtain written permission before performi
 
 ### Requirements
 - **Node.js 20.x**
-- **Yarn** or **npm**
+- **Yarn 4.9.2** (via Corepack)
+  - `corepack enable`
+  - `corepack prepare yarn@4.9.2 --activate`
 - Recommended: **pnpm** if you prefer stricter hoisting; update lock/config accordingly.
 
 ### Install & Run (Dev)
@@ -31,6 +33,8 @@ Always test inside controlled labs and obtain written permission before performi
 cp .env.local.example .env.local  # populate with required keys
 nvm install 20  # install Node 20.x if needed
 nvm use 20
+corepack enable
+corepack prepare yarn@4.9.2 --activate
 yarn install
 yarn dev
 ```
