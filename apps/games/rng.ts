@@ -15,9 +15,25 @@ export const serialize = (): string => {
 };
 
 export const deserialize = (state: string): void => {
-  rng = seedrandom('', {
-    state: JSON.parse(state) as seedrandom.State.Arc4,
-  });
+  try {
+    const parsed = JSON.parse(state);
+    if (
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      'i' in parsed &&
+      'j' in parsed &&
+      'S' in parsed
+    ) {
+      rng = seedrandom('', {
+        state: parsed as seedrandom.State.Arc4,
+      });
+      return;
+    }
+  } catch {
+    // fall through to reset below
+  }
+
+  rng = seedrandom('', { state: true });
 };
 
 const rngApi = { random, reset, serialize, deserialize };
