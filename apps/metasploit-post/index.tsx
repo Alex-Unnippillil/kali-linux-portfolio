@@ -215,7 +215,7 @@ const MetasploitPost: React.FC = () => {
   const runModule = (mod: ModuleEntry) => {
     const result = { title: mod.path, output: mod.sampleOutput };
     setResults((prev) => {
-      const items = prev[activeTab] ?? [];
+      const items: ResultItem[] = prev[activeTab] ?? [];
       return {
         ...prev,
         [activeTab]: [...items, result],
