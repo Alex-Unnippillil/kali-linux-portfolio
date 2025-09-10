@@ -32,6 +32,7 @@ export default function Pinball() {
   const [score, setScore] = useState(0);
   const nudgesRef = useRef<number[]>([]);
   const lastNudgeRef = useRef(0);
+  const currentTheme = themes[theme] ?? themes.classic;
 
   const handleTilt = useCallback(() => {
     setTilt(true);
@@ -77,7 +78,7 @@ export default function Pinball() {
         width: 400,
         height: 600,
         wireframes: false,
-        background: themes[theme].bg,
+        background: currentTheme.bg,
       },
     });
     engineRef.current = engine;
@@ -97,13 +98,13 @@ export default function Pinball() {
       isStatic: true,
       angle: Math.PI / 8,
       restitution: bounce,
-      render: { fillStyle: themes[theme].flipper },
+      render: { fillStyle: currentTheme.flipper },
     });
     const rightFlipper = Bodies.rectangle(280, 560, 80, 20, {
       isStatic: true,
       angle: -Math.PI / 8,
       restitution: bounce,
-      render: { fillStyle: themes[theme].flipper },
+      render: { fillStyle: currentTheme.flipper },
     });
     leftFlipperRef.current = leftFlipper;
     rightFlipperRef.current = rightFlipper;
@@ -255,14 +256,14 @@ export default function Pinball() {
   useEffect(() => {
     if (leftFlipperRef.current) {
       leftFlipperRef.current.restitution = bounce;
-      leftFlipperRef.current.render.fillStyle = themes[theme].flipper;
+      leftFlipperRef.current.render.fillStyle = currentTheme.flipper;
     }
     if (rightFlipperRef.current) {
       rightFlipperRef.current.restitution = bounce;
-      rightFlipperRef.current.render.fillStyle = themes[theme].flipper;
+      rightFlipperRef.current.render.fillStyle = currentTheme.flipper;
     }
     if (engineRef.current) {
-      (engineRef.current.render.options as any).background = themes[theme].bg;
+      (engineRef.current.render.options as any).background = currentTheme.bg;
     }
   }, [bounce, theme]);
 
