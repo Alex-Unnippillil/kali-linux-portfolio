@@ -35,14 +35,14 @@ const STYLES = [
   { name: 'Classic', bg: '#000000', fg: '#ffffff', font: 'serif' },
   { name: 'Inverted', bg: '#ffffff', fg: '#000000', font: 'sans-serif' },
   { name: 'Retro', bg: '#1e3a8a', fg: '#fef3c7', font: 'monospace' },
-];
+] as const;
 
 export default function Posterizer({ quote }: { quote: Quote | null }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [styleIndex, setStyleIndex] = useState(0);
-  const [bg, setBg] = useState(STYLES[0].bg);
-  const [fg, setFg] = useState(STYLES[0].fg);
-  const [font, setFont] = useState(STYLES[0].font);
+  const [bg, setBg] = useState<string>(STYLES[0].bg);
+  const [fg, setFg] = useState<string>(STYLES[0].fg);
+  const [font, setFont] = useState<string>(STYLES[0].font);
 
   const cycleStyle = () => {
     const next = (styleIndex + 1) % STYLES.length;
