@@ -24,6 +24,8 @@ const LootViewer: React.FC = () => {
 
   const total = artifacts.length;
   const artifact = artifacts[index];
+  const isFavorite = artifact ? favorites.includes(artifact.id) : false;
+
   if (!artifact) {
     return (
       <div className="p-4 text-sm bg-ub-grey flex flex-col gap-2">
@@ -31,7 +33,6 @@ const LootViewer: React.FC = () => {
       </div>
     );
   }
-  const isFavorite = favorites.includes(artifact.id);
 
   const prev = () => setIndex((i) => (i === 0 ? total - 1 : i - 1));
   const next = () => setIndex((i) => (i === total - 1 ? 0 : i + 1));
