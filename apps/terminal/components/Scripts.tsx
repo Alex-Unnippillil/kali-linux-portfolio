@@ -122,12 +122,14 @@ const Scripts = ({ runCommand }: ScriptsProps) => {
           onChange={(e) => setName(e.target.value)}
           placeholder="script name"
           className="w-full border p-1"
+          aria-label="script name"
         />
         <textarea
           value={code}
           onChange={(e) => setCode(e.target.value)}
           placeholder={"echo hello\nsleep 1000\necho done"}
           className="w-full border p-1 h-32"
+          aria-label="script code"
         />
         <button
           onClick={save}
@@ -145,8 +147,7 @@ const Scripts = ({ runCommand }: ScriptsProps) => {
         )}
       </div>
       <ul className="space-y-1">
-        {Object.keys(scripts).map((n) => {
-          const entry = scripts[n];
+        {Object.entries(scripts).map(([n, entry]) => {
           const data: ScriptEntry =
             typeof entry === 'string' ? { code: entry } : entry;
           const presets = data.presets || {};
