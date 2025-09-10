@@ -425,15 +425,19 @@ function Projects({ projects }: { projects: any[] }) {
         </div>
       </div>
       {projects.map((project) => {
-        const projectNameFromLink = project.link.split('/');
-        const projectName = projectNameFromLink[projectNameFromLink.length - 1];
+        const projectName = project.link.split('/').at(-1) ?? project.link;
         return (
           <div key={project.link} className="flex w-full flex-col px-4">
             <div className="w-full py-1 px-2 my-2 border border-gray-50 border-opacity-10 rounded hover:bg-gray-50 hover:bg-opacity-5">
               <div className="flex flex-wrap justify-between items-center">
                 <div className="flex justify-center items-center">
-                  <a href={project.link} target="_blank" rel="noopener noreferrer" className="text-base md:text-lg mr-2">
-                    {project.name.toLowerCase()}
+                  <a
+                    href={project.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-base md:text-lg mr-2"
+                  >
+                    {projectName}
                   </a>
                   <GitHubStars user="alex-unnippillil" repo={projectName} />
                 </div>

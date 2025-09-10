@@ -195,11 +195,10 @@ const TowerDefense = () => {
 
   useEffect(() => {
     if (path.length >= 2) {
-      flowFieldRef.current = computeFlowField(
-        path[0],
-        path[path.length - 1],
-        towers,
-      );
+      const start = path.at(0);
+      const end = path.at(-1);
+      if (!start || !end) return;
+      flowFieldRef.current = computeFlowField(start, end, towers);
     }
   }, [path, towers]);
 
@@ -399,7 +398,6 @@ const TowerDefense = () => {
   useEffect(() => {
     lastTime.current = performance.now();
     requestAnimationFrame(update);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
     const start = () => {
@@ -470,6 +468,7 @@ const TowerDefense = () => {
             Add Wave
           </button>
           <textarea
+            aria-label="wave configuration"
             className="w-full bg-black text-white p-1 rounded h-24"
             value={waveJson}
             onChange={(e) => setWaveJson(e.target.value)}
@@ -491,6 +490,7 @@ const TowerDefense = () => {
         </div>
         <div className="flex">
           <canvas
+            aria-label="tower defense map"
             ref={canvasRef}
             width={CANVAS_SIZE}
             height={CANVAS_SIZE}

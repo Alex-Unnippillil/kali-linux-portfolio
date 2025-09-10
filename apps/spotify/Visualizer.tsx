@@ -26,6 +26,7 @@ export default function Visualizer({ analyser }: Props) {
       for (let i = 0; i < bufferLength; i++) {
         // With `noUncheckedIndexedAccess` enabled, direct indexing can yield
         // `undefined`. Provide a safe fallback to keep the visualizer stable.
+
         const value = dataArray[i] ?? 0;
         const barHeight = (value / 255) * canvas.height;
         ctx.fillStyle = `rgb(${value}, 100, 150)`;
@@ -35,6 +36,14 @@ export default function Visualizer({ analyser }: Props) {
     draw();
   }, [analyser]);
 
-  return <canvas ref={canvasRef} width={300} height={100} className="w-full h-24" />;
+  return (
+    <canvas
+      ref={canvasRef}
+      width={300}
+      height={100}
+      className="w-full h-24"
+      aria-label="audio visualizer"
+    />
+  );
 }
 

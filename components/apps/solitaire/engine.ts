@@ -65,7 +65,7 @@ export const initializeGame = (
       if (!card) break;
       tableau[i].push(card);
     }
-    const top = tableau[i][tableau[i].length - 1];
+    const top = tableau[i].at(-1);
     if (top) top.faceUp = true;
   }
 
@@ -117,13 +117,13 @@ export const drawFromStock = (state: GameState): GameState => {
 
 const canPlaceOnTableau = (card: Card, dest: Card[]): boolean => {
   if (dest.length === 0) return card.value === 13;
-  const top = dest[dest.length - 1];
+  const top = dest.at(-1)!;
   return top.faceUp && top.color !== card.color && top.value === card.value + 1;
 };
 
 export const moveWasteToTableau = (state: GameState, destIndex: number): GameState => {
   if (state.waste.length === 0) return state;
-  const card = state.waste[state.waste.length - 1];
+  const card = state.waste.at(-1)!;
   if (!canPlaceOnTableau(card, state.tableau[destIndex])) return state;
   const newWaste = state.waste.slice(0, -1);
   const newTableau = state.tableau.map((p, i) =>
@@ -145,9 +145,9 @@ export const moveTableauToTableau = (
   const newTableau = state.tableau.map((p, i) => {
     if (i === from) {
       const remaining = p.slice(0, cardIndex);
-      if (remaining.length && !remaining[remaining.length - 1].faceUp) {
-        remaining[remaining.length - 1] = {
-          ...remaining[remaining.length - 1],
+      if (remaining.length && !remaining.at(-1)!.faceUp) {
+        remaining[remaining.length - 1]! = {
+          ...remaining.at(-1)!,
           faceUp: true,
         };
         return remaining;
@@ -157,10 +157,11 @@ export const moveTableauToTableau = (
     if (i === to) return [...p, ...moving];
     return p;
   });
-  const score = state.tableau[from].length - moving.length > 0 &&
-    !state.tableau[from][state.tableau[from].length - moving.length - 1]?.faceUp
-    ? state.score + 5
-    : state.score;
+  const score =
+    state.tableau[from].length - moving.length > 0 &&
+    !state.tableau[from].at(-moving.length - 1)!.faceUp
+      ? state.score + 5
+      : state.score;
   return { ...state, tableau: newTableau, score };
 };
 
@@ -172,30 +173,30 @@ export const moveToFoundation = (
   const foundations = state.foundations.map((p) => p.slice());
   let card: Card | undefined;
   if (source === 'waste') {
-    card = state.waste[state.waste.length - 1];
-    if (!card) return state;
-    const dest = foundations[suits.indexOf(card.suit)];
-    if (dest.length === 0 && card.value !== 1) return state;
-    if (dest.length > 0 && dest[dest.length - 1].value + 1 !== card.value) return state;
+      card = state.waste.at(-1)!;
+      if (!card) return state;
+      const dest = foundations[suits.indexOf(card.suit)];
+      if (dest.length === 0 && card.value !== 1) return state;
+      if (dest.length > 0 && dest.at(-1)!.value + 1 !== card.value) return state;
     const newWaste = state.waste.slice(0, -1);
     dest.push(card);
     return { ...state, waste: newWaste, foundations, score: state.score + 10 };
   }
   const pile = state.tableau[fromIndex!];
-  card = pile[pile.length - 1];
+  card = pile.at(-1);
   if (!card || !card.faceUp) return state;
   const dest = foundations[suits.indexOf(card.suit)];
   if (dest.length === 0 && card.value !== 1) return state;
-  if (dest.length > 0 && dest[dest.length - 1].value + 1 !== card.value) return state;
+  if (dest.length > 0 && dest.at(-1)!.value + 1 !== card.value) return state;
   const newTableau = state.tableau.map((p, i) => {
     if (i === fromIndex) {
       const remaining = p.slice(0, -1);
-      if (remaining.length && !remaining[remaining.length - 1].faceUp) {
-        remaining[remaining.length - 1] = {
-          ...remaining[remaining.length - 1],
-          faceUp: true,
-        };
-      }
+        if (remaining.length && !remaining.at(-1)!.faceUp) {
+          remaining[remaining.length - 1]! = {
+            ...remaining.at(-1)!,
+            faceUp: true,
+          };
+        }
       return remaining;
     }
     return p;
@@ -259,11 +260,11 @@ export const findHint = (
   state: GameState,
 ): { source: 'waste' | 'tableau'; pile: number; index: number } | null => {
   if (state.waste.length) {
-    const w = state.waste[state.waste.length - 1];
+    const w = state.waste.at(-1)!;
     const f = state.foundations[suits.indexOf(w.suit)];
     if (
       (f.length === 0 && w.value === 1) ||
-      (f.length > 0 && f[f.length - 1].value + 1 === w.value)
+      (f.length > 0 && f.at(-1)!.value + 1 === w.value)
     ) {
       return { source: 'waste', pile: -1, index: state.waste.length - 1 };
     }
@@ -276,12 +277,12 @@ export const findHint = (
   for (let i = 0; i < state.tableau.length; i += 1) {
     const pile = state.tableau[i];
     if (!pile.length) continue;
-    const top = pile[pile.length - 1];
+    const top = pile.at(-1)!;
     if (!top.faceUp) continue;
     const f = state.foundations[suits.indexOf(top.suit)];
     if (
       (f.length === 0 && top.value === 1) ||
-      (f.length > 0 && f[f.length - 1].value + 1 === top.value)
+      (f.length > 0 && f.at(-1)!.value + 1 === top.value)
     ) {
       return { source: 'tableau', pile: i, index: pile.length - 1 };
     }
