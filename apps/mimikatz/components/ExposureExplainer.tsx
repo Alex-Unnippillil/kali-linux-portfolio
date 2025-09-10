@@ -58,6 +58,7 @@ const steps: Step[] = [
 
 const ExposureExplainer: React.FC = () => {
   const [index, setIndex] = useState(0);
+  const currentStep = steps[index];
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -65,6 +66,10 @@ const ExposureExplainer: React.FC = () => {
     }, 4000);
     return () => clearInterval(timer);
   }, []);
+
+  if (!currentStep) {
+    return null;
+  }
 
   return (
     <div className="text-white p-4">
@@ -83,8 +88,8 @@ const ExposureExplainer: React.FC = () => {
           </div>
         ))}
       </div>
-      <h3 className="text-lg font-bold text-center mb-2">{steps[index].title}</h3>
-      <p className="text-center max-w-md mx-auto mb-4">{steps[index].description}</p>
+      <h3 className="text-lg font-bold text-center mb-2">{currentStep.title}</h3>
+      <p className="text-center max-w-md mx-auto mb-4">{currentStep.description}</p>
       <div className="flex justify-center space-x-2">
         {steps.map((_, i) => (
           <button
