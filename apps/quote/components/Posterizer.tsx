@@ -50,7 +50,7 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
   const cycleStyle = () => {
     const next = (styleIndex + 1) % STYLES.length;
     setStyleIndex(next);
-    const s = STYLES[next]!;
+    const s = STYLES[next] ?? DEFAULT_STYLE;
 
     setBg(s.bg);
     setFg(s.fg);
