@@ -4,11 +4,13 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Engine, Render, World, Bodies, Body, Runner, Events } from "matter-js";
 import { useTiltSensor } from "./tilt";
 
-const themes: Record<string, { bg: string; flipper: string }> = {
+const themes = {
   classic: { bg: "#0b3d91", flipper: "#ffd700" },
   space: { bg: "#000000", flipper: "#00ffff" },
   forest: { bg: "#064e3b", flipper: "#9acd32" },
-};
+} as const;
+
+type Theme = keyof typeof themes;
 
 export default function Pinball() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -23,7 +25,7 @@ export default function Pinball() {
     left: false,
     right: false,
   });
-  const [theme, setTheme] = useState<keyof typeof themes>("classic");
+  const [theme, setTheme] = useState<Theme>("classic");
   const [power, setPower] = useState(1);
   const [bounce, setBounce] = useState(0.5);
   const [tilt, setTilt] = useState(false);
@@ -269,33 +271,35 @@ export default function Pinball() {
       <div className="flex space-x-4">
         <label className="flex flex-col text-xs">
           Power
-          <input
-            type="range"
-            min="0.5"
-            max="2"
-            step="0.1"
-            value={power}
-            onChange={(e) => setPower(parseFloat(e.target.value))}
-          />
+            <input
+              type="range"
+              min="0.5"
+              max="2"
+              step="0.1"
+              value={power}
+              onChange={(e) => setPower(parseFloat(e.target.value))}
+              aria-label="Power"
+            />
         </label>
         <label className="flex flex-col text-xs">
           Bounce
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.1"
-            value={bounce}
-            onChange={(e) => setBounce(parseFloat(e.target.value))}
-          />
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              value={bounce}
+              onChange={(e) => setBounce(parseFloat(e.target.value))}
+              aria-label="Bounce"
+            />
         </label>
         <label className="flex flex-col text-xs">
           Theme
           <select
             value={theme}
-            onChange={(e) => setTheme(e.target.value as keyof typeof themes)}
+            onChange={(e) => setTheme(e.target.value as Theme)}
           >
-            {Object.keys(themes).map((t) => (
+            {(Object.keys(themes) as Theme[]).map((t) => (
               <option key={t} value={t}>
                 {t}
               </option>
@@ -304,7 +308,13 @@ export default function Pinball() {
         </label>
       </div>
       <div className="relative">
-        <canvas ref={canvasRef} width={400} height={600} className="border" />
+        <canvas
+          ref={canvasRef}
+          width={400}
+          height={600}
+          className="border"
+          aria-label="Pinball table"
+        />
         <div className="absolute top-2 left-1/2 -translate-x-1/2 text-white font-mono text-xl">
           {score.toString().padStart(6, "0")}
         </div>
