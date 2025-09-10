@@ -15,11 +15,11 @@
       {"label": "Download Mirrors", "href": "https://http.kali.org/README?mirrorlist"}
     ]},
     {"label": "Developers", "children": [
-      {"label": "Git Repositories", "href": "https://gitlab.com/kalilinux"},
-      {"label": "Packages", "href": "https://pkg.kali.org/"},
-      {"label": "Auto Package Test", "href": "https://autopkgtest.kali.org/"},
       {"label": "Bug Tracker", "href": "https://bugs.kali.org/"},
-      {"label": "Kali NetHunter Stats", "href": "https://nethunter.kali.org/"}
+      {"label": "Continuous Integration", "href": "https://autopkgtest.kali.org/"},
+      {"label": "Network Mirror", "href": "https://http.kali.org/README?mirrorlist"},
+      {"label": "Package Tracker", "href": "https://pkg.kali.org/"},
+      {"label": "GitLab", "href": "https://gitlab.com/kalilinux"}
     ]},
     {"label": "About", "children": [
       {"label": "Kali Linux Overview", "href": "https://www.kali.org/features/"},
