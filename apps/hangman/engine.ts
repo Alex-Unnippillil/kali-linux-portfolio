@@ -60,7 +60,7 @@ export const useHint = (game: HangmanGame): string | null => {
     .filter((l) => !game.guessed.includes(l));
   if (remaining.length === 0) return null;
   const unique = Array.from(new Set(remaining));
-  const reveal = unique[Math.floor(Math.random() * unique.length)];
+  const reveal = unique[Math.floor(Math.random() * unique.length)]!;
   game.guessed.push(reveal);
   game.hints -= 1;
   return reveal;
