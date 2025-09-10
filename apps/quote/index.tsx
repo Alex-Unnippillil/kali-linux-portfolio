@@ -111,12 +111,13 @@ export default function QuoteApp() {
         .split(',')
         .map((n) => parseInt(n, 10))
         .filter((n) => !Number.isNaN(n) && n >= 0 && n < quotes.length);
-      if (ids.length > 0) {
+      if (ids.length) {
         setPlaylist(ids);
         const first = ids[0];
         if (first !== undefined) {
           const firstQuote = quotes[first];
           if (firstQuote) setCurrent(firstQuote);
+
         }
       }
     }
@@ -135,9 +136,12 @@ export default function QuoteApp() {
         }
       } catch { /* ignore */ }
     }
-    const q = quotes[Math.floor(Math.random() * quotes.length)];
-    setDailyQuote(q);
-    localStorage.setItem('daily-quote', JSON.stringify({ date: today, quote: q }));
+    const idx = Math.floor(Math.random() * quotes.length);
+    const q = quotes[idx];
+    if (q) {
+      setDailyQuote(q);
+      localStorage.setItem('daily-quote', JSON.stringify({ date: today, quote: q }));
+    }
   }, [quotes]);
 
   const filtered = useMemo(() => {
@@ -170,7 +174,10 @@ export default function QuoteApp() {
       setCurrent(null);
       return;
     }
-    setCurrent(filtered[Math.floor(Math.random() * filtered.length)]);
+    const q = filtered[Math.floor(Math.random() * filtered.length)];
+    if (q) {
+      setCurrent(q);
+    }
   };
 
   const nextQuote = useCallback(() => {
@@ -179,7 +186,10 @@ export default function QuoteApp() {
       return;
     }
     const next = (currentIndex + 1) % filtered.length;
-    setCurrent(filtered[next]);
+    const q = filtered[next];
+    if (q) {
+      setCurrent(q);
+    }
   }, [filtered, currentIndex]);
 
   const prevQuote = useCallback(() => {
@@ -188,7 +198,10 @@ export default function QuoteApp() {
       return;
     }
     const prev = (currentIndex - 1 + filtered.length) % filtered.length;
-    setCurrent(filtered[prev]);
+    const q = filtered[prev];
+    if (q) {
+      setCurrent(q);
+    }
   }, [filtered, currentIndex]);
 
   useEffect(() => {
@@ -229,8 +242,11 @@ export default function QuoteApp() {
   useEffect(() => {
     if (!playOrder.length) return;
     const idx = playOrder[playIndex];
-    if (idx >= 0 && idx < quotes.length) {
-      setCurrent(quotes[idx]);
+    if (idx !== undefined && idx >= 0 && idx < quotes.length) {
+      const q = quotes[idx];
+      if (q) {
+        setCurrent(q);
+      }
     }
   }, [playIndex, playOrder, quotes]);
 
@@ -301,7 +317,12 @@ export default function QuoteApp() {
     setPlayOrder(order);
     setPlayIndex(0);
     const idx = order[0];
-    if (idx >= 0 && idx < quotes.length) setCurrent(quotes[idx]);
+    if (idx !== undefined && idx >= 0 && idx < quotes.length) {
+      const q = quotes[idx];
+      if (q) {
+        setCurrent(q);
+      }
+    }
     setPlaying(true);
   };
 
