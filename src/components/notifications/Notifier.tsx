@@ -38,7 +38,7 @@ export const Notifier: React.FC<{ children?: React.ReactNode }> = ({ children })
 
   useEffect(() => {
     if (!current && queue.length > 0) {
-      setCurrent(queue[0]);
+      setCurrent(queue[0]!);
       setQueue(q => q.slice(1));
     }
   }, [queue, current]);

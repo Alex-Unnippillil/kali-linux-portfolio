@@ -56,7 +56,7 @@ export async function readAutostart(): Promise<AutostartEntry[]> {
  */
 export async function saveAutostartEntry(entry: AutostartEntry): Promise<void> {
   const { file, data, name, enabled, delay } = entry;
-  const updated = { ...data, Name: name };
+  const updated: Record<string, unknown> = { ...data, Name: name };
   updated["X-GNOME-Autostart-enabled"] = enabled;
   if (typeof delay === "number") {
     updated["X-GNOME-Autostart-Delay"] = delay;
