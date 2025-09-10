@@ -45,7 +45,6 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
   const [fg, setFg] = useState<string>(initial.fg);
   const [font, setFont] = useState<string>(initial.font);
 
-
   const cycleStyle = () => {
     const next = (styleIndex + 1) % STYLES.length;
     setStyleIndex(next);
