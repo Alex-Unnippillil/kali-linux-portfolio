@@ -151,6 +151,8 @@ const Scripts = ({ runCommand }: ScriptsProps) => {
           const data: ScriptEntry =
             typeof entry === 'string' ? { code: entry } : entry;
           const presets = data.presets || {};
+          const selected = selectedPresets[n];
+          const canRemove = selected && presets[selected];
           return (
             <li key={n} className="flex items-center gap-2">
               <span className="flex-1 truncate">{n}</span>
@@ -180,9 +182,9 @@ const Scripts = ({ runCommand }: ScriptsProps) => {
               >
                 Add Preset
               </button>
-              {selectedPresets[n] && presets[selectedPresets[n]] && (
+              {canRemove && (
                 <button
-                  onClick={() => removePreset(n, selectedPresets[n])}
+                  onClick={() => removePreset(n, selected!)}
                   className="bg-yellow-600 text-white px-2 py-0.5 rounded"
                 >
                   Remove
