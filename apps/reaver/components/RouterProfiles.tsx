@@ -42,7 +42,8 @@ interface RouterProfilesProps {
 const STORAGE_KEY = 'reaver-router-profile';
 
 const RouterProfiles: React.FC<RouterProfilesProps> = ({ onChange }) => {
-  const [selected, setSelected] = useState<RouterProfile>(ROUTER_PROFILES[0]);
+  // ROUTER_PROFILES always contains at least one entry, default to the first
+  const [selected, setSelected] = useState<RouterProfile>(ROUTER_PROFILES[0]!);
 
   // Load persisted profile on mount
   useEffect(() => {
