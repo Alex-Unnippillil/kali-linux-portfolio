@@ -280,27 +280,27 @@ export default function Pinball() {
       <div className="flex space-x-4">
         <label className="flex flex-col text-xs">
           Power
-            <input
-              type="range"
-              min="0.5"
-              max="2"
-              step="0.1"
-              value={power}
-              onChange={(e) => setPower(parseFloat(e.target.value))}
-              aria-label="Power"
-            />
+          <input
+            type="range"
+            min="0.5"
+            max="2"
+            step="0.1"
+            value={power}
+            onChange={(e) => setPower(parseFloat(e.target.value))}
+            aria-label="Power"
+          />
         </label>
         <label className="flex flex-col text-xs">
           Bounce
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.1"
-              value={bounce}
-              onChange={(e) => setBounce(parseFloat(e.target.value))}
-              aria-label="Bounce"
-            />
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.1"
+            value={bounce}
+            onChange={(e) => setBounce(parseFloat(e.target.value))}
+            aria-label="Bounce"
+          />
         </label>
         <label className="flex flex-col text-xs">
           Theme
