@@ -51,6 +51,11 @@ module.exports = {
         'ubt-gedit-dark': 'var(--color-ubt-gedit-dark)',
         'ub-border-orange': 'var(--color-ub-border-orange)',
         'ub-dark-grey': 'var(--color-ub-dark-grey)',
+        'kali-bg': 'var(--kali-bg)',
+        'kali-bg-elev': 'var(--kali-bg-elev)',
+        'kali-primary': 'var(--kali-primary)',
+        'kali-accent': 'var(--kali-accent)',
+        'kali-muted': 'var(--kali-muted)',
       },
         fontFamily: {
           ubuntu: ['Ubuntu', 'sans-serif'],

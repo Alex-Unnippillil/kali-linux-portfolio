@@ -22,6 +22,14 @@
     --kali-danger: #ef4444;
 }
 
+:root {
+    --kali-bg: var(--color-bg);
+    --kali-bg-elev: var(--color-surface);
+    --kali-primary: var(--color-primary);
+    --kali-accent: var(--color-accent);
+    --kali-muted: var(--color-muted);
+}
+
 html {
     font-size: calc(14px * var(--font-multiplier));
     scrollbar-width: thin;
