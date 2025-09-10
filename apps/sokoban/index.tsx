@@ -87,9 +87,9 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
   const [packs, setPacks] = useState<LevelPack[]>(LEVEL_PACKS);
   const [packIndex, setPackIndex] = useState(0);
   const [index, setIndex] = useState(0);
-  const currentPack = packs[packIndex];
-  const [state, setState] = useState<State>(() => loadLevel(currentPack.levels[0]));
-  const [reach, setReach] = useState<Set<string>>(reachable(loadLevel(currentPack.levels[0])));
+  const currentPack = packs[packIndex]!;
+  const [state, setState] = useState<State>(() => loadLevel(currentPack.levels[0]!));
+  const [reach, setReach] = useState<Set<string>>(reachable(loadLevel(currentPack.levels[0]!)));
   const [best, setBest] = useState<number | null>(null);
   const [hint, setHint] = useState<string>('');
   const [status, setStatus] = useState<string>('');
@@ -109,9 +109,9 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
   const initRef = useRef(false);
 
   const selectLevel = useCallback(
-    (i: number, pIdx: number = packIndex, pData: LevelPack[] = packs) => {
-      const pack = pData[pIdx];
-      const st = loadLevel(pack.levels[i]);
+      (i: number, pIdx: number = packIndex, pData: LevelPack[] = packs) => {
+        const pack = pData[pIdx]!;
+        const st = loadLevel(pack.levels[i]!);
       setPackIndex(pIdx);
       setIndex(i);
       setState(st);
@@ -164,7 +164,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
   }, [state]);
 
   const handleReset = useCallback(() => {
-    const st = resetLevel(currentPack.levels[index]);
+    const st = resetLevel(currentPack.levels[index]!);
     setState(st);
     setReach(reachable(st));
       setHint('');
@@ -217,18 +217,18 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
             parsed = [];
           }
         }
-        if (parsed.length) {
-          const customPack: LevelPack = { name: 'Custom', difficulty: 'Custom', levels: parsed };
-          const newPacks = [...LEVEL_PACKS, customPack];
-          setPacks(newPacks);
-          const st = loadLevel(parsed[0]);
-          setPackIndex(newPacks.length - 1);
-          setIndex(0);
-          setState(st);
-          setReach(reachable(st));
-          setMinPushes(null);
-          setTimeout(() => setMinPushes(findMinPushes(st)), 0);
-        }
+          if (parsed.length) {
+            const customPack: LevelPack = { name: 'Custom', difficulty: 'Custom', levels: parsed };
+            const newPacks = [...LEVEL_PACKS, customPack];
+            setPacks(newPacks);
+            const st = loadLevel(parsed[0]!);
+            setPackIndex(newPacks.length - 1);
+            setIndex(0);
+            setState(st);
+            setReach(reachable(st));
+            setMinPushes(null);
+            setTimeout(() => setMinPushes(findMinPushes(st)), 0);
+          }
       }
       if (!code) {
         setMinPushes(null);
@@ -278,12 +278,12 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
             if (newState.pushes > state.pushes) {
               const from = Array.from(state.boxes).find((b) => !newState.boxes.has(b));
               const to = Array.from(newState.boxes).find((b) => !state.boxes.has(b));
-              if (from) {
-                const [fx, fy] = from.split(',').map(Number);
-                const id = puffId.current++;
-                setPuffs((p) => [...p, { id, x: fx, y: fy }]);
-                setTimeout(() => setPuffs((p) => p.filter((pp) => pp.id !== id)), 300);
-              }
+                if (from) {
+                  const [fx, fy] = from.split(',').map(Number) as [number, number];
+                  const id = puffId.current++;
+                  setPuffs((p) => [...p, { id, x: fx, y: fy }]);
+                  setTimeout(() => setPuffs((p) => p.filter((pp) => pp.id !== id)), 300);
+                }
               if (to) {
                 setLastPush(to);
                 setTimeout(() => setLastPush(null), 200);
@@ -325,21 +325,21 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
       setStatus(newState.deadlocks.size ? 'Deadlock!' : '');
       setGhost(new Set());
       setSolutionPath(new Set());
-      if (newState.pushes > state.pushes) {
-        const from = Array.from(state.boxes).find((b) => !newState.boxes.has(b));
-        const to = Array.from(newState.boxes).find((b) => !state.boxes.has(b));
-        if (from) {
-          const [fx, fy] = from.split(',').map(Number);
-          const id = puffId.current++;
-          setPuffs((p) => [...p, { id, x: fx, y: fy }]);
-          setTimeout(() => setPuffs((p) => p.filter((pp) => pp.id !== id)), 300);
+        if (newState.pushes > state.pushes) {
+          const from = Array.from(state.boxes).find((b) => !newState.boxes.has(b));
+          const to = Array.from(newState.boxes).find((b) => !state.boxes.has(b));
+          if (from) {
+            const [fx, fy] = from.split(',').map(Number) as [number, number];
+            const id = puffId.current++;
+            setPuffs((p) => [...p, { id, x: fx, y: fy }]);
+            setTimeout(() => setPuffs((p) => p.filter((pp) => pp.id !== id)), 300);
+          }
+          if (to) {
+            setLastPush(to);
+            setTimeout(() => setLastPush(null), 200);
+          }
+          logEvent({ category: 'sokoban', action: 'push' });
         }
-        if (to) {
-          setLastPush(to);
-          setTimeout(() => setLastPush(null), 200);
-        }
-        logEvent({ category: 'sokoban', action: 'push' });
-      }
       if (isSolved(newState)) {
         logGameEnd('sokoban', `level_complete`);
         logEvent({
@@ -534,9 +534,9 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
             );
           })
         )}
-        {Array.from(state.boxes).map((b) => {
-          const [x, y] = b.split(',').map(Number);
-          const dead = state.deadlocks.has(b);
+          {Array.from(state.boxes).map((b) => {
+            const [x, y] = b.split(',').map(Number) as [number, number];
+            const dead = state.deadlocks.has(b);
           return (
             <div
               key={b}
@@ -632,8 +632,8 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
               ))}
             </div>
             <div className="flex-1 overflow-y-auto max-h-96">
-              <div className="grid grid-cols-3 gap-2">
-                {packs[packIndex].levels.map((lvl, i) => (
+                <div className="grid grid-cols-3 gap-2">
+                  {packs[packIndex]!.levels.map((lvl, i) => (
                   <div
                     key={i}
                     className={`p-1 border cursor-pointer ${
