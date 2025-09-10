@@ -176,9 +176,10 @@ const MetasploitPost: React.FC = () => {
     { label: 'Cleanup Traces', done: false },
   ]);
 
-  const tabs = ['Hash Dump', 'Persistence', 'Enumeration'];
-  const [activeTab, setActiveTab] = useState('Hash Dump');
-  const [results, setResults] = useState<Record<string, ResultItem[]>>({
+  const tabs = ['Hash Dump', 'Persistence', 'Enumeration'] as const;
+  type Tab = typeof tabs[number];
+  const [activeTab, setActiveTab] = useState<Tab>('Hash Dump');
+  const [results, setResults] = useState<Record<Tab, ResultItem[]>>({
     'Hash Dump': [],
     Persistence: [],
     Enumeration: [],
