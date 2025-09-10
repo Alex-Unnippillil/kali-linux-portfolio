@@ -10,7 +10,7 @@ interface Frame {
   type: string;
 }
 
-const target = capture[0];
+const target = capture[0]!;
 
 const frames: Frame[] = [
   { seq: 1, src: target.bssid, dst: '11:22:33:44:55:66', type: 'Data' },
