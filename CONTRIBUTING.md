@@ -17,6 +17,9 @@
   ```
 - `.mdx` files must not be imported in code.
 
+## Type debt
+Document any temporary type suppressions (for example `@ts-ignore`, `@ts-expect-error` or `any` casts) in [docs/type-debt.md](docs/type-debt.md) with the location, owner, justification and a target removal date.
+
 ## Tests
 - **Unit tests**:
   ```bash
