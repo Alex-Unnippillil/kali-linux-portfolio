@@ -292,7 +292,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
         );
       }
 
-      update(time: number, delta: number) {
+      override update(time: number, delta: number) {
         const ctrl = controls.current;
         const speed = 5;
         const fixedDelta = Math.min(delta, 1000 / 60);
@@ -302,8 +302,8 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
         if (gamepad && gamepad.total > 0) {
           const pad = gamepad.getPad(0);
           const pm = padMapRef.current;
-          ctrl.left = pad.buttons[pm.left]?.pressed;
-          ctrl.right = pad.buttons[pm.right]?.pressed;
+          ctrl.left = !!pad.buttons[pm.left]?.pressed;
+          ctrl.right = !!pad.buttons[pm.right]?.pressed;
           const jp = pad.buttons[pm.jump]?.pressed;
           if (jp && !this.padJumpWasPressed) {
             ctrl.jumpPressed = true;
@@ -311,7 +311,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
           } else if (!jp) {
             ctrl.jumpHeld = false;
           }
-          this.padJumpWasPressed = jp;
+          this.padJumpWasPressed = !!jp;
         }
 
         if (ctrl.left) this.player.setVelocityX(-speed);
