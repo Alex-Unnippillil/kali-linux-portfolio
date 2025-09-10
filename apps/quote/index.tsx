@@ -111,11 +111,12 @@ export default function QuoteApp() {
         .split(',')
         .map((n) => parseInt(n, 10))
         .filter((n) => !Number.isNaN(n) && n >= 0 && n < quotes.length);
-      if (ids.length > 0) {
+      if (ids.length) {
         setPlaylist(ids);
         const first = ids[0];
         if (first !== undefined) {
           setCurrent(quotes[first]!);
+
         }
       }
     }
@@ -137,6 +138,7 @@ export default function QuoteApp() {
     const q = quotes[Math.floor(Math.random() * quotes.length)]!;
     setDailyQuote(q);
     localStorage.setItem('daily-quote', JSON.stringify({ date: today, quote: q }));
+
   }, [quotes]);
 
   const filtered = useMemo(() => {
@@ -170,6 +172,7 @@ export default function QuoteApp() {
       return;
     }
     setCurrent(filtered[Math.floor(Math.random() * filtered.length)] ?? null);
+
   };
 
   const nextQuote = useCallback(() => {
@@ -179,6 +182,7 @@ export default function QuoteApp() {
     }
     const next = (currentIndex + 1) % filtered.length;
     setCurrent(filtered[next] ?? null);
+
   }, [filtered, currentIndex]);
 
   const prevQuote = useCallback(() => {
@@ -188,6 +192,7 @@ export default function QuoteApp() {
     }
     const prev = (currentIndex - 1 + filtered.length) % filtered.length;
     setCurrent(filtered[prev] ?? null);
+
   }, [filtered, currentIndex]);
 
   useEffect(() => {
@@ -230,6 +235,7 @@ export default function QuoteApp() {
     const idx = playOrder[playIndex];
     if (idx !== undefined && idx >= 0 && idx < quotes.length) {
       setCurrent(quotes[idx]!);
+
     }
   }, [playIndex, playOrder, quotes]);
 
@@ -301,7 +307,10 @@ export default function QuoteApp() {
     setPlayIndex(0);
     const idx = order[0];
     if (idx !== undefined && idx >= 0 && idx < quotes.length) {
+
+      
       setCurrent(quotes[idx]!);
+
     }
     setPlaying(true);
   };
