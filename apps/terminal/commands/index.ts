@@ -30,6 +30,10 @@ function alias(args: string, ctx: CommandContext) {
     return;
   }
   const [name, value] = args.split('=');
+  if (!name) {
+    ctx.writeLine("usage: alias name='value'");
+    return;
+  }
   if (value) {
     ctx.setAlias(name.trim(), value.trim());
   } else {
