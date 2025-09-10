@@ -18,8 +18,9 @@ const MoodTuner = () => {
       .then((data: Playlists) => {
         setPlaylists(data);
         const moods = Object.keys(data);
-        if (!mood && moods.length) {
-          setMood(moods[0]);
+        const firstMood = moods[0];
+        if (!mood && firstMood) {
+          setMood(firstMood);
         }
       })
       .catch(() => {});
@@ -29,8 +30,9 @@ const MoodTuner = () => {
   // Ensure selected mood exists after playlists load
   useEffect(() => {
     const moods = Object.keys(playlists);
-    if (moods.length && !playlists[mood]) {
-      setMood(moods[0]);
+    const firstMood = moods[0];
+    if (firstMood && !playlists[mood]) {
+      setMood(firstMood);
     }
   }, [playlists, mood, setMood]);
 
@@ -88,7 +90,12 @@ const MoodTuner = () => {
           min={0}
           max={Math.max(0, moods.length - 1)}
           value={index >= 0 ? index : 0}
-          onChange={(e) => setMood(moods[Number(e.target.value)])}
+          onChange={(e) => {
+            const selectedMood = moods[Number(e.target.value)];
+            if (selectedMood) {
+              setMood(selectedMood);
+            }
+          }}
           className="flex-1"
         />
         <span className="capitalize min-w-[4rem] text-center">{mood}</span>
