@@ -14,7 +14,7 @@ export interface RouterProfile {
   lockDuration: number;
 }
 
-export const ROUTER_PROFILES: RouterProfile[] = [
+export const ROUTER_PROFILES: [RouterProfile, ...RouterProfile[]] = [
   {
     id: 'generic',
     label: 'Generic (no lockout)',
@@ -50,7 +50,6 @@ const RouterProfiles: React.FC<RouterProfilesProps> = ({ onChange }) => {
     const profile = ROUTER_PROFILES.find((p) => p.id === stored) || ROUTER_PROFILES[0];
     setSelected(profile);
     onChange(profile);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
