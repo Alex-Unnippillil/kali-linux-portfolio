@@ -114,12 +114,14 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
     if (!waiting || waiting.device !== 'pad') return;
     // poll at 100ms intervals instead of every frame to reduce CPU
     const interval = setInterval(() => {
-      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-      for (const gp of pads) {
-        if (!gp) continue;
-        for (let i = 0; i < gp.buttons.length; i++) {
-          const button = gp.buttons[i];
-          if (button?.pressed) {
+      const pads = navigator.getGamepads
+        ? Array.from(navigator.getGamepads())
+        : [];
+      for (const gpMaybe of pads) {
+        if (!gpMaybe) continue;
+        for (const [i, btn] of gpMaybe.buttons.entries()) {
+          if (btn.pressed) {
+            if (!waiting) return;
             setPadMap((prev) => ({ ...prev, [waiting.action]: i }));
             setWaiting(null);
             return;
