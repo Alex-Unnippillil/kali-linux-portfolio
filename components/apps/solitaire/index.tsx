@@ -421,7 +421,13 @@ const Solitaire = () => {
       let fromY = 0;
       let card: Card;
       if (source === 'waste') {
-        card = fromState.waste[fromState.waste.length - 1];
+        const c = fromState.waste.at(-1);
+        if (c === undefined) {
+          setGame(toState);
+          cb();
+          return;
+        }
+        card = c;
         const rect = wasteRef.current?.getBoundingClientRect();
         if (rect) {
           fromX = (rect.left - rootRect.left) / scaleFactor;
@@ -812,7 +818,7 @@ const Solitaire = () => {
                 !prefersReducedMotion ? 'transition-transform' : ''
               }`}
             >
-              {renderCard(game.waste[game.waste.length - 1])}
+              {renderCard(game.waste.at(-1)!)}
             </div>
           ) : (
             <div className="w-16 h-24 min-w-[24px] min-h-[24px]" />
@@ -828,7 +834,7 @@ const Solitaire = () => {
               foundationRefs.current[i] = el;
             }}
           >
-            {pile.length ? renderCard(pile[pile.length - 1]) : (
+            {pile.length ? renderCard(pile.at(-1)!) : (
               <div className="w-16 h-24 min-w-[24px] min-h-[24px] border border-dashed border-white rounded" />
             )}
           </div>
