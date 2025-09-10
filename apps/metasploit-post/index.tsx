@@ -118,7 +118,7 @@ const EvidenceVault: React.FC = () => {
     const entry: Evidence = {
       id: Date.now(),
       note,
-      fileName: file?.name,
+      ...(file ? { fileName: file.name } : {}),
       tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
     };
     setItems((prev) => [...prev, entry]);
