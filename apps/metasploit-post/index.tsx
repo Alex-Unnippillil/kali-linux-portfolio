@@ -118,7 +118,7 @@ const EvidenceVault: React.FC = () => {
     const entry: Evidence = {
       id: Date.now(),
       note,
-      fileName: file?.name,
+      ...(file ? { fileName: file.name } : {}),
       tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
     };
     setItems((prev) => [...prev, entry]);
@@ -131,13 +131,20 @@ const EvidenceVault: React.FC = () => {
     <div className="mt-4">
       <h3 className="font-semibold mb-2">Evidence Vault</h3>
       <textarea
+        aria-label="Note"
         className="w-full p-2 mb-2 text-black"
         placeholder="Note"
         value={note}
         onChange={(e) => setNote(e.target.value)}
       />
-      <input type="file" className="mb-2" onChange={(e) => setFile(e.target.files?.[0] || null)} />
       <input
+        aria-label="File"
+        type="file"
+        className="mb-2"
+        onChange={(e) => setFile(e.target.files?.[0] || null)}
+      />
+      <input
+        aria-label="Tags"
         className="w-full p-2 mb-2 text-black"
         placeholder="Tags (comma separated)"
         value={tags}
@@ -297,16 +304,20 @@ const MetasploitPost: React.FC = () => {
             <div>
               <h2 className="font-semibold mb-2">{selected.path}</h2>
               <p className="mb-2 text-sm text-gray-300">{selected.description}</p>
-              {selected.options?.map((o) => (
-                <label key={o.name} className="block mb-2">
-                  {o.label}
-                  <input
-                    className="w-full p-1 bg-gray-800 rounded mt-1"
-                    value={params[o.name] || ''}
-                    onChange={(e) => handleParamChange(o.name, e.target.value)}
-                  />
-                </label>
-              ))}
+                {selected.options?.map((o) => (
+                  <div key={o.name} className="mb-2">
+                    <label htmlFor={o.name} className="block">
+                      {o.label}
+                    </label>
+                    <input
+                      id={o.name}
+                      aria-label={o.label}
+                      className="w-full p-1 bg-gray-800 rounded mt-1"
+                      value={params[o.name] || ''}
+                      onChange={(e) => handleParamChange(o.name, e.target.value)}
+                    />
+                  </div>
+                ))}
               <button onClick={run} className="mt-2 px-3 py-1 bg-green-600 rounded">
                 Run
               </button>
@@ -329,12 +340,13 @@ const MetasploitPost: React.FC = () => {
                 <button onClick={runQueue} className="px-3 py-1 bg-green-600 rounded">
                   Run Queue
                 </button>
-                <input
-                  className="p-1 text-black"
-                  placeholder="Set name"
-                  value={setName}
-                  onChange={(e) => setSetName(e.target.value)}
-                />
+                  <input
+                    aria-label="Set name"
+                    className="p-1 text-black"
+                    placeholder="Set name"
+                    value={setName}
+                    onChange={(e) => setSetName(e.target.value)}
+                  />
                 <button onClick={saveSet} className="px-3 py-1 bg-blue-600 rounded">
                   Save Set
                 </button>
