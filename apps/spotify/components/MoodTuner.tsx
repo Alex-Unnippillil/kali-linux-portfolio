@@ -17,20 +17,17 @@ const MoodTuner = () => {
       .then((res) => res.json())
       .then((data: Playlists) => {
         setPlaylists(data);
-        const moods = Object.keys(data);
-        const firstMood = moods[0];
+        const [firstMood] = Object.keys(data);
         if (!mood && firstMood) {
           setMood(firstMood);
         }
       })
       .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Ensure selected mood exists after playlists load
   useEffect(() => {
-    const moods = Object.keys(playlists);
-    const firstMood = moods[0];
+    const [firstMood] = Object.keys(playlists);
     if (firstMood && !playlists[mood]) {
       setMood(firstMood);
     }
@@ -86,6 +83,7 @@ const MoodTuner = () => {
     <div className="h-full w-full bg-[var(--color-bg)] text-[var(--color-text)] flex flex-col">
       <div className="p-2 flex items-center gap-2 bg-black bg-opacity-30">
         <input
+          aria-label="Select mood"
           type="range"
           min={0}
           max={Math.max(0, moods.length - 1)}
