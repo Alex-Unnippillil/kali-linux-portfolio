@@ -70,8 +70,9 @@ const Modal: React.FC<ModalProps> = ({
         if (e.key !== 'Tab') return;
         const elements = modalRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS);
         if (!elements || elements.length === 0) return;
-        const first = elements[0];
-        const last = elements[elements.length - 1];
+        const first = elements.item(0);
+        const last = elements.item(elements.length - 1);
+        if (!first || !last) return;
         const current = document.activeElement as HTMLElement;
         if (!e.shiftKey && current === last) {
             e.preventDefault();
