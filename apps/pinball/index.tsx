@@ -132,12 +132,18 @@ export default function Pinball() {
       evt.pairs.forEach((pair) => {
         const bodies = [pair.bodyA, pair.bodyB];
         if (bodies.includes(ball) && bodies.includes(leftFlipper)) {
-          const { x, y } = pair.collision.supports[0];
-          sparksRef.current.push({ x, y, life: 1 });
+          const support = pair.collision.supports[0];
+          if (support) {
+            const { x, y } = support;
+            sparksRef.current.push({ x, y, life: 1 });
+          }
         }
         if (bodies.includes(ball) && bodies.includes(rightFlipper)) {
-          const { x, y } = pair.collision.supports[0];
-          sparksRef.current.push({ x, y, life: 1 });
+          const support = pair.collision.supports[0];
+          if (support) {
+            const { x, y } = support;
+            sparksRef.current.push({ x, y, life: 1 });
+          }
         }
         if (bodies.includes(ball) && bodies.includes(leftLane)) {
           laneGlowRef.current.left = true;
@@ -272,27 +278,27 @@ export default function Pinball() {
       <div className="flex space-x-4">
         <label className="flex flex-col text-xs">
           Power
-            <input
-              type="range"
-              min="0.5"
-              max="2"
-              step="0.1"
-              value={power}
-              onChange={(e) => setPower(parseFloat(e.target.value))}
-              aria-label="Power"
-            />
+          <input
+            type="range"
+            min="0.5"
+            max="2"
+            step="0.1"
+            value={power}
+            onChange={(e) => setPower(parseFloat(e.target.value))}
+            aria-label="Power"
+          />
         </label>
         <label className="flex flex-col text-xs">
           Bounce
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.1"
-              value={bounce}
-              onChange={(e) => setBounce(parseFloat(e.target.value))}
-              aria-label="Bounce"
-            />
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.1"
+            value={bounce}
+            onChange={(e) => setBounce(parseFloat(e.target.value))}
+            aria-label="Bounce"
+          />
         </label>
         <label className="flex flex-col text-xs">
           Theme
