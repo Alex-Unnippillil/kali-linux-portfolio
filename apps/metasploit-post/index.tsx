@@ -214,10 +214,13 @@ const MetasploitPost: React.FC = () => {
 
   const runModule = (mod: ModuleEntry) => {
     const result = { title: mod.path, output: mod.sampleOutput };
-    setResults((prev) => ({
-      ...prev,
-      [activeTab]: [...prev[activeTab], result],
-    }));
+    setResults((prev) => {
+      const items = prev[activeTab] ?? [];
+      return {
+        ...prev,
+        [activeTab]: [...items, result],
+      };
+    });
     setSelected(mod);
     animateSteps();
   };
