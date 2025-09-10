@@ -292,7 +292,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
         );
       }
 
-      update(time: number, delta: number) {
+      override update(time: number, delta: number) {
         const ctrl = controls.current;
         const speed = 5;
         const fixedDelta = Math.min(delta, 1000 / 60);
