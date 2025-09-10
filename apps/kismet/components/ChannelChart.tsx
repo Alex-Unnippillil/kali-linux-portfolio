@@ -39,7 +39,7 @@ const ChannelChart: React.FC = () => {
     return chs;
   }, [band, channelCounts]);
 
-  const maxCount = Math.max(1, ...channels.map((c) => channelCounts[c]));
+  const maxCount = Math.max(1, ...channels.map((c) => channelCounts[c] ?? 0));
 
   return (
     <div className="text-white">
@@ -60,7 +60,7 @@ const ChannelChart: React.FC = () => {
       </div>
       <div className="flex items-end h-40 space-x-1" aria-live="polite">
         {channels.map((c) => {
-          const count = channelCounts[c];
+          const count = channelCounts[c] ?? 0;
           const color = c <= bandRanges['2.4GHz'][1] ? 'bg-blue-600' : 'bg-green-600';
           return (
             <div key={c} className="flex flex-col items-center">
