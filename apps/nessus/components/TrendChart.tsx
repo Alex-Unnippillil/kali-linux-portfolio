@@ -124,7 +124,7 @@ export default function TrendChart() {
               {severities.map((sev, i) => {
                 const barWidth = width / severities.length - 4;
                 const x = i * (barWidth + 4);
-                const barHeight = (latest.counts[sev] / max) * height;
+                const barHeight = ((latest?.counts[sev] ?? 0) / max) * height;
                 const y = height - barHeight;
                 return (
                   <rect
