@@ -22,12 +22,12 @@ const LootViewer: React.FC = () => {
     (v): v is string[] => Array.isArray(v) && v.every((x) => typeof x === 'string'),
   );
 
-  const artifact = artifacts[index];
   const total = artifacts.length;
 
   if (!artifact) {
     return null;
   }
+
 
   const isFavorite = favorites.includes(artifact.id);
 
