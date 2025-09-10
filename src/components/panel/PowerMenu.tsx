@@ -102,7 +102,9 @@ export default function PowerMenu({ index, move, innerRef, focused, onFocus }: P
         >
           <button
             role="menuitem"
-            ref={(el) => (itemRefs.current[0] = el)}
+            ref={(el) => {
+              itemRefs.current[0] = el;
+            }}
             onKeyDown={handleItemKey}
             onClick={() => {
               setOpen(false);
@@ -115,7 +117,9 @@ export default function PowerMenu({ index, move, innerRef, focused, onFocus }: P
           </button>
           <button
             role="menuitem"
-            ref={(el) => (itemRefs.current[1] = el)}
+            ref={(el) => {
+              itemRefs.current[1] = el;
+            }}
             onKeyDown={handleItemKey}
             onClick={() => {
               setOpen(false);
@@ -128,7 +132,9 @@ export default function PowerMenu({ index, move, innerRef, focused, onFocus }: P
           </button>
           <button
             role="menuitem"
-            ref={(el) => (itemRefs.current[2] = el)}
+            ref={(el) => {
+              itemRefs.current[2] = el;
+            }}
             onKeyDown={handleItemKey}
             onClick={() => {
               setOpen(false);
