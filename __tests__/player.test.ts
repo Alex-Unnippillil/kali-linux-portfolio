@@ -11,9 +11,9 @@ describe('audio player pooling', () => {
         this.state = 'running';
       }
     }
-    // @ts-ignore
+    // @ts-expect-error Web Audio API not available in JSDOM
     window.AudioContext = MockAudioContext as any;
-    // @ts-ignore
+    // @ts-expect-error Web Audio API not available in JSDOM
     window.webkitAudioContext = MockAudioContext as any;
     Object.defineProperty(window.HTMLMediaElement.prototype, 'pause', {
       configurable: true,

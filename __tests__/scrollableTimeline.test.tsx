@@ -10,7 +10,7 @@ beforeAll(() => {
     unobserve() {}
     takeRecords() { return []; }
   }
-  // @ts-ignore
+  // @ts-expect-error IntersectionObserver missing in Node
   global.IntersectionObserver = IntersectionObserverMock;
 });
 

@@ -8,7 +8,7 @@ describe('useLocale', () => {
 
   test('applies rtl direction when locale is rtl', () => {
     const original = Intl.DateTimeFormat;
-    // @ts-ignore overriding for test
+    // @ts-expect-error override Intl in test
     Intl.DateTimeFormat = jest.fn().mockReturnValue({
       resolvedOptions: () => ({ locale: 'ar' }),
     });
@@ -24,7 +24,7 @@ describe('useLocale', () => {
 
   test('defaults to ltr direction', () => {
     const original = Intl.DateTimeFormat;
-    // @ts-ignore overriding for test
+    // @ts-expect-error override Intl in test
     Intl.DateTimeFormat = jest.fn().mockReturnValue({
       resolvedOptions: () => ({ locale: 'en-US' }),
     });

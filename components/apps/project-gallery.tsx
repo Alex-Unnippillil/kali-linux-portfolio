@@ -45,7 +45,7 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
       /* ignore */
     }
     try {
-      // @ts-ignore - OPFS not yet in TypeScript libs
+      // @ts-expect-error OPFS not yet in TypeScript libs
       const root = await navigator.storage?.getDirectory();
       const handle = await root?.getFileHandle(STORAGE_FILE);
       const file = await handle?.getFile();
@@ -71,7 +71,7 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
       /* ignore */
     }
     try {
-      // @ts-ignore - OPFS not yet in TypeScript libs
+      // @ts-expect-error OPFS not yet in TypeScript libs
       const root = await navigator.storage?.getDirectory();
       const handle = await root?.getFileHandle(STORAGE_FILE, { create: true });
       const writable = await handle?.createWritable();

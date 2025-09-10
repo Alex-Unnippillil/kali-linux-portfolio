@@ -11,7 +11,7 @@ function detectLocale(): LocaleInfo {
   const { locale } = new Intl.DateTimeFormat().resolvedOptions();
   let dir: TextDirection = 'ltr';
   try {
-    // @ts-ignore - Intl.Locale may not be in older typings
+    // @ts-expect-error Intl.Locale may not exist in older libs
     const intlLocale = new Intl.Locale(locale);
     dir = intlLocale?.textInfo?.direction || 'ltr';
   } catch {

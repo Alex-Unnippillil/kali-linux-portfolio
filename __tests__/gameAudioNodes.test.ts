@@ -26,9 +26,9 @@ describe('game audio node manager', () => {
       close = close;
     }
 
-    // @ts-ignore
+    // @ts-expect-error Web Audio API not available in JSDOM
     window.AudioContext = MockAudioContext as any;
-    // @ts-ignore
+    // @ts-expect-error Web Audio API not available in JSDOM
     window.webkitAudioContext = MockAudioContext as any;
   });
 

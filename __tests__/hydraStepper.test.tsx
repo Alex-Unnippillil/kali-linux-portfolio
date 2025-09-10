@@ -5,7 +5,7 @@ import Stepper from '../components/apps/hydra/Stepper';
 describe('Hydra Stepper', () => {
   beforeEach(() => {
     jest.useFakeTimers();
-    // @ts-ignore
+    // @ts-expect-error matchMedia missing in JSDOM
     window.matchMedia = window.matchMedia || function () {
       return {
         matches: false,
@@ -13,7 +13,7 @@ describe('Hydra Stepper', () => {
         removeListener: () => {},
       };
     };
-    // @ts-ignore
+    // @ts-expect-error requestAnimationFrame not in Node tests
     window.requestAnimationFrame = (cb: any) => cb();
   });
 

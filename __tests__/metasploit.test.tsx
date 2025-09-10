@@ -4,7 +4,7 @@ import MetasploitApp from '../components/apps/metasploit';
 
 describe.skip('Metasploit app', () => {
   beforeEach(() => {
-    // @ts-ignore
+    // @ts-expect-error fetch not in Node tests
     global.fetch = jest.fn(() =>
       Promise.resolve({
         json: () => Promise.resolve({ loot: [], notes: [] }),
@@ -56,7 +56,7 @@ describe.skip('Metasploit app', () => {
   });
 
   it('toggles loot viewer', async () => {
-    // @ts-ignore
+    // @ts-expect-error fetch not in Node tests
     global.fetch = jest.fn(() =>
       Promise.resolve({
         json: () =>

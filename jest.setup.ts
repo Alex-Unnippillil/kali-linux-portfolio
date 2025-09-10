@@ -3,11 +3,11 @@ import '@testing-library/jest-dom';
 
 // Provide TextEncoder/TextDecoder in the test environment
 if (!global.TextEncoder) {
-  // @ts-ignore
+  // @ts-expect-error Missing TextEncoder in Jest environment
   global.TextEncoder = TextEncoder;
 }
 if (!global.TextDecoder) {
-  // @ts-ignore
+  // @ts-expect-error Missing TextDecoder in Jest environment
   global.TextDecoder = TextDecoder as any;
 }
 
@@ -28,14 +28,14 @@ class LocalStorageMock {
   }
 }
 const localStorageMock = new LocalStorageMock();
-// @ts-ignore
+// @ts-expect-error Node globals lack localStorage
 if (!global.localStorage) {
-  // @ts-ignore
+  // @ts-expect-error Assign mock localStorage to global
   global.localStorage = localStorageMock;
 }
-// @ts-ignore
+// @ts-expect-error window missing localStorage in JSDOM
 if (typeof window !== 'undefined' && !window.localStorage) {
-  // @ts-ignore
+  // @ts-expect-error Assign mock localStorage to window
   window.localStorage = localStorageMock;
 }
 
@@ -46,21 +46,21 @@ class IntersectionObserverMock {
   unobserve() {}
   disconnect() {}
 }
-// @ts-ignore
+// @ts-expect-error JSDOM missing IntersectionObserver
 if (!global.IntersectionObserver) {
-  // @ts-ignore
+  // @ts-expect-error Assign mock IntersectionObserver
   global.IntersectionObserver = IntersectionObserverMock;
 }
-// @ts-ignore
+// @ts-expect-error JSDOM window missing IntersectionObserver
 if (typeof window !== 'undefined' && !window.IntersectionObserver) {
-  // @ts-ignore
+  // @ts-expect-error Assign mock IntersectionObserver to window
   window.IntersectionObserver = IntersectionObserverMock;
 }
 
 // matchMedia mock for components expecting it
-// @ts-ignore
+// @ts-expect-error JSDOM lacks matchMedia
 if (typeof window !== 'undefined' && !window.matchMedia) {
-  // @ts-ignore
+  // @ts-expect-error Provide mock matchMedia
   window.matchMedia = () => ({
     matches: false,
     addListener: () => {},
@@ -72,15 +72,15 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
 }
 
 // Provide a stub for fetch so tests can spy on it
-// @ts-ignore
+// @ts-expect-error Node test environment lacks fetch
 if (!global.fetch) {
-  // @ts-ignore
+  // @ts-expect-error Assign mock fetch
   global.fetch = () => Promise.reject(new Error('fetch not implemented'));
 }
 
 // Canvas mock for tests relying on 2D context
 if (typeof HTMLCanvasElement !== 'undefined') {
-  // @ts-ignore
+  // @ts-expect-error JSDOM Canvas API incomplete
   HTMLCanvasElement.prototype.getContext = () => ({
     fillRect: () => {},
     clearRect: () => {},
