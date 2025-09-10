@@ -170,7 +170,7 @@ export function undo(state: State): State {
 
 export function redo(state: State): State {
   if (!state.future.length) return state;
-  const next = state.future[state.future.length - 1];
+  const next = state.future[state.future.length - 1]!;
   const boxes = new Set(next.boxes);
   const restored: State = {
     ...state,

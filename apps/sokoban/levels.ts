@@ -54,5 +54,5 @@ export const LEVEL_PACKS: LevelPack[] = [
   { name: 'Classic', difficulty: 'Medium', levels: parseLevels(RAW_CLASSIC) },
 ] as const;
 
-export const defaultLevels = LEVEL_PACKS[0].levels;
+export const defaultLevels = LEVEL_PACKS[0]!.levels;
 
