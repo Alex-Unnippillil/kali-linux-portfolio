@@ -34,8 +34,16 @@ type SnapPosition =
 
 const EDGE_THRESHOLD = 30;
 
-const Window = forwardRef<{ handleDrag: () => void; handleStop: () => void; handleKeyDown: (e: any) => void; }, WindowProps>(
-  ({ children }, ref) => {
+interface WindowHandle {
+  handleDrag: DraggableEventHandler;
+  handleStop: DraggableEventHandler;
+  handleKeyDown: (e: any) => void;
+}
+
+const Window = forwardRef<WindowHandle, WindowProps>(function Window(
+  { children },
+  ref,
+) {
     const nodeRef = useRef<HTMLDivElement>(null);
     const [snapPreview, setSnapPreview] = useState<SnapPreview | null>(null);
     const [snapPosition, setSnapPosition] = useState<SnapPosition>(null);
