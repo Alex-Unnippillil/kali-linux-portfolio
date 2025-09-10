@@ -38,8 +38,9 @@ export default function DocPage({ html, toc, title, topic }: DocProps) {
   const sections: TocSection[] = toc.reduce((acc: TocSection[], item) => {
     if (item.depth === 2) {
       acc.push({ id: item.id, text: item.text, children: [] });
-    } else if (item.depth === 3 && acc.length > 0) {
-      acc[acc.length - 1].children.push(item);
+    } else if (item.depth === 3) {
+      const last = acc.at(-1);
+      if (last) last.children.push(item);
     }
     return acc;
   }, []);
