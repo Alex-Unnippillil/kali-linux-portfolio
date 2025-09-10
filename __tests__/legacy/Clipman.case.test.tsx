@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
-import Clipman, { CLIPMAN_STORAGE_KEY } from '../src/plugins/Clipman';
+import Clipman, { CLIPMAN_STORAGE_KEY } from '../../src/plugins/Clipman';
 
 let original: string | null;
 
