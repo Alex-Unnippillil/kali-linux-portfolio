@@ -1,7 +1,7 @@
 import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import InstallButton from '../components/InstallButton';
-import { initA2HS } from '../src/pwa/a2hs';
+import { initA2HS, BeforeInstallPromptEvent } from '../src/pwa/a2hs';
 
 describe('InstallButton', () => {
   test('shows install prompt when beforeinstallprompt fires', async () => {
@@ -9,16 +9,16 @@ describe('InstallButton', () => {
     initA2HS();
     expect(screen.queryByText(/install/i)).toBeNull();
 
-    let resolveChoice: (value: any) => void = () => {};
-    const userChoice = new Promise((resolve) => {
+    let resolveChoice: (value: { outcome: 'accepted' | 'dismissed'; platform: string }) => void = () => {};
+    const userChoice = new Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>((resolve) => {
       resolveChoice = resolve;
     });
 
     const prompt = jest.fn().mockResolvedValue(undefined);
-    const event: any = new Event('beforeinstallprompt');
-    event.preventDefault = jest.fn();
-    event.prompt = prompt;
-    event.userChoice = userChoice;
+    const event = new Event('beforeinstallprompt') as BeforeInstallPromptEvent;
+    Object.defineProperty(event, 'preventDefault', { value: jest.fn() });
+    Object.defineProperty(event, 'prompt', { value: prompt });
+    Object.defineProperty(event, 'userChoice', { value: userChoice });
 
     await act(async () => {
       window.dispatchEvent(event);
@@ -42,10 +42,12 @@ describe('InstallButton', () => {
   test('can be focused via keyboard', async () => {
     render(<InstallButton />);
     initA2HS();
-    const event: any = new Event('beforeinstallprompt');
-    event.preventDefault = jest.fn();
-    event.prompt = jest.fn();
-    event.userChoice = Promise.resolve({ outcome: 'dismissed' });
+    const event = new Event('beforeinstallprompt') as BeforeInstallPromptEvent;
+    Object.defineProperty(event, 'preventDefault', { value: jest.fn() });
+    Object.defineProperty(event, 'prompt', { value: jest.fn() });
+    Object.defineProperty(event, 'userChoice', {
+      value: Promise.resolve({ outcome: 'dismissed', platform: '' }),
+    });
     await act(async () => {
       window.dispatchEvent(event);
     });

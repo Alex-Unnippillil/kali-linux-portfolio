@@ -13,23 +13,28 @@ jest.mock('../utils/bleProfiles', () => ({
 describe('BleSensor error handling', () => {
   beforeEach(() => {
     window.confirm = jest.fn().mockReturnValue(true);
-    (navigator as any).bluetooth = {
-      requestDevice: jest
-        .fn()
-        .mockRejectedValueOnce(Object.assign(new Error('No devices found'), {
-          name: 'NotFoundError',
-        }))
-        .mockResolvedValueOnce({
-          id: 'dev1',
-          name: 'Device 1',
-          gatt: {
-            connect: jest.fn().mockResolvedValue({
-              getPrimaryServices: jest.fn().mockResolvedValue([]),
+    Object.defineProperty(navigator, 'bluetooth', {
+      configurable: true,
+      value: {
+        requestDevice: jest
+          .fn()
+          .mockRejectedValueOnce(
+            Object.assign(new Error('No devices found'), {
+              name: 'NotFoundError',
             }),
-          },
-          addEventListener: jest.fn(),
-        }),
-    };
+          )
+          .mockResolvedValueOnce({
+            id: 'dev1',
+            name: 'Device 1',
+            gatt: {
+              connect: jest.fn().mockResolvedValue({
+                getPrimaryServices: jest.fn().mockResolvedValue([]),
+              }),
+            },
+            addEventListener: jest.fn(),
+          }),
+      },
+    });
   });
 
   it('shows friendly error then connects on retry', async () => {

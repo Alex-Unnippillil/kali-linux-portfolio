@@ -6,6 +6,24 @@ import ResultViewer from '../../ResultViewer';
 import ExplainerPane from '../../ExplainerPane';
 import EmptyState from '../../ui/EmptyState';
 
+type GenericRecord = Record<string, unknown>;
+interface SigmaRule extends GenericRecord {
+  id: string;
+  title: string;
+}
+interface MitreTechnique {
+  id: string;
+  name: string;
+}
+interface MitreTactic {
+  id: string;
+  name: string;
+  techniques: MitreTechnique[];
+}
+interface MitreData {
+  tactics: MitreTactic[];
+}
+
 const tabs = [
   { id: 'repeater', label: 'Repeater' },
   { id: 'suricata', label: 'Suricata Logs' },
@@ -20,21 +38,31 @@ export default function SecurityTools() {
   const [active, setActive] = useState('repeater');
   const [query, setQuery] = useState('');
   const [authorized, setAuthorized] = useState(false);
-  const [fixtureData, setFixtureData] = useState([]);
+  const [fixtureData, setFixtureData] = useState<GenericRecord[]>([]);
 
   // Logs, rules and fixtures
-  const [suricata, setSuricata] = useState([]);
-  const [zeek, setZeek] = useState([]);
-  const [sigma, setSigma] = useState([]);
-  const [mitre, setMitre] = useState({ tactics: [] });
+  const [suricata, setSuricata] = useState<GenericRecord[]>([]);
+  const [zeek, setZeek] = useState<GenericRecord[]>([]);
+  const [sigma, setSigma] = useState<SigmaRule[]>([]);
+  const [mitre, setMitre] = useState<MitreData>({ tactics: [] });
   const [sampleText, setSampleText] = useState('');
 
   useEffect(() => {
-    fetch('/fixtures/suricata.json').then(r => r.json()).then(setSuricata);
-    fetch('/fixtures/zeek.json').then(r => r.json()).then(setZeek);
-    fetch('/fixtures/sigma.json').then(r => r.json()).then(setSigma);
-    fetch('/fixtures/mitre.json').then(r => r.json()).then(setMitre);
-    fetch('/fixtures/yara_sample.txt').then(r => r.text()).then(setSampleText);
+    fetch('/fixtures/suricata.json')
+      .then((r) => r.json())
+      .then((d: GenericRecord[]) => setSuricata(d));
+    fetch('/fixtures/zeek.json')
+      .then((r) => r.json())
+      .then((d: GenericRecord[]) => setZeek(d));
+    fetch('/fixtures/sigma.json')
+      .then((r) => r.json())
+      .then((d: SigmaRule[]) => setSigma(d));
+    fetch('/fixtures/mitre.json')
+      .then((r) => r.json())
+      .then((d: MitreData) => setMitre(d));
+    fetch('/fixtures/yara_sample.txt')
+      .then((r) => r.text())
+      .then(setSampleText);
   }, []);
 
   const [yaraRule, setYaraRule] = useState('rule Demo { strings: $a = "MALWARE" condition: $a }');
@@ -83,7 +111,7 @@ export default function SecurityTools() {
     mitreResults.length ||
     (yaraMatch ? 1 : 0);
 
-  const tabButton = (t) => (
+  const tabButton = (t: { id: string; label: string }) => (
     <button
       key={t.id}
       onClick={() => setActive(t.id)}

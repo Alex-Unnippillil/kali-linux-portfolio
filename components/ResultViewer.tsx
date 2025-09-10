@@ -3,19 +3,19 @@
 import { useState, useMemo, useEffect } from 'react';
 import DensityWrapper from './ui/DensityWrapper';
 
-interface ViewerProps {
-  data: any[];
+interface ViewerProps<T extends Record<string, unknown>> {
+  data: T[];
 }
 
-export default function ResultViewer({ data }: ViewerProps) {
+export default function ResultViewer<T extends Record<string, unknown>>({ data }: ViewerProps<T>) {
   const [tab, setTab] = useState<'raw' | 'parsed' | 'chart'>('raw');
-  const [sortKey, setSortKey] = useState('');
+  const [sortKey, setSortKey] = useState<keyof T | ''>('');
   const [filter, setFilter] = useState('');
 
   useEffect(() => {
     try {
       const sk = localStorage.getItem('rv-sort');
-      if (sk) setSortKey(sk);
+      if (sk) setSortKey(sk as keyof T);
     } catch {
       /* ignore */
     }
@@ -29,18 +29,23 @@ export default function ResultViewer({ data }: ViewerProps) {
     }
   }, [sortKey]);
 
-  const keys = data[0] ? Object.keys(data[0]) : [];
+  const keys = data[0] ? (Object.keys(data[0]) as Array<keyof T>) : [];
   const filtered = useMemo(() => {
     const lower = filter.toLowerCase();
     return data.filter((row) => JSON.stringify(row).toLowerCase().includes(lower));
   }, [data, filter]);
   const sorted = useMemo(() => {
     if (!sortKey) return filtered;
-    return [...filtered].sort((a, b) => (a[sortKey] > b[sortKey] ? 1 : -1));
+    return [...filtered].sort((a, b) =>
+      a[sortKey as keyof T] > b[sortKey as keyof T] ? 1 : -1,
+    );
   }, [filtered, sortKey]);
 
   const exportCsv = () => {
-    const csv = [keys.join(','), ...data.map((row) => keys.map((k) => JSON.stringify(row[k] ?? '')).join(','))].join('\n');
+    const csv = [
+      keys.join(','),
+      ...data.map((row) => keys.map((k) => JSON.stringify(row[k] ?? '')).join(',')),
+    ].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

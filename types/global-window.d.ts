@@ -14,5 +14,11 @@ declare global {
       requestWindow: (options?: PictureInPictureWindowOptions) => Promise<Window>;
     };
   }
+
+  interface CustomA2HSEvent extends Event {}
+
+  interface WindowEventMap {
+    'a2hs:available': CustomA2HSEvent;
+  }
 }
 

@@ -59,10 +59,7 @@ const ScrollableTimeline: React.FC = () => {
   }, [milestonesByYear, selectedYear]);
 
   useEffect(() => {
-    const container = containerRef.current as HTMLElement | null;
-    if (container && 'scrollTo' in container) {
-      (container as any).scrollTo({ left: 0 });
-    }
+    containerRef.current?.scrollTo({ left: 0 });
   }, [view, selectedYear]);
 
   useEffect(() => {

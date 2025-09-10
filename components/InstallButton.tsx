@@ -9,8 +9,8 @@ const InstallButton: React.FC = () => {
 
   useEffect(() => {
     const handler = () => setVisible(true);
-    (window as any).addEventListener('a2hs:available', handler);
-    return () => (window as any).removeEventListener('a2hs:available', handler);
+    window.addEventListener<'a2hs:available'>('a2hs:available', handler);
+    return () => window.removeEventListener<'a2hs:available'>('a2hs:available', handler);
   }, []);
 
   const handleInstall = async () => {

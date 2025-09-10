@@ -12,6 +12,8 @@ beforeAll(() => {
   }
   // @ts-ignore
   global.IntersectionObserver = IntersectionObserverMock;
+  // Mock scrollTo as jsdom does not implement it
+  HTMLElement.prototype.scrollTo = function () {};
 });
 
 describe('ScrollableTimeline', () => {

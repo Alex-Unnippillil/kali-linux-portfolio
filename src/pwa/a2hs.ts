@@ -1,5 +1,5 @@
 import { isBrowser } from '@/utils/env';
-interface BeforeInstallPromptEvent extends Event {
+export interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
   readonly userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
   prompt(): Promise<void>;
@@ -13,7 +13,7 @@ export function initA2HS() {
     const event = e as BeforeInstallPromptEvent;
     event.preventDefault();
     deferredPrompt = event;
-    window.dispatchEvent(new Event('a2hs:available'));
+    window.dispatchEvent(new Event('a2hs:available') as CustomA2HSEvent);
   });
 }
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 
 interface LoaderProps {
-  onData: (rows: any[]) => void;
+  onData: (rows: Record<string, unknown>[]) => void;
 }
 
 export default function FixturesLoader({ onData }: LoaderProps) {
