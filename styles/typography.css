@@ -1,0 +1,59 @@
+/* Typography utilities */
+
+:root {
+  --font-sans: 'Ubuntu', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+    'Noto Color Emoji';
+  --font-serif: 'Merriweather', Georgia, Cambria, 'Times New Roman', Times, serif;
+  --font-mono: 'Ubuntu Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--font-mono);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-sans);
+}
+
+h1 {
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+h2 {
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+h3 {
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+
+h4 {
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+h5 {
+  letter-spacing: -0.005em;
+  line-height: 1.3;
+}
+
+h6 {
+  letter-spacing: 0;
+  line-height: 1.35;
+}
