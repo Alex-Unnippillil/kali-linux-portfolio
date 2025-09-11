@@ -1,0 +1,25 @@
+.hero-title br {
+  display: none;
+}
+
+[data-theme='kali'] .hero-title br {
+  display: block;
+}
+
+/* Reserve space to avoid layout shift when the theme toggles */
+@media (min-width: 768px) {
+  .hero-title {
+    min-height: calc(2 * 1em * 1.2);
+  }
+}
+
+/* On narrow screens allow natural wrapping and hide forced break */
+@media (max-width: 767px) {
+  .hero-title {
+    white-space: normal;
+    min-height: 0;
+  }
+  [data-theme='kali'] .hero-title br {
+    display: none;
+  }
+}
