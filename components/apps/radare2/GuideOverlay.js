@@ -83,7 +83,7 @@ export default function GuideOverlay({ onClose }) {
             href="/demo-data/radare2/tutorial/basic.r2"
             className="underline"
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
           >
             View script
           </a>

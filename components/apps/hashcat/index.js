@@ -464,7 +464,7 @@ function HashcatApp() {
             className="underline"
             href="https://hashcat.net/wiki/doku.php?id=wordlists"
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
           >
             hashcat.net
           </a>
