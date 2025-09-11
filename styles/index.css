@@ -11,6 +11,17 @@ body{
     color: var(--color-text);
 }
 
+/* Cross-browser text selection styling */
+::selection {
+    background: var(--color-selection);
+    color: var(--color-inverse);
+}
+
+::-moz-selection {
+    background: var(--color-selection);
+    color: var(--color-inverse);
+}
+
 button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .hit-area {
     min-width: var(--hit-area);
     min-height: var(--hit-area);
