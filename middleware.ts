@@ -39,9 +39,11 @@ export function middleware(req: NextRequest | { headers: Headers; nextUrl?: URL;
       ?.split(',')[0]
       .split('-')[0];
     const locale = locales.includes(language ?? '') ? language! : defaultLocale;
-    return NextResponse.redirect(
-      new URL(`/${locale}${pathname}`, (req as any).url || 'http://localhost')
-    );
+    if (locale !== defaultLocale) {
+      return NextResponse.redirect(
+        new URL(`/${locale}${pathname}`, (req as any).url || 'http://localhost')
+      );
+    }
   }
 
   const n = nonce();
