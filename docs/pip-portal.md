@@ -11,14 +11,19 @@ hook to open or close the PiP window.
 ```tsx
 import PipPortalProvider, { usePipPortal } from '../components/common/PipPortal';
 
+function Timer({ label }: { label: string }) {
+  return <div className="p-2">{label}: 00:30</div>;
+}
+
 function HudButton() {
   const { open, close } = usePipPortal();
 
   return (
     <div>
+      {/* `label` sets the text displayed before the timer value */}
       <button
         onClick={() =>
-          open(<div className="p-2">Timer: 00:30</div>)
+          open(<Timer label="Elapsed" />)
         }
       >
         Show Timer
