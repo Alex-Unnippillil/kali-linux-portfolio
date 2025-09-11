@@ -8,7 +8,7 @@ import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
 
-export class Window extends Component {
+export class Window extends Component<any, any> {
     constructor(props) {
         super(props);
         this.id = null;
@@ -525,40 +525,40 @@ export class Window extends Component {
             this.focusWindow();
         } else if (e.altKey) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('top');
             }
             this.focusWindow();
         } else if (e.shiftKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
             }
             this.focusWindow();
@@ -582,33 +582,6 @@ export class Window extends Component {
                 this.unsnapWindow();
             }
         }
-    }
-
-    snapWindow = (pos) => {
-        this.focusWindow();
-        const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
-        let transform = '';
-        if (pos === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (pos === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        }
-        const node = document.getElementById(this.id);
-        if (node && transform) {
-            node.style.transform = transform;
-        }
-        this.setState({
-            snapped: pos,
-            lastSize: { width, height },
-            width: newWidth,
-            height: newHeight
-        }, this.resizeBoundries);
     }
 
     render() {
@@ -690,7 +663,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
 }
 
 // Window's Borders
-export class WindowYBorder extends Component {
+export class WindowYBorder extends Component<any, any> {
     componentDidMount() {
         // Use the browser's Image constructor rather than the imported Next.js
         // Image component to avoid runtime errors when running in tests.
@@ -710,7 +683,7 @@ export class WindowYBorder extends Component {
         }
     }
 
-export class WindowXBorder extends Component {
+export class WindowXBorder extends Component<any, any> {
     componentDidMount() {
         // Use the global Image constructor instead of Next.js Image component
 
@@ -824,7 +797,7 @@ export function WindowEditButtons(props) {
 }
 
 // Window's Main Screen
-export class WindowMainScreen extends Component {
+export class WindowMainScreen extends Component<any, any> {
     constructor() {
         super();
         this.state = {
