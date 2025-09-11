@@ -5,7 +5,6 @@ import PanelClock from '../util-components/PanelClock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
 import WhiskerMenu from '../menu/WhiskerMenu';
-import HelpMenu from '../menu/HelpMenu';
 import { getUndercover, setUndercover } from '../../utils/theme';
 
 export default class Navbar extends Component {
@@ -45,7 +44,6 @@ export default class Navbar extends Component {
           />
         </div>
         <WhiskerMenu />
-        <HelpMenu />
         <button
           type="button"
           aria-label="Undercover mode"
