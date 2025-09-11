@@ -3,6 +3,7 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { getNavLabels } from '@/src/config/nav';
 
 type AppMeta = {
   id: string;
@@ -27,6 +28,7 @@ const WhiskerMenu: React.FC = () => {
   const [highlight, setHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const labels = getNavLabels();
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
@@ -37,7 +39,7 @@ const WhiskerMenu: React.FC = () => {
     } catch {
       return [];
     }
-  }, [allApps, open]);
+  }, [allApps]);
   const utilityApps: AppMeta[] = utilities as any;
   const gameApps: AppMeta[] = games as any;
 
@@ -120,7 +122,7 @@ const WhiskerMenu: React.FC = () => {
         ref={buttonRef}
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        className="pl-3 pr-3 transition duration-100 ease-in-out border-b-2 border-transparent py-1"
       >
         <Image
           src="/themes/Yaru/status/decompiler-symbolic.svg"
@@ -129,7 +131,7 @@ const WhiskerMenu: React.FC = () => {
           height={16}
           className="inline mr-1"
         />
-        Applications
+        {labels.applications}
       </button>
       {open && (
         <div
@@ -155,8 +157,9 @@ const WhiskerMenu: React.FC = () => {
           </div>
           <div className="p-3">
             <input
-              className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
+              className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20"
               placeholder="Search"
+              aria-label="Search applications"
               value={query}
               onChange={e => setQuery(e.target.value)}
               autoFocus
