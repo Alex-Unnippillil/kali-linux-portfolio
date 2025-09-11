@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 import usePersistentState from '../../hooks/usePersistentState';
 
 export const VARS_KEY = 'calc-vars';
@@ -16,7 +15,7 @@ export function useVariables() {
 }
 
 export function loadVariables(): VarMap {
-  if (!isBrowser()) return {};
+  if (typeof window === 'undefined') return {};
   try {
     const stored = window.localStorage.getItem(VARS_KEY);
     if (stored) {

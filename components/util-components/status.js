@@ -2,11 +2,11 @@ import React, { useEffect, useState } from "react";
 import Image from 'next/image';
 import SmallArrow from "./small_arrow";
 import { useSettings } from '../../hooks/useSettings';
-import { useTray } from '../../hooks/useTray';
+
+const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
 
 export default function Status() {
-  const { allowNetwork, theme, symbolicTrayIcons } = useSettings();
-  const { icons, register, unregister } = useTray();
+  const { allowNetwork } = useSettings();
   const [online, setOnline] = useState(true);
 
   useEffect(() => {
@@ -38,63 +38,46 @@ export default function Status() {
     };
   }, []);
 
-  useEffect(() => {
-    const id = 'network';
-    const themeDir = theme === 'kali-light' ? 'Yaru' : 'Yaru';
-    const connected = `/themes/${themeDir}/status/network-wireless-signal-good-symbolic.svg`;
-    const disconnected = `/themes/${themeDir}/status/network-wireless-signal-none-symbolic.svg`;
-    register({
-      id,
-      tooltip: online ? (allowNetwork ? 'Online' : 'Online (requests blocked)') : 'Offline',
-      sni: online ? connected : disconnected,
-      legacy: online ? connected : disconnected,
-    });
-    return () => unregister(id);
-  }, [online, allowNetwork, register, unregister, theme]);
-
-  useEffect(() => {
-    const id = 'volume';
-    const themeDir = theme === 'kali-light' ? 'Yaru' : 'Yaru';
-    const icon = `/themes/${themeDir}/status/audio-volume-medium-symbolic.svg`;
-    register({ id, tooltip: 'Volume', sni: icon, legacy: icon });
-    return () => unregister(id);
-  }, [register, unregister, theme]);
-
-  useEffect(() => {
-    const id = 'battery';
-    const themeDir = theme === 'kali-light' ? 'Yaru' : 'Yaru';
-    const icon = `/themes/${themeDir}/status/battery-good-symbolic.svg`;
-    register({ id, tooltip: 'Battery', sni: icon, legacy: icon });
-    return () => unregister(id);
-  }, [register, unregister, theme]);
-
   return (
-    <div className="flex items-center gap-2 md:gap-1 lg:gap-2" role="group" aria-label="System tray">
-      {icons.map((icon) => (
-        <span
-          key={icon.id}
-          className="relative flex items-center justify-center w-5 h-5 md:w-4 md:h-4 lg:w-5 lg:h-5"
-          title={icon.tooltip}
-        >
-          <Image
-            width={20}
-            height={20}
-            src={
-              symbolicTrayIcons
-                ? icon.sni || icon.legacy
-                : icon.legacy || icon.sni
-            }
-            alt={icon.tooltip || icon.id}
-            className="status-symbol w-5 h-5 md:w-4 md:h-4 lg:w-5 lg:h-5"
-            sizes="20px"
-          />
-          {icon.id === 'network' && !allowNetwork && (
-            <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
-          )}
-        </span>
-      ))}
-      <span className="flex items-center justify-center w-5 h-5 md:w-4 md:h-4 lg:w-5 lg:h-5">
-        <SmallArrow angle="down" className="status-symbol" />
+    <div className="flex justify-center items-center">
+      <span
+        className="mx-1.5 relative"
+        title={online ? (allowNetwork ? 'Online' : 'Online (requests blocked)') : 'Offline'}
+      >
+        <Image
+          width={16}
+          height={16}
+          src={online ? "/themes/Yaru/status/network-wireless-signal-good-symbolic.svg" : "/themes/Yaru/status/network-wireless-signal-none-symbolic.svg"}
+          alt={online ? "online" : "offline"}
+          className="inline status-symbol w-4 h-4"
+          sizes="16px"
+        />
+        {!allowNetwork && (
+          <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+        )}
+      </span>
+      <span className="mx-1.5">
+        <Image
+          width={16}
+          height={16}
+          src={VOLUME_ICON}
+          alt="volume"
+          className="inline status-symbol w-4 h-4"
+          sizes="16px"
+        />
+      </span>
+      <span className="mx-1.5">
+        <Image
+          width={16}
+          height={16}
+          src="/themes/Yaru/status/battery-good-symbolic.svg"
+          alt="ubuntu battry"
+          className="inline status-symbol w-4 h-4"
+          sizes="16px"
+        />
+      </span>
+      <span className="mx-1">
+        <SmallArrow angle="down" className=" status-symbol" />
       </span>
     </div>
   );

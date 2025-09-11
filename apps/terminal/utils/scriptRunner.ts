@@ -23,7 +23,7 @@ export function parseScript(source: string): ScriptStep[] {
     .map((line) => {
       const sleepMatch = line.match(/^sleep\s+(\d+)$/i);
       if (sleepMatch) {
-        return { type: 'sleep', ms: parseInt(sleepMatch[1]!, 10) } as SleepStep;
+        return { type: 'sleep', ms: parseInt(sleepMatch[1], 10) } as SleepStep;
       }
       return { type: 'command', command: line } as CommandStep;
     });

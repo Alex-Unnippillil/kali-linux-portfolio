@@ -6,6 +6,7 @@ Attempted to load each route under `/apps` in Chromium, Firefox, and WebKit. All
 
 | Route | Chromium | Firefox | WebKit |
 |-------|----------|---------|--------|
+| /apps/2048 | HTTP 500 | HTTP 500 | HTTP 500 |
 | /apps/blackjack | HTTP 500 | HTTP 500 | HTTP 500 |
 | /apps/calculator | HTTP 500 | HTTP 500 | HTTP 500 |
 | /apps/checkers | HTTP 500 | HTTP 500 | HTTP 500 |
@@ -31,13 +32,3 @@ Attempted to load each route under `/apps` in Chromium, Firefox, and WebKit. All
 - `yarn why bare-fs` shows the module is required by `tar-fs@3.1.0` via `@puppeteer/browsers@2.10.7`.
 - Latest versions (`@puppeteer/browsers@2.10.8`, `tar-fs@3.1.0`) still depend on `bare-fs@4.2.1`, so the warning remains.
 - `puppeteer` and `puppeteer-core` require this chain; removing them would break existing tooling, so the warning is ignored.
-
-## Accessibility contrast checks (2025-09-08)
-
-- `text-gray-400` on light backgrounds failed WCAG AA contrast in several components (QuickSettings, Network Manager, Gigolo, Bluetooth panel).
-- Updated disabled and empty-state text to use `text-gray-600 dark:text-gray-400` for sufficient contrast in both light and dark themes.
-
-## Sticky Notes share target (2025-02-14)
-
-- Verified the manifest `share_target` flow on Chrome and Edge.
-- Sharing a text snippet in either browser opens the PWA and creates a new Sticky Note with the shared content.

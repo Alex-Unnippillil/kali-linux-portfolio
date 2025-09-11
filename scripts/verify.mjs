@@ -2,7 +2,6 @@ import { execSync, spawn } from 'child_process';
 import { createRequire } from 'module';
 import net from 'net';
 import waitOn from 'wait-on';
-import logger from '../utils/logger';
 
 const require = createRequire(import.meta.url);
 
@@ -31,9 +30,9 @@ const getPort = () =>
   try {
     const yarnVersion = execSync('yarn --version', { encoding: 'utf8' }).trim();
     const nextVersion = require('next/package.json').version;
-    logger.info(`node: ${process.version}`);
-    logger.info(`yarn: ${yarnVersion}`);
-    logger.info(`next: ${nextVersion}`);
+    console.log(`node: ${process.version}`);
+    console.log(`yarn: ${yarnVersion}`);
+    console.log(`next: ${nextVersion}`);
 
     await run('yarn', ['install', '--immutable']);
     await run('yarn', ['lint']);
@@ -52,14 +51,14 @@ const getPort = () =>
       if (res.status !== 200 || header !== 'Next.js') {
         throw new Error(`Route ${route} failed: status ${res.status}, header ${header}`);
       }
-      logger.info(`✓ ${route}`);
+      console.log(`✓ ${route}`);
     }
 
-    logger.info('verify: PASS');
+    console.log('verify: PASS');
     server.kill();
   } catch (err) {
-    logger.error('verify: FAIL');
-    logger.error(err);
+    console.error('verify: FAIL');
+    console.error(err);
     process.exit(1);
   }
 })();

@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   parseRules,
@@ -7,7 +6,7 @@ import {
   generateIncrementalCandidates,
   parsePotfile,
 } from './utils';
-import FormError from '@/components/ui/FormError';
+import FormError from '../../ui/FormError';
 import StatsChart from '../../StatsChart';
 
 // Enhanced John the Ripper interface that supports rule uploads,
@@ -38,7 +37,7 @@ const JohnApp = () => {
   const controllerRef = useRef(null);
 
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === 'undefined') return;
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
     const update = () => setPrefersReducedMotion(media.matches);
     update();

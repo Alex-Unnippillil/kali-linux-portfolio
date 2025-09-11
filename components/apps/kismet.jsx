@@ -15,82 +15,74 @@ const parseMgmtFrame = (frame) => {
   // Skip header (24 bytes) + fixed params (12 bytes)
   let off = 36;
   while (off + 2 <= frame.length) {
-      const tag = frame[off];
-      const len = frame[off + 1];
-      const data = frame.slice(off + 2, off + 2 + len);
-      if (tag === 0) {
-        try {
-          ssid = new TextDecoder().decode(data);
-        } catch {
-          ssid = '';
-        }
-      } else if (tag === 3 && data.length) {
-        channel = data[0];
-      }
-      off += 2 + len;
+    const tag = frame[off];
+    const len = frame[off + 1];
+    const data = frame.slice(off + 2, off + 2 + len);
+    if (tag === 0) {
+      ssid = new TextDecoder().decode(data);
+    } else if (tag === 3 && data.length) {
+      channel = data[0];
     }
+    off += 2 + len;
+  }
 
   return { ssid, bssid, channel };
 };
 
 // Parse packets from a pcap ArrayBuffer
 const parsePcap = (arrayBuffer, onNetwork) => {
-  try {
-    const dv = new DataView(arrayBuffer);
-    const packets = [];
-    let offset = 24; // global header
-    while (offset + 16 <= dv.byteLength) {
-      const tsSec = dv.getUint32(offset, true);
-      const tsUsec = dv.getUint32(offset + 4, true);
-      const inclLen = dv.getUint32(offset + 8, true);
-      offset += 16;
-      const data = new Uint8Array(arrayBuffer, offset, inclLen);
-      packets.push({ tsSec, tsUsec, data });
-      offset += inclLen;
-    }
-
-    const networks = {};
-    const channelCounts = {};
-    const timeCounts = {};
-    const startTime = packets[0]?.tsSec || 0;
-
-    for (const pkt of packets) {
-      if (pkt.data.length < 4) continue;
-      const rtLen = pkt.data[2] | (pkt.data[3] << 8);
-      if (pkt.data.length < rtLen + 24) continue;
-      const frame = pkt.data.subarray(rtLen);
-      const fc = frame[0] | (frame[1] << 8);
-      const type = (fc >> 2) & 0x3;
-      const subtype = (fc >> 4) & 0xf;
-      // Only management beacons/probe responses
-      if (type !== 0 || (subtype !== 8 && subtype !== 5)) continue;
-
-      const info = parseMgmtFrame(frame);
-      const key = info.bssid || info.ssid;
-      if (!networks[key]) {
-        networks[key] = { ...info, frames: 0 };
-        onNetwork?.({
-          ssid: info.ssid,
-          bssid: info.bssid,
-          discoveredAt: pkt.tsSec * 1000 + Math.floor(pkt.tsUsec / 1000),
-        });
-      }
-      networks[key].frames += 1;
-      if (info.channel != null) {
-        channelCounts[info.channel] = (channelCounts[info.channel] || 0) + 1;
-      }
-      const t = pkt.tsSec - startTime;
-      timeCounts[t] = (timeCounts[t] || 0) + 1;
-    }
-
-    return {
-      networks: Object.values(networks),
-      channelCounts,
-      timeCounts,
-    };
-  } catch {
-    return { networks: [], channelCounts: {}, timeCounts: {} };
+  const dv = new DataView(arrayBuffer);
+  const packets = [];
+  let offset = 24; // global header
+  while (offset + 16 <= dv.byteLength) {
+    const tsSec = dv.getUint32(offset, true);
+    const tsUsec = dv.getUint32(offset + 4, true);
+    const inclLen = dv.getUint32(offset + 8, true);
+    offset += 16;
+    const data = new Uint8Array(arrayBuffer, offset, inclLen);
+    packets.push({ tsSec, tsUsec, data });
+    offset += inclLen;
   }
+
+  const networks = {};
+  const channelCounts = {};
+  const timeCounts = {};
+  const startTime = packets[0]?.tsSec || 0;
+
+  for (const pkt of packets) {
+    if (pkt.data.length < 4) continue;
+    const rtLen = pkt.data[2] | (pkt.data[3] << 8);
+    if (pkt.data.length < rtLen + 24) continue;
+    const frame = pkt.data.subarray(rtLen);
+    const fc = frame[0] | (frame[1] << 8);
+    const type = (fc >> 2) & 0x3;
+    const subtype = (fc >> 4) & 0xf;
+    // Only management beacons/probe responses
+    if (type !== 0 || (subtype !== 8 && subtype !== 5)) continue;
+
+    const info = parseMgmtFrame(frame);
+    const key = info.bssid || info.ssid;
+    if (!networks[key]) {
+      networks[key] = { ...info, frames: 0 };
+      onNetwork?.({
+        ssid: info.ssid,
+        bssid: info.bssid,
+        discoveredAt: pkt.tsSec * 1000 + Math.floor(pkt.tsUsec / 1000),
+      });
+    }
+    networks[key].frames += 1;
+    if (info.channel != null) {
+      channelCounts[info.channel] = (channelCounts[info.channel] || 0) + 1;
+    }
+    const t = pkt.tsSec - startTime;
+    timeCounts[t] = (timeCounts[t] || 0) + 1;
+  }
+
+  return {
+    networks: Object.values(networks),
+    channelCounts,
+    timeCounts,
+  };
 };
 
 const ChannelChart = ({ data }) => {
@@ -148,20 +140,14 @@ const KismetApp = ({ onNetworkDiscovered }) => {
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    try {
-      const buffer = await file.arrayBuffer();
-      const { networks, channelCounts, timeCounts } = parsePcap(
-        buffer,
-        onNetworkDiscovered,
-      );
-      setNetworks(networks);
-      setChannels(channelCounts);
-      setTimes(timeCounts);
-    } catch {
-      setNetworks([]);
-      setChannels({});
-      setTimes({});
-    }
+    const buffer = await file.arrayBuffer();
+    const { networks, channelCounts, timeCounts } = parsePcap(
+      buffer,
+      onNetworkDiscovered,
+    );
+    setNetworks(networks);
+    setChannels(channelCounts);
+    setTimes(timeCounts);
   };
 
   return (

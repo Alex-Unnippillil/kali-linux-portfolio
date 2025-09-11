@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 import React, { useState, useEffect, useRef } from 'react';
 import TaskOverview from './task-overview';
 import PolicySettings from './policy-settings';
@@ -27,7 +26,7 @@ const profileTabs = [
 
 // Simple helper for notifications that falls back to alert()
 const notify = (title, body) => {
-  if (!isBrowser()) return;
+  if (typeof window === 'undefined') return;
   if ('Notification' in window && Notification.permission === 'granted') {
     new Notification(title, { body });
   } else {
@@ -170,7 +169,7 @@ const hostReports = [
 
 // Persist in-progress scans so they can resume after reload
 const loadSession = () => {
-  if (!isBrowser()) return null;
+  if (typeof window === 'undefined') return null;
   try {
     return JSON.parse(localStorage.getItem('openvas/session') || 'null');
   } catch {
@@ -179,12 +178,12 @@ const loadSession = () => {
 };
 
 const saveSession = (session) => {
-  if (!isBrowser()) return;
+  if (typeof window === 'undefined') return;
   localStorage.setItem('openvas/session', JSON.stringify(session));
 };
 
 const clearSession = () => {
-  if (!isBrowser()) return;
+  if (typeof window === 'undefined') return;
   localStorage.removeItem('openvas/session');
 };
 
@@ -207,7 +206,7 @@ const OpenVASApp = () => {
   const sessionRef = useRef({});
 
   useEffect(() => {
-    if (isBrowser()) {
+    if (typeof window !== 'undefined') {
       const media = window.matchMedia('(prefers-reduced-motion: reduce)');
       reduceMotion.current = media.matches;
       if (typeof Worker === 'function') {
@@ -639,13 +638,7 @@ const OpenVASApp = () => {
           aria-label="Download summary"
           className="inline-flex items-center mt-2 p-2 bg-blue-600 rounded"
         >
-          <img
-            src="/themes/Yaru/status/download.svg"
-            alt=""
-            className="w-4 h-4"
-            width={16}
-            height={16}
-          />
+          <img src="/themes/Yaru/status/download.svg" alt="" className="w-4 h-4" />
         </a>
       )}
       <footer className="mt-4 text-xs text-gray-400">

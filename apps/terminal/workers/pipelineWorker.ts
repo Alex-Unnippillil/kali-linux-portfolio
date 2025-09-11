@@ -115,7 +115,7 @@ function buildPipeline(command: string, ctx: Context): Stream {
     .filter(Boolean);
   let stream: Stream = emptyStream();
   for (const seg of segments) {
-    const [name = '', ...args] = seg.split(/\s+/);
+    const [name, ...args] = seg.split(/\s+/);
     const handler = handlers[name];
     if (handler) {
       stream = handler(args, stream, ctx);

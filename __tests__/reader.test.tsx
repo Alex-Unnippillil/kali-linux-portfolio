@@ -1,20 +1,15 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Reader from '../components/apps/chrome/Reader';
 
-const sampleArticle = {
-  title: 't',
-  content: '<h1>Sample</h1><p>Content here</p>',
-  excerpt: '',
-  markdown: '# t\n\nContent here',
-};
+const sampleHtml = `<!DOCTYPE html><html><head><title>t</title></head><body><article><h1>Sample</h1><p>Content here</p></article></body></html>`;
 
 const writeTextMock = jest.fn();
 
 describe('Reader', () => {
   beforeEach(() => {
-    (global as any).fetch = jest.fn(async () => ({ json: async () => sampleArticle }));
+    (global as any).fetch = jest.fn(async () => ({ text: async () => sampleHtml }));
     writeTextMock.mockClear();
     localStorage.clear();
   });

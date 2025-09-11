@@ -87,7 +87,7 @@ interface EnemyInstance extends Enemy {
 }
 
 const TowerDefense = () => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [editing, setEditing] = useState(true);
   const [path, setPath] = useState<{ x: number; y: number }[]>([]);
   const pathSetRef = useRef<Set<string>>(new Set());
@@ -162,9 +162,7 @@ const TowerDefense = () => {
   };
 
   const handleCanvasClick = (e: React.MouseEvent) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
+    const rect = canvasRef.current!.getBoundingClientRect();
     const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
     const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
     const key = `${x},${y}`;
@@ -182,9 +180,7 @@ const TowerDefense = () => {
   };
 
   const handleCanvasMove = (e: React.MouseEvent) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
+    const rect = canvasRef.current!.getBoundingClientRect();
     const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
     const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
     const idx = towers.findIndex((t) => t.x === x && t.y === y);
@@ -195,10 +191,11 @@ const TowerDefense = () => {
 
   useEffect(() => {
     if (path.length >= 2) {
-      const start = path.at(0);
-      const end = path.at(-1);
-      if (!start || !end) return;
-      flowFieldRef.current = computeFlowField(start, end, towers);
+      flowFieldRef.current = computeFlowField(
+        path[0],
+        path[path.length - 1],
+        towers,
+      );
     }
   }, [path, towers]);
 
@@ -398,6 +395,7 @@ const TowerDefense = () => {
   useEffect(() => {
     lastTime.current = performance.now();
     requestAnimationFrame(update);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
     const start = () => {
@@ -468,7 +466,6 @@ const TowerDefense = () => {
             Add Wave
           </button>
           <textarea
-            aria-label="wave configuration"
             className="w-full bg-black text-white p-1 rounded h-24"
             value={waveJson}
             onChange={(e) => setWaveJson(e.target.value)}
@@ -490,7 +487,6 @@ const TowerDefense = () => {
         </div>
         <div className="flex">
           <canvas
-            aria-label="tower defense map"
             ref={canvasRef}
             width={CANVAS_SIZE}
             height={CANVAS_SIZE}

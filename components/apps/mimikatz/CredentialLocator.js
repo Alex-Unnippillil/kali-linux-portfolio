@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 // Simulator: displays sample credential artifacts. For educational use only.
 import React, { useState, useEffect } from 'react';
 
@@ -13,7 +12,7 @@ const CredentialArtifactLocator = () => {
   const [results, setResults] = useState([]);
   const [scanning, setScanning] = useState(false);
   const prefersReducedMotion =
-    isBrowser() &&
+    typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   useEffect(() => {

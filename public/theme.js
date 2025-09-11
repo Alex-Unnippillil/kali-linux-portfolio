@@ -1,31 +1,23 @@
-
 (function () {
   var THEME_KEY = 'app:theme';
-  var darkThemes = ['dark', 'neon', 'matrix', 'kali-dark'];
-
-  if (typeof window === 'undefined' || typeof document === 'undefined') {
-    return;
-  }
-
   try {
     var stored = null;
-    if (typeof window.localStorage !== 'undefined') {
+    if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
       stored = window.localStorage.getItem(THEME_KEY);
     }
 
-    var prefersDark =
-      typeof window.matchMedia === 'function' &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches;
-    var theme = stored || (prefersDark ? 'kali-dark' : 'kali-light');
+    var prefersDark = false;
+    if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+      prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
 
+    var theme = stored || (prefersDark ? 'dark' : 'default');
     document.documentElement.dataset.theme = theme;
-    document.documentElement.classList.toggle(
-      'dark',
-      darkThemes.includes(theme)
-    );
+    var darkThemes = ['dark', 'neon', 'matrix'];
+    document.documentElement.classList.toggle('dark', darkThemes.includes(theme));
   } catch (e) {
     console.error('Failed to apply theme', e);
-    document.documentElement.dataset.theme = 'kali-dark';
-    document.documentElement.classList.add('dark');
+    document.documentElement.dataset.theme = 'default';
+    document.documentElement.classList.remove('dark');
   }
 })();

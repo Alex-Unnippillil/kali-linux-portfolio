@@ -1,6 +1,4 @@
-import { isBrowser } from '@/utils/env';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import Image from 'next/image';
 import * as chrono from 'chrono-node';
 import { RRule } from 'rrule';
 import { parseRecurring } from '../../apps/todoist/utils/recurringParser';
@@ -54,12 +52,12 @@ export default function Todoist() {
   const workerRef = useRef(null);
   const quickRef = useRef(null);
   const prefersReducedMotion = useRef(
-    isBrowser() &&
+    typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
   );
 
   useEffect(() => {
-    if (isBrowser()) {
+    if (typeof window !== 'undefined') {
       const data = localStorage.getItem(STORAGE_KEY);
       if (data) {
         try {
@@ -87,7 +85,7 @@ export default function Todoist() {
   }, []);
 
   useEffect(() => {
-    if (isBrowser() && typeof Worker === 'function') {
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
       workerRef.current = new Worker(new URL('./todoist.worker.js', import.meta.url));
       workerRef.current.onmessage = (e) => {
         const { groups: newGroups, taskTitle, to } = e.data || {};
@@ -108,7 +106,7 @@ export default function Todoist() {
   const finalizeMove = useCallback(
     (newGroups, taskTitle, to) => {
       setGroups(newGroups);
-      if (isBrowser()) {
+      if (typeof window !== 'undefined') {
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
         } catch {
@@ -162,7 +160,7 @@ export default function Todoist() {
 
   const updateGroups = (newGroups) => {
     setGroups(newGroups);
-    if (isBrowser()) {
+    if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
       } catch {
@@ -182,7 +180,7 @@ export default function Todoist() {
       ),
     };
     setGroups(newGroups);
-    if (isBrowser()) {
+    if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
       } catch {
@@ -308,7 +306,7 @@ export default function Todoist() {
       }),
     };
     setGroups(newGroups);
-    if (isBrowser()) {
+    if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
       } catch {
@@ -430,7 +428,7 @@ export default function Todoist() {
         const parsed = JSON.parse(reader.result);
         const newGroups = { ...initialGroups, ...parsed };
         setGroups(newGroups);
-        if (isBrowser()) {
+        if (typeof window !== 'undefined') {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
         }
       } catch {
@@ -554,7 +552,7 @@ export default function Todoist() {
           Today: [...groups.Today, ...imported],
         };
         setGroups(newGroups);
-        if (isBrowser()) {
+        if (typeof window !== 'undefined') {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
         }
       } catch {
@@ -611,7 +609,7 @@ export default function Todoist() {
             </div>
             <div className="flex flex-wrap gap-2 text-xs text-gray-500">
               {task.due && (
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${chipColor}`}>
+                <span className={`inline-flex items-center gap-1 px-2 py-[2px] rounded-full ${chipColor}`}>
                   <span aria-hidden>📅</span>
                   {task.due}
                 </span>
@@ -674,7 +672,7 @@ export default function Todoist() {
         </h2>
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center text-gray-500 mt-3">
-            <Image src="/empty-tasks.svg" alt="" className="mb-1.5" width={64} height={64} />
+            <img src="/empty-tasks.svg" alt="" className="w-16 h-16 mb-1.5" />
             <span className="text-sm">No tasks</span>
           </div>
         ) : (

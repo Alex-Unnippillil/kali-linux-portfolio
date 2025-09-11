@@ -1,6 +1,5 @@
 'use client';
 
-import { isBrowser } from '@/utils/env';
 import { useState } from 'react';
 import type { GameState } from '../games/solitaire/logic';
 import {
@@ -16,7 +15,7 @@ import {
 
 const Solitaire = () => {
   const getStoredMode = (): 'draw1' | 'draw3' => {
-    if (!isBrowser()) return 'draw1';
+    if (typeof window === 'undefined') return 'draw1';
     return (localStorage.getItem('solitaire-mode') as 'draw1' | 'draw3' | null) || 'draw1';
   };
 

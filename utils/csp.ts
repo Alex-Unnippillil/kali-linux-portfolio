@@ -1,7 +1,5 @@
-import { isBrowser } from './isBrowser';
-
 export function getCspNonce(): string | undefined {
-  if (isBrowser()) {
+  if (typeof document !== 'undefined') {
     return document.documentElement.dataset.cspNonce;
   }
   return undefined;

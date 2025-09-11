@@ -1,113 +1,29 @@
 import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
 
-/**
- * @typedef {import('./types/app').AppMetadata} AppMetadata
- */
+import { displayX } from './components/apps/x';
+import { displaySpotify } from './components/apps/spotify';
+import { displaySettings } from './components/apps/settings';
+import { displayChrome } from './components/apps/chrome';
+import { displayGedit } from './components/apps/gedit';
+import { displayTodoist } from './components/apps/todoist';
+import { displayWeather } from './components/apps/weather';
+import { displayClipboardManager } from './components/apps/ClipboardManager';
+import { displayFiglet } from './components/apps/figlet';
+import { displayResourceMonitor } from './components/apps/resource_monitor';
+import { displayScreenRecorder } from './components/apps/screen-recorder';
+import { displayNikto } from './components/apps/nikto';
 
 export const chromeDefaultTiles = [
+  { title: 'MDN', url: 'https://developer.mozilla.org/' },
+  { title: 'Wikipedia', url: 'https://en.wikipedia.org' },
   { title: 'Example', url: 'https://example.com' },
 ];
 
-// TODO: restore YouTube (youtube)
-// TODO: restore Converter (converter)
-// TODO: restore Tic Tac Toe (tictactoe)
-// TODO: restore Chess (chess)
-// TODO: restore Connect Four (connect-four)
-// TODO: restore Hangman (hangman)
-// TODO: restore Frogger (frogger)
-// TODO: restore Flappy Bird (flappy-bird)
-// TODO: restore Snake (snake)
-// TODO: restore Memory (memory)
-// TODO: restore Minesweeper (minesweeper)
-// TODO: restore Pong (pong)
-// TODO: restore Pacman (pacman)
-// TODO: restore Car Racer (car-racer)
-// TODO: restore Lane Runner (lane-runner)
-// TODO: restore Platformer (platformer)
-// TODO: restore Battleship (battleship)
-// TODO: restore Checkers (checkers)
-// TODO: restore Reversi (reversi)
-// TODO: restore Simon (simon)
-// TODO: restore Sokoban (sokoban)
-// TODO: restore Solitaire (solitaire/index)
-// TODO: restore Tower Defense (tower-defense)
-// TODO: restore Word Search (word-search)
-// TODO: restore Wordle (wordle)
-// TODO: restore Blackjack (blackjack)
-// TODO: restore Breakout (breakout)
-// TODO: restore Asteroids (asteroids)
-// TODO: restore Sudoku (sudoku)
-// TODO: restore Space Invaders (space-invaders)
-// TODO: restore Nonogram (nonogram)
-// TODO: restore Tetris (tetris)
-// TODO: restore Candy Crush (candy-crush)
-// TODO: restore Files (file-explorer)
-// TODO: restore Image Viewer (ristretto)
-// TODO: restore Radare2 (radare2)
-// TODO: restore About Alex (alex)
-// TODO: restore Power Settings (power)
-// TODO: restore X (x)
-// TODO: restore Spotify (spotify)
-// TODO: restore Settings (settings)
-// TODO: restore Chrome (chrome)
-// TODO: restore Gedit (gedit)
-// TODO: restore Todoist (todoist)
-// TODO: restore Weather (weather)
-// TODO: restore Clipboard Manager (ClipboardManager)
-// TODO: restore Figlet (figlet)
-// TODO: restore Resource Monitor (resource_monitor)
-// TODO: restore Screen Recorder (screen-recorder)
-// TODO: restore Task Manager (task_manager)
-// TODO: restore Nikto (nikto)
-// TODO: restore QR Tool (qr)
-// TODO: restore ASCII Art (ascii_art)
-// TODO: restore Quote (quote)
-// TODO: restore Project Gallery (project-gallery)
-// TODO: restore Weather Widget (weather_widget)
-// TODO: restore Input Lab (input-lab)
-// TODO: restore Ghidra (ghidra)
-// TODO: restore Brasero (brasero)
-// TODO: restore Sticky Notes (sticky_notes)
-// TODO: restore Trash (trash)
-// TODO: restore Serial Terminal (serial-terminal)
-// TODO: restore Network Connections (network/connections)
-// TODO: restore BLE Sensor (ble-sensor)
-// TODO: restore Bluetooth (bluetooth)
-// TODO: restore dsniff (dsniff)
-// TODO: restore BeEF (beef)
-// TODO: restore Metasploit (metasploit)
-// TODO: restore Network Manager (network-manager)
-// TODO: restore Autopsy (autopsy)
-// TODO: restore Plugin Manager (plugin-manager)
-// TODO: restore Panel Profiles (panel-profiles)
-// TODO: restore Gomoku (gomoku)
-// TODO: restore Pinball (pinball)
-// TODO: restore Volatility (volatility)
-// TODO: restore Kismet (kismet.jsx)
-// TODO: restore Hashcat (hashcat)
-// TODO: restore Metasploit Post (msf-post)
-// TODO: restore Evidence Vault (evidence-vault)
-// TODO: restore Mimikatz (mimikatz)
-// TODO: restore Mimikatz Offline (mimikatz/offline)
-// TODO: restore Ettercap (ettercap)
-// TODO: restore Reaver (reaver)
-// TODO: restore Hydra (hydra)
-// TODO: restore John the Ripper (john)
-// TODO: restore Nessus (nessus)
-// TODO: restore Nmap NSE (nmap-nse)
-// TODO: restore OpenVAS (openvas)
-// TODO: restore Recon-ng (reconng)
-// TODO: restore Kali Tools (kali-tools)
-// TODO: restore Security Tools (security-tools)
-// TODO: restore Kali Tweaks (kali-tweaks)
-// TODO: restore SSH Command Builder (ssh)
-// TODO: restore HTTP Request Builder (http)
-// TODO: restore HTML Rewriter (html-rewriter)
-// TODO: restore Contact (contact)
-// TODO: restore Gigolo (gigolo)
-
+// Dynamic applications and games
 const TerminalApp = createDynamicApp('terminal', 'Terminal');
+// VSCode app uses a Stack iframe, so no editor dependencies are required
 const VsCodeApp = createDynamicApp('vscode', 'VsCode');
+const YouTubeApp = createDynamicApp('youtube', 'YouTube');
 const CalculatorApp = createDynamicApp('calculator', 'Calculator');
 const ConverterApp = createDynamicApp('converter', 'Converter');
 const TicTacToeApp = createDynamicApp('tictactoe', 'Tic Tac Toe');
@@ -117,6 +33,7 @@ const ConnectFourApp = createDynamicApp('connect-four', 'Connect Four');
 const HangmanApp = createDynamicApp('hangman', 'Hangman');
 const FroggerApp = createDynamicApp('frogger', 'Frogger');
 const FlappyBirdApp = createDynamicApp('flappy-bird', 'Flappy Bird');
+const Game2048App = createDynamicApp('2048', '2048');
 const SnakeApp = createDynamicApp('snake', 'Snake');
 const MemoryApp = createDynamicApp('memory', 'Memory');
 // Classic puzzle where players clear a minefield.
@@ -146,25 +63,8 @@ const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const FileExplorerApp = createDynamicApp('file-explorer', 'Files');
-const RistrettoApp = createDynamicApp('ristretto', 'Image Viewer');
 const Radare2App = createDynamicApp('radare2', 'Radare2');
-const AboutAlexApp = createDynamicApp('About', 'About Alex');
-const PowerApp = createDynamicApp('power', 'Power Settings');
-
-const XApp = createDynamicApp('x', 'X');
-const SpotifyApp = createDynamicApp('spotify', 'Spotify');
-const SettingsApp = createDynamicApp('settings', 'Settings');
-const ChromeApp = createDynamicApp('chrome', 'Chrome');
-const GeditApp = createDynamicApp('gedit', 'Gedit');
-const MousepadApp = createDynamicApp('mousepad', 'Mousepad Preferences');
-const TodoistApp = createDynamicApp('todoist', 'Todoist');
-const WeatherApp = createDynamicApp('weather', 'Weather');
-const ClipboardManagerApp = createDynamicApp('clipboard_manager', 'Clipboard Manager');
-const FigletApp = createDynamicApp('figlet', 'Figlet');
-const ResourceMonitorApp = createDynamicApp('resource_monitor', 'Resource Monitor');
-const ScreenRecorderApp = createDynamicApp('screen-recorder', 'Screen Recorder');
-const TaskManagerApp = createDynamicApp('task_manager', 'Task Manager');
-const NiktoApp = createDynamicApp('nikto', 'Nikto');
+const AboutAlexApp = createDynamicApp('alex', 'About Alex');
 
 const QrApp = createDynamicApp('qr', 'QR Tool');
 const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
@@ -173,33 +73,29 @@ const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery')
 const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
 const InputLabApp = createDynamicApp('input-lab', 'Input Lab');
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
-const BraseroApp = createDynamicApp('brasero', 'Brasero');
 
 const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
 const TrashApp = createDynamicApp('trash', 'Trash');
 const SerialTerminalApp = createDynamicApp('serial-terminal', 'Serial Terminal');
 
 
-const NetworkConnectionsApp = createDynamicApp('network/connections', 'Network Connections');
+const WiresharkApp = createDynamicApp('wireshark', 'Wireshark');
 const BleSensorApp = createDynamicApp('ble-sensor', 'BLE Sensor');
-const BluetoothApp = createDynamicApp('bluetooth', 'Bluetooth');
 const DsniffApp = createDynamicApp('dsniff', 'dsniff');
 const BeefApp = createDynamicApp('beef', 'BeEF');
 const MetasploitApp = createDynamicApp('metasploit', 'Metasploit');
-const NetworkManagerApp = createDynamicApp('network-manager', 'Network Manager');
 
 const AutopsyApp = createDynamicApp('autopsy', 'Autopsy');
 const PluginManagerApp = createDynamicApp('plugin-manager', 'Plugin Manager');
-const PanelProfilesApp = createDynamicApp('panel-profiles', 'Panel Profiles');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
 const VolatilityApp = createDynamicApp('volatility', 'Volatility');
 
-const KismetApp = createDynamicApp('kismet', 'Kismet');
+const KismetApp = createDynamicApp('kismet.jsx', 'Kismet');
 
 const HashcatApp = createDynamicApp('hashcat', 'Hashcat');
-const MsfPostApp = createDynamicApp('metasploit-post', 'Metasploit Post');
+const MsfPostApp = createDynamicApp('msf-post', 'Metasploit Post');
 const EvidenceVaultApp = createDynamicApp('evidence-vault', 'Evidence Vault');
 const MimikatzApp = createDynamicApp('mimikatz', 'Mimikatz');
 const MimikatzOfflineApp = createDynamicApp('mimikatz/offline', 'Mimikatz Offline');
@@ -211,20 +107,17 @@ const NessusApp = createDynamicApp('nessus', 'Nessus');
 const NmapNSEApp = createDynamicApp('nmap-nse', 'Nmap NSE');
 const OpenVASApp = createDynamicApp('openvas', 'OpenVAS');
 const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
-const KaliToolsApp = createDynamicApp('kali-tools', 'Kali Tools');
 const SecurityToolsApp = createDynamicApp('security-tools', 'Security Tools');
-const KaliTweaksApp = createDynamicApp('kali-tweaks', 'Kali Tweaks');
 const SSHApp = createDynamicApp('ssh', 'SSH Command Builder');
 const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
 const HtmlRewriteApp = createDynamicApp('html-rewriter', 'HTML Rewriter');
 const ContactApp = createDynamicApp('contact', 'Contact');
-const GigoloApp = createDynamicApp('gigolo', 'Gigolo');
-
 
 
 
 const displayTerminal = createDisplay(TerminalApp);
 const displayVsCode = createDisplay(VsCodeApp);
+const displayYouTube = createDisplay(YouTubeApp);
 const displayCalculator = createDisplay(CalculatorApp);
 const displayConverter = createDisplay(ConverterApp);
 const displayTicTacToe = createDisplay(TicTacToeApp);
@@ -233,6 +126,7 @@ const displayConnectFour = createDisplay(ConnectFourApp);
 const displayHangman = createDisplay(HangmanApp);
 const displayFrogger = createDisplay(FroggerApp);
 const displayFlappyBird = createDisplay(FlappyBirdApp);
+const displayGame2048 = createDisplay(Game2048App);
 const displaySnake = createDisplay(SnakeApp);
 const displayMemory = createDisplay(MemoryApp);
 const displayMinesweeper = createDisplay(MinesweeperApp);
@@ -259,25 +153,8 @@ const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayFileExplorer = createDisplay(FileExplorerApp);
-const displayRistretto = createDisplay(RistrettoApp);
 const displayRadare2 = createDisplay(Radare2App);
 const displayAboutAlex = createDisplay(AboutAlexApp);
-const displayPower = createDisplay(PowerApp);
-
-const displayX = createDisplay(XApp);
-const displaySpotify = createDisplay(SpotifyApp);
-const displaySettings = createDisplay(SettingsApp);
-const displayChrome = createDisplay(ChromeApp);
-const displayGedit = createDisplay(GeditApp);
-const displayMousepad = createDisplay(MousepadApp);
-const displayTodoist = createDisplay(TodoistApp);
-const displayWeather = createDisplay(WeatherApp);
-const displayClipboardManager = createDisplay(ClipboardManagerApp);
-const displayFiglet = createDisplay(FigletApp);
-const displayResourceMonitor = createDisplay(ResourceMonitorApp);
-const displayScreenRecorder = createDisplay(ScreenRecorderApp);
-const displayTaskManager = createDisplay(TaskManagerApp);
-const displayNikto = createDisplay(NiktoApp);
 
 const displayQr = createDisplay(QrApp);
 const displayAsciiArt = createDisplay(AsciiArtApp);
@@ -290,18 +167,14 @@ const displayWeatherWidget = createDisplay(WeatherWidgetApp);
 const displayInputLab = createDisplay(InputLabApp);
 
 const displayGhidra = createDisplay(GhidraApp);
-const displayBrasero = createDisplay(BraseroApp);
 
 const displayAutopsy = createDisplay(AutopsyApp);
 const displayPluginManager = createDisplay(PluginManagerApp);
-const displayPanelProfiles = createDisplay(PanelProfilesApp);
 
-const displayNetworkConnections = createDisplay(NetworkConnectionsApp);
+const displayWireshark = createDisplay(WiresharkApp);
 const displayBleSensor = createDisplay(BleSensorApp);
-const displayBluetooth = createDisplay(BluetoothApp);
 const displayBeef = createDisplay(BeefApp);
 const displayMetasploit = createDisplay(MetasploitApp);
-const displayNetworkManager = createDisplay(NetworkManagerApp);
 const displayDsniff = createDisplay(DsniffApp);
 const displayGomoku = createDisplay(GomokuApp);
 const displayPinball = createDisplay(PinballApp);
@@ -319,21 +192,17 @@ const displayNessus = createDisplay(NessusApp);
 const displayNmapNSE = createDisplay(NmapNSEApp);
 const displayOpenVAS = createDisplay(OpenVASApp);
 const displayReconNG = createDisplay(ReconNGApp);
-const displayKaliTools = createDisplay(KaliToolsApp);
 const displaySecurityTools = createDisplay(SecurityToolsApp);
-const displayKaliTweaks = createDisplay(KaliTweaksApp);
 const displaySSH = createDisplay(SSHApp);
 const displayHTTP = createDisplay(HTTPApp);
 const displayHtmlRewrite = createDisplay(HtmlRewriteApp);
 const displayContact = createDisplay(ContactApp);
-const displayGigolo = createDisplay(GigoloApp);
 
 const displayHashcat = createDisplay(HashcatApp);
 
 const displayKismet = createDisplay(KismetApp);
 
 // Utilities list used for the "Utilities" folder on the desktop
-/** @type {AppMetadata[]} */
 const utilityList = [
   {
     id: 'qr',
@@ -390,15 +259,6 @@ const utilityList = [
     screen: displayProjectGallery,
   },
   {
-    id: 'brasero',
-    title: 'Brasero',
-    icon: '/themes/Yaru/apps/brasero.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayBrasero,
-  },
-  {
     id: 'input-lab',
     title: 'Input Lab',
     icon: '/themes/Yaru/apps/input-lab.svg',
@@ -419,6 +279,17 @@ export const gameDefaults = {
 
 // Games list used for the "Games" folder on the desktop
 const gameList = [
+  {
+    id: '2048',
+    title: '2048',
+    icon: '/themes/Yaru/apps/2048.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayGame2048,
+    defaultWidth: 35,
+    defaultHeight: 45,
+  },
   {
     id: 'asteroids',
     title: 'Asteroids',
@@ -721,12 +592,31 @@ const gameList = [
   },
 ];
 
-/** @type {AppMetadata[]} */
 export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
 
-
-/** @type {AppMetadata[]} */
 const apps = [
+  {
+    id: 'chrome',
+    title: 'Google Chrome',
+    icon: '/themes/Yaru/apps/chrome.png',
+    disabled: false,
+    favourite: true,
+    desktop_shortcut: true,
+    screen: displayChrome,
+  },
+  {
+    id: 'calculator',
+    title: 'Calculator',
+    icon: '/themes/Yaru/apps/calc.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCalculator,
+    resizable: false,
+    allowMaximize: false,
+    defaultWidth: 28,
+    defaultHeight: 50,
+  },
   {
     id: 'terminal',
     title: 'Terminal',
@@ -767,6 +657,15 @@ const apps = [
     screen: displaySpotify,
   },
   {
+    id: 'youtube',
+    title: 'YouTube',
+    icon: '/themes/Yaru/apps/youtube.svg',
+    disabled: false,
+    favourite: true,
+    desktop_shortcut: false,
+    screen: displayYouTube,
+  },
+  {
     id: 'beef',
     title: 'BeEF',
     icon: '/themes/Yaru/apps/beef.svg',
@@ -794,15 +693,6 @@ const apps = [
     screen: displaySettings,
   },
   {
-    id: 'power',
-    title: 'Power',
-    icon: '/themes/Yaru/status/power-button.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayPower,
-  },
-  {
     id: 'files',
     title: 'Files',
     icon: '/themes/Yaru/system/folder.png',
@@ -812,15 +702,6 @@ const apps = [
     screen: displayFileExplorer,
   },
   {
-    id: 'ristretto',
-    title: 'Image Viewer',
-    icon: '/themes/Yaru/apps/ristretto.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayRistretto,
-  },
-  {
     id: 'resource-monitor',
     title: 'Resource Monitor',
     icon: '/themes/Yaru/apps/resource-monitor.svg',
@@ -828,15 +709,6 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayResourceMonitor,
-  },
-  {
-    id: 'task-manager',
-    title: 'Task Manager',
-    icon: '/themes/Yaru/apps/resource-monitor.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayTaskManager,
   },
   {
     id: 'screen-recorder',
@@ -866,15 +738,6 @@ const apps = [
     screen: displayBleSensor,
   },
   {
-    id: 'bluetooth',
-    title: 'Bluetooth',
-    icon: '/themes/Yaru/apps/bluetooth.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayBluetooth,
-  },
-  {
     id: 'metasploit',
     title: 'Metasploit',
     icon: '/themes/Yaru/apps/metasploit.svg',
@@ -884,13 +747,13 @@ const apps = [
     screen: displayMetasploit,
   },
   {
-    id: 'network/connections',
-    title: 'Network Connections',
-    icon: '/themes/Yaru/status/network-wireless-signal-good-symbolic.svg',
+    id: 'wireshark',
+    title: 'Wireshark',
+    icon: '/themes/Yaru/apps/wireshark.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayNetworkConnections,
+    screen: displayWireshark,
   },
   {
     id: 'todoist',
@@ -920,15 +783,6 @@ const apps = [
     screen: displayTrash,
   },
   {
-    id: 'mousepad',
-    title: 'Mousepad Preferences',
-    icon: '/themes/Yaru/apps/gedit.png',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayMousepad,
-  },
-  {
     id: 'gedit',
     title: 'Contact Me',
     icon: '/themes/Yaru/apps/gedit.png',
@@ -940,7 +794,6 @@ const apps = [
   {
     id: 'converter',
     title: 'Converter',
-
     icon: '/themes/Yaru/apps/calc.png',
     disabled: false,
     favourite: false,
@@ -974,26 +827,17 @@ const apps = [
     desktop_shortcut: false,
     screen: displayAutopsy,
   },
-    {
-      id: 'plugin-manager',
-      title: 'Plugin Manager',
-      icon: '/themes/Yaru/apps/project-gallery.svg',
-      disabled: false,
-      favourite: false,
-      desktop_shortcut: false,
-      screen: displayPluginManager,
-    },
-    {
-      id: 'panel-profiles',
-      title: 'Panel Profiles',
-      icon: '/themes/Yaru/apps/project-gallery.svg',
-      disabled: false,
-      favourite: false,
-      desktop_shortcut: false,
-      screen: displayPanelProfiles,
-    },
-    {    id: 'reaver',
-      title: 'Reaver',
+  {
+    id: 'plugin-manager',
+    title: 'Plugin Manager',
+    icon: '/themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPluginManager,
+  },
+  {    id: 'reaver',
+    title: 'Reaver',
     icon: '/themes/Yaru/apps/reaver.svg',
     disabled: false,
     favourite: false,
@@ -1017,15 +861,6 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayGhidra,
-  },
-  {
-    id: 'gigolo',
-    title: 'Gigolo',
-    icon: '/themes/Yaru/apps/ftp.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayGigolo,
   },
   {
     id: 'mimikatz',
@@ -1072,19 +907,15 @@ const apps = [
     desktop_shortcut: false,
     screen: displayHtmlRewrite,
   },
-  ...(process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
-    ? [
-        {
-          id: 'contact',
-          title: 'Contact',
-          icon: '/themes/Yaru/apps/project-gallery.svg',
-          disabled: false,
-          favourite: false,
-          desktop_shortcut: false,
-          screen: displayContact,
-        },
-      ]
-    : []),
+  {
+    id: 'contact',
+    title: 'Contact',
+    icon: '/themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayContact,
+  },
   {
     id: 'hydra',
     title: 'Hydra',
@@ -1158,7 +989,7 @@ const apps = [
     screen: displayHashcat,
   },
   {
-    id: 'metasploit-post',
+    id: 'msf-post',
     title: 'Metasploit Post',
     icon: '/themes/Yaru/apps/msf-post.svg',
     disabled: false,
@@ -1183,15 +1014,6 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayDsniff,
-  },
-  {
-    id: 'network-manager',
-    title: 'Network Manager',
-    icon: '/themes/Yaru/apps/resource-monitor.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayNetworkManager,
   },
   {
     id: 'john',
@@ -1221,15 +1043,6 @@ const apps = [
     screen: displayReconNG,
   },
   {
-    id: 'kali-tools',
-    title: 'Kali Tools',
-    icon: '/themes/Yaru/apps/project-gallery.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayKaliTools,
-  },
-  {
     id: 'security-tools',
     title: 'Security Tools',
     icon: '/themes/Yaru/apps/project-gallery.svg',
@@ -1238,16 +1051,10 @@ const apps = [
     desktop_shortcut: false,
     screen: displaySecurityTools,
   },
-  {
-    id: 'kali-tweaks',
-    title: 'Kali Tweaks',
-    icon: '/themes/Yaru/apps/project-gallery.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayKaliTweaks,
-
-  },
+  // Utilities are grouped separately
+  ...utilities,
+  // Games are included so they appear alongside apps
+  ...games,
 ];
 
 export default apps;

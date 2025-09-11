@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import projectsData from '../../data/projects.json';
-import WindowedList from './windowed-list';
 
 interface Project {
   id: number;
@@ -155,28 +154,8 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
     });
   };
 
-  const clearAllFilters = () => {
-    setSearch('');
-    setStack('');
-    setYear('');
-    setType('');
-    setTags([]);
-  };
-
-  const activeFilters = [
-    stack && { label: stack, remove: () => setStack('') },
-    year && { label: year, remove: () => setYear('') },
-    type && { label: type, remove: () => setType('') },
-    ...tags.map((t) => ({
-      label: t,
-      remove: () =>
-        setTags((prev) => prev.filter((tag) => tag !== t)),
-    })),
-    search && { label: `Search: ${search}`, remove: () => setSearch('') },
-  ].filter(Boolean) as { label: string; remove: () => void }[];
-
   return (
-    <div className="p-4 h-full flex flex-col bg-ub-cool-grey text-white">
+    <div className="p-4 h-full overflow-auto bg-ub-cool-grey text-white">
       <div className="flex flex-wrap gap-2 mb-4">
         <input
           aria-label="Search"
@@ -246,37 +225,12 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
           </label>
         ))}
       </div>
-      {activeFilters.length > 0 && (
-        <div className="mb-4 overflow-x-auto" aria-label="Active filters">
-          <div className="flex items-center gap-2 w-max">
-            {activeFilters.map((f) => (
-              <button
-                key={f.label}
-                onClick={f.remove}
-                className="bg-gray-700 text-xs px-2 py-1 rounded-full flex items-center whitespace-nowrap focus:outline-none focus:ring"
-                aria-label={`Remove filter ${f.label}`}
-              >
-                {f.label}
-                <span aria-hidden="true" className="ml-1">
-                  ×
-                </span>
-              </button>
-            ))}
-            <button
-              onClick={clearAllFilters}
-              className="text-xs text-blue-400 whitespace-nowrap flex-shrink-0 hover:underline"
-            >
-              Clear All
-            </button>
-          </div>
-        </div>
-      )}
       {selected.length === 2 && (
         <div className="mb-4 overflow-auto">
           <table className="w-full text-sm text-left" role="table">
             <thead>
               <tr>
-                <th aria-hidden="true" />
+                <th />
                 {selected.map((p) => (
                   <th key={p.id}>{p.title}</th>
                 ))}
@@ -299,15 +253,11 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
           </table>
         </div>
       )}
-      <WindowedList
-        className="flex-1 mt-4"
-        items={filtered}
-        itemHeight={400}
-        itemKey={(index, project) => project.id}
-        renderItem={(project) => (
+      <div className="columns-1 sm:columns-2 md:columns-3 gap-4">
+        {filtered.map((project) => (
           <div
             key={project.id}
-            className="mb-4 bg-gray-800 rounded shadow overflow-hidden"
+            className="mb-4 break-inside-avoid bg-gray-800 rounded shadow overflow-hidden"
           >
             <div className="flex flex-col md:flex-row h-48">
               <img
@@ -396,8 +346,8 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
               </div>
             </div>
           </div>
-        )}
-      />
+        ))}
+      </div>
       <div aria-live="polite" className="sr-only">
         {ariaMessage}
       </div>

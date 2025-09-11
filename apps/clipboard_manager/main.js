@@ -1,65 +1,27 @@
 /* eslint-env browser */
-import { isBrowser } from '../../utils/env';
+const historyKey = 'clipboardHistory';
+let history = JSON.parse(localStorage.getItem(historyKey)) || [];
 
-if (isBrowser()) {
+
+if (isBrowser) {
   const historyKey = 'clipboardHistory';
   let history = JSON.parse(safeLocalStorage?.getItem(historyKey) || '[]');
 
   const list = document.getElementById('history');
   const clearBtn = document.getElementById('clear');
-  const searchInput = document.getElementById('search');
-  const typeFilter = document.getElementById('type-filter');
-
-  const isUrl = (text) => {
-    try {
-      new URL(text);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  const isHash = (text) => /^[a-fA-F0-9]{32,64}$/.test(text);
 
   function render() {
     list.innerHTML = '';
-    const search = searchInput?.value.toLowerCase() || '';
-    const type = typeFilter?.value || 'all';
-
-    const filtered = history
-      .filter((item) => {
-        const matchesSearch = item.text.toLowerCase().includes(search);
-        let matchesType = true;
-        if (type === 'url') matchesType = isUrl(item.text);
-        else if (type === 'hash') matchesType = isHash(item.text);
-        else if (type === 'text') matchesType = !isUrl(item.text) && !isHash(item.text);
-        return matchesSearch && matchesType;
-      })
-      .sort((a, b) => {
-        if (a.pinned === b.pinned) return 0;
-        return a.pinned ? -1 : 1;
-      });
-
-    filtered.forEach((item) => {
+    history.forEach((item) => {
       const li = document.createElement('li');
-      li.textContent = item.text;
+      li.textContent = item;
       li.addEventListener('click', async () => {
         try {
-          await navigator.clipboard.writeText(item.text);
+          await navigator.clipboard.writeText(item);
         } catch (err) {
           console.error('Failed to copy text:', err);
         }
       });
-      const pinBtn = document.createElement('button');
-      pinBtn.className = 'pin';
-      pinBtn.textContent = item.pinned ? '★' : '☆';
-      pinBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        item.pinned = !item.pinned;
-        save();
-        render();
-      });
-      li.appendChild(pinBtn);
       list.appendChild(li);
     });
   }
@@ -69,19 +31,16 @@ if (isBrowser()) {
   }
 
   clearBtn?.addEventListener('click', () => {
-    history = history.filter((item) => item.pinned);
+    history = [];
     save();
     render();
   });
 
-  searchInput?.addEventListener('input', render);
-  typeFilter?.addEventListener('change', render);
-
   document.addEventListener('copy', async () => {
     try {
       const text = await navigator.clipboard.readText();
-      if (text && (history.length === 0 || history[0].text !== text)) {
-        history.unshift({ text, pinned: false });
+      if (text && (history.length === 0 || history[0] !== text)) {
+        history.unshift(text);
         save();
         render();
       }

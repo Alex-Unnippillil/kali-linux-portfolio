@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 import React, { useState } from 'react';
 
 const PolicySettings = ({ policy }) => {
@@ -14,12 +13,12 @@ const PolicySettings = ({ policy }) => {
     setConfig({ ...config, [field]: e.target.value });
 
   const savePolicy = () => {
-    if (isBrowser())
+    if (typeof window !== 'undefined')
       localStorage.setItem('openvasPolicy', JSON.stringify(config));
   };
 
   const loadPolicy = () => {
-    if (isBrowser()) {
+    if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('openvasPolicy');
       if (stored) setConfig(JSON.parse(stored));
     }

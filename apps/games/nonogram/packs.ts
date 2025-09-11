@@ -1,4 +1,4 @@
-import { lineToClues, Grid, Clue, Cell } from './logic';
+import { lineToClues, Grid, Clue } from './logic';
 
 export interface Puzzle {
   name: string;
@@ -25,9 +25,7 @@ export const parsePack = (raw: string): Puzzle[] => {
     const width = grid[0]?.length || 0;
     const cols: Clue[] = [];
     for (let c = 0; c < width; c++) {
-      const col: Cell[] = grid
-        .map((row) => row[c])
-        .filter((v): v is Cell => v !== undefined);
+      const col = grid.map((row) => row[c]);
       cols.push(lineToClues(col));
     }
     return { name: `Puzzle ${idx + 1}`, rows, cols, grid };
@@ -55,9 +53,7 @@ export const loadPackFromJSON = (raw: string): PuzzlePack => {
     const width = grid[0]?.length || 0;
     const cols: Clue[] = [];
     for (let c = 0; c < width; c++) {
-      const col: Cell[] = grid
-        .map((row) => row[c])
-        .filter((v): v is Cell => v !== undefined);
+      const col = grid.map((row) => row[c]);
       cols.push(lineToClues(col));
     }
     return { name: p.name || `Puzzle ${idx + 1}`, rows, cols, grid };

@@ -1,8 +1,7 @@
-"use client";
+'use client';
 
-import React, { useEffect, useMemo, useState } from "react";
-import HeaderLab from "./components/HeaderLab";
-import CommandChip from "../../components/ui/CommandChip";
+import React, { useEffect, useMemo, useState } from 'react';
+import HeaderLab from './components/HeaderLab';
 
 interface NiktoFinding {
   path: string;
@@ -13,24 +12,24 @@ interface NiktoFinding {
 }
 
 const NiktoPage: React.FC = () => {
-  const [host, setHost] = useState("");
-  const [port, setPort] = useState("");
+  const [host, setHost] = useState('');
+  const [port, setPort] = useState('');
   const [ssl, setSsl] = useState(false);
   const [findings, setFindings] = useState<NiktoFinding[]>([]);
-  const [rawLog, setRawLog] = useState("");
+  const [rawLog, setRawLog] = useState('');
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch("/demo-data/nikto/report.json");
+        const res = await fetch('/demo-data/nikto/report.json');
         const data = await res.json();
         setFindings(data);
       } catch {
         // ignore errors
       }
       try {
-        const logRes = await fetch("/demo/nikto-output.txt");
+        const logRes = await fetch('/demo/nikto-output.txt');
         setRawLog(await logRes.text());
       } catch {
         // ignore errors
@@ -39,14 +38,12 @@ const NiktoPage: React.FC = () => {
     load();
   }, []);
 
-  const command = `nikto -h ${host || "TARGET"}${port ? ` -p ${port}` : ""}${ssl ? " -ssl" : ""}`;
+  const command = `nikto -h ${host || 'TARGET'}${port ? ` -p ${port}` : ''}${ssl ? ' -ssl' : ''}`;
 
   const grouped = useMemo(() => {
     return findings.reduce<Record<string, NiktoFinding[]>>((acc, f) => {
-      const list = acc[f.severity] ?? [];
-      list.push(f);
-      acc[f.severity] = list;
-
+      acc[f.severity] = acc[f.severity] || [];
+      acc[f.severity].push(f);
       return acc;
     }, {});
   }, [findings]);
@@ -54,18 +51,18 @@ const NiktoPage: React.FC = () => {
   const headers = useMemo(() => {
     return rawLog
       .split(/\r?\n/)
-      .map((l) => l.trim().replace(/^\+\s*/, ""))
+      .map((l) => l.trim().replace(/^\+\s*/, ''))
       .filter((l) => /^[A-Za-z-]+:/.test(l))
       .map((line) => {
-        const idx = line.indexOf(":");
+        const idx = line.indexOf(':');
         return { name: line.slice(0, idx), value: line.slice(idx + 1).trim() };
       });
   }, [rawLog]);
 
   const url = useMemo(() => {
-    if (!host) return "http://target";
-    const proto = ssl ? "https://" : "http://";
-    return `${proto}${host}${port ? `:${port}` : ""}`;
+    if (!host) return 'http://target';
+    const proto = ssl ? 'https://' : 'http://';
+    return `${proto}${host}${port ? `:${port}` : ''}`;
   }, [host, port, ssl]);
 
   const copySection = async (list: NiktoFinding[]) => {
@@ -78,10 +75,10 @@ const NiktoPage: React.FC = () => {
 
   const exportSection = (list: NiktoFinding[], sev: string) => {
     const blob = new Blob([JSON.stringify(list, null, 2)], {
-      type: "application/json",
+      type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    const a = document.createElement('a');
     a.href = url;
     a.download = `nikto-${sev.toLowerCase()}.json`;
     document.body.appendChild(a);
@@ -91,9 +88,9 @@ const NiktoPage: React.FC = () => {
   };
 
   const colorMap: Record<string, string> = {
-    High: "bg-red-700",
-    Medium: "bg-yellow-700",
-    Info: "bg-blue-700",
+    High: 'bg-red-700',
+    Medium: 'bg-yellow-700',
+    Info: 'bg-blue-700',
   };
 
   const summary = useMemo(() => {
@@ -118,13 +115,9 @@ const NiktoPage: React.FC = () => {
     <div className="p-4 bg-gray-900 text-white min-h-screen space-y-4">
       <h1 className="text-2xl mb-4">Nikto Scanner</h1>
       <p className="text-sm text-yellow-300 mb-4">
-        Build a nikto command without running any scans. Data and reports are
-        static and for learning only.
+        Build a nikto command without running any scans. Data and reports are static and for learning only.
       </p>
-      <form
-        onSubmit={(e) => e.preventDefault()}
-        className="grid gap-4 md:grid-cols-3"
-      >
+      <form onSubmit={(e) => e.preventDefault()} className="grid gap-4 md:grid-cols-3">
         <div>
           <label htmlFor="nikto-host" className="block text-sm mb-1">
             Host
@@ -161,10 +154,9 @@ const NiktoPage: React.FC = () => {
           </label>
         </div>
       </form>
-
       <div>
         <h2 className="text-lg mb-2">Command Preview</h2>
-        <CommandChip command={command} />
+        <pre className="bg-black text-green-400 p-2 rounded overflow-auto">{command}</pre>
       </div>
       <div className="relative bg-gray-800 p-4 rounded shadow space-y-4">
         <div className="absolute top-2 right-2 bg-gray-700 text-xs px-2 py-1 rounded-full">
@@ -196,15 +188,11 @@ const NiktoPage: React.FC = () => {
               <div key={sev} className="mb-2 border border-gray-700 rounded">
                 <div
                   className="flex justify-between items-center p-2 bg-gray-800 cursor-pointer"
-                  onClick={() =>
-                    setOpenSections((s) => ({ ...s, [sev]: !open }))
-                  }
+                  onClick={() => setOpenSections((s) => ({ ...s, [sev]: !open }))}
                 >
                   <span className="font-bold">{sev}</span>
                   <div className="flex items-center space-x-2">
-                    <span className="bg-gray-600 rounded-full px-2 text-xs">
-                      {list.length}
-                    </span>
+                    <span className="bg-gray-600 rounded-full px-2 text-xs">{list.length}</span>
                     <button
                       type="button"
                       onClick={(e) => {
@@ -232,7 +220,7 @@ const NiktoPage: React.FC = () => {
                     {list.map((f) => (
                       <li
                         key={f.path}
-                        className={`p-2 rounded ${colorMap[f.severity] || "bg-gray-700"}`}
+                        className={`p-2 rounded ${colorMap[f.severity] || 'bg-gray-700'}`}
                       >
                         <span className="font-mono">{f.path}</span>: {f.finding}
                       </li>
@@ -248,20 +236,12 @@ const NiktoPage: React.FC = () => {
         <div>
           <h2 className="text-lg mb-2">Summary</h2>
           <div className="flex space-x-2 mb-4 text-sm">
-            <div className="bg-red-700 px-2 py-1 rounded">
-              Critical: {summary.critical}
-            </div>
-            <div className="bg-yellow-600 px-2 py-1 rounded">
-              Warning: {summary.warning}
-            </div>
-            <div className="bg-blue-600 px-2 py-1 rounded">
-              Info: {summary.info}
-            </div>
+            <div className="bg-red-700 px-2 py-1 rounded">Critical: {summary.critical}</div>
+            <div className="bg-yellow-600 px-2 py-1 rounded">Warning: {summary.warning}</div>
+            <div className="bg-blue-600 px-2 py-1 rounded">Info: {summary.info}</div>
           </div>
           <h2 className="text-lg mb-2">Raw Log</h2>
-          <pre className="bg-black text-green-400 p-2 rounded overflow-auto">
-            {rawLog}
-          </pre>
+          <pre className="bg-black text-green-400 p-2 rounded overflow-auto">{rawLog}</pre>
         </div>
       )}
       <HeaderLab />
@@ -270,3 +250,4 @@ const NiktoPage: React.FC = () => {
 };
 
 export default NiktoPage;
+

@@ -1,11 +1,6 @@
 'use client';
 
-import dynamic from 'next/dynamic';
-
-const DemoRunner = dynamic(() => import('./components/DemoRunner'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
+import DemoRunner from './components/DemoRunner';
 
 export default function GhidraPage() {
   return (

@@ -1,4 +1,4 @@
-import figlet, { FontName, FigletOptions } from 'figlet';
+import figlet from 'figlet';
 // Fonts are loaded dynamically from the main thread. This keeps the worker
 // lightweight and allows only the fonts that are actually used to be loaded.
 
@@ -11,7 +11,7 @@ function isMonospace(name: string) {
   let width: number | undefined;
   for (const ch of chars) {
     const glyph = strip(
-        figlet.textSync(ch, { font: name as FontName }).split('\n'),
+      figlet.textSync(ch, { font: name as figlet.Fonts }).split('\n'),
     );
     const w = glyph.reduce((m, line) => Math.max(m, line.length), 0);
     if (width === undefined) width = w;
@@ -24,8 +24,8 @@ self.onmessage = (e: MessageEvent<any>) => {
   if (e.data?.type === 'load') {
     const { name, data } = e.data as { name: string; data: string };
     try {
-        figlet.parseFont(name, data);
-        const preview = figlet.textSync('Figlet', { font: name as FontName });
+      figlet.parseFont(name, data);
+      const preview = figlet.textSync('Figlet', { font: name as figlet.Fonts });
       const mono = isMonospace(name);
       self.postMessage({ type: 'font', font: name, preview, mono });
     } catch {
@@ -34,21 +34,21 @@ self.onmessage = (e: MessageEvent<any>) => {
     return;
   }
 
-    const { text = '', font, width = 80, layout = 'default' } = e.data as {
-      text: string;
-      font: string;
-      width: number;
-      layout: string;
-    };
+  const { text = '', font, width = 80, layout = 'default' } = e.data as {
+    text: string;
+    font: string;
+    width: number;
+    layout: string;
+  };
   if (!font) return;
   const normalized = String(text)
     .split(/\r\n|\r|\n/)
     .map((line) => line.trim())
     .join('\n');
-    const rendered = figlet.textSync(normalized, {
-      font: font as FontName,
-      width,
-      horizontalLayout: layout as NonNullable<FigletOptions['horizontalLayout']>,
-    });
+  const rendered = figlet.textSync(normalized, {
+    font: font as figlet.Fonts,
+    width,
+    horizontalLayout: layout as figlet.KerningMethods,
+  });
   self.postMessage({ type: 'render', output: rendered });
 };

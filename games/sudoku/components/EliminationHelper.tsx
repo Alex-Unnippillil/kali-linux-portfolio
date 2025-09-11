@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { SIZE, getCandidates } from "../../../apps/games/sudoku";
 

@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 import {
   LeaderboardEntry,
   getLeaderboard,
@@ -23,7 +22,7 @@ export const getDailySeed = (gameId: string, date: Date = new Date()): string =>
   const day = date.toISOString().split('T')[0];
   const key = `${gameId}:${day}`;
   const seed = hash(key);
-  if (isBrowser()) {
+  if (typeof window !== 'undefined') {
     try {
       window.localStorage.setItem(`${SEED_PREFIX}${gameId}`, seed);
     } catch {
@@ -39,7 +38,7 @@ export const hasCompleted = (
   gameId: string,
   date: Date = new Date(),
 ): boolean => {
-  if (!isBrowser()) return false;
+  if (typeof window === 'undefined') return false;
   const day = date.toISOString().split('T')[0];
   try {
     return window.localStorage.getItem(
@@ -58,7 +57,7 @@ export const recordCompletion = (
   limit = 10,
 ): LeaderboardEntry[] => {
   const board = baseRecordScore(gameId, name, score, limit);
-  if (isBrowser()) {
+  if (typeof window !== 'undefined') {
     try {
       const day = date.toISOString().split('T')[0];
       window.localStorage.setItem(

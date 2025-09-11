@@ -1,6 +1,5 @@
 'use client';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import usePersistentState from '../../hooks/usePersistentState';
 import Filter from 'bad-words';
 import { toPng } from 'html-to-image';
 import offlineQuotes from '../../public/quotes/quotes.json';
@@ -77,11 +76,7 @@ export default function QuoteApp() {
   const [category, setCategory] = useState('');
   const [search, setSearch] = useState('');
   const [authorFilter, setAuthorFilter] = useState('');
-  const [favorites, setFavorites] = usePersistentState<string[]>(
-    'quote-favorites',
-    [],
-    (v): v is string[] => Array.isArray(v) && v.every((s) => typeof s === 'string'),
-  );
+  const [favorites, setFavorites] = useState<string[]>([]);
   const [dailyQuote, setDailyQuote] = useState<Quote | null>(null);
   const [posterize, setPosterize] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -93,6 +88,10 @@ export default function QuoteApp() {
   const [shuffle, setShuffle] = useState(false);
 
   useEffect(() => {
+    const fav = localStorage.getItem('quote-favorites');
+    if (fav) {
+      try { setFavorites(JSON.parse(fav)); } catch { /* ignore */ }
+    }
     const custom = localStorage.getItem('custom-quotes');
     if (custom) {
       try {
@@ -113,12 +112,7 @@ export default function QuoteApp() {
         .filter((n) => !Number.isNaN(n) && n >= 0 && n < quotes.length);
       if (ids.length) {
         setPlaylist(ids);
-        const first = ids[0];
-        if (first !== undefined) {
-          setCurrent(quotes[first]!);
-
-
-        }
+        setCurrent(quotes[ids[0]]);
       }
     }
   }, [quotes]);
@@ -136,10 +130,9 @@ export default function QuoteApp() {
         }
       } catch { /* ignore */ }
     }
-    const q = quotes[Math.floor(Math.random() * quotes.length)]!;
+    const q = quotes[Math.floor(Math.random() * quotes.length)];
     setDailyQuote(q);
     localStorage.setItem('daily-quote', JSON.stringify({ date: today, quote: q }));
-
   }, [quotes]);
 
   const filtered = useMemo(() => {
@@ -172,8 +165,7 @@ export default function QuoteApp() {
       setCurrent(null);
       return;
     }
-    setCurrent(filtered[Math.floor(Math.random() * filtered.length)] ?? null);
-
+    setCurrent(filtered[Math.floor(Math.random() * filtered.length)]);
   };
 
   const nextQuote = useCallback(() => {
@@ -182,8 +174,7 @@ export default function QuoteApp() {
       return;
     }
     const next = (currentIndex + 1) % filtered.length;
-    setCurrent(filtered[next] ?? null);
-
+    setCurrent(filtered[next]);
   }, [filtered, currentIndex]);
 
   const prevQuote = useCallback(() => {
@@ -192,12 +183,12 @@ export default function QuoteApp() {
       return;
     }
     const prev = (currentIndex - 1 + filtered.length) % filtered.length;
-    setCurrent(filtered[prev] ?? null);
-
+    setCurrent(filtered[prev]);
   }, [filtered, currentIndex]);
 
   useEffect(() => {
     changeQuote();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtered]);
 
   useEffect(() => {
@@ -233,18 +224,21 @@ export default function QuoteApp() {
   useEffect(() => {
     if (!playOrder.length) return;
     const idx = playOrder[playIndex];
-    if (idx !== undefined && idx >= 0 && idx < quotes.length) {
-      setCurrent(quotes[idx]!);
-
+    if (idx >= 0 && idx < quotes.length) {
+      setCurrent(quotes[idx]);
     }
   }, [playIndex, playOrder, quotes]);
 
   const toggleFavorite = () => {
     if (!current) return;
     const key = keyOf(current);
-    setFavorites((favs) =>
-      favs.includes(key) ? favs.filter((f) => f !== key) : [...favs, key]
-    );
+    setFavorites((favs) => {
+      const updated = favs.includes(key)
+        ? favs.filter((f) => f !== key)
+        : [...favs, key];
+      localStorage.setItem('quote-favorites', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const importQuotes = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -306,12 +300,7 @@ export default function QuoteApp() {
     setPlayOrder(order);
     setPlayIndex(0);
     const idx = order[0];
-    if (idx !== undefined && idx >= 0 && idx < quotes.length) {
-
-      
-      setCurrent(quotes[idx]!);
-
-    }
+    if (idx >= 0 && idx < quotes.length) setCurrent(quotes[idx]);
     setPlaying(true);
   };
 
@@ -422,13 +411,7 @@ export default function QuoteApp() {
           )}
           <label className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded cursor-pointer">
             Import
-            <input
-              type="file"
-              accept="application/json"
-              className="hidden"
-              onChange={importQuotes}
-              aria-label="Import quotes"
-            />
+            <input type="file" accept="application/json" className="hidden" onChange={importQuotes} />
           </label>
         </div>
         {posterize && (
@@ -442,20 +425,17 @@ export default function QuoteApp() {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search"
             className="px-2 py-1 rounded text-black"
-            aria-label="Search quotes"
           />
           <input
             value={authorFilter}
             onChange={(e) => setAuthorFilter(e.target.value)}
             placeholder="Author"
             className="px-2 py-1 rounded text-black"
-            aria-label="Author filter"
           />
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             className="px-2 py-1 rounded text-black"
-            aria-label="Category"
           >
             <option value="">All Categories</option>
             {categories.map((cat) => (
@@ -486,7 +466,6 @@ export default function QuoteApp() {
               type="checkbox"
               checked={loop}
               onChange={(e) => setLoop(e.target.checked)}
-              aria-label="Loop playlist"
             />
             <span>Loop</span>
           </label>
@@ -495,7 +474,6 @@ export default function QuoteApp() {
               type="checkbox"
               checked={shuffle}
               onChange={(e) => setShuffle(e.target.checked)}
-              aria-label="Shuffle playlist"
             />
             <span>Shuffle</span>
           </label>

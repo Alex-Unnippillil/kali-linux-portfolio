@@ -1,6 +1,5 @@
 'use client';
 
-import { isBrowser } from '@/utils/env';
 import React, { useEffect, useState } from 'react';
 import { protocolName } from '../../../components/apps/wireshark/utils';
 import FilterHelper from './FilterHelper';
@@ -165,6 +164,15 @@ const parsePcapNg = (buf: ArrayBuffer): Packet[] => {
 };
 
 const parseWithWasm = async (buf: ArrayBuffer): Promise<Packet[]> => {
+  try {
+    // Attempt to load wasm parser; fall back to JS parsing
+    await WebAssembly.instantiateStreaming(
+      fetch('https://unpkg.com/pcap.js@latest/pcap.wasm'),
+      {}
+    );
+  } catch {
+    // Ignore errors and use JS parser
+  }
   const magic = new DataView(buf).getUint32(0, false);
   return magic === 0x0a0d0d0a ? parsePcapNg(buf) : parsePcap(buf);
 };
@@ -250,14 +258,14 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
   }, [filter]);
 
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const f = params.get('filter');
     if (f) setFilter(f);
   }, []);
 
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === 'undefined') return;
     const url = new URL(window.location.href);
     if (filter) url.searchParams.set('filter', filter);
     else url.searchParams.delete('filter');

@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 export interface ButtonEvent {
   gamepad: Gamepad;
   index: number;
@@ -36,7 +35,7 @@ export const GAMEPAD_PRESETS: Record<string, CalibrationData> = {
 };
 
 export function loadCalibration(id: string): CalibrationData | null {
-  if (!isBrowser()) return null;
+  if (typeof window === 'undefined') return null;
   try {
     const raw = window.localStorage.getItem(CAL_PREFIX + id);
     return raw ? (JSON.parse(raw) as CalibrationData) : null;
@@ -46,7 +45,7 @@ export function loadCalibration(id: string): CalibrationData | null {
 }
 
 export function saveCalibration(id: string, data: CalibrationData) {
-  if (!isBrowser()) return;
+  if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(CAL_PREFIX + id, JSON.stringify(data));
   } catch {
@@ -72,9 +71,7 @@ export type GamepadEventMap = {
 type Listener<T> = (event: T) => void;
 
 class GamepadManager {
-  private listeners: {
-    [K in keyof GamepadEventMap]: Set<Listener<GamepadEventMap[K]>>;
-  } = {
+  private listeners: Record<keyof GamepadEventMap, Set<Listener<any>>> = {
     connected: new Set(),
     disconnected: new Set(),
     button: new Set(),
@@ -88,12 +85,12 @@ class GamepadManager {
   constructor(deadzone = 0.1) {
     this.deadzone = deadzone;
 
-    if (isBrowser()) {
-      window.addEventListener('gamepadconnected', (e: GamepadEvent) =>
-        this.emit('connected', e.gamepad)
+    if (typeof window !== 'undefined') {
+      window.addEventListener('gamepadconnected', (e) =>
+        this.emit('connected', (e as GamepadEvent).gamepad)
       );
-      window.addEventListener('gamepaddisconnected', (e: GamepadEvent) =>
-        this.emit('disconnected', e.gamepad)
+      window.addEventListener('gamepaddisconnected', (e) =>
+        this.emit('disconnected', (e as GamepadEvent).gamepad)
       );
     }
   }
@@ -188,13 +185,13 @@ export function pollTwinStick(deadzone = 0.25): TwinStickState {
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   for (const pad of pads) {
     if (!pad) continue;
-      const calib = loadCalibration(pad.id);
-      const ranges = calib?.axes || [];
-      const [lx = 0, ly = 0, rx = 0, ry = 0] = pad.axes;
-      const cx = applyCalibration(lx, ranges[0]);
-      const cy = applyCalibration(ly, ranges[1]);
-      const ax = applyCalibration(rx, ranges[2]);
-      const ay = applyCalibration(ry, ranges[3]);
+    const calib = loadCalibration(pad.id);
+    const ranges = calib?.axes || [];
+    const [lx, ly, rx, ry] = pad.axes;
+    const cx = applyCalibration(lx, ranges[0]);
+    const cy = applyCalibration(ly, ranges[1]);
+    const ax = applyCalibration(rx, ranges[2]);
+    const ay = applyCalibration(ry, ranges[3]);
     state.moveX = Math.abs(cx) > deadzone ? cx : 0;
     state.moveY = Math.abs(cy) > deadzone ? cy : 0;
     state.aimX = Math.abs(ax) > deadzone ? ax : 0;

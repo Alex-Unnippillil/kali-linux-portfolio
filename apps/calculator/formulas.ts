@@ -1,5 +1,5 @@
 import usePersistentState from '../../hooks/usePersistentState';
-import { evaluate } from './utils/parser';
+import { evaluate } from './main';
 
 export interface Formula {
   name: string;
@@ -20,9 +20,7 @@ export function useFormulas() {
 
 export function validateFormula(expr: string): boolean {
   try {
-    const sanitized = expr.replace(/\s+/g, '');
-    if (/(?:[+\-*\/]{2,})/.test(sanitized)) return false;
-    evaluate(sanitized);
+    evaluate(expr);
     return true;
   } catch {
     return false;

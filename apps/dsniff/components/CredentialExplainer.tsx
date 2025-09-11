@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 import React, { useEffect, useState } from 'react';
 
 // Simulation: illustrates how weak protocols expose credentials. For educational use only.
@@ -11,7 +10,7 @@ const steps = [
 const CredentialExplainer: React.FC = () => {
   const [step, setStep] = useState(0);
   const prefersReducedMotion =
-    isBrowser() &&
+    typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   useEffect(() => {

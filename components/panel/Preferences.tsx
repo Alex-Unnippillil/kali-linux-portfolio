@@ -3,21 +3,12 @@
 import React, { useState, useEffect } from "react";
 import Tabs from "../Tabs";
 import ToggleSwitch from "../ToggleSwitch";
-import { PANEL_PROFILES, type PanelProfile } from "./profiles";
-import { isBrowser } from '@/utils/env';
 
 const PANEL_PREFIX = "xfce.panel.";
 
 export default function Preferences() {
-  type TabId =
-    | "profiles"
-    | "display"
-    | "measurements"
-    | "appearance"
-    | "opacity"
-    | "items";
+  type TabId = "display" | "measurements" | "appearance" | "opacity" | "items";
   const TABS: readonly { id: TabId; label: string }[] = [
-    { id: "profiles", label: "Profiles" },
     { id: "display", label: "Display" },
     { id: "measurements", label: "Measurements" },
     { id: "appearance", label: "Appearance" },
@@ -27,90 +18,52 @@ export default function Preferences() {
 
   const [active, setActive] = useState<TabId>("display");
 
-  const [profileId, setProfileId] = useState(() => {
-    if (!isBrowser()) return PANEL_PROFILES[0].id;
-    return localStorage.getItem(`${PANEL_PREFIX}profile`) ||
-      PANEL_PROFILES[0].id;
-  });
-
-  const [confirming, setConfirming] = useState<PanelProfile | null>(null);
-
   const [size, setSize] = useState(() => {
-    if (!isBrowser()) return 24;
+    if (typeof window === "undefined") return 24;
     const stored = localStorage.getItem(`${PANEL_PREFIX}size`);
     return stored ? parseInt(stored, 10) : 24;
   });
   const [length, setLength] = useState(() => {
-    if (!isBrowser()) return 100;
+    if (typeof window === "undefined") return 100;
     const stored = localStorage.getItem(`${PANEL_PREFIX}length`);
     return stored ? parseInt(stored, 10) : 100;
   });
   const [orientation, setOrientation] = useState<"horizontal" | "vertical">(() => {
-    if (!isBrowser()) return "horizontal";
+    if (typeof window === "undefined") return "horizontal";
     return (localStorage.getItem(`${PANEL_PREFIX}orientation`) as
       | "horizontal"
       | "vertical"
       | null) || "horizontal";
   });
   const [autohide, setAutohide] = useState(() => {
-    if (!isBrowser()) return false;
+    if (typeof window === "undefined") return false;
     return localStorage.getItem(`${PANEL_PREFIX}autohide`) === "true";
   });
 
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === "undefined") return;
     localStorage.setItem(`${PANEL_PREFIX}size`, String(size));
   }, [size]);
 
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === "undefined") return;
     localStorage.setItem(`${PANEL_PREFIX}length`, String(length));
   }, [length]);
 
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === "undefined") return;
     localStorage.setItem(`${PANEL_PREFIX}orientation`, orientation);
   }, [orientation]);
 
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === "undefined") return;
     localStorage.setItem(`${PANEL_PREFIX}autohide`, autohide ? "true" : "false");
   }, [autohide]);
-
-  useEffect(() => {
-    if (!isBrowser()) return;
-    localStorage.setItem(`${PANEL_PREFIX}profile`, profileId);
-  }, [profileId]);
-
-  const applyProfile = (profile: PanelProfile) => {
-    setOrientation(profile.settings.orientation);
-    setLength(profile.settings.length);
-    setSize(profile.settings.size);
-    setAutohide(profile.settings.autohide);
-    setProfileId(profile.id);
-  };
 
   return (
     <div>
       <Tabs tabs={TABS} active={active} onChange={setActive} />
       <div className="p-4">
-        {active === "profiles" && (
-          <div className="grid grid-cols-3 gap-4">
-            {PANEL_PROFILES.map((p) => (
-              <button
-                key={p.id}
-                className={`p-2 border rounded text-left ${
-                  profileId === p.id ? "border-ub-orange" : "border-transparent"
-                }`}
-                onClick={() => setConfirming(p)}
-              >
-                <p.Preview className="w-16 h-10 mx-auto mb-2" />
-                <div className="text-sm font-bold">{p.name}</div>
-                <div className="text-xs text-ubt-grey">{p.description}</div>
-              </button>
-            ))}
-          </div>
-        )}
         {active === "display" && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -183,31 +136,6 @@ export default function Preferences() {
           <p className="text-ubt-grey">Item settings are not available yet.</p>
         )}
       </div>
-      {confirming && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-ub-cool-grey p-4 rounded text-center w-64">
-            <h2 className="mb-2">Apply {confirming.name}?</h2>
-            <confirming.Preview className="w-24 h-16 mx-auto mb-2" />
-            <div className="flex justify-center space-x-2">
-              <button
-                className="px-3 py-1 bg-ub-orange text-white rounded"
-                onClick={() => {
-                  applyProfile(confirming);
-                  setConfirming(null);
-                }}
-              >
-                Apply
-              </button>
-              <button
-                className="px-3 py-1 bg-gray-600 text-white rounded"
-                onClick={() => setConfirming(null)}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

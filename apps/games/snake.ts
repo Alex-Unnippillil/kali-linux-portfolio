@@ -8,41 +8,37 @@ export interface Point {
 export const randomFood = (
   snake: Point[],
   obstacles: Point[] = [],
-  maxAttempts = 100,
-): Point | null => {
-  for (let i = 0; i < maxAttempts; i += 1) {
-    const pos = {
+): Point => {
+  let pos: Point;
+  do {
+    pos = {
       x: Math.floor(Math.random() * GRID_SIZE),
       y: Math.floor(Math.random() * GRID_SIZE),
     };
-    if (
-      !snake.some((s) => s.x === pos.x && s.y === pos.y) &&
-      !obstacles.some((o) => o.x === pos.x && o.y === pos.y)
-    )
-      return pos;
-  }
-  return null;
+  } while (
+    snake.some((s) => s.x === pos.x && s.y === pos.y) ||
+    obstacles.some((o) => o.x === pos.x && o.y === pos.y)
+  );
+  return pos;
 };
 
 export const randomObstacle = (
   snake: Point[],
   food: Point,
   obstacles: Point[] = [],
-  maxAttempts = 100,
-): Point | null => {
-  for (let i = 0; i < maxAttempts; i += 1) {
-    const pos = {
+): Point => {
+  let pos: Point;
+  do {
+    pos = {
       x: Math.floor(Math.random() * GRID_SIZE),
       y: Math.floor(Math.random() * GRID_SIZE),
     };
-    if (
-      !snake.some((s) => s.x === pos.x && s.y === pos.y) &&
-      !(food.x === pos.x && food.y === pos.y) &&
-      !obstacles.some((o) => o.x === pos.x && o.y === pos.y)
-    )
-      return pos;
-  }
-  return null;
+  } while (
+    snake.some((s) => s.x === pos.x && s.y === pos.y) ||
+    (food.x === pos.x && food.y === pos.y) ||
+    obstacles.some((o) => o.x === pos.x && o.y === pos.y)
+  );
+  return pos;
 };
 
 export const generateObstacles = (
@@ -52,9 +48,7 @@ export const generateObstacles = (
 ): Point[] => {
   const obstacles: Point[] = [];
   for (let i = 0; i < count; i += 1) {
-    const pos = randomObstacle(snake, food, obstacles);
-    if (!pos) break;
-    obstacles.push(pos);
+    obstacles.push(randomObstacle(snake, food, obstacles));
   }
   return obstacles;
 };

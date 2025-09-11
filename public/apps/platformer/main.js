@@ -208,20 +208,14 @@ function setupMobile() {
     const el = document.getElementById(id);
     if (!el) return;
     const key = map[id];
-    el.addEventListener(
-      'touchstart',
-      () => {
-        keys[key] = true;
-      },
-      { passive: true }
-    );
-    el.addEventListener(
-      'touchend',
-      () => {
-        keys[key] = false;
-      },
-      { passive: true }
-    );
+    el.addEventListener('touchstart', e => {
+      e.preventDefault();
+      keys[key] = true;
+    });
+    el.addEventListener('touchend', e => {
+      e.preventDefault();
+      keys[key] = false;
+    });
   });
 }
 setupMobile();

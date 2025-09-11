@@ -4,7 +4,7 @@
 
 ## Module Schemas
 
-Modules are defined in `apps/reconng/index.js` as schema objects with:
+Modules are defined in `components/apps/reconng/index.js` as schema objects with:
 
 - `input` – expected target type (`domain` or `ip`).
 - `demo(target)` – returns canned text, nodes and edges for offline runs.

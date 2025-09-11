@@ -1,7 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { baseMetadata } from '../lib/metadata';
-
-export const metadata = baseMetadata;
+import React from 'react';
+import Meta from '../components/SEO/Meta';
 
 interface TileProps {
   title: string;
@@ -60,74 +58,19 @@ const DnsDiagram = () => (
   </svg>
 );
 
-const SpoofingOverview = () => {
-  const carouselRef = useRef<HTMLDivElement>(null);
-  const [active, setActive] = useState(0);
-
-  const tiles = [
-    {
-      id: 'arpspoof',
-      title: 'arpspoof',
-      link: 'https://manpages.debian.org/unstable/dsniff/arpspoof.8.en.html',
-      content: <ArpDiagram />,
-    },
-    {
-      id: 'dnsspoof',
-      title: 'dnsspoof',
-      link: 'https://manpages.debian.org/unstable/dsniff/dnsspoof.8.en.html',
-      content: <DnsDiagram />,
-    },
-  ];
-
-  useEffect(() => {
-    const el = carouselRef.current;
-    if (!el) return;
-
-    const onScroll = () => {
-      const index = Math.round(el.scrollLeft / el.clientWidth);
-      setActive(index);
-    };
-
-    el.addEventListener('scroll', onScroll);
-    return () => el.removeEventListener('scroll', onScroll);
-  }, []);
-
-  const scrollTo = (i: number) => {
-    const el = carouselRef.current;
-    if (!el) return;
-    el.scrollTo({ left: el.clientWidth * i, behavior: 'smooth' });
-  };
-
-  return (
-    <>
-      <main className="p-4 bg-ub-cool-grey min-h-screen">
-        <div
-          ref={carouselRef}
-          aria-roledescription="carousel"
-          className="flex gap-4 overflow-x-auto snap-x snap-mandatory md:grid md:grid-cols-2 md:gap-4 md:overflow-visible"
-        >
-          {tiles.map((t, i) => (
-            <div key={t.id} id={t.id} className="w-full flex-shrink-0 snap-center">
-              <ToolTile title={t.title} link={t.link}>
-                {t.content}
-              </ToolTile>
-            </div>
-          ))}
-        </div>
-        <div className="flex justify-center mt-4 gap-2 md:hidden">
-          {tiles.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => scrollTo(i)}
-              aria-label={`Go to slide ${i + 1}`}
-              className={`w-2 h-2 rounded-full ${active === i ? 'bg-white' : 'bg-gray-500'}`}
-            />
-          ))}
-        </div>
-      </main>
-    </>
-  );
-};
+const SpoofingOverview = () => (
+  <>
+    <Meta />
+    <main className="p-4 grid gap-4 md:grid-cols-2 bg-ub-cool-grey min-h-screen">
+      <ToolTile title="arpspoof" link="https://manpages.debian.org/unstable/dsniff/arpspoof.8.en.html">
+        <ArpDiagram />
+      </ToolTile>
+      <ToolTile title="dnsspoof" link="https://manpages.debian.org/unstable/dsniff/dnsspoof.8.en.html">
+        <DnsDiagram />
+      </ToolTile>
+    </main>
+  </>
+);
 
 export default SpoofingOverview;
 

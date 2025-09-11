@@ -1,7 +1,5 @@
 import { chromium, firefox, webkit } from 'playwright';
 import fs from 'fs';
-import logger from '../utils/logger';
-
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
@@ -13,9 +11,10 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
   ];
 
   // Add new app routes here to include them in smoke tests
-    const routes = [
-      '/apps/ascii-art',
-      '/apps/autopsy',
+  const routes = [
+    '/apps/2048',
+    '/apps/ascii-art',
+    '/apps/autopsy',
     '/apps/beef',
     '/apps/blackjack',
     '/apps/calculator',
@@ -75,7 +74,7 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
       page.on('pageerror', (err) => {
         pageErrors.push(err.message);
       });
-      logger.info(`[${name}] Visiting ${route}`);
+      console.log(`[${name}] Visiting ${route}`);
       let error = '';
       try {
         const response = await page.goto(`${BASE_URL}${route}`);
@@ -89,7 +88,7 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
       }
       if (error) {
         hadError = true;
-        logger.error(`[${name}] Error on ${route}: ${error}`);
+        console.error(`[${name}] Error on ${route}: ${error}`);
       }
       results.push({ browser: name, route, error });
       await page.close();
@@ -99,9 +98,9 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
   }
 
   if (hadError) {
-    logger.error('Completed with errors');
+    console.error('Completed with errors');
   } else {
-    logger.info('All app routes loaded without console errors.');
+    console.log('All app routes loaded without console errors.');
   }
 
   // Write results to log file if TEST_LOG env variable provided

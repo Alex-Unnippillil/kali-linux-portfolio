@@ -4,8 +4,8 @@
   "start_url": "/",
   "offline_page": "/offline.html",
   "display": "standalone",
-  "background_color": "#0F1317",
-  "theme_color": "#0F1317",
+  "background_color": "#0f1317",
+  "theme_color": "#0f1317",
   "icons": [
     {
       "src": "/images/logos/fevicon.png",
@@ -44,6 +44,11 @@
       "name": "New Note",
       "short_name": "Note",
       "url": "/apps/sticky_notes/"
+    },
+    {
+      "name": "Open 2048 Daily",
+      "short_name": "2048",
+      "url": "/?open=2048&daily=true"
     }
   ]
 }

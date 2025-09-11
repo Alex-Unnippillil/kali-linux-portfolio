@@ -2,7 +2,6 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { isBrowser } from '@/utils/env';
 
 interface Block {
   addr: string;
@@ -41,7 +40,7 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
   }, [blocks]);
 
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === "undefined") return;
     const style = getComputedStyle(document.documentElement);
     setColors({
       bg: style.getPropertyValue("--r2-bg").trim() || "#000",

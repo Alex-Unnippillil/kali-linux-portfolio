@@ -76,8 +76,7 @@ const RulesSandbox: React.FC<Props> = ({ savedSets, onChange, setRuleSet }) => {
 
   const load = (key: string) => {
     setName(key);
-    // Guard against undefined rule sets to satisfy TypeScript's strict null checks
-    setRules(savedSets[key]?.join('\n') ?? '');
+    setRules(savedSets[key].join('\n'));
   };
 
   const remove = (key: string) => {

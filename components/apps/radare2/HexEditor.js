@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 const BYTES_PER_ROW = 16;
@@ -21,7 +20,7 @@ const HexEditor = ({ hex, theme }) => {
   });
 
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === 'undefined') return;
     const style = getComputedStyle(document.documentElement);
     colorsRef.current = {
       surface: style.getPropertyValue('--r2-surface').trim() || '#374151',
@@ -32,7 +31,7 @@ const HexEditor = ({ hex, theme }) => {
   }, [theme]);
 
   useEffect(() => {
-    if (isBrowser()) {
+    if (typeof window !== 'undefined') {
       prefersReduced.current = window.matchMedia(
         '(prefers-reduced-motion: reduce)'
       ).matches;
@@ -40,7 +39,7 @@ const HexEditor = ({ hex, theme }) => {
   }, []);
 
   useEffect(() => {
-    if (isBrowser() && typeof Worker === 'function') {
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
       workerRef.current = new Worker(
         new URL('./hexWorker.js', import.meta.url)
       );
@@ -143,7 +142,7 @@ const HexEditor = ({ hex, theme }) => {
 
   const handleEdit = (idx, current) => {
     const value =
-      isBrowser()
+      typeof window !== 'undefined'
         ? window.prompt('Enter byte (two hex chars)', current)
         : null;
     if (value) {

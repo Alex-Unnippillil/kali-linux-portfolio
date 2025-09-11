@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { importSpriteStrip } from '../utils/spriteStrip';
 
 interface SpriteStripPreviewProps {
@@ -27,39 +27,10 @@ const SpriteStripPreview: React.FC<SpriteStripPreviewProps> = ({
   fps = 12,
 }) => {
   const [frame, setFrame] = useState(0);
-  const [url, setUrl] = useState<string | null>(null);
-  const releaseRef = useRef<() => void>(() => {});
-  const divRef = useRef<HTMLDivElement>(null);
 
-  // Observe visibility to load/unload strip
+  // Preload and cache the sprite strip
   useEffect(() => {
-    const node = divRef.current;
-    if (!node) return;
-
-    const load = async () => {
-      const res = await importSpriteStrip(src);
-      setUrl(res.url);
-      releaseRef.current = res.release;
-    };
-
-    const onChange: IntersectionObserverCallback = (entries) => {
-      entries.forEach((e) => {
-        if (e.isIntersecting) {
-          load();
-        } else {
-          releaseRef.current();
-          releaseRef.current = () => {};
-          setUrl(null);
-        }
-      });
-    };
-
-    const obs = new IntersectionObserver(onChange);
-    obs.observe(node);
-    return () => {
-      obs.disconnect();
-      releaseRef.current();
-    };
+    importSpriteStrip(src);
   }, [src]);
 
   // Cycle through frames
@@ -74,13 +45,13 @@ const SpriteStripPreview: React.FC<SpriteStripPreviewProps> = ({
   const style: React.CSSProperties = {
     width: frameWidth,
     height: frameHeight,
-    backgroundImage: url ? `url(${url})` : undefined,
+    backgroundImage: `url(${src})`,
     backgroundPosition: `-${frame * frameWidth}px 0px`,
     backgroundRepeat: 'no-repeat',
     imageRendering: 'pixelated',
   };
 
-  return <div ref={divRef} style={style} data-testid="sprite-strip-preview" />;
+  return <div style={style} data-testid="sprite-strip-preview" />;
 };
 
 export default SpriteStripPreview;

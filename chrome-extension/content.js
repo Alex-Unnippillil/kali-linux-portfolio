@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 function getMedias() {
   return Array.from(document.querySelectorAll('video, audio'));
 }
@@ -31,7 +30,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
-if (isBrowser()) {
+if (typeof window !== 'undefined') {
   window.addEventListener('message', (ev) => {
     const data = ev.data;
     if (!data || !data.type) return;

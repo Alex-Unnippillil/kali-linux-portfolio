@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 import React, { useEffect, useRef, useState } from 'react';
 
 const categories = {
@@ -26,7 +25,7 @@ const MemoryHeatmap = ({ data }) => {
   const prefersReducedMotion = useRef(false);
 
   useEffect(() => {
-    if (isBrowser()) {
+    if (typeof window !== 'undefined') {
       prefersReducedMotion.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     }
   }, []);

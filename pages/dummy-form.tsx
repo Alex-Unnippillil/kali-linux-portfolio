@@ -1,6 +1,5 @@
 "use client";
 
-import { isBrowser } from '@/utils/env';
 import React, { useState, useEffect } from 'react';
 import FormError from '../components/ui/FormError';
 
@@ -15,7 +14,7 @@ const DummyForm: React.FC = () => {
   const [recovered, setRecovered] = useState(false);
 
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === 'undefined') return;
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) {
@@ -37,7 +36,7 @@ const DummyForm: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === 'undefined') return;
     const handle = setTimeout(() => {
       const hasContent = name || email || message;
       try {
@@ -90,9 +89,9 @@ const DummyForm: React.FC = () => {
     <div className="flex min-h-screen items-center justify-center bg-gray-100">
       <form onSubmit={handleSubmit} className="w-full max-w-md rounded bg-white p-6 shadow-md">
         <h1 className="mb-4 text-xl font-bold">Contact Us</h1>
-        {recovered && <p className="mb-4 text-sm text-info">Recovered draft</p>}
+        {recovered && <p className="mb-4 text-sm text-blue-600">Recovered draft</p>}
         {error && <FormError className="mb-4 mt-0">{error}</FormError>}
-        {success && <p className="mb-4 text-sm text-success">Form submitted successfully!</p>}
+        {success && <p className="mb-4 text-sm text-green-600">Form submitted successfully!</p>}
         <label className="mb-2 block text-sm font-medium" htmlFor="name">Name</label>
         <input
           id="name"

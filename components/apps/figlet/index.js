@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { toPng } from 'html-to-image';
 import AlignmentControls from '../../../apps/figlet/components/AlignmentControls';
@@ -30,7 +29,7 @@ const FigletApp = () => {
   const [serverFontNames, setServerFontNames] = useState([]);
 
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const t = params.get('text');
     if (t) setText(t);
@@ -55,7 +54,7 @@ const FigletApp = () => {
   }, []);
 
   useEffect(() => {
-    if (isBrowser() && typeof Worker === 'function') {
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
       workerRef.current = new Worker(new URL('./worker.js', import.meta.url));
       workerRef.current.onmessage = (e) => {
         if (e.data?.type === 'font') {
@@ -230,7 +229,7 @@ const FigletApp = () => {
   }, [fonts, font, updateFiglet]);
 
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === 'undefined') return;
     const params = new URLSearchParams();
     if (text) params.set('text', text);
     if (font) params.set('font', font);

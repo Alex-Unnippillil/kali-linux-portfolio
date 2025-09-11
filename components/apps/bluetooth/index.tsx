@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import FormError from "@/components/ui/FormError";
+import FormError from "../../ui/FormError";
 
 interface DeviceInfo {
   address: string;
@@ -13,7 +13,7 @@ const SignalBars: React.FC<{ rssi: number }> = ({ rssi }) => {
     rssi >= -60 ? 4 : rssi >= -70 ? 3 : rssi >= -80 ? 2 : rssi >= -90 ? 1 : 0;
   const heights = ["h-[4px]", "h-[8px]", "h-[12px]", "h-[16px]"];
   return (
-    <div className="mt-1.5 flex h-4 items-end gap-0.5">
+    <div className="mt-[6px] flex h-4 items-end gap-[2px]">
       {heights.map((h, i) => (
         <div
           key={i}
@@ -123,24 +123,24 @@ const BluetoothApp: React.FC = () => {
         {Object.entries(grouped).map(([type, list]) => (
           <div key={type}>
             <h3 className="mb-2 font-bold">{type}</h3>
-            <ul className="grid grid-cols-2 gap-1.5">
+            <ul className="grid grid-cols-2 gap-[6px]">
               {list.map((d) => (
                 <li
                   key={d.address}
-                  className="flex flex-col items-center rounded bg-gray-800 p-1.5"
+                  className="flex flex-col items-center rounded bg-gray-800 p-[6px]"
                 >
                   <img
                     src="/themes/Yaru/status/emblem-system-symbolic.svg"
                     alt=""
                     className="h-16 w-16"
                   />
-                  <p className="mt-1.5 text-center text-sm font-bold">
+                  <p className="mt-[6px] text-center text-sm font-bold">
                     {d.name || d.address}
                   </p>
                   <SignalBars rssi={d.rssi} />
                   <button
                     onClick={() => setPairingDevice(d)}
-                    className="mt-1.5 w-full rounded bg-gray-700 px-2 py-1 text-sm"
+                    className="mt-[6px] w-full rounded bg-gray-700 px-2 py-1 text-sm"
                   >
                     Pair
                   </button>

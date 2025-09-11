@@ -7,7 +7,7 @@ interface Props {
 }
 
 export default function Visualizer({ analyser }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     if (!analyser) return;
@@ -24,10 +24,7 @@ export default function Visualizer({ analyser }: Props) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const barWidth = canvas.width / bufferLength;
       for (let i = 0; i < bufferLength; i++) {
-        // With `noUncheckedIndexedAccess` enabled, direct indexing can yield
-        // `undefined`. Provide a safe fallback to keep the visualizer stable.
-
-        const value = dataArray[i] ?? 0;
+        const value = dataArray[i];
         const barHeight = (value / 255) * canvas.height;
         ctx.fillStyle = `rgb(${value}, 100, 150)`;
         ctx.fillRect(i * barWidth, canvas.height - barHeight, barWidth - 1, barHeight);
@@ -36,14 +33,6 @@ export default function Visualizer({ analyser }: Props) {
     draw();
   }, [analyser]);
 
-  return (
-    <canvas
-      ref={canvasRef}
-      width={300}
-      height={100}
-      className="w-full h-24"
-      aria-label="audio visualizer"
-    />
-  );
+  return <canvas ref={canvasRef} width={300} height={100} className="w-full h-24" />;
 }
 

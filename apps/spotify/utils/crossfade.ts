@@ -6,7 +6,7 @@ export default class CrossfadePlayer {
     null,
   ];
   private analyser: AnalyserNode | null = null;
-  private current: 0 | 1 = 0;
+  private current = 0;
   private startTime = 0;
 
   private ensureContext() {
@@ -36,7 +36,7 @@ export default class CrossfadePlayer {
       const res = await fetch(url);
       const arr = await res.arrayBuffer();
       const buffer = await ctx.decodeAudioData(arr);
-      const nextIndex: 0 | 1 = ((this.current + 1) % 2) as 0 | 1;
+      const nextIndex = (this.current + 1) % 2;
       const src = ctx.createBufferSource();
       src.buffer = buffer;
       src.connect(gains[nextIndex]);

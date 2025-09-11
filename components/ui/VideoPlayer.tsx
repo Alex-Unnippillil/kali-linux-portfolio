@@ -2,8 +2,6 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import PipPortalProvider, { usePipPortal } from "../common/PipPortal";
-import useWakeLockOnFullscreen from "@/hooks/useWakeLockOnFullscreen";
-import { isBrowser } from '@/utils/env';
 
 interface VideoPlayerProps {
   src: string;
@@ -22,18 +20,16 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
   const [docPipSupported, setDocPipSupported] = useState(false);
   const [isPip, setIsPip] = useState(false);
 
-  useWakeLockOnFullscreen(videoRef);
-
   useEffect(() => {
     const video = videoRef.current;
     setPipSupported(
-      isBrowser() &&
+      typeof document !== "undefined" &&
         !!document.pictureInPictureEnabled &&
         !!video &&
         typeof video.requestPictureInPicture === "function"
     );
     setDocPipSupported(
-      isBrowser() &&
+      typeof window !== "undefined" &&
         !!(window as any).documentPictureInPicture
     );
 
@@ -123,7 +119,6 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
               setVol(v);
               send({ type: "volume", value: v });
             }}
-            aria-label="Volume"
           />
         </div>
       );
@@ -134,14 +129,7 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
 
   return (
     <div className={`relative ${className}`.trim()}>
-      <video
-        ref={videoRef}
-        src={src}
-        poster={poster}
-        controls
-        className="w-full h-auto"
-        aria-label="Video player"
-      />
+      <video ref={videoRef} src={src} poster={poster} controls className="w-full h-auto" />
       {pipSupported && (
         <button
           type="button"

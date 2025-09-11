@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactGA from 'react-ga4';
 import { pointerHandlers } from '../../../utils/pointer';
@@ -34,7 +33,7 @@ const Checkers = () => {
   const [cursor, setCursor] = useState<[number, number]>([0, 0]);
   const [showLegal, setShowLegal] = useState(false);
   const [rule, setRule] = useState<'forced' | 'relaxed'>('forced');
-  const boardRef = useRef<HTMLDivElement | null>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
 
   const workerRef = useRef<Worker | null>(null);
   const hintRequest = useRef(false);
@@ -87,7 +86,7 @@ const Checkers = () => {
   };
 
   useEffect(() => {
-    if (isBrowser() && typeof Worker === 'function') {
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
       workerRef.current = new Worker('/checkers-worker.js');
       workerRef.current.onmessage = (e: MessageEvent<Move>) => {
         const move = e.data;
@@ -286,8 +285,8 @@ const Checkers = () => {
   };
 
   const undo = () => {
-    const prev = history.at(-1);
-    if (!prev) return;
+    if (!history.length) return;
+    const prev = history[history.length - 1];
     setFuture([{ board, turn, no: noCapture, move: lastMove }, ...future]);
     setBoard(prev.board);
     setTurn(prev.turn as 'red' | 'black');

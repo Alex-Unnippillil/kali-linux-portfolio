@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 import React, { useEffect, useRef, useState } from 'react';
 import GameLayout from './GameLayout';
 import usePersistedState from '../../hooks/usePersistedState';
@@ -177,7 +176,7 @@ const Minesweeper = () => {
   const audioRef = useRef(null);
   const workerRef = useRef(null);
   const initWorker = () => {
-    if (isBrowser() && typeof Worker === 'function') {
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
       workerRef.current = new Worker(
         new URL('./minesweeper.worker.js', import.meta.url),
       );
@@ -226,14 +225,14 @@ const Minesweeper = () => {
   }, []);
 
   useEffect(() => {
-    if (isBrowser()) {
+    if (typeof window !== 'undefined') {
       const best = localStorage.getItem('minesweeper-best-time');
       if (best) setBestTime(parseFloat(best));
     }
   }, []);
 
   useEffect(() => {
-    if (isBrowser()) {
+    if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('minesweeper-state');
       if (saved) {
         try {
@@ -267,7 +266,7 @@ const Minesweeper = () => {
   }, []);
 
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const urlSeed = params.get('seed');
     if (urlSeed) {
@@ -291,7 +290,7 @@ const Minesweeper = () => {
   }, []);
 
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     params.set('seed', seed.toString(36));
     window.history.replaceState(
@@ -311,7 +310,7 @@ const Minesweeper = () => {
   }, [status, startTime, paused]);
 
   useEffect(() => {
-    if (isBrowser()) {
+    if (typeof window !== 'undefined') {
       const media = window.matchMedia('(prefers-reduced-motion: reduce)');
       prefersReducedMotion.current = media.matches;
       const handler = (e) => (prefersReducedMotion.current = e.matches);
@@ -429,7 +428,7 @@ const Minesweeper = () => {
   }, [useQuestionMarks, board]);
 
   useEffect(() => {
-    if (isBrowser()) {
+    if (typeof window !== 'undefined') {
       try {
         const data = {
           board: board ? serializeBoard(board) : null,
@@ -450,7 +449,7 @@ const Minesweeper = () => {
   }, [board, status, seed, shareCode, startTime, elapsed, bv, bvps, flags, paused]);
 
   const playSound = (type) => {
-    if (!sound || !isBrowser()) return;
+    if (!sound || typeof window === 'undefined') return;
     if (!audioRef.current)
       audioRef.current = new (window.AudioContext || window.webkitAudioContext)();
     const ctx = audioRef.current;
@@ -473,7 +472,7 @@ const Minesweeper = () => {
       const finalBV = calculate3BV(newBoard);
       setBV(finalBV);
       setBVPS(time > 0 ? finalBV / time : finalBV);
-      if (isBrowser()) {
+      if (typeof window !== 'undefined') {
         if (!bestTime || time < bestTime) {
           setBestTime(time);
           localStorage.setItem('minesweeper-best-time', time.toString());
@@ -956,7 +955,7 @@ const Minesweeper = () => {
   };
 
   const loadSaved = () => {
-    if (!isBrowser()) return;
+    if (typeof window === 'undefined') return;
     const saved = localStorage.getItem('minesweeper-state');
     if (!saved) return;
     try {

@@ -25,7 +25,7 @@ export interface OPFSHook {
   ) => Promise<FileSystemFileHandle[]>;
 }
 
-function useOPFSCore(): OPFSHook {
+export default function useOPFS(): OPFSHook {
   const supported =
     typeof navigator !== 'undefined' && !!navigator.storage?.getDirectory;
 
@@ -129,63 +129,5 @@ function useOPFSCore(): OPFSHook {
   );
 
   return { supported, root, getDir, readFile, writeFile, deleteFile, listFiles };
-}
-
-export default function useOPFS(): OPFSHook;
-export default function useOPFS<T>(
-  name: string,
-  initialValue: T,
-): [T, (v: T) => Promise<void>, boolean];
-export default function useOPFS<T>(
-  name?: string,
-  initialValue?: T,
-): OPFSHook | [T, (v: T) => Promise<void>, boolean] {
-  const core = useOPFSCore();
-  if (name !== undefined) {
-    const { supported, getDir, readFile, writeFile } = core;
-    const [value, setValue] = useState<T>(initialValue as T);
-    const [ready, setReady] = useState(false);
-
-    useEffect(() => {
-      let active = true;
-      if (!supported) {
-        setReady(true);
-        return;
-      }
-      (async () => {
-        const dir = await getDir();
-        if (!dir) {
-          if (active) setReady(true);
-          return;
-        }
-        try {
-          const text = await readFile(name, dir);
-          if (text && active) setValue(JSON.parse(text));
-        } catch {
-          await writeFile(name, JSON.stringify(initialValue), dir);
-        }
-        if (active) setReady(true);
-      })();
-      return () => {
-        active = false;
-      };
-    }, [supported, name, initialValue, getDir, readFile, writeFile]);
-
-    const save = useCallback(
-      async (v: T) => {
-        setValue(v);
-        if (!supported) return;
-        const dir = await getDir();
-        if (!dir) return;
-        try {
-          await writeFile(name, JSON.stringify(v), dir);
-        } catch {}
-      },
-      [supported, name, getDir, writeFile],
-    );
-
-    return [value, save, ready];
-  }
-  return core;
 }
 

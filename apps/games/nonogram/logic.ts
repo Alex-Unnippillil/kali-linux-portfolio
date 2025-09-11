@@ -20,9 +20,7 @@ export const lineToClues = (line: Cell[]): number[] => {
 // Generate all patterns for a clue in a line of given length
 export const generateLinePatterns = (clue: Clue, length: number): Cell[][] => {
   if (clue.length === 0) return [Array(length).fill(0)];
-  const first = clue[0];
-  const rest = clue.slice(1);
-  if (first === undefined) return [];
+  const [first, ...rest] = clue;
   const patterns: Cell[][] = [];
   for (let offset = 0; offset <= length - first; offset++) {
     const head: Cell[] = Array(offset).fill(0).concat(Array(first).fill(1));
@@ -52,16 +50,11 @@ export const findForcedCellsInLine = (
   line: Cell[]
 ): { index: number; value: Cell }[] => {
   const solutions = getPossibleLineSolutions(clue, line);
-  const base = solutions[0];
-  if (!base) return [];
+  if (!solutions.length) return [];
   const forced: { index: number; value: Cell }[] = [];
   for (let i = 0; i < line.length; i++) {
-    const val = base[i];
-    if (
-      val !== undefined &&
-      solutions.every((s) => s[i] === val) &&
-      line[i] === 0
-    ) {
+    const val = solutions[0][i];
+    if (solutions.every((s) => s[i] === val) && line[i] === 0) {
       forced.push({ index: i, value: (val ? 1 : -1) as Cell });
     }
   }
@@ -75,23 +68,17 @@ export const findHint = (
   grid: Grid
 ): { i: number; j: number; value: 1 } | null => {
   for (let i = 0; i < rows.length; i++) {
-    const clue = rows[i];
-    const row = grid[i];
-    if (!clue || !row) continue;
-    const forced = findForcedCellsInLine(clue, row).filter((f) => f.value === 1);
-    const firstForced = forced[0];
-    if (firstForced) return { i, j: firstForced.index, value: 1 };
+    const forced = findForcedCellsInLine(rows[i], grid[i]).filter(
+      (f) => f.value === 1
+    );
+    if (forced.length) return { i, j: forced[0].index, value: 1 };
   }
   for (let j = 0; j < cols.length; j++) {
-    const clue = cols[j];
-    if (!clue) continue;
-    const col: Cell[] = grid
-      .map((row) => row[j])
-      .filter((v): v is Cell => v !== undefined);
-    if (col.length !== grid.length) continue;
-    const forced = findForcedCellsInLine(clue, col).filter((f) => f.value === 1);
-    const firstForced = forced[0];
-    if (firstForced) return { i: firstForced.index, j, value: 1 };
+    const col = grid.map((row) => row[j]);
+    const forced = findForcedCellsInLine(cols[j], col).filter(
+      (f) => f.value === 1
+    );
+    if (forced.length) return { i: forced[0].index, j, value: 1 };
   }
   return null;
 };
@@ -109,16 +96,11 @@ export const checkContradictions = (
   rows: Clue[],
   cols: Clue[]
 ): { rows: boolean[]; cols: boolean[] } => {
-  const rowContradictions = rows.map((clue, i) => {
-    const row = grid[i];
-    if (!row) return false;
-    return evaluateLine(row, clue).contradiction;
-  });
+  const rowContradictions = rows.map((clue, i) =>
+    evaluateLine(grid[i], clue).contradiction
+  );
   const colContradictions = cols.map((clue, j) => {
-    const column: Cell[] = grid
-      .map((row) => row[j])
-      .filter((v): v is Cell => v !== undefined);
-    if (column.length !== grid.length) return false;
+    const column = grid.map((row) => row[j]);
     return evaluateLine(column, clue).contradiction;
   });
   return { rows: rowContradictions, cols: colContradictions };
@@ -127,7 +109,6 @@ export const checkContradictions = (
 // Toggle a cross mark on the grid
 export const toggleCross = (grid: Grid, r: number, c: number): Grid => {
   const g = grid.map((row) => row.slice());
-  if (!g[r] || g[r][c] === undefined) return g;
   g[r][c] = g[r][c] === -1 ? 0 : -1;
   return g;
 };
@@ -140,36 +121,28 @@ export const autoFill = (grid: Grid, rows: Clue[], cols: Clue[]): Grid => {
     changed = false;
     rows.forEach((clue, i) => {
       const line = g[i];
-      if (!line) return;
       const solutions = getPossibleLineSolutions(clue, line);
       if (solutions.length === 1) {
-        const sol = solutions[0];
-        if (sol)
-          sol.forEach((val, j) => {
-            const newVal = (val ? 1 : -1) as Cell;
-            if (line[j] !== newVal) {
-              line[j] = newVal;
-              changed = true;
-            }
-          });
+        solutions[0].forEach((val, j) => {
+          const newVal = (val ? 1 : -1) as Cell;
+          if (g[i][j] !== newVal) {
+            g[i][j] = newVal;
+            changed = true;
+          }
+        });
       }
     });
     cols.forEach((clue, j) => {
-      const col: Cell[] = g
-        .map((row) => row[j])
-        .filter((v): v is Cell => v !== undefined);
-      if (col.length !== g.length) return;
+      const col = g.map((row) => row[j]);
       const solutions = getPossibleLineSolutions(clue, col);
       if (solutions.length === 1) {
-        const sol = solutions[0];
-        if (sol)
-          sol.forEach((val, i) => {
-            const newVal = (val ? 1 : -1) as Cell;
-            if (g[i] && g[i][j] !== newVal) {
-              g[i][j] = newVal;
-              changed = true;
-            }
-          });
+        solutions[0].forEach((val, i) => {
+          const newVal = (val ? 1 : -1) as Cell;
+          if (g[i][j] !== newVal) {
+            g[i][j] = newVal;
+            changed = true;
+          }
+        });
       }
     });
   }

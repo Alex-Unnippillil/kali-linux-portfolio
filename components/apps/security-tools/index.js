@@ -4,7 +4,6 @@ import CommandBuilder from '../../CommandBuilder';
 import FixturesLoader from '../../FixturesLoader';
 import ResultViewer from '../../ResultViewer';
 import ExplainerPane from '../../ExplainerPane';
-import EmptyState from '../../ui/EmptyState';
 
 const tabs = [
   { id: 'repeater', label: 'Repeater' },
@@ -135,7 +134,6 @@ export default function SecurityTools() {
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search all tools"
-            aria-label="Search all tools"
             className="w-full mb-2 p-1 text-black text-xs"
           />
           {query ? (
@@ -191,13 +189,7 @@ export default function SecurityTools() {
               <div>Sample text contains &quot;{query}&quot;</div>
             </div>
           )}
-            {!hasResults && (
-              <EmptyState
-                variant="search"
-                headline="No results"
-                helperText="Try refining your query"
-              />
-            )}
+            {!hasResults && <div>No results found.</div>}
           </div>
         ) : (
           <>
@@ -246,19 +238,9 @@ export default function SecurityTools() {
             {active === 'yara' && (
             <div>
               <p className="text-xs mb-2">Simplified YARA tester using sample text. Pattern matching is simulated.</p>
-              <textarea
-                aria-label="YARA rule"
-                value={yaraRule}
-                onChange={e=>setYaraRule(e.target.value)}
-                className="w-full h-24 text-black p-1"
-              />
+              <textarea value={yaraRule} onChange={e=>setYaraRule(e.target.value)} className="w-full h-24 text-black p-1" />
               <div className="text-xs mt-2 mb-1">Sample file:</div>
-              <textarea
-                aria-label="Sample file"
-                value={sampleText}
-                readOnly
-                className="w-full h-24 text-black p-1"
-              />
+              <textarea value={sampleText} readOnly className="w-full h-24 text-black p-1" />
               <button onClick={runYara} className="mt-2 px-2 py-1 bg-ub-green text-black text-xs">Scan</button>
               {yaraResult && <div className="mt-2 text-xs">{yaraResult}</div>}
             </div>

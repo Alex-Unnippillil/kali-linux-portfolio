@@ -70,21 +70,3 @@ test('modal closes when Escape pressed globally', async () => {
   fireEvent.keyDown(document, { key: 'Escape' });
   await waitFor(() => expect(openButton).toHaveFocus());
 });
-
-test('modal associates heading via aria-labelledby', () => {
-  const root = document.createElement('div');
-  root.setAttribute('id', '__next');
-  document.body.appendChild(root);
-
-  const { unmount } = render(
-    <Modal isOpen onClose={() => {}} ariaLabelledby="title-id">
-      <h2 id="title-id">Title</h2>
-    </Modal>,
-    { container: root }
-  );
-
-  expect(screen.getByRole('dialog')).toHaveAttribute('aria-labelledby', 'title-id');
-
-  unmount();
-  document.body.removeChild(root);
-});

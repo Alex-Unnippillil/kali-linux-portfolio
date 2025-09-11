@@ -1,6 +1,4 @@
-import { isBrowser } from '@/utils/env';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import Image from 'next/image';
 import {
   SIZE,
   DIRECTIONS,
@@ -57,7 +55,7 @@ const Reversi = () => {
   useEffect(() => { setScore(countPieces(board)); }, [board]);
 
   useEffect(() => {
-    if (isBrowser()) {
+    if (typeof window !== 'undefined') {
       reduceMotionRef.current = window.matchMedia(
         '(prefers-reduced-motion: reduce)'
       ).matches;
@@ -90,7 +88,7 @@ const Reversi = () => {
 
   // load wins from storage
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === 'undefined') return;
     const saved = window.localStorage.getItem('reversiWins');
     if (saved) {
       try { setWins(JSON.parse(saved)); } catch { /* ignore */ }
@@ -99,7 +97,7 @@ const Reversi = () => {
 
   // persist wins
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === 'undefined') return;
     window.localStorage.setItem('reversiWins', JSON.stringify(wins));
   }, [wins]);
 
@@ -416,7 +414,7 @@ const Reversi = () => {
           onClick={reset}
           aria-label="Reset"
         >
-          <Image src="/themes/Yaru/status/chrome_refresh.svg" width={24} height={24} alt="" />
+          <img src="/themes/Yaru/status/chrome_refresh.svg" width="24" height="24" alt="" />
         </button>
         <button
           className="w-6 h-6 bg-gray-700 hover:bg-gray-600 rounded flex items-center justify-center disabled:opacity-50"

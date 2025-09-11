@@ -14,7 +14,7 @@ export interface RouterProfile {
   lockDuration: number;
 }
 
-export const ROUTER_PROFILES: [RouterProfile, ...RouterProfile[]] = [
+export const ROUTER_PROFILES: RouterProfile[] = [
   {
     id: 'generic',
     label: 'Generic (no lockout)',
@@ -42,16 +42,15 @@ interface RouterProfilesProps {
 const STORAGE_KEY = 'reaver-router-profile';
 
 const RouterProfiles: React.FC<RouterProfilesProps> = ({ onChange }) => {
-  // ROUTER_PROFILES always contains at least one entry, default to the first
-  const [selected, setSelected] = useState<RouterProfile>(ROUTER_PROFILES[0]!);
+  const [selected, setSelected] = useState<RouterProfile>(ROUTER_PROFILES[0]);
 
   // Load persisted profile on mount
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    const profile =
-      ROUTER_PROFILES.find((p) => p.id === stored) ?? ROUTER_PROFILES[0]!;
+    const profile = ROUTER_PROFILES.find((p) => p.id === stored) || ROUTER_PROFILES[0];
     setSelected(profile);
     onChange(profile);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {

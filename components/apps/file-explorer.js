@@ -1,16 +1,12 @@
 "use client";
 
-import { isBrowser } from '@/utils/env';
 import React, { useState, useEffect, useRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
-import PropertiesDialog from '../ui/PropertiesDialog';
-import Sidebar from '../filemanager/Sidebar';
-import Toast from '../ui/Toast';
 
 export async function openFileDialog(options = {}) {
-  if (isBrowser() && window.showOpenFilePicker) {
+  if (typeof window !== 'undefined' && window.showOpenFilePicker) {
     const [handle] = await window.showOpenFilePicker(options);
     return handle;
   }
@@ -40,7 +36,7 @@ export async function openFileDialog(options = {}) {
 }
 
 export async function saveFileDialog(options = {}) {
-  if (isBrowser() && window.showSaveFilePicker) {
+  if (typeof window !== 'undefined' && window.showSaveFilePicker) {
     return await window.showSaveFilePicker(options);
   }
 
@@ -95,9 +91,7 @@ async function addRecentDir(handle) {
   } catch {}
 }
 
-const imageRegex = /\.(png|jpe?g|gif|webp|bmp)$/i;
-
-export default function FileExplorer({ openApp }) {
+export default function FileExplorer() {
   const [supported, setSupported] = useState(true);
   const [dirHandle, setDirHandle] = useState(null);
   const [files, setFiles] = useState([]);
@@ -110,8 +104,6 @@ export default function FileExplorer({ openApp }) {
   const [results, setResults] = useState([]);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
-  const [devices, setDevices] = useState([]);
-  const [toast, setToast] = useState('');
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -123,33 +115,11 @@ export default function FileExplorer({ openApp }) {
     deleteFile: opfsDelete,
   } = useOPFS();
   const [unsavedDir, setUnsavedDir] = useState(null);
-  const [showProps, setShowProps] = useState(false);
-  const [propsTarget, setPropsTarget] = useState(null);
 
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
     setSupported(ok);
     if (ok) getRecentDirs().then(setRecent);
-  }, []);
-
-  useEffect(() => {
-    const handler = (e) => {
-      if (e.key !== 'volume-event' || !e.newValue) return;
-      try {
-        const data = JSON.parse(e.newValue);
-        if (data.type === 'insert') {
-          setDevices((d) => [...d, { id: data.id, name: data.label }]);
-          setToast(`Mounted ${data.label}`);
-          if (data.open) {
-            // Placeholder for opening folder logic
-          }
-        } else if (data.type === 'eject') {
-          setDevices((d) => d.filter((dev) => dev.id !== data.id));
-        }
-      } catch {}
-    };
-    window.addEventListener('storage', handler);
-    return () => window.removeEventListener('storage', handler);
   }, []);
 
   useEffect(() => {
@@ -205,14 +175,6 @@ export default function FileExplorer({ openApp }) {
   };
 
   const openFile = async (file) => {
-    if (imageRegex.test(file.name)) {
-      const imageFiles = files.filter(f => imageRegex.test(f.name));
-      if (isBrowser()) {
-        window.__ristretto = { files: imageFiles, index: imageFiles.findIndex(f => f.name === file.name) };
-      }
-      openApp && openApp('ristretto');
-      return;
-    }
     setCurrentFile(file);
     let text = '';
     if (opfsSupported) {
@@ -224,34 +186,6 @@ export default function FileExplorer({ openApp }) {
       text = await f.text();
     }
     setContent(text);
-  };
-
-  const openProperties = async (entry) => {
-    const meta = { name: entry.name, handle: entry.handle };
-    meta.kind = entry.handle.kind;
-    if (entry.handle.kind === 'file') {
-      try {
-        const f = await entry.handle.getFile();
-        meta.size = f.size;
-        meta.modified = f.lastModified;
-        meta.type = f.type || 'File';
-        if (f.type && f.type.startsWith('image/')) {
-          meta.preview = URL.createObjectURL(f);
-        }
-      } catch {}
-    }
-    setPropsTarget(meta);
-    setShowProps(true);
-  };
-
-  const closeProperties = () => {
-    if (propsTarget?.preview) URL.revokeObjectURL(propsTarget.preview);
-    setShowProps(false);
-    setPropsTarget(null);
-  };
-
-  const handleRenamed = async () => {
-    if (dirHandle) await readDir(dirHandle);
   };
 
   const readDir = async (handle) => {
@@ -308,7 +242,7 @@ export default function FileExplorer({ openApp }) {
     if (!dirHandle || !hasWorker) return;
     setResults([]);
     if (workerRef.current) workerRef.current.terminate();
-    if (isBrowser() && typeof Worker === 'function') {
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
       workerRef.current = new Worker(new URL('./find.worker.js', import.meta.url));
       workerRef.current.onmessage = (e) => {
         const { file, line, text, done } = e.data;
@@ -328,13 +262,7 @@ export default function FileExplorer({ openApp }) {
   if (!supported) {
     return (
       <div className="p-4 flex flex-col h-full">
-        <input
-          ref={fallbackInputRef}
-          type="file"
-          onChange={openFallback}
-          className="hidden"
-          aria-hidden="true"
-        />
+        <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
         {!currentFile && (
           <button
             onClick={() => fallbackInputRef.current?.click()}
@@ -345,12 +273,11 @@ export default function FileExplorer({ openApp }) {
         )}
         {currentFile && (
           <>
-              <textarea
-                className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
-                value={content}
-                onChange={onChange}
-                aria-label="File content"
-              />
+            <textarea
+              className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
+              value={content}
+              onChange={onChange}
+            />
             <button
               onClick={async () => {
                 const handle = await saveFileDialog({ suggestedName: currentFile.name });
@@ -369,116 +296,80 @@ export default function FileExplorer({ openApp }) {
   }
 
   return (
-    <>
-      <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
-        <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
-          <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
-            Open Folder
+    <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
+      <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
+        <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
+          Open Folder
+        </button>
+        {path.length > 1 && (
+          <button onClick={goBack} className="px-2 py-1 bg-black bg-opacity-50 rounded">
+            Back
           </button>
-          {path.length > 1 && (
-            <button onClick={goBack} className="px-2 py-1 bg-black bg-opacity-50 rounded">
-              Back
-            </button>
-          )}
-          <Breadcrumbs path={path} onNavigate={navigateTo} />
-          {currentFile && (
-            <button onClick={saveFile} className="px-2 py-1 bg-black bg-opacity-50 rounded">
-              Save
-            </button>
-          )}
+        )}
+        <Breadcrumbs path={path} onNavigate={navigateTo} />
+        {currentFile && (
+          <button onClick={saveFile} className="px-2 py-1 bg-black bg-opacity-50 rounded">
+            Save
+          </button>
+        )}
+      </div>
+      <div className="flex flex-1 overflow-hidden">
+        <div className="w-40 overflow-auto border-r border-gray-600">
+          <div className="p-2 font-bold">Recent</div>
+          {recent.map((r, i) => (
+            <div
+              key={i}
+              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+              onClick={() => openRecent(r)}
+            >
+              {r.name}
+            </div>
+          ))}
+          <div className="p-2 font-bold">Directories</div>
+          {dirs.map((d, i) => (
+            <div
+              key={i}
+              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+              onClick={() => openDir(d)}
+            >
+              {d.name}
+            </div>
+          ))}
+          <div className="p-2 font-bold">Files</div>
+          {files.map((f, i) => (
+            <div
+              key={i}
+              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+              onClick={() => openFile(f)}
+            >
+              {f.name}
+            </div>
+          ))}
         </div>
-        <div className="flex flex-1 overflow-hidden">
-          <Sidebar devices={devices} onEject={(id) => {
-            setDevices((d) => d.filter((dev) => dev.id !== id));
-            if (isBrowser()) {
-              window.localStorage.setItem(
-                'volume-event',
-                JSON.stringify({ type: 'eject', id }),
-              );
-            }
-          }} />
-          <div className="w-40 overflow-auto border-r border-gray-600">
-            <div className="p-2 font-bold">Recent</div>
-            {recent.map((r, i) => (
-              <div
-                key={i}
-                className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-                onClick={() => openRecent(r)}
-              >
-                {r.name}
-              </div>
-            ))}
-            <div className="p-2 font-bold">Directories</div>
-            {dirs.map((d, i) => (
-              <div
-                key={i}
-                className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-                onClick={() => openDir(d)}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  openProperties(d);
-                }}
-              >
-                {d.name}
-              </div>
-            ))}
-            <div className="p-2 font-bold">Files</div>
-            {files.map((f, i) => (
-              <div
-                key={i}
-                className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-                onClick={() => openFile(f)}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  openProperties(f);
-                }}
-              >
-                {f.name}
-              </div>
-            ))}
-          </div>
-          <div className="flex-1 flex flex-col">
-            {currentFile && (
-            <textarea
-              className="flex-1 p-2 bg-ub-cool-grey outline-none"
-              value={content}
-              onChange={onChange}
-              aria-label="File content"
+        <div className="flex-1 flex flex-col">
+          {currentFile && (
+            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
+          )}
+          <div className="p-2 border-t border-gray-600">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Find in files"
+              className="px-1 py-0.5 text-black"
             />
-            )}
-            <div className="p-2 border-t border-gray-600">
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Find in files"
-                className="px-1 py-0.5 text-black"
-                aria-label="Search query"
-              />
-              <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
-                Search
-              </button>
-              <div className="max-h-40 overflow-auto mt-2">
-                {results.map((r, i) => (
-                  <div key={i}>
-                    <span className="font-bold">{r.file}:{r.line}</span> {r.text}
-                  </div>
-                ))}
-              </div>
+            <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
+              Search
+            </button>
+            <div className="max-h-40 overflow-auto mt-2">
+              {results.map((r, i) => (
+                <div key={i}>
+                  <span className="font-bold">{r.file}:{r.line}</span> {r.text}
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </div>
-      {showProps && propsTarget && (
-        <PropertiesDialog
-          item={propsTarget}
-          onClose={closeProperties}
-          onRenamed={(newName) => {
-            handleRenamed();
-            setPropsTarget((p) => (p ? { ...p, name: newName } : p));
-          }}
-        />
-      )}
-      {toast && <Toast message={toast} onClose={() => setToast('')} />}
-    </>
+    </div>
   );
 }

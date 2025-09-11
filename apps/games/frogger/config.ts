@@ -89,5 +89,5 @@ export const getDefaultSkin = (): SkinName => {
 
 export const getRandomSkin = (): SkinName => {
   const names = Object.keys(SKINS) as SkinName[];
-  return names[Math.floor(Math.random() * names.length)]!;
+  return names[Math.floor(Math.random() * names.length)];
 };

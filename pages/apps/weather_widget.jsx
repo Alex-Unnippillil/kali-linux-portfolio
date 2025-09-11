@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 
@@ -13,7 +12,7 @@ export default function WeatherWidgetPage() {
   const [locationConsent, setLocationConsent] = useState('unknown');
 
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === 'undefined') return;
 
     // Load persisted unit preference if available
     try {

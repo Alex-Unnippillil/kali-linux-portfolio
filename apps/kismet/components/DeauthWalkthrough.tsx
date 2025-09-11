@@ -10,22 +10,14 @@ interface Frame {
   type: string;
 }
 
-// The capture data is expected to contain at least one entry, but since array
-// indexing returns `undefined` when out of bounds (especially under
-// `noUncheckedIndexedAccess`), safeguard the `bssid` extraction with optional
-// chaining and a fallback.
-// Provide a human-friendly fallback when the capture array is empty. Using an
-// obviously invalid BSSID makes it easier to spot missing data during
-// development while still satisfying TypeScript's strict null checks.
-const FALLBACK_BSSID = '00:00:00:00:00:00';
-const targetBssid = capture[0]?.bssid ?? FALLBACK_BSSID;
+const target = capture[0];
 
 const frames: Frame[] = [
-  { seq: 1, src: targetBssid, dst: '11:22:33:44:55:66', type: 'Data' },
-  { seq: 2, src: targetBssid, dst: '11:22:33:44:55:66', type: 'Data' },
-  { seq: 3, src: targetBssid, dst: 'FF:FF:FF:FF:FF:FF', type: 'Deauth' },
-  { seq: 4, src: targetBssid, dst: 'FF:FF:FF:FF:FF:FF', type: 'Deauth' },
-  { seq: 5, src: targetBssid, dst: '11:22:33:44:55:66', type: 'Data' },
+  { seq: 1, src: target.bssid, dst: '11:22:33:44:55:66', type: 'Data' },
+  { seq: 2, src: target.bssid, dst: '11:22:33:44:55:66', type: 'Data' },
+  { seq: 3, src: target.bssid, dst: 'FF:FF:FF:FF:FF:FF', type: 'Deauth' },
+  { seq: 4, src: target.bssid, dst: 'FF:FF:FF:FF:FF:FF', type: 'Deauth' },
+  { seq: 5, src: target.bssid, dst: '11:22:33:44:55:66', type: 'Data' },
 ];
 
 const DeauthWalkthrough: React.FC = () => {

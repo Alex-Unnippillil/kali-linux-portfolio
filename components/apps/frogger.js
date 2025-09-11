@@ -7,7 +7,6 @@ import {
   getRandomSkin,
 } from '../../apps/games/frogger/config';
 import { getLevelConfig } from '../../apps/games/frogger/levels';
-import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 const WIDTH = 7;
 const HEIGHT = 8;
@@ -143,8 +142,8 @@ const Frogger = () => {
   const [sound, setSound] = useState(true);
   const soundRef = useRef(sound);
   const [highScore, setHighScore] = useState(0);
-  const prefersReducedMotion = usePrefersReducedMotion();
-  const reduceMotionRef = useRef(prefersReducedMotion);
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const reduceMotionRef = useRef(reduceMotion);
   const canvasRef = useRef(null);
   const audioCtxRef = useRef(null);
   const nextLife = useRef(500);
@@ -170,7 +169,7 @@ const Frogger = () => {
   useEffect(() => { padsRef.current = pads; }, [pads]);
   useEffect(() => { pausedRef.current = paused; }, [paused]);
   useEffect(() => { soundRef.current = sound; }, [sound]);
-  useEffect(() => { reduceMotionRef.current = prefersReducedMotion; }, [prefersReducedMotion]);
+  useEffect(() => { reduceMotionRef.current = reduceMotion; }, [reduceMotion]);
   useEffect(() => { slowTimeRef.current = slowTime; }, [slowTime]);
   useEffect(() => { livesRef.current = lives; }, [lives]);
   useEffect(() => { levelRef.current = level; }, [level]);
@@ -191,7 +190,13 @@ const Frogger = () => {
     }
   }, [score, highScore]);
 
-  // reduced motion preference handled via usePrefersReducedMotion
+  useEffect(() => {
+    const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handler = () => setReduceMotion(mql.matches);
+    handler();
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
 
   const playTone = (freq, duration = 0.1) => {
     if (!soundRef.current) return;
@@ -266,8 +271,8 @@ const Frogger = () => {
         else if (dy < -30) moveFrog(0, -1);
       }
     };
-    container?.addEventListener('touchstart', handleStart, { passive: true });
-    container?.addEventListener('touchend', handleEnd, { passive: true });
+    container?.addEventListener('touchstart', handleStart);
+    container?.addEventListener('touchend', handleEnd);
     return () => {
       container?.removeEventListener('touchstart', handleStart);
       container?.removeEventListener('touchend', handleEnd);
@@ -391,26 +396,24 @@ const Frogger = () => {
           ctx.fillRect(x * CELL, CELL * 3 - 4 + offset, CELL, 4);
         }
       }
-      if (!reduceMotionRef.current) {
-        // parallax background for logs
-        logsRef.current.forEach((lane) => {
-          const bgOffset =
-            ((rippleRef.current * lane.speed * lane.dir * 20) % CELL) - CELL;
-          ctx.fillStyle = 'rgba(255,255,255,0.05)';
-          for (let x = bgOffset; x < WIDTH * CELL + CELL; x += CELL) {
-            ctx.fillRect(x, lane.y * CELL, CELL / 8, CELL);
-          }
-        });
-        // parallax background for car lanes
-        carsRef.current.forEach((lane) => {
-          const bgOffset =
-            ((rippleRef.current * lane.speed * lane.dir * 20) % CELL) - CELL;
-          ctx.fillStyle = 'rgba(255,255,255,0.1)';
-          for (let x = bgOffset; x < WIDTH * CELL + CELL; x += CELL) {
-            ctx.fillRect(x, lane.y * CELL, CELL / 4, CELL);
-          }
-        });
-      }
+      // parallax background for logs
+      logsRef.current.forEach((lane) => {
+        const bgOffset =
+          ((rippleRef.current * lane.speed * lane.dir * 20) % CELL) - CELL;
+        ctx.fillStyle = 'rgba(255,255,255,0.05)';
+        for (let x = bgOffset; x < WIDTH * CELL + CELL; x += CELL) {
+          ctx.fillRect(x, lane.y * CELL, CELL / 8, CELL);
+        }
+      });
+      // parallax background for car lanes
+      carsRef.current.forEach((lane) => {
+        const bgOffset =
+          ((rippleRef.current * lane.speed * lane.dir * 20) % CELL) - CELL;
+        ctx.fillStyle = 'rgba(255,255,255,0.1)';
+        for (let x = bgOffset; x < WIDTH * CELL + CELL; x += CELL) {
+          ctx.fillRect(x, lane.y * CELL, CELL / 4, CELL);
+        }
+      });
       // draw logs and cars
       logsRef.current.forEach((lane) => {
         ctx.fillStyle = colors.log;
@@ -605,7 +608,6 @@ const Frogger = () => {
         width={WIDTH * CELL}
         height={HEIGHT * CELL}
         className="border border-gray-700"
-        aria-label="Frogger game area"
       />
       <div className="mt-4" aria-live="polite">
         Score: {score} High: {highScore} Lives: {lives} Level: {level}

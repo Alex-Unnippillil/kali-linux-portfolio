@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useEffect, useState, useRef } from 'react';
 import { z } from 'zod';
 import { useRouter } from 'next/router';
@@ -397,16 +395,15 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
 
   const useLastHint = () => {
     if (lastHints <= 0) return;
-    const remaining = placements.filter((p) => {
-      const last = p.positions.at(-1);
-      return last ? !found.has(p.word) && !hintCells.has(key(last)) : false;
-    });
+    const remaining = placements.filter(
+      (p) =>
+        !found.has(p.word) &&
+        !hintCells.has(key(p.positions[p.positions.length - 1]))
+    );
     if (!remaining.length) return;
     const target = remaining[Math.floor(Math.random() * remaining.length)];
-    const lastPos = target.positions.at(-1);
-    if (!lastPos) return;
     const newHints = new Set(hintCells);
-    newHints.add(key(lastPos));
+    newHints.add(key(target.positions[target.positions.length - 1]));
     setHintCells(newHints);
     setLastHints(lastHints - 1);
   };

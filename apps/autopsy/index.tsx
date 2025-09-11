@@ -1,6 +1,5 @@
 'use client';
 
-import { isBrowser } from '@/utils/env';
 import React, { useEffect, useState } from 'react';
 import AutopsyAppComponent from '../../components/apps/autopsy';
 import KeywordTester from './components/KeywordTester';
@@ -11,7 +10,7 @@ const AutopsyPage: React.FC = () => {
 
   // Restore view from the URL hash on first load
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
     const viewParam = params.get('view');
     if (viewParam === 'keywords' || viewParam === 'autopsy') {
@@ -21,7 +20,7 @@ const AutopsyPage: React.FC = () => {
 
   // Persist current view to the URL hash
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
     params.set('view', view);
     const newHash = params.toString();

@@ -2,21 +2,16 @@
 
 import { useState, useRef } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
-import AdvancedTab from "./components/AdvancedTab";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
-import KernelTab from "./components/KernelTab";
 import {
   resetSettings,
   defaults,
   exportSettings as exportSettingsData,
   importSettings as importSettingsData,
-  exportPanel as exportPanelData,
-  importPanel as importPanelData,
 } from "../../utils/settingsStore";
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
-import WallpaperPicker from "../../components/ui/WallpaperPicker";
 
 export default function Settings() {
   const {
@@ -38,18 +33,27 @@ export default function Settings() {
     setTheme,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const panelFileRef = useRef<HTMLInputElement>(null);
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
-    { id: "kernel", label: "Kernel" },
-    { id: "advanced", label: "Advanced" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
 
+  const wallpapers = [
+    "wall-1",
+    "wall-2",
+    "wall-3",
+    "wall-4",
+    "wall-5",
+    "wall-6",
+    "wall-7",
+    "wall-8",
+  ];
+
+  const changeBackground = (name: string) => setWallpaper(name);
 
   const handleExport = async () => {
     const data = await exportSettingsData();
@@ -79,23 +83,6 @@ export default function Settings() {
     } catch (err) {
       console.error("Invalid settings", err);
     }
-  };
-
-  const handlePanelExport = async () => {
-    const data = await exportPanelData();
-    const blob = new Blob([data], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "panel.json";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handlePanelImport = async (file: File) => {
-    const text = await file.text();
-    await importPanelData(text);
-    window.location.reload();
   };
 
   const handleReset = async () => {
@@ -142,8 +129,6 @@ export default function Settings() {
               className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
             >
               <option value="default">Default</option>
-              <option value="kali-dark">Kali Dark</option>
-              <option value="kali-light">Kali Light</option>
               <option value="dark">Dark</option>
               <option value="neon">Neon</option>
               <option value="matrix">Matrix</option>
@@ -165,11 +150,54 @@ export default function Settings() {
               ))}
             </div>
           </div>
-          <div className="border-t border-gray-900">
-            <WallpaperPicker />
+          <div className="flex justify-center my-4">
+            <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">Wallpaper:</label>
+            <input
+              id="wallpaper-slider"
+              type="range"
+              min="0"
+              max={wallpapers.length - 1}
+              step="1"
+              value={wallpapers.indexOf(wallpaper)}
+              onChange={(e) =>
+                changeBackground(wallpapers[parseInt(e.target.value, 10)])
+              }
+              className="ubuntu-slider"
+              aria-label="Wallpaper"
+            />
           </div>
           <div className="flex justify-center my-4">
             <BackgroundSlideshow />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 justify-items-center border-t border-gray-900">
+            {wallpapers.map((name) => (
+              <div
+                key={name}
+                role="button"
+                aria-label={`Select ${name.replace("wall-", "wallpaper ")}`}
+                aria-pressed={name === wallpaper}
+                tabIndex={0}
+                onClick={() => changeBackground(name)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    changeBackground(name);
+                  }
+                }}
+                className={
+                  (name === wallpaper
+                    ? " border-yellow-700 "
+                    : " border-transparent ") +
+                  " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"
+                }
+                style={{
+                  backgroundImage: `url(/wallpapers/${name}.webp)`,
+                  backgroundSize: "cover",
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "center center",
+                }}
+              ></div>
+            ))}
           </div>
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
             <button
@@ -243,7 +271,7 @@ export default function Settings() {
         </>
       )}
       {activeTab === "privacy" && (
-        <> 
+        <>
           <div className="flex justify-center my-4 space-x-4">
             <button
               onClick={handleExport}
@@ -258,24 +286,8 @@ export default function Settings() {
               Import Settings
             </button>
           </div>
-          <div className="flex justify-center my-4 space-x-4">
-            <button
-              onClick={handlePanelExport}
-              className="px-4 py-2 rounded bg-ub-orange text-white"
-            >
-              Backup Dock
-            </button>
-            <button
-              onClick={() => panelFileRef.current?.click()}
-              className="px-4 py-2 rounded bg-ub-orange text-white"
-            >
-              Restore Dock
-            </button>
-          </div>
         </>
       )}
-      {activeTab === "kernel" && <KernelTab />}
-      {activeTab === "advanced" && <AdvancedTab />}
         <input
           type="file"
           accept="application/json"
@@ -284,18 +296,6 @@ export default function Settings() {
           onChange={(e) => {
             const file = e.target.files && e.target.files[0];
             if (file) handleImport(file);
-            e.target.value = "";
-          }}
-          className="hidden"
-        />
-        <input
-          type="file"
-          accept="application/json"
-          ref={panelFileRef}
-          aria-label="Import panel file"
-          onChange={(e) => {
-            const file = e.target.files && e.target.files[0];
-            if (file) handlePanelImport(file);
             e.target.value = "";
           }}
           className="hidden"

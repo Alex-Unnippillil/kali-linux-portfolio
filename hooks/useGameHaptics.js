@@ -24,7 +24,7 @@ export default function useGameHaptics() {
   const danger = useCallback(() => vibrate(patterns.danger), [vibrate]);
   const gameOver = useCallback(() => vibrate(patterns.gameOver), [vibrate]);
 
-  const toggle = useCallback(() => setHaptics((h) => !h), [setHaptics]);
+  const toggle = useCallback(() => setHaptics(!enabled), [setHaptics, enabled]);
 
   return { enabled, toggle, vibrate, score, danger, gameOver };
 }

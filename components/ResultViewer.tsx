@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import DensityWrapper from './ui/DensityWrapper';
 
 interface ViewerProps {
   data: any[];
@@ -51,7 +50,6 @@ export default function ResultViewer({ data }: ViewerProps) {
   };
 
   return (
-    <DensityWrapper>
     <div className="text-xs" aria-label="result viewer">
       <div role="tablist" className="mb-2 flex">
         <button role="tab" aria-selected={tab === 'raw'} onClick={() => setTab('raw')} className="px-2 py-1 bg-ub-cool-grey text-white mr-2">
@@ -122,7 +120,6 @@ export default function ResultViewer({ data }: ViewerProps) {
         </svg>
       )}
     </div>
-    </DensityWrapper>
   );
 }
 

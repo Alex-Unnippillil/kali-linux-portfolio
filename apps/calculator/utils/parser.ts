@@ -1,7 +1,6 @@
-import { isBrowser } from '@/utils/env';
-import { create, all, type FactoryFunctionMap } from 'mathjs';
+import { create, all } from 'mathjs';
 
-const math = create(all as FactoryFunctionMap);
+const math = create(all);
 
 export interface EvalOptions {
   /** Base for numeric literals and result formatting */
@@ -29,7 +28,7 @@ export function evaluate(expression: string, opts: EvalOptions = {}) {
   const prepared = preprocess(expression, base);
   let scope: Record<string, any> = {};
   try {
-    const raw = !isBrowser() ? null : localStorage.getItem('calc-vars');
+    const raw = typeof window === 'undefined' ? null : localStorage.getItem('calc-vars');
     scope = raw ? JSON.parse(raw) : {};
     Object.keys(scope).forEach((k) => {
       const v = scope[k];

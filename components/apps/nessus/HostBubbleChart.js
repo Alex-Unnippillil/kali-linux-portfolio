@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 const severityLevels = ['All', 'Critical', 'High', 'Medium', 'Low'];
@@ -24,13 +23,13 @@ const HostBubbleChart = ({ hosts = sampleHosts }) => {
 
   const prefersReducedMotion = useMemo(
     () =>
-      isBrowser() &&
+      typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches,
     []
   );
 
   useEffect(() => {
-    if (isBrowser() && typeof Worker === 'function') {
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
       workerRef.current = new Worker(
         new URL('./filter.worker.js', import.meta.url)
       );

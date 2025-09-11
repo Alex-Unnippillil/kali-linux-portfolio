@@ -1,5 +1,3 @@
-import logger from '../utils/logger';
-
 const SENSITIVE_KEYS = new Set(['password', 'secret', 'token', 'key']);
 
 export interface Logger {
@@ -25,7 +23,7 @@ class ConsoleLogger implements Logger {
       correlationId: this.correlationId,
       ...safeMeta,
     };
-    logger.info(JSON.stringify(entry));
+    console.log(JSON.stringify(entry));
   }
 
   info(message: string, meta?: Record<string, any>) {

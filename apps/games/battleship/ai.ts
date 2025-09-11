@@ -7,15 +7,13 @@ type Layout = { x: number; y: number; dir: 0 | 1; len: number; cells: number[] }
 const rand = (n: number) => Math.floor(Math.random() * n);
 
 // Fisher-Yates shuffle
-  const shuffle = <T>(arr: T[]): T[] => {
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = rand(i + 1);
-      const tmp = arr[i]!;
-      arr[i] = arr[j]!;
-      arr[j] = tmp;
-    }
-    return arr;
-  };
+const shuffle = <T>(arr: T[]): T[] => {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = rand(i + 1);
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+};
 
 // Try to place all ships randomly respecting hits/misses.
 // If noAdjacency is true, ships may not touch (even diagonally).
@@ -66,7 +64,7 @@ function randomLayout(
 
   const placeShip = (i: number): boolean => {
     if (i >= shipLens.length) return true;
-      const len = shipLens[i]!;
+    const len = shipLens[i];
     const options: Layout[] = [];
     for (let dir: 0 | 1 = 0; dir < 2; dir++) {
       const dir01 = dir as 0 | 1;
@@ -74,8 +72,8 @@ function randomLayout(
       const maxY = dir === 1 ? BOARD_SIZE - len : BOARD_SIZE - 1;
       for (let x = 0; x <= maxX; x++) {
         for (let y = 0; y <= maxY; y++) {
-            const cells = canPlace(x, y, dir01, len);
-            if (cells) options.push({ x, y, dir: dir01, len: len!, cells });
+          const cells = canPlace(x, y, dir01, len);
+          if (cells) options.push({ x, y, dir: dir01, len, cells });
         }
       }
     }
@@ -94,7 +92,7 @@ function randomLayout(
 
   const allCells = new Set<number>();
   layout.forEach((sh) => sh.cells.forEach((c) => allCells.add(c)));
-  for (const h of Array.from(hits)) {
+  for (const h of hits) {
     if (!allCells.has(h)) return null;
   }
 
@@ -173,12 +171,12 @@ export class RandomSalvoAI {
     if (hit) {
       const x = idx % BOARD_SIZE;
       const y = Math.floor(idx / BOARD_SIZE);
-        const neighbors: Array<[number, number]> = [
-          [x + 1, y],
-          [x - 1, y],
-          [x, y + 1],
-          [x, y - 1],
-        ];
+      const neighbors = [
+        [x + 1, y],
+        [x - 1, y],
+        [x, y + 1],
+        [x, y - 1],
+      ];
       neighbors.forEach(([nx, ny]) => {
         if (nx >= 0 && ny >= 0 && nx < BOARD_SIZE && ny < BOARD_SIZE) {
           const nIdx = ny * BOARD_SIZE + nx;
@@ -196,8 +194,7 @@ export class RandomSalvoAI {
     }
     const choices = Array.from(this.available);
     if (!choices.length) return null;
-    const idx = Math.floor(Math.random() * choices.length);
-    const choice = choices[idx]!;
+    const choice = choices[Math.floor(Math.random() * choices.length)];
     this.available.delete(choice);
     return choice;
   }
@@ -219,8 +216,7 @@ export class RandomAI {
   nextMove(): number | null {
     const choices = Array.from(this.available);
     if (!choices.length) return null;
-    const idx = Math.floor(Math.random() * choices.length);
-    const choice = choices[idx]!;
+    const choice = choices[Math.floor(Math.random() * choices.length)];
     this.available.delete(choice);
     return choice;
   }

@@ -16,11 +16,11 @@ const hexToRgb = (hex: string) => {
 };
 
 const luminance = ({ r, g, b }: { r: number; g: number; b: number }) => {
-  const [rLum, gLum, bLum] = [r, g, b].map((v) => {
+  const a = [r, g, b].map((v) => {
     const val = v / 255;
     return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
-  }) as [number, number, number];
-  return rLum * 0.2126 + gLum * 0.7152 + bLum * 0.0722;
+  });
+  return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
 };
 
 const contrastRatio = (c1: string, c2: string) => {
@@ -35,22 +35,19 @@ const STYLES = [
   { name: 'Classic', bg: '#000000', fg: '#ffffff', font: 'serif' },
   { name: 'Inverted', bg: '#ffffff', fg: '#000000', font: 'sans-serif' },
   { name: 'Retro', bg: '#1e3a8a', fg: '#fef3c7', font: 'monospace' },
-] as const;
+];
 
 export default function Posterizer({ quote }: { quote: Quote | null }) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [styleIndex, setStyleIndex] = useState(0);
-  const initial = STYLES[0] ?? { bg: '#000000', fg: '#ffffff', font: 'serif' };
-  const [bg, setBg] = useState<string>(initial.bg);
-  const [fg, setFg] = useState<string>(initial.fg);
-  const [font, setFont] = useState<string>(initial.font);
-
+  const [bg, setBg] = useState(STYLES[0].bg);
+  const [fg, setFg] = useState(STYLES[0].fg);
+  const [font, setFont] = useState(STYLES[0].font);
 
   const cycleStyle = () => {
     const next = (styleIndex + 1) % STYLES.length;
     setStyleIndex(next);
-    const s = STYLES[next]!;
-
+    const s = STYLES[next];
     setBg(s.bg);
     setFg(s.fg);
     setFont(s.font);
@@ -116,33 +113,15 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
 
   return (
     <div className="flex flex-col items-center gap-2 w-full">
-      <canvas
-        ref={canvasRef}
-        width={600}
-        height={400}
-        className="border"
-        role="img"
-        aria-label="Poster preview"
-
-      />
+      <canvas ref={canvasRef} width={600} height={400} className="border" />
       <div className="flex flex-wrap gap-2 justify-center">
         <label className="flex items-center gap-1">
           BG
-          <input
-            type="color"
-            value={bg}
-            onChange={(e) => setBg(e.target.value)}
-            aria-label="Background color"
-          />
+          <input type="color" value={bg} onChange={(e) => setBg(e.target.value)} />
         </label>
         <label className="flex items-center gap-1">
           FG
-          <input
-            type="color"
-            value={fg}
-            onChange={(e) => setFg(e.target.value)}
-            aria-label="Foreground color"
-          />
+          <input type="color" value={fg} onChange={(e) => setFg(e.target.value)} />
         </label>
         <input
           type="text"
@@ -150,7 +129,6 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
           onChange={(e) => setFont(e.target.value)}
           className="px-2 py-1 rounded text-black"
           placeholder="Font"
-          aria-label="Font"
         />
         <span className={accessible ? 'text-green-400' : 'text-red-400'}>
           Contrast: {ratio.toFixed(2)}
@@ -161,8 +139,7 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
         >
           Next Style
         </button>
-        <span>Style: {STYLES[styleIndex]!.name}</span>
-
+        <span>Style: {STYLES[styleIndex].name}</span>
         <button
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
           onClick={download}

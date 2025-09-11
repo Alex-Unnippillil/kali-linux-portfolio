@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 import React, { useState, useEffect, useRef, useReducer } from 'react';
 import ReactGA from 'react-ga4';
 import { BlackjackGame, handValue, cardValue, Shoe } from './engine';
@@ -18,7 +17,7 @@ const Card = ({ card, faceDown, peeking }) => {
   const prefersReduced = useRef(false);
 
   useEffect(() => {
-    if (isBrowser()) {
+    if (typeof window !== 'undefined') {
       prefersReduced.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     }
   }, []);
@@ -55,7 +54,7 @@ const BetChips = ({ amount }) => {
   const prefersReduced = useRef(false);
 
   useEffect(() => {
-    if (isBrowser()) {
+    if (typeof window !== 'undefined') {
       prefersReduced.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     }
   }, []);
@@ -160,7 +159,7 @@ const Blackjack = () => {
   const [practiceGuess, setPracticeGuess] = useState('');
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(() => {
-    if (isBrowser()) {
+    if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('bj_best_streak');
       return stored ? parseInt(stored, 10) : 0;
     }
@@ -192,7 +191,7 @@ const Blackjack = () => {
   }, [penetration]);
 
   useEffect(() => {
-    if (isBrowser()) {
+    if (typeof window !== 'undefined') {
       localStorage.setItem('bj_best_streak', bestStreak.toString());
     }
   }, [bestStreak]);

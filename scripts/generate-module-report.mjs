@@ -1,8 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import logger from '../utils/logger';
-
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -59,7 +57,7 @@ async function build() {
   const mods = JSON.parse(raw);
   const html = render(mods);
   await fs.writeFile(outputPath, html, 'utf8');
-  logger.info(`Module report written to ${outputPath}`);
+  console.log(`Module report written to ${outputPath}`);
 }
 
 build().catch((err) => {

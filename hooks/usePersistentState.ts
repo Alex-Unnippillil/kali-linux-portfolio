@@ -1,10 +1,6 @@
 "use client";
 
-import { isBrowser } from '@/utils/env';
 import { useState, useEffect } from 'react';
-import { loadFromStorage, saveToStorage } from '../utils/persistent';
-import { migrate, settings } from '../lib/migrations';
-import { logEvent } from '../utils/analytics';
 
 /**
  * Persist state in localStorage.
@@ -22,18 +18,15 @@ export default function usePersistentState<T>(
     typeof initial === 'function' ? (initial as () => T)() : initial;
 
   const [state, setState] = useState<T>(() => {
-    if (!isBrowser()) return getInitial();
+    if (typeof window === 'undefined') return getInitial();
     try {
-      const prev = window.localStorage.getItem('settings.version');
-      if (prev !== String(settings.version)) {
-        const migrated = migrate(key, window.localStorage);
-        if (migrated) {
-          logEvent({ category: 'settings', action: 'migrated', label: key });
+      const stored = window.localStorage.getItem(key);
+      if (stored !== null) {
+        const parsed = JSON.parse(stored);
+        if (!validator || validator(parsed)) {
+          return parsed as T;
         }
-        window.localStorage.setItem('settings.version', String(settings.version));
       }
-
-      return loadFromStorage<T>(key, getInitial(), validator);
     } catch {
       // ignore parsing errors and fall back
     }
@@ -41,7 +34,11 @@ export default function usePersistentState<T>(
   });
 
   useEffect(() => {
-    saveToStorage(key, state);
+    try {
+      window.localStorage.setItem(key, JSON.stringify(state));
+    } catch {
+      // ignore write errors
+    }
   }, [key, state]);
 
   const reset = () => setState(getInitial());

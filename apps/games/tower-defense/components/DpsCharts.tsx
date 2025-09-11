@@ -10,7 +10,7 @@ interface DpsChartsProps {
 }
 
 const DpsCharts = ({ towers }: DpsChartsProps) => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -18,12 +18,12 @@ const DpsCharts = ({ towers }: DpsChartsProps) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-      const dpsMap: Partial<Record<TowerType, number>> = {};
-      towers.forEach((t) => {
-        const type = t.type ?? 'single';
+    const dpsMap: Partial<Record<TowerType, number>> = {};
+    towers.forEach((t) => {
+      const type = ((t as any).type || 'single') as TowerType;
 
-        dpsMap[type] = (dpsMap[type] || 0) + getTowerDPS(type, t.level);
-      });
+      dpsMap[type] = (dpsMap[type] || 0) + getTowerDPS(type, t.level);
+    });
 
     const entries = Object.entries(dpsMap) as [TowerType, number][];
     const w = canvas.width;

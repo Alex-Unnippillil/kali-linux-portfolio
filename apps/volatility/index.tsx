@@ -1,13 +1,8 @@
 'use client';
 
 import React from 'react';
-import dynamic from 'next/dynamic';
+import VolatilityApp from '../../components/apps/volatility';
 import TriageFilters from './components/TriageFilters';
-
-const VolatilityApp = dynamic(() => import('../../components/apps/volatility'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
 
 const VolatilityPage: React.FC = () => {
   return (

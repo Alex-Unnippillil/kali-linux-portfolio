@@ -47,9 +47,7 @@ export const getPieceMoves = (
   c: number,
   enforceCapture = true,
 ): Move[] => {
-  // With `noUncheckedIndexedAccess`, array indices may return `undefined`.
-  // Optional chaining guards against out-of-bounds access when compiling.
-  const piece = board[r]?.[c];
+  const piece = board[r][c];
   if (!piece) return [];
   const dirs = [...directions[piece.color]];
   if (piece.king) {
@@ -61,13 +59,13 @@ export const getPieceMoves = (
     const r1 = r + dr;
     const c1 = c + dc;
     if (!inBounds(r1, c1)) continue;
-    const target = board[r1]?.[c1];
+    const target = board[r1][c1];
     if (!target) {
       moves.push({ from: [r, c], to: [r1, c1] });
     } else if (target.color !== piece.color) {
       const r2 = r + dr * 2;
       const c2 = c + dc * 2;
-      if (inBounds(r2, c2) && !board[r2]?.[c2]) {
+      if (inBounds(r2, c2) && !board[r2][c2]) {
         captures.push({ from: [r, c], to: [r2, c2], captured: [r1, c1] });
       }
     }
@@ -83,7 +81,7 @@ export const getAllMoves = (
   let result: Move[] = [];
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
-      if (board[r]?.[c]?.color === color) {
+      if (board[r][c]?.color === color) {
         const moves = getPieceMoves(board, r, c, enforceCapture);
         if (moves.length) result = result.concat(moves);
       }
@@ -131,7 +129,7 @@ export const boardToBitboards = (board: Board) => {
   let kings = 0n;
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
-      const piece = board[r]?.[c];
+      const piece = board[r][c];
       if (!piece) continue;
       const bit = 1n << BigInt((7 - r) * 8 + c);
       if (piece.color === 'red') red |= bit;

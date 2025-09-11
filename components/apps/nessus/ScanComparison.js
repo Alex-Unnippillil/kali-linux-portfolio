@@ -2,9 +2,6 @@ import React, { useMemo } from 'react';
 import previousScan from './fixtures/scan-1.json';
 import currentScan from './fixtures/scan-2.json';
 
-const prevScan = Array.isArray(previousScan) ? previousScan : [];
-const currScan = Array.isArray(currentScan) ? currentScan : [];
-
 const severityOrder = ['Critical', 'High', 'Medium', 'Low'];
 const severityColors = {
   Critical: '#991b1b',
@@ -21,7 +18,7 @@ const summarize = (scan) => {
   return summary;
 };
 
-const ScanComparison = ({ previous = prevScan, current = currScan }) => {
+const ScanComparison = ({ previous = previousScan, current = currentScan }) => {
   const { added, removed, changed } = useMemo(() => {
     const prevMap = new Map(previous.map((v) => [v.id, v]));
     const curMap = new Map(current.map((v) => [v.id, v]));

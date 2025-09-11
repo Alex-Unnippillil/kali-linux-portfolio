@@ -1,6 +1,5 @@
-import { isBrowser } from '@/utils/env';
 export function exportGameSettings(game: string): string {
-  if (!isBrowser()) return '{}';
+  if (typeof window === 'undefined') return '{}';
   const data: Record<string, unknown> = {};
   for (let i = 0; i < window.localStorage.length; i += 1) {
     const key = window.localStorage.key(i);
@@ -17,7 +16,7 @@ export function exportGameSettings(game: string): string {
 }
 
 export function importGameSettings(game: string, json: string): void {
-  if (!isBrowser()) return;
+  if (typeof window === 'undefined') return;
   let parsed: Record<string, unknown>;
   try {
     parsed = JSON.parse(json);

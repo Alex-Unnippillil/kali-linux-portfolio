@@ -1,5 +1,4 @@
 'use client';
-import { isBrowser } from '@/utils/env';
 import { useEffect } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import ModeSwitcher from './components/ModeSwitcher';
@@ -36,7 +35,7 @@ export default function Calculator() {
     let setBase: any;
 
     const load = async () => {
-      if (isBrowser() && !(window as any).math) {
+      if (typeof window !== 'undefined' && !(window as any).math) {
         await new Promise((resolve) => {
           const script = document.createElement('script');
           script.src =
@@ -166,34 +165,13 @@ export default function Calculator() {
       };
       document.addEventListener('keydown', keyHandler);
 
-      const announcer = document.getElementById('calc-announcer');
-      const announce = (msg: string) => {
-        if (announcer) announcer.textContent = msg;
-      };
-
       historyToggle?.addEventListener('click', () => {
-        const hidden = historyEl?.classList.toggle('hidden') ?? false;
-        historyToggle?.setAttribute('aria-pressed', (!hidden).toString());
-        announce(`History ${hidden ? 'hidden' : 'shown'}`);
+        historyEl?.classList.toggle('hidden');
       });
 
       formulasToggle?.addEventListener('click', () => {
-        const hidden = formulasEl?.classList.toggle('hidden') ?? false;
-        formulasToggle?.setAttribute('aria-pressed', (!hidden).toString());
-        announce(`Formulas ${hidden ? 'hidden' : 'shown'}`);
+        formulasEl?.classList.toggle('hidden');
       });
-
-      const shortcutHandler = (e: KeyboardEvent) => {
-        if (e.altKey && e.key.toLowerCase() === 'h') {
-          e.preventDefault();
-          historyToggle?.click();
-        }
-        if (e.altKey && e.key.toLowerCase() === 'f') {
-          e.preventDefault();
-          formulasToggle?.click();
-        }
-      };
-      document.addEventListener('keydown', shortcutHandler);
 
       baseSelect?.addEventListener('change', () => {
         setBase(parseInt(baseSelect.value, 10));
@@ -204,7 +182,6 @@ export default function Calculator() {
           btn.removeEventListener('click', handler),
         );
         document.removeEventListener('keydown', keyHandler);
-        document.removeEventListener('keydown', shortcutHandler);
       };
     };
 
@@ -358,12 +335,6 @@ export default function Calculator() {
         ))}
       </div>
       <Tape entries={history} />
-      <div
-        id="calc-announcer"
-        role="status"
-        aria-live="polite"
-        className="sr-only"
-      />
     </div>
   );
 }

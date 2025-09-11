@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Waterfall from './Waterfall';
@@ -64,7 +63,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
 
   // Load persisted filter on mount
   useEffect(() => {
-    if (isBrowser()) {
+    if (typeof window !== 'undefined') {
       const saved = window.localStorage.getItem('wireshark-filter');
       if (saved) setFilter(saved);
       prefersReducedMotion.current = window.matchMedia(
@@ -75,7 +74,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
 
   // instantiate worker for burst grouping
   useEffect(() => {
-    if (isBrowser() && typeof Worker === 'function') {
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
       const worker = new Worker(new URL('./burstWorker.js', import.meta.url));
       worker.onmessage = (e) => {
         if (e.data.type === 'burst') {
@@ -108,7 +107,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
 
   const handleFilterChange = (val) => {
     setFilter(val);
-    if (isBrowser()) {
+    if (typeof window !== 'undefined') {
       window.localStorage.setItem('wireshark-filter', val);
     }
   };
@@ -157,7 +156,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
   };
 
   const startCapture = () => {
-    if (socket || !isBrowser()) return;
+    if (socket || typeof window === 'undefined') return;
     const ws = new WebSocket('ws://localhost:8080');
     ws.onopen = () => {
       if (tlsKeys) {

@@ -14,7 +14,7 @@ interface PhaserMatterProps {
 
 const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
   void getDailySeed;
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
   const prefersReducedMotion = usePrefersReducedMotion();
   const prefersRef = useRef(prefersReducedMotion);
@@ -24,12 +24,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
     if (!gameRef.current) return;
     const scene = gameRef.current.scene.getScene('level') as Phaser.Scene & {
       matter: Phaser.Physics.Matter.MatterPhysics;
-      parallax: Phaser.GameObjects.Rectangle[];
     };
-    scene.parallax?.forEach((p) => {
-      const orig = p.getData('scrollFactor') ?? 1;
-      p.setScrollFactor(prefersReducedMotion ? 1 : orig);
-    });
     if (prefersReducedMotion) {
       scene.scene.pause();
       scene.matter.world.pause();
@@ -114,14 +109,11 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
     if (!waiting || waiting.device !== 'pad') return;
     // poll at 100ms intervals instead of every frame to reduce CPU
     const interval = setInterval(() => {
-      const pads = navigator.getGamepads
-        ? Array.from(navigator.getGamepads())
-        : [];
-      for (const gpMaybe of pads) {
-        if (!gpMaybe) continue;
-        for (const [i, btn] of gpMaybe.buttons.entries()) {
-          if (btn.pressed) {
-            if (!waiting) return;
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      for (const gp of pads) {
+        if (!gp) continue;
+        for (let i = 0; i < gp.buttons.length; i++) {
+          if (gp.buttons[i].pressed) {
             setPadMap((prev) => ({ ...prev, [waiting.action]: i }));
             setWaiting(null);
             return;
@@ -178,9 +170,8 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
               data.bounds.height,
               color,
             )
+            .setScrollFactor(l.scrollFactor)
             .setDepth(-100);
-          rect.setData('scrollFactor', l.scrollFactor);
-          rect.setScrollFactor(prefersRef.current ? 1 : l.scrollFactor);
           this.parallax.push(rect);
         });
 
@@ -268,13 +259,10 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
                 const idx = this.coins.findIndex((c) => c.body === body);
                 if (idx >= 0) {
                   const [coin] = this.coins.splice(idx, 1);
-
-                  if (coin) {
-                    coin.sprite.destroy();
-                    this.matter.world.remove(body);
-                    const count = this.gameState.addCoin();
-                    this.coinText.setText(`Coins: ${count}`);
-                  }
+                  coin.sprite.destroy();
+                  this.matter.world.remove(body);
+                  const count = this.gameState.addCoin();
+                  this.coinText.setText(`Coins: ${count}`);
                 }
               }
             });
@@ -292,7 +280,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
         );
       }
 
-      override update(time: number, delta: number) {
+      update(time: number, delta: number) {
         const ctrl = controls.current;
         const speed = 5;
         const fixedDelta = Math.min(delta, 1000 / 60);
@@ -302,9 +290,9 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
         if (gamepad && gamepad.total > 0) {
           const pad = gamepad.getPad(0);
           const pm = padMapRef.current;
-          ctrl.left = !!pad.buttons[pm.left]?.pressed;
-          ctrl.right = !!pad.buttons[pm.right]?.pressed;
-          const jp = !!pad.buttons[pm.jump]?.pressed;
+          ctrl.left = pad.buttons[pm.left]?.pressed;
+          ctrl.right = pad.buttons[pm.right]?.pressed;
+          const jp = pad.buttons[pm.jump]?.pressed;
           if (jp && !this.padJumpWasPressed) {
             ctrl.jumpPressed = true;
             ctrl.jumpHeld = true;
@@ -491,18 +479,15 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
           </button>
         </div>
         <div className="pt-2">
-          <label>
-            Buffer:
-            <input
-              type="range"
-              min={0}
-              max={300}
-              value={bufferWindow}
-              onChange={(e) => setBufferWindow(Number(e.target.value))}
-              className="mx-1"
-              aria-label="Buffer window"
-            />
-          </label>
+          Buffer:
+          <input
+            type="range"
+            min={0}
+            max={300}
+            value={bufferWindow}
+            onChange={(e) => setBufferWindow(Number(e.target.value))}
+            className="mx-1"
+          />
           {bufferWindow}ms
         </div>
       </div>

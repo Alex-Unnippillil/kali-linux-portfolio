@@ -5,12 +5,7 @@ import GitHubStars from '../GitHubStars';
 import Certs from './certs';
 import data from './alex/data.json';
 import resumeData from './alex/resume.json';
-import dynamic from 'next/dynamic';
-
-const ActivityCalendar = dynamic(
-    () => import('react-activity-calendar'),
-    { ssr: false },
-);
+import ActivityCalendar from 'react-activity-calendar';
 
 export class AboutAlex extends Component {
 

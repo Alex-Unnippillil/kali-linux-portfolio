@@ -80,8 +80,8 @@ const useGameControls = (arg, gameId = 'default') => {
       }
     };
 
-    window.addEventListener('touchstart', start, { passive: true });
-    window.addEventListener('touchend', end, { passive: true });
+    window.addEventListener('touchstart', start);
+    window.addEventListener('touchend', end);
     return () => {
       window.removeEventListener('touchstart', start);
       window.removeEventListener('touchend', end);
@@ -162,9 +162,9 @@ const useGameControls = (arg, gameId = 'default') => {
       stateRef.current.hyperspace = false;
     };
 
-    canvas.addEventListener('touchstart', start, { passive: true });
-    canvas.addEventListener('touchmove', move, { passive: true });
-    canvas.addEventListener('touchend', end, { passive: true });
+    canvas.addEventListener('touchstart', start);
+    canvas.addEventListener('touchmove', move);
+    canvas.addEventListener('touchend', end);
     return () => {
       canvas.removeEventListener('touchstart', start);
       canvas.removeEventListener('touchmove', move);

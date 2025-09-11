@@ -17,19 +17,20 @@ const MoodTuner = () => {
       .then((res) => res.json())
       .then((data: Playlists) => {
         setPlaylists(data);
-        const [firstMood] = Object.keys(data);
-        if (!mood && firstMood) {
-          setMood(firstMood);
+        const moods = Object.keys(data);
+        if (!mood && moods.length) {
+          setMood(moods[0]);
         }
       })
       .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Ensure selected mood exists after playlists load
   useEffect(() => {
-    const [firstMood] = Object.keys(playlists);
-    if (firstMood && !playlists[mood]) {
-      setMood(firstMood);
+    const moods = Object.keys(playlists);
+    if (moods.length && !playlists[mood]) {
+      setMood(moods[0]);
     }
   }, [playlists, mood, setMood]);
 
@@ -83,17 +84,11 @@ const MoodTuner = () => {
     <div className="h-full w-full bg-[var(--color-bg)] text-[var(--color-text)] flex flex-col">
       <div className="p-2 flex items-center gap-2 bg-black bg-opacity-30">
         <input
-          aria-label="Select mood"
           type="range"
           min={0}
           max={Math.max(0, moods.length - 1)}
           value={index >= 0 ? index : 0}
-          onChange={(e) => {
-            const selectedMood = moods[Number(e.target.value)];
-            if (selectedMood) {
-              setMood(selectedMood);
-            }
-          }}
+          onChange={(e) => setMood(moods[Number(e.target.value)])}
           className="flex-1"
         />
         <span className="capitalize min-w-[4rem] text-center">{mood}</span>

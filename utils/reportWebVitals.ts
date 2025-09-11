@@ -1,6 +1,4 @@
 import ReactGA from 'react-ga4';
-import { track } from '@vercel/analytics';
-import logger from './logger';
 
 interface WebVitalMetric {
   id: string;
@@ -11,18 +9,13 @@ interface WebVitalMetric {
 const thresholds: Record<string, number> = {
   LCP: 2500,
   INP: 200,
-  TTI: 5000,
 };
-
-const vitalNames = new Set(['TTFB', 'LCP', 'INP', 'CLS', 'TTI']);
 
 export const reportWebVitals = ({ id, name, value }: WebVitalMetric): void => {
   if (process.env.NEXT_PUBLIC_VERCEL_ENV !== 'preview') return;
-  if (!vitalNames.has(name)) return;
+  if (name !== 'LCP' && name !== 'INP') return;
 
-  const rounded = Math.round(name === 'CLS' ? value * 1000 : value);
-
-  logger.log(`[Web Vitals] ${name} (${id}): ${rounded}`);
+  const rounded = Math.round(value);
 
   ReactGA.event({
     category: 'Web Vitals',
@@ -40,7 +33,6 @@ export const reportWebVitals = ({ id, name, value }: WebVitalMetric): void => {
       label: id,
       value: rounded,
     });
-    track('web-vitals-alert', { name, id, value: rounded });
     if (typeof console !== 'undefined') {
       console.warn(`Web Vitals alert: ${name} ${rounded}`);
     }

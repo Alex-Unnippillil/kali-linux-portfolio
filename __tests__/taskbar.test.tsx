@@ -16,7 +16,6 @@ describe('Taskbar', () => {
         closed_windows={{ app1: false }}
         minimized_windows={{ app1: false }}
         focused_windows={{ app1: true }}
-        dock={['app1']}
         openApp={openApp}
         minimize={minimize}
       />
@@ -36,7 +35,6 @@ describe('Taskbar', () => {
         closed_windows={{ app1: false }}
         minimized_windows={{ app1: true }}
         focused_windows={{ app1: false }}
-        dock={['app1']}
         openApp={openApp}
         minimize={minimize}
       />
@@ -44,26 +42,5 @@ describe('Taskbar', () => {
     const button = screen.getByRole('button', { name: /app one/i });
     fireEvent.click(button);
     expect(openApp).toHaveBeenCalledWith('app1');
-  });
-
-  it('shows separator and running indicator', () => {
-    render(
-      <Taskbar
-        apps={[
-          { id: 'app1', title: 'App One', icon: '/1.png' },
-          { id: 'app2', title: 'App Two', icon: '/2.png' },
-        ]}
-        dock={['app1']}
-        closed_windows={{ app1: true, app2: false }}
-        minimized_windows={{}}
-        focused_windows={{}}
-        openApp={() => {}}
-        minimize={() => {}}
-      />
-    );
-
-    expect(screen.getByTestId('pinned-separator')).toBeInTheDocument();
-    const running = screen.getByRole('button', { name: /app two/i });
-    expect(running.querySelector('[data-testid="running-indicator"]')).toBeTruthy();
   });
 });

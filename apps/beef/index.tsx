@@ -42,15 +42,11 @@ const BeefPage: React.FC = () => {
             src="/themes/Yaru/window/window-minimize-symbolic.svg"
             alt="minimize"
             className="w-6 h-6"
-            width={24}
-            height={24}
           />
           <img
             src="/themes/Yaru/window/window-close-symbolic.svg"
             alt="close"
             className="w-6 h-6"
-            width={24}
-            height={24}
           />
         </div>
       </header>

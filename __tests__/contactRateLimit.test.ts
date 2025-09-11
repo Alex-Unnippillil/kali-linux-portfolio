@@ -1,35 +1,28 @@
-import handler, { RATE_LIMIT_COOKIE, RATE_LIMIT_WINDOW_MS } from '../pages/api/contact';
-import { createMocks } from 'node-mocks-http';
-import { sign, unsign } from '@tinyhttp/cookie-signature';
+import handler, { rateLimit, RATE_LIMIT_WINDOW_MS } from '../pages/api/contact';
 
 describe('contact api rate limiter', () => {
   afterEach(() => {
     jest.restoreAllMocks();
+    rateLimit.clear();
     delete (global as any).fetch;
     delete process.env.RECAPTCHA_SECRET;
-    delete process.env.RATE_LIMIT_SECRET;
   });
 
-  it('removes stale timestamp entries', async () => {
+  it('removes stale IP entries', async () => {
     const baseTime = 1_000_000;
     jest.spyOn(Date, 'now').mockReturnValue(baseTime);
+
+    rateLimit.set('1.1.1.1', { count: 1, start: baseTime - RATE_LIMIT_WINDOW_MS - 1 });
 
     (global as any).fetch = jest
       .fn()
       .mockResolvedValue({ json: () => Promise.resolve({ success: true }) });
     process.env.RECAPTCHA_SECRET = 'secret';
-    process.env.RATE_LIMIT_SECRET = 'ratelimit';
-
-    const old = baseTime - RATE_LIMIT_WINDOW_MS - 1;
-    const signed = sign(JSON.stringify([old]), 'ratelimit');
-
-    const { req, res } = createMocks({
+    const req: any = {
       method: 'POST',
-      headers: {
-        'x-csrf-token': 'token',
-        cookie: `csrfToken=token; ${RATE_LIMIT_COOKIE}=${encodeURIComponent(signed)}`,
-      },
-      cookies: { csrfToken: 'token', [RATE_LIMIT_COOKIE]: signed },
+      headers: { 'x-csrf-token': 'token', cookie: 'csrfToken=token' },
+      cookies: { csrfToken: 'token' },
+      socket: { remoteAddress: '2.2.2.2' },
       body: {
         name: 'Alex',
         email: 'alex@example.com',
@@ -37,19 +30,14 @@ describe('contact api rate limiter', () => {
         honeypot: '',
         recaptchaToken: 'tok',
       },
-    });
+    };
+    const res: any = {};
+    res.status = () => res;
+    res.json = () => {};
 
-    await handler(req as any, res as any);
+    await handler(req, res);
 
-    const setCookie = res.getHeader('Set-Cookie');
-    const cookieStr = Array.isArray(setCookie)
-      ? setCookie.find((c) => c.startsWith(`${RATE_LIMIT_COOKIE}=`))
-      : setCookie;
-    const value = decodeURIComponent(cookieStr.split(';')[0].split('=')[1]);
-    const arr = JSON.parse(unsign(value, 'ratelimit'));
-    expect(arr).toHaveLength(1);
-    expect(arr[0]).toBe(baseTime);
-    expect(res._getStatusCode()).toBe(200);
+    expect(rateLimit.has('1.1.1.1')).toBe(false);
+    expect(rateLimit.has('2.2.2.2')).toBe(true);
   });
 });
-

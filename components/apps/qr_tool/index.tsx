@@ -1,5 +1,4 @@
 'use client';
-import { isBrowser } from '@/utils/env';
 import React, { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
 
@@ -26,11 +25,11 @@ const QRTool: React.FC = () => {
   const initWorker = React.useCallback(() => {
     if (
       !workerRef.current &&
-      isBrowser() &&
+      typeof window !== 'undefined' &&
       typeof Worker === 'function'
     ) {
       workerRef.current = new Worker(
-        new URL('../../../workers/qrEncode.worker.js', import.meta.url),
+        new URL('../../../workers/qrEncode.worker.ts', import.meta.url),
       );
     }
     return workerRef.current;

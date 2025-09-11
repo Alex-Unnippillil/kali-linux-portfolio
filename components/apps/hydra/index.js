@@ -450,13 +450,7 @@ const HydraApp = () => {
                 service === m.value ? 'bg-blue-600' : 'bg-gray-700'
               }`}
             >
-              <img
-                src={m.icon}
-                alt={m.label}
-                className="w-6 h-6 mr-2"
-                width={24}
-                height={24}
-              />
+              <img src={m.icon} alt={m.label} className="w-6 h-6 mr-2" />
               <span>{m.label}</span>
             </div>
           ))}

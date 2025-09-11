@@ -1,37 +1,34 @@
-import { isBrowser } from '@/utils/env';
 export const THEME_KEY = 'app:theme';
 
 // Score required to unlock each theme
 export const THEME_UNLOCKS: Record<string, number> = {
   default: 0,
-  'kali-light': 0,
-  'kali-dark': 0,
   neon: 100,
   dark: 500,
   matrix: 1000,
 };
 
-const DARK_THEMES = ['dark', 'neon', 'matrix', 'kali-dark'] as const;
+const DARK_THEMES = ['dark', 'neon', 'matrix'] as const;
 
 export const isDarkTheme = (theme: string): boolean =>
   DARK_THEMES.includes(theme as (typeof DARK_THEMES)[number]);
 
 export const getTheme = (): string => {
-  if (!isBrowser()) return 'kali-dark';
+  if (typeof window === 'undefined') return 'default';
   try {
     const stored = window.localStorage.getItem(THEME_KEY);
     if (stored) return stored;
     const prefersDark = window.matchMedia?.(
       '(prefers-color-scheme: dark)'
     ).matches;
-    return prefersDark ? 'kali-dark' : 'kali-light';
+    return prefersDark ? 'dark' : 'default';
   } catch {
-    return 'kali-dark';
+    return 'default';
   }
 };
 
 export const setTheme = (theme: string): void => {
-  if (!isBrowser()) return;
+  if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(THEME_KEY, theme);
     document.documentElement.dataset.theme = theme;

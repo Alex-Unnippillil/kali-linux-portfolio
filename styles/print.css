@@ -6,31 +6,6 @@
     background: white;
     color: black;
   }
-  a[href]:not(.no-print)::after {
-    content: " (" attr(href) ")";
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  th,
-  td {
-    border: 1px solid #000;
-    padding: 0.25rem;
-  }
-  pre,
-  code {
-    background: #f5f5f5;
-    color: black;
-    font-family: monospace;
-  }
-  pre {
-    white-space: pre-wrap;
-    word-break: break-word;
-    border: 1px solid #ddd;
-    padding: 0.5rem;
-    page-break-inside: avoid;
-  }
   .no-print {
     display: none !important;
   }

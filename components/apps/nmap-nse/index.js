@@ -1,8 +1,6 @@
-import { isBrowser } from '@/utils/env';
 import React, { useEffect, useRef, useState } from 'react';
 import Toast from '../../ui/Toast';
 import DiscoveryMap from './DiscoveryMap';
-import CommandChip from '../../ui/CommandChip';
 
 // Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
 const scripts = [
@@ -132,6 +130,17 @@ const NmapNSEApp = () => {
     .replace(/\s+/g, ' ')
     .trim();
 
+  const copyCommand = async () => {
+    if (typeof window !== 'undefined') {
+      try {
+        await navigator.clipboard.writeText(command);
+        setToast('Command copied');
+      } catch (e) {
+        // ignore
+      }
+    }
+  };
+
   const copyOutput = async () => {
     const text = selectedScripts
       .map((s) => `# ${s}\n${examples[s] || ''}`)
@@ -147,7 +156,7 @@ const NmapNSEApp = () => {
 
   const selectOutput = () => {
     const el = outputRef.current;
-    if (!el || !isBrowser()) return;
+    if (!el || typeof window === 'undefined') return;
     const range = document.createRange();
     range.selectNodeContents(el);
     const sel = window.getSelection();
@@ -266,7 +275,16 @@ const NmapNSEApp = () => {
           </div>
         </div>
         <div className="flex items-center mb-4">
-          <CommandChip command={command} />
+          <pre className="flex-1 bg-black text-green-400 p-2 rounded overflow-auto">
+            {command}
+          </pre>
+          <button
+            type="button"
+            onClick={copyCommand}
+            className="ml-2 px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
+          >
+            Copy Command
+          </button>
         </div>
       </div>
       <div className="md:w-1/2 p-4 bg-black overflow-y-auto">

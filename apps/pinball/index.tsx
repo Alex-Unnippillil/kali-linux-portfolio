@@ -4,16 +4,14 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Engine, Render, World, Bodies, Body, Runner, Events } from "matter-js";
 import { useTiltSensor } from "./tilt";
 
-const themes = {
+const themes: Record<string, { bg: string; flipper: string }> = {
   classic: { bg: "#0b3d91", flipper: "#ffd700" },
   space: { bg: "#000000", flipper: "#00ffff" },
   forest: { bg: "#064e3b", flipper: "#9acd32" },
-} as const;
-
-type Theme = keyof typeof themes;
+};
 
 export default function Pinball() {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   // References for core Matter.js entities
 
   const engineRef = useRef<Engine | null>(null);
@@ -25,14 +23,13 @@ export default function Pinball() {
     left: false,
     right: false,
   });
-  const [theme, setTheme] = useState<Theme>("classic");
+  const [theme, setTheme] = useState<keyof typeof themes>("classic");
   const [power, setPower] = useState(1);
   const [bounce, setBounce] = useState(0.5);
   const [tilt, setTilt] = useState(false);
   const [score, setScore] = useState(0);
   const nudgesRef = useRef<number[]>([]);
   const lastNudgeRef = useRef(0);
-  const currentTheme = themes[theme] ?? themes.classic;
 
   const handleTilt = useCallback(() => {
     setTilt(true);
@@ -78,7 +75,7 @@ export default function Pinball() {
         width: 400,
         height: 600,
         wireframes: false,
-        background: currentTheme.bg,
+        background: themes[theme].bg,
       },
     });
     engineRef.current = engine;
@@ -98,13 +95,13 @@ export default function Pinball() {
       isStatic: true,
       angle: Math.PI / 8,
       restitution: bounce,
-      render: { fillStyle: currentTheme.flipper },
+      render: { fillStyle: themes[theme].flipper },
     });
     const rightFlipper = Bodies.rectangle(280, 560, 80, 20, {
       isStatic: true,
       angle: -Math.PI / 8,
       restitution: bounce,
-      render: { fillStyle: currentTheme.flipper },
+      render: { fillStyle: themes[theme].flipper },
     });
     leftFlipperRef.current = leftFlipper;
     rightFlipperRef.current = rightFlipper;
@@ -132,19 +129,12 @@ export default function Pinball() {
       evt.pairs.forEach((pair) => {
         const bodies = [pair.bodyA, pair.bodyB];
         if (bodies.includes(ball) && bodies.includes(leftFlipper)) {
-          const support = pair.collision.supports[0];
-          if (support) {
-            const { x, y } = support;
-            sparksRef.current.push({ x, y, life: 1 });
-          }
+          const { x, y } = pair.collision.supports[0];
+          sparksRef.current.push({ x, y, life: 1 });
         }
         if (bodies.includes(ball) && bodies.includes(rightFlipper)) {
-          const support = pair.collision.supports[0];
-          if (support) {
-            const { x, y } = support;
-            sparksRef.current.push({ x, y, life: 1 });
-          }
-
+          const { x, y } = pair.collision.supports[0];
+          sparksRef.current.push({ x, y, life: 1 });
         }
         if (bodies.includes(ball) && bodies.includes(leftLane)) {
           laneGlowRef.current.left = true;
@@ -248,8 +238,7 @@ export default function Pinball() {
     const poll = () => {
       const gp = navigator.getGamepads ? navigator.getGamepads()[0] : null;
       if (gp) {
-        const pressed =
-          gp.buttons[5]?.pressed || (gp.axes[1] ?? 0) < -0.8;
+        const pressed = gp.buttons[5]?.pressed || gp.axes[1] < -0.8;
         if (pressed && !lastPressed) {
           tryNudge();
         }
@@ -264,14 +253,14 @@ export default function Pinball() {
   useEffect(() => {
     if (leftFlipperRef.current) {
       leftFlipperRef.current.restitution = bounce;
-      leftFlipperRef.current.render.fillStyle = currentTheme.flipper;
+      leftFlipperRef.current.render.fillStyle = themes[theme].flipper;
     }
     if (rightFlipperRef.current) {
       rightFlipperRef.current.restitution = bounce;
-      rightFlipperRef.current.render.fillStyle = currentTheme.flipper;
+      rightFlipperRef.current.render.fillStyle = themes[theme].flipper;
     }
     if (engineRef.current) {
-      (engineRef.current.render.options as any).background = currentTheme.bg;
+      (engineRef.current.render.options as any).background = themes[theme].bg;
     }
   }, [bounce, theme]);
 
@@ -287,7 +276,6 @@ export default function Pinball() {
             step="0.1"
             value={power}
             onChange={(e) => setPower(parseFloat(e.target.value))}
-            aria-label="Power"
           />
         </label>
         <label className="flex flex-col text-xs">
@@ -299,16 +287,15 @@ export default function Pinball() {
             step="0.1"
             value={bounce}
             onChange={(e) => setBounce(parseFloat(e.target.value))}
-            aria-label="Bounce"
           />
         </label>
         <label className="flex flex-col text-xs">
           Theme
           <select
             value={theme}
-            onChange={(e) => setTheme(e.target.value as Theme)}
+            onChange={(e) => setTheme(e.target.value as keyof typeof themes)}
           >
-            {(Object.keys(themes) as Theme[]).map((t) => (
+            {Object.keys(themes).map((t) => (
               <option key={t} value={t}>
                 {t}
               </option>
@@ -317,13 +304,7 @@ export default function Pinball() {
         </label>
       </div>
       <div className="relative">
-        <canvas
-          ref={canvasRef}
-          width={400}
-          height={600}
-          className="border"
-          aria-label="Pinball table"
-        />
+        <canvas ref={canvasRef} width={400} height={600} className="border" />
         <div className="absolute top-2 left-1/2 -translate-x-1/2 text-white font-mono text-xl">
           {score.toString().padStart(6, "0")}
         </div>

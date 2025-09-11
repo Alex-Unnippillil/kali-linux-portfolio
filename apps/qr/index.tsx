@@ -12,7 +12,7 @@ import {
 } from '../../utils/qrStorage';
 
 export default function QR() {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [payload, setPayload] = useState('');
   const [mode, setMode] = useState<'generate' | 'scan'>('generate');
   const [size, setSize] = useState(256);

@@ -56,7 +56,7 @@ export default function GameShell({
 
   useGameInput({ onInput: handleInput, game });
 
-  const fileRef = useRef<HTMLInputElement | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const handleExport = () => {
     const data = exportGameSettings(game);

@@ -16,10 +16,6 @@ export default function BackgroundSlideshow() {
     'bg-slideshow-interval',
     30000,
   );
-  const [mode, setMode] = usePersistentState<'off' | 'daily' | 'login'>(
-    'bg-slideshow-mode',
-    'off',
-  );
   const [playing, setPlaying] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const indexRef = useRef(0);
@@ -38,7 +34,6 @@ export default function BackgroundSlideshow() {
     }
     const run = () => {
       const file = selected[indexRef.current % selected.length];
-      if (!file) return;
       const base = file.replace(/\.[^.]+$/, '');
       setWallpaper(base);
       indexRef.current = (indexRef.current + 1) % selected.length;
@@ -75,40 +70,24 @@ export default function BackgroundSlideshow() {
               type="checkbox"
               checked={selected.includes(file)}
               onChange={() => toggle(file)}
-              aria-label={file}
             />
           </label>
         ))}
       </div>
       <div className="flex items-center space-x-2">
-        <label htmlFor="mode">Rotate:</label>
-        <select
-          id="mode"
-          value={mode}
-          onChange={(e) => setMode(e.target.value as 'off' | 'daily' | 'login')}
-          className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
-        >
-          <option value="off">Off</option>
-          <option value="daily">Daily rotate</option>
-          <option value="login">Every login rotate</option>
-        </select>
-      </div>
-      <div className="flex items-center space-x-2">
         <label htmlFor="interval">Interval (s):</label>
-          <input
-            id="interval"
-            type="number"
-            min={5}
-            value={Math.round(intervalMs / 1000)}
-            onChange={(e) => setIntervalMs(Number(e.target.value) * 1000)}
-            className="w-20 bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
-            disabled={mode !== 'off'}
-            aria-label="Interval in seconds"
-          />
+        <input
+          id="interval"
+          type="number"
+          min={5}
+          value={Math.round(intervalMs / 1000)}
+          onChange={(e) => setIntervalMs(Number(e.target.value) * 1000)}
+          className="w-20 bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+        />
       </div>
       <button
         onClick={() => setPlaying((p) => !p)}
-        disabled={selected.length === 0 || mode !== 'off'}
+        disabled={selected.length === 0}
         className="px-4 py-2 rounded bg-ub-cool-grey border border-ubt-cool-grey hover:bg-ubt-cool-grey disabled:opacity-50"
       >
         {playing ? 'Pause' : 'Start'}

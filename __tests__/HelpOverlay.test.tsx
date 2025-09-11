@@ -8,12 +8,12 @@ describe('HelpOverlay', () => {
     expect(container.firstChild).toBeNull();
   });
 
-    it('renders instructions when available', () => {
-      render(<HelpOverlay gameId="asteroids" onClose={() => {}} />);
-      expect(screen.getByText('asteroids Help')).toBeInTheDocument();
-      expect(
-        screen.getByText('Destroy asteroids without crashing your ship.')
-      ).toBeInTheDocument();
-      expect(screen.getByText(/left: ArrowLeft/i)).toBeInTheDocument();
-    });
+  it('renders instructions when available', () => {
+    render(<HelpOverlay gameId="2048" onClose={() => {}} />);
+    expect(screen.getByText('2048 Help')).toBeInTheDocument();
+    expect(
+      screen.getByText('Reach the 2048 tile by merging numbers.')
+    ).toBeInTheDocument();
+    expect(screen.getByText(/up: ArrowUp/i)).toBeInTheDocument();
   });
+});

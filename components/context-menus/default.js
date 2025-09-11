@@ -1,6 +1,6 @@
 import React, { useRef } from 'react'
-import useFocusTrap from '@/hooks/useFocusTrap'
-import useRovingTabIndex from '@/hooks/useRovingTabIndex'
+import useFocusTrap from '../../hooks/useFocusTrap'
+import useRovingTabIndex from '../../hooks/useRovingTabIndex'
 
 function DefaultMenu(props) {
     const menuRef = useRef(null)
@@ -17,7 +17,6 @@ function DefaultMenu(props) {
         <div
             id="default-menu"
             role="menu"
-            aria-label="Default context menu"
             aria-hidden={!props.active}
             ref={menuRef}
             onKeyDown={handleKeyDown}
@@ -31,7 +30,6 @@ function DefaultMenu(props) {
                 target="_blank"
                 role="menuitem"
                 aria-label="Follow on Linkedin"
-                tabIndex={props.active ? 0 : -1}
                 className="w-full block cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
                 <span className="ml-5">🙋‍♂️</span> <span className="ml-2">Follow on <strong>Linkedin</strong></span>
@@ -42,7 +40,6 @@ function DefaultMenu(props) {
                 target="_blank"
                 role="menuitem"
                 aria-label="Follow on Github"
-                tabIndex={props.active ? 0 : -1}
                 className="w-full block cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
                 <span className="ml-5">🤝</span> <span className="ml-2">Follow on <strong>Github</strong></span>
@@ -53,7 +50,6 @@ function DefaultMenu(props) {
                 target="_blank"
                 role="menuitem"
                 aria-label="Contact Me"
-                tabIndex={props.active ? 0 : -1}
                 className="w-full block cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
                 <span className="ml-5">📥</span> <span className="ml-2">Contact Me</span>
@@ -64,7 +60,6 @@ function DefaultMenu(props) {
                 onClick={() => { localStorage.clear(); window.location.reload() }}
                 role="menuitem"
                 aria-label="Reset Kali Linux"
-                tabIndex={props.active ? 0 : -1}
                 className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
                 <span className="ml-5">🧹</span> <span className="ml-2">Reset Kali Linux</span>

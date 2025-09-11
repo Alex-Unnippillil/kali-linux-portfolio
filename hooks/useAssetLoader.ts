@@ -30,20 +30,15 @@ export default function useAssetLoader(
       img.src = src;
     });
 
-    const loadSound = (src: string) =>
-      new Promise<void>((resolve, reject) => {
-        if (typeof window === 'undefined' || typeof Audio === 'undefined') {
-          resolve();
-          return;
-        }
-        const audio = new Audio();
-        // oncanplaythrough fires when enough data has loaded to play the audio
-        audio.oncanplaythrough = () => resolve();
-        audio.onerror = () => reject(new Error(`Failed to load audio: ${src}`));
-        audio.src = src;
-        // Some browsers require calling load() manually for audio elements
-        audio.load();
-      });
+    const loadSound = (src: string) => new Promise<void>((resolve, reject) => {
+      const audio = new Audio();
+      // oncanplaythrough fires when enough data has loaded to play the audio
+      audio.oncanplaythrough = () => resolve();
+      audio.onerror = () => reject(new Error(`Failed to load audio: ${src}`));
+      audio.src = src;
+      // Some browsers require calling load() manually for audio elements
+      audio.load();
+    });
 
     Promise.all([
       ...images.map(loadImage),

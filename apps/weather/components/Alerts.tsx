@@ -73,7 +73,7 @@ const Alerts = ({ latitude, longitude }: AlertsProps) => {
     const handleFocus = () => start();
     const handleBlur = () => stop();
 
-    if (typeof document !== "undefined" && document.hasFocus()) start();
+    if (document.hasFocus()) start();
 
     window.addEventListener("focus", handleFocus);
     window.addEventListener("blur", handleBlur);
@@ -87,38 +87,35 @@ const Alerts = ({ latitude, longitude }: AlertsProps) => {
 
   return (
     <div className="space-y-2 p-2">
-        <label className="flex items-center space-x-2">
+      <label className="flex items-center space-x-2">
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={(e) => setEnabled(e.target.checked)}
+        />
+        <span>Enable alerts</span>
+      </label>
+      <div className="flex space-x-4">
+        <label className="flex items-center space-x-1">
+          <span>Low</span>
           <input
-            type="checkbox"
-            checked={enabled}
-            onChange={(e) => setEnabled(e.target.checked)}
-            aria-label="Enable alerts"
+            type="number"
+            value={low}
+            onChange={(e) => setLow(Number(e.target.value))}
+            className="w-16 text-black"
           />
-          <span>Enable alerts</span>
         </label>
-        <div className="flex space-x-4">
-          <label className="flex items-center space-x-1">
-            <span>Low</span>
-            <input
-              type="number"
-              value={low}
-              onChange={(e) => setLow(Number(e.target.value))}
-              className="w-16 text-black"
-              aria-label="Low temperature"
-            />
-          </label>
-          <label className="flex items-center space-x-1">
-            <span>High</span>
-            <input
-              type="number"
-              value={high}
-              onChange={(e) => setHigh(Number(e.target.value))}
-              className="w-16 text-black"
-              aria-label="High temperature"
-            />
-          </label>
-        </div>
+        <label className="flex items-center space-x-1">
+          <span>High</span>
+          <input
+            type="number"
+            value={high}
+            onChange={(e) => setHigh(Number(e.target.value))}
+            className="w-16 text-black"
+          />
+        </label>
       </div>
+    </div>
   );
 };
 

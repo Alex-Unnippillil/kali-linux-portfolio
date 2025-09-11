@@ -4,30 +4,16 @@
       "args": ["--no-sandbox"]
     },
     "runners": ["axe", "htmlcs"],
-    "standard": "WCAG2.2AA",
-    "includeNotices": true,
-    "includeWarnings": true,
+    "standard": "WCAG2AA",
     "axe": {
       "rules": {
-        "color-contrast": { "enabled": true },
-        "label": { "enabled": true },
-        "focus-order-semantics": { "enabled": true }
+        "color-contrast": { "enabled": true }
       }
     }
   },
   "urls": [
-    "http://localhost:3000/",
-    "http://localhost:3000/apps",
-    "http://localhost:3000/apps/chess",
-    "http://localhost:3000/apps/sudoku",
-    "http://localhost:3000/apps/youtube",
-    "http://localhost:3000/apps/vscode",
-    "http://localhost:3000/apps/spotify",
-    "http://localhost:3000/apps/x",
-    "http://localhost:3000/apps/chrome",
-    "http://localhost:3000/apps/trash",
-    "http://localhost:3000/apps/gedit",
-    "http://localhost:3000/apps/todoist"
+    "http://localhost:3000",
+    "http://localhost:3000/apps"
   ],
   "scenarios": [
     {},

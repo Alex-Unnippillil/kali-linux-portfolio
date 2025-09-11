@@ -29,12 +29,10 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(
       const canvas = canvasRef.current;
       if (!canvas) return;
 
-      canvas.style.willChange = 'transform';
-
       // Prefer OffscreenCanvas with a worker when supported
       if (typeof Worker === 'function' && hasOffscreenCanvas()) {
         const worker = new Worker(
-          new URL('../../../../../workers/game-loop.worker.js', import.meta.url)
+          new URL('../../../../../workers/game-loop.worker.ts', import.meta.url)
         );
         workerRef.current = worker;
         const offscreen = canvas.transferControlToOffscreen();
@@ -58,11 +56,10 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(
         );
 
         resize();
-        const ro = new ResizeObserver(resize);
-        ro.observe(canvas);
+        window.addEventListener('resize', resize);
         return () => {
           worker.terminate();
-          ro.disconnect();
+          window.removeEventListener('resize', resize);
         };
       }
 
@@ -80,9 +77,8 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(
       };
 
       resize();
-      const ro = new ResizeObserver(resize);
-      ro.observe(canvas);
-      return () => ro.disconnect();
+      window.addEventListener('resize', resize);
+      return () => window.removeEventListener('resize', resize);
     }, [width, height]);
 
     useImperativeHandle(ref, () => ({
@@ -99,16 +95,15 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(
       },
     }));
 
-      return (
-        <canvas
-          ref={canvasRef}
-          className={className}
-          style={{ imageRendering: 'pixelated' }}
-          aria-label="Game canvas"
-        />
-      );
-    }
-  );
+    return (
+      <canvas
+        ref={canvasRef}
+        className={className}
+        style={{ imageRendering: 'pixelated' }}
+      />
+    );
+  }
+);
 
 Canvas.displayName = 'Canvas';
 

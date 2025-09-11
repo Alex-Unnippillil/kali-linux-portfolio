@@ -7,27 +7,14 @@ const FILE_NAME = 'qr-scans.json';
 
 const getStorage = (): StorageManager => navigator.storage;
 
-const isOpfsSupported = (): boolean =>
-  isBrowser() && 'storage' in navigator && Boolean(getStorage().getDirectory);
-
-let directoryHandlePromise: Promise<FileSystemDirectoryHandle | null> | null = null;
-const getDirectoryHandle = (): Promise<FileSystemDirectoryHandle | null> => {
-  if (directoryHandlePromise) return directoryHandlePromise;
-  if (!isOpfsSupported()) {
-    directoryHandlePromise = Promise.resolve(null);
-  } else {
-    directoryHandlePromise = getStorage()
-      .getDirectory()
-      .catch(() => null);
-  }
-  return directoryHandlePromise;
-};
+const hasOpfs =
+  isBrowser && 'storage' in navigator && Boolean(getStorage().getDirectory);
 
 export const loadScans = async (): Promise<string[]> => {
-  if (!isBrowser()) return [];
-  const root = await getDirectoryHandle();
-  if (root) {
+  if (!isBrowser) return [];
+  if (hasOpfs) {
     try {
+      const root = await getStorage().getDirectory();
       const handle = await root.getFileHandle(FILE_NAME);
       const file = await handle.getFile();
       return JSON.parse(await file.text());
@@ -43,27 +30,23 @@ export const loadScans = async (): Promise<string[]> => {
 };
 
 export const saveScans = async (scans: string[]): Promise<void> => {
-  if (!isBrowser()) return;
-  const root = await getDirectoryHandle();
-  if (root) {
-    try {
-      const handle = await root.getFileHandle(FILE_NAME, { create: true });
-      const writable = await handle.createWritable();
-      await writable.write(JSON.stringify(scans));
-      await writable.close();
-      return;
-    } catch {
-      // fall through to localStorage
-    }
+  if (!isBrowser) return;
+  if (hasOpfs) {
+    const root = await getStorage().getDirectory();
+    const handle = await root.getFileHandle(FILE_NAME, { create: true });
+    const writable = await handle.createWritable();
+    await writable.write(JSON.stringify(scans));
+    await writable.close();
+    return;
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(scans));
 };
 
 export const clearScans = async (): Promise<void> => {
-  if (!isBrowser()) return;
-  const root = await getDirectoryHandle();
-  if (root) {
+  if (!isBrowser) return;
+  if (hasOpfs) {
     try {
+      const root = await getStorage().getDirectory();
       await root.removeEntry(FILE_NAME);
     } catch {
       /* ignore */
@@ -74,21 +57,21 @@ export const clearScans = async (): Promise<void> => {
 };
 
 export const loadLastScan = (): string => {
-  if (!isBrowser()) return '';
+  if (!isBrowser) return '';
   return localStorage.getItem(LAST_SCAN_KEY) || '';
 };
 
 export const saveLastScan = (scan: string): void => {
-  if (!isBrowser()) return;
+  if (!isBrowser) return;
   localStorage.setItem(LAST_SCAN_KEY, scan);
 };
 
 export const loadLastGeneration = (): string => {
-  if (!isBrowser()) return '';
+  if (!isBrowser) return '';
   return localStorage.getItem(LAST_GEN_KEY) || '';
 };
 
 export const saveLastGeneration = (payload: string): void => {
-  if (!isBrowser()) return;
+  if (!isBrowser) return;
   localStorage.setItem(LAST_GEN_KEY, payload);
 };

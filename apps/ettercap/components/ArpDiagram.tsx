@@ -19,17 +19,12 @@ export default function ArpDiagram() {
   const [nodes, setNodes] = useState<Record<string, NodeData>>(initialNodes);
 
   const handleDrag = (key: string) => (_: DraggableEvent, data: DraggableData) => {
-    setNodes((n) => {
-      const node = n[key];
-      if (!node) return n;
-      return { ...n, [key]: { ...node, x: data.x, y: data.y } };
-    });
+    setNodes((n) => ({ ...n, [key]: { ...n[key], x: data.x, y: data.y } }));
   };
 
   const getLine = (from: string, to: string) => {
     const a = nodes[from];
     const b = nodes[to];
-    if (!a || !b) return '';
     return `M${a.x + 20} ${a.y + 20} L${b.x + 20} ${b.y + 20}`;
   };
 
