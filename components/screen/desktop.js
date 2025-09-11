@@ -87,13 +87,13 @@ export class Desktop extends Component {
         this.checkForAppShortcuts();
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
-        document.addEventListener('keydown', this.handleGlobalShortcut);
+        window.addEventListener('keydown', this.handleGlobalShortcut, true);
         window.addEventListener('open-app', this.handleOpenAppEvent);
     }
 
     componentWillUnmount() {
         this.removeContextListeners();
-        document.removeEventListener('keydown', this.handleGlobalShortcut);
+        window.removeEventListener('keydown', this.handleGlobalShortcut, true);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
     }
