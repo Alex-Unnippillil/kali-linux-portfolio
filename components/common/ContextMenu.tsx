@@ -38,6 +38,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
 
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
+      e.stopPropagation();
       setPos({ x: e.pageX, y: e.pageY });
       setOpen(true);
     };
@@ -45,6 +46,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.shiftKey && e.key === 'F10') {
         e.preventDefault();
+        e.stopPropagation();
         const rect = node.getBoundingClientRect();
         setPos({ x: rect.left, y: rect.bottom });
         setOpen(true);
