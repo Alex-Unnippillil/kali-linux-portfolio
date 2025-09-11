@@ -102,6 +102,21 @@ See `.env.local.example` for the full list.
 
 ---
 
+## Contributing
+
+Before submitting pull requests that involve Kali UI work, ensure the following commands all succeed:
+
+```bash
+yarn lint
+yarn test
+yarn build
+yarn verify:all
+```
+
+Only open a pull request once all four checks pass locally.
+
+---
+
 ## Speed Insights
 
 - Enable Speed Insights in the Vercel project dashboard.
