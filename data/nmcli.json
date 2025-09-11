@@ -1,9 +1,0 @@
-{
-  "devices": [
-    { "device": "eth0", "type": "ethernet", "state": "connected", "connection": "Wired connection 1" },
-    { "device": "wlan0", "type": "wifi", "state": "disconnected", "connection": "--" }
-  ],
-  "connections": [
-    { "name": "Wired connection 1", "uuid": "11111111-1111-1111-1111-111111111111", "type": "ethernet", "device": "eth0" }
-  ]
-}
