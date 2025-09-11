@@ -20,7 +20,7 @@ export const getTheme = (): string => {
   if (!isBrowser()) return 'kali-dark';
   try {
     const stored = window.localStorage.getItem(THEME_KEY);
-    if (stored && stored !== 'undercover') return stored;
+    if (stored) return stored;
     const prefersDark = window.matchMedia?.(
       '(prefers-color-scheme: dark)'
     ).matches;
@@ -36,34 +36,6 @@ export const setTheme = (theme: string): void => {
     window.localStorage.setItem(THEME_KEY, theme);
     document.documentElement.dataset.theme = theme;
     document.documentElement.classList.toggle('dark', isDarkTheme(theme));
-  } catch {
-    /* ignore storage errors */
-  }
-};
-
-export const UNDERCOVER_KEY = 'app:undercover';
-
-export const getUndercover = (): boolean => {
-  if (!isBrowser()) return false;
-  try {
-    return window.localStorage.getItem(UNDERCOVER_KEY) === 'true';
-  } catch {
-    return false;
-  }
-};
-
-export const setUndercover = (on: boolean): void => {
-  if (!isBrowser()) return;
-  try {
-    window.localStorage.setItem(UNDERCOVER_KEY, on ? 'true' : 'false');
-    if (on) {
-      document.documentElement.setAttribute('data-undercover', 'true');
-    } else {
-      document.documentElement.removeAttribute('data-undercover');
-    }
-    document.dispatchEvent(
-      new CustomEvent('undercover-change', { detail: { value: on } }),
-    );
   } catch {
     /* ignore storage errors */
   }

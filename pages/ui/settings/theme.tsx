@@ -86,7 +86,7 @@ export default function ThemeSettings({ wallpapers }: ThemeSettingsProps) {
       <div className="flex-1 p-4 overflow-y-auto">
         <h1 className="text-xl mb-4">Theme</h1>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {['default', 'kali-dark', 'kali-light', 'undercover', 'dark', 'neon', 'matrix'].map(
+          {['default', 'kali-dark', 'kali-light', 'dark', 'neon', 'matrix'].map(
             (t) => (
               <button
                 key={t}

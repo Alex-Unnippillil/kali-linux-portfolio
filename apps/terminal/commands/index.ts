@@ -91,10 +91,6 @@ function neofetch(_args: string, ctx: CommandContext) {
   ];
   lines.forEach((line) => ctx.writeLine(line));
 
-  const variant = document.documentElement.classList.contains('dark')
-    ? 'Dark'
-    : 'Light';
-  ctx.writeLine(`${c2}Theme: Undercover (${variant})${reset}`);
 }
 
 async function apt(args: string, ctx: CommandContext) {
