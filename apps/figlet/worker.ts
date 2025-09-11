@@ -1,4 +1,5 @@
-import figlet from 'figlet';
+import figlet, { FontName } from 'figlet';
+import type { KerningMethods } from 'figlet/dist/types/figlet-types';
 // Fonts are loaded dynamically from the main thread. This keeps the worker
 // lightweight and allows only the fonts that are actually used to be loaded.
 
@@ -11,7 +12,7 @@ function isMonospace(name: string) {
   let width: number | undefined;
   for (const ch of chars) {
     const glyph = strip(
-      figlet.textSync(ch, { font: name as figlet.Fonts }).split('\n'),
+      figlet.textSync(ch, { font: name as FontName }).split('\n'),
     );
     const w = glyph.reduce((m, line) => Math.max(m, line.length), 0);
     if (width === undefined) width = w;
@@ -25,7 +26,7 @@ self.onmessage = (e: MessageEvent<any>) => {
     const { name, data } = e.data as { name: string; data: string };
     try {
       figlet.parseFont(name, data);
-      const preview = figlet.textSync('Figlet', { font: name as figlet.Fonts });
+      const preview = figlet.textSync('Figlet', { font: name as FontName });
       const mono = isMonospace(name);
       self.postMessage({ type: 'font', font: name, preview, mono });
     } catch {
@@ -46,9 +47,9 @@ self.onmessage = (e: MessageEvent<any>) => {
     .map((line) => line.trim())
     .join('\n');
   const rendered = figlet.textSync(normalized, {
-    font: font as figlet.Fonts,
+    font: font as FontName,
     width,
-    horizontalLayout: layout as figlet.KerningMethods,
+    horizontalLayout: layout as KerningMethods,
   });
   self.postMessage({ type: 'render', output: rendered });
 };
