@@ -220,6 +220,7 @@ export default function YouTubePlayer({ videoId }) {
                 src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
                 alt="YouTube video thumbnail"
                 loading="lazy"
+                decoding="async"
                 className="absolute inset-0 w-full h-full object-cover"
               />
               <svg

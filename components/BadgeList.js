@@ -77,6 +77,8 @@ const BadgeList = ({ badges, className = '' }) => {
                 src={badge.src}
                 alt={badge.alt}
                 title={badge.description || badge.label}
+                loading="lazy"
+                decoding="async"
               />
             </button>
           ))}
