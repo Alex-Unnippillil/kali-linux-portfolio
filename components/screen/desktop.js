@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import Image from 'next/image';
 
 export class Desktop extends Component {
     constructor() {
@@ -30,6 +31,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.lastFocusedWindow = null;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -576,6 +578,40 @@ export class Desktop extends Component {
         return result;
     }
 
+    toggleAllWindows = () => {
+        const allMinimized = this.checkAllMinimised();
+        if (allMinimized) {
+            const minimized_windows = { ...this.state.minimized_windows };
+            Object.keys(this.state.closed_windows).forEach(id => {
+                if (!this.state.closed_windows[id]) {
+                    const r = document.getElementById(id);
+                    if (r) {
+                        r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
+                    }
+                    minimized_windows[id] = false;
+                }
+            });
+            this.setState({ minimized_windows }, () => {
+                if (this.lastFocusedWindow) this.focus(this.lastFocusedWindow);
+                this.saveSession();
+            });
+        } else {
+            this.lastFocusedWindow = this.getFocusedWindowId();
+            const minimized_windows = { ...this.state.minimized_windows };
+            const focused_windows = { ...this.state.focused_windows };
+            Object.keys(this.state.closed_windows).forEach(id => {
+                if (!this.state.closed_windows[id]) {
+                    minimized_windows[id] = true;
+                    focused_windows[id] = false;
+                }
+            });
+            this.setState({ minimized_windows, focused_windows }, () => {
+                this.hideSideBar(null, false);
+                this.saveSession();
+            });
+        }
+    }
+
     handleOpenAppEvent = (e) => {
         const id = e.detail;
         if (id) {
@@ -864,6 +900,7 @@ export class Desktop extends Component {
     }
 
     render() {
+        const allMinimized = this.checkAllMinimised();
         return (
             <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
 
@@ -901,6 +938,16 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
                 />
+
+                {/* Show Desktop Icon */}
+                <button
+                    type="button"
+                    aria-label={allMinimized ? 'Restore all windows' : 'Minimize all windows'}
+                    onClick={this.toggleAllWindows}
+                    className="absolute bottom-2 right-2 z-50 p-1 rounded hover:bg-white hover:bg-opacity-10"
+                >
+                    <Image src="/themes/Yaru/system/user-desktop.png" alt="" width={24} height={24} />
+                </button>
 
                 {/* Desktop Apps */}
                 {this.renderDesktopApps()}
