@@ -1,0 +1,16 @@
+/* Link styling for Kali theme */
+
+a {
+  color: var(--color-text);
+  text-decoration: none;
+  background-image: linear-gradient(currentColor, currentColor);
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  background-size: 100% 2px;
+  transition: background-size 0.2s ease, color 0.2s ease;
+}
+
+a:hover {
+  color: var(--color-primary);
+  background-size: 100% 4px;
+}
