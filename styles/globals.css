@@ -68,6 +68,21 @@ html[data-theme='matrix'] {
 
 }
 
+/* Undercover theme */
+html[data-theme='undercover'] {
+  --color-bg: #f3f4f6;
+  --color-text: #1f2937;
+  --color-primary: #2563eb;
+  --color-secondary: #e5e7eb;
+  --color-accent: #2563eb;
+  --color-muted: #d1d5db;
+  --color-surface: #ffffff;
+  --color-inverse: #ffffff;
+  --color-border: #d1d5db;
+  --color-terminal: #111827;
+  --color-dark: #ffffff;
+}
+
 ::selection {
   background: var(--color-selection);
   color: var(--color-inverse);
