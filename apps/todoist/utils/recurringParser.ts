@@ -38,13 +38,14 @@ export function parseRecurring(text: string, start: Date = new Date()): ParseRes
     freq = RRule.WEEKLY;
     byweekday = [RRule.SA, RRule.SU];
   } else {
-    const maybeNumber = parseInt(tokens[0] || '', 10);
+    const maybeNumber = parseInt(tokens[0] ?? '', 10);
+
     if (!isNaN(maybeNumber)) {
       interval = maybeNumber;
       tokens.shift();
     }
 
-    const unit = tokens[0];
+    const unit = tokens[0] ?? '';
     switch (unit) {
       case 'day':
       case 'days':

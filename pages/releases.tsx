@@ -16,20 +16,28 @@ export default function ReleasesPage({ releases }: ReleasesPageProps) {
 }
 
 export const getStaticProps: GetStaticProps<ReleasesPageProps> = async () => {
-  const res = await fetch('https://www.kali.org/rss.xml');
-  const xml = await res.text();
-  const parser = new XMLParser();
-  const parsed = parser.parse(xml);
-  const items = Array.isArray(parsed.rss.channel.item)
-    ? parsed.rss.channel.item
-    : [parsed.rss.channel.item];
-  const releases: ReleaseItem[] = items.map((item: any) => ({
-    title: item.title as string,
-    link: item.link as string,
-    pubDate: item.pubDate as string,
-  }));
-  return {
-    props: { releases },
-    revalidate: 7200,
-  };
+  try {
+    const res = await fetch('https://www.kali.org/rss.xml');
+    const xml = await res.text();
+    const parser = new XMLParser();
+    const parsed = parser.parse(xml);
+    const items = Array.isArray(parsed.rss.channel.item)
+      ? parsed.rss.channel.item
+      : [parsed.rss.channel.item];
+    const releases: ReleaseItem[] = items.map((item: any) => ({
+      title: item.title as string,
+      link: item.link as string,
+      pubDate: item.pubDate as string,
+    }));
+    return {
+      props: { releases },
+      revalidate: 7200,
+    };
+  } catch {
+    // Fallback to an empty list if the RSS feed cannot be fetched
+    return {
+      props: { releases: [] },
+      revalidate: 7200,
+    };
+  }
 };

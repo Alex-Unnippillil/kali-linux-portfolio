@@ -132,7 +132,12 @@ export default function ToolsPage({ tools }: ToolsPageProps) {
 }
 
 export const getStaticProps: GetStaticProps<ToolsPageProps> = async () => {
-  const res = await fetch("https://www.kali.org/tools/kali-tools.json");
-  const tools = (await res.json()) as Tool[];
-  return { props: { tools }, revalidate: 7200 };
+  try {
+    const res = await fetch("https://www.kali.org/tools/kali-tools.json");
+    const tools = (await res.json()) as Tool[];
+    return { props: { tools }, revalidate: 7200 };
+  } catch {
+    // If fetching the tools list fails, provide an empty list
+    return { props: { tools: [] }, revalidate: 7200 };
+  }
 };
