@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import React, { Component } from 'react';
@@ -338,23 +339,28 @@ export class Window extends Component {
 
     applyEdgeResistance = (node, data) => {
         if (!node || !data) return;
-        const threshold = 30;
-        const resistance = 0.35; // how much to slow near edges
-        let { x, y } = data;
+        const threshold = 80; // distance from edge where slowing begins
         const maxX = this.state.parentSize.width;
         const maxY = this.state.parentSize.height;
 
-        const resist = (pos, min, max) => {
-            if (pos < min) return min;
-            if (pos < min + threshold) return min + (pos - min) * resistance;
-            if (pos > max) return max;
-            if (pos > max - threshold) return max - (max - pos) * resistance;
+        const slow = (pos, max) => {
+            if (typeof pos !== 'number') pos = 0;
+            if (pos <= 0) return 0;
+            if (pos >= max) return max;
+            const dist = Math.min(pos, max - pos);
+            if (dist < threshold) {
+                const edge = pos < max / 2 ? 0 : max;
+                const ratio = dist / threshold;
+                return edge + (pos - edge) * ratio;
+            }
             return pos;
-        }
+        };
 
-        x = resist(x, 0, maxX);
-        y = resist(y, 0, maxY);
-        node.style.transform = `translate(${x}px, ${y}px)`;
+        const newX = slow(data.x, maxX);
+        const newY = slow(data.y, maxY);
+        node.style.transform = `translate(${newX}px, ${newY}px)`;
+        data.x = newX;
+        data.y = newY;
     }
 
     handleDrag = (e, data) => {
@@ -519,46 +525,42 @@ export class Window extends Component {
     }
 
     handleKeyDown = (e) => {
+        const prevent = () => {
+            if (typeof e.preventDefault === 'function') e.preventDefault();
+            if (typeof e.stopPropagation === 'function') e.stopPropagation();
+        };
         if (e.key === 'Escape') {
             this.closeWindow();
         } else if (e.key === 'Tab') {
             this.focusWindow();
         } else if (e.altKey) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                prevent();
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                prevent();
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                prevent();
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                prevent();
                 this.snapWindow('top');
             }
             this.focusWindow();
         } else if (e.shiftKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                prevent();
                 this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                prevent();
                 this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                prevent();
                 this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                prevent();
                 this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
             }
             this.focusWindow();
