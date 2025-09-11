@@ -8,11 +8,6 @@ interface Feature {
 
 const features: Feature[] = [
   {
-    icon: "🕵️", // detective emoji
-    title: "Undercover",
-    description: "Blend into a crowd with a Windows-like look.",
-  },
-  {
     icon: "🪟", // window emoji
     title: "Win-KeX",
     description: "Run a full Kali desktop experience inside WSL.",

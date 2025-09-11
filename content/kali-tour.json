@@ -4,12 +4,8 @@
     "description": "Explore Kali Linux's default Xfce desktop environment."
   },
   {
-    "title": "Undercover Mode",
-    "description": "Blend in by switching to the Windows-like undercover mode."
-  },
-  {
     "title": "Tools Library",
-    "description": "Access the extensive collection of security tools." 
+    "description": "Access the extensive collection of security tools."
   },
   {
     "title": "Metapackages",
