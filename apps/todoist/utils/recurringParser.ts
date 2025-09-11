@@ -38,7 +38,7 @@ export function parseRecurring(text: string, start: Date = new Date()): ParseRes
     freq = RRule.WEEKLY;
     byweekday = [RRule.SA, RRule.SU];
   } else {
-    const maybeNumber = parseInt(tokens[0], 10);
+    const maybeNumber = parseInt(tokens[0] || '', 10);
     if (!isNaN(maybeNumber)) {
       interval = maybeNumber;
       tokens.shift();
@@ -64,9 +64,10 @@ export function parseRecurring(text: string, start: Date = new Date()): ParseRes
         break;
       default:
         // handle specific days like Monday, Tuesday etc
-        if (DAY_MAP[unit]) {
+        const day = unit && DAY_MAP[unit];
+        if (day) {
           freq = RRule.WEEKLY;
-          byweekday = [DAY_MAP[unit]];
+          byweekday = [day];
         }
         break;
     }
