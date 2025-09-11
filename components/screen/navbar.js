@@ -6,17 +6,36 @@ import QuickSettings from '../ui/QuickSettings';
 import WhiskerMenu from '../menu/WhiskerMenu';
 
 export default class Navbar extends Component {
-	constructor() {
-		super();
-		this.state = {
-			status_card: false
-		};
-	}
+        constructor() {
+                super();
+                this.state = {
+                        status_card: false,
+                        compact: false,
+                };
+                this.handleScroll = this.handleScroll.bind(this);
+        }
+
+        componentDidMount() {
+                window.addEventListener('scroll', this.handleScroll, { passive: true });
+                this.handleScroll();
+        }
+
+        componentWillUnmount() {
+                window.removeEventListener('scroll', this.handleScroll);
+        }
+
+        handleScroll() {
+                const isKali = document.documentElement.dataset.theme === 'kali';
+                const compact = isKali && window.scrollY > 8;
+                if (compact !== this.state.compact) {
+                        this.setState({ compact });
+                }
+        }
 
 	render() {
 		return (
-                        <div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
-                                <div className="pl-3 pr-1">
+                        <div className={`header main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50 ${this.state.compact ? 'header--compact' : ''}`}>
+                                <div className="pl-3 pr-1 header__logo">
                                         <Image src="/themes/Yaru/status/network-wireless-signal-good-symbolic.svg" alt="network icon" width={16} height={16} className="w-4 h-4" />
                                 </div>
                                 <WhiskerMenu />
