@@ -837,8 +837,12 @@ export class WindowMainScreen extends Component {
         }, 3000);
     }
     render() {
+        const isKali = typeof document !== 'undefined' && document.documentElement.dataset.theme === 'kali';
+        const base = "w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen";
+        const divider = isKali ? " kali-divider overflow-x-hidden" : "";
+        const themeBg = this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey";
         return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
+            <div className={base + divider + themeBg}>
                 {this.props.screen(this.props.addFolder, this.props.openApp)}
             </div>
         )
