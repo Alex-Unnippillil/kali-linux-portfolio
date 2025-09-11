@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
-import useFocusTrap from '@/hooks/useFocusTrap';
-import useRovingTabIndex from '@/hooks/useRovingTabIndex';
+import useFocusTrap from '../../hooks/useFocusTrap';
+import useRovingTabIndex from '../../hooks/useRovingTabIndex';
 
 function WindowMenu(props) {
     const menuRef = useRef(null);
@@ -22,7 +22,6 @@ function WindowMenu(props) {
         <div
             id="window-menu"
             role="menu"
-            aria-label="Window context menu"
             aria-hidden={!props.active}
             ref={menuRef}
             onKeyDown={handleKeyDown}

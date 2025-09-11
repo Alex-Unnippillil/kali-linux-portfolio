@@ -88,6 +88,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const filesRef = useRef<Record<string, string>>(files);
   const aliasesRef = useRef<Record<string, string>>({});
   const historyRef = useRef<string[]>([]);
+  const hintRef = useRef('');
   const contextRef = useRef<CommandContext>({
     writeLine: () => {},
     files: filesRef.current,
@@ -145,9 +146,37 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
   contextRef.current.writeLine = writeLine;
 
-  const prompt = useCallback(() => {
-    if (termRef.current) termRef.current.write('$ ');
+  const renderHint = useCallback(() => {
+    const term = termRef.current;
+    const current = commandRef.current;
+    if (!term || !current) {
+      if (hintRef.current) {
+        term?.write('\u001b[s\u001b[0K\u001b[u');
+        hintRef.current = '';
+      }
+      return;
+    }
+    const historyMatch = [...historyRef.current]
+      .reverse()
+      .find((c) => c.startsWith(current) && c !== current);
+    const registryMatch = Object.keys(registryRef.current).find(
+      (c) => c.startsWith(current) && c !== current,
+    );
+    const match = historyMatch || registryMatch || '';
+    const hint = match ? match.slice(current.length) : '';
+    if (hintRef.current === hint) return;
+    hintRef.current = hint;
+    term.write('\u001b[s\u001b[0K');
+    if (hint) term.write(`\u001b[90m${hint}\u001b[0m`);
+    term.write('\u001b[u');
   }, []);
+
+  const prompt = useCallback(() => {
+    if (termRef.current) {
+      termRef.current.write('┌──(🦊 kali)\r\n└─❯ ');
+      renderHint();
+    }
+  }, [renderHint]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(contentRef.current).catch(() => {});
@@ -255,12 +284,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         const completion = matches[0].slice(current.length);
         termRef.current?.write(completion);
         commandRef.current = matches[0];
+        renderHint();
       } else if (matches.length > 1) {
         writeLine(matches.join('  '));
         prompt();
         termRef.current?.write(commandRef.current);
+        renderHint();
       }
-    }, [prompt, writeLine]);
+    }, [prompt, renderHint, writeLine]);
 
     const handleInput = useCallback(
       (data: string) => {
@@ -274,14 +305,16 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
             if (commandRef.current.length > 0) {
               termRef.current?.write('\b \b');
               commandRef.current = commandRef.current.slice(0, -1);
+              renderHint();
             }
           } else {
             commandRef.current += ch;
             termRef.current?.write(ch);
+            renderHint();
           }
         }
       },
-      [runCommand, prompt],
+      [runCommand, prompt, renderHint],
     );
 
   useImperativeHandle(ref, () => ({

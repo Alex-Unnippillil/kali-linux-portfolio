@@ -52,6 +52,19 @@ const QuickSettings = ({ open }: Props) => {
           onChange={() => setReduceMotion(!reduceMotion)}
         />
       </div>
+      <div className="px-4 pt-2 border-t border-black border-opacity-20 mt-2">
+        <button
+          className="w-full text-left text-blue-300 hover:underline"
+          onClick={() => {
+            window.localStorage.setItem('settings-open-tab', 'power');
+            document.dispatchEvent(
+              new CustomEvent('open-settings', { detail: { tab: 'power' } }),
+            );
+          }}
+        >
+          Power Manager Settings…
+        </button>
+      </div>
     </div>
   );
 };

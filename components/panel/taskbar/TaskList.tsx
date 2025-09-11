@@ -1,9 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import Image from 'next/image';
-import usePersistentState from '../../../hooks/usePersistentState';
-
-const BLUR_DATA_URL =
-  'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+import React, { useState, useCallback } from 'react';
 
 interface AppDefinition {
   id: string;
@@ -24,21 +19,6 @@ const WINDOW_MIME = 'application/x-window-id';
 
 const TaskList: React.FC<TaskListProps> = ({ apps, onMinimizeWindow }) => {
   const [dragTarget, setDragTarget] = useState<string | null>(null);
-  const [rowSize] = usePersistentState<number>('xfce.panel.size', 24);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const [overflow, setOverflow] = useState(false);
-
-  useEffect(() => {
-    const checkOverflow = () => {
-      const el = panelRef.current;
-      if (el) {
-        setOverflow(el.scrollWidth > el.clientWidth);
-      }
-    };
-    checkOverflow();
-    window.addEventListener('resize', checkOverflow);
-    return () => window.removeEventListener('resize', checkOverflow);
-  }, [apps]);
 
   const handleDragOver = useCallback(
     (appId: string) => (e: React.DragEvent) => {
@@ -70,11 +50,7 @@ const TaskList: React.FC<TaskListProps> = ({ apps, onMinimizeWindow }) => {
   );
 
   return (
-    <div
-      ref={panelRef}
-      className="flex overflow-hidden"
-      style={{ height: rowSize }}
-    >
+    <div className="flex">
       {apps.map((app) => (
         <div
           key={app.id}
@@ -83,35 +59,18 @@ const TaskList: React.FC<TaskListProps> = ({ apps, onMinimizeWindow }) => {
           onDragOver={handleDragOver(app.id)}
           onDragLeave={handleDragLeave(app.id)}
           onDrop={handleDrop(app.id)}
-          className={`transition-outline flex items-center justify-center ${
+          className={`p-1 transition-outline ${
             dragTarget === app.id ? 'outline outline-2 outline-blue-500' : ''
           }`}
-          style={{ width: rowSize, height: rowSize }}
         >
           {app.icon ? (
-            <Image
-              src={app.icon}
-              alt={app.title}
-              className="max-w-full max-h-full"
-              width={rowSize}
-              height={rowSize}
-              placeholder="blur"
-              blurDataURL={BLUR_DATA_URL}
-            />
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={app.icon} alt="" className="w-5 h-5" />
           ) : (
             <span>{app.title}</span>
           )}
         </div>
       ))}
-      {overflow && (
-        <div
-          className="flex items-center justify-center"
-          style={{ width: rowSize, height: rowSize }}
-          aria-hidden="true"
-        >
-          ⌄
-        </div>
-      )}
     </div>
   );
 };

@@ -7,7 +7,19 @@ let renderApps = (props) => {
     props.apps.forEach((app, index) => {
         if (props.favourite_apps[app.id] === false) return;
         sideBarAppsJsx.push(
-            <SideBarApp key={app.id} id={app.id} title={app.title} icon={app.icon} isClose={props.closed_windows} isFocus={props.focused_windows} openApp={props.openAppByAppId} isMinimized={props.isMinimized} openFromMinimised={props.openFromMinimised} />
+            <SideBarApp
+                key={app.id}
+                id={app.id}
+                title={app.title}
+                icon={app.icon}
+                isClose={props.closed_windows}
+                isFocus={props.focused_windows}
+                openApp={props.openAppByAppId}
+                isMinimized={props.isMinimized}
+                openFromMinimised={props.openFromMinimised}
+                notifications={app.notifications}
+                tasks={app.tasks}
+            />
         );
     });
     return sideBarAppsJsx;
@@ -30,7 +42,13 @@ export default function SideBar(props) {
             <nav
                 aria-label="Dock"
                 className={(props.hide ? " -translate-x-full " : "") +
-                    " absolute transform duration-300 select-none z-40 left-0 top-0 h-full min-h-screen w-16 flex flex-col justify-start items-center pt-7 border-black border-opacity-60 bg-black bg-opacity-50"}
+                    " absolute transform duration-300 select-none z-40 left-0 top-0 h-full min-h-screen flex flex-col justify-start items-center pt-7 border-black border-opacity-60"}
+                style={{
+                    width: 'var(--sidebar-width)',
+                    backgroundColor: 'var(--menu-bg)',
+                    opacity: 'var(--menu-opacity)',
+                    borderRadius: 'var(--menu-border-radius)'
+                }}
             >
                 {
                     (

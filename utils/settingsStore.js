@@ -2,6 +2,7 @@
 
 import { get, set, del } from 'idb-keyval';
 import { getTheme, setTheme } from './theme';
+import { safeLocalStorage } from './safeStorage';
 
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
@@ -212,6 +213,54 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+}
+
+export async function exportPanel() {
+  if (typeof window === 'undefined') return JSON.stringify({ pinnedApps: [], panelSize: 16 });
+  let pinnedApps = [];
+  try {
+    pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]');
+  } catch {
+    pinnedApps = [];
+  }
+  let panelSize = 16;
+  try {
+    const stored = window.localStorage.getItem('app:panel-icons');
+    panelSize = stored ? JSON.parse(stored) : 16;
+  } catch {
+    panelSize = 16;
+  }
+  return JSON.stringify({ pinnedApps, panelSize });
+}
+
+export async function importPanel(json) {
+  if (typeof window === 'undefined') return;
+  let data;
+  try {
+    data = typeof json === 'string' ? JSON.parse(json) : json;
+  } catch (e) {
+    console.error('Invalid panel settings', e);
+    return;
+  }
+  const { pinnedApps, panelSize } = data;
+  if (Array.isArray(pinnedApps)) {
+    safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps));
+    try {
+      const sessionRaw = window.localStorage.getItem('desktop-session');
+      const session = sessionRaw ? JSON.parse(sessionRaw) : {};
+      session.dock = pinnedApps;
+      window.localStorage.setItem('desktop-session', JSON.stringify(session));
+    } catch {
+      // ignore
+    }
+  }
+  if (panelSize !== undefined) {
+    try {
+      window.localStorage.setItem('app:panel-icons', JSON.stringify(panelSize));
+    } catch {
+      // ignore
+    }
+  }
 }
 
 export const defaults = DEFAULT_SETTINGS;
