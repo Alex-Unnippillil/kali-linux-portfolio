@@ -23,9 +23,9 @@ export default function Sensors() {
   }, []);
 
   const tempClass = (t: number) => {
-    if (t >= 70) return "text-danger";
-    if (t >= 50) return "text-warning";
-    return "text-success";
+    if (t >= 70) return "text-red-500";
+    if (t >= 50) return "text-yellow-400";
+    return "text-green-400";
   };
 
   return (

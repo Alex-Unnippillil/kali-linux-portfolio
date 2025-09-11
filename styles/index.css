@@ -1,4 +1,5 @@
 @import './globals.css';
+@import './whisker.css';
 
 html {
     font-size: clamp(12px, calc(16px * var(--font-multiplier)), 24px);
@@ -367,7 +368,9 @@ dialog {
 /* Context Menu & Panels */
 .context-menu-bg,
 .windowMainScreen {
-    background-color: color-mix(in srgb, var(--color-bg), transparent 15%); /* Fallback for unsupported browsers */
+    background-color: var(--menu-bg);
+    border-radius: var(--menu-border-radius);
+    opacity: var(--menu-opacity);
 }
 
 @supports ((-webkit-backdrop-filter: blur(0)) or (backdrop-filter: blur(0))) {
@@ -375,7 +378,7 @@ dialog {
     .windowMainScreen {
         -webkit-backdrop-filter: blur(10px);
         backdrop-filter: blur(10px);
-        background-color: color-mix(in srgb, var(--color-bg), transparent 60%);
+        background-color: var(--menu-bg);
     }
 }
 

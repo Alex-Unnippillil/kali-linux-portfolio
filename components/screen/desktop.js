@@ -14,15 +14,18 @@ import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
 import WindowSwitcher from '../screen/window-switcher'
+import LauncherCreator from './launcher-creator'
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import Taskbar from './taskbar';
 import TaskbarMenu from '../context-menus/taskbar-menu';
+import WindowMenu from '../context-menus/window-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { addRecentApp, getRecentApps } from '../../utils/recent';
 
 export class Desktop extends Component {
     constructor() {
@@ -30,9 +33,12 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.windowRefs = {};
         this.state = {
             focused_windows: {},
             closed_windows: {},
+            currentWorkspace: 0,
+            window_workspaces: {},
             allAppsView: false,
             overlapped_windows: {},
             disabled_apps: {},
@@ -41,15 +47,18 @@ export class Desktop extends Component {
             minimized_windows: {},
             window_positions: {},
             desktop_apps: [],
+            recentApps: getRecentApps(),
             context_menus: {
                 desktop: false,
                 default: false,
                 app: false,
                 taskbar: false,
+                window: false,
             },
             context_app: null,
             showNameBar: false,
             showShortcutSelector: false,
+            showLauncherCreator: false,
             showWindowSwitcher: false,
             switcherWindows: [],
         }
@@ -85,15 +94,18 @@ export class Desktop extends Component {
         this.setEventListeners();
         this.checkForNewFolders();
         this.checkForAppShortcuts();
+        this.checkForLaunchers();
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
+        window.addEventListener('open-app', this.handleOpenAppEvent);
     }
 
     componentWillUnmount() {
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
+        window.removeEventListener('open-app', this.handleOpenAppEvent);
     }
 
     checkForNewFolders = () => {
@@ -128,6 +140,13 @@ export class Desktop extends Component {
                 this.openApp("settings");
             });
         }
+        document.addEventListener('open-settings', (e) => {
+            const tab = e.detail && e.detail.tab;
+            if (tab) {
+                window.localStorage.setItem('settings-open-tab', tab);
+            }
+            this.openApp('settings');
+        });
     }
 
     setContextListeners = () => {
@@ -150,17 +169,35 @@ export class Desktop extends Component {
             if (!this.state.showWindowSwitcher) {
                 this.openWindowSwitcher();
             }
-        } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
+        }
+        else if (e.altKey && e.key === 'F4') {
+            e.preventDefault();
+            const id = this.getFocusedWindowId();
+            if (id) this.closeApp(id);
+        }
+        else if (e.ctrlKey && e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+            e.preventDefault();
+            this.switchWorkspace(e.key === 'ArrowRight' ? 1 : -1);
+        }
+        else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
             e.preventDefault();
             this.openApp('clipboard-manager');
-        }
-        else if (e.altKey && e.key === 'Tab') {
-            e.preventDefault();
-            this.cycleApps(e.shiftKey ? -1 : 1);
         }
         else if (e.altKey && (e.key === '`' || e.key === '~')) {
             e.preventDefault();
             this.cycleAppWindows(e.shiftKey ? -1 : 1);
+        }
+        else if (e.altKey && e.code === 'Space') {
+            e.preventDefault();
+            const id = this.getFocusedWindowId();
+            if (id) {
+                const node = document.getElementById(id);
+                if (node) {
+                    const rect = node.getBoundingClientRect();
+                    const fakeEvent = { pageX: rect.left, pageY: rect.top + rect.height };
+                    this.setState({ context_app: id }, () => this.showContextMenu(fakeEvent, 'window'));
+                }
+            }
         }
         else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
             e.preventDefault();
@@ -219,6 +256,21 @@ export class Desktop extends Component {
         }
     }
 
+    switchWorkspace = (direction) => {
+        const WORKSPACE_COUNT = 3;
+        this.setState(prev => {
+            const next = (prev.currentWorkspace + direction + WORKSPACE_COUNT) % WORKSPACE_COUNT;
+            const closed_windows = { ...prev.closed_windows };
+            const focused_windows = { ...prev.focused_windows };
+            Object.keys(prev.window_workspaces).forEach(id => {
+                const same = prev.window_workspaces[id] === next;
+                closed_windows[id] = !same;
+                if (!same) focused_windows[id] = false;
+            });
+            return { currentWorkspace: next, closed_windows, focused_windows };
+        }, this.giveFocusToLastApp);
+    }
+
     closeWindowSwitcher = () => {
         this.setState({ showWindowSwitcher: false, switcherWindows: [] });
     }
@@ -257,6 +309,13 @@ export class Desktop extends Component {
                 });
                 this.setState({ context_app: appId }, () => this.showContextMenu(e, "taskbar"));
                 break;
+            case "window":
+                ReactGA.event({
+                    category: `Context Menu`,
+                    action: `Opened Window Context Menu`
+                });
+                this.setState({ context_app: appId }, () => this.showContextMenu(e, "window"));
+                break;
             default:
                 ReactGA.event({
                     category: `Context Menu`,
@@ -287,6 +346,10 @@ export class Desktop extends Component {
             case "taskbar":
                 ReactGA.event({ category: `Context Menu`, action: `Opened Taskbar Context Menu` });
                 this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "taskbar"));
+                break;
+            case "window":
+                ReactGA.event({ category: `Context Menu`, action: `Opened Window Context Menu` });
+                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "window"));
                 break;
             default:
                 ReactGA.event({ category: `Context Menu`, action: `Opened Default Context Menu` });
@@ -481,7 +544,11 @@ export class Desktop extends Component {
                 }
 
                 windowsJsx.push(
-                    <Window key={app.id} {...props} />
+                    <Window
+                        key={app.id}
+                        ref={ref => { if (ref) this.windowRefs[app.id] = ref; }}
+                        {...props}
+                    />
                 )
             }
         });
@@ -556,8 +623,9 @@ export class Desktop extends Component {
         // if there is atleast one app opened, give it focus
         if (!this.checkAllMinimised()) {
             for (const index in this.app_stack) {
-                if (!this.state.minimized_windows[this.app_stack[index]]) {
-                    this.focus(this.app_stack[index]);
+                const id = this.app_stack[index];
+                if (!this.state.closed_windows[id] && !this.state.minimized_windows[id]) {
+                    this.focus(id);
                     break;
                 }
             }
@@ -574,6 +642,13 @@ export class Desktop extends Component {
         return result;
     }
 
+    handleOpenAppEvent = (e) => {
+        const id = e.detail;
+        if (id) {
+            this.openApp(id);
+        }
+    }
+
     openApp = (objId) => {
 
         // google analytics
@@ -584,6 +659,16 @@ export class Desktop extends Component {
 
         // if the app is disabled
         if (this.state.disabled_apps[objId]) return;
+
+        const appMeta = apps.find(a => a.id === objId);
+        if (appMeta && appMeta.command) {
+            if (/^https?:\/\//.test(appMeta.command)) {
+                window.open(appMeta.command, '_blank');
+            } else if (appMeta.command !== objId) {
+                this.openApp(appMeta.command);
+            }
+            return;
+        }
 
         // if app is already open, focus it instead of spawning a new window
         if (this.state.closed_windows[objId] === false) {
@@ -603,6 +688,7 @@ export class Desktop extends Component {
         } else {
             let closed_windows = this.state.closed_windows;
             let favourite_apps = this.state.favourite_apps;
+            let window_workspaces = this.state.window_workspaces;
             let frequentApps = [];
             try { frequentApps = JSON.parse(safeLocalStorage?.getItem('frequentApps') || '[]'); } catch (e) { frequentApps = []; }
             var currentApp = frequentApps.find(app => app.id === objId);
@@ -628,14 +714,24 @@ export class Desktop extends Component {
 
             safeLocalStorage?.setItem('frequentApps', JSON.stringify(frequentApps));
 
+            let recentApps = [];
+            try { recentApps = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]'); } catch (e) { recentApps = []; }
+            recentApps = recentApps.filter(id => id !== objId);
+            recentApps.unshift(objId);
+            recentApps = recentApps.slice(0, 10);
+            safeLocalStorage?.setItem('recentApps', JSON.stringify(recentApps));
+
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
-                this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
+                window_workspaces[objId] = this.state.currentWorkspace;
+                this.setState({ closed_windows, favourite_apps, window_workspaces, allAppsView: false }, () => {
                     this.focus(objId);
                     this.saveSession();
                 });
                 this.app_stack.push(objId);
+                const recentApps = addRecentApp(objId);
+                this.setState({ recentApps });
             }, 200);
         }
     }
@@ -667,6 +763,7 @@ export class Desktop extends Component {
             icon: appMeta.icon,
             image,
             closedAt: now,
+            path: objId,
         });
         safeLocalStorage?.setItem('window-trash', JSON.stringify(trash));
         this.updateTrashIcon();
@@ -681,11 +778,13 @@ export class Desktop extends Component {
         // close window
         let closed_windows = this.state.closed_windows;
         let favourite_apps = this.state.favourite_apps;
+        let window_workspaces = { ...this.state.window_workspaces };
 
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
+        delete window_workspaces[objId];
 
-        this.setState({ closed_windows, favourite_apps }, this.saveSession);
+        this.setState({ closed_windows, favourite_apps, window_workspaces }, this.saveSession);
     }
 
     pinApp = (id) => {
@@ -739,6 +838,10 @@ export class Desktop extends Component {
         this.setState({ showShortcutSelector: true });
     }
 
+    openLauncherCreator = () => {
+        this.setState({ showLauncherCreator: true });
+    }
+
     addShortcutToDesktop = (app_id) => {
         const appIndex = apps.findIndex(app => app.id === app_id);
         if (appIndex === -1) return;
@@ -771,6 +874,53 @@ export class Desktop extends Component {
         }
     }
 
+    createLauncher = ({ name, comment, icon, command }) => {
+        const id = name.trim().replace(/\s+/g, '-').toLowerCase();
+        const finalIcon = icon || '/themes/Yaru/apps/bash.png';
+        apps.push({
+            id,
+            title: name,
+            icon: finalIcon,
+            comment,
+            command,
+            disabled: false,
+            favourite: false,
+            desktop_shortcut: true,
+            screen: () => { },
+        });
+        let launchers = [];
+        try { launchers = JSON.parse(safeLocalStorage?.getItem('custom_launchers') || '[]'); } catch (e) { launchers = []; }
+        launchers.push({ id, title: name, icon: finalIcon, comment, command });
+        safeLocalStorage?.setItem('custom_launchers', JSON.stringify(launchers));
+        this.setState({ showLauncherCreator: false }, this.updateAppsData);
+    }
+
+    checkForLaunchers = () => {
+        const stored = safeLocalStorage?.getItem('custom_launchers');
+        if (!stored) {
+            safeLocalStorage?.setItem('custom_launchers', JSON.stringify([]));
+            return;
+        }
+        try {
+            JSON.parse(stored).forEach(l => {
+                apps.push({
+                    id: l.id,
+                    title: l.title,
+                    icon: l.icon || '/themes/Yaru/apps/bash.png',
+                    comment: l.comment,
+                    command: l.command,
+                    disabled: false,
+                    favourite: false,
+                    desktop_shortcut: true,
+                    screen: () => { },
+                });
+            });
+            this.updateAppsData();
+        } catch (e) {
+            safeLocalStorage?.setItem('custom_launchers', JSON.stringify([]));
+        }
+    }
+
     updateTrashIcon = () => {
         let trash = [];
         try { trash = JSON.parse(safeLocalStorage?.getItem('window-trash') || '[]'); } catch (e) { trash = []; }
@@ -779,8 +929,17 @@ export class Desktop extends Component {
             const icon = trash.length
                 ? '/themes/Yaru/status/user-trash-full-symbolic.svg'
                 : '/themes/Yaru/status/user-trash-symbolic.svg';
+            const count = trash.length;
+            let shouldUpdate = false;
             if (apps[appIndex].icon !== icon) {
                 apps[appIndex].icon = icon;
+                shouldUpdate = true;
+            }
+            if (apps[appIndex].tasks !== count) {
+                apps[appIndex].tasks = count;
+                shouldUpdate = true;
+            }
+            if (shouldUpdate) {
                 this.forceUpdate();
             }
         }
@@ -823,7 +982,7 @@ export class Desktop extends Component {
             <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
                 <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
                     <span>New folder name</span>
-                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
+                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} aria-label="Folder name" />
                 </div>
                 <div className="flex">
                     <button
@@ -895,6 +1054,7 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
+                    openLauncherCreator={this.openLauncherCreator}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
@@ -924,6 +1084,17 @@ export class Desktop extends Component {
                     }}
                     onCloseMenu={this.hideAllContextMenu}
                 />
+                <WindowMenu
+                    active={this.state.context_menus.window}
+                    onMove={() => { const id = this.state.context_app; if (id) this.windowRefs[id]?.changeCursorToMove(); }}
+                    onResize={() => { const id = this.state.context_app; if (id) this.windowRefs[id]?.startResize(); }}
+                    onTop={() => { const id = this.state.context_app; if (id) this.windowRefs[id]?.toggleAlwaysOnTop(); }}
+                    onShade={() => { const id = this.state.context_app; if (id) this.windowRefs[id]?.toggleShade(); }}
+                    onStick={() => { const id = this.state.context_app; if (id) this.windowRefs[id]?.toggleStick(); }}
+                    onMaximize={() => { const id = this.state.context_app; if (id) this.windowRefs[id]?.maximizeWindow(); }}
+                    onClose={() => { const id = this.state.context_app; if (id) this.closeApp(id); }}
+                    onCloseMenu={this.hideAllContextMenu}
+                />
 
                 {/* Folder Input Name Bar */}
                 {
@@ -936,7 +1107,7 @@ export class Desktop extends Component {
                 { this.state.allAppsView ?
                     <AllApplications apps={apps}
                         games={games}
-                        recentApps={this.app_stack}
+                        recentApps={this.state.recentApps}
                         openApp={this.openApp} /> : null}
 
                 { this.state.showShortcutSelector ?
@@ -944,6 +1115,11 @@ export class Desktop extends Component {
                         games={games}
                         onSelect={this.addShortcutToDesktop}
                         onClose={() => this.setState({ showShortcutSelector: false })} /> : null}
+
+                { this.state.showLauncherCreator ?
+                    <LauncherCreator
+                        onSave={this.createLauncher}
+                        onClose={() => this.setState({ showLauncherCreator: false })} /> : null}
 
                 { this.state.showWindowSwitcher ?
                     <WindowSwitcher

@@ -46,15 +46,9 @@ const PropertiesDialog: React.FC<Props> = ({ item, onClose, onRenamed }) => {
       role="dialog"
       aria-modal="true"
     >
-      <div className="bg-ub-cool-grey p-4 rounded border border-window shadow-window text-white w-64">
+      <div className="bg-ub-cool-grey p-4 rounded shadow-md text-white w-64">
         <div className="flex items-center mb-4">
-          <img
-            src={iconSrc}
-            alt=""
-            className="w-12 h-12 mr-2 object-cover"
-            width={48}
-            height={48}
-          />
+          <img src={iconSrc} alt="" className="w-12 h-12 mr-2 object-cover" />
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}

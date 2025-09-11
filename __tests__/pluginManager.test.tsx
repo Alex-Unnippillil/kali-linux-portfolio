@@ -71,4 +71,31 @@ describe('PluginManager', () => {
     fireEvent.click(exportBtn);
     expect((global as any).URL.createObjectURL).toHaveBeenCalled();
   });
+
+  test('exports and imports plugin config', async () => {
+    render(<PluginManager />);
+    const installBtn = await screen.findByText('Install');
+    fireEvent.click(installBtn);
+    await waitFor(() =>
+      expect(localStorage.getItem('installedPlugins')).toContain('demo')
+    );
+    const exportBtn = screen.getByText('Export Config');
+    fireEvent.click(exportBtn);
+    expect((global as any).URL.createObjectURL).toHaveBeenCalled();
+
+    const input = screen.getByTestId('import-demo');
+    const file = new File(
+      [JSON.stringify({ sandbox: 'iframe', extra: 'x' })],
+      'cfg.json',
+      { type: 'application/json' }
+    );
+    Object.defineProperty(input, 'files', {
+      value: [file],
+    });
+    fireEvent.change(input);
+    await waitFor(() =>
+      expect(localStorage.getItem('installedPlugins')).toContain('iframe')
+    );
+    expect(await screen.findByText(/Import successful/)).toBeInTheDocument();
+  });
 });

@@ -8,6 +8,8 @@ import {
   defaults,
   exportSettings as exportSettingsData,
   importSettings as importSettingsData,
+  exportPanel as exportPanelData,
+  importPanel as importPanelData,
 } from "../../utils/settingsStore";
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
@@ -33,6 +35,7 @@ export default function Settings() {
     setTheme,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const panelFileRef = useRef<HTMLInputElement>(null);
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
@@ -83,6 +86,23 @@ export default function Settings() {
     } catch (err) {
       console.error("Invalid settings", err);
     }
+  };
+
+  const handlePanelExport = async () => {
+    const data = await exportPanelData();
+    const blob = new Blob([data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "panel.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePanelImport = async (file: File) => {
+    const text = await file.text();
+    await importPanelData(text);
+    window.location.reload();
   };
 
   const handleReset = async () => {
@@ -271,7 +291,7 @@ export default function Settings() {
         </>
       )}
       {activeTab === "privacy" && (
-        <>
+        <> 
           <div className="flex justify-center my-4 space-x-4">
             <button
               onClick={handleExport}
@@ -286,6 +306,20 @@ export default function Settings() {
               Import Settings
             </button>
           </div>
+          <div className="flex justify-center my-4 space-x-4">
+            <button
+              onClick={handlePanelExport}
+              className="px-4 py-2 rounded bg-ub-orange text-white"
+            >
+              Backup Dock
+            </button>
+            <button
+              onClick={() => panelFileRef.current?.click()}
+              className="px-4 py-2 rounded bg-ub-orange text-white"
+            >
+              Restore Dock
+            </button>
+          </div>
         </>
       )}
         <input
@@ -296,6 +330,18 @@ export default function Settings() {
           onChange={(e) => {
             const file = e.target.files && e.target.files[0];
             if (file) handleImport(file);
+            e.target.value = "";
+          }}
+          className="hidden"
+        />
+        <input
+          type="file"
+          accept="application/json"
+          ref={panelFileRef}
+          aria-label="Import panel file"
+          onChange={(e) => {
+            const file = e.target.files && e.target.files[0];
+            if (file) handlePanelImport(file);
             e.target.value = "";
           }}
           className="hidden"

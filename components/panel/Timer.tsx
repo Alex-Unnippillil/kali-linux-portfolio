@@ -57,7 +57,7 @@ export default function Timer() {
     setRemaining(totalSeconds);
     setRunning(true);
     workerRef.current = new Worker(
-      new URL("../../workers/timer.worker.js", import.meta.url)
+      new URL("../../workers/timer.worker.ts", import.meta.url)
     );
     workerRef.current.onmessage = () => {
       const left = Math.max(
@@ -160,18 +160,18 @@ export default function Timer() {
         <button
           onClick={start}
           disabled={running}
-          className="px-2 py-1 bg-success rounded disabled:opacity-50"
+          className="px-2 py-1 bg-green-600 rounded disabled:opacity-50"
         >
           Start
         </button>
         <button
           onClick={stop}
           disabled={!running}
-          className="px-2 py-1 bg-warning rounded disabled:opacity-50"
+          className="px-2 py-1 bg-yellow-600 rounded disabled:opacity-50"
         >
           Stop
         </button>
-        <button onClick={reset} className="px-2 py-1 bg-danger rounded">
+        <button onClick={reset} className="px-2 py-1 bg-red-600 rounded">
           Reset
         </button>
       </div>
@@ -185,13 +185,13 @@ export default function Timer() {
                 reset();
                 start();
               }}
-              className="px-2 py-1 bg-success rounded"
+              className="px-2 py-1 bg-green-600 rounded"
             >
               Reset
             </button>
             <button
               onClick={() => setShowNotice(false)}
-              className="px-2 py-1 bg-danger rounded"
+              className="px-2 py-1 bg-red-600 rounded"
             >
               Dismiss
             </button>
