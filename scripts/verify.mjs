@@ -44,7 +44,15 @@ const getPort = () =>
     process.on('exit', () => server.kill());
     await waitOn({ resources: [`http://localhost:${port}`], timeout: 60000 });
 
-    const routes = ['/', '/dummy-form', '/video-gallery', '/profile'];
+    const routes = [
+      '/',
+      '/dummy-form',
+      '/video-gallery',
+      '/profile',
+      '/popular-modules',
+      '/network-topology',
+      '/notes',
+    ];
     for (const route of routes) {
       const res = await fetch(`http://localhost:${port}${route}`);
       const header = res.headers.get('x-powered-by');
