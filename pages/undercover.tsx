@@ -13,7 +13,7 @@ export default function UndercoverDisclaimer() {
         in during public use while avoiding trademarked assets.
       </p>
       <p>
-        <Link href="/">Return to desktop</Link>
+        <Link href="/desktop">Return to desktop</Link>
       </p>
     </main>
   );
