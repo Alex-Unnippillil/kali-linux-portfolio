@@ -51,34 +51,11 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({
   const [appSettings, setAppSettings] = usePersistentState<
     Record<string, { enabled: boolean; urgency: string }>
   >('notification-app-settings', {});
-  const [quietStart, setQuietStart] = usePersistentState<string>(
-    'notification-quiet-start',
-    '22:00',
-  );
-  const [quietEnd, setQuietEnd] = usePersistentState<string>(
-    'notification-quiet-end',
-    '07:00',
-  );
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   const toggleCollapse = useCallback((id: string) => {
     setCollapsed(prev => ({ ...prev, [id]: !prev[id] }));
   }, []);
-
-  const isQuietHours = useCallback(() => {
-    if (!quietStart || !quietEnd) return false;
-    const now = new Date();
-    const [sH, sM] = quietStart.split(':').map(Number);
-    const [eH, eM] = quietEnd.split(':').map(Number);
-    const start = new Date();
-    start.setHours(sH, sM, 0, 0);
-    const end = new Date();
-    end.setHours(eH, eM, 0, 0);
-    if (start <= end) {
-      return now >= start && now <= end;
-    }
-    return now >= start || now <= end;
-  }, [quietStart, quietEnd]);
 
   const pushNotification = useCallback(
     (appId: string, message: string) => {
@@ -93,7 +70,7 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({
         enabled: true,
         urgency: 'normal',
       };
-      if (doNotDisturb || isQuietHours() || !settings.enabled) return;
+      if (doNotDisturb || !settings.enabled) return;
       setNotifications(prev => {
         const list = prev[appId] ?? [];
         const next = {
@@ -126,7 +103,7 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({
         });
       }, 5000);
     },
-    [doNotDisturb, appSettings, isQuietHours, setAppSettings]
+    [doNotDisturb, appSettings, setAppSettings]
   );
 
   const clearNotifications = useCallback((appId?: string) => {
@@ -320,21 +297,6 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({
           >
             {doNotDisturb ? '🔕' : '🔔'}
           </button>
-          <div className="quiet-hours">
-            <span>Quiet Hours</span>
-            <input
-              type="time"
-              aria-label="Quiet hours start"
-              value={quietStart}
-              onChange={e => setQuietStart(e.target.value)}
-            />
-            <input
-              type="time"
-              aria-label="Quiet hours end"
-              value={quietEnd}
-              onChange={e => setQuietEnd(e.target.value)}
-            />
-          </div>
           <select
             value={position}
             onChange={e => setPosition(e.target.value as Position)}
