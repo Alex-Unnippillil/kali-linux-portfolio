@@ -1,6 +1,8 @@
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/router';
 import Meta from '../components/SEO/Meta';
 import BetaBadge from '../components/BetaBadge';
+import KaliEverywhere from '../components/landing/KaliEverywhere';
 
 const Ubuntu = dynamic(
   () =>
@@ -28,16 +30,22 @@ const InstallButton = dynamic(
 /**
  * @returns {JSX.Element}
  */
-const App = () => (
-  <>
-    <a href="#window-area" className="sr-only focus:not-sr-only">
-      Skip to content
-    </a>
-    <Meta />
-    <Ubuntu />
-    <BetaBadge />
-    <InstallButton />
-  </>
-);
+const App = () => {
+  const { query } = useRouter();
+  const theme = Array.isArray(query.theme) ? query.theme[0] : query.theme;
+
+  return (
+    <>
+      <a href="#window-area" className="sr-only focus:not-sr-only">
+        Skip to content
+      </a>
+      <Meta />
+      {theme === 'kali' && <KaliEverywhere />}
+      <Ubuntu />
+      <BetaBadge />
+      <InstallButton />
+    </>
+  );
+};
 
 export default App;
