@@ -26,7 +26,7 @@ const TerminalTabs: React.FC<TerminalProps> = ({ openApp }) => {
       title: `Session ${countRef.current++}`,
       content: (
         <Terminal
-          openApp={openApp}
+          openApp={openApp!}
           scheme={scheme}
           opacity={opacity}
           onSettingsChange={handleSettingsChange}

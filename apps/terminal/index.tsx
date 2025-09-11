@@ -13,6 +13,7 @@ import usePersistentState from '../../hooks/usePersistentState';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
 import { exoOpen } from '../../src/lib/exo-open';
+import type { ITheme } from '@xterm/xterm';
 import { TERMINAL_THEMES } from './themes';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -232,11 +233,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
 
   useEffect(() => {
     if (!termRef.current || !containerRef.current) return;
-    const preset = TERMINAL_THEMES[scheme as keyof typeof TERMINAL_THEMES];
-    const bg = hexToRgba(preset.background, opacity);
+    const preset = (
+      TERMINAL_THEMES[scheme as keyof typeof TERMINAL_THEMES] ??
+      TERMINAL_THEMES['Kali-Dark']
+    ) as ITheme;
+    const bg = hexToRgba(preset.background!, opacity);
     termRef.current.options.theme = { ...preset, background: bg };
     containerRef.current.style.backgroundColor = bg;
-    containerRef.current.style.color = preset.foreground;
+    containerRef.current.style.color = preset.foreground!;
   }, [scheme, opacity]);
 
   useEffect(() => {
@@ -284,12 +288,12 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
 
     const runCommand = useCallback(
       async (cmd: string) => {
-        const [name, ...rest] = cmd.trim().split(/\s+/);
+        const [name = '', ...rest] = cmd.trim().split(/\s+/);
         const expanded =
           aliasesRef.current[name]
             ? `${aliasesRef.current[name]} ${rest.join(' ')}`.trim()
             : cmd;
-        const [cmdName, ...cmdRest] = expanded.split(/\s+/);
+        const [cmdName = '', ...cmdRest] = expanded.split(/\s+/);
         const handler = registryRef.current[cmdName];
         historyRef.current.push(cmd);
         if (handler) await handler(cmdRest.join(' '), contextRef.current);
@@ -302,10 +306,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
       const current = commandRef.current;
       const registry = registryRef.current;
       const matches = Object.keys(registry).filter((c) => c.startsWith(current));
-      if (matches.length === 1) {
-        const completion = matches[0].slice(current.length);
+      const match = matches[0];
+      if (matches.length === 1 && match) {
+        const completion = match.slice(current.length);
         termRef.current?.write(completion);
-        commandRef.current = matches[0];
+        commandRef.current = match;
         renderHint();
       } else if (matches.length > 1) {
         writeLine(matches.join('  '));
@@ -406,11 +411,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
       const textarea = term.textarea;
       textarea?.addEventListener('paste', handlePasteEvent);
       container?.addEventListener('contextmenu', handleLinkContext);
-      const preset = TERMINAL_THEMES[scheme as keyof typeof TERMINAL_THEMES];
-      const bg = hexToRgba(preset.background, opacity);
+      const preset = (
+        TERMINAL_THEMES[scheme as keyof typeof TERMINAL_THEMES] ??
+        TERMINAL_THEMES['Kali-Dark']
+      ) as ITheme;
+      const bg = hexToRgba(preset.background!, opacity);
       term.options.theme = { ...preset, background: bg };
-      container.style.backgroundColor = bg;
-      container.style.color = preset.foreground;
+      container!.style.backgroundColor = bg;
+      container!.style.color = preset.foreground!;
       if (opfsSupported) {
         dirRef.current = await getDir('terminal');
         const existing = await readFile('history.txt', dirRef.current || undefined);
