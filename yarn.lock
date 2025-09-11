@@ -7443,6 +7443,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"eslint-plugin-no-dupe-app-imports@workspace:eslint-plugin-no-dupe-app-imports":
+  version: 0.0.0-use.local
+  resolution: "eslint-plugin-no-dupe-app-imports@workspace:eslint-plugin-no-dupe-app-imports"
+  languageName: unknown
+  linkType: soft
+
+"eslint-plugin-no-duplicate-filenames@workspace:eslint-plugin-no-duplicate-filenames":
+  version: 0.0.0-use.local
+  resolution: "eslint-plugin-no-duplicate-filenames@workspace:eslint-plugin-no-duplicate-filenames"
+  languageName: unknown
+  linkType: soft
+
+"eslint-plugin-no-top-level-window@workspace:eslint-plugin-no-top-level-window":
+  version: 0.0.0-use.local
+  resolution: "eslint-plugin-no-top-level-window@workspace:eslint-plugin-no-top-level-window"
+  languageName: unknown
+  linkType: soft
+
 "eslint-plugin-react-hooks@npm:^5.0.0":
   version: 5.2.0
   resolution: "eslint-plugin-react-hooks@npm:5.2.0"
