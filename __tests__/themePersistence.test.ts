@@ -23,7 +23,9 @@ describe('theme persistence and unlocking', () => {
 
   test('themes unlock at score milestones', () => {
     const unlocked = getUnlockedThemes(600);
-    expect(unlocked).toEqual(expect.arrayContaining(['default', 'neon', 'dark']));
+    expect(unlocked).toEqual(
+      expect.arrayContaining(['default', 'work', 'neon', 'dark'])
+    );
     expect(unlocked).not.toContain('matrix');
   });
 
@@ -32,6 +34,8 @@ describe('theme persistence and unlocking', () => {
     expect(document.documentElement.classList.contains('dark')).toBe(true);
     setTheme('matrix');
     expect(document.documentElement.classList.contains('dark')).toBe(true);
+    setTheme('work');
+    expect(document.documentElement.classList.contains('dark')).toBe(false);
   });
 
   test('updates CSS variables without reload', () => {

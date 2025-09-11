@@ -61,6 +61,25 @@
   --focus-outline-width: 2px;
 }
 
+/* Work mode theme */
+html[data-theme='work'] {
+  --color-bg: #f5f5f5;
+  --color-text: #1a1a1a;
+  --color-primary: #4b5563;
+  --color-secondary: #e5e7eb;
+  --color-accent: #2563eb;
+  --color-muted: #d1d5db;
+  --color-surface: #ffffff;
+  --color-inverse: #ffffff;
+  --color-border: #d1d5db;
+  --color-terminal: #1a1a1a;
+  --color-dark: #e5e7eb;
+  --color-focus-ring: var(--color-accent);
+  --color-selection: var(--color-accent);
+  --color-control-accent: var(--color-accent);
+  accent-color: var(--color-control-accent);
+}
+
 /* High contrast theme */
 .high-contrast {
   --color-bg: #000000;
