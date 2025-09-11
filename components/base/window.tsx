@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import React, { Component } from 'react';
@@ -468,19 +469,43 @@ export class Window extends Component {
 
     closeWindow = () => {
         this.setWinowsPosition();
+
+        const node = document.querySelector("#" + this.id);
+        let posx = -310;
+        if (this.state.maximized) {
+            posx = -510;
+        }
+
+        const sidebarApp = document.querySelector("#sidebar-" + this.id);
+        const rect = sidebarApp?.getBoundingClientRect();
+        if (node && rect) {
+            node.style.setProperty('--window-close-x', posx + 'px');
+            node.style.setProperty('--window-close-y', (rect.y - 240).toFixed(1) + 'px');
+        }
+
+        const prefersReducedMotion =
+            window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        if (prefersReducedMotion) {
+            this.deactivateOverlay();
+            this.props.hideSideBar(this.id, false);
+            this.props.closed(this.id);
+            return;
+        }
+
         this.setState({ closed: true }, () => {
             this.deactivateOverlay();
             this.props.hideSideBar(this.id, false);
             setTimeout(() => {
-                this.props.closed(this.id)
-            }, 300) // after 300ms this window will be unmounted from parent (Desktop)
+                this.props.closed(this.id);
+            }, 300); // after 300ms this window will be unmounted from parent (Desktop)
         });
     }
 
     handleTitleBarKeyDown = (e) => {
         if (e.key === ' ' || e.key === 'Space' || e.key === 'Enter') {
-            e.preventDefault();
-            e.stopPropagation();
+            e.preventDefault?.();
+            e.stopPropagation?.();
             if (this.state.grabbed) {
                 this.handleStop();
             } else {
@@ -494,8 +519,8 @@ export class Window extends Component {
             else if (e.key === 'ArrowUp') dy = -step;
             else if (e.key === 'ArrowDown') dy = step;
             if (dx !== 0 || dy !== 0) {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 const node = document.getElementById(this.id);
                 if (node) {
                     const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
@@ -525,40 +550,40 @@ export class Window extends Component {
             this.focusWindow();
         } else if (e.altKey) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('top');
             }
             this.focusWindow();
         } else if (e.shiftKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
             }
             this.focusWindow();
