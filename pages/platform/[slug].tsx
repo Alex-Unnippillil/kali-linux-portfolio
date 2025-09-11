@@ -42,9 +42,14 @@ export const getStaticProps: GetStaticProps<PlatformPageProps> = async ({ params
   if (!platform) {
     return { notFound: true };
   }
+  // Ensure the meta values are serializable
+  const serializableMeta = platform.meta.map((m) => ({
+    label: m.label,
+    value: typeof m.value === 'string' ? m.value : '',
+  }));
   return {
     props: {
-      platform,
+      platform: { ...platform, meta: serializableMeta },
     },
   };
 };

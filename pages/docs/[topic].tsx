@@ -175,19 +175,22 @@ export const getStaticProps: GetStaticProps<DocProps> = async ({ params }) => {
   ) as any;
   const title = titleToken ? titleToken.text : topic;
 
-  const tocSlugger = new marked.Slugger();
+  const slug = (text: any) =>
+    String(text)
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-');
   const toc: TocItem[] = tokens
     .filter((t) => t.type === 'heading' && (t as any).depth && ((t as any).depth === 2 || (t as any).depth === 3))
     .map((t) => ({
-      id: tocSlugger.slug((t as any).text),
+      id: slug((t as any).text),
       text: (t as any).text,
       depth: (t as any).depth,
     }));
 
   const renderer = new marked.Renderer();
-  const renderSlugger = new marked.Slugger();
   renderer.heading = (text, level) => {
-    const id = renderSlugger.slug(text);
+    const id = slug(text);
     return `<h${level} id="${id}">${text}</h${level}>`;
   };
 

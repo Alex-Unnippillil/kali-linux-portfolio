@@ -49,22 +49,26 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
     }))
   );
 
-  const rssRes = await fetch("https://www.kali.org/rss.xml");
-  const rssText = await rssRes.text();
-  const parser = new XMLParser();
-  const rss = parser.parse(rssText);
-  const items = rss?.rss?.channel?.item ?? [];
-  const arr = Array.isArray(items) ? items : [items];
-  const posts: Post[] = arr
-    .filter((i) => i && i.title)
-    .map((i: any) => ({
-      title: i.title,
-      link: i.link,
-      date: i.pubDate,
-    }));
+    try {
+      const rssRes = await fetch("https://www.kali.org/rss.xml");
+      const rssText = await rssRes.text();
+      const parser = new XMLParser();
+      const rss = parser.parse(rssText);
+      const items = rss?.rss?.channel?.item ?? [];
+      const arr = Array.isArray(items) ? items : [items];
+      const posts: Post[] = arr
+        .filter((i) => i && i.title)
+        .map((i: any) => ({
+          title: i.title,
+          link: i.link,
+          date: i.pubDate,
+        }));
 
-  return { props: { desktops, posts }, revalidate: 7200 };
-};
+      return { props: { desktops, posts }, revalidate: 7200 };
+    } catch {
+      return { props: { desktops, posts: [] }, revalidate: 7200 };
+    }
+  };
 
 export default function Home({ desktops }: HomeProps) {
   const [open, setOpen] = useState(false);

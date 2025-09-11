@@ -767,15 +767,6 @@ const apps = [
     screen: displaySpotify,
   },
   {
-    id: 'youtube',
-    title: 'YouTube',
-    icon: '/themes/Yaru/apps/youtube.svg',
-    disabled: false,
-    favourite: true,
-    desktop_shortcut: false,
-    screen: displayYouTube,
-  },
-  {
     id: 'beef',
     title: 'BeEF',
     icon: '/themes/Yaru/apps/beef.svg',
