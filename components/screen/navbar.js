@@ -4,7 +4,7 @@ import PanelClock from '../util-components/PanelClock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
 import WhiskerMenu from '../menu/WhiskerMenu';
-import HelpMenu from '../menu/HelpMenu';
+
 
 export default class Navbar extends Component {
   constructor() {
@@ -27,7 +27,7 @@ export default class Navbar extends Component {
           />
         </div>
         <WhiskerMenu />
-        <HelpMenu />
+
         <div className="pl-2 pr-2 text-xs md:text-sm outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1">
           <PanelClock />
         </div>

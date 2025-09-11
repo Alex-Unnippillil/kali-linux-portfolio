@@ -735,13 +735,6 @@ textarea:focus-visible {
 }
 
 
-.tour-highlight {
-    position: relative;
-    z-index: 60 !important;
-    box-shadow: 0 0 0 4px rgba(251,191,36,0.9);
-    border-radius: 4px;
-}
-
 /* Density utility classes */
 .ui-cozy {
     --space-1: 0.25rem;
