@@ -23,7 +23,7 @@ const Splash = ({ color }) => {
   return (
     <span
       className={`absolute inset-0 rounded-full pointer-events-none ${color}`}
-      style={{ animation: 'ping 0.6s cubic-bezier(0,0,0.2,1) forwards', opacity: 0.5 }}
+      style={{ animation: 'ping calc(var(--motion-enabled) * 0.6s) cubic-bezier(0,0,0.2,1) forwards', opacity: 0.5 }}
       aria-hidden="true"
     />
   );

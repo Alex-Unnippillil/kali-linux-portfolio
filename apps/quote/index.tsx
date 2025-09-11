@@ -481,7 +481,7 @@ export default function QuoteApp() {
       </div>
       <style jsx>{`
         .animate-quote {
-          animation: fadeIn 150ms ease-in-out;
+          animation: fadeIn calc(var(--motion-enabled) * 150ms) ease-in-out;
         }
         @keyframes fadeIn {
           from {

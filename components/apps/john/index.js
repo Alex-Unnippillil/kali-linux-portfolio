@@ -449,7 +449,7 @@ const JohnApp = () => {
                       : 'repeating-linear-gradient(45deg,#1e3a8a,#1e3a8a 10px,#065f46 10px,#065f46 20px)',
                   backgroundSize: '20px 20px',
                   backgroundPosition: `${phase === 'wordlist' ? animOffset : -animOffset}px 0`,
-                  transition: prefersReducedMotion ? 'none' : 'width 0.2s ease-out',
+                  transition: 'width calc(var(--motion-enabled) * 0.2s) ease-out',
                 }}
                 role="progressbar"
                 aria-valuenow={Math.round(progress)}

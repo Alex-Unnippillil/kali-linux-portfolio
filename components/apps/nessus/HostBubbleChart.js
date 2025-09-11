@@ -92,7 +92,7 @@ const HostBubbleChart = ({ hosts = sampleHosts }) => {
                 fill={severityColors[host.severity]}
                 aria-label={`${host.host} severity ${host.severity} CVSS ${host.cvss}`}
                 style={{
-                  transition: prefersReducedMotion ? 'none' : 'all 0.3s ease',
+                  transition: 'all calc(var(--motion-enabled) * 0.3s) ease',
                 }}
               />
               <text

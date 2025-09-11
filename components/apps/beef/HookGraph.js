@@ -35,7 +35,7 @@ export default function HookGraph({ hooks, steps }) {
       })}
       <style jsx>{`
         .fade-in {
-          animation: fadeIn 0.5s ease-in-out;
+          animation: fadeIn calc(var(--motion-enabled) * 0.5s) ease-in-out;
         }
         @keyframes fadeIn {
           from { opacity: 0; transform: scale(0.95); }

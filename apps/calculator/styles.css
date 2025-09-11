@@ -72,7 +72,7 @@ body {
   font-size: 1rem;
   cursor: pointer;
   min-height: 48px;
-  transition: transform 150ms;
+  transition: transform calc(var(--motion-enabled) * 150ms);
 }
 
 .btn:hover {

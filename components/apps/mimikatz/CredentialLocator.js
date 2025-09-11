@@ -61,7 +61,7 @@ const CredentialArtifactLocator = () => {
           className="bg-blue-500 h-4"
           style={{
             width: `${progress}%`,
-            transition: prefersReducedMotion ? 'none' : 'width 0.2s',
+            transition: 'width calc(var(--motion-enabled) * 0.2s)',
           }}
           role="progressbar"
           aria-label="scan progress"
