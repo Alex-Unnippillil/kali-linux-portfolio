@@ -8,7 +8,7 @@ interface RangeUpgradeTreeProps {
 }
 
 const RangeUpgradeTree = ({ tower }: RangeUpgradeTreeProps) => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;

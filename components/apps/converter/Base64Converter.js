@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 import React, { useState } from 'react';
 import { formatBytes, formatDuration } from './format';
 
@@ -7,7 +6,7 @@ const Base64Converter = () => {
   const [base64, setBase64] = useState('');
 
   const encode = (value) => {
-    if (!isBrowser()) return '';
+    if (typeof window === 'undefined') return '';
     try {
       return window.btoa(value);
     } catch {
@@ -16,7 +15,7 @@ const Base64Converter = () => {
   };
 
   const decode = (value) => {
-    if (!isBrowser()) return '';
+    if (typeof window === 'undefined') return '';
     try {
       return window.atob(value);
     } catch {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import FormError from '@/components/ui/FormError';
+import FormError from '../ui/FormError';
 
 interface SerialPort {
   readonly readable: ReadableStream<Uint8Array> | null;

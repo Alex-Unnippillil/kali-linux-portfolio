@@ -1,6 +1,5 @@
 'use client';
 
-import { isBrowser } from '@/utils/env';
 import React, { useEffect, useState } from 'react';
 
 export interface Vector2 {
@@ -54,7 +53,7 @@ const DriftMeter: React.FC<DriftMeterProps> = ({ velocity, direction }) => {
 
   // load best drift score from storage
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === 'undefined') return;
     try {
       const stored = window.localStorage.getItem(STORAGE_KEY);
       if (stored) setBest(parseFloat(stored));
@@ -65,7 +64,7 @@ const DriftMeter: React.FC<DriftMeterProps> = ({ velocity, direction }) => {
 
   // update best score whenever the current score exceeds it
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === 'undefined') return;
     if (score > best) {
       setBest(score);
       try {

@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import type { Clue, Grid } from "../../../apps/games/nonogram/logic";
 import { lineToClues } from "../../../apps/games/nonogram/logic";
 import Board from "./Board";
-import { isBrowser } from '@/utils/env';
 
 export interface ParsedPuzzle {
   grid: Grid;
@@ -32,7 +31,7 @@ export async function parseMonochromePng(
   const buffer = input instanceof ArrayBuffer ? input : await input.arrayBuffer();
 
   // Browser implementation using Canvas APIs
-  if (isBrowser()) {
+  if (typeof window !== "undefined" && typeof document !== "undefined") {
     const blob = new Blob([buffer], { type: "image/png" });
     const bitmap = await createImageBitmap(blob);
     const canvas = document.createElement("canvas");

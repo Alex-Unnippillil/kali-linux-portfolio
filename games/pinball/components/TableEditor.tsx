@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import useCanvasResize from '../../../hooks/useCanvasResize';
+import { useState, useEffect, useRef } from 'react';
 
 interface Wall {
   type: 'wall';
@@ -31,7 +30,7 @@ function decode(code: string): TableObject[] {
 }
 
 export default function TableEditor() {
-  const canvasRef = useCanvasResize(400, 600);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [objects, setObjects] = useState<TableObject[]>([]);
   const [tool, setTool] = useState<'wall' | 'bumper'>('wall');
   const [code, setCode] = useState('');
@@ -79,28 +78,26 @@ export default function TableEditor() {
   return (
     <div className="flex flex-col space-y-2">
       <div className="flex space-x-2 text-xs">
-          <label className="flex items-center space-x-1">
-            <input
-              type="radio"
-              name="tool"
-              value="wall"
-              aria-label="Wall tool"
-              checked={tool === 'wall'}
-              onChange={() => setTool('wall')}
-            />
-            <span>Wall</span>
-          </label>
-          <label className="flex items-center space-x-1">
-            <input
-              type="radio"
-              name="tool"
-              value="bumper"
-              aria-label="Bumper tool"
-              checked={tool === 'bumper'}
-              onChange={() => setTool('bumper')}
-            />
-            <span>Bumper</span>
-          </label>
+        <label className="flex items-center space-x-1">
+          <input
+            type="radio"
+            name="tool"
+            value="wall"
+            checked={tool === 'wall'}
+            onChange={() => setTool('wall')}
+          />
+          <span>Wall</span>
+        </label>
+        <label className="flex items-center space-x-1">
+          <input
+            type="radio"
+            name="tool"
+            value="bumper"
+            checked={tool === 'bumper'}
+            onChange={() => setTool('bumper')}
+          />
+          <span>Bumper</span>
+        </label>
         <button
           className="border px-2"
           type="button"
@@ -109,23 +106,23 @@ export default function TableEditor() {
           Clear
         </button>
       </div>
-          <canvas
-            ref={canvasRef}
-            className="border"
-            aria-label="Pinball table canvas"
-            onClick={handleClick}
-          />
+      <canvas
+        ref={canvasRef}
+        width={400}
+        height={600}
+        className="border"
+        onClick={handleClick}
+      />
       <div className="flex flex-col text-xs space-y-1">
         <button className="border px-2" type="button" onClick={handleExport}>
           Export Code
         </button>
-          <textarea
-            className="border p-1"
-            rows={3}
-            aria-label="Table code"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-          />
+        <textarea
+          className="border p-1"
+          rows={3}
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+        />
         <button className="border px-2" type="button" onClick={handleImport}>
           Import Code
         </button>

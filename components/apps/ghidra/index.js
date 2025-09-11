@@ -1,24 +1,15 @@
-"use client";
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import PseudoDisasmViewer from './PseudoDisasmViewer';
 import FunctionTree from './FunctionTree';
 import CallGraph from './CallGraph';
 import ImportAnnotate from './ImportAnnotate';
-
-let Capstone;
-let Const;
-let loadCapstone;
+import { Capstone, Const, loadCapstone } from 'capstone-wasm';
 
 // Applies S1–S8 guidelines for responsive and accessible binary analysis UI
-const DEFAULT_WRAPPER = '/wasm/ghidra.js';
+const DEFAULT_WASM = '/wasm/ghidra.wasm';
 
 async function loadCapstoneModule() {
   if (typeof window === 'undefined') return null;
-  if (!Capstone || !Const || !loadCapstone) {
-    const mod = await import('capstone-wasm');
-    ({ Capstone, Const, loadCapstone } = mod);
-  }
   await loadCapstone();
   return { Capstone, Const };
 }
@@ -101,7 +92,6 @@ export default function GhidraApp() {
   const [arch, setArch] = useState('x86');
   // S1: Detect GHIDRA web support and fall back to Capstone
   const ensureCapstone = useCallback(async () => {
-    if (typeof window === 'undefined') return null;
     if (capstoneRef.current) return capstoneRef.current;
     const mod = await loadCapstoneModule();
     capstoneRef.current = mod;
@@ -109,14 +99,13 @@ export default function GhidraApp() {
   }, []);
 
   useEffect(() => {
-    const wrapperUrl =
-      process.env.NEXT_PUBLIC_GHIDRA_WASM || DEFAULT_WRAPPER;
+    const wasmUrl = process.env.NEXT_PUBLIC_GHIDRA_WASM || DEFAULT_WASM;
     if (typeof WebAssembly === 'undefined') {
       setEngine('capstone');
       ensureCapstone();
       return;
     }
-    import(/* webpackIgnore: true */ wrapperUrl).catch(() => {
+    WebAssembly.instantiateStreaming(fetch(wasmUrl), {}).catch(() => {
       setEngine('capstone');
       ensureCapstone();
     });

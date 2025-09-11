@@ -1,6 +1,5 @@
 'use client';
 
-import { isBrowser } from '@/utils/env';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { pointerHandlers } from '../../utils/pointer';
 import usePersistentState from '../../hooks/usePersistentState';
@@ -20,10 +19,7 @@ const getAllMovesNoForce = (board: Board, color: 'red' | 'black'): Move[] => {
   let result: Move[] = [];
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
-      // With `noUncheckedIndexedAccess`, array indexing is considered unsafe
-      // and may return `undefined`. Optional chaining ensures we only access
-      // piece properties when both the row and cell exist.
-      if (board[r]?.[c]?.color === color) {
+      if (board[r][c]?.color === color) {
         const moves = getPieceMoves(board, r, c, false);
         if (moves.length) result = result.concat(moves);
       }
@@ -109,7 +105,7 @@ export default function CheckersPage() {
   );
 
   useEffect(() => {
-    if (isBrowser() && typeof Worker === 'function') {
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
       workerRef.current = new Worker('/checkers-worker.js');
       workerRef.current.onmessage = (e: MessageEvent<Move>) => {
         const move = e.data;
@@ -132,8 +128,7 @@ export default function CheckersPage() {
   }, [board]);
 
   const selectPiece = (r: number, c: number) => {
-    // Guard against out-of-bounds access when using strict array indexing.
-    const piece = board[r]?.[c];
+    const piece = board[r][c];
     if (winner || !piece || piece.color !== turn) return;
     const filtered = getSelectableMoves(board, r, c, rule === 'forced');
     if (filtered.length) {
@@ -169,10 +164,7 @@ export default function CheckersPage() {
     const count = positionCounts.current.get(currentKey) || 0;
     if (count <= 1) positionCounts.current.delete(currentKey);
     else positionCounts.current.set(currentKey, count - 1);
-    // `history` is checked for length above, but `noUncheckedIndexedAccess`
-    // still treats the indexed element as possibly undefined. Assert
-    // existence with `!` to satisfy the compiler.
-    const prev = history[history.length - 1]!;
+    const prev = history[history.length - 1];
     setBoard(prev.board);
     setTurn(prev.turn);
     setNoCapture(prev.noCapture);

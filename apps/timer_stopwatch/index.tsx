@@ -1,5 +1,4 @@
 'use client';
-import { isBrowser } from '@/utils/env';
 import { useEffect, useState, useRef, RefObject } from 'react';
 import useIntersection from '../../hooks/useIntersection';
 
@@ -8,7 +7,7 @@ export default function TimerStopwatch() {
   const containerRef = useRef<HTMLDivElement>(null);
   const isVisible = useIntersection(containerRef as RefObject<Element>);
   useEffect(() => {
-    if (isVisible && isBrowser()) {
+    if (isVisible && typeof window !== 'undefined') {
       import('./main');
     }
   }, [isVisible]);
@@ -43,10 +42,10 @@ export default function TimerStopwatch() {
         style={{ contentVisibility: 'auto' }}
       >
         <div>
-          <input type="number" id="minutes" min="0" defaultValue="25" aria-label="minutes" /> :
-          <input type="number" id="seconds" min="0" max="59" defaultValue="0" aria-label="seconds" />
+          <input type="number" id="minutes" min="0" defaultValue="0" /> :
+          <input type="number" id="seconds" min="0" max="59" defaultValue="30" />
         </div>
-        <div className="display" id="timerDisplay">25:00</div>
+        <div className="display" id="timerDisplay">00:30</div>
         <div>
           <button id="startTimer">Start</button>
           <button id="stopTimer">Stop</button>
@@ -63,17 +62,11 @@ export default function TimerStopwatch() {
         <div className="display" id="stopwatchDisplay">00:00</div>
         <div>
           <button id="startWatch">Start</button>
-          <button id="pauseWatch">Pause</button>
+          <button id="stopWatch">Stop</button>
           <button id="resetWatch">Reset</button>
           <button id="lapWatch">Lap</button>
         </div>
         <ul id="laps" />
-      </div>
-      <div id="breakOverlay" className="break-overlay hidden">
-        <p>
-          Break time! Resume in <span id="breakCountdown">05:00</span>
-        </p>
-        <button id="postponeBreak">Postpone 5m</button>
       </div>
     </div>
   );

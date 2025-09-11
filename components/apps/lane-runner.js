@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 import React, { useEffect, useState, useRef } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import usePersistentState from '../../hooks/usePersistentState';
@@ -33,7 +32,7 @@ export const detectCollision = (
 export const updateScore = (score, speed, dt) => score + speed * dt;
 
 export const canUseTilt = async () => {
-  if (!isBrowser()) return false;
+  if (typeof window === 'undefined') return false;
   const D = window.DeviceOrientationEvent;
   if (!D) return false;
   if (typeof D.requestPermission === 'function') {

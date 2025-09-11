@@ -1,5 +1,4 @@
 'use client';
-import { isBrowser } from '@/utils/env';
 import {
   useEffect,
   useRef,
@@ -101,7 +100,7 @@ export default function XTimeline() {
   const [scriptError, setScriptError] = useState(false);
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>(() =>
-    isBrowser() &&
+    typeof document !== 'undefined' &&
     document.documentElement.classList.contains('dark')
       ? 'dark'
       : 'light'
@@ -110,10 +109,6 @@ export default function XTimeline() {
   const timeoutsRef = useRef<Record<string, number>>({});
   const [scheduled, setScheduled] = useScheduledTweets();
   const [showSetup, setShowSetup] = useState(true);
-  const nonce =
-    typeof document !== 'undefined'
-      ? document.documentElement.dataset.cspNonce
-      : undefined;
 
   useEffect(() => {
     const root = document.documentElement;
@@ -126,7 +121,7 @@ export default function XTimeline() {
 
   useEffect(() => {
     if (
-      isBrowser() &&
+      typeof window !== 'undefined' &&
       'Notification' in window &&
       Notification.permission === 'default'
     ) {
@@ -167,6 +162,7 @@ export default function XTimeline() {
   useEffect(() => {
     if (!loaded || !scriptLoaded) return;
     loadTimeline();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [theme, feed, timelineType, scriptLoaded]);
 
   const loadTimeline = () => {
@@ -299,9 +295,6 @@ export default function XTimeline() {
       <Script
         src="https://platform.twitter.com/widgets.js"
         strategy="lazyOnload"
-        nonce={nonce}
-        crossOrigin="anonymous"
-        integrity="sha384-2tybKFlI8VO9WeecxiJMRsCpfm6xp0mNzAuAFOxtqzenagQgy+bKmARu8EXVJhPu"
         onLoad={() => {
           setScriptLoaded(true);
           if (loaded) loadTimeline();
@@ -333,7 +326,6 @@ export default function XTimeline() {
         <div className="p-1.5 space-y-4 flex-1 overflow-auto">
         <form onSubmit={handleScheduleTweet} className="space-y-2">
           <textarea
-            aria-label="Tweet text"
             value={tweetText}
             onChange={(e) => setTweetText(e.target.value)}
             placeholder="Tweet text"
@@ -341,7 +333,6 @@ export default function XTimeline() {
           />
           <div className="flex gap-2 items-center">
             <input
-              aria-label="Schedule time"
               type="datetime-local"
               value={tweetTime}
               onChange={(e) => setTweetTime(e.target.value)}
@@ -413,7 +404,6 @@ export default function XTimeline() {
         </div>
         <form onSubmit={handleAddPreset} className="flex gap-2">
           <input
-            aria-label="Add feed"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={

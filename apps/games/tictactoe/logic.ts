@@ -28,9 +28,7 @@ export const checkWinner = (
 ): { winner: Player | 'draw' | null; line: number[] } => {
   const lines = generateLines(size);
   for (const line of lines) {
-    const first = line[0];
-    if (first === undefined) continue;
-    const rest = line.slice(1);
+    const [first, ...rest] = line;
     const val = board[first];
     if (val && rest.every((idx) => board[idx] === val)) {
       const winner = misere ? (val === 'X' ? 'O' : 'X') : val;
@@ -55,11 +53,9 @@ export const minimax = (
   if (winner === 'X') return { score: depth - 10, index: -1 };
   if (winner === 'draw') return { score: 0, index: -1 };
 
-    const key = player + (misere ? 'M' : 'N') + boardKey(board);
-    const cached = memo.get(key);
-    if (cached && cached.index !== undefined) {
-      return { index: cached.index, score: cached.score };
-    }
+  const key = player + (misere ? 'M' : 'N') + boardKey(board);
+  const cached = memo.get(key);
+  if (cached && cached.index !== undefined) return cached as any;
 
   let best: { index: number; score: number } = {
     index: -1,

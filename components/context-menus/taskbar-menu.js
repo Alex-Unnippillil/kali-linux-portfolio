@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
-import useFocusTrap from '@/hooks/useFocusTrap';
-import useRovingTabIndex from '@/hooks/useRovingTabIndex';
+import useFocusTrap from '../../hooks/useFocusTrap';
+import useRovingTabIndex from '../../hooks/useRovingTabIndex';
 
 function TaskbarMenu(props) {
     const menuRef = useRef(null);
@@ -27,7 +27,6 @@ function TaskbarMenu(props) {
         <div
             id="taskbar-menu"
             role="menu"
-            aria-label="Taskbar context menu"
             aria-hidden={!props.active}
             ref={menuRef}
             onKeyDown={handleKeyDown}
@@ -38,7 +37,6 @@ function TaskbarMenu(props) {
                 onClick={handleMinimize}
                 role="menuitem"
                 aria-label={props.minimized ? 'Restore Window' : 'Minimize Window'}
-                tabIndex={props.active ? 0 : -1}
                 className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
                 <span className="ml-5">{props.minimized ? 'Restore' : 'Minimize'}</span>
@@ -48,7 +46,6 @@ function TaskbarMenu(props) {
                 onClick={handleClose}
                 role="menuitem"
                 aria-label="Close Window"
-                tabIndex={props.active ? 0 : -1}
                 className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
                 <span className="ml-5">Close</span>

@@ -14,10 +14,10 @@
 
   <div id="timerControls">
     <div>
-      <input type="number" id="minutes" min="0" value="25" aria-label="minutes" /> :
-      <input type="number" id="seconds" min="0" max="59" value="0" aria-label="seconds" />
+      <input type="number" id="minutes" min="0" value="0" /> :
+      <input type="number" id="seconds" min="0" max="59" value="30" />
     </div>
-    <div class="display" id="timerDisplay">25:00</div>
+    <div class="display" id="timerDisplay">00:30</div>
     <div>
       <button id="startTimer">Start</button>
       <button id="stopTimer">Stop</button>
@@ -29,16 +29,11 @@
     <div class="display" id="stopwatchDisplay">00:00</div>
     <div>
       <button id="startWatch">Start</button>
-      <button id="pauseWatch">Pause</button>
+      <button id="stopWatch">Stop</button>
       <button id="resetWatch">Reset</button>
       <button id="lapWatch">Lap</button>
     </div>
     <ul id="laps"></ul>
-  </div>
-
-  <div id="breakOverlay" class="break-overlay hidden">
-    <p>Break time! Resume in <span id="breakCountdown">05:00</span></p>
-    <button id="postponeBreak">Postpone 5m</button>
   </div>
 
   <script src="main.js"></script>

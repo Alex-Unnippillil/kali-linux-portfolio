@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 import React, {
   useCallback,
   useEffect,
@@ -71,7 +70,7 @@ const TerminalPaneInner = (
     }, [updateSuggestionsLive]);
 
     const renderHint = useCallback(() => {
-      if (!isBrowser() || !termRef.current) return;
+      if (typeof window === 'undefined' || !termRef.current) return;
       if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
       rafRef.current = window.requestAnimationFrame(() => {
         const current = commandRef.current;
@@ -473,7 +472,7 @@ const TerminalPaneInner = (
           renderHint();
         });
 
-      if (isBrowser() && typeof Worker === 'function') {
+      if (typeof window !== 'undefined' && typeof Worker === 'function') {
         workerRef.current = new Worker(
           new URL('./terminal.worker.js', import.meta.url),
         );

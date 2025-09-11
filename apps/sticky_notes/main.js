@@ -2,13 +2,12 @@
 
 import { isBrowser } from '../../utils/env';
 import { getDb } from '../../utils/safeIDB';
-import DOMPurify from 'dompurify';
 
 let notesContainer = null;
 let addNoteBtn = null;
 
 function initDom() {
-  if (!isBrowser()) return;
+  if (!isBrowser) return;
   notesContainer = document.getElementById('notes');
   addNoteBtn = document.getElementById('add-note');
 }
@@ -40,10 +39,6 @@ function getDB() {
 }
 
 let notes = [];
-
-export function sanitize(input) {
-  return DOMPurify.sanitize(input);
-}
 
 async function saveNotes() {
   try {
@@ -174,7 +169,7 @@ async function init() {
     const params = new URLSearchParams(location.search);
     const sharedText = params.get('text');
     if (sharedText) {
-      addNote(sanitize(sharedText));
+      addNote(sharedText);
       history.replaceState(null, '', location.pathname);
     }
   } catch (err) {
@@ -188,7 +183,7 @@ async function init() {
   }
 }
 
-if (isBrowser() && addNoteBtn) {
+if (isBrowser && addNoteBtn) {
   addNoteBtn.addEventListener('click', addNote);
   void init();
 }

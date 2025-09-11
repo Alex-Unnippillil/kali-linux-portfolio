@@ -373,7 +373,7 @@ const Simon = () => {
   return (
     <GameLayout onRestart={restartGame}>
       <div className={errorFlash ? "buzz" : ""}>
-        <div className="grid grid-cols-2 gap-1.5 mb-4">
+        <div className="grid grid-cols-2 gap-[6px] mb-4">
           {pads.map((pad, idx) => (
             <button
               key={pad.id}

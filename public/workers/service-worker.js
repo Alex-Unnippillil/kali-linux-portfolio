@@ -1,17 +1,16 @@
-const BUILD_ID = self.BUILD_ID || "0";
-const CACHE_NAME = `KLP_v${BUILD_ID}-periodic-cache-v1`;
+const CACHE_NAME = 'periodic-cache-v1';
 const ASSETS = [
-  "/apps/weather.js",
-  "/feeds",
-  "/about",
-  "/projects",
-  "/projects.json",
-  "/apps",
-  "/apps/weather",
-  "/apps/terminal",
-  "/apps/checkers",
-  "/offline.html",
-  "/manifest.webmanifest",
+  '/apps/weather.js',
+  '/feeds',
+  '/about',
+  '/projects',
+  '/projects.json',
+  '/apps',
+  '/apps/weather',
+  '/apps/terminal',
+  '/apps/checkers',
+  '/offline.html',
+  '/manifest.webmanifest',
 ];
 
 async function prefetchAssets() {
@@ -19,7 +18,7 @@ async function prefetchAssets() {
   await Promise.all(
     ASSETS.map(async (url) => {
       try {
-        const response = await fetch(url, { cache: "no-cache" });
+        const response = await fetch(url, { cache: 'no-cache' });
         if (response.ok) {
           await cache.put(url, response.clone());
         }
@@ -30,43 +29,27 @@ async function prefetchAssets() {
   );
 }
 
-async function cleanupOldCaches() {
-  const keys = await caches.keys();
-  const appCaches = keys.filter((name) => name.startsWith("KLP_v"));
-  const old = appCaches.sort().slice(0, -2);
-  await Promise.all(old.map((name) => caches.delete(name)));
-}
-
-self.addEventListener("install", (event) => {
+self.addEventListener('install', (event) => {
   event.waitUntil(prefetchAssets());
 });
 
-self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    (async () => {
-      await cleanupOldCaches();
-      await self.clients.claim();
-    })(),
-  );
-});
-
-self.addEventListener("periodicsync", (event) => {
-  if (event.tag === "content-sync") {
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'content-sync') {
     event.waitUntil(prefetchAssets());
   }
 });
 
-self.addEventListener("message", (event) => {
-  if (event.data && event.data.type === "refresh") {
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'refresh') {
     event.waitUntil(prefetchAssets());
   }
 });
 
-self.addEventListener("fetch", (event) => {
+self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  if (url.pathname.startsWith("/apps/")) {
+  if (url.pathname.startsWith('/apps/')) {
     event.respondWith(
       caches.open(CACHE_NAME).then(async (cache) => {
         try {
@@ -79,13 +62,6 @@ self.addEventListener("fetch", (event) => {
           return cache.match(request);
         }
       }),
-    );
-    return;
-  }
-
-  if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request).catch(() => caches.match("/offline.html")),
     );
     return;
   }

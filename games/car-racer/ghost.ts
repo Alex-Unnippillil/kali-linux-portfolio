@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 export interface GhostFrame {
   x: number;
   y: number;
@@ -31,7 +30,7 @@ function write(key: string, value: unknown): void {
  * Load all ghost laps stored for a track.
  */
 export function loadGhosts(track: string): GhostLap[] {
-  if (!isBrowser()) return [];
+  if (typeof window === 'undefined') return [];
   return read<GhostLap[]>(ghostKey(track)) || [];
 }
 
@@ -39,7 +38,7 @@ export function loadGhosts(track: string): GhostLap[] {
  * Persist ghosts for a track.
  */
 function saveGhosts(track: string, ghosts: GhostLap[]): void {
-  if (!isBrowser()) return;
+  if (typeof window === 'undefined') return;
   write(ghostKey(track), ghosts);
 }
 
@@ -48,7 +47,7 @@ function saveGhosts(track: string, ghosts: GhostLap[]): void {
  * The best lap is also cached separately for quick access.
  */
 export function recordLap(track: string, lap: GhostLap): void {
-  if (!isBrowser()) return;
+  if (typeof window === 'undefined') return;
   const ghosts = loadGhosts(track);
   ghosts.push(lap);
   ghosts.sort((a, b) => a.time - b.time);
@@ -60,7 +59,7 @@ export function recordLap(track: string, lap: GhostLap): void {
  * Get the best lap recorded for a track.
  */
 export function loadBestLap(track: string): GhostLap | null {
-  if (!isBrowser()) return null;
+  if (typeof window === 'undefined') return null;
   return read<GhostLap>(bestKey(track));
 }
 

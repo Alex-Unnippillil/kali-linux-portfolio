@@ -101,7 +101,7 @@ export class SideBarApp extends Component {
                     this.setState({ showTitle: false, thumbnail: null });
                 }}
                 className={(this.props.isClose[this.id] === false && this.props.isFocus[this.id] ? "bg-white bg-opacity-10 " : "") +
-                    " group w-auto p-2 relative rounded m-1 hover:bg-white hover:bg-opacity-10 active:bg-white active:bg-opacity-20 cursor-pointer transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2"}
+                    " w-auto p-2 outline-none relative hover:bg-white hover:bg-opacity-10 rounded m-1 transition-hover transition-active"}
                 id={"sidebar-" + this.props.id}
             >
                 <Image
@@ -109,7 +109,7 @@ export class SideBarApp extends Component {
                     height={28}
                     className="w-7"
                     src={this.props.icon.replace('./', '/')}
-                    alt={this.props.title}
+                    alt="Ubuntu App Icon"
                     sizes="28px"
                 />
                 <Image
@@ -117,14 +117,13 @@ export class SideBarApp extends Component {
                     height={28}
                     className={(this.state.scaleImage ? " scale " : "") + " scalable-app-icon w-7 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"}
                     src={this.props.icon.replace('./', '/')}
-                    alt={this.props.title}
-                    aria-hidden="true"
+                    alt=""
                     sizes="28px"
                 />
                 {
                     (
                         this.props.isClose[this.id] === false
-                            ? <div className="w-2 h-1 absolute bottom-0 left-1/2 transform -translate-x-1/2 bg-white rounded-md opacity-80 transition-opacity group-hover:opacity-100 group-active:opacity-100 group-focus-visible:opacity-100"></div>
+                            ? <div className=" w-2 h-1 absolute bottom-0 left-1/2 transform -translate-x-1/2 bg-white rounded-md"></div>
                             : null
                     )
                 }

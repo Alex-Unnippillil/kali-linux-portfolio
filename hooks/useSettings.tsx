@@ -1,7 +1,9 @@
-import { isBrowser } from '@/utils/env';
 import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
-import usePersistentState from './usePersistentState';
 import {
+  getAccent as loadAccent,
+  setAccent as saveAccent,
+  getWallpaper as loadWallpaper,
+  setWallpaper as saveWallpaper,
   getDensity as loadDensity,
   setDensity as saveDensity,
   getReducedMotion as loadReducedMotion,
@@ -18,13 +20,9 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
-  getNetworkTime as loadNetworkTime,
-  setNetworkTime as saveNetworkTime,
-  getSymbolicTrayIcons as loadSymbolicTrayIcons,
-  setSymbolicTrayIcons as saveSymbolicTrayIcons,
   defaults,
 } from '../utils/settingsStore';
-import { THEME_KEY, getTheme as getStoredTheme, setTheme as applyTheme } from '../utils/theme';
+import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -64,9 +62,7 @@ interface SettingsContextValue {
   pongSpin: boolean;
   allowNetwork: boolean;
   haptics: boolean;
-  networkTime: boolean;
   theme: string;
-  symbolicTrayIcons: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -77,9 +73,7 @@ interface SettingsContextValue {
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
-  setNetworkTime: (value: boolean) => void;
   setTheme: (value: string) => void;
-  setSymbolicTrayIcons: (value: boolean) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -93,9 +87,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
-  networkTime: defaults.networkTime,
   theme: 'default',
-  symbolicTrayIcons: defaults.symbolicTrayIcons,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -106,27 +98,12 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setPongSpin: () => {},
   setAllowNetwork: () => {},
   setHaptics: () => {},
-  setNetworkTime: () => {},
   setTheme: () => {},
-  setSymbolicTrayIcons: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [accent, setAccent] = usePersistentState<string>(
-    'accent',
-    defaults.accent,
-    (v): v is string => typeof v === 'string',
-  );
-  const [wallpaper, setWallpaper] = usePersistentState<string>(
-    'bg-image',
-    defaults.wallpaper,
-    (v): v is string => typeof v === 'string',
-  );
-  const [theme, setTheme] = usePersistentState<string>(
-    THEME_KEY,
-    () => getStoredTheme(),
-    (v): v is string => typeof v === 'string',
-  );
+  const [accent, setAccent] = useState<string>(defaults.accent);
+  const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
@@ -135,34 +112,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
-  const [networkTime, setNetworkTime] = useState<boolean>(defaults.networkTime);
-  const [symbolicTrayIcons, setSymbolicTrayIcons] = useState<boolean>(defaults.symbolicTrayIcons);
+  const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
-
-  const [rotationMode] = usePersistentState<'off' | 'daily' | 'login'>(
-    'bg-slideshow-mode',
-    'off',
-    (v): v is 'off' | 'daily' | 'login' =>
-      v === 'off' || v === 'daily' || v === 'login',
-  );
-  const [rotationSet] = usePersistentState<string[]>(
-    'bg-slideshow-selected',
-    [],
-    (v): v is string[] => Array.isArray(v) && v.every((s) => typeof s === 'string'),
-  );
-  const [rotationIndex, setRotationIndex] = usePersistentState<number>(
-    'bg-slideshow-index',
-    0,
-    (v): v is number => typeof v === 'number',
-  );
-  const [rotationDate, setRotationDate] = usePersistentState<string>(
-    'bg-slideshow-date',
-    '',
-    (v): v is string => typeof v === 'string',
-  );
 
   useEffect(() => {
     (async () => {
+      setAccent(await loadAccent());
+      setWallpaper(await loadWallpaper());
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
       setFontScale(await loadFontScale());
@@ -171,13 +127,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
-      setNetworkTime(await loadNetworkTime());
-      setSymbolicTrayIcons(await loadSymbolicTrayIcons());
+      setTheme(loadTheme());
     })();
   }, []);
 
   useEffect(() => {
-    applyTheme(theme);
+    saveTheme(theme);
   }, [theme]);
 
   useEffect(() => {
@@ -194,26 +149,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
+    saveAccent(accent);
   }, [accent]);
 
-
   useEffect(() => {
-    if (rotationMode === 'off') return;
-    if (!rotationSet.length) return;
-    const index = rotationIndex % rotationSet.length;
-    const base = rotationSet[index].replace(/\.[^.]+$/, '');
-    if (rotationMode === 'daily') {
-      const today = new Date().toISOString().slice(0, 10);
-      if (rotationDate === today) return;
-      setWallpaper(base);
-      setRotationIndex((index + 1) % rotationSet.length);
-      setRotationDate(today);
-    } else if (rotationMode === 'login') {
-      setWallpaper(base);
-      setRotationIndex((index + 1) % rotationSet.length);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rotationMode, rotationSet]);
+    saveWallpaper(wallpaper);
+  }, [wallpaper]);
 
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {
@@ -267,7 +208,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     saveAllowNetwork(allowNetwork);
-    if (!isBrowser()) return;
+    if (typeof window === 'undefined') return;
     if (!fetchRef.current) fetchRef.current = window.fetch.bind(window);
     if (!allowNetwork) {
       window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
@@ -295,14 +236,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
-  useEffect(() => {
-    saveNetworkTime(networkTime);
-  }, [networkTime]);
-
-  useEffect(() => {
-    saveSymbolicTrayIcons(symbolicTrayIcons);
-  }, [symbolicTrayIcons]);
-
   return (
     <SettingsContext.Provider
       value={{
@@ -316,8 +249,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         pongSpin,
         allowNetwork,
         haptics,
-        networkTime,
-        symbolicTrayIcons,
         theme,
         setAccent,
         setWallpaper,
@@ -329,9 +260,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
-        setNetworkTime,
         setTheme,
-        setSymbolicTrayIcons,
       }}
     >
       {children}

@@ -32,10 +32,4 @@ describe('web manifest', () => {
       expect(shortcut.url).toBeDefined();
     }
   });
-
-  test('exposes a share_target for Sticky Notes', () => {
-    expect(manifest.share_target).toBeDefined();
-    expect(manifest.share_target.action).toBe('/share-target');
-    expect(manifest.share_target.params?.text).toBe('text');
-  });
 });

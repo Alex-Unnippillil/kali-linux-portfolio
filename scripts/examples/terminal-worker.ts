@@ -1,5 +1,4 @@
 // Example scripts demonstrating the terminal worker
-import logger from '../../utils/logger';
 
 export function uppercaseExample() {
   if (typeof Worker !== 'function') return;
@@ -7,7 +6,7 @@ export function uppercaseExample() {
   worker.onmessage = (e: MessageEvent<any>) => {
     const { type, chunk } = e.data || {};
     if (type === 'data') {
-      logger.info(chunk);
+      console.log(chunk);
     }
   };
   worker.postMessage({ action: 'run', command: 'echo hello world | upper' });
@@ -20,7 +19,7 @@ export function lineCountExample() {
   worker.onmessage = (e: MessageEvent<any>) => {
     const { type, chunk } = e.data || {};
     if (type === 'data') {
-      logger.info(chunk);
+      console.log(chunk);
     }
   };
   worker.postMessage({

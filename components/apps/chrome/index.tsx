@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 import React, {
   useEffect,
   useRef,
@@ -7,6 +6,8 @@ import React, {
   useMemo,
 } from 'react';
 import { toPng } from 'html-to-image';
+import { Readability } from '@mozilla/readability';
+import DOMPurify from 'dompurify';
 import AddressBar from './AddressBar';
 import { getCachedFavicon, cacheFavicon } from './bookmarks';
 
@@ -29,7 +30,11 @@ const STORAGE_KEY = 'chrome-tabs';
 const HOME_URL = 'home://start';
 const SANDBOX_FLAGS = ['allow-scripts', 'allow-forms', 'allow-popups'] as const;
 const CSP = "default-src 'self'; script-src 'none'; connect-src 'none';";
-const DEMO_ORIGINS = ['https://example.com'];
+const DEMO_ORIGINS = [
+  'https://example.com',
+  'https://developer.mozilla.org',
+  'https://en.wikipedia.org',
+];
 
 const formatUrl = (value: string) => {
   let url = value.trim();
@@ -45,7 +50,7 @@ const formatUrl = (value: string) => {
 };
 
 const readTabs = (): { tabs: TabData[]; active: number } => {
-  if (!isBrowser()) return { tabs: [], active: 0 };
+  if (typeof window === 'undefined') return { tabs: [], active: 0 };
   try {
     const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '');
     return data || { tabs: [], active: 0 };
@@ -61,7 +66,7 @@ const saveTabs = (tabs: TabData[], active: number) => {
 const Chrome: React.FC = () => {
   const { tabs: storedTabs, active: storedActive } = readTabs();
   const sessionUrl =
-    isBrowser() ? sessionStorage.getItem('chrome-last-url') : null;
+    typeof window !== 'undefined' ? sessionStorage.getItem('chrome-last-url') : null;
   const [tabs, setTabs] = useState<TabData[]>(
     storedTabs.length
       ? storedTabs.map((t) => ({ blocked: false, muted: false, ...t }))
@@ -150,6 +155,11 @@ const Chrome: React.FC = () => {
     }
   }, []);
   const [articles, setArticles] = useState<Record<number, string>>({});
+  const sanitizedArticle = useMemo(
+    () =>
+      articles[activeId] ? DOMPurify.sanitize(articles[activeId]) : '',
+    [articles, activeId],
+  );
 
   const updateFavicon = useCallback(
     async (url: string) => {
@@ -209,11 +219,13 @@ const Chrome: React.FC = () => {
 
   const fetchArticle = useCallback(async (tabId: number, url: string) => {
     try {
-      const apiUrl = `/api/reader?url=${encodeURIComponent(url)}`;
-      const res = await fetch(apiUrl);
-      const data = await res.json();
-      if (data && data.content) {
-        setArticles((prev) => ({ ...prev, [tabId]: data.content }));
+      const res = await fetch(url);
+      const html = await res.text();
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const reader = new Readability(doc);
+      const parsed = reader.parse();
+      if (parsed) {
+        setArticles((prev) => ({ ...prev, [tabId]: parsed.content ?? '' }));
       }
     } catch {
       setArticles((prev) => ({ ...prev, [tabId]: '' }));
@@ -537,8 +549,6 @@ const Chrome: React.FC = () => {
                     src={`https://www.google.com/s2/favicons?sz=64&domain_url=${origin}`}
                     alt=""
                     className="w-8 h-8 mb-1"
-                    width={32}
-                    height={32}
                   />
                 );
               } catch {
@@ -725,8 +735,6 @@ const Chrome: React.FC = () => {
                     src={src}
                     alt=""
                     className="w-4 h-4 mr-1 flex-shrink-0"
-                    width={16}
-                    height={16}
                   />
                 ) : null;
               } catch {
@@ -768,7 +776,7 @@ const Chrome: React.FC = () => {
           ) : articles[activeId] ? (
             <main
               style={{ maxInlineSize: '60ch', margin: 'auto' }}
-              dangerouslySetInnerHTML={{ __html: articles[activeId] ?? '' }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(articles[activeId] ?? '') }}
             />
           ) : activeTab.blocked ? (
             blockedView

@@ -4,12 +4,6 @@ import usePersistentState from '../../hooks/usePersistentState';
 export interface TrashItem {
   id: string;
   title: string;
-  /**
-   * Original location of the item before it was moved to trash.
-   * For application windows this is simply the app id, but for
-   * future file-system integration it represents the full path.
-   */
-  path: string;
   icon?: string;
   image?: string;
   closedAt: number;
@@ -43,30 +37,6 @@ export default function useTrashState() {
     },
     [setHistory],
   );
-
-  const moveToTrash = useCallback(
-    (item: Omit<TrashItem, 'closedAt'>) => {
-      const payload: TrashItem = { ...item, closedAt: Date.now() };
-      setItems(prev => [...prev, payload]);
-    },
-    [setItems],
-  );
-
-  const restore = useCallback(
-    (index: number): TrashItem | null => {
-      const restored = items[index];
-      if (!restored) return null;
-      setItems(prev => prev.filter((_, i) => i !== index));
-      return restored;
-    },
-    [items, setItems],
-  );
-
-  const emptyTrash = useCallback((): TrashItem[] => {
-    const removed = items;
-    setItems([]);
-    return removed;
-  }, [items, setItems]);
 
   const resolveNameConflict = (
     restored: TrashItem,
@@ -134,16 +104,6 @@ export default function useTrashState() {
     });
   }, [setHistory, setItems]);
 
-  return {
-    items,
-    setItems,
-    history,
-    pushHistory,
-    restoreFromHistory,
-    restoreAllFromHistory,
-    moveToTrash,
-    restore,
-    emptyTrash,
-  };
+  return { items, setItems, history, pushHistory, restoreFromHistory, restoreAllFromHistory };
 }
 

@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import useGameControls from './useGameControls';
@@ -50,7 +49,7 @@ const PongInner = () => {
   const [speedMultiplier, setSpeedMultiplier] = useState(1);
   const speedRef = useRef(1);
   const [history, setHistory] = useState(() => {
-    if (isBrowser()) {
+    if (typeof window !== 'undefined') {
       try {
         return JSON.parse(localStorage.getItem('pongHistory')) || [];
       } catch {
@@ -117,10 +116,10 @@ const PongInner = () => {
       controls.current.touchY = null;
       controls.current.touchY2 = null;
     };
-    canvas.addEventListener('touchstart', handleTouch, { passive: true });
-    canvas.addEventListener('touchmove', handleTouch, { passive: true });
-    canvas.addEventListener('touchend', endTouch, { passive: true });
-    canvas.addEventListener('touchcancel', endTouch, { passive: true });
+    canvas.addEventListener('touchstart', handleTouch);
+    canvas.addEventListener('touchmove', handleTouch);
+    canvas.addEventListener('touchend', endTouch);
+    canvas.addEventListener('touchcancel', endTouch);
     return () => {
       canvas.removeEventListener('touchstart', handleTouch);
       canvas.removeEventListener('touchmove', handleTouch);

@@ -1,5 +1,4 @@
 'use client';
-import { isBrowser } from '@/utils/env';
 import { useEffect, useState } from 'react';
 
 interface PluginInfo { id: string; file: string; }
@@ -14,7 +13,7 @@ export default function PluginManager() {
   const [plugins, setPlugins] = useState<PluginInfo[]>([]);
   const [installed, setInstalled] = useState<Record<string, PluginManifest>>(
     () => {
-      if (isBrowser()) {
+      if (typeof window !== 'undefined') {
         try {
           return JSON.parse(localStorage.getItem('installedPlugins') || '{}');
         } catch {
@@ -31,7 +30,7 @@ export default function PluginManager() {
   }
 
   const [lastRun, setLastRun] = useState<LastRun | null>(() => {
-    if (isBrowser()) {
+    if (typeof window !== 'undefined') {
       try {
         return JSON.parse(localStorage.getItem('lastPluginRun') || 'null');
       } catch {
@@ -40,7 +39,6 @@ export default function PluginManager() {
     }
     return null;
   });
-  const [message, setMessage] = useState('');
 
   useEffect(() => {
     fetch('/api/plugins')
@@ -110,49 +108,6 @@ export default function PluginManager() {
     }
   };
 
-  const exportConfig = (id: string) => {
-    const manifest = installed[id];
-    if (!manifest) return;
-    try {
-      const blob = new Blob([JSON.stringify(manifest, null, 2)], {
-        type: 'application/json',
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${id}-config.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      setMessage(`Exported configuration for ${id}.`);
-    } catch {
-      setMessage(`Failed to export configuration for ${id}.`);
-    }
-  };
-
-  const importConfig = async (id: string, file: File | undefined) => {
-    if (!file) return;
-    try {
-      const text = await (file.text
-        ? file.text()
-        : new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(String(reader.result));
-            reader.onerror = () => reject(reader.error);
-            reader.readAsText(file);
-          }));
-      const data = JSON.parse(text);
-      const updated = {
-        ...installed,
-        [id]: { ...installed[id], ...data },
-      };
-      setInstalled(updated);
-      localStorage.setItem('installedPlugins', JSON.stringify(updated));
-      setMessage(`Import successful for ${id}.`);
-    } catch {
-      setMessage(`Import failed for ${id}.`);
-    }
-  };
-
   const exportCsv = () => {
     if (!lastRun) return;
     const csv = ['result', ...lastRun.output.map((line) => JSON.stringify(line))].join('\n');
@@ -180,40 +135,12 @@ export default function PluginManager() {
               {installed[p.id] ? 'Installed' : 'Install'}
             </button>
             {installed[p.id] && (
-              <>
-                <button
-                  className="bg-ub-green text-black px-2 py-1 rounded ml-2"
-                  onClick={() => run(p)}
-                >
-                  Run
-                </button>
-                <button
-                  className="bg-ub-blue text-black px-2 py-1 rounded ml-2"
-                  onClick={() => exportConfig(p.id)}
-                >
-                  Export Config
-                </button>
-                <input
-                  type="file"
-                  id={`import-${p.id}`}
-                  data-testid={`import-${p.id}`}
-                  className="hidden"
-                  accept="application/json"
-                  onChange={(e) =>
-                    importConfig(p.id, e.target.files?.[0])
-                  }
-                />
-                <button
-                  className="bg-ub-purple text-black px-2 py-1 rounded ml-2"
-                  onClick={() =>
-                    document
-                      .getElementById(`import-${p.id}`)
-                      ?.click()
-                  }
-                >
-                  Import Config
-                </button>
-              </>
+              <button
+                className="bg-ub-green text-black px-2 py-1 rounded ml-2"
+                onClick={() => run(p)}
+              >
+                Run
+              </button>
             )}
           </li>
         ))}
@@ -231,9 +158,6 @@ export default function PluginManager() {
             Export CSV
           </button>
         </div>
-      )}
-      {message && (
-        <div className="mt-4 text-ubt-grey text-sm">{message}</div>
       )}
     </div>
   );

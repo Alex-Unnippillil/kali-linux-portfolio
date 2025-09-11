@@ -1,24 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import dynamic from 'next/dynamic';
 import Image from 'next/image';
-
-const GhidraApp = dynamic(() => import('../../../components/apps/ghidra'), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
+import GhidraApp from '../../../components/apps/ghidra';
 
 export default function DemoRunner() {
-  const wrapperUrl = process.env.NEXT_PUBLIC_GHIDRA_WASM;
+  const wasmUrl = process.env.NEXT_PUBLIC_GHIDRA_WASM;
   const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
-    if (!wrapperUrl) {
+    if (!wasmUrl) {
       return;
     }
     let mounted = true;
-    import(/* webpackIgnore: true */ wrapperUrl)
+    WebAssembly.instantiateStreaming(fetch(wasmUrl), {})
       .then(() => {
         if (mounted) {
           setEnabled(true);
@@ -32,7 +27,7 @@ export default function DemoRunner() {
     return () => {
       mounted = false;
     };
-  }, [wrapperUrl]);
+  }, [wasmUrl]);
 
   if (!enabled) {
     return (

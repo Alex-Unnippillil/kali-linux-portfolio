@@ -9,10 +9,8 @@ export const share = async (
   url?: string
 ): Promise<boolean> => {
   if (!canShare()) return false;
-    try {
-      const data: ShareData = { text, url: url ?? window.location.href };
-      if (title !== undefined) data.title = title;
-      await navigator.share(data);
+  try {
+    await navigator.share({ text, title, url: url ?? window.location.href });
     return true;
   } catch {
     return false;

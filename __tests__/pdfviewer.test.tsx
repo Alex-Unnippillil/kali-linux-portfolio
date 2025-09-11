@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import PdfViewer from '../components/common/PdfViewer/PdfViewer';
+import PdfViewer from '../components/common/PdfViewer';
 
 jest.mock('pdfjs-dist', () => {
   const getPage = jest.fn(async () => ({

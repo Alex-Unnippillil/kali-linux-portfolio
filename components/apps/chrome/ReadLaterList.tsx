@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 import React from 'react';
 
 export interface ReadLaterItem {
@@ -10,7 +9,7 @@ export interface ReadLaterItem {
 const STORAGE_KEY = 'read-later-items';
 
 const loadItems = (): ReadLaterItem[] => {
-  if (!isBrowser()) return [];
+  if (typeof window === 'undefined') return [];
   try {
     const data = localStorage.getItem(STORAGE_KEY);
     return data ? (JSON.parse(data) as ReadLaterItem[]) : [];

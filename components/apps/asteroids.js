@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 import React, { useRef, useEffect, useState } from 'react';
 import {
   wrap,
@@ -110,7 +109,7 @@ const Asteroids = () => {
   const canvasRef = useRef(null);
   const requestRef = useRef();
   const audioCtx = useRef(null);
-  const dpr = isBrowser() ? window.devicePixelRatio || 1 : 1;
+  const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
   const controlsRef = useRef(useGameControls(canvasRef));
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);

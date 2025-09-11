@@ -3,19 +3,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import apps from '../../apps.config';
-import EmptyState from '../ui/EmptyState';
 
 // Load the actual VSCode app lazily so no editor dependencies are required
-const VsCode = dynamic(
-  () =>
-    import(
-      /* webpackChunkName: "app-vscode" */ '../../apps/vscode'
-    ),
-  {
-    ssr: false,
-    loading: () => <p>Loading VSCode...</p>,
-  },
-);
+const VsCode = dynamic(() => import('../../apps/vscode'), { ssr: false });
 
 // Simple fuzzy match: returns true if query characters appear in order
 function fuzzyMatch(text, query) {
@@ -94,13 +84,7 @@ export default function VsCodeWrapper({ openApp }) {
                 </li>
               ))}
               {items.length === 0 && (
-                <li className="py-8">
-                  <EmptyState
-                    variant="search"
-                    headline="No results"
-                    helperText="Try another search"
-                  />
-                </li>
+                <li className="px-2 py-1 text-sm text-gray-400">No results</li>
               )}
             </ul>
           </div>

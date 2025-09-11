@@ -1,16 +1,13 @@
 'use client';
 
-import { isBrowser } from '@/utils/env';
 import { useState, useEffect, useRef, useCallback, ChangeEvent } from 'react';
 import figlet from 'figlet';
-import type { FontName } from 'figlet';
-
 import Standard from 'figlet/importable-fonts/Standard.js';
 import Slant from 'figlet/importable-fonts/Slant.js';
 import Big from 'figlet/importable-fonts/Big.js';
 import { useRouter } from 'next/router';
 
-const fontList: FontName[] = ['Standard', 'Slant', 'Big'];
+const fontList = ['Standard', 'Slant', 'Big'];
 const fontSizes = [10, 12, 14];
 
 const ramp = '@%#*+=-:. ';
@@ -72,15 +69,14 @@ const AsciiArtApp = () => {
   const [tab, setTab] = useState<'text' | 'image'>('text');
   const [text, setText] = useState('');
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
-  const [font, setFont] = useState<FontName>('Standard');
-
+  const [font, setFont] = useState<figlet.Fonts>('Standard');
   const [output, setOutput] = useState('');
   const [fgColor, setFgColor] = useState('#00ff00');
   const [bgColor, setBgColor] = useState('#000000');
   const [fontSize, setFontSize] = useState<number>(12);
 
-  const canvasRef = useRef<HTMLCanvasElement | null>(null); // for image processing
-  const displayCanvasRef = useRef<HTMLCanvasElement | null>(null); // for final rendering
+  const canvasRef = useRef<HTMLCanvasElement>(null); // for image processing
+  const displayCanvasRef = useRef<HTMLCanvasElement>(null); // for final rendering
   const [imgOutput, setImgOutput] = useState('');
   const [brightness, setBrightness] = useState(0); // -1 to 1
   const [contrast, setContrast] = useState(1); // 0 to 2
@@ -96,8 +92,7 @@ const AsciiArtApp = () => {
     if (!router.isReady) return;
     const { t, f, b, c } = router.query;
     if (typeof t === 'string') setText(t);
-      if (typeof f === 'string' && fontList.includes(f as FontName)) setFont(f as FontName);
-
+      if (typeof f === 'string' && fontList.includes(f)) setFont(f as figlet.Fonts);
     if (typeof b === 'string') {
       const br = parseFloat(b);
       if (!Number.isNaN(br) && br >= -1 && br <= 1) setBrightness(br);
@@ -111,7 +106,7 @@ const AsciiArtApp = () => {
 
   // update query string permalink
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === 'undefined') return;
     const params = new URLSearchParams();
     if (text) params.set('t', text);
     if (font && font !== 'Standard') params.set('f', font);
@@ -180,10 +175,7 @@ const AsciiArtApp = () => {
     for (let y = 0; y < height; y += 1) {
       for (let x = 0; x < width; x += 1) {
         const idx = (y * width + x) * 4;
-        const r = data[idx] ?? 0;
-        const g = data[idx + 1] ?? 0;
-        const b = data[idx + 2] ?? 0;
-        let val = (r + g + b) / 3 / 255; // 0-1
+        let val = (data[idx] + data[idx + 1] + data[idx + 2]) / 3 / 255; // 0-1
         val = val + brightness; // apply brightness
         val = (val - 0.5) * contrast + 0.5; // apply contrast
         val = Math.min(1, Math.max(0, val));
@@ -266,8 +258,7 @@ const AsciiArtApp = () => {
           />
           <select
             value={font}
-            onChange={(e) => setFont(e.target.value as FontName)}
-
+            onChange={(e) => setFont(e.target.value as figlet.Fonts)}
             className="px-2 py-1 text-black rounded"
           >
             {fontList.map((f) => (
@@ -329,7 +320,7 @@ const AsciiArtApp = () => {
             </button>
           </div>
           <pre
-            className="p-1.5 whitespace-pre overflow-auto font-mono leading-none"
+            className="p-[6px] whitespace-pre overflow-auto font-mono leading-none"
             style={{ imageRendering: 'pixelated', fontSize: `${fontSize}px`, color: fgColor, backgroundColor: bgColor }}
           >
             {output}
@@ -430,7 +421,7 @@ const AsciiArtApp = () => {
           </div>
           <canvas ref={canvasRef} className="hidden" />
           <pre
-            className="p-1.5 whitespace-pre overflow-auto font-mono leading-none"
+            className="p-[6px] whitespace-pre overflow-auto font-mono leading-none"
             style={{ imageRendering: 'pixelated', fontSize: `${fontSize}px`, color: fgColor, backgroundColor: bgColor }}
           >
             {imgOutput}

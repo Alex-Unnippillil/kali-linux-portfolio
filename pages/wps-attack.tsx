@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-import { baseMetadata } from '../lib/metadata';
-import CommandChip from '../components/ui/CommandChip';
-
-export const metadata = baseMetadata;
+import Meta from '../components/SEO/Meta';
 
 interface Step {
   title: string;
@@ -46,6 +43,7 @@ const WpsAttack = () => {
 
   return (
     <>
+      <Meta />
       <main className="bg-ub-cool-grey text-white min-h-screen p-4">
         <h1 className="text-2xl mb-4">WPS Attack Walkthrough</h1>
         <ol className="space-y-4">
@@ -58,12 +56,10 @@ const WpsAttack = () => {
             >
               <div className="font-bold">{`Step ${idx + 1}: ${s.title}`}</div>
               {idx === current && (
-                <>
-                  <CommandChip command={s.command} className="mt-2" />
-                  <pre className="bg-ub-black text-green-400 p-2 mt-2 text-sm overflow-auto whitespace-pre-wrap">
-                    {s.output}
-                  </pre>
-                </>
+                <pre className="bg-ub-black text-green-400 p-2 mt-2 text-sm overflow-auto whitespace-pre-wrap">
+{`$ ${s.command}
+${s.output}`}
+                </pre>
               )}
             </li>
           ))}

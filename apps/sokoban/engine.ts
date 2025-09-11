@@ -112,9 +112,8 @@ export function isDeadlockPosition(state: State, pos: Position): boolean {
 function computeDeadlocks(state: State): Set<string> {
   const d = new Set<string>();
   state.boxes.forEach((b) => {
-    const [xStr, yStr] = b.split(',');
-    if (xStr === undefined || yStr === undefined) return;
-    const pos: Position = { x: Number(xStr), y: Number(yStr) };
+    const [x, y] = b.split(',').map(Number);
+    const pos = { x, y };
     if (isDeadlockPosition(state, pos)) d.add(b);
   });
   return d;
@@ -152,8 +151,8 @@ export function move(state: State, dirKey: DirectionKey): State {
 }
 
 export function undo(state: State): State {
+  if (!state.history.length) return state;
   const prev = state.history[state.history.length - 1];
-  if (!prev) return state;
   const boxes = new Set(prev.boxes);
   const restored: State = {
     ...state,
@@ -170,7 +169,7 @@ export function undo(state: State): State {
 
 export function redo(state: State): State {
   if (!state.future.length) return state;
-  const next = state.future[state.future.length - 1]!;
+  const next = state.future[state.future.length - 1];
   const boxes = new Set(next.boxes);
   const restored: State = {
     ...state,

@@ -1,10 +1,12 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
+import Head from 'next/head';
 import ReactGA from 'react-ga4';
 import GitHubStars from '../../GitHubStars';
 import Certs from '../certs';
 import data from '../alex/data.json';
 import SafetyNote from './SafetyNote';
+import { getCspNonce } from '../../../utils/csp';
 import AboutSlides from './slides';
 import ScrollableTimeline from '../../ScrollableTimeline';
 
@@ -105,9 +107,18 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
       name: 'Alex Unnippillil',
       url: 'https://unnippillil.com',
     };
+    const nonce = getCspNonce();
 
     return (
       <main className="w-full h-full flex bg-ub-cool-grey text-white select-none relative">
+        <Head>
+          <title>About</title>
+          <script
+            type="application/ld+json"
+            nonce={nonce}
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
+          />
+        </Head>
         <div
           className="md:flex hidden flex-col w-1/4 md:w-1/5 text-sm overflow-y-auto windowMainScreen border-r border-black"
           role="tablist"
@@ -180,54 +191,59 @@ function About() {
         <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 left-0" />
         <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 right-0" />
       </div>
-      <div className="prose prose-invert w-5/6 md:w-3/4">
-        <ul className="emoji-list">
-          <li className="list-pc">
-            I&apos;m a <span className="font-medium">Technology Enthusiast</span> who thrives on learning and mastering the rapidly
-            evolving world of tech. I completed four years of a{' '}
+      <ul className=" mt-4 leading-tight tracking-tight text-sm md:text-base w-5/6 md:w-3/4 emoji-list">
+        <li className="list-pc">
+          I&apos;m a <span className=" font-medium">Technology Enthusiast</span> who thrives on learning and mastering the rapidly
+          evolving world of tech. I completed four years of a{' '}
+          <a
+            className=" underline cursor-pointer"
+            href="https://shared.ontariotechu.ca/shared/faculty/fesns/documents/FESNS%20Program%20Maps/2018_nuclear_engineering_map_2017_entry.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Nuclear Engineering
+          </a>{' '}
+          degree at Ontario Tech University before deciding to change my career goals and pursue my passion for{' '}
+          <a
+            className=" underline cursor-pointer"
+            href="https://businessandit.ontariotechu.ca/undergraduate/bachelor-of-information-technology/networking-and-information-technology-security/networking-and-i.t-security-bit-2023-2024_.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Networking and I.T. Security
+          </a>
+          .
+        </li>
+        <li className="mt-3 list-building">
+          If you&apos;re looking for someone who always wants to help others and will put in the work 24/7, feel free to email{' '}
+          <a className=" underline" href="mailto:alex.unnippillil@hotmail.com">
+            alex.unnippillil@hotmail.com
+          </a>
+          .
+        </li>
+        <li className="mt-3 list-time">
+          When I&apos;m not learning new technical skills, I enjoy reading books, rock climbing, or watching{' '}
+          <a
+            className=" underline cursor-pointer"
+            href="https://www.youtube.com/@Alex-Unnippillil/playlists"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            YouTube videos
+          </a>{' '}
+          and{' '}
             <a
-              href="https://shared.ontariotechu.ca/shared/faculty/fesns/documents/FESNS%20Program%20Maps/2018_nuclear_engineering_map_2017_entry.pdf"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Nuclear Engineering
-            </a>{' '}
-            degree at Ontario Tech University before deciding to change my career goals and pursue my passion for{' '}
-            <a
-              href="https://businessandit.ontariotechu.ca/undergraduate/bachelor-of-information-technology/networking-and-information-technology-security/networking-and-i.t-security-bit-2023-2024_.pdf"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Networking and I.T. Security
-            </a>
-            .
-          </li>
-          <li className="list-building">
-            If you&apos;re looking for someone who always wants to help others and will put in the work 24/7, feel free to email{' '}
-            <a href="mailto:alex.unnippillil@hotmail.com">alex.unnippillil@hotmail.com</a>.
-          </li>
-          <li className="list-time">
-            When I&apos;m not learning new technical skills, I enjoy reading books, rock climbing, or watching{' '}
-            <a
-              href="https://www.youtube.com/@Alex-Unnippillil/playlists"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              YouTube videos
-            </a>{' '}
-            and{' '}
-            <a
+              className=" underline cursor-pointer"
               href="https://myanimelist.net/animelist/alex_u"
               target="_blank"
               rel="noopener noreferrer"
             >
               anime
             </a>
-            .
-          </li>
-          <li className="list-star">I also have interests in deep learning, software development, and animation.</li>
-        </ul>
-      </div>
+          .
+        </li>
+        <li className="mt-3 list-star">I also have interests in deep learning, software development, and animation.</li>
+      </ul>
       <WorkerStatus />
       <SafetyNote />
       <Timeline />
@@ -302,24 +318,26 @@ function Education() {
           <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 right-full" />
         </div>
       </div>
-      <div className="prose prose-invert w-10/12 mt-4 ml-4 md:px-1">
-        <ul>
-          <li className="list-disc mt-5">
-            <h3 className="text-left">Ontario Tech University</h3>
-            <p className="text-gray-400">2020 - 2024</p>
-            <p>Networking and Information Technology Security</p>
-          </li>
-          <li className="list-disc mt-5">
-            <h3 className="text-left">Ontario Tech University</h3>
-            <p className="text-gray-400">2012 - 2016</p>
-            <p>Nuclear Engineering</p>
-          </li>
-          <li className="list-disc mt-5">
-            <h3 className="text-left">St. John Paul II Catholic Secondary School</h3>
-            <p className="text-gray-400">2008 - 2012</p>
-          </li>
-        </ul>
-      </div>
+      <ul className=" w-10/12  mt-4 ml-4 px-0 md:px-1">
+        <li className="list-disc mt-5">
+          <div className=" text-lg md:text-xl text-left font-bold leading-tight">Ontario Tech University</div>
+          <div className=" text-sm text-gray-400 mt-0.5">2020 - 2024</div>
+          <div className=" text-sm md:text-base">Networking and Information Technology Security</div>
+          <div className="text-sm text-gray-300 font-bold mt-1"> </div>
+        </li>
+        <li className="list-disc mt-5">
+          <div className=" text-lg md:text-xl text-left font-bold leading-tight">Ontario Tech University</div>
+          <div className=" text-sm text-gray-400 mt-0.5">2012 - 2016</div>
+          <div className=" text-sm md:text-base">Nuclear Engineering</div>
+          <div className="text-sm text-gray-300 font-bold mt-1" />
+        </li>
+        <li className="list-disc mt-5">
+          <div className=" text-lg md:text-xl text-left font-bold leading-tight">St. John Paul II Catholic Secondary School</div>
+          <div className=" text-sm text-gray-400 mt-0.5">2008 - 2012</div>
+          <div className=" text-sm md:text-base"> </div>
+          <div className="text-sm text-gray-300 font-bold mt-1"> </div>
+        </li>
+      </ul>
     </>
   );
 }
@@ -334,7 +352,6 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
       <input
         type="text"
         placeholder="Filter..."
-        aria-label="Filter skills"
         className="mt-2 w-full px-2 py-1 rounded text-black"
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
@@ -377,17 +394,17 @@ function Skills({ skills }: { skills: any }) {
           <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 right-full" />
         </div>
       </div>
-      <div className="prose prose-invert w-10/12">
-        <ul className="emoji-list">
-          <li className="list-arrow">
+      <ul className=" tracking-tight text-sm md:text-base w-10/12 emoji-list">
+        <li className=" list-arrow text-sm md:text-base mt-4 leading-tight tracking-tight">
+          <div>
             I&apos;ve learned a variety of programming languages and frameworks while{' '}
             <strong className="text-ubt-gedit-blue">specializing in network security</strong>
-          </li>
-          <li className="list-arrow">
-            Below are some skills I&apos;ve learned over the years
-          </li>
-        </ul>
-      </div>
+          </div>
+        </li>
+        <li className=" list-arrow text-sm md:text-base mt-4 leading-tight tracking-tight">
+          <div>Below are some skills I&apos;ve learned over the years</div>
+        </li>
+      </ul>
       <div className="w-full md:w-10/12 grid grid-cols-1 md:grid-cols-2 mt-4 gap-4">
         <SkillSection title="Networking & Security" badges={networkingSecurity} />
         <SkillSection title="Softwares & Operating Systems" badges={softwaresOperating} />
@@ -425,31 +442,27 @@ function Projects({ projects }: { projects: any[] }) {
         </div>
       </div>
       {projects.map((project) => {
-        const projectName = project.link.split('/').at(-1) ?? project.link;
+        const projectNameFromLink = project.link.split('/');
+        const projectName = projectNameFromLink[projectNameFromLink.length - 1];
         return (
           <div key={project.link} className="flex w-full flex-col px-4">
             <div className="w-full py-1 px-2 my-2 border border-gray-50 border-opacity-10 rounded hover:bg-gray-50 hover:bg-opacity-5">
               <div className="flex flex-wrap justify-between items-center">
                 <div className="flex justify-center items-center">
-                  <a
-                    href={project.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-base md:text-lg mr-2"
-                  >
-                    {projectName}
+                  <a href={project.link} target="_blank" rel="noopener noreferrer" className="text-base md:text-lg mr-2">
+                    {project.name.toLowerCase()}
                   </a>
                   <GitHubStars user="alex-unnippillil" repo={projectName} />
                 </div>
                 <div className="text-gray-300 font-light text-sm">{project.date}</div>
               </div>
-              <div className="prose prose-invert ml-4 mt-1">
-                <ul>
-                  {project.description.map((desc: string) => (
-                    <li key={desc}>{desc}</li>
-                  ))}
-                </ul>
-              </div>
+              <ul className=" tracking-normal leading-tight text-sm font-light ml-4 mt-1">
+                {project.description.map((desc: string) => (
+                  <li key={desc} className="list-disc mt-1 text-gray-100">
+                    {desc}
+                  </li>
+                ))}
+              </ul>
               <div className="flex flex-wrap items-start justify-start text-xs py-2">
                 {project.domains
                   ? project.domains.map((domain: string) => {

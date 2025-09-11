@@ -97,12 +97,8 @@ export default function Converter() {
     const data = rates[active as Domain];
     const units = Object.keys(data);
     if (units.length) {
-      // `noUncheckedIndexedAccess` is enabled, so direct indexing returns
-      // `string | undefined`. However, the length check above guarantees
-      // that at least the first element exists.
-      setFromUnit(units[0]!);
-      setToUnit(units[1] ?? units[0]!);
-
+      setFromUnit(units[0]);
+      setToUnit(units[1] || units[0]);
     }
     setFromValue("");
     setToValue("");
@@ -131,13 +127,7 @@ export default function Converter() {
       return;
     }
     const data = rates[active as Domain];
-    const toRate = data[toUnit];
-    const fromRate = data[fromUnit];
-    if (toRate === undefined || fromRate === undefined) {
-      setToValue("");
-      return;
-    }
-    const result = (n * toRate) / fromRate;
+    const result = (n * data[toUnit]) / data[fromUnit];
     const out = result.toString();
     setToValue(out);
     addHistory(val, fromUnit, out, toUnit);
@@ -150,14 +140,8 @@ export default function Converter() {
       setFromValue("");
       return;
     }
-    const data = rates[active as Domain];
-    const fromRate = data[fromUnit];
-    const toRate = data[toUnit];
-    if (fromRate === undefined || toRate === undefined) {
-      setFromValue("");
-      return;
-    }
-    const result = (n * fromRate) / toRate;
+    const data = rates[active];
+    const result = (n * data[fromUnit]) / data[toUnit];
     const out = result.toString();
     setFromValue(out);
     addHistory(out, fromUnit, val, toUnit);
@@ -209,8 +193,8 @@ export default function Converter() {
         </label>
       </div>
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row items-center gap-1.5">
-          <div className="flex flex-col sm:flex-row gap-1.5 flex-1">
+        <div className="flex flex-col sm:flex-row items-center gap-[6px]">
+          <div className="flex flex-col sm:flex-row gap-[6px] flex-1">
             <div className="flex flex-col flex-1">
               <input
                 type="number"
@@ -254,7 +238,7 @@ export default function Converter() {
           >
             ↔
           </button>
-          <div className="flex flex-col sm:flex-row gap-1.5 flex-1">
+          <div className="flex flex-col sm:flex-row gap-[6px] flex-1">
             <div className="flex flex-col flex-1">
               <input
                 type="number"

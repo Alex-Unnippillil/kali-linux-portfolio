@@ -1,8 +1,7 @@
-import { isBrowser } from '@/utils/env';
 const STORAGE_KEY = 'portfolio-tasks';
 
 export async function loadTasks(): Promise<any | undefined> {
-  if (!isBrowser()) return undefined;
+  if (typeof window === 'undefined') return undefined;
   try {
     const data = localStorage.getItem(STORAGE_KEY);
     return data ? (JSON.parse(data) as any) : undefined;
@@ -12,7 +11,7 @@ export async function loadTasks(): Promise<any | undefined> {
 }
 
 export async function saveTasks(data: any): Promise<void> {
-  if (!isBrowser()) return;
+  if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch {

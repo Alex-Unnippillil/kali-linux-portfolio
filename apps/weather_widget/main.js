@@ -2,7 +2,7 @@ import demoCity from './demoCity.json';
 import { isBrowser } from '../../utils/env';
 import { safeLocalStorage } from '../../utils/safeStorage';
 
-if (isBrowser()) {
+if (isBrowser) {
 const widget = document.getElementById('weather');
 const tempEl = widget.querySelector('.temp');
 const feelsEl = widget.querySelector('.feels-like');

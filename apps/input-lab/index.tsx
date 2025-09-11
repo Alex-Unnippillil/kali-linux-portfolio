@@ -1,9 +1,13 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { evaluate } from 'mathjs';
+import { z } from 'zod';
 
 const SAVE_KEY = 'input-lab:text';
+
+const schema = z.object({
+  text: z.string().min(1, 'Text is required'),
+});
 
 export default function InputLab() {
   const [text, setText] = useState('');
@@ -29,50 +33,41 @@ export default function InputLab() {
   };
 
   const exportLog = () => {
-    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-      const blob = new Blob([JSON.stringify(eventLog, null, 2)], {
-        type: 'application/json',
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'input-lab-log.json';
-      a.click();
-      URL.revokeObjectURL(url);
-    }
+    const blob = new Blob([JSON.stringify(eventLog, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'input-lab-log.json';
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   // Load saved text on mount
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const saved = window.localStorage.getItem(SAVE_KEY);
-      if (saved) setText(saved);
-    }
+    if (typeof window === 'undefined') return;
+    const saved = window.localStorage.getItem(SAVE_KEY);
+    if (saved) setText(saved);
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setText(val);
-    setError('');
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(SAVE_KEY, val);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      try {
-        const result = evaluate(text);
-        setText(String(result));
-        setStatus(`Result: ${result}`);
-        setError('');
-      } catch {
-        setError('Invalid expression');
-        setStatus('');
+  // Validate and autosave
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handle = setTimeout(() => {
+      const result = schema.safeParse({ text });
+      if (!result.success) {
+        const msg = result.error.issues[0].message;
+        setError(msg);
+        setStatus(`Error: ${msg}`);
+        return;
       }
-    }
-  };
+      setError('');
+      window.localStorage.setItem(SAVE_KEY, text);
+      setStatus('Saved');
+    }, 500);
+    return () => clearTimeout(handle);
+  }, [text]);
 
   return (
     <div className="min-h-screen bg-gray-900 p-4 text-white">
@@ -86,9 +81,7 @@ export default function InputLab() {
             id="input-lab-text"
             type="text"
             value={text}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            aria-label="Text"
+            onChange={(e) => setText(e.target.value)}
             onCompositionStart={(e) =>
               logEvent('compositionstart', { data: e.data })
             }

@@ -43,7 +43,7 @@ const FontGrid: React.FC<Props> = ({ fonts, value, onChange }) => {
           className="absolute z-10 bg-gray-800 text-white max-h-60 overflow-auto p-1"
           role="listbox"
         >
-          <div className="grid grid-cols-2 gap-x-2 gap-y-1.5">
+          <div className="grid grid-cols-2 gap-x-2 gap-y-[6px]">
             {fonts.map((f) => (
               <button
                 key={f.name}

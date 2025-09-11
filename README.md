@@ -1,4 +1,4 @@
-# Kali Linux Portfolio
+# Kali Linux Portfolio 
 
 A desktop-style portfolio built with Next.js and Tailwind that emulates a Kali/Ubuntu UI with windows, a dock, context menus, and a rich catalog of **security-tool simulations**, **utilities**, and **retro games**. This README is tailored for a professional full-stack engineer preparing **production deployment** and ongoing maintenance.
 
@@ -22,26 +22,18 @@ Always test inside controlled labs and obtain written permission before performi
 ## Setup
 
 ### Requirements
-- **Node.js 20.x**
+- **Node.js 20.19.5** (repo includes `.nvmrc`; run `nvm use`)
 - **Yarn** or **npm**
 - Recommended: **pnpm** if you prefer stricter hoisting; update lock/config accordingly.
 
 ### Install & Run (Dev)
 ```bash
 cp .env.local.example .env.local  # populate with required keys
-nvm install 20  # install Node 20.x if needed
-nvm use 20
+nvm install  # installs Node 20.19.5 from .nvmrc if needed
+nvm use
 yarn install
 yarn dev
 ```
-
-You can try the experimental Turbopack dev server for faster refreshes:
-
-```bash
-yarn dev:turbo
-```
-
-> **Limitations:** Turbopack is still in beta. Custom webpack plugins (such as the PWA service worker) and some Next.js features may not work yet. Use `yarn dev` if you hit build errors or missing functionality.
 
 ### Production Build
 Serverful deployments run the built Next.js server so all API routes are available.
@@ -54,15 +46,12 @@ After the server starts, exercise an API route to confirm server-side functional
 curl -X POST http://localhost:3000/api/dummy
 ```
 
-### Static Export (for GitHub Pages / S3 + CloudFront)
+### Static Export (for GitHub Pages / S3 Websites)
 This project supports static export. Serverless API routes will not be available; the UI falls back to demo data or hides features.
 ```bash
 yarn export && npx serve out
 
 ```
-For production hosting, upload the `out/` directory to a **private** S3 bucket behind CloudFront.
-See [deployment docs](./docs/deployment.md) for Terraform and upload steps.
-All access should go through CloudFront – the S3 website endpoint remains disabled.
 Verify that features relying on `/api/*` return 404 or other placeholders when served statically.
 
 ### Install as PWA for Sharing
@@ -72,32 +61,14 @@ To send text or links directly into the Sticky Notes app:
 1. Open the site in a supported browser (Chrome, Edge, etc.).
 2. Use the browser's **Install** or **Add to Home screen** option.
 3. After installation, use the system **Share** action and select "Kali Linux Portfolio".
-4. The shared text or URL is routed through the manifest `share_target` endpoint and appears as a new Sticky Note.
-
-Tested on **Chrome** and **Edge**: sharing a snippet or link creates a note and focuses the Sticky Notes window immediately after the share completes.
+4. The shared content will appear as a new note.
 
 ### Service Worker (SW)
 
-- Generated via [`@ducanh2912/next-pwa`](https://github.com/DuCanhGH/next-pwa); output is `public/service-worker.js`.
+- Generated via [`@ducanh2912/next-pwa`](https://github.com/DuCanhGH/next-pwa); output is `public/sw.js`.
 - Only assets under `public/` are precached.
 - Dynamic routes or API responses are not cached.
 - Future work may use `injectManifest` for finer control.
-
-### Bundle size budgets
-
-Client bundle size is tracked using `@next/bundle-analyzer`. Thresholds defined in
-[`bundle-budgets.json`](./bundle-budgets.json) are enforced in CI and can be
-verified locally:
-
-```bash
-ANALYZE=true yarn build
-yarn check-budgets
-```
-
-Current limits:
-
-- `^chunks/framework`: 300000 bytes
-- `^chunks/main-app`: 350000 bytes
 
 ---
 
@@ -108,9 +79,7 @@ Copy `.env.local.example` to `.env.local` and fill in required API keys:
 - `NEXT_PUBLIC_ENABLE_ANALYTICS` – enable client-side analytics when set to `true`.
 - `FEATURE_TOOL_APIS` – toggle simulated tool APIs (`enabled` or `disabled`).
 - `RECAPTCHA_SECRET` and related `NEXT_PUBLIC_RECAPTCHA_*` keys for contact form spam protection.
-- `RATE_LIMIT_SECRET` – secret used to sign rate limit cookies. Define this as a project environment variable in Vercel; no secret is referenced in `vercel.json`.
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` – Supabase credentials. When unset, Supabase-backed APIs and features are disabled.
-- `NODE_OPTIONS` – override Node.js memory limits. The build script sets `NODE_OPTIONS="--max-old-space-size=4096"` automatically when `CI` is detected to avoid out-of-memory errors in constrained environments.
 
 See `.env.local.example` for the full list.
 
@@ -120,11 +89,9 @@ See `.env.local.example` for the full list.
 
 - `yarn install` – install project dependencies.
 - `yarn dev` – start the development server with hot reloading.
-- `yarn dev:turbo` – start the experimental Turbopack dev server (limited feature support).
 - `yarn test` – run the test suite.
 - `yarn lint` – check code for linting issues.
 - `yarn export` – generate a static export in the `out/` directory.
-- `yarn check-budgets` – verify client bundle size against configured limits.
 
 ---
 
@@ -132,15 +99,6 @@ See `.env.local.example` for the full list.
 
 - Run `yarn lint` and `yarn test` before committing changes.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
-
----
-
-## App Finder
-
-- Press **Ctrl+Space** to open a compact run dialog.
-- The expanded view organizes results into categories and favorites.
-- Drag a search result onto the panel to create a launcher.
-- Press **Esc** to close the finder.
 
 ---
 
@@ -222,9 +180,7 @@ __tests__/
 ```ts
 import dynamic from 'next/dynamic';
 
-const SudokuApp = dynamic(() => import('./apps/sudoku'), {
-  ssr: false,
-});
+const SudokuApp = dynamic(() => import('./components/apps/sudoku'));
 export const displaySudoku = () => <SudokuApp />;
 ```
 Heavy apps are wrapped with **dynamic import** and most games share a `GameLayout` with a help overlay.
@@ -252,7 +208,6 @@ Copy `.env.local.example` to `.env.local` and fill in required values.
 | `NEXT_PUBLIC_GHIDRA_WASM` | Optional URL for a Ghidra WebAssembly build. |
 | `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | ReCAPTCHA site key used on the client. |
 | `RECAPTCHA_SECRET` | ReCAPTCHA secret key for server-side verification. |
-| `RATE_LIMIT_SECRET` | Secret used to sign rate limiting cookies. Configure this as an environment variable in Vercel. |
 | `SUPABASE_URL` | Supabase project URL for server-side access. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key for privileged operations. |
 | `SUPABASE_ANON_KEY` | Supabase anonymous key for server-side reads. |
@@ -276,7 +231,7 @@ Defined in `next.config.js`. See [CSP External Domains](#csp-external-domains) f
 - **Content-Security-Policy (CSP)** (string built from `ContentSecurityPolicy[]`; see [CSP External Domains](#csp-external-domains))
 - `X-Content-Type-Options: nosniff`
 - `Referrer-Policy: strict-origin-when-cross-origin`
-- `Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()`
+- `Permissions-Policy: camera=(), microphone=(), geolocation=()`
 - `X-Frame-Options: SAMEORIGIN`
 
 ### CSP External Domains
@@ -285,33 +240,26 @@ These external domains are whitelisted in the default CSP. Update this list when
 
 | Domain | Purpose |
 | --- | --- |
-| `*.twitter.com` | Twitter widgets and scripts |
-| `*.twimg.com` | Twitter asset CDN |
+| `platform.twitter.com` | Twitter widgets and scripts |
+| `syndication.twitter.com` | Twitter embed scripts |
+| `cdn.syndication.twimg.com` | Twitter asset CDN |
+| `*.twitter.com` | Additional Twitter content |
 | `*.x.com` | X (Twitter) domain equivalents |
 | `*.google.com` | Google services and Chrome app favicons |
 | `example.com` | Chrome app demo origin |
-| `opengraph.githubassets.com` | GitHub Open Graph images |
-| `raw.githubusercontent.com` | GitHub raw content |
-| `avatars.githubusercontent.com` | GitHub avatars |
-| `i.ytimg.com` | YouTube thumbnails |
-| `yt3.ggpht.com` | YouTube channel images |
-| `openweathermap.org` | Weather widget images |
-| `ghchart.rshah.org` | GitHub contribution charts |
-| `data.typeracer.com` | Typing race data |
-| `images.credly.com` | Certification badges |
-| `staticmap.openstreetmap.de` | Static map images |
+| `developer.mozilla.org` | Chrome app demo origin |
+| `en.wikipedia.org` | Chrome app demo origin |
 | `cdn.jsdelivr.net` | Math.js library |
 | `cdnjs.cloudflare.com` | PDF.js worker |
 | `stackblitz.com` | StackBlitz IDE embeds |
+| `www.youtube.com` | YouTube IFrame API |
 | `www.youtube-nocookie.com` | YouTube video embeds (privacy-enhanced) |
 | `open.spotify.com` | Spotify embeds |
-| `react.dev` | React documentation embeds |
-| `sdk.scdn.co` | Spotify Web Playback SDK |
 | `vercel.live` | Vercel toolbar |
-| `img.shields.io` | Skill badge images |
 
 **Notes for prod hardening**
 - Review `connect-src` and `frame-src` to ensure only required domains are present for your deployment.
+- Consider removing `'unsafe-inline'` from `style-src` once all inline styles are eliminated.
 - If deploying on a domain that serves a PDF resume via `<object>`, keep `X-Frame-Options: SAMEORIGIN`. Otherwise you can rely on CSP `frame-ancestors` instead.
 
 ---
@@ -321,7 +269,7 @@ These external domains are whitelisted in the default CSP. Update this list when
 ### Static export (GitHub Pages)
 Workflow: `.github/workflows/gh-deploy.yml`:
  - Installs Node, runs `yarn export`, adds `.nojekyll`, and deploys `./out` → `gh-pages` branch.
- - Uses **Node 20.x** to match `package.json`.
+ - Uses **Node 20.19.5** to match `package.json`.
 - Required env variables (GitHub Secrets):
   - `NEXT_PUBLIC_TRACKING_ID`
   - `NEXT_PUBLIC_SERVICE_ID`
@@ -344,11 +292,10 @@ Workflow: `.github/workflows/gh-deploy.yml`:
   - `NEXT_PUBLIC_BEEF_URL`
   - `NEXT_PUBLIC_GHIDRA_URL`
   - `NEXT_PUBLIC_GHIDRA_WASM`
-   - `NEXT_PUBLIC_UI_EXPERIMENTS`
-   - `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`
-   - `RECAPTCHA_SECRET`
-   - `RATE_LIMIT_SECRET`
-   - `ADMIN_READ_KEY` (set manually in Vercel or your host)
+  - `NEXT_PUBLIC_UI_EXPERIMENTS`
+  - `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`
+  - `RECAPTCHA_SECRET`
+  - `ADMIN_READ_KEY` (set manually in Vercel or your host)
 - Build command: `yarn build`
 - Output: Next.js (serverless by default on Vercel).
 - If you keep API routes, Vercel deploys them as serverless functions. For a static build, disable API routes or feature-flag those apps.
@@ -413,113 +360,100 @@ yarn lint
 
 Browse all apps, games, and security tool demos at `/apps`, which presents a searchable grid built from `apps.config.js`.
 
-Browse all apps at `/apps`, which presents a searchable grid built from `apps.config.js`.
-
-### Available Apps
+### Utilities & Media
 | App | Route | Category |
 | --- | --- | --- |
-| Terminal | /apps/terminal | Utility |
-| VS Code | /apps/vscode | Utility |
-| Calculator | /apps/calculator | Utility |
+| Alex | /apps/alex | Utility / Media |
+| Chrome | /apps/chrome | Utility / Media |
+| VS Code | /apps/vscode | StackBlitz IDE embed |
+| Spotify | /apps/spotify | Utility / Media |
+| Youtube | /apps/youtube | Utility / Media |
+| Weather | /apps/weather | Utility / Media |
+| X / Twitter | /apps/x | Utility / Media |
+| Todoist | /apps/todoist | Utility / Media |
+| Gedit | /apps/gedit | Utility / Media |
+| Settings | /apps/settings | Utility / Media |
+| Trash | /apps/trash | Utility / Media |
+| Project Gallery | /apps/project-gallery | Utility / Media |
+| Quote | /apps/quote | Utility / Media |
 
-<!-- TODO: restore YouTube (youtube) -->
-<!-- TODO: restore Converter (converter) -->
-<!-- TODO: restore Tic Tac Toe (tictactoe) -->
-<!-- TODO: restore Chess (chess) -->
-<!-- TODO: restore Connect Four (connect-four) -->
-<!-- TODO: restore Hangman (hangman) -->
-<!-- TODO: restore Frogger (frogger) -->
-<!-- TODO: restore Flappy Bird (flappy-bird) -->
-<!-- TODO: restore Snake (snake) -->
-<!-- TODO: restore Memory (memory) -->
-<!-- TODO: restore Minesweeper (minesweeper) -->
-<!-- TODO: restore Pong (pong) -->
-<!-- TODO: restore Pacman (pacman) -->
-<!-- TODO: restore Car Racer (car-racer) -->
-<!-- TODO: restore Lane Runner (lane-runner) -->
-<!-- TODO: restore Platformer (platformer) -->
-<!-- TODO: restore Battleship (battleship) -->
-<!-- TODO: restore Checkers (checkers) -->
-<!-- TODO: restore Reversi (reversi) -->
-<!-- TODO: restore Simon (simon) -->
-<!-- TODO: restore Sokoban (sokoban) -->
-<!-- TODO: restore Solitaire (solitaire/index) -->
-<!-- TODO: restore Tower Defense (tower-defense) -->
-<!-- TODO: restore Word Search (word-search) -->
-<!-- TODO: restore Wordle (wordle) -->
-<!-- TODO: restore Blackjack (blackjack) -->
-<!-- TODO: restore Breakout (breakout) -->
-<!-- TODO: restore Asteroids (asteroids) -->
-<!-- TODO: restore Sudoku (sudoku) -->
-<!-- TODO: restore Space Invaders (space-invaders) -->
-<!-- TODO: restore Nonogram (nonogram) -->
-<!-- TODO: restore Tetris (tetris) -->
-<!-- TODO: restore Candy Crush (candy-crush) -->
-<!-- TODO: restore Files (file-explorer) -->
-<!-- TODO: restore Image Viewer (ristretto) -->
-<!-- TODO: restore Radare2 (radare2) -->
-<!-- TODO: restore About Alex (alex) -->
-<!-- TODO: restore Power Settings (power) -->
-<!-- TODO: restore X (x) -->
-<!-- TODO: restore Spotify (spotify) -->
-<!-- TODO: restore Settings (settings) -->
-<!-- TODO: restore Chrome (chrome) -->
-<!-- TODO: restore Gedit (gedit) -->
-<!-- TODO: restore Todoist (todoist) -->
-<!-- TODO: restore Weather (weather) -->
-<!-- TODO: restore Clipboard Manager (ClipboardManager) -->
-<!-- TODO: restore Figlet (figlet) -->
-<!-- TODO: restore Resource Monitor (resource_monitor) -->
-<!-- TODO: restore Screen Recorder (screen-recorder) -->
-<!-- TODO: restore Task Manager (task_manager) -->
-<!-- TODO: restore Nikto (nikto) -->
-<!-- TODO: restore QR Tool (qr) -->
-<!-- TODO: restore ASCII Art (ascii_art) -->
-<!-- TODO: restore Quote (quote) -->
-<!-- TODO: restore Project Gallery (project-gallery) -->
-<!-- TODO: restore Weather Widget (weather_widget) -->
-<!-- TODO: restore Input Lab (input-lab) -->
-<!-- TODO: restore Ghidra (ghidra) -->
-<!-- TODO: restore Brasero (brasero) -->
-<!-- TODO: restore Sticky Notes (sticky_notes) -->
-<!-- TODO: restore Trash (trash) -->
-<!-- TODO: restore Serial Terminal (serial-terminal) -->
-<!-- TODO: restore Network Connections (network/connections) -->
-<!-- TODO: restore BLE Sensor (ble-sensor) -->
-<!-- TODO: restore Bluetooth (bluetooth) -->
-<!-- TODO: restore dsniff (dsniff) -->
-<!-- TODO: restore BeEF (beef) -->
-<!-- TODO: restore Metasploit (metasploit) -->
-<!-- TODO: restore Network Manager (network-manager) -->
-<!-- TODO: restore Autopsy (autopsy) -->
-<!-- TODO: restore Plugin Manager (plugin-manager) -->
-<!-- TODO: restore Panel Profiles (panel-profiles) -->
-<!-- TODO: restore Gomoku (gomoku) -->
-<!-- TODO: restore Pinball (pinball) -->
-<!-- TODO: restore Volatility (volatility) -->
-<!-- TODO: restore Kismet (kismet.jsx) -->
-<!-- TODO: restore Hashcat (hashcat) -->
-<!-- TODO: restore Metasploit Post (msf-post) -->
-<!-- TODO: restore Evidence Vault (evidence-vault) -->
-<!-- TODO: restore Mimikatz (mimikatz) -->
-<!-- TODO: restore Mimikatz Offline (mimikatz/offline) -->
-<!-- TODO: restore Ettercap (ettercap) -->
-<!-- TODO: restore Reaver (reaver) -->
-<!-- TODO: restore Hydra (hydra) -->
-<!-- TODO: restore John the Ripper (john) -->
-<!-- TODO: restore Nessus (nessus) -->
-<!-- TODO: restore Nmap NSE (nmap-nse) -->
-<!-- TODO: restore OpenVAS (openvas) -->
-<!-- TODO: restore Recon-ng (reconng) -->
-<!-- TODO: restore Kali Tools (kali-tools) -->
-<!-- TODO: restore Security Tools (security-tools) -->
-<!-- TODO: restore Kali Tweaks (kali-tweaks) -->
-<!-- TODO: restore SSH Command Builder (ssh) -->
-<!-- TODO: restore HTTP Request Builder (http) -->
-<!-- TODO: restore HTML Rewriter (html-rewriter) -->
-<!-- TODO: restore Contact (contact) -->
-<!-- TODO: restore Gigolo (gigolo) -->
-<!-- TODO: restore Wireshark (/apps/wireshark) -->
+> The VS Code app now embeds a StackBlitz IDE via iframe instead of the local Monaco editor.
+
+The Spotify app lets you customize a mood-to-playlist mapping. Use the in-app form to
+add, reorder, or delete moods; selections persist in the browser's Origin Private File
+System so your choices restore on load. The last mood played is remembered, and
+play/pause and track controls include keyboard hotkeys.
+
+### Terminal Commands
+- `clear` – clears the terminal display.
+- `help` – lists available commands.
+
+### Games
+| Game | Route | Category |
+| --- | --- | --- |
+| 2048 | /apps/2048 | Game |
+| Asteroids | /apps/asteroids | Game |
+| Battleship | /apps/battleship | Game |
+| Blackjack | /apps/blackjack | Game |
+| Breakout | /apps/breakout | Game |
+| Candy Crush | /apps/candy-crush | Game |
+| Car Racer | /apps/car-racer | Game - ghost replays, lane assist, drift scoring |
+| Checkers | /apps/checkers | Game |
+| Chess | /apps/chess | Game |
+| Connect Four | /apps/connect-four | Game |
+| Flappy Bird | /apps/flappy-bird | Game |
+| Frogger | /apps/frogger | Game |
+| Gomoku | /apps/gomoku | Game |
+| Hangman | /apps/hangman | Game |
+| Memory | /apps/memory | Game |
+| Minesweeper | /apps/minesweeper | Game |
+| Nonogram | /apps/nonogram | Game |
+| Pacman | /apps/pacman | Game |
+| Pinball | /apps/pinball | Game |
+| Platformer | /apps/platformer | Game |
+| Pong | /apps/pong | Game |
+| Reversi | /apps/reversi | Game |
+| Simon | /apps/simon | Game |
+| Snake | /apps/snake | Game |
+| Sokoban | /apps/sokoban | Game |
+| Solitaire | /apps/solitaire | Game |
+| Space Invaders | /apps/space-invaders | Game |
+| Sudoku | /apps/sudoku | Game |
+| Tetris | /apps/tetris | Game |
+| Tic Tac Toe | /apps/tictactoe | Game |
+| Tower Defense | /apps/tower-defense | Game |
+| Word Search | /apps/word-search | Game |
+| Wordle | /apps/wordle | Game |
+
+### Security Tools (Simulated)
+| Tool | Route | Category |
+| --- | --- | --- |
+| Autopsy | /apps/autopsy | Security Tool (simulated) |
+| BeEF | /apps/beef | Security Tool (simulated) |
+| Bluetooth Tools | /apps/bluetooth | Security Tool (simulated) |
+| dsniff | /apps/dsniff | Security Tool (simulated) |
+| Ettercap | /apps/ettercap | Security Tool (simulated) |
+| Ghidra | /apps/ghidra | Security Tool (simulated) |
+| Hashcat | /apps/hashcat | Security Tool (simulated) |
+| Hydra | /apps/hydra | Security Tool (simulated) |
+| John the Ripper | /apps/john | Security Tool (simulated) |
+| Kismet | /apps/kismet | Security Tool (simulated) |
+| Metasploit | /apps/metasploit | Security Tool (simulated) |
+| Metasploit Post | /apps/metasploit-post | Security Tool (simulated) |
+| Mimikatz | /apps/mimikatz | Security Tool (simulated) |
+| Nessus | /apps/nessus | Security Tool (simulated) |
+| Nmap NSE | /apps/nmap-nse | Security Tool (simulated) |
+| OpenVAS | /apps/openvas | Security Tool (simulated) |
+| Radare2 | /apps/radare2 | Security Tool (simulated) |
+| Reaver | /apps/reaver | Security Tool (simulated) |
+| Recon-ng | /apps/reconng | Security Tool (simulated) |
+| Volatility | /apps/volatility | Security Tool (simulated) |
+| Wireshark | /apps/wireshark | Security Tool (simulated, lab use only) |
+
+> All security apps are **non-operational simulations** intended for education/demos. They **do not** execute exploits and should not be used for any unauthorized activity.
+> All reports and feed data are canned examples and not generated from live systems.
+
+---
 
 ## Notable Components
 
@@ -528,18 +462,17 @@ Browse all apps at `/apps`, which presents a searchable grid built from `apps.co
 - **`hooks/usePersistentState.ts`** - localStorage-backed state with validation + reset helper.
 - **`hooks/useSettings.tsx`** - global settings context exposing theme, accent, wallpaper and other preferences with persistence.
 - **`components/apps/GameLayout.tsx`** - standardized layout and help toggle for games.
-- **`apps/radare2`** - dual hex/disassembly panes with seek/find/xref; graph mode from JSON fixtures; per-file notes and bookmarks.
+- **`components/apps/radare2`** - dual hex/disassembly panes with seek/find/xref; graph mode from JSON fixtures; per-file notes and bookmarks.
 - **`components/common/PipPortal.tsx`** - renders arbitrary UI inside a Document Picture-in-Picture window. See [`docs/pip-portal.md`](./docs/pip-portal.md).
-- **`hooks/useTray.tsx`** & **`components/util-components/status.js`** - unified tray grouping StatusNotifierItem icons with legacy systray fallback. See [`docs/system-tray.md`](./docs/system-tray.md).
 
 ---
 
 ## Adding a New App
 
-1. Create your component under `apps/my-app/index.tsx`.
+1. Create your component under `components/apps/my-app/index.tsx`.
 2. Register it in `apps.config.js` using dynamic import:
    ```ts
-   const MyApp = dynamic(() => import('./apps/my-app'));
+   const MyApp = dynamic(() => import('./components/apps/my-app'));
    export const displayMyApp = () => <MyApp />;
    ```
 3. Add metadata (icon, title) where appropriate.
@@ -550,7 +483,7 @@ Browse all apps at `/apps`, which presents a searchable grid built from `apps.co
 
 ## Production Hardening Checklist
 
-- [x] **Use Node 20.x** across runtime and CI.
+- [x] **Pin Node to 20.19.5** across runtime and CI.
 - [ ] **Track Node.js `DEP0170` deprecation** for custom protocol URLs; update tooling/dependencies when Node fully removes support and ensure `yarn install` runs without related warnings.
 - [ ] **Tighten CSP** (`connect-src`, `frame-src`, remove `http:` and `'unsafe-inline'`).
 - [ ] **Set env vars** in the hosting platform; rotate EmailJS keys regularly.
@@ -592,3 +525,4 @@ The calculator supports a subset of math.js expressions with the following featu
 - The previous answer is accessible via `Ans`.
 
 Invalid syntax is highlighted in the calculator input, selecting the character where parsing failed.
+

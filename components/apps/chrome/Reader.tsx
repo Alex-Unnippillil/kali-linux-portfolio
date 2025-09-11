@@ -1,5 +1,7 @@
-import { isBrowser } from '@/utils/env';
 import React, { useEffect, useState } from 'react';
+import { Readability } from '@mozilla/readability';
+import TurndownService from 'turndown';
+import DOMPurify from 'dompurify';
 import { useReadLater } from './ReadLaterList';
 
 interface ReaderProps {
@@ -10,11 +12,11 @@ interface Article {
   title: string;
   content: string;
   excerpt: string;
-  markdown: string;
 }
 
 const Reader: React.FC<ReaderProps> = ({ url }) => {
   const [article, setArticle] = useState<Article | null>(null);
+  const [markdown, setMarkdown] = useState<string>('');
   const [viewMode, setViewMode] = useState<'rendered' | 'markdown' | 'split'>('rendered');
   const [error, setError] = useState<string | null>(null);
   const { add } = useReadLater();
@@ -26,12 +28,22 @@ const Reader: React.FC<ReaderProps> = ({ url }) => {
       return;
     }
 
-    const apiUrl = `/api/reader?url=${encodeURIComponent(target.href)}`;
-    fetch(apiUrl)
-      .then((res) => res.json())
-      .then((data: Article) => {
-        if (data && data.content) {
-          setArticle(data);
+    fetch(target.href)
+      .then((res) => res.text())
+      .then((html) => {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const reader = new Readability(doc);
+        const parsed = reader.parse();
+        if (parsed) {
+          const sanitizedContent = DOMPurify.sanitize(parsed.content ?? '');
+          setArticle({
+            title: parsed.title ?? '',
+            content: sanitizedContent,
+            excerpt: parsed.excerpt ?? '',
+          });
+          const turndown = new TurndownService();
+          const md = turndown.turndown(sanitizedContent);
+          setMarkdown(`# ${parsed.title ?? ''}\n\n${md}`);
         } else {
           setError('Unable to parse article.');
         }
@@ -40,7 +52,7 @@ const Reader: React.FC<ReaderProps> = ({ url }) => {
   }, [url]);
 
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === 'undefined') return;
     const saved = localStorage.getItem('readerView');
     if (saved === 'rendered' || saved === 'markdown' || saved === 'split') {
       setViewMode(saved);
@@ -49,14 +61,14 @@ const Reader: React.FC<ReaderProps> = ({ url }) => {
 
   const changeView = (mode: 'rendered' | 'markdown' | 'split') => {
     setViewMode(mode);
-    if (isBrowser()) {
+    if (typeof window !== 'undefined') {
       localStorage.setItem('readerView', mode);
     }
   };
 
   const copyMarkdown = () => {
-    if (!article?.markdown) return;
-    navigator.clipboard?.writeText(article.markdown);
+    if (!markdown) return;
+    navigator.clipboard?.writeText(markdown);
   };
 
   const saveForLater = () => {
@@ -72,7 +84,7 @@ const Reader: React.FC<ReaderProps> = ({ url }) => {
   );
 
   const markdownContent = (
-    <pre className="whitespace-pre-wrap overflow-auto">{article.markdown}</pre>
+    <pre className="whitespace-pre-wrap overflow-auto">{markdown}</pre>
   );
 
   return (

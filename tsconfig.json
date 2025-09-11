@@ -1,45 +1,27 @@
 {
   "compilerOptions": {
     "target": "es2020",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
     "strictNullChecks": true,
     "noImplicitAny": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-    "exactOptionalPropertyTypes": true,
     "forceConsistentCasingInFileNames": true,
     "esModuleInterop": true,
     "module": "esnext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "resolveJsonModule": true,
-    "allowImportingTsExtensions": false,
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "types": [
-      "jest",
-      "node",
-      "./types/file-system-access",
-      "./types/web-bluetooth"
-    ],
+    "types": [],
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]
-    },
-    "noEmit": true,
-    "plugins": [{ "name": "next" }]
-  },
-  "include": ["**/*"],
-  "exclude": ["node_modules", "chrome-extension", "__tests__", "storybook"],
-  "overrides": [
-    {
-      "files": ["apps/games/**/*.ts", "games/**/*.ts"],
-      "compilerOptions": {
-        "noImplicitAny": true
-      }
+
     }
-  ]
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "types/**/*.d.ts"],
+  "exclude": ["node_modules", "__tests__", "components/apps/archive", "components/apps/kismet"]
 }

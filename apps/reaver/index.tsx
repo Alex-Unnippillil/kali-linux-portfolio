@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import React, { useEffect, useRef, useState } from "react";
-import TabbedWindow, { TabDefinition } from "../../components/ui/TabbedWindow";
+import React, { useEffect, useRef, useState } from 'react';
+import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
 import RouterProfiles, {
   ROUTER_PROFILES,
   RouterProfile,
-} from "./components/RouterProfiles";
-import APList from "./components/APList";
-import ProgressDonut from "./components/ProgressDonut";
+} from './components/RouterProfiles';
+import APList from './components/APList';
+import ProgressDonut from './components/ProgressDonut';
 
 const PlayIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 20 20" fill="currentColor" {...props}>
@@ -27,41 +27,43 @@ interface RouterMeta {
 }
 
 interface LogEntry {
-  level: "info" | "warn" | "success" | "error";
+  level: 'info' | 'warn' | 'success' | 'error';
   text: string;
 }
 
 const stages = [
   {
-    title: "Discovery",
+    title: 'Discovery',
     detail:
-      "Scanning for WPS-enabled access points. Retries with incremental backoff when none are found.",
+      'Scanning for WPS-enabled access points. Retries with incremental backoff when none are found.',
   },
   {
-    title: "Association",
+    title: 'Association',
     detail:
-      "Associates with the target AP. Failed attempts are retried with exponential backoff.",
+      'Associates with the target AP. Failed attempts are retried with exponential backoff.',
   },
   {
-    title: "Handshake (M1–M8)",
+    title: 'Handshake (M1–M8)',
     detail:
-      "Exchanges WPS messages. NACK responses trigger delays before retrying.",
+      'Exchanges WPS messages. NACK responses trigger delays before retrying.',
   },
   {
-    title: "PIN Brute Force",
+    title: 'PIN Brute Force',
     detail:
-      "Cycles through possible PINs. Routers may lock WPS or impose delays after repeated failures.",
+      'Cycles through possible PINs. Routers may lock WPS or impose delays after repeated failures.',
   },
 ];
 
 const TOTAL_PINS = 11000; // example PIN space for demonstration
-const FOUND_PIN = "12345670";
+const FOUND_PIN = '12345670';
 
 const formatTime = (seconds: number) => {
   const hrs = Math.floor(seconds / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
   const secs = Math.floor(seconds % 60);
-  return [hrs, mins, secs].map((v) => String(v).padStart(2, "0")).join(":");
+  return [hrs, mins, secs]
+    .map((v) => String(v).padStart(2, '0'))
+    .join(':');
 };
 
 const ReaverPanel: React.FC = () => {
@@ -80,7 +82,7 @@ const ReaverPanel: React.FC = () => {
   const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch("/demo-data/reaver/routers.json")
+    fetch('/demo-data/reaver/routers.json')
       .then((r) => r.json())
       .then(setRouters)
       .catch(() => setRouters([]));
@@ -107,26 +109,20 @@ const ReaverPanel: React.FC = () => {
             setLockRemaining(lockRef.current);
             setLogs((l) => [
               ...l,
-              {
-                level: "warn",
-                text: `WPS locked for ${profile.lockDuration}s`,
-              },
+              { level: 'warn', text: `WPS locked for ${profile.lockDuration}s` },
             ]);
           }
         }
 
         if (next % 1000 === 0) {
-          setLogs((l) => [...l, { level: "info", text: `Tried ${next} PINs` }]);
+          setLogs((l) => [...l, { level: 'info', text: `Tried ${next} PINs` }]);
         }
 
         if (next >= TOTAL_PINS) {
           clearInterval(intervalRef.current!);
           setRunning(false);
           setStageIdx(stages.length);
-          setLogs((l) => [
-            ...l,
-            { level: "success", text: `PIN found: ${FOUND_PIN}` },
-          ]);
+          setLogs((l) => [...l, { level: 'success', text: `PIN found: ${FOUND_PIN}` }]);
           return TOTAL_PINS;
         }
         return next;
@@ -149,14 +145,14 @@ const ReaverPanel: React.FC = () => {
     setLockRemaining(0);
     setStageIdx(0);
     setRunning(true);
-    setLogs([{ level: "info", text: "Attack started" }]);
+    setLogs([{ level: 'info', text: 'Attack started' }]);
   };
 
   const stop = () => {
     setRunning(false);
     clearInterval(intervalRef.current!);
     setStageIdx(-1);
-    setLogs((l) => [...l, { level: "warn", text: "Attack stopped" }]);
+    setLogs((l) => [...l, { level: 'warn', text: 'Attack stopped' }]);
   };
 
   useEffect(() => {
@@ -168,36 +164,38 @@ const ReaverPanel: React.FC = () => {
   }, [running, stageIdx]);
 
   useEffect(() => {
-    const stage = stages[stageIdx];
-    if (stageIdx >= 0 && stageIdx < stages.length && stage) {
-      setLogs((l) => [...l, { level: "info", text: `Stage: ${stage.title}` }]);
+    if (stageIdx >= 0 && stageIdx < stages.length) {
+      setLogs((l) => [
+        ...l,
+        { level: 'info', text: `Stage: ${stages[stageIdx].title}` },
+      ]);
     }
     if (stageIdx === stages.length) {
-      setLogs((l) => [...l, { level: "success", text: "Attack complete" }]);
+      setLogs((l) => [...l, { level: 'success', text: 'Attack complete' }]);
     }
-  }, [stageIdx]);
+    }, [stageIdx]);
 
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight });
   }, [logs]);
 
   const stageStatus = (i: number) => {
-    if (i < stageIdx) return "completed";
-    if (i === stageIdx && running) return "running";
-    return "pending";
+    if (i < stageIdx) return 'completed';
+    if (i === stageIdx && running) return 'running';
+    return 'pending';
   };
 
-  const stripColor = (level: LogEntry["level"]) => {
+  const stripColor = (level: LogEntry['level']) => {
     switch (level) {
-      case "warn":
-        return "bg-yellow-500";
-      case "success":
-        return "bg-green-500";
-      case "error":
-        return "bg-red-500";
-      case "info":
+      case 'warn':
+        return 'bg-yellow-500';
+      case 'success':
+        return 'bg-green-500';
+      case 'error':
+        return 'bg-red-500';
+      case 'info':
       default:
-        return "bg-blue-500";
+        return 'bg-blue-500';
     }
   };
 
@@ -221,11 +219,11 @@ const ReaverPanel: React.FC = () => {
           {stages.map((s, i) => {
             const status = stageStatus(i);
             const color =
-              status === "completed"
-                ? "bg-green-500"
-                : status === "running"
-                  ? "bg-yellow-500"
-                  : "bg-gray-600";
+              status === 'completed'
+                ? 'bg-green-500'
+                : status === 'running'
+                ? 'bg-yellow-500'
+                : 'bg-gray-600';
             return (
               <div
                 key={s.title}
@@ -266,9 +264,9 @@ const ReaverPanel: React.FC = () => {
               type="button"
               onClick={running ? stop : start}
               className={`w-12 h-12 flex items-center justify-center rounded disabled:opacity-50 ${
-                running ? "bg-red-700" : "bg-green-700"
+                running ? 'bg-red-700' : 'bg-green-700'
               }`}
-              aria-label={running ? "Stop attack" : "Start attack"}
+              aria-label={running ? 'Stop attack' : 'Start attack'}
             >
               {running ? (
                 <StopIcon className="w-6 h-6" />
@@ -361,11 +359,7 @@ const ReaverPage: React.FC = () => {
 
   const createTab = (): TabDefinition => {
     const id = Date.now().toString();
-    return {
-      id,
-      title: `Session ${countRef.current++}`,
-      content: <ReaverApp />,
-    };
+    return { id, title: `Session ${countRef.current++}`, content: <ReaverApp /> };
   };
 
   return (
@@ -378,3 +372,4 @@ const ReaverPage: React.FC = () => {
 };
 
 export default ReaverPage;
+

@@ -17,7 +17,7 @@ describe('admin messages api', () => {
   it('logs unauthorized access', async () => {
     process.env.ADMIN_READ_KEY = 'secret';
     const { req, res } = createMocks({ method: 'GET', headers: {} });
-    const spy = jest.spyOn(console, 'info').mockImplementation(() => {});
+    const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
     const { default: handler } = await import('../pages/api/admin/messages');
     await handler(req as any, res as any);
     expect(res._getStatusCode()).toBe(401);

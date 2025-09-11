@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import GameLayout from './GameLayout';
 import { checkWinner, minimax, createBoard } from '../../apps/games/tictactoe/logic';
@@ -20,9 +19,8 @@ const TicTacToe = () => {
   const [ai, setAi] = useState(null);
   const [status, setStatus] = useState('Choose X or O');
   const [winLine, setWinLine] = useState(null);
-  const [ariaMessage, setAriaMessage] = useState('');
   const [stats, setStats] = useState(() => {
-    if (!isBrowser()) return {};
+    if (typeof window === 'undefined') return {};
     try {
       return JSON.parse(localStorage.getItem('tictactoeStats') || '{}');
     } catch {
@@ -45,7 +43,7 @@ const TicTacToe = () => {
             draws: res === 'draw' ? cur.draws + 1 : cur.draws,
           },
         };
-        if (isBrowser()) {
+        if (typeof window !== 'undefined') {
           localStorage.setItem('tictactoeStats', JSON.stringify(updated));
         }
         return updated;
@@ -60,7 +58,6 @@ const TicTacToe = () => {
     setAi(null);
     setStatus('Choose X or O');
     setWinLine(null);
-    setAriaMessage('');
   }, [size, mode]);
 
   const startGame = (p) => {
@@ -70,7 +67,6 @@ const TicTacToe = () => {
     setBoard(createBoard(size));
     setStatus(`${SKINS[skin][p]}'s turn`);
     setWinLine(null);
-    setAriaMessage('');
   };
 
   const handleClick = (idx) => {
@@ -86,7 +82,6 @@ const TicTacToe = () => {
     const { winner, line } = checkWinner(board, size, mode === 'misere');
     if (winner) {
       setStatus(winner === 'draw' ? 'Draw' : `${SKINS[skin][winner]} wins`);
-      setAriaMessage(winner === player ? 'You win' : 'Game over');
       setWinLine(line);
       if (winner === 'draw') recordResult('draw');
       else if (winner === player) recordResult('win');
@@ -142,16 +137,11 @@ const TicTacToe = () => {
   if (player === null) {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
-        <p className="sr-only">
-          Use Tab to move through settings and choose your mark. When the board appears, tab through the squares and press Enter or
-          Space to place your symbol. Get three in a row to win.
-        </p>
-        <div aria-live="polite" className="sr-only">{ariaMessage}</div>
         <div className="mb-4">Size:
           <select
             value={size}
             onChange={(e) => setSize(parseInt(e.target.value, 10))}
-            className="bg-gray-700 rounded p-1 ml-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white"
+            className="bg-gray-700 rounded p-1 ml-2"
           >
             <option value={3}>3×3</option>
             <option value={4}>4×4</option>
@@ -161,7 +151,7 @@ const TicTacToe = () => {
           <select
             value={mode}
             onChange={(e) => setMode(e.target.value)}
-            className="bg-gray-700 rounded p-1 ml-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white"
+            className="bg-gray-700 rounded p-1 ml-2"
           >
             <option value="classic">Classic</option>
             <option value="misere">Misère (three-in-a-row loses)</option>
@@ -171,7 +161,7 @@ const TicTacToe = () => {
           <select
             value={level}
             onChange={(e) => setLevel(e.target.value)}
-            className="bg-gray-700 rounded p-1 ml-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white"
+            className="bg-gray-700 rounded p-1 ml-2"
           >
             <option value="easy">Easy</option>
             <option value="medium">Medium</option>
@@ -182,7 +172,7 @@ const TicTacToe = () => {
           <select
             value={skin}
             onChange={(e) => setSkin(e.target.value)}
-            className="bg-gray-700 rounded p-1 ml-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white"
+            className="bg-gray-700 rounded p-1 ml-2"
           >
             {Object.keys(SKINS).map((k) => (
               <option key={k} value={k}>
@@ -194,13 +184,13 @@ const TicTacToe = () => {
         <div className="mb-4">Choose X or O</div>
         <div className="flex space-x-4">
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-yellow-400"
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
             onClick={() => startGame('X')}
           >
             {currentSkin.X}
           </button>
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-yellow-400"
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
             onClick={() => startGame('O')}
           >
             {currentSkin.O}
@@ -218,10 +208,6 @@ const TicTacToe = () => {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
-      <p className="sr-only">
-        Use Tab to move focus across the grid and press Enter or Space to place your mark. Get three in a row to win.
-      </p>
-      <div aria-live="polite" className="sr-only">{ariaMessage}</div>
       <div className="mb-2" aria-live="polite">
         {status}
       </div>
@@ -233,7 +219,7 @@ const TicTacToe = () => {
           {board.map((cell, idx) => (
             <button
               key={idx}
-              className="w-full h-full flex items-center justify-center bg-gray-700 text-5xl focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-yellow-400"
+              className="w-full h-full flex items-center justify-center bg-gray-700 text-5xl"
               onClick={() => handleClick(idx)}
             >
               {cell ? currentSkin[cell] : ''}
@@ -270,25 +256,23 @@ const TicTacToe = () => {
       </div>
       <div className="flex space-x-4 mt-4">
         <button
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-300"
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded"
           onClick={() => {
             setBoard(createBoard(size));
             setStatus(`${currentSkin[player]}'s turn`);
             setWinLine(null);
-            setAriaMessage('');
           }}
         >
           Restart
         </button>
         <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-yellow-400"
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
           onClick={() => {
             setPlayer(null);
             setAi(null);
             setBoard(createBoard(size));
             setStatus('Choose X or O');
             setWinLine(null);
-            setAriaMessage('');
           }}
         >
           Reset

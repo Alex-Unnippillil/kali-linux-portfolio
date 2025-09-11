@@ -27,7 +27,7 @@ const DPR =
     : 1;
 
 const AsteroidsGame: React.FC = () => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const shipRef = useRef({
     x: 0,
     y: 0,
@@ -234,18 +234,15 @@ const AsteroidsGame: React.FC = () => {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    canvas.style.willChange = "transform";
-
-    const resize = () => {
+    function resize() {
       if (!canvas || !ctx) return;
       const { clientWidth, clientHeight } = canvas;
       canvas.width = clientWidth * DPR;
       canvas.height = clientHeight * DPR;
       ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    };
+    }
     resize();
-    const ro = new ResizeObserver(resize);
-    ro.observe(canvas);
+    window.addEventListener("resize", resize);
 
     initGame();
 
@@ -260,7 +257,7 @@ const AsteroidsGame: React.FC = () => {
     id = requestAnimationFrame(loop);
     return () => {
       cancelAnimationFrame(id);
-      ro.disconnect();
+      window.removeEventListener("resize", resize);
     };
   }, [paused, initGame, update, draw]);
 
@@ -271,7 +268,7 @@ const AsteroidsGame: React.FC = () => {
 
   return (
     <div className="relative w-full h-full bg-black" data-testid="asteroids-game">
-      <canvas ref={canvasRef} className="w-full h-full" aria-label="Asteroids game canvas" />
+      <canvas ref={canvasRef} className="w-full h-full" />
       <div className="pointer-events-none absolute inset-0 select-none">
         <div className="absolute top-2 left-2 flex gap-1">
           {Array.from({ length: lives }).map((_, i) => (

@@ -1,13 +1,4 @@
-import {
-  initLane,
-  updateCars,
-  handlePads,
-  PAD_POSITIONS,
-  rampLane,
-  carLaneDefs,
-  logLaneDefs,
-} from '../components/apps/frogger';
-import { LEVELS, getLevelConfig } from '../apps/games/frogger/levels';
+import { initLane, updateCars, handlePads, PAD_POSITIONS, rampLane, carLaneDefs, logLaneDefs } from '../components/apps/frogger';
 
 describe('frogger mechanics', () => {
   test('lane spawn variance via lane-local RNG', () => {
@@ -52,10 +43,5 @@ describe('frogger mechanics', () => {
     expect(hard.speed).toBeCloseTo(carLaneDefs[0].speed * 1.2);
     const easy = rampLane(carLaneDefs[0], 1, 0.3, 0.8);
     expect(easy.speed).toBeCloseTo(carLaneDefs[0].speed * 0.8);
-  });
-
-  test('getLevelConfig always returns a configuration', () => {
-    expect(getLevelConfig(1)).toBeDefined();
-    expect(getLevelConfig(LEVELS.length + 5)).toBeDefined();
   });
 });

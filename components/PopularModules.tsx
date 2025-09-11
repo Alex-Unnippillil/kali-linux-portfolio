@@ -94,16 +94,16 @@ const PopularModules: React.FC = () => {
   };
 
   const levelClass: Record<string, string> = {
-    info: 'text-info',
-    success: 'text-success',
-    error: 'text-danger',
-    warning: 'text-warning',
+    info: 'text-blue-300',
+    success: 'text-green-400',
+    error: 'text-red-400',
+    warning: 'text-yellow-300',
   };
 
   const levelIcon: Record<string, React.ReactElement> = {
     info: (
       <svg
-        className="w-6 h-6 text-info"
+        className="w-6 h-6 text-blue-300"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -119,7 +119,7 @@ const PopularModules: React.FC = () => {
     ),
     success: (
       <svg
-        className="w-6 h-6 text-success"
+        className="w-6 h-6 text-green-400"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -141,7 +141,7 @@ const PopularModules: React.FC = () => {
     ),
     warning: (
       <svg
-        className="w-6 h-6 text-warning"
+        className="w-6 h-6 text-yellow-300"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -157,7 +157,7 @@ const PopularModules: React.FC = () => {
     ),
     error: (
       <svg
-        className="w-6 h-6 text-danger"
+        className="w-6 h-6 text-red-400"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -194,7 +194,7 @@ const PopularModules: React.FC = () => {
         </button>
         <span className="text-xs">v{version}</span>
         {updateAvailable && (
-          <span className="text-xs text-warning">Update available</span>
+          <span className="text-xs text-yellow-300">Update available</span>
         )}
       </div>
       {updateMessage && <p className="text-sm">{updateMessage}</p>}

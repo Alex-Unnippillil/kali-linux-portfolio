@@ -1,9 +1,6 @@
-"use client";
-
 import React, { useRef, useEffect, useState } from "react";
 import { Chess } from "chess.js";
 import { suggestMoves } from "../../games/chess/engine/wasmEngine";
-import { isBrowser } from '@/utils/env';
 
 // 0x88 board representation utilities
 const EMPTY = 0;
@@ -309,9 +306,9 @@ const ChessGame = () => {
   const [showHints, setShowHints] = useState(false);
   const [mateSquares, setMateSquares] = useState([]);
   const [elo, setElo] = useState(() =>
-    isBrowser()
-      ? Number(localStorage.getItem("chessElo") || 1200)
-      : 1200,
+    typeof window === "undefined"
+      ? 1200
+      : Number(localStorage.getItem("chessElo") || 1200),
   );
   const animRef = useRef(null);
   const trailsRef = useRef([]);
@@ -323,24 +320,16 @@ const ChessGame = () => {
   const [pieceSet, setPieceSet] = useState("sprites");
   const [analysisMoves, setAnalysisMoves] = useState([]);
   const [analysisDepth, setAnalysisDepth] = useState(2);
-  const [hasStockfish, setHasStockfish] = useState(false);
   const pgnInputRef = useRef(null);
   const evalPercent = (1 / (1 + Math.exp(-displayEval / 200))) * 100;
 
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === "undefined") return;
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
     reduceMotionRef.current = mq.matches;
     const handler = () => (reduceMotionRef.current = mq.matches);
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
-  }, []);
-
-  useEffect(() => {
-    if (!isBrowser()) return;
-    import("stockfish/src/stockfish-nnue-16-single.js")
-      .then(() => setHasStockfish(true))
-      .catch(() => setHasStockfish(false));
   }, []);
 
   useEffect(() => {
@@ -557,7 +546,7 @@ const ChessGame = () => {
     const k = 32;
     const newElo = Math.round(elo + k * (score - expected));
     setElo(newElo);
-    if (isBrowser())
+    if (typeof window !== "undefined")
       localStorage.setItem("chessElo", String(newElo));
   };
 
@@ -857,27 +846,18 @@ const ChessGame = () => {
             <button className="px-2 py-1 bg-gray-700" onClick={toggleHints}>
               {showHints ? "Hide Hints" : "Mate in 1"}
             </button>
-            {hasStockfish ? (
-              <select
-                className="px-2 py-1 bg-gray-700"
-                value={analysisDepth}
-                onChange={(e) => setAnalysisDepth(parseInt(e.target.value))}
-                aria-label="Stockfish depth"
-              >
-                {[1, 2, 3, 4, 5].map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <span
-                className="px-2 py-1 bg-gray-700"
-                aria-label="Simple AI mode"
-              >
-                Simple AI
-              </span>
-            )}
+            <select
+              className="px-2 py-1 bg-gray-700"
+              value={analysisDepth}
+              onChange={(e) => setAnalysisDepth(parseInt(e.target.value))}
+              aria-label="Stockfish depth"
+            >
+              {[1, 2, 3, 4, 5].map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
             <button className="px-2 py-1 bg-gray-700" onClick={runAnalysis}>
               Analyze
             </button>
@@ -897,7 +877,6 @@ const ChessGame = () => {
             <div
               className="h-4 bg-gray-700"
               role="progressbar"
-              aria-label="Evaluation progress"
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={evalPercent.toFixed(0)}

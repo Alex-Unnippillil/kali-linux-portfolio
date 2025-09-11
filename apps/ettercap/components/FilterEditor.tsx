@@ -47,7 +47,7 @@ export default function FilterEditor() {
   );
   const [filterText, setFilterText] = usePersistentState(
     'ettercap-filter-text',
-    DEFAULT_SAMPLES[0]?.code ?? '',
+    DEFAULT_SAMPLES[0].code,
   );
   const output = applyFilters(filterText, EXAMPLE_PACKETS);
 
@@ -57,11 +57,9 @@ export default function FilterEditor() {
   );
 
   const saveSample = () => {
-    if (typeof window !== 'undefined') {
-      const name = window.prompt('Sample name');
-      if (!name) return;
-      setSamples((s) => [...s, { name, code: filterText }]);
-    }
+    const name = window.prompt('Sample name');
+    if (!name) return;
+    setSamples((s) => [...s, { name, code: filterText }]);
   };
 
   return (
@@ -91,7 +89,6 @@ export default function FilterEditor() {
         className="w-full h-32 border p-2 font-mono"
         value={filterText}
         onChange={(e) => setFilterText(e.target.value)}
-        aria-label="Filter code"
       />
       <div className="grid grid-cols-2 gap-4">
         <div>

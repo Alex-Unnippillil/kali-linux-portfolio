@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { trackEvent } from '@/lib/analytics-client';
-import { showA2HS } from '../src/pwa/a2hs';
+import { showA2HS } from '@/src/pwa/a2hs';
 
 const InstallButton: React.FC = () => {
   const [visible, setVisible] = useState(false);

@@ -25,23 +25,12 @@ class ErrorBoundary extends Component<Props, State> {
     log.error('ErrorBoundary caught an error', { error, errorInfo });
   }
 
-  private handleRetry = () => {
-    this.setState({ hasError: false });
-  };
-
   render() {
     if (this.state.hasError) {
       return (
         <div role="alert" className="p-4 text-center">
           <h1 className="text-xl font-bold">Something went wrong.</h1>
-          <p className="mb-2">Please try again.</p>
-          <button
-            type="button"
-            onClick={this.handleRetry}
-            className="px-4 py-2 bg-ub-orange text-white rounded"
-          >
-            Retry
-          </button>
+          <p>Please refresh the page or try again.</p>
         </div>
       );
     }

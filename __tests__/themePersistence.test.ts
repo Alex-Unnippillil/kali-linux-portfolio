@@ -23,21 +23,15 @@ describe('theme persistence and unlocking', () => {
 
   test('themes unlock at score milestones', () => {
     const unlocked = getUnlockedThemes(600);
-    expect(unlocked).toEqual(
-      expect.arrayContaining(['default', 'neon', 'dark', 'kali-light', 'kali-dark'])
-    );
+    expect(unlocked).toEqual(expect.arrayContaining(['default', 'neon', 'dark']));
     expect(unlocked).not.toContain('matrix');
   });
 
-  test('dark class applied for dark themes', () => {
+  test('dark class applied for neon and matrix themes', () => {
     setTheme('neon');
     expect(document.documentElement.classList.contains('dark')).toBe(true);
     setTheme('matrix');
     expect(document.documentElement.classList.contains('dark')).toBe(true);
-    setTheme('kali-dark');
-    expect(document.documentElement.classList.contains('dark')).toBe(true);
-    setTheme('kali-light');
-    expect(document.documentElement.classList.contains('dark')).toBe(false);
   });
 
   test('updates CSS variables without reload', () => {

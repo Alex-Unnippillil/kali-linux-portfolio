@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { isBrowser } from '@/utils/env';
 
 interface ModalProps {
     isOpen: boolean;
@@ -12,15 +11,6 @@ interface ModalProps {
      * Defaults to the Next.js root (`__next`).
      */
     overlayRoot?: string | HTMLElement;
-    /**
-     * Optional id of a heading element that labels the dialog.
-     */
-    ariaLabelledby?: string;
-    /**
-     * Optional className applied to the dialog element, allowing styling such
-     * as positioning or background overlays.
-     */
-    className?: string;
 }
 
 const FOCUSABLE_SELECTORS = [
@@ -37,20 +27,13 @@ const FOCUSABLE_SELECTORS = [
     '[contenteditable]'
 ].join(',');
 
-const Modal: React.FC<ModalProps> = ({
-    isOpen,
-    onClose,
-    children,
-    overlayRoot,
-    ariaLabelledby,
-    className,
-}) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot }) => {
     const modalRef = useRef<HTMLDivElement>(null);
     const triggerRef = useRef<HTMLElement | null>(null);
     const portalRef = useRef<HTMLDivElement | null>(null);
     const inertRootRef = useRef<HTMLElement | null>(null);
 
-    if (!portalRef.current && isBrowser()) {
+    if (!portalRef.current && typeof document !== 'undefined') {
         const el = document.createElement('div');
         portalRef.current = el;
         document.body.appendChild(el);
@@ -70,9 +53,8 @@ const Modal: React.FC<ModalProps> = ({
         if (e.key !== 'Tab') return;
         const elements = modalRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS);
         if (!elements || elements.length === 0) return;
-        const first = elements.item(0);
-        const last = elements.item(elements.length - 1);
-        if (!first || !last) return;
+        const first = elements[0];
+        const last = elements[elements.length - 1];
         const current = document.activeElement as HTMLElement;
         if (!e.shiftKey && current === last) {
             e.preventDefault();
@@ -131,11 +113,9 @@ const Modal: React.FC<ModalProps> = ({
         <div
             role="dialog"
             aria-modal="true"
-            aria-labelledby={ariaLabelledby}
             ref={modalRef}
             onKeyDown={handleKeyDown}
             tabIndex={-1}
-            className={className}
         >
             {children}
         </div>,

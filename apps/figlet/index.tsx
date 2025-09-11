@@ -5,7 +5,6 @@ import { toPng, toSvg } from "html-to-image";
 import AlignmentControls from "./components/AlignmentControls";
 import FontGrid from "./components/FontGrid";
 import usePersistentState from "../../hooks/usePersistentState";
-import { isBrowser } from '@/utils/env';
 
 interface FontInfo {
   name: string;
@@ -38,7 +37,7 @@ const FigletApp: React.FC = () => {
   const [serverFontNames, setServerFontNames] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const t = params.get("text");
     if (t) setText(t);
@@ -74,7 +73,7 @@ const FigletApp: React.FC = () => {
   ]);
 
   useEffect(() => {
-    if (isBrowser() && typeof Worker === "function") {
+    if (typeof window !== "undefined" && typeof Worker === "function") {
       workerRef.current = new Worker(new URL("./worker.ts", import.meta.url));
       workerRef.current.onmessage = (e: MessageEvent<any>) => {
         if (e.data?.type === "font") {
@@ -297,7 +296,7 @@ const FigletApp: React.FC = () => {
   const displayedFonts = fonts.filter((f) => !monoOnly || f.mono);
 
   useEffect(() => {
-    if (fonts.length && !font) setFont(fonts[0]?.name ?? '');
+    if (fonts.length && !font) setFont(fonts[0].name);
   }, [fonts, font, setFont]);
 
   useEffect(() => {
@@ -305,7 +304,7 @@ const FigletApp: React.FC = () => {
   }, [fonts, font, updateFiglet]);
 
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === "undefined") return;
     const params = new URLSearchParams();
     if (text) params.set("text", text);
     if (font) params.set("font", font);

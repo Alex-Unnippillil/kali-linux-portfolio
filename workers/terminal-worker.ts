@@ -1,5 +1,3 @@
-import nmcliData from '../data/nmcli.json';
-
 const CHUNK_SIZE = 64 * 1024; // 64KB
 
 export interface RunMessage {
@@ -39,20 +37,6 @@ async function* chunkString(text: string, size = CHUNK_SIZE): Stream {
   }
 }
 
-function formatTable(headers: string[], rows: string[][]): string {
-  const widths = headers.map((h, i) =>
-    Math.max(h.length, ...rows.map((r) => r[i]?.length ?? 0)),
-  );
-  const header = headers
-    .map((h, i) => h.padEnd(widths[i]!))
-    .join('  ');
-  const separator = widths.map((w) => '='.repeat(w)).join('  ');
-  const lines = rows.map((r) =>
-    r.map((c, i) => c.padEnd(widths[i]!)).join('  '),
-  );
-  return [separator, header, separator, ...lines, separator].join('\n') + '\n';
-}
-
 type CommandHandler = (args: string[], input: Stream, ctx: Context) => Stream;
 
 const handlers: Record<string, CommandHandler> = {
@@ -77,9 +61,6 @@ const handlers: Record<string, CommandHandler> = {
   },
   grep: (args, input, ctx) => {
     const [pattern, file] = args;
-    if (!pattern) {
-      return textToStream('grep: search pattern required\n');
-    }
     let source: Stream;
     if (file) {
       const content = ctx.files[file];
@@ -137,33 +118,6 @@ const handlers: Record<string, CommandHandler> = {
     }
     yield String(count) + '\n';
   },
-  nmcli: (args) => {
-    if (args[0] === '-p' && args[1] === 'device') {
-      const headers = ['DEVICE', 'TYPE', 'STATE', 'CONNECTION'];
-      const rows = nmcliData.devices.map((d) => [
-        d.device,
-        d.type,
-        d.state,
-        d.connection,
-      ]);
-      return textToStream(formatTable(headers, rows));
-    }
-    if (
-      args[0] === '-p' &&
-      args[1] === 'connection' &&
-      args[2] === 'show'
-    ) {
-      const headers = ['NAME', 'UUID', 'TYPE', 'DEVICE'];
-      const rows = nmcliData.connections.map((c) => [
-        c.name,
-        c.uuid,
-        c.type,
-        c.device,
-      ]);
-      return textToStream(formatTable(headers, rows));
-    }
-    return textToStream('nmcli: unsupported arguments\n');
-  },
 };
 
 function buildPipeline(command: string, ctx: Context): Stream {
@@ -173,7 +127,7 @@ function buildPipeline(command: string, ctx: Context): Stream {
     .filter(Boolean);
   let stream: Stream = emptyStream();
   for (const seg of segments) {
-    const [name, ...args] = seg.split(/\s+/) as [string, ...string[]];
+    const [name, ...args] = seg.split(/\s+/);
     const handler = handlers[name];
     if (handler) {
       stream = handler(args, stream, ctx);

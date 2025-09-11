@@ -1,16 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react'
-import logger from '@/utils/logger'
-import PolicyKitPrompt from '../common/PolicyKitPrompt'
-import useFocusTrap from '@/hooks/useFocusTrap'
-import useRovingTabIndex from '@/hooks/useRovingTabIndex'
+import React, { useState, useEffect } from 'react'
+import logger from '../../utils/logger'
 
 function DesktopMenu(props) {
 
     const [isFullScreen, setIsFullScreen] = useState(false)
-    const [showRootPrompt, setShowRootPrompt] = useState(false)
-    const menuRef = useRef(null)
-    useFocusTrap(menuRef, props.active)
-    useRovingTabIndex(menuRef, props.active, 'vertical')
 
     useEffect(() => {
         document.addEventListener('fullscreenchange', checkFullScreen);
@@ -26,10 +19,6 @@ function DesktopMenu(props) {
 
     const openSettings = () => {
         props.openApp("settings");
-    }
-
-    const openRootPrompt = () => {
-        setShowRootPrompt(true)
     }
 
     const checkFullScreen = () => {
@@ -54,20 +43,11 @@ function DesktopMenu(props) {
         }
     }
 
-    const handleKeyDown = (e) => {
-        if (e.key === 'Escape') {
-            props.onClose && props.onClose()
-        }
-    }
-
     return (
-        <>
         <div
             id="desktop-menu"
             role="menu"
             aria-label="Desktop context menu"
-            ref={menuRef}
-            onKeyDown={handleKeyDown}
             className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
         >
             <button
@@ -88,15 +68,6 @@ function DesktopMenu(props) {
             >
                 <span className="ml-5">Create Shortcut...</span>
             </button>
-            <button
-                onClick={props.openLauncherCreator}
-                type="button"
-                role="menuitem"
-                aria-label="Create Launcher"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
-            >
-                <span className="ml-5">Create Launcher...</span>
-            </button>
             <Devider />
             <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
                 <span className="ml-5">Paste</span>
@@ -105,17 +76,6 @@ function DesktopMenu(props) {
             <div role="menuitem" aria-label="Show Desktop in Files" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
                 <span className="ml-5">Show Desktop in Files</span>
             </div>
-            <button
-                onClick={openRootPrompt}
-                type="button"
-                role="menuitem"
-                aria-label="Open as root"
-                title="Demo only: root access is not available"
-                aria-disabled="true"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400 cursor-not-allowed"
-            >
-                <span className="ml-5">Open as root</span>
-            </button>
             <button
                 onClick={openTerminal}
                 type="button"
@@ -169,8 +129,6 @@ function DesktopMenu(props) {
                 <span className="ml-5">Clear Session</span>
             </button>
         </div>
-        <PolicyKitPrompt open={showRootPrompt} onClose={() => setShowRootPrompt(false)} />
-        </>
     )
 }
 

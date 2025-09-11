@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 import React, {
   useState,
   useEffect,
@@ -12,27 +11,12 @@ import { useSettings } from '../../../hooks/useSettings';
 
 const CytoscapeComponent = dynamic(
   async () => {
-    const cytoscape = (
-      await import(
-        /* webpackChunkName: "cytoscape-core" */ 'cytoscape'
-      )
-    ).default;
-    const coseBilkent = (
-      await import(
-        /* webpackChunkName: "cytoscape-cose" */ 'cytoscape-cose-bilkent'
-      )
-    ).default;
+    const cytoscape = (await import('cytoscape')).default;
+    const coseBilkent = (await import('cytoscape-cose-bilkent')).default;
     cytoscape.use(coseBilkent);
-    return (
-      await import(
-        /* webpackChunkName: "react-cytoscapejs" */ 'react-cytoscapejs'
-      )
-    ).default;
+    return (await import('react-cytoscapejs')).default;
   },
-  {
-    ssr: false,
-    loading: () => <p>Loading graph...</p>,
-  },
+  { ssr: false },
 );
 
 // Built-in modules with simple schemas and canned demo data. Each schema defines
@@ -172,7 +156,7 @@ const ReconNG = () => {
   const currentWorkspace = workspaces[activeWs];
 
   useEffect(() => {
-    if (!isBrowser()) return undefined;
+    if (typeof window === 'undefined') return undefined;
     if (allowNetwork) return undefined;
     const originalFetch = window.fetch.bind(window);
     window.fetch = (input, init) => {
@@ -204,7 +188,7 @@ const ReconNG = () => {
   }, [view, chainData]);
 
   useEffect(() => {
-    if (isBrowser()) {
+    if (typeof window !== 'undefined') {
       const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
       setPrefersReducedMotion(mediaQuery.matches);
       const handler = (e) => setPrefersReducedMotion(e.matches);

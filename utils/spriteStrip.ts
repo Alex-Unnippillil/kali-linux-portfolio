@@ -1,47 +1,15 @@
-interface StripResource {
-  /** Object URL used for rendering */
-  url: string;
-  /** Decoded bitmap for cleanup */
-  bitmap: ImageBitmap | HTMLImageElement;
-  /** Release underlying resources */
-  release: () => void;
-}
-
-const stripCache: Record<string, Promise<StripResource>> = {};
+const stripCache: Record<string, HTMLImageElement> = {};
 
 /**
  * Imports a sprite strip image and caches it for reuse.
  * @param src image source path
- * @returns a promise resolving to the decoded strip resource
+ * @returns the loaded HTMLImageElement
  */
-export const importSpriteStrip = (src: string): Promise<StripResource> => {
+export const importSpriteStrip = (src: string): HTMLImageElement => {
   if (!stripCache[src]) {
-    if (typeof fetch === 'undefined' || typeof createImageBitmap === 'undefined') {
-      // Fallback for non-browser environments (e.g. tests)
-      stripCache[src] = Promise.resolve({
-        url: src,
-        bitmap: Object.assign(new Image(), { src }) as HTMLImageElement,
-        release: () => {
-          delete stripCache[src];
-        },
-      });
-    } else {
-      stripCache[src] = fetch(src)
-        .then((r) => r.blob())
-        .then(async (blob) => {
-          const bitmap = await createImageBitmap(blob);
-          const url = URL.createObjectURL(blob);
-          return {
-            url,
-            bitmap,
-            release: () => {
-              bitmap.close?.();
-              URL.revokeObjectURL(url);
-              delete stripCache[src];
-            },
-          } as StripResource;
-        });
-    }
+    const img = new Image();
+    img.src = src;
+    stripCache[src] = img;
   }
   return stripCache[src];
 };
@@ -50,13 +18,5 @@ export const importSpriteStrip = (src: string): Promise<StripResource> => {
  * Clears the sprite strip cache. Useful for testing.
  */
 export const clearSpriteStripCache = () => {
-  Object.keys(stripCache).forEach((k) => {
-    stripCache[k]?.then((res) => res.release());
-    delete stripCache[k];
-  });
+  Object.keys(stripCache).forEach((k) => delete stripCache[k]);
 };
-
-/**
- * Returns current number of cached strips. Mainly for testing.
- */
-export const stripCacheSize = () => Object.keys(stripCache).length;

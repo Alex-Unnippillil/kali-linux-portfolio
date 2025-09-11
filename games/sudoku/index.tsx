@@ -15,7 +15,6 @@ import {
   cellsToBoard,
 } from "../../apps/games/sudoku/cell";
 import PencilMarks from "./components/PencilMarks";
-import useRafInterval from "../../hooks/useRafInterval";
 
 const formatTime = (s: number) =>
   `${Math.floor(s / 60)}:${("0" + (s % 60)).slice(-2)}`;
@@ -65,7 +64,10 @@ const SudokuGame: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [difficulty]);
 
-  useRafInterval(() => setTime((t) => t + 1), 1000);
+  useEffect(() => {
+    const id = setInterval(() => setTime((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const handleValue = (
     r: number,
@@ -172,7 +174,7 @@ const SudokuGame: React.FC = () => {
             ✏️
           </button>
         </div>
-        <div className="grid grid-cols-9 gap-0.5" role="grid">
+        <div className="grid grid-cols-9 gap-[2px]" role="grid">
           {board.map((row, r) =>
             row.map((cell, c) => {
               const original = puzzle[r][c] !== 0;

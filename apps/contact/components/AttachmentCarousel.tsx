@@ -29,7 +29,6 @@ const AttachmentCarousel: React.FC<AttachmentCarouselProps> = ({
   if (!attachments.length) return null;
 
   const file = attachments[index];
-  if (!file) return null;
   const url = urls[index];
   const isImage = file.type.startsWith('image/');
 
@@ -47,7 +46,7 @@ const AttachmentCarousel: React.FC<AttachmentCarouselProps> = ({
         <button
           type="button"
           onClick={() => onRemove(index)}
-          className="absolute top-1 right-1 bg-danger text-white px-2 py-1 rounded"
+          className="absolute top-1 right-1 bg-red-600 text-white px-2 py-1 rounded"
         >
           Remove
         </button>

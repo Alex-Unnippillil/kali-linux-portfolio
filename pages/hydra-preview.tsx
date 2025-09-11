@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import FormError from '../components/ui/FormError';
-import CommandChip from '../components/ui/CommandChip';
 
 const protocols = ['ssh', 'ftp', 'http', 'smtp'];
 
@@ -93,7 +92,7 @@ const HydraPreview: React.FC = () => {
             <p className="mb-4 text-sm text-yellow-700">
               Use this command only on systems you own or have explicit permission to test. Unauthorized access is illegal.
             </p>
-            <CommandChip command={command} />
+            <pre className="overflow-auto rounded bg-black p-2 text-green-400">{command}</pre>
           </div>
         )}
         <div className="mt-4 flex justify-between">

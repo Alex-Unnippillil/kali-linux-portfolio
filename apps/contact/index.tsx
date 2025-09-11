@@ -24,7 +24,6 @@ const getRecaptchaToken = (siteKey: string): Promise<string> =>
   });
 
 const ContactApp: React.FC = () => {
-  const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
@@ -84,15 +83,12 @@ const ContactApp: React.FC = () => {
     }
 
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
-    let recaptchaToken = "";
-    if (siteKey) {
-      recaptchaToken = await getRecaptchaToken(siteKey);
-      if (!recaptchaToken && !demoMode) {
-        setError("Captcha verification failed. Please try again.");
-        setSubmitting(false);
-        trackEvent("contact_submit_error", { method: "form" });
-        return;
-      }
+    const recaptchaToken = await getRecaptchaToken(siteKey);
+    if (!recaptchaToken) {
+      setError("Captcha verification failed. Please try again.");
+      setSubmitting(false);
+      trackEvent("contact_submit_error", { method: "form" });
+      return;
     }
 
     try {
@@ -125,11 +121,6 @@ const ContactApp: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4">
-      {demoMode && (
-        <div className="mb-4 rounded bg-warning p-2 text-sm text-black">
-          Demo mode: messages are not stored.
-        </div>
-      )}
       <h1 className="mb-4 text-2xl">Contact</h1>
       <p className="mb-4 text-sm">
         Prefer email?{" "}
@@ -150,7 +141,7 @@ const ContactApp: React.FC = () => {
       </p>
       <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
         <div>
-          <label htmlFor="contact-name" className="mb-1.5 block text-sm">
+          <label htmlFor="contact-name" className="mb-[6px] block text-sm">
             Name
           </label>
           <div className="relative">
@@ -178,7 +169,7 @@ const ContactApp: React.FC = () => {
           </div>
         </div>
         <div>
-          <label htmlFor="contact-email" className="mb-1.5 block text-sm">
+          <label htmlFor="contact-email" className="mb-[6px] block text-sm">
             Email
           </label>
           <div className="relative">
@@ -214,7 +205,7 @@ const ContactApp: React.FC = () => {
           )}
         </div>
         <div>
-          <label htmlFor="contact-message" className="mb-1.5 block text-sm">
+          <label htmlFor="contact-message" className="mb-[6px] block text-sm">
             Message
           </label>
           <div className="relative">

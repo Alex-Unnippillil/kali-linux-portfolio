@@ -1,5 +1,4 @@
 body { font-family: Arial, sans-serif; margin: 2rem; }
-.controls { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
-li { cursor: pointer; margin: 0.25rem 0; display: flex; align-items: center; }
+button { margin-bottom: 1rem; }
+li { cursor: pointer; margin: 0.25rem 0; }
 li:hover { text-decoration: underline; }
-button.pin { margin-left: 0.5rem; cursor: pointer; }

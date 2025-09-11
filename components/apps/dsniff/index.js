@@ -3,7 +3,6 @@ import urlsnarfFixture from '../../../public/demo-data/dsniff/urlsnarf.json';
 import arpspoofFixture from '../../../public/demo-data/dsniff/arpspoof.json';
 import pcapFixture from '../../../public/demo-data/dsniff/pcap.json';
 import TerminalOutput from '../../TerminalOutput';
-import CommandChip from '../../ui/CommandChip';
 
 // Simple parser that attempts to extract protocol, host and remaining details
 // Each parsed line is also given a synthetic timestamp for display purposes
@@ -124,8 +123,8 @@ const LogRow = ({ log, prefersReduced }) => {
           {log.protocol}
         </abbr>
       </td>
-      <td className="px-2 py-1.5 text-white">{log.host}</td>
-      <td className="px-2 py-1.5 text-green-400">{log.details}</td>
+      <td className="px-2 py-[6px] text-white">{log.host}</td>
+      <td className="px-2 py-[6px] text-green-400">{log.details}</td>
     </tr>
   );
 };
@@ -225,16 +224,16 @@ const Dsniff = () => {
   const [timeline, setTimeline] = useState([]);
   const [protocolFilter, setProtocolFilter] = useState([]);
 
-  const urlsnarfLines = Array.isArray(urlsnarfFixture)
-    ? urlsnarfFixture
-    : [];
-  const arpspoofLines = Array.isArray(arpspoofFixture)
-    ? arpspoofFixture
-    : [];
-  const { summary: pcapSummary = [], remediation = [] } = pcapFixture || {};
+  const { summary: pcapSummary, remediation } = pcapFixture;
 
   const sampleCommand = 'urlsnarf -i eth0';
-  const sampleOutput = urlsnarfLines.slice(0, 1).join('\n');
+  const sampleOutput = urlsnarfFixture.slice(0, 1).join('\n');
+
+  const copySampleCommand = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(sampleCommand);
+    }
+  };
 
   const copySelectedPacket = () => {
     if (selectedPacket !== null && navigator.clipboard) {
@@ -253,8 +252,8 @@ const Dsniff = () => {
   }, []);
 
   useEffect(() => {
-    const urlsnarfData = parseLines(urlsnarfLines.join('\n'));
-    const arpspoofData = parseLines(arpspoofLines.join('\n'));
+    const urlsnarfData = parseLines(urlsnarfFixture.join('\n'));
+    const arpspoofData = parseLines(arpspoofFixture.join('\n'));
     setUrlsnarfLogs(urlsnarfData);
     setArpspoofLogs(arpspoofData);
   }, []);
@@ -434,9 +433,17 @@ const Dsniff = () => {
         <div className="md:w-1/2 bg-black p-2 flex flex-col">
           <div className="flex items-center justify-between mb-2">
             <span className="font-bold text-sm">Sample command</span>
-            <CommandChip command={sampleCommand} />
+            <button
+              onClick={copySampleCommand}
+              className="px-2 py-1 bg-ub-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400"
+            >
+              Copy sample command
+            </button>
           </div>
-          <TerminalOutput text={sampleOutput} ariaLabel="sample command output" />
+          <TerminalOutput
+            text={`${sampleCommand}\n${sampleOutput}`}
+            ariaLabel="sample command output"
+          />
         </div>
       </div>
       <div className="mb-4" data-testid="pcap-demo">

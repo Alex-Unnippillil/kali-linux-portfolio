@@ -1,6 +1,5 @@
 "use client";
 
-import { isBrowser } from '@/utils/env';
 import React, {
   useState,
   useEffect,
@@ -15,7 +14,6 @@ import {
   serialize as serializeRng,
   deserialize as deserializeRng,
 } from '../../apps/games/rng';
-import logger from '../../utils/logger';
 
 interface GameLayoutProps {
   gameId?: string;
@@ -126,7 +124,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
     } catch {
       /* ignore download errors */
     }
-    logger.info(data);
+    console.log(data);
   }, [log, gameId]);
 
   const replay = useCallback(() => {
@@ -169,7 +167,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   useEffect(() => {
     try {
       const key = `seen_tutorial_${gameId}`;
-      if (isBrowser() && !window.localStorage.getItem(key)) {
+      if (typeof window !== 'undefined' && !window.localStorage.getItem(key)) {
         setShowHelp(true);
         window.localStorage.setItem(key, '1');
       }

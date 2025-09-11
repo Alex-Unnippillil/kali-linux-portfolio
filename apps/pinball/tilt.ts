@@ -1,6 +1,5 @@
 'use client';
 
-import { isBrowser } from '@/utils/env';
 import { useEffect } from 'react';
 
 export const shouldTilt = (
@@ -20,7 +19,7 @@ export const useTiltSensor = (
   onTilt: () => void,
 ): void => {
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === 'undefined') return;
     const handler = (e: DeviceMotionEvent) => {
       if (shouldTilt(e.accelerationIncludingGravity, threshold)) onTilt();
     };

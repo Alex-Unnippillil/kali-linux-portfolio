@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Head from 'next/head';
 
 const ALLOWLIST = ['https://vscode.dev', 'https://stackblitz.com'];
 
@@ -36,10 +37,14 @@ export default function ExternalFrame({ src, title, prefetch = false, onLoad: on
 
   return (
     <>
-      {prefetch && null}
+      {prefetch && (
+        <Head>
+          <link rel="prefetch" href={src} />
+        </Head>
+      )}
       <div className="h-full w-full flex flex-col">
         {cookiesBlocked && (
-          <div role="alert" className="bg-danger text-white text-sm p-2 text-center">
+          <div role="alert" className="bg-red-600 text-white text-sm p-2 text-center">
             Third-party cookies are blocked{' '}
             <button onClick={() => setShowDialog(true)} className="underline">
               Instructions

@@ -1,6 +1,5 @@
 "use client";
 
-import { isBrowser } from '@/utils/env';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import KeywordSearchPanel from './KeywordSearchPanel';
 import demoArtifacts from './data/sample-artifacts.json';
@@ -43,7 +42,7 @@ function Timeline({ events, onSelect }) {
   }, [sorted]);
 
   useEffect(() => {
-    if (isBrowser() && typeof Worker === 'function') {
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
       workerRef.current = new Worker(
         new URL('./timelineWorker.js', import.meta.url)
       );
@@ -369,7 +368,7 @@ function Autopsy({ initialArtifacts = null }) {
   }, []);
 
   useEffect(() => {
-    if (isBrowser() && typeof Worker === 'function') {
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
       try {
         parseWorkerRef.current = new Worker(
           new URL('./jsonWorker.js', import.meta.url)

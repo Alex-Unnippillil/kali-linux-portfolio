@@ -9,12 +9,11 @@ interface Props {
 const SettingsDrawer = ({ highScore = 0 }: Props) => {
   const [open, setOpen] = useState(false);
   const unlocked = getUnlockedThemes(highScore);
-  const { accent, setAccent, theme, setTheme, highContrast, setHighContrast } =
-    useSettings();
+  const { accent, setAccent, theme, setTheme } = useSettings();
 
   return (
     <div>
-      <button aria-label="settings" onClick={() => setOpen((o) => !o)}>
+      <button aria-label="settings" onClick={() => setOpen(!open)}>
         Settings
       </button>
       {open && (
@@ -32,15 +31,6 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
                 </option>
               ))}
             </select>
-          </label>
-          <label className="mt-2 flex items-center gap-2">
-            <input
-              id="settings-high-contrast"
-              type="checkbox"
-              checked={highContrast}
-              onChange={(e) => setHighContrast(e.target.checked)}
-            />
-            <span>High Contrast</span>
           </label>
           <label>
             Accent

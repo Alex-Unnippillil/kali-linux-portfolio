@@ -7,7 +7,6 @@ import {
   createSHA3,
   createBLAKE3,
   createCRC32,
-  type IHasher,
 } from 'hash-wasm';
 
 export type Algorithm =
@@ -46,7 +45,7 @@ self.onmessage = async ({ data }: MessageEvent<HashWorkerRequest>) => {
   const results: Record<string, string> = {};
 
   if (file) {
-    const hashers: Partial<Record<Algorithm, IHasher>> = {};
+    const hashers: Record<string, any> = {};
 
     for (const alg of algorithms) {
       switch (alg) {
@@ -90,24 +89,22 @@ self.onmessage = async ({ data }: MessageEvent<HashWorkerRequest>) => {
       if (done) break;
       loaded += value.length;
       for (const hasher of Object.values(hashers)) {
-        hasher?.update(value);
+        hasher.update(value);
       }
-      self.postMessage({
+      (self as any).postMessage({
         type: 'progress',
         loaded,
         total: file.size,
       } as ProgressMessage);
     }
-    for (const alg of Object.keys(hashers) as Algorithm[]) {
-      const hasher = hashers[alg];
-      if (!hasher) continue;
-        if (alg === 'CRC32') {
-          const result = hasher.digest() as unknown;
-          results[alg] =
-            typeof result === 'number' ? result.toString(16) : String(result);
-        } else {
-          results[alg] = hasher.digest();
-        }
+
+    for (const [alg, hasher] of Object.entries(hashers)) {
+      if (alg === 'CRC32') {
+        const num = hasher.digest();
+        results[alg] = num.toString(16).padStart(8, '0');
+      } else {
+        results[alg] = hasher.digest('hex');
+      }
     }
   } else if (typeof text === 'string') {
     const data = new TextEncoder().encode(text);
@@ -116,7 +113,7 @@ self.onmessage = async ({ data }: MessageEvent<HashWorkerRequest>) => {
     const hashAlgs = algorithms.filter(
       (a) => !['BASE64', 'BASE64URL', 'URL'].includes(a),
     );
-    const hashers: Partial<Record<Algorithm, IHasher>> = {};
+    const hashers: Record<string, any> = {};
     for (const alg of hashAlgs) {
       switch (alg) {
         case 'MD5':
@@ -152,19 +149,16 @@ self.onmessage = async ({ data }: MessageEvent<HashWorkerRequest>) => {
     }
 
     for (const hasher of Object.values(hashers)) {
-      hasher?.update(data);
+      hasher.update(data);
     }
 
-    for (const alg of Object.keys(hashers) as Algorithm[]) {
-      const hasher = hashers[alg];
-      if (!hasher) continue;
-        if (alg === 'CRC32') {
-          const result = hasher.digest() as unknown;
-          results[alg] =
-            typeof result === 'number' ? result.toString(16) : String(result);
-        } else {
-          results[alg] = hasher.digest();
-        }
+    for (const [alg, hasher] of Object.entries(hashers)) {
+      if (alg === 'CRC32') {
+        const num = hasher.digest();
+        results[alg] = num.toString(16).padStart(8, '0');
+      } else {
+        results[alg] = hasher.digest('hex');
+      }
     }
 
     if (algorithms.includes('BASE64')) {
@@ -177,14 +171,14 @@ self.onmessage = async ({ data }: MessageEvent<HashWorkerRequest>) => {
       results.URL = encodeURIComponent(text);
     }
 
-    self.postMessage({
+    (self as any).postMessage({
       type: 'progress',
       loaded: data.length,
       total: data.length,
     } as ProgressMessage);
   }
 
-  self.postMessage({ type: 'result', results } as ResultMessage);
+  (self as any).postMessage({ type: 'result', results } as ResultMessage);
 };
 
 export {};

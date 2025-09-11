@@ -1,9 +1,6 @@
-import { isBrowser } from '@/utils/env';
 import React, { useState, useEffect, useRef } from 'react';
-import usePrefersReducedMotion from '../../../hooks/usePrefersReducedMotion';
 import progressInfo from './progress.json';
 import StatsChart from '../../StatsChart';
-import CommandChip from '../../ui/CommandChip';
 
 export const hashTypes = [
   {
@@ -172,7 +169,7 @@ function HashcatApp() {
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState('');
   const [isCracking, setIsCracking] = useState(false);
-  const prefersReducedMotion = usePrefersReducedMotion();
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [attackMode, setAttackMode] = useState('0');
   const [mask, setMask] = useState('');
   const appendMask = (token) => setMask((m) => m + token);
@@ -221,13 +218,22 @@ function HashcatApp() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handleChange = () => setPrefersReducedMotion(mediaQuery.matches);
+    handleChange();
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
   const startCracking = () => {
     if (isCracking) return;
     const expected = selected.output;
     setIsCracking(true);
     setProgress(0);
     setResult('');
-    if (!isBrowser()) return;
+    if (typeof window === 'undefined') return;
     if (typeof Worker === 'function') {
       workerRef.current = new Worker(
         new URL('./progress.worker.js', import.meta.url)
@@ -495,14 +501,34 @@ function HashcatApp() {
       </div>
       <div className="mt-2">
         <div className="text-sm">Demo Command:</div>
-        <CommandChip
-          command={`hashcat -m ${hashType} -a ${attackMode} ${
-            hashInput || 'hash.txt'
-          } ${wordlist ? `${wordlist}.txt` : 'wordlist.txt'}${
-            showMask && mask ? ` ${mask}` : ''
-          }${ruleSet !== 'none' ? ` -r ${ruleSet}.rule` : ''}`}
-          data-testid="demo-command"
-        />
+        <div className="flex items-center">
+          <code
+            className="bg-black px-2 py-1 text-xs"
+            data-testid="demo-command"
+          >
+            {`hashcat -m ${hashType} -a ${attackMode} ${
+              hashInput || 'hash.txt'
+            } ${wordlist ? `${wordlist}.txt` : 'wordlist.txt'}${
+              showMask && mask ? ` ${mask}` : ''
+            }${ruleSet !== 'none' ? ` -r ${ruleSet}.rule` : ''}`}
+          </code>
+          <button
+            className="ml-2"
+            onClick={() => {
+              if (navigator?.clipboard?.writeText) {
+                navigator.clipboard.writeText(
+                  `hashcat -m ${hashType} -a ${attackMode} ${
+                    hashInput || 'hash.txt'
+                  } ${wordlist ? `${wordlist}.txt` : 'wordlist.txt'}${
+                    showMask && mask ? ` ${mask}` : ''
+                  }${ruleSet !== 'none' ? ` -r ${ruleSet}.rule` : ''}`
+                );
+              }
+            }}
+          >
+            Copy
+          </button>
+        </div>
       </div>
       <div className="mt-4 w-full max-w-md">
         <div className="text-sm">Sample Output:</div>

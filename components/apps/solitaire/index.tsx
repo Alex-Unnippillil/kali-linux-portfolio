@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactGA from 'react-ga4';
 import usePrefersReducedMotion from '../../../hooks/usePrefersReducedMotion';
@@ -93,7 +92,7 @@ const Solitaire = () => {
   const foundationCountRef = useRef(0);
 
   useEffect(() => {
-    if (!isBrowser()) {
+    if (typeof window === 'undefined') {
       setBankrollReady(true);
       return;
     }
@@ -103,7 +102,7 @@ const Solitaire = () => {
   }, []);
 
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (typeof window === 'undefined') return;
     const saved = JSON.parse(
       localStorage.getItem(getStatsKey(variant, drawMode, passLimit)) || '{}',
     );
@@ -175,7 +174,7 @@ const Solitaire = () => {
       setIsDaily(daily);
       setBankroll((b) => {
         const nb = b - 52;
-        if (isBrowser()) {
+        if (typeof window !== 'undefined') {
           localStorage.setItem('solitaireBankroll', String(nb));
         }
         return nb;
@@ -183,7 +182,7 @@ const Solitaire = () => {
       foundationCountRef.current = 0;
       setStats((s) => {
         const ns = { ...s, gamesPlayed: s.gamesPlayed + 1 };
-        if (isBrowser()) {
+        if (typeof window !== 'undefined') {
           localStorage.setItem(
             getStatsKey(v, mode, passLimit),
             JSON.stringify(ns),
@@ -231,7 +230,7 @@ const Solitaire = () => {
           dailyStreak,
           lastDaily,
         };
-        if (isBrowser()) {
+        if (typeof window !== 'undefined') {
           localStorage.setItem(
             getStatsKey(variant, drawMode, passLimit),
             JSON.stringify(ns),
@@ -264,7 +263,7 @@ const Solitaire = () => {
       const diff = count - foundationCountRef.current;
       setBankroll((b) => {
         const nb = b + diff * 5;
-        if (isBrowser()) {
+        if (typeof window !== 'undefined') {
           localStorage.setItem('solitaireBankroll', String(nb));
         }
         return nb;
@@ -421,13 +420,7 @@ const Solitaire = () => {
       let fromY = 0;
       let card: Card;
       if (source === 'waste') {
-        const c = fromState.waste.at(-1);
-        if (c === undefined) {
-          setGame(toState);
-          cb();
-          return;
-        }
-        card = c;
+        card = fromState.waste[fromState.waste.length - 1];
         const rect = wasteRef.current?.getBoundingClientRect();
         if (rect) {
           fromX = (rect.left - rootRect.left) / scaleFactor;
@@ -818,7 +811,7 @@ const Solitaire = () => {
                 !prefersReducedMotion ? 'transition-transform' : ''
               }`}
             >
-              {renderCard(game.waste.at(-1)!)}
+              {renderCard(game.waste[game.waste.length - 1])}
             </div>
           ) : (
             <div className="w-16 h-24 min-w-[24px] min-h-[24px]" />
@@ -834,7 +827,7 @@ const Solitaire = () => {
               foundationRefs.current[i] = el;
             }}
           >
-            {pile.length ? renderCard(pile.at(-1)!) : (
+            {pile.length ? renderCard(pile[pile.length - 1]) : (
               <div className="w-16 h-24 min-w-[24px] min-h-[24px] border border-dashed border-white rounded" />
             )}
           </div>

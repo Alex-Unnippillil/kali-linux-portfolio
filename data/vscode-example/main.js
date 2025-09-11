@@ -1,7 +1,5 @@
-import logger from '../../utils/logger';
-
 function greet(name) {
-  logger.info('Hello ' + name)
+  console.log('Hello ' + name)
 }
 
 greet('World')

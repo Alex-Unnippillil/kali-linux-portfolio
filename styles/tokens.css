@@ -3,7 +3,7 @@
 :root {
   /* Theme colors */
   --color-ub-grey: #0f1317;
-  --color-ub-warm-grey: #4d4d4d;
+  --color-ub-warm-grey: #7d7f83;
   --color-ub-cool-grey: #1a1f26;
   --color-ub-orange: #1793d1;
   --color-ub-lite-abrgn: #22262c;
@@ -14,8 +14,8 @@
   --color-ub-gedit-light: #003B70;
   --color-ub-gedit-darker: #010D1A;
   --color-ubt-grey: #F6F6F5;
-  --color-ubt-warm-grey: #F6F6F5;
-  --color-ubt-cool-grey: #b3b3b3;
+  --color-ubt-warm-grey: #AEA79F;
+  --color-ubt-cool-grey: #333333;
   --color-ubt-blue: #62A0EA;
   --color-ubt-green: #73D216;
   --color-ubt-gedit-orange: #F39A21;
@@ -25,10 +25,6 @@
   --color-ub-dark-grey: #2a2e36;
   --color-bg: #0f1317;
   --color-text: #F5F5F5;
-  --color-primary: #1793d1;
-  --color-secondary: #1a1f26;
-  --color-tertiary: #374151;
-  --color-ghost: transparent;
 
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
@@ -55,42 +51,20 @@
   --motion-medium: 300ms;
   --motion-slow: 500ms;
 
-  /* Blur */
-  --blur-sm: 4px;
-  --blur-md: 8px;
-  --blur-lg: 16px;
-
-  /* Shadows */
-  --shadow-color: color-mix(in srgb, var(--color-inverse), transparent 80%);
-  --shadow-sm: 0 1px 2px var(--shadow-color);
-  --shadow-md: 0 4px 6px var(--shadow-color);
-  --shadow-lg: 0 8px 12px var(--shadow-color);
-
   /* Fonts */
   --font-family-base: 'Ubuntu', sans-serif;
   --font-multiplier: 1;
   /* Minimum interactive target size */
   --hit-area: 32px;
   /* Focus outline */
-  --focus-outline-color: var(--color-accent);
+  --focus-outline-color: var(--color-ubt-blue);
   --focus-outline-width: 2px;
-  --focus-outline-style: solid;
-  --focus-outline-offset: 4px;
 }
 
 /* High contrast theme */
 .high-contrast {
   --color-bg: #000000;
   --color-text: #ffffff;
-  --color-primary: #ffff00;
-  --color-secondary: #000000;
-  --color-accent: #ffff00;
-  --color-muted: #000000;
-  --color-surface: #000000;
-  --color-inverse: #000000;
-  --color-border: #ffff00;
-  --color-info: #00ffff;
-  --color-success: #00ff00;
   --color-ub-grey: #000000;
   --color-ub-cool-grey: #000000;
   --color-ubt-grey: #ffffff;
@@ -98,16 +72,10 @@
   --color-ub-orange: #ffff00;
   --color-ub-lite-abrgn: #00ffff;
   --color-ub-border-orange: #ffff00;
-  --focus-outline-color: #ffff00;
-  --focus-outline-width: 3px;
-  --focus-outline-style: solid;
-  --focus-outline-offset: 5px;
   --game-color-secondary: #ffff00;
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
   --game-color-danger: #ff0000;
-  --color-tertiary: #ffffff;
-  --color-ghost: transparent;
 }
 
 /* Dyslexia-friendly fonts */
@@ -147,7 +115,5 @@
     --color-ub-orange: #ffff00;
     --color-ub-lite-abrgn: #00ffff;
     --color-ub-border-orange: #ffff00;
-    --color-tertiary: #ffffff;
-    --color-ghost: transparent;
   }
 }

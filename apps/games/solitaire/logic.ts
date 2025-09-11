@@ -31,9 +31,7 @@ export const createDeck = (): Card[] => {
 const shuffle = (deck: Card[]) => {
   for (let i = deck.length - 1; i > 0; i -= 1) {
     const j = Math.floor(random() * (i + 1));
-    const tmp: Card = deck[i]!;
-    deck[i] = deck[j]!;
-    deck[j] = tmp;
+    [deck[i], deck[j]] = [deck[j], deck[i]];
   }
 };
 
@@ -95,14 +93,14 @@ const cardColor = (suit: Suit) => (suit === '♥' || suit === '♦' ? 'red' : 'b
 export const canMoveToFoundation = (card: Card, foundation: Card[]) => {
   if (card.faceDown) return false;
   if (foundation.length === 0) return card.rank === 1;
-  const top = foundation[foundation.length - 1]!; // length checked above
+  const top = foundation[foundation.length - 1];
   return top.suit === card.suit && top.rank + 1 === card.rank;
 };
 
 export const canMoveToTableau = (card: Card, pile: Card[]) => {
   if (card.faceDown) return false;
   if (pile.length === 0) return card.rank === 13;
-  const top = pile[pile.length - 1]!; // length checked above
+  const top = pile[pile.length - 1];
   if (top.faceDown) return false;
   return cardColor(top.suit) !== cardColor(card.suit) && top.rank === card.rank + 1;
 };
@@ -129,10 +127,7 @@ export const applyMoveToFoundation = (
   if (move.from === 'waste') {
     state.waste.shift();
   } else {
-    const pile = state.tableau[move.fromIndex];
-    if (pile) {
-      pile.pop();
-    }
+    state.tableau[move.fromIndex].pop();
   }
   state.foundations[move.card.suit].push(move.card);
 };
@@ -141,7 +136,7 @@ export const autoMove = (state: GameState) => {
   let moved = false;
   let moves = getAutoMoves(state);
   while (moves.length) {
-    applyMoveToFoundation(state, moves[0]!);
+    applyMoveToFoundation(state, moves[0]);
     moved = true;
     moves = getAutoMoves(state);
   }
@@ -151,28 +146,23 @@ export const autoMove = (state: GameState) => {
 export const getHint = (state: GameState): string | null => {
   const auto = getAutoMoves(state);
   if (auto.length) {
-    const m = auto[0]!;
+    const m = auto[0];
     return `Move ${rankToString(m.card.rank)}${m.card.suit} to foundation`;
   }
   const wasteTop = state.waste[0];
   if (wasteTop) {
     for (let i = 0; i < state.tableau.length; i += 1) {
-      const pile = state.tableau[i];
-      if (pile && canMoveToTableau(wasteTop, pile)) {
+      if (canMoveToTableau(wasteTop, state.tableau[i])) {
         return `Move ${rankToString(wasteTop.rank)}${wasteTop.suit} to pile ${i + 1}`;
       }
     }
   }
   for (let i = 0; i < state.tableau.length; i += 1) {
-    const pile = state.tableau[i];
-    const card = pile?.[pile.length - 1];
+    const card = state.tableau[i][state.tableau[i].length - 1];
     if (card) {
       for (let j = 0; j < state.tableau.length; j += 1) {
-        if (i !== j) {
-          const target = state.tableau[j];
-          if (target && canMoveToTableau(card, target)) {
-            return `Move ${rankToString(card.rank)}${card.suit} from pile ${i + 1} to pile ${j + 1}`;
-          }
+        if (i !== j && canMoveToTableau(card, state.tableau[j])) {
+          return `Move ${rankToString(card.rank)}${card.suit} from pile ${i + 1} to pile ${j + 1}`;
         }
       }
     }

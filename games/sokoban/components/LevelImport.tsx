@@ -2,37 +2,20 @@
 
 import React, { useCallback, useState } from "react";
 import { LevelPack, parseLevels } from "../../../apps/sokoban/levels";
-import { isBrowser } from '@/utils/env';
 
 const STORAGE_KEY = "sokoban_packs";
 const FILE_NAME = "sokoban-packs.json";
 
-const opfsSupported = (() => {
-  if (!isBrowser()) return false;
-  return (
-    "storage" in navigator &&
-    Boolean((navigator.storage as any).getDirectory)
-  );
-})();
-
-let directoryHandlePromise: Promise<FileSystemDirectoryHandle | null> | null = null;
-const getDirectoryHandle = (): Promise<FileSystemDirectoryHandle | null> => {
-  if (directoryHandlePromise) return directoryHandlePromise;
-  if (!opfsSupported) {
-    directoryHandlePromise = Promise.resolve(null);
-  } else {
-    directoryHandlePromise = (navigator.storage as any)
-      .getDirectory()
-      .catch(() => null);
-  }
-  return directoryHandlePromise;
-};
+const hasOpfs =
+  typeof window !== "undefined" &&
+  "storage" in navigator &&
+  Boolean((navigator.storage as any).getDirectory);
 
 export const loadLocalPacks = async (): Promise<LevelPack[]> => {
-  if (!isBrowser()) return [];
-  const root = await getDirectoryHandle();
-  if (root) {
+  if (typeof window === "undefined") return [];
+  if (hasOpfs) {
     try {
+      const root = await (navigator.storage as any).getDirectory();
       const handle = await root.getFileHandle(FILE_NAME);
       const file = await handle.getFile();
       return JSON.parse(await file.text());
@@ -48,18 +31,14 @@ export const loadLocalPacks = async (): Promise<LevelPack[]> => {
 };
 
 export const saveLocalPacks = async (packs: LevelPack[]): Promise<void> => {
-  if (!isBrowser()) return;
-  const root = await getDirectoryHandle();
-  if (root) {
-    try {
-      const handle = await root.getFileHandle(FILE_NAME, { create: true });
-      const writable = await handle.createWritable();
-      await writable.write(JSON.stringify(packs));
-      await writable.close();
-      return;
-    } catch {
-      // fall through to localStorage
-    }
+  if (typeof window === "undefined") return;
+  if (hasOpfs) {
+    const root = await (navigator.storage as any).getDirectory();
+    const handle = await root.getFileHandle(FILE_NAME, { create: true });
+    const writable = await handle.createWritable();
+    await writable.write(JSON.stringify(packs));
+    await writable.close();
+    return;
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(packs));
 };

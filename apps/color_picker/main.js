@@ -1,5 +1,4 @@
 /* eslint-disable no-top-level-window/no-top-level-window-or-document */
-import { isBrowser } from '../../utils/env';
 const colors = [];
 const input = document.getElementById('color-input');
 const swatches = document.getElementById('swatches');
@@ -7,7 +6,7 @@ const hexOutput = document.getElementById('hex-output');
 hexOutput.textContent = input.value;
 
 
-if (isBrowser()) {
+if (isBrowser) {
   const colors = [];
   const input = document.getElementById('color-input');
   const swatches = document.getElementById('swatches');

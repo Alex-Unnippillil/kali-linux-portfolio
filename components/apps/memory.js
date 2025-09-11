@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import GameLayout from './GameLayout';
 import { createDeck, PATTERN_THEMES, fisherYatesShuffle } from './memory_utils';
@@ -8,6 +7,7 @@ const DEFAULT_TIME = { 2: 30, 4: 60, 6: 120 };
 // Built-in theme assets that can be used by the memory game.
 const BUILT_IN_THEMES = {
   icons: [
+    '/themes/Yaru/apps/2048.svg',
     '/themes/Yaru/apps/car-racer.svg',
     '/themes/Yaru/apps/checkers.svg',
     '/themes/Yaru/apps/flappy-bird.svg',
@@ -82,7 +82,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
   useEffect(() => () => clearTimeout(previewTimeout.current), []);
 
   const beep = useCallback(() => {
-    if (!sound || !isBrowser()) return;
+    if (!sound || typeof window === 'undefined') return;
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = ctx.createOscillator();

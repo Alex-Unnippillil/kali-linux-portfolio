@@ -1,15 +1,14 @@
 "use client";
 
-import { isBrowser } from '@/utils/env';
 import { getSeed, setSeed } from './idb';
 
 function today(): string {
-  return new Date().toISOString().split('T')[0]!;
+  return new Date().toISOString().split('T')[0];
 }
 
 export async function getDailySeed(game: string): Promise<string> {
   const date = today();
-  if (isBrowser() && 'serviceWorker' in navigator && navigator.serviceWorker.controller) {
+  if (typeof window !== 'undefined' && 'serviceWorker' in navigator && navigator.serviceWorker.controller) {
     const channel = new MessageChannel();
     const sw = navigator.serviceWorker.controller;
     return new Promise((resolve) => {

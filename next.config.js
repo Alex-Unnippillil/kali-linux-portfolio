@@ -1,10 +1,43 @@
-/**
- * @type {import('next').NextConfig}
- */
+// Security headers configuration for Next.js.
+// Allows external badges and same-origin PDF embedding.
+// Update README (section "CSP External Domains") when editing domains below.
 
-const { validateServerEnv } = require('./lib/validate');
+const { validateServerEnv: validateEnv } = require('./lib/validate.js');
+
+const ContentSecurityPolicy = [
+  "default-src 'self'",
+  // Prevent injection of external base URIs
+  "base-uri 'self'",
+  // Restrict form submissions to same origin
+  "form-action 'self'",
+  // Disallow all plugins and other embedded objects
+  "object-src 'none'",
+  // Allow external images and data URIs for badges/icons
+  "img-src 'self' https: data:",
+  // Allow inline styles
+  "style-src 'self' 'unsafe-inline'",
+  // Explicitly allow inline style tags
+  "style-src-elem 'self' 'unsafe-inline'",
+  // Restrict fonts to same origin
+  "font-src 'self'",
+  // External scripts required for embedded timelines
+  "script-src 'self' 'unsafe-inline' https://vercel.live https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
+  // Allow outbound connections for embeds and the in-browser Chrome app
+  "connect-src 'self' https://example.com https://developer.mozilla.org https://en.wikipedia.org https://www.google.com https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.google.com https://stackblitz.com",
+  // Allow iframes from specific providers so the Chrome and StackBlitz apps can load allowed content
+  "frame-src 'self' https://vercel.live https://stackblitz.com https://*.google.com https://platform.twitter.com https://syndication.twitter.com https://*.twitter.com https://*.x.com https://www.youtube-nocookie.com https://open.spotify.com https://example.com https://developer.mozilla.org https://en.wikipedia.org",
+
+  // Allow this site to embed its own resources (resume PDF)
+  "frame-ancestors 'self'",
+  // Enforce HTTPS for all requests
+  'upgrade-insecure-requests',
+].join('; ');
 
 const securityHeaders = [
+  {
+    key: 'Content-Security-Policy',
+    value: ContentSecurityPolicy,
+  },
   {
     key: 'X-Content-Type-Options',
     value: 'nosniff',
@@ -15,134 +48,86 @@ const securityHeaders = [
   },
   {
     key: 'Permissions-Policy',
-    value:
-      'camera=(), microphone=(), geolocation=(), interest-cohort=()',
-
+    value: 'camera=(), microphone=(), geolocation=*',
   },
   {
+    // Allow same-origin framing so the PDF resume renders in an <object>
     key: 'X-Frame-Options',
     value: 'SAMEORIGIN',
-  },
-  {
-    key: 'Strict-Transport-Security',
-    value: 'max-age=63072000; includeSubDomains; preload',
   },
 ];
 
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
-  openAnalyzer: false,
-  analyzerMode: 'json',
 });
 
-// Prefix PWA caches with the current build ID so each deployment gets its own
-// cache namespace. The service worker reads this via NEXT_PUBLIC_BUILD_ID and
-// calls setCacheNameDetails to apply the prefix.
-const buildId =
-  process.env.NEXT_BUILD_ID || process.env.BUILD_ID || 'dev';
-
-let precacheManifest = [];
-try {
-  precacheManifest = require('./precache-manifest.json');
-} catch {
-  // The manifest is generated at build time; fall back to an empty list when absent
-}
-
-const additionalManifestEntries = [
-  // Precache the main shell and tools index so they are instantly available offline
-  { url: '/', revision: buildId },
-  { url: '/apps', revision: buildId },
-];
-precacheManifest.forEach((entry) => additionalManifestEntries.push(entry));
-
-const withPWAInit = require('@ducanh2912/next-pwa').default;
-// Enable PWA support via next-pwa
-const withPWA = withPWAInit({
+const withPWA = require('@ducanh2912/next-pwa').default({
   dest: 'public',
-  sw: 'service-worker.js',
-  // Enable the service worker for all production builds, even when not on Vercel.
-  // This avoids the "PWA support is disabled" message in local builds.
-  disable: process.env.NODE_ENV !== 'production',
+  sw: 'sw.js',
+  disable: process.env.NODE_ENV === 'development',
   buildExcludes: [/dynamic-css-manifest\.json$/],
-  fallbacks: {
-    document: '/offline.html',
-  },
   workboxOptions: {
-    swSrc: 'sw.ts',
-    additionalManifestEntries,
+    navigateFallback: '/offline.html',
+    additionalManifestEntries: [
+      { url: '/', revision: null },
+      { url: '/feeds', revision: null },
+      { url: '/about', revision: null },
+      { url: '/projects', revision: null },
+      { url: '/projects.json', revision: null },
+      { url: '/apps', revision: null },
+      { url: '/apps/weather', revision: null },
+      { url: '/apps/terminal', revision: null },
+      { url: '/apps/checkers', revision: null },
+      { url: '/offline.html', revision: null },
+      { url: '/manifest.webmanifest', revision: null },
+    ],
   },
 });
-
-
-let withExportImages = (config) => config;
-try {
-  withExportImages = require('next-export-optimize-images');
-} catch {}
 
 const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 const isProd = process.env.NODE_ENV === 'production';
 
-if (isProd) {
-  validateServerEnv(process.env);
-}
-
 // Merge experiment settings and production optimizations into a single function.
 function configureWebpack(config, { isServer }) {
   // Enable WebAssembly loading and avoid JSON destructuring bug
-  config.experiments ??= {};
-  config.experiments.asyncWebAssembly = true;
+  config.experiments = {
+    ...(config.experiments || {}),
+    asyncWebAssembly: true,
+  };
   // Prevent bundling of server-only modules in the browser
   config.resolve = config.resolve || {};
-  config.resolve.fallback = Object.assign(
-    {},
-    config.resolve.fallback,
-    {
-      module: false,
-      async_hooks: false,
-      fs: false,
-      worker_threads: false,
-      readline: false,
-    }
-  );
-  config.resolve.alias = Object.assign(
-    {},
-    config.resolve.alias,
-    {
-      'react-dom$': require('path').resolve(
-        __dirname,
-        'lib/react-dom-shim.js'
-      ),
-    }
-  );
+  config.resolve.fallback = {
+    ...(config.resolve.fallback || {}),
+    module: false,
+    async_hooks: false,
+  };
+  config.resolve.alias = {
+    ...(config.resolve.alias || {}),
+    'react-dom$': require('path').resolve(__dirname, 'lib/react-dom-shim.js'),
+  };
   if (isProd) {
-    config.optimization = Object.assign({}, config.optimization, {
+    config.optimization = {
+      ...(config.optimization || {}),
       mangleExports: false,
-    });
+    };
   }
   return config;
 }
 
-const nextConfig = withBundleAnalyzer(
-  withExportImages({
-    output: isStaticExport ? 'export' : undefined,
-    serverExternalPackages: [
-      '@supabase/supabase-js',
-      '@tinyhttp/cookie-signature',
-    ],
+try {
+  validateEnv?.(process.env);
+} catch {
+  console.warn('Missing env vars; running without validation');
+}
+
+module.exports = withBundleAnalyzer(
+  withPWA({
+    ...(isStaticExport && { output: 'export' }),
     webpack: configureWebpack,
 
-    // Run ESLint during builds so linting problems surface in CI and local builds.
+    // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
     eslint: {
-      // Ignore ESLint errors during builds to prevent failures
       ignoreDuringBuilds: true,
-    },
-    typescript: {
-      // Allow production builds to complete even if there are type errors
-      ignoreBuildErrors: true,
-    },
-    experimental: {
-      // Disable CSS optimization since the required dependency 'critters' is missing
-      optimizeCss: false,
     },
     images: {
       unoptimized: true,
@@ -152,122 +137,46 @@ const nextConfig = withBundleAnalyzer(
         'avatars.githubusercontent.com',
         'i.ytimg.com',
         'yt3.ggpht.com',
-        'openweathermap.org',
-        'ghchart.rshah.org',
-        'data.typeracer.com',
-        'images.credly.com',
-        'staticmap.openstreetmap.de',
-      ],
-      remotePatterns: [
-        { protocol: 'https', hostname: 'opengraph.githubassets.com' },
-        { protocol: 'https', hostname: 'raw.githubusercontent.com' },
-        { protocol: 'https', hostname: 'avatars.githubusercontent.com' },
-        { protocol: 'https', hostname: 'i.ytimg.com' },
-        { protocol: 'https', hostname: 'yt3.ggpht.com' },
-        { protocol: 'https', hostname: 'openweathermap.org' },
-        { protocol: 'https', hostname: 'ghchart.rshah.org' },
-        { protocol: 'https', hostname: 'data.typeracer.com' },
-        { protocol: 'https', hostname: 'images.credly.com' },
-        { protocol: 'https', hostname: 'staticmap.openstreetmap.de' },
-      ],
-      localPatterns: [
-        { pathname: '/themes/Yaru/apps/**' },
-        { pathname: '/icons/**' },
+        'i.scdn.co',
+        'www.google.com',
+        'example.com',
+        'developer.mozilla.org',
+        'en.wikipedia.org',
       ],
       deviceSizes: [640, 750, 828, 1080, 1200, 1280, 1920, 2048, 3840],
       imageSizes: [16, 32, 48, 64, 96, 128, 256],
-      formats: ['image/avif', 'image/webp'],
     },
-    async rewrites() {
-      return [
-        {
-          source: '/.well-known/vercel/flags',
-          destination: '/api/vercel/flags',
-        },
-      ];
-    },
-    // Apply security headers only in production.
-    headers: isProd
-      ? async () => {
-          const result = [
-            {
-              source: '/',
-              headers: [
-                {
-                  key: 'Link',
-                  value: '</wallpapers/wall-1.webp>; rel=preload; as=image',
-                },
-              ],
-            },
-            {
-              source: '/:path*',
-              headers: [
-                {
-                  key: 'Link',
-                  value: '<https://fonts.googleapis.com>; rel=preconnect; crossorigin',
-                },
-                {
-                  key: 'Link',
-                  value: '<https://fonts.gstatic.com>; rel=preconnect; crossorigin',
-                },
-              ],
-            },
-            {
-              source: '/_next/static/:path*',
-              headers: [
-                {
-                  key: 'Cache-Control',
-                  value: 'public, max-age=31536000, immutable',
-                },
-              ],
-            },
-            {
-              source: '/(.*)',
-              headers: securityHeaders,
-            },
-          ];
-          result.push(
-            {
-              source: '/manifest.webmanifest',
-              headers: [
-                {
-                  key: 'Content-Type',
-                  value: 'application/manifest+json',
-                },
-                {
-                  key: 'Cache-Control',
-                  value: 'public, max-age=0, must-revalidate',
-                },
-              ],
-            },
-            {
-              source: '/service-worker.js',
-              headers: [
-                {
-                  key: 'Cache-Control',
-                  value: 'public, max-age=0, must-revalidate',
-                },
-              ],
-            },
-            {
-              // Cache all static assets aggressively so they can be reused
-              // between deploys. This covers files served from `public/`
-              // such as scripts, stylesheets, images and fonts.
-              source:
-                '/:all*(js|css|svg|png|jpg|jpeg|gif|ico|webp|avif|tiff|bmp|eot|otf|ttf|woff|woff2|json)',
-
-              headers: [
-                {
-                  key: 'Cache-Control',
-                  value: 'public, max-age=31536000, immutable',
-                },
-              ],
-            }
-          );
-          return result;
-        }
-      : undefined,
+    // Security headers are skipped outside production; remove !isProd check to restore them for development.
+    ...(isStaticExport || !isProd
+      ? {}
+      : {
+          async headers() {
+            return [
+              {
+                source: '/(.*)',
+                headers: securityHeaders,
+              },
+              {
+                source: '/fonts/(.*)',
+                headers: [
+                  {
+                    key: 'Cache-Control',
+                    value: 'public, max-age=31536000, immutable',
+                  },
+                ],
+              },
+              {
+                source: '/images/(.*)',
+                headers: [
+                  {
+                    key: 'Cache-Control',
+                    value: 'public, max-age=86400',
+                  },
+                ],
+              },
+            ];
+          },
+        }),
   })
 );
 
-module.exports = nextConfig;

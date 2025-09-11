@@ -1,13 +1,12 @@
-import handler, { RATE_LIMIT_COOKIE } from '../pages/api/contact';
+import handler, { rateLimit, RATE_LIMIT_WINDOW_MS } from '../pages/api/contact';
 import { createMocks } from 'node-mocks-http';
-import { unsign } from '@tinyhttp/cookie-signature';
 
 describe('contact api', () => {
   afterEach(() => {
+    rateLimit.clear();
     jest.restoreAllMocks();
     delete (global as any).fetch;
     delete process.env.RECAPTCHA_SECRET;
-    delete process.env.RATE_LIMIT_SECRET;
   });
 
   test('returns 200 when inputs pass', async () => {
@@ -15,7 +14,6 @@ describe('contact api', () => {
       .fn()
       .mockResolvedValue({ json: () => Promise.resolve({ success: true }) });
     process.env.RECAPTCHA_SECRET = 'secret';
-    process.env.RATE_LIMIT_SECRET = 'ratelimit';
 
     const { req, res } = createMocks({
       method: 'POST',
@@ -38,44 +36,28 @@ describe('contact api', () => {
 
     expect(res._getStatusCode()).toBe(200);
     expect(res._getJSONData()).toEqual({ ok: true });
-
-    const setCookie = res.getHeader('Set-Cookie');
-    const cookieStr = Array.isArray(setCookie)
-      ? setCookie.find((c) => c.startsWith(`${RATE_LIMIT_COOKIE}=`))
-      : setCookie;
-    expect(cookieStr).toBeDefined();
-    const value = decodeURIComponent(
-      cookieStr.split(';')[0].split('=')[1]
-    );
-    const arr = JSON.parse(unsign(value, 'ratelimit'));
-    expect(Array.isArray(arr)).toBe(true);
-    expect(arr.length).toBe(1);
   });
 
-  test('rate limits when cookie contains recent requests', async () => {
-    const now = 1_000_000;
-    jest.spyOn(Date, 'now').mockReturnValue(now);
+  test('removes stale ip entries', async () => {
+    const currentTime = 1_000_000;
+    jest.spyOn(Date, 'now').mockReturnValue(currentTime);
+    rateLimit.set('1.1.1.1', {
+      count: 1,
+      start: currentTime - RATE_LIMIT_WINDOW_MS - 1,
+    });
+
     (global as any).fetch = jest
       .fn()
       .mockResolvedValue({ json: () => Promise.resolve({ success: true }) });
     process.env.RECAPTCHA_SECRET = 'secret';
-    process.env.RATE_LIMIT_SECRET = 'ratelimit';
-
-    const timestamps = Array.from({ length: 5 }, (_, i) => now - i * 1000);
-    const signed = require('@tinyhttp/cookie-signature').sign(
-      JSON.stringify(timestamps),
-      'ratelimit'
-    );
 
     const { req, res } = createMocks({
       method: 'POST',
       headers: {
         'x-csrf-token': 'token',
-        cookie: `csrfToken=token; ${RATE_LIMIT_COOKIE}=${encodeURIComponent(
-          signed
-        )}`,
+        cookie: 'csrfToken=token',
       },
-      cookies: { csrfToken: 'token', [RATE_LIMIT_COOKIE]: signed },
+      cookies: { csrfToken: 'token' },
       body: {
         name: 'Alex',
         email: 'alex@example.com',
@@ -84,9 +66,12 @@ describe('contact api', () => {
         recaptchaToken: 'tok',
       },
     });
+    (req.socket as any).remoteAddress = '2.2.2.2';
 
     await handler(req as any, res as any);
 
-    expect(res._getStatusCode()).toBe(429);
+    expect(rateLimit.has('1.1.1.1')).toBe(false);
+    expect(rateLimit.has('2.2.2.2')).toBe(true);
+    expect(res._getStatusCode()).toBe(200);
   });
 });

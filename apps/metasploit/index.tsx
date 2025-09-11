@@ -18,14 +18,6 @@ interface TreeNode {
   __modules?: Module[];
 }
 
-const isTreeNode = (
-  v: TreeNode | Module[] | undefined,
-): v is TreeNode => typeof v === 'object' && v !== null && !Array.isArray(v);
-
-const isModuleArray = (
-  v: TreeNode | Module[] | undefined,
-): v is Module[] => Array.isArray(v);
-
 const typeColors: Record<string, string> = {
   auxiliary: 'bg-blue-500',
   exploit: 'bg-red-500',
@@ -42,12 +34,8 @@ function buildTree(mods: Module[]): TreeNode {
         if (!node.__modules) node.__modules = [];
         node.__modules.push(mod);
       } else {
-        let child = node[part];
-        if (!isTreeNode(child)) {
-          child = {};
-          node[part] = child;
-        }
-        node = child;
+        node[part] = (node[part] as TreeNode) || {};
+        node = node[part] as TreeNode;
       }
     });
   });
@@ -116,34 +104,30 @@ const MetasploitPage: React.FC = () => {
   const renderTree = (node: TreeNode) => (
     <ul className="ml-2">
       {Object.entries(node)
-        .filter(
-          (entry): entry is [string, TreeNode] =>
-            entry[0] !== '__modules' && isTreeNode(entry[1]),
-        )
+        .filter(([k]) => k !== '__modules')
         .map(([key, child]) => (
           <li key={key}>
             <details>
               <summary className="cursor-pointer">{key}</summary>
-              {renderTree(child)}
+              {renderTree(child as TreeNode)}
             </details>
           </li>
         ))}
-      {isModuleArray(node.__modules) &&
-        node.__modules.map((mod) => (
-          <li key={mod.name}>
-            <button
-              onClick={() => setSelected(mod)}
-              className="flex justify-between w-full text-left px-1 py-0.5 hover:bg-gray-100"
+      {(node.__modules || []).map((mod) => (
+        <li key={mod.name}>
+          <button
+            onClick={() => setSelected(mod)}
+            className="flex justify-between w-full text-left px-1 py-0.5 hover:bg-gray-100"
+          >
+            <span>{mod.name.split('/').pop()}</span>
+            <span
+              className={`ml-2 text-xs text-white px-1 rounded ${typeColors[mod.type] || 'bg-gray-500'}`}
             >
-              <span>{mod.name.split('/').pop()}</span>
-              <span
-                className={`ml-2 text-xs text-white px-1 rounded ${typeColors[mod.type] || 'bg-gray-500'}`}
-              >
-                {mod.type}
-              </span>
-            </button>
-          </li>
-        ))}
+              {mod.type}
+            </span>
+          </button>
+        </li>
+      ))}
     </ul>
   );
 

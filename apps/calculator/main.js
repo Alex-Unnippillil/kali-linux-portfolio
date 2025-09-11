@@ -1,4 +1,3 @@
-import { isBrowser } from '@/utils/env';
 // Shunting-yard evaluator and tokenizer for the calculator
 // Exposes pure functions without DOM dependencies
 
@@ -236,7 +235,7 @@ function evalRPN(rpn, vars = {}) {
 
 function evaluate(expression, vars = {}) {
   let scope = { ...vars };
-  if (isBrowser()) {
+  if (typeof window !== 'undefined') {
     try {
       const raw = localStorage.getItem('calc-vars');
       if (raw) scope = { ...JSON.parse(raw), ...scope };
@@ -293,7 +292,7 @@ function getLastResult() {
   return lastResult;
 }
 
-export {
+module.exports = {
   tokenize,
   toRPN,
   evalRPN,

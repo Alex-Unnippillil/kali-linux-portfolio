@@ -1,10 +1,9 @@
 "use client";
 
-import { isBrowser } from '@/utils/env';
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import Head from 'next/head';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 import useOPFS from '../hooks/useOPFS';
-import useWakeLockOnFullscreen from '../hooks/useWakeLockOnFullscreen';
 
 // Basic YouTube player with keyboard shortcuts, playback rate cycling,
 // chapter drawer and Picture-in-Picture helpers. The Doc-PiP window is a
@@ -12,7 +11,6 @@ import useWakeLockOnFullscreen from '../hooks/useWakeLockOnFullscreen';
 export default function YouTubePlayer({ videoId }) {
   const [activated, setActivated] = useState(false);
   const containerRef = useRef(null); // DOM node hosting the iframe
-  useWakeLockOnFullscreen(containerRef);
   const playerRef = useRef(null); // YT.Player instance
   const [isPlaying, setIsPlaying] = useState(false);
   const [chapters, setChapters] = useState([]); // [{title, startTime}]
@@ -62,7 +60,7 @@ export default function YouTubePlayer({ videoId }) {
       });
     };
 
-    if (isBrowser()) {
+    if (typeof window !== 'undefined') {
       // Load the IFrame Player API script only after user interaction
       if (!window.YT) {
         const tag = document.createElement('script');
@@ -197,6 +195,13 @@ export default function YouTubePlayer({ videoId }) {
 
   return (
     <>
+      <Head>
+        <link
+          rel="preconnect"
+          href="https://www.youtube-nocookie.com"
+        />
+        <link rel="preconnect" href="https://i.ytimg.com" />
+      </Head>
       <div
         className="relative w-full"
         style={{ aspectRatio: '16 / 9' }}
@@ -303,7 +308,6 @@ export default function YouTubePlayer({ videoId }) {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="mb-2 bg-black/80 border border-white/20 p-1"
-                  aria-label="Search notes"
                 />
                 {search && results.length > 0 && (
                   <ul className="mb-2 overflow-auto max-h-24 border border-white/20 p-1">
@@ -319,7 +323,6 @@ export default function YouTubePlayer({ videoId }) {
                   onChange={handleNoteChange}
                   className="flex-1 bg-black/80 border border-white/20 p-1"
                   placeholder="Write notes…"
-                  aria-label="Notes editor"
                 />
               </>
             ) : (

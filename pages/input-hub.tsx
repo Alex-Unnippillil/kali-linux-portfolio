@@ -169,33 +169,33 @@ const InputHub = () => {
   };
 
   return (
-    <div className="p-space-2 text-black max-w-md mx-auto">
-      <div className="mb-space-2">
+    <div className="p-4 text-black max-w-md mx-auto">
+      <div className="mb-4">
         <span
-          className={`px-space-1 py-space-1 text-sm rounded ${
+          className={`px-2 py-1 text-sm rounded ${
             emailjsReady ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
           }`}
         >
           {emailjsReady ? 'EmailJS: Online' : 'EmailJS: Offline'}
         </span>
       </div>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-space-1">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2">
         <input
-          className="p-space-1 border"
+          className="p-1 border"
           placeholder="Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
         />
         <input
-          className="p-space-1 border"
+          className="p-1 border"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
         />
         <select
-          className="p-space-1 border"
+          className="p-1 border"
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
         >
@@ -206,28 +206,27 @@ const InputHub = () => {
           ))}
         </select>
         <textarea
-          className="p-space-1 border"
+          className="p-1 border"
           placeholder="Message"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           required
         />
-        {process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY && (
-          <label className="flex items-center gap-space-1">
-            <input
-              type="checkbox"
-              checked={useCaptcha}
-              onChange={(e) => setUseCaptcha(e.target.checked)}
-            />
-            <span>Use reCAPTCHA</span>
-          </label>
-        )}
-        <button type="submit" className="bg-blue-500 text-white px-space-1 py-space-1">
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={useCaptcha}
+            onChange={(e) => setUseCaptcha(e.target.checked)}
+            disabled={!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+          />
+          <span>Use reCAPTCHA</span>
+        </label>
+        <button type="submit" className="bg-blue-500 text-white px-2 py-1">
           Send
         </button>
       </form>
       {status && (
-        <div role="status" aria-live="polite" className="mt-space-1 text-sm">
+        <div role="status" aria-live="polite" className="mt-2 text-sm">
           {status}
         </div>
       )}

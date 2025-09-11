@@ -1,10 +1,9 @@
 'use client';
-import { isBrowser } from '@/utils/env';
 import { useEffect } from 'react';
 
 export default function WeatherWidget() {
   useEffect(() => {
-    if (isBrowser()) {
+    if (typeof window !== 'undefined') {
       import('./main');
     }
   }, []);

@@ -1,22 +1,11 @@
-import { isBrowser } from '@/utils/env';
-const omnibox = (() => {
-  if (isBrowser()) {
-    return document.getElementById('omnibox');
-  }
-  return null;
-})();
-const playBtn = (() => {
-  if (isBrowser()) {
-    return document.getElementById('play');
-  }
-  return null;
-})();
-const pauseBtn = (() => {
-  if (isBrowser()) {
-    return document.getElementById('pause');
-  }
-  return null;
-})();
+const omnibox =
+  typeof document !== 'undefined'
+    ? document.getElementById('omnibox')
+    : null;
+const playBtn =
+  typeof document !== 'undefined' ? document.getElementById('play') : null;
+const pauseBtn =
+  typeof document !== 'undefined' ? document.getElementById('pause') : null;
 
 function refresh() {
   chrome.runtime.sendMessage({ type: 'query' }, (response) => {
