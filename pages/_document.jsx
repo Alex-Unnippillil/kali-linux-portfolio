@@ -21,7 +21,14 @@ class MyDocument extends Document {
           <script nonce={nonce} src="/theme.js" />
         </Head>
         <body>
-          <Main />
+          <a href="#main-content" className="sr-only focus:not-sr-only">
+            Skip to content
+          </a>
+          <header />
+          <main id="main-content">
+            <Main />
+          </main>
+          <footer />
           <NextScript nonce={nonce} />
         </body>
       </Html>
