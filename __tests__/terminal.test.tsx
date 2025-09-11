@@ -71,7 +71,7 @@ describe('Terminal component', () => {
 
     fireEvent.keyDown(root, { ctrlKey: true, key: 'Tab' });
     const headers = container.querySelectorAll('.flex.items-center.cursor-pointer');
-    expect((headers[0] as HTMLElement).className).toContain('bg-gray-700');
+    expect((headers[0] as HTMLElement).className).toContain('bg-[var(--color-surface)]');
 
     fireEvent.keyDown(root, { ctrlKey: true, key: 'w' });
     expect(container.querySelectorAll('.flex.items-center.cursor-pointer').length).toBe(1);
