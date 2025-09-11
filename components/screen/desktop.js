@@ -22,7 +22,7 @@ import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
-import { useSnapSetting } from '../../hooks/usePersistentState';
+import { useSnapSetting, loadPersistentState, savePersistentState } from '../../hooks/usePersistentState';
 
 export class Desktop extends Component {
     constructor() {
@@ -60,22 +60,14 @@ export class Desktop extends Component {
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
         this.fetchAppsData(() => {
-            const session = this.props.session || {};
+            const stored = loadPersistentState('desktop:windows', []);
             const positions = {};
-            if (session.dock && session.dock.length) {
-                let favourite_apps = { ...this.state.favourite_apps };
-                session.dock.forEach(id => {
-                    favourite_apps[id] = true;
-                });
-                this.setState({ favourite_apps });
-            }
-
-            if (session.windows && session.windows.length) {
-                session.windows.forEach(({ id, x, y }) => {
+            if (Array.isArray(stored) && stored.length) {
+                stored.forEach(({ id, x, y }) => {
                     positions[id] = { x, y };
                 });
                 this.setState({ window_positions: positions }, () => {
-                    session.windows.forEach(({ id }) => this.openApp(id));
+                    stored.forEach(({ id }) => this.openApp(id));
                 });
             } else {
                 this.openApp('about-alex');
@@ -89,6 +81,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        window.addEventListener('beforeunload', this.saveSession);
     }
 
     componentWillUnmount() {
@@ -96,6 +89,7 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        window.removeEventListener('beforeunload', this.saveSession);
     }
 
     checkForNewFolders = () => {
@@ -507,8 +501,11 @@ export class Desktop extends Component {
             x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
             y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10
         }));
-        const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
-        this.props.setSession({ ...this.props.session, windows, dock });
+        savePersistentState('desktop:windows', windows);
+        if (this.props.setSession) {
+            const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
+            this.props.setSession({ ...this.props.session, windows, dock });
+        }
     }
 
     hideSideBar = (objId, hide) => {
