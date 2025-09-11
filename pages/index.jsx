@@ -1,28 +1,39 @@
-import dynamic from 'next/dynamic';
-import Meta from '../components/SEO/Meta';
-import BetaBadge from '../components/BetaBadge';
+import dynamic from "next/dynamic";
+import Meta from "../components/SEO/Meta";
+import BetaBadge from "../components/BetaBadge";
 
 const Ubuntu = dynamic(
   () =>
-    import('../components/ubuntu').catch((err) => {
-      console.error('Failed to load Ubuntu component', err);
+    import("../components/ubuntu").catch((err) => {
+      console.error("Failed to load Ubuntu component", err);
       throw err;
     }),
   {
     ssr: false,
     loading: () => <p>Loading Ubuntu...</p>,
-  }
+  },
 );
 const InstallButton = dynamic(
   () =>
-    import('../components/InstallButton').catch((err) => {
-      console.error('Failed to load InstallButton component', err);
+    import("../components/InstallButton").catch((err) => {
+      console.error("Failed to load InstallButton component", err);
       throw err;
     }),
   {
     ssr: false,
     loading: () => <p>Loading install options...</p>,
-  }
+  },
+);
+const LatestNews = dynamic(
+  () =>
+    import("../src/components/LatestNews").catch((err) => {
+      console.error("Failed to load LatestNews component", err);
+      throw err;
+    }),
+  {
+    ssr: false,
+    loading: () => <p>Loading news...</p>,
+  },
 );
 
 /**
@@ -37,6 +48,7 @@ const App = () => (
     <Ubuntu />
     <BetaBadge />
     <InstallButton />
+    <LatestNews />
   </>
 );
 
