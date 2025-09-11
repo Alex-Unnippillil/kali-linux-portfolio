@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
-import { Icon } from '../ui/Icon';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 
@@ -119,17 +119,24 @@ const WhiskerMenu: React.FC = () => {
       <button
         ref={buttonRef}
         type="button"
+        aria-label="Show Applications"
         onClick={() => setOpen(o => !o)}
         className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
       >
-        <Icon name="menu" className="inline mr-1 w-4 h-4 rtl:ml-1 rtl:mr-0" />
+        <Image
+          src="/themes/Yaru/status/decompiler-symbolic.svg"
+          alt="Menu"
+          width={16}
+          height={16}
+          className="inline mr-1"
+        />
         Applications
       </button>
       {open && (
-          <div
-            ref={menuRef}
-            className="absolute left-0 mt-1 z-50 flex bg-ub-grey text-white shadow-lg rtl:left-auto rtl:right-0"
-            tabIndex={-1}
+        <div
+          ref={menuRef}
+          className="absolute left-0 mt-1 z-50 flex bg-ub-grey text-white shadow-lg rtl:left-auto rtl:right-0"
+          tabIndex={-1}
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
               setOpen(false);
@@ -140,18 +147,18 @@ const WhiskerMenu: React.FC = () => {
             {CATEGORIES.map(cat => (
               <button
                 key={cat.id}
-                className={`text-left px-2 py-1 rounded mb-1 rtl:text-right ${category === cat.id ? 'bg-gray-700' : ''}`}
+                className={`text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''} rtl:text-right`}
                 onClick={() => setCategory(cat.id)}
               >
                 {cat.label}
               </button>
             ))}
           </div>
-          <div className="p-3">
+            <div className="p-3">
             <input
               className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
               placeholder="Search"
-              aria-label="Search applications"
+              aria-label="Search"
               value={query}
               onChange={e => setQuery(e.target.value)}
               autoFocus
