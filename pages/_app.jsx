@@ -16,6 +16,7 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import ReleaseBanner from '../components/common/ReleaseBanner';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -156,6 +157,7 @@ function MyApp(props) {
         >
           Skip to app grid
         </a>
+        <ReleaseBanner />
         <SettingsProvider>
           <PipPortalProvider>
             <div aria-live="polite" id="live-region" />
