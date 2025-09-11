@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
+import Button from '@/components/ui/Button';
 
 interface HelpPanelProps {
   appId: string;
@@ -50,15 +51,16 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
 
   return (
     <>
-      <button
+      <Button
         type="button"
         aria-label="Help"
         aria-expanded={open}
         onClick={toggle}
-        className="fixed top-2 right-2 z-40 bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
+        variant="secondary"
+        className="fixed top-2 right-2 z-40 rounded-full w-11 h-11 p-0"
       >
         ?
-      </button>
+      </Button>
       {open && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-end p-4"

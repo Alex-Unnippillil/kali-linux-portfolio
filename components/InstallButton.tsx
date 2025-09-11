@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { trackEvent } from '@/lib/analytics-client';
 import { showA2HS } from '@/src/pwa/a2hs';
+import Button from '@/components/ui/Button';
 
 const InstallButton: React.FC = () => {
   const [visible, setVisible] = useState(false);
@@ -24,12 +25,9 @@ const InstallButton: React.FC = () => {
   if (!visible) return null;
 
   return (
-    <button
-      onClick={handleInstall}
-      className="fixed bottom-4 right-4 bg-ubt-blue text-white px-3 py-1 rounded"
-    >
+    <Button onClick={handleInstall} className="fixed bottom-4 right-4">
       Install
-    </button>
+    </Button>
   );
 };
 

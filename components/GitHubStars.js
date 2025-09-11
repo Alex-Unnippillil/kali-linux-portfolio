@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import usePersistentState from '../hooks/usePersistentState';
+import Button from '@/components/ui/Button';
 
 const GitHubStars = ({ user, repo }) => {
   const ref = useRef(null);
@@ -50,13 +51,14 @@ const GitHubStars = ({ user, repo }) => {
       ) : (
         <>
           <span>⭐ {stars}</span>
-          <button
+          <Button
             onClick={fetchStars}
             aria-label="Refresh star count"
-            className="ml-2 text-gray-400 hover:text-white"
+            variant="secondary"
+            className="ml-2"
           >
             ↻
-          </button>
+          </Button>
         </>
       )}
     </div>
