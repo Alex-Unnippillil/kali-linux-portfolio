@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { GetStaticProps } from "next";
 import { XMLParser } from "fast-xml-parser";
@@ -84,6 +85,11 @@ export default function Home({ desktops }: HomeProps) {
         <h1 className="mb-4 text-2xl font-bold sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl">
           Choose the desktop you prefer
         </h1>
+        <p className="mb-4">
+          <Link href="/desktop" className="underline">
+            Launch desktop
+          </Link>
+        </p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
           {desktops.map((d) => (
             <div
