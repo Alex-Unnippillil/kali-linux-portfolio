@@ -201,8 +201,8 @@ export class Window extends Component {
     }
 
     snapToGrid = (value) => {
-        if (!this.props.snapEnabled) return value;
-        return Math.round(value / 8) * 8;
+        const grid = this.props.snapEnabled ? 8 : 4;
+        return Math.round(value / grid) * grid;
     }
 
     handleVerticleResize = () => {
@@ -371,6 +371,7 @@ export class Window extends Component {
         if (snapPos) {
             this.snapWindow(snapPos);
         } else {
+            this.setWinowsPosition();
             this.setState({ snapPreview: null, snapPosition: null });
         }
     }
@@ -624,7 +625,7 @@ export class Window extends Component {
                 <Draggable
                     axis="both"
                     handle=".bg-ub-window-title"
-                    grid={this.props.snapEnabled ? [8, 8] : [1, 1]}
+                    grid={[this.props.snapEnabled ? 8 : 4, this.props.snapEnabled ? 8 : 4]}
                     scale={1}
                     onStart={this.changeCursorToMove}
                     onStop={this.handleStop}
