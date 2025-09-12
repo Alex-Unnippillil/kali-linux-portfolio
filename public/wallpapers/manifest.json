@@ -1,0 +1,13 @@
+{
+  "categories": ["Dark", "Light", "Abstract", "Community"],
+  "wallpapers": [
+    { "name": "wall-1", "categories": ["Dark"] },
+    { "name": "wall-2", "categories": ["Dark"] },
+    { "name": "wall-3", "categories": ["Light"] },
+    { "name": "wall-4", "categories": ["Light"] },
+    { "name": "wall-5", "categories": ["Abstract"] },
+    { "name": "wall-6", "categories": ["Abstract"] },
+    { "name": "wall-7", "categories": ["Community"] },
+    { "name": "wall-8", "categories": ["Community"] }
+  ]
+}
