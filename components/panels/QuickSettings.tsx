@@ -12,6 +12,11 @@ const QuickSettings = ({ open }: Props) => {
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
+  const [orientation, setOrientation] = usePersistentState<'bottom' | 'left'>(
+    'dock-orientation',
+    'bottom',
+    (v): v is 'bottom' | 'left' => v === 'bottom' || v === 'left',
+  );
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -38,15 +43,35 @@ const QuickSettings = ({ open }: Props) => {
       </div>
       <div className="px-4 pb-2 flex justify-between">
         <span>Sound</span>
-        <input type="checkbox" checked={sound} onChange={() => setSound(!sound)} />
+        <input
+          aria-label="Sound"
+          type="checkbox"
+          checked={sound}
+          onChange={() => setSound(!sound)}
+        />
       </div>
       <div className="px-4 pb-2 flex justify-between">
         <span>Network</span>
-        <input type="checkbox" checked={online} onChange={() => setOnline(!online)} />
+        <input
+          aria-label="Network"
+          type="checkbox"
+          checked={online}
+          onChange={() => setOnline(!online)}
+        />
+      </div>
+      <div className="px-4 pb-2 flex justify-between">
+        <span>Dock position</span>
+        <button
+          className="px-2 py-0.5 border rounded"
+          onClick={() => setOrientation(orientation === 'bottom' ? 'left' : 'bottom')}
+        >
+          {orientation === 'bottom' ? 'Bottom' : 'Left'}
+        </button>
       </div>
       <div className="px-4 flex justify-between">
         <span>Reduced motion</span>
         <input
+          aria-label="Reduced motion"
           type="checkbox"
           checked={reduceMotion}
           onChange={() => setReduceMotion(!reduceMotion)}
