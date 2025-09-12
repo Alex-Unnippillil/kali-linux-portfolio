@@ -5,7 +5,6 @@ import ReactGA from 'react-ga4';
 import GitHubStars from '../../GitHubStars';
 import Certs from '../certs';
 import data from '../alex/data.json';
-import SafetyNote from './SafetyNote';
 import { getCspNonce } from '../../../utils/csp';
 import AboutSlides from './slides';
 import ScrollableTimeline from '../../ScrollableTimeline';
@@ -167,87 +166,17 @@ export { default as SafetyNote } from './SafetyNote';
 
 function About() {
   return (
-    <>
-      <div className="w-20 md:w-28 my-4 full">
-        <Image
-          className="w-full rounded border border-gray-600"
-          src="/images/logos/bitmoji.png"
-          alt="Alex Unnippillil Logo"
-          width={256}
-          height={256}
-          sizes="(max-width: 768px) 50vw, 25vw"
-          priority
-        />
-      </div>
-      <div className=" mt-4 md:mt-8 text-lg md:text-2xl text-center px-1">
-        <div>
-          My name is <span className="font-bold">Alex Unnippillil</span>,{' '}
-        </div>
-        <div className="font-normal ml-1">
-          I&apos;m a <span className="text-ubt-blue font-bold"> Cybersecurity Specialist!</span>
-        </div>
-      </div>
-      <div className=" mt-4 relative md:my-8 pt-px bg-white w-32 md:w-48">
-        <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 left-0" />
-        <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 right-0" />
-      </div>
-      <ul className=" mt-4 leading-tight tracking-tight text-sm md:text-base w-5/6 md:w-3/4 emoji-list">
-        <li className="list-pc">
-          I&apos;m a <span className=" font-medium">Technology Enthusiast</span> who thrives on learning and mastering the rapidly
-          evolving world of tech. I completed four years of a{' '}
-          <a
-            className=" underline cursor-pointer"
-            href="https://shared.ontariotechu.ca/shared/faculty/fesns/documents/FESNS%20Program%20Maps/2018_nuclear_engineering_map_2017_entry.pdf"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Nuclear Engineering
-          </a>{' '}
-          degree at Ontario Tech University before deciding to change my career goals and pursue my passion for{' '}
-          <a
-            className=" underline cursor-pointer"
-            href="https://businessandit.ontariotechu.ca/undergraduate/bachelor-of-information-technology/networking-and-information-technology-security/networking-and-i.t-security-bit-2023-2024_.pdf"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Networking and I.T. Security
-          </a>
-          .
-        </li>
-        <li className="mt-3 list-building">
-          If you&apos;re looking for someone who always wants to help others and will put in the work 24/7, feel free to email{' '}
-          <a className=" underline" href="mailto:alex.unnippillil@hotmail.com">
-            alex.unnippillil@hotmail.com
-          </a>
-          .
-        </li>
-        <li className="mt-3 list-time">
-          When I&apos;m not learning new technical skills, I enjoy reading books, rock climbing, or watching{' '}
-          <a
-            className=" underline cursor-pointer"
-            href="https://www.youtube.com/@Alex-Unnippillil/playlists"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            YouTube videos
-          </a>{' '}
-          and{' '}
-            <a
-              className=" underline cursor-pointer"
-              href="https://myanimelist.net/animelist/alex_u"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              anime
-            </a>
-          .
-        </li>
-        <li className="mt-3 list-star">I also have interests in deep learning, software development, and animation.</li>
-      </ul>
-      <WorkerStatus />
-      <SafetyNote />
-      <Timeline />
-    </>
+    <article className="terminal">
+      <header className="titlebar">
+        <span className="winbtn close"></span>
+        <span className="winbtn min"></span>
+        <span className="winbtn max"></span>
+        <strong>user@portfolio:~</strong>
+      </header>
+      <pre className="screen">
+        {`$ whoami\nAlex Unnippillil\n$ echo "Cybersecurity Specialist passionate about technology."`}
+      </pre>
+    </article>
   );
 }
 
@@ -420,72 +349,24 @@ function Skills({ skills }: { skills: any }) {
 }
 
 function Projects({ projects }: { projects: any[] }) {
-  const tag_colors: Record<string, string> = {
-    python: 'green-400',
-    javascript: 'yellow-300',
-    html5: 'red-400',
-    css: 'blue-400',
-    'c++': 'purple-400',
-    c: 'purple-400',
-    react: 'blue-300',
-    tailwindcss: 'blue-300',
-    'next.js': 'purple-600',
-  };
-
   return (
     <>
       <div className=" font-medium relative text-2xl mt-2 md:mt-4 mb-4">
         Projects
-        <div className="absolute pt-px bg-white mt-px top-full w-full">
-          <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 left-full" />
-          <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 right-full" />
-        </div>
       </div>
-      {projects.map((project) => {
-        const projectNameFromLink = project.link.split('/');
-        const projectName = projectNameFromLink[projectNameFromLink.length - 1];
-        return (
-          <div key={project.link} className="flex w-full flex-col px-4">
-            <div className="w-full py-1 px-2 my-2 border border-gray-50 border-opacity-10 rounded hover:bg-gray-50 hover:bg-opacity-5">
-              <div className="flex flex-wrap justify-between items-center">
-                <div className="flex justify-center items-center">
-                  <a href={project.link} target="_blank" rel="noopener noreferrer" className="text-base md:text-lg mr-2">
-                    {project.name.toLowerCase()}
-                  </a>
-                  <GitHubStars user="alex-unnippillil" repo={projectName} />
-                </div>
-                <div className="text-gray-300 font-light text-sm">{project.date}</div>
-              </div>
-              <ul className=" tracking-normal leading-tight text-sm font-light ml-4 mt-1">
-                {project.description.map((desc: string) => (
-                  <li key={desc} className="list-disc mt-1 text-gray-100">
-                    {desc}
-                  </li>
-                ))}
-              </ul>
-              <div className="flex flex-wrap items-start justify-start text-xs py-2">
-                {project.domains
-                  ? project.domains.map((domain: string) => {
-                      const borderColorClass = `border-${tag_colors[domain]}`;
-                      const textColorClass = `text-${tag_colors[domain]}`;
-                      return (
-                        <a
-                          key={domain}
-                          href={project.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={`px-1.5 py-0.5 w-max border ${borderColorClass} ${textColorClass} m-1 rounded-full`}
-                        >
-                          {domain}
-                        </a>
-                      );
-                    })
-                  : null}
-              </div>
-            </div>
-          </div>
-        );
-      })}
+      {projects.map((project) => (
+        <article key={project.link} className="terminal mb-4">
+          <header className="titlebar">
+            <span className="winbtn close"></span>
+            <span className="winbtn min"></span>
+            <span className="winbtn max"></span>
+            <strong>user@portfolio:~/projects</strong>
+          </header>
+          <pre className="screen">
+            {`$ ${project.name}\n${project.description.join('\n')}`}
+          </pre>
+        </article>
+      ))}
     </>
   );
 }
