@@ -530,3 +530,15 @@ textarea:focus-visible {
     color: #000 !important;
 }
 
+/* Diagonal gradient overlay for wallpapers */
+.wallpaper-diagonal-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--color-bg), transparent 40%) 0%,
+        transparent 100%
+    );
+}
+
