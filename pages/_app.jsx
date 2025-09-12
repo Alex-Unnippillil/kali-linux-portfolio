@@ -146,6 +146,47 @@ function MyApp(props) {
     };
   }, []);
 
+  useEffect(() => {
+    const prefersReducedMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)'
+    ).matches;
+
+    const handle = (el) => {
+      const reset = () => {
+        el.setAttribute('data-attention', 'false');
+      };
+      if (prefersReducedMotion) {
+        reset();
+        return;
+      }
+      el.addEventListener('animationend', reset, { once: true });
+    };
+
+    document.querySelectorAll('[data-attention="true"]').forEach(handle);
+
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((m) => {
+        if (
+          m.type === 'attributes' &&
+          m.attributeName === 'data-attention' &&
+          m.target.getAttribute('data-attention') === 'true'
+        ) {
+          handle(m.target);
+        }
+      });
+    });
+
+    if (document.body) {
+      observer.observe(document.body, {
+        attributes: true,
+        subtree: true,
+        attributeFilter: ['data-attention'],
+      });
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <ErrorBoundary>
       <Script src="/a2hs.js" strategy="beforeInteractive" />
