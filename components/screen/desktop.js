@@ -30,6 +30,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.windowAreaRef = React.createRef();
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -42,7 +43,6 @@ export class Desktop extends Component {
             window_positions: {},
             desktop_apps: [],
             context_menus: {
-                desktop: false,
                 default: false,
                 app: false,
                 taskbar: false,
@@ -232,19 +232,18 @@ export class Desktop extends Component {
     }
 
     checkContextMenu = (e) => {
-        e.preventDefault();
-        this.hideAllContextMenu();
         const target = e.target.closest('[data-context]');
         const context = target ? target.dataset.context : null;
         const appId = target ? target.dataset.appId : null;
+
+        if (context === "desktop-area") {
+            this.hideAllContextMenu();
+            return;
+        }
+
+        e.preventDefault();
+        this.hideAllContextMenu();
         switch (context) {
-            case "desktop-area":
-                ReactGA.event({
-                    category: `Context Menu`,
-                    action: `Opened Desktop Context Menu`
-                });
-                this.showContextMenu(e, "desktop");
-                break;
             case "app":
                 ReactGA.event({
                     category: `Context Menu`,
@@ -270,18 +269,21 @@ export class Desktop extends Component {
 
     handleContextKey = (e) => {
         if (!(e.shiftKey && e.key === 'F10')) return;
-        e.preventDefault();
-        this.hideAllContextMenu();
+
         const target = e.target.closest('[data-context]');
         const context = target ? target.dataset.context : null;
         const appId = target ? target.dataset.appId : null;
+
+        if (context === "desktop-area") {
+            this.hideAllContextMenu();
+            return;
+        }
+
+        e.preventDefault();
+        this.hideAllContextMenu();
         const rect = target ? target.getBoundingClientRect() : { left: 0, top: 0, height: 0 };
         const fakeEvent = { pageX: rect.left, pageY: rect.top + rect.height };
         switch (context) {
-            case "desktop-area":
-                ReactGA.event({ category: `Context Menu`, action: `Opened Desktop Context Menu` });
-                this.showContextMenu(fakeEvent, "desktop");
-                break;
             case "app":
                 ReactGA.event({ category: `Context Menu`, action: `Opened App Context Menu` });
                 this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "app"));
@@ -838,8 +840,16 @@ export class Desktop extends Component {
         return (
             <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
                 <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
-                    <span>New folder name</span>
-                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
+                    <label htmlFor="folder-name-input">New folder name</label>
+                    <input
+                        className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5"
+                        id="folder-name-input"
+                        type="text"
+                        autoComplete="off"
+                        spellCheck="false"
+                        autoFocus={true}
+                        aria-label="New folder name"
+                    />
                 </div>
                 <div className="flex">
                     <button
@@ -873,6 +883,7 @@ export class Desktop extends Component {
                     role="main"
                     className="absolute h-full w-full bg-transparent"
                     data-context="desktop-area"
+                    ref={this.windowAreaRef}
                 >
                     {this.renderWindows()}
                 </div>
@@ -907,11 +918,10 @@ export class Desktop extends Component {
 
                 {/* Context Menus */}
                 <DesktopMenu
-                    active={this.state.context_menus.desktop}
-                    openApp={this.openApp}
-                    addNewFolder={this.addNewFolder}
-                    openShortcutSelector={this.openShortcutSelector}
-                    clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                    targetRef={this.windowAreaRef}
+                    onNewFolder={this.addNewFolder}
+                    onChangeWallpaper={() => this.openApp('settings')}
+                    onDisplaySettings={() => this.openApp('settings')}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
                 <AppMenu
