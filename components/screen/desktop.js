@@ -9,6 +9,7 @@ const BackgroundImage = dynamic(
 );
 import SideBar from './side_bar';
 import apps, { games } from '../../apps.config';
+import appRegistry from '../../apps/app-registry';
 import Window from '../base/window';
 import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
@@ -71,8 +72,8 @@ export class Desktop extends Component {
             }
 
             if (session.windows && session.windows.length) {
-                session.windows.forEach(({ id, x, y }) => {
-                    positions[id] = { x, y };
+                session.windows.forEach(({ id, x, y, width, height }) => {
+                    positions[id] = { x, y, width, height };
                 });
                 this.setState({ window_positions: positions }, () => {
                     session.windows.forEach(({ id }) => this.openApp(id));
@@ -460,6 +461,9 @@ export class Desktop extends Component {
             if (this.state.closed_windows[app.id] === false) {
 
                 const pos = this.state.window_positions[app.id];
+                const reg = appRegistry[app.id] || {};
+                const defaultWidth = pos?.width ?? reg.preferred?.[0] ?? app.defaultWidth;
+                const defaultHeight = pos?.height ?? reg.preferred?.[1] ?? app.defaultHeight;
                 const props = {
                     title: app.title,
                     id: app.id,
@@ -474,11 +478,15 @@ export class Desktop extends Component {
                     minimized: this.state.minimized_windows[app.id],
                     resizable: app.resizable,
                     allowMaximize: app.allowMaximize,
-                    defaultWidth: app.defaultWidth,
-                    defaultHeight: app.defaultHeight,
+                    defaultWidth,
+                    defaultHeight,
+                    minWidth: reg.min?.[0],
+                    minHeight: reg.min?.[1],
+                    aspectRatio: reg.aspect,
                     initialX: pos ? pos.x : undefined,
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
+                    onSizeChange: (w, h) => this.updateWindowSize(app.id, w, h),
                     snapEnabled: this.props.snapEnabled,
                 }
 
@@ -495,7 +503,19 @@ export class Desktop extends Component {
             ? (v) => Math.round(v / 8) * 8
             : (v) => v;
         this.setState(prev => ({
-            window_positions: { ...prev.window_positions, [id]: { x: snap(x), y: snap(y) } }
+            window_positions: {
+                ...prev.window_positions,
+                [id]: { ...prev.window_positions[id], x: snap(x), y: snap(y) }
+            }
+        }), this.saveSession);
+    }
+
+    updateWindowSize = (id, width, height) => {
+        this.setState(prev => ({
+            window_positions: {
+                ...prev.window_positions,
+                [id]: { ...prev.window_positions[id], width, height }
+            }
         }), this.saveSession);
     }
 
@@ -505,7 +525,9 @@ export class Desktop extends Component {
         const windows = openWindows.map(id => ({
             id,
             x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
-            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10
+            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10,
+            width: this.state.window_positions[id]?.width,
+            height: this.state.window_positions[id]?.height,
         }));
         const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
         this.props.setSession({ ...this.props.session, windows, dock });
