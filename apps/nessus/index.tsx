@@ -168,8 +168,10 @@ const Nessus: React.FC = () => {
     <div className="p-4 bg-gray-900 text-white min-h-screen space-y-6">
       <h1 className="text-2xl">Nessus Demo</h1>
 
-      <section>
-        <h2 className="text-xl mb-2">Plugin Feed</h2>
+      <section role="region" aria-labelledby="plugin-feed-title">
+        <h2 id="plugin-feed-title" className="text-xl mb-2">
+          Plugin Feed
+        </h2>
         <button
           type="button"
           onClick={() => setDrawerOpen(true)}
@@ -195,8 +197,10 @@ const Nessus: React.FC = () => {
         )}
       </section>
 
-      <section>
-        <h2 className="text-xl mb-2">Scan Comparison</h2>
+      <section role="region" aria-labelledby="scan-comparison-title">
+        <h2 id="scan-comparison-title" className="text-xl mb-2">
+          Scan Comparison
+        </h2>
         <div className="mb-2">
           {diff.changed.map((c) => (
             <div key={c.plugin}>
@@ -212,8 +216,10 @@ const Nessus: React.FC = () => {
         </div>
       </section>
 
-      <section>
-        <h2 className="text-xl mb-2">Executive Summary</h2>
+      <section role="region" aria-labelledby="executive-summary-title">
+        <h2 id="executive-summary-title" className="text-xl mb-2">
+          Executive Summary
+        </h2>
         <div ref={chartRef}>
           <SummaryDashboard summary={summary} trend={trend} />
         </div>
@@ -225,8 +231,8 @@ const Nessus: React.FC = () => {
           Export
         </button>
       </section>
-      <section>
-        <h2 className="text-xl mb-2">Trends</h2>
+      <section role="region" aria-labelledby="trends-title">
+        <h2 id="trends-title" className="text-xl mb-2">Trends</h2>
         <TrendChart />
       </section>
       <FiltersDrawer

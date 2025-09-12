@@ -51,8 +51,10 @@ const CaseWalkthrough: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <section>
-        <h2 className="text-lg font-bold mb-2">Timeline</h2>
+      <section role="region" aria-labelledby="timeline-title">
+        <h2 id="timeline-title" className="text-lg font-bold mb-2">
+          Timeline
+        </h2>
         <ul className="space-y-2">
           {timeline.map((item, idx) => (
             <li key={idx} className="flex items-center text-sm">
@@ -64,8 +66,10 @@ const CaseWalkthrough: React.FC = () => {
           ))}
         </ul>
       </section>
-      <section>
-        <h2 className="text-lg font-bold mb-2">File Tree</h2>
+      <section role="region" aria-labelledby="file-tree-title">
+        <h2 id="file-tree-title" className="text-lg font-bold mb-2">
+          File Tree
+        </h2>
         {renderNode(fileTree)}
       </section>
     </div>
