@@ -675,18 +675,42 @@ export default Window
 
 // Window's title bar
 export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+    let finish = "matte";
+    if (typeof window !== "undefined") {
+        finish = getComputedStyle(document.documentElement)
+            .getPropertyValue("--win-finish")
+            .trim() || "matte";
+    }
+    const backdropSupported =
+        typeof window !== "undefined" &&
+        window.CSS &&
+        (window.CSS.supports("backdrop-filter", "blur(8px)") ||
+            window.CSS.supports("-webkit-backdrop-filter", "blur(8px)"));
+    const isGlass = finish === "glass" && backdropSupported;
     return (
         <div
-            className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
+            className={
+                " relative border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11" +
+                (isGlass ? "" : " bg-ub-window-title")
+            }
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
+            style={
+                isGlass
+                    ? {
+                          background:
+                              "color-mix(in srgb, var(--color-bg), transparent 70%)",
+                          backdropFilter: "blur(8px)",
+                      }
+                    : undefined
+            }
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>
-    )
+    );
 }
 
 // Window's Borders
