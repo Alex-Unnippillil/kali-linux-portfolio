@@ -33,6 +33,7 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            resizeOverlay: null,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
@@ -53,6 +54,7 @@ export class Window extends Component {
         window.addEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.addEventListener('super-arrow', this.handleSuperArrow);
+        window.addEventListener('mouseup', this.hideResizeOverlay);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -66,6 +68,7 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        window.removeEventListener('mouseup', this.hideResizeOverlay);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
@@ -205,20 +208,47 @@ export class Window extends Component {
         return Math.round(value / 8) * 8;
     }
 
-    handleVerticleResize = () => {
+    snapValue = (value) => Math.round(value / 8) * 8;
+
+    showResizeOverlay = (e, width, height) => {
+        this.setState({
+            resizeOverlay: {
+                x: e.clientX + 8,
+                y: e.clientY + 8,
+                width: this.snapValue(width),
+                height: this.snapValue(height),
+            }
+        });
+    }
+
+    hideResizeOverlay = () => {
+        if (this.state.resizeOverlay) {
+            this.setState({ resizeOverlay: null });
+        }
+    }
+
+    handleVerticleResize = (e) => {
         if (this.props.resizable === false) return;
         const px = (this.state.height / 100) * window.innerHeight + 1;
         const snapped = this.snapToGrid(px);
         const heightPercent = snapped / window.innerHeight * 100;
-        this.setState({ height: heightPercent }, this.resizeBoundries);
+        const widthPx = (this.state.width / 100) * window.innerWidth;
+        this.setState({ height: heightPercent }, () => {
+            this.resizeBoundries();
+            this.showResizeOverlay(e, widthPx, snapped);
+        });
     }
 
-    handleHorizontalResize = () => {
+    handleHorizontalResize = (e) => {
         if (this.props.resizable === false) return;
         const px = (this.state.width / 100) * window.innerWidth + 1;
         const snapped = this.snapToGrid(px);
         const widthPercent = snapped / window.innerWidth * 100;
-        this.setState({ width: widthPercent }, this.resizeBoundries);
+        const heightPx = (this.state.height / 100) * window.innerHeight;
+        this.setState({ width: widthPercent }, () => {
+            this.resizeBoundries();
+            this.showResizeOverlay(e, snapped, heightPx);
+        });
     }
 
     setWinowsPosition = () => {
@@ -614,6 +644,16 @@ export class Window extends Component {
     render() {
         return (
             <>
+                {this.state.resizeOverlay && (
+                    <div
+                        role="status"
+                        aria-live="polite"
+                        className="fixed z-50 pointer-events-none bg-black text-white text-xs px-1 py-0.5 rounded"
+                        style={{ left: this.state.resizeOverlay.x, top: this.state.resizeOverlay.y }}
+                    >
+                        {this.state.resizeOverlay.width} x {this.state.resizeOverlay.height}
+                    </div>
+                )}
                 {this.state.snapPreview && (
                     <div
                         data-testid="snap-preview"
@@ -642,8 +682,18 @@ export class Window extends Component {
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                        {this.props.resizable !== false && (
+                            <WindowYBorder
+                                resize={this.handleHorizontalResize}
+                                stopResize={this.hideResizeOverlay}
+                            />
+                        )}
+                        {this.props.resizable !== false && (
+                            <WindowXBorder
+                                resize={this.handleVerticleResize}
+                                stopResize={this.hideResizeOverlay}
+                            />
+                        )}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
@@ -705,6 +755,7 @@ export class WindowYBorder extends Component {
                     className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
                     onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
                     onDrag={this.props.resize}
+                    onDragEnd={this.props.stopResize}
                 ></div>
             )
         }
@@ -724,6 +775,7 @@ export class WindowXBorder extends Component {
                     className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
                     onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
                     onDrag={this.props.resize}
+                    onDragEnd={this.props.stopResize}
                 ></div>
             )
         }
