@@ -55,7 +55,7 @@ export class UbuntuApp extends Component {
                     height={40}
                     className="mb-1 w-10"
                     src={this.props.icon.replace('./', '/')}
-                    alt={"Kali " + this.props.name}
+                    alt={this.props.name}
                     sizes="40px"
                 />
                 {this.props.displayName || this.props.name}
