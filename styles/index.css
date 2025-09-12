@@ -11,6 +11,31 @@ body{
     color: var(--color-text);
 }
 
+html[data-theme="kali"] {
+    --win-border: 1px;
+    --win-border-active: var(--color-accent);
+    --win-border-inactive: var(--color-ub-dark-grey);
+    --win-border-warning: var(--game-color-warning);
+    --win-border-error: var(--game-color-danger);
+    --win-border-focus: var(--color-ubt-blue);
+    --win-radius: var(--radius-lg);
+    --win-radius-tight: var(--radius-md);
+    --win-shadow-0: 0 0 0 1px color-mix(in srgb, var(--color-inverse), transparent 80%);
+    --win-shadow-1: 0 1px 2px color-mix(in srgb, var(--color-inverse), transparent 80%);
+    --win-shadow-2: 0 4px 8px color-mix(in srgb, var(--color-inverse), transparent 85%);
+    --win-shadow-3: 0 8px 16px color-mix(in srgb, var(--color-inverse), transparent 90%);
+    --win-grab-size: 0.5rem;
+    --win-gap: 0.5rem;
+    --win-titlebar-height: 2rem;
+    --win-accent: var(--color-accent);
+    --win-accent-weak: color-mix(in srgb, var(--color-accent), transparent 70%);
+    --win-bg-0: var(--color-ub-drk-abrgn);
+    --win-bg-1: var(--color-ub-med-abrgn);
+    --win-bg-2: var(--color-ub-lite-abrgn);
+    --win-inactive-dim: 0.6;
+    --win-mobile-titlebar-height: 2.5rem;
+}
+
 button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .hit-area {
     min-width: var(--hit-area);
     min-height: var(--hit-area);
