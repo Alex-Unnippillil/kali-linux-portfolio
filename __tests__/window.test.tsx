@@ -2,6 +2,9 @@ import React, { act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Window from '../components/base/window';
 
+// Minimal requestAnimationFrame polyfill for tests
+(global as any).requestAnimationFrame = (cb: any) => cb();
+
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('react-draggable', () => ({
   __esModule: true,
@@ -199,7 +202,7 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true, preventDefault: () => {}, stopPropagation: () => {} } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
@@ -251,7 +254,94 @@ describe('Window snapping finalize and release', () => {
 
     expect(ref.current!.state.snapped).toBeNull();
     expect(ref.current!.state.width).toBe(60);
-    expect(ref.current!.state.height).toBe(85);
+  expect(ref.current!.state.height).toBe(85);
+  });
+});
+
+describe('Snapped window swapping', () => {
+  it('swaps positions when dragged over another snapped window', () => {
+    const ref1 = React.createRef<Window>();
+    const ref2 = React.createRef<Window>();
+    const focus = jest.fn();
+    render(
+      <>
+        <Window
+          id="w1"
+          title="W1"
+          screen={() => <div>1</div>}
+          focus={focus}
+          hasMinimised={() => {}}
+          closed={() => {}}
+          hideSideBar={() => {}}
+          openApp={() => {}}
+          ref={ref1}
+        />
+        <Window
+          id="w2"
+          title="W2"
+          screen={() => <div>2</div>}
+          focus={focus}
+          hasMinimised={() => {}}
+          closed={() => {}}
+          hideSideBar={() => {}}
+          openApp={() => {}}
+          ref={ref2}
+        />
+      </>
+    );
+
+    act(() => {
+      ref1.current!.snapWindow('left');
+      ref2.current!.snapWindow('right');
+    });
+
+    const w1El = document.getElementById('w1')!;
+    const w2El = document.getElementById('w2')!;
+    w1El.getBoundingClientRect = () => ({
+      left: 500,
+      top: 0,
+      right: 800,
+      bottom: 600,
+      width: 300,
+      height: 600,
+      x: 500,
+      y: 0,
+      toJSON: () => {}
+    });
+    w2El.getBoundingClientRect = () => ({
+      left: 500,
+      top: 0,
+      right: 1000,
+      bottom: 600,
+      width: 500,
+      height: 600,
+      x: 500,
+      y: 0,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref1.current!.changeCursorToMove();
+    });
+    // after unsnapping, simulate overlapping position
+    w1El.getBoundingClientRect = () => ({
+      left: 500,
+      top: 0,
+      right: 800,
+      bottom: 600,
+      width: 300,
+      height: 600,
+      x: 500,
+      y: 0,
+      toJSON: () => {}
+    });
+    act(() => {
+      ref1.current!.handleStop();
+    });
+
+    expect(ref1.current!.state.snapped).toBe('right');
+    expect(ref2.current!.state.snapped).toBe('left');
+    expect(focus).toHaveBeenLastCalledWith('w2');
   });
 });
 
