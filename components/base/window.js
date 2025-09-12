@@ -472,7 +472,7 @@ export class Window extends Component {
             this.deactivateOverlay();
             this.props.hideSideBar(this.id, false);
             setTimeout(() => {
-                this.props.closed(this.id)
+                this.props.closed(this.id, this.state.width, this.state.height)
             }, 300) // after 300ms this window will be unmounted from parent (Desktop)
         });
     }
