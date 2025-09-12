@@ -480,6 +480,7 @@ export class Desktop extends Component {
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
+                    utility: app.utility,
                 }
 
                 windowsJsx.push(

@@ -199,7 +199,12 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault() {},
+        stopPropagation() {},
+      } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
@@ -404,5 +409,66 @@ describe('Window overlay inert behaviour', () => {
 
     document.body.removeChild(root);
     document.body.removeChild(opener);
+  });
+});
+
+describe('Utility window sizing', () => {
+  const originalWidth = window.innerWidth;
+  const originalHeight = window.innerHeight;
+
+  beforeEach(() => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1000, writable: true });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800, writable: true });
+  });
+
+  afterEach(() => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalWidth, writable: true });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalHeight, writable: true });
+  });
+
+  it('sizes and centers utility windows', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="util-window"
+        title="Util"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        utility
+        ref={ref}
+      />
+    );
+    const winEl = document.getElementById('util-window')!;
+    expect(winEl.style.width).toBe('42%');
+    expect(winEl.style.height).toBe('40%');
+    expect(ref.current!.startX).toBe(290);
+    expect(ref.current!.startY).toBe(240);
+  });
+
+  it('ignores sizing for tabbed terminal', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="terminal"
+        title="Terminal"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        utility
+        ref={ref}
+      />
+    );
+    const winEl = document.getElementById('terminal')!;
+    expect(winEl.style.width).toBe('60%');
+    expect(winEl.style.height).toBe('85%');
+    expect(ref.current!.startX).toBe(60);
+    expect(ref.current!.startY).toBe(10);
   });
 });
