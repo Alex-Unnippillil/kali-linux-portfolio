@@ -145,8 +145,8 @@ export class Window extends Component {
             const usage = this.computeContentUsage();
             if (usage >= 80) return;
             this.setState(prev => ({
-                width: Math.max(prev.width - 1, 20),
-                height: Math.max(prev.height - 1, 20)
+                width: Math.max(prev.width - 1, this.props.minW ?? 20),
+                height: Math.max(prev.height - 1, this.props.minH ?? 20)
             }), () => {
                 if (this.computeContentUsage() < 80) {
                     setTimeout(shrink, 50);
@@ -209,16 +209,32 @@ export class Window extends Component {
         if (this.props.resizable === false) return;
         const px = (this.state.height / 100) * window.innerHeight + 1;
         const snapped = this.snapToGrid(px);
-        const heightPercent = snapped / window.innerHeight * 100;
-        this.setState({ height: heightPercent }, this.resizeBoundries);
+        const minPx = ((this.props.minH ?? 20) / 100) * window.innerHeight;
+        const finalPx = Math.max(snapped, minPx);
+        const heightPercent = finalPx / window.innerHeight * 100;
+        let widthPercent = this.state.width;
+        if (this.props.preferRatio) {
+            const minW = this.props.minW ?? 20;
+            const ratioWidth = heightPercent * this.props.preferRatio;
+            widthPercent = Math.max(ratioWidth, minW);
+        }
+        this.setState({ height: heightPercent, width: widthPercent }, this.resizeBoundries);
     }
 
     handleHorizontalResize = () => {
         if (this.props.resizable === false) return;
         const px = (this.state.width / 100) * window.innerWidth + 1;
         const snapped = this.snapToGrid(px);
-        const widthPercent = snapped / window.innerWidth * 100;
-        this.setState({ width: widthPercent }, this.resizeBoundries);
+        const minPx = ((this.props.minW ?? 20) / 100) * window.innerWidth;
+        const finalPx = Math.max(snapped, minPx);
+        const widthPercent = finalPx / window.innerWidth * 100;
+        let heightPercent = this.state.height;
+        if (this.props.preferRatio) {
+            const minH = this.props.minH ?? 20;
+            const ratioHeight = widthPercent / this.props.preferRatio;
+            heightPercent = Math.max(ratioHeight, minH);
+        }
+        this.setState({ width: widthPercent, height: heightPercent }, this.resizeBoundries);
     }
 
     setWinowsPosition = () => {
@@ -525,41 +541,68 @@ export class Window extends Component {
             this.focusWindow();
         } else if (e.altKey) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('top');
             }
             this.focusWindow();
         } else if (e.shiftKey) {
             const step = 1;
+            const minW = this.props.minW ?? 20;
+            const minH = this.props.minH ?? 20;
+            const prevent = () => { e.preventDefault?.(); e.stopPropagation?.(); };
             if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
+                prevent();
+                this.setState(prev => {
+                    let width = Math.max(prev.width - step, minW);
+                    let height = prev.height;
+                    if (this.props.preferRatio) {
+                        height = Math.max(width / this.props.preferRatio, minH);
+                    }
+                    return { width, height };
+                }, this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
+                prevent();
+                this.setState(prev => {
+                    let width = Math.min(prev.width + step, 100);
+                    let height = prev.height;
+                    if (this.props.preferRatio) {
+                        height = Math.max(width / this.props.preferRatio, minH);
+                    }
+                    return { width, height };
+                }, this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
+                prevent();
+                this.setState(prev => {
+                    let height = Math.max(prev.height - step, minH);
+                    let width = prev.width;
+                    if (this.props.preferRatio) {
+                        width = Math.max(height * this.props.preferRatio, minW);
+                    }
+                    return { width, height };
+                }, this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
+                prevent();
+                this.setState(prev => {
+                    let height = Math.min(prev.height + step, 100);
+                    let width = prev.width;
+                    if (this.props.preferRatio) {
+                        width = Math.max(height * this.props.preferRatio, minW);
+                    }
+                    return { width, height };
+                }, this.resizeBoundries);
             }
             this.focusWindow();
         }
