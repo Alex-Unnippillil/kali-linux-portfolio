@@ -684,7 +684,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
             onKeyDown={onKeyDown}
             onBlur={onBlur}
         >
-            <div className="flex justify-center w-full text-sm font-bold">{title}</div>
+            <div className="flex justify-center w-full text-sm font-bold min-w-0 leading-[2.75rem] overflow-hidden text-ellipsis whitespace-nowrap">{title}</div>
         </div>
     )
 }
@@ -735,45 +735,49 @@ export function WindowEditButtons(props) {
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
     return (
         <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center h-11 min-w-[8.25rem]">
-            {pipSupported && props.pip && (
+            <div className="mx-1 h-6 w-6 min-w-[1.5rem] flex justify-center items-center">
+                {pipSupported && props.pip && (
+                    <button
+                        type="button"
+                        aria-label="Window pin"
+                        className="bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                        onClick={togglePin}
+                    >
+                        <NextImage
+                            src="/themes/Yaru/window/window-pin-symbolic.svg"
+                            alt="Kali window pin"
+                            className="h-4 w-4 inline"
+                            width={16}
+                            height={16}
+                            sizes="16px"
+                        />
+                    </button>
+                )}
+            </div>
+            <div className="mx-1 h-6 w-6 min-w-[1.5rem] flex justify-center items-center">
                 <button
                     type="button"
-                    aria-label="Window pin"
-                    className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
-                    onClick={togglePin}
+                    aria-label="Window minimize"
+                    className="bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                    onClick={props.minimize}
                 >
                     <NextImage
-                        src="/themes/Yaru/window/window-pin-symbolic.svg"
-                        alt="Kali window pin"
+                        src="/themes/Yaru/window/window-minimize-symbolic.svg"
+                        alt="Kali window minimize"
                         className="h-4 w-4 inline"
                         width={16}
                         height={16}
                         sizes="16px"
                     />
                 </button>
-            )}
-            <button
-                type="button"
-                aria-label="Window minimize"
-                className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
-                onClick={props.minimize}
-            >
-                <NextImage
-                    src="/themes/Yaru/window/window-minimize-symbolic.svg"
-                    alt="Kali window minimize"
-                    className="h-4 w-4 inline"
-                    width={16}
-                    height={16}
-                    sizes="16px"
-                />
-            </button>
-            {props.allowMaximize && (
-                props.isMaximised
-                    ? (
+            </div>
+            <div className="mx-1 h-6 w-6 min-w-[1.5rem] flex justify-center items-center">
+                {props.allowMaximize && (
+                    props.isMaximised ? (
                         <button
                             type="button"
                             aria-label="Window restore"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                            className="bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
                             onClick={props.maximize}
                         >
                             <NextImage
@@ -789,7 +793,7 @@ export function WindowEditButtons(props) {
                         <button
                             type="button"
                             aria-label="Window maximize"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                            className="bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
                             onClick={props.maximize}
                         >
                             <NextImage
@@ -802,23 +806,26 @@ export function WindowEditButtons(props) {
                             />
                         </button>
                     )
-            )}
-            <button
-                type="button"
-                id={`close-${props.id}`}
-                aria-label="Window close"
-                className="mx-1 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6"
-                onClick={props.close}
-            >
-                <NextImage
-                    src="/themes/Yaru/window/window-close-symbolic.svg"
-                    alt="Kali window close"
-                    className="h-4 w-4 inline"
-                    width={16}
-                    height={16}
-                    sizes="16px"
-                />
-            </button>
+                )}
+            </div>
+            <div className="mx-1 h-6 w-6 min-w-[1.5rem] flex justify-center items-center">
+                <button
+                    type="button"
+                    id={`close-${props.id}`}
+                    aria-label="Window close"
+                    className="focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6"
+                    onClick={props.close}
+                >
+                    <NextImage
+                        src="/themes/Yaru/window/window-close-symbolic.svg"
+                        alt="Kali window close"
+                        className="h-4 w-4 inline"
+                        width={16}
+                        height={16}
+                        sizes="16px"
+                    />
+                </button>
+            </div>
         </div>
     )
 }
