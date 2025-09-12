@@ -11,6 +11,20 @@ body{
     color: var(--color-text);
 }
 
+body.watermark::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: url('/brand/dragon-silhouette.svg') no-repeat center;
+    background-size: min(80vmin, 80vmax);
+    opacity: 0.05;
+    pointer-events: none;
+}
+
+html.high-contrast body.watermark::before {
+    display: none;
+}
+
 button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .hit-area {
     min-width: var(--hit-area);
     min-height: var(--hit-area);
