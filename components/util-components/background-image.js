@@ -38,7 +38,7 @@ export default function BackgroundImage() {
 
     return (
         <div className="bg-ubuntu-img absolute -z-10 top-0 right-0 overflow-hidden h-full w-full">
-            <img
+            <img loading="lazy"
                 src={`/wallpapers/${wallpaper}.webp`}
                 alt=""
                 className="w-full h-full object-cover"

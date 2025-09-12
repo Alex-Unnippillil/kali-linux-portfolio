@@ -358,7 +358,7 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
       />
       <div className="flex flex-wrap justify-center items-start w-full mt-2">
         {filteredBadges.map((badge) => (
-          <img
+          <img loading="lazy"
             key={badge.alt}
             className="m-1 cursor-pointer"
             src={badge.src}

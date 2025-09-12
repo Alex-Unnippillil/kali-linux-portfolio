@@ -126,7 +126,7 @@ const ScrollableTimeline: React.FC = () => {
                       className="text-left w-full focus:outline-none"
                     >
                       <div className="text-ubt-blue font-bold text-lg mb-2">{year}</div>
-                      <img
+                      <img loading="lazy"
                         src={first.image}
                         alt={first.title}
                         className="w-full h-32 object-cover mb-2 rounded"
@@ -155,7 +155,7 @@ const ScrollableTimeline: React.FC = () => {
                     rel="noopener noreferrer"
                     className="block mb-2"
                   >
-                    <img
+                    <img loading="lazy"
                       src={m.image}
                       alt={m.title}
                       className="w-full h-32 object-cover mb-2 rounded"

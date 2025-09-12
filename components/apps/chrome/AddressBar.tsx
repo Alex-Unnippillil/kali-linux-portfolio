@@ -251,7 +251,7 @@ const AddressBar: React.FC<AddressBarProps> = ({
                 onContextMenu={(e) => openContext(e, s)}
               >
                 {fav && fav.favicon && (
-                  <img src={fav.favicon} alt="" className="w-4 h-4 mr-2" />
+                  <img loading="lazy" src={fav.favicon} alt="" className="w-4 h-4 mr-2" />
                 )}
                 <span className="truncate">{s}</span>
               </li>

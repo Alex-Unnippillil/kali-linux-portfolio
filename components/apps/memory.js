@@ -329,7 +329,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
                     } ${reduceMotion.current ? '' : 'transition-colors duration-300'}`}
                   >
                     {card.image ? (
-                      <img src={card.image} alt="" className="w-3/4 h-3/4 object-contain" />
+                      <img loading="lazy" src={card.image} alt="" className="w-3/4 h-3/4 object-contain" />
                     ) : (
                       <span className={`text-4xl ${card.color || ''}`}>{card.value}</span>
                     )}

@@ -545,7 +545,7 @@ const Chrome: React.FC = () => {
               try {
                 const origin = new URL(t.url).origin;
                 return (
-                  <img
+                  <img loading="lazy"
                     src={`https://www.google.com/s2/favicons?sz=64&domain_url=${origin}`}
                     alt=""
                     className="w-8 h-8 mb-1"
@@ -731,7 +731,7 @@ const Chrome: React.FC = () => {
                 const origin = new URL(t.url).origin;
                 const src = favicons[origin];
                 return src ? (
-                  <img
+                  <img loading="lazy"
                     src={src}
                     alt=""
                     className="w-4 h-4 mr-1 flex-shrink-0"

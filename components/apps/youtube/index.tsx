@@ -125,7 +125,7 @@ function Sidebar({
             className="mb-[6px] cursor-pointer"
             onClick={() => onPlay(v)}
           >
-            <img src={v.thumbnail} alt="" className="h-24 w-full rounded object-cover" />
+            <img loading="lazy" src={v.thumbnail} alt="" className="h-24 w-full rounded object-cover" />
             <div>{v.title}</div>
           </div>
         ))}
@@ -145,7 +145,7 @@ function Sidebar({
             tabIndex={0}
             onKeyDown={(e) => handleKey(i, e)}
           >
-            <img src={v.thumbnail} alt="" className="h-24 w-full rounded object-cover" />
+            <img loading="lazy" src={v.thumbnail} alt="" className="h-24 w-full rounded object-cover" />
             <div>{v.name || v.title}</div>
           </div>
         ))}
@@ -225,7 +225,7 @@ function VirtualGrid({
             >
               <div className="cursor-pointer" onClick={() => onPlay(v)}>
                 <div className="relative">
-                  <img
+                  <img loading="lazy"
                     src={v.thumbnail}
                     alt={v.title}
                     className="h-[162px] w-full rounded object-cover"

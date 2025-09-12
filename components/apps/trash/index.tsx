@@ -143,9 +143,9 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
             className={`m-2 border p-1 w-32 cursor-pointer ${selected === idx ? 'bg-ub-drk-abrgn' : ''}`}
           >
             {item.image ? (
-              <img src={item.image} alt={item.title} className="h-20 w-full object-cover" />
+              <img loading="lazy" src={item.image} alt={item.title} className="h-20 w-full object-cover" />
             ) : item.icon ? (
-              <img src={item.icon} alt={item.title} className="h-20 w-20 mx-auto object-contain" />
+              <img loading="lazy" src={item.icon} alt={item.title} className="h-20 w-20 mx-auto object-contain" />
             ) : null}
             <p className="text-center text-xs truncate mt-1" title={item.title}>
               {item.title}

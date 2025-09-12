@@ -310,7 +310,7 @@ const SkillSection = ({ title, badges }) => {
       />
       <div className="flex flex-wrap justify-center items-start w-full mt-2">
         {filteredBadges.map(badge => (
-          <img
+          <img loading="lazy"
             key={badge.alt}
             className="m-1 cursor-pointer"
             src={badge.src}
@@ -373,7 +373,7 @@ function Skills({ skills }) {
       <div className="w-full md:w-10/12 flex flex-col items-center mt-8">
         <div className="font-bold text-sm md:text-base mb-2 text-center">GitHub Contributions</div>
         <div className="bg-ub-gedit-light bg-opacity-20 p-1 md:p-2 rounded-md shadow-md">
-          <img
+          <img loading="lazy"
             src="https://ghchart.rshah.org/Alex-Unnippillil"
             alt="Alex Unnippillil's GitHub contribution graph"
             className="w-full rounded"

@@ -79,7 +79,7 @@ function renderWeather(data) {
         dailyEl.innerHTML = data.forecast
           .map(
             (d) =>
-              `<div class="day"><img class="forecast-icon animated-icon" src="https://openweathermap.org/img/wn/${d.icon}.png" alt="${d.condition}"><div>${d.day} ${Math.round(
+              `<div class="day"><img loading="lazy" class="forecast-icon animated-icon" src="https://openweathermap.org/img/wn/${d.icon}.png" alt="${d.condition}"><div>${d.day} ${Math.round(
                 convertTemp(d.tempC)
               )}°${unit === 'metric' ? 'C' : 'F'}</div></div>`
           )

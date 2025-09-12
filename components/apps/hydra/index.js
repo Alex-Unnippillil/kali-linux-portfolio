@@ -450,7 +450,7 @@ const HydraApp = () => {
                 service === m.value ? 'bg-blue-600' : 'bg-gray-700'
               }`}
             >
-              <img src={m.icon} alt={m.label} className="w-6 h-6 mr-2" />
+              <img loading="lazy" src={m.icon} alt={m.label} className="w-6 h-6 mr-2" />
               <span>{m.label}</span>
             </div>
           ))}
@@ -647,7 +647,7 @@ const HydraApp = () => {
         onAttemptChange={handleAttempt}
       />
       <div className="mt-4 flex items-center gap-2">
-        <img
+        <img loading="lazy"
           src="/themes/Yaru/status/changes-prevent-symbolic.svg"
           alt="credentials"
           className="w-5 h-5"

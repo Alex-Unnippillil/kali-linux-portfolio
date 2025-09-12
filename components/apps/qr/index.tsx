@@ -140,7 +140,7 @@ const QRScanner: React.FC = () => {
       {result && (
         <div className="flex items-center gap-2 p-2 bg-white text-black rounded-md w-full max-w-sm">
           {preview && (
-            <img
+            <img loading="lazy"
               src={preview}
               alt="QR preview"
               className="w-32 h-32 rounded-md border"

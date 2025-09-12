@@ -572,7 +572,7 @@ const CarRacer = () => {
                 onClick={() => setSkin(s.key)}
                 className={`border-2 ${skin === s.key ? 'border-white' : 'border-transparent'}`}
               >
-                <img
+                <img loading="lazy"
                   src={skinAssets[s.key]?.src || s.src}
                   alt={s.label}
                   className="h-12 w-8"

@@ -17,8 +17,9 @@ class MyDocument extends Document {
         <Head>
           <link rel="icon" href="/favicon.ico" />
           <link rel="manifest" href="/manifest.webmanifest" />
+          <link rel="preload" href="/styles/tokens.css" as="style" />
           <meta name="theme-color" content="#0f1317" />
-          <script nonce={nonce} src="/theme.js" />
+          <script nonce={nonce} src="/kali-ui.js" />
         </Head>
         <body>
           <Main />

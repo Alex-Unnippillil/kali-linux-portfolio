@@ -773,7 +773,7 @@ function Autopsy({ initialArtifacts = null }) {
                     </pre>
                   )}
                   {previewTab === 'image' && selectedFile.imageUrl && (
-                    <img
+                    <img loading="lazy"
                       src={selectedFile.imageUrl}
                       alt={selectedFile.name}
                       className="max-w-full h-auto"

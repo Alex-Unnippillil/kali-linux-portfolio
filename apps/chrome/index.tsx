@@ -140,7 +140,7 @@ export default function ChromeApp() {
           <ForwardIcon />
         </button>
         {favicon && (
-          <img src={favicon} alt="favicon" width={16} height={16} />
+          <img loading="lazy" src={favicon} alt="favicon" width={16} height={16} />
         )}
         {url && (
           <div className="flex items-center space-x-1 bg-gray-200 rounded-full px-2 py-1 text-xs">

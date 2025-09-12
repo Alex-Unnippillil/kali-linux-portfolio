@@ -490,7 +490,7 @@ const FigletApp: React.FC = () => {
           className="p-1 bg-green-700 hover:bg-green-600 rounded"
           aria-label="Export PNG"
         >
-          <img
+          <img loading="lazy"
             src="/themes/Yaru/actions/document-save-as-png-symbolic.svg"
             alt=""
             className="w-6 h-6"
@@ -501,7 +501,7 @@ const FigletApp: React.FC = () => {
           className="p-1 bg-yellow-700 hover:bg-yellow-600 rounded"
           aria-label="Export SVG"
         >
-          <img
+          <img loading="lazy"
             src="/themes/Yaru/actions/document-save-as-svg-symbolic.svg"
             alt=""
             className="w-6 h-6"

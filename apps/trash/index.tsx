@@ -182,7 +182,7 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
       </div>
       <div className="flex-1 overflow-auto">
         <div className="flex flex-col items-center justify-center mt-12 space-y-1.5">
-          <img
+          <img loading="lazy"
             src={items.length ? FULL_ICON : EMPTY_ICON}
             alt={items.length ? 'Full trash' : 'Empty trash'}
             className="h-16 w-16 opacity-60"
@@ -198,7 +198,7 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
                 onClick={() => setSelected(idx)}
                 className={`flex items-center h-9 px-1 cursor-pointer ${selected === idx ? 'bg-ub-drk-abrgn' : ''}`}
               >
-                <img
+                <img loading="lazy"
                   src={item.icon || DEFAULT_ICON}
                   alt=""
                   className="h-4 w-4 mr-2"

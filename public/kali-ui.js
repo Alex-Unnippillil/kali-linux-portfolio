@@ -1,6 +1,15 @@
-(function () {
+;(function () {
   var THEME_KEY = 'app:theme';
   try {
+    var head = document.head;
+    if (head) {
+      var tokens = document.createElement('link');
+      tokens.rel = 'preload';
+      tokens.href = '/styles/tokens.css';
+      tokens.as = 'style';
+      head.appendChild(tokens);
+    }
+
     var stored = null;
     if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
       stored = window.localStorage.getItem(THEME_KEY);
