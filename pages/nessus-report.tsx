@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import data from '../components/apps/nessus/sample-report.json';
+import useAlertModal from '../hooks/useAlertModal';
 
 const severityColors: Record<string, string> = {
   Critical: '#991b1b',
@@ -29,6 +30,7 @@ const NessusReport: React.FC = () => {
   const [host, setHost] = useState<string>('All');
   const [family, setFamily] = useState<string>('All');
   const [findings, setFindings] = useState<Finding[]>(data as Finding[]);
+  const { show, modal } = useAlertModal();
 
   const hosts = useMemo(
     () => Array.from(new Set(findings.map((f) => f.host))).sort(),
@@ -61,7 +63,7 @@ const NessusReport: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.name !== 'sample-report.json') {
-      alert('Only sample-report.json is supported in this demo.');
+      show('Error', 'Only sample-report.json is supported in this demo.', 'error');
       return;
     }
     try {
@@ -72,7 +74,7 @@ const NessusReport: React.FC = () => {
       setHost('All');
       setFamily('All');
     } catch {
-      alert('Invalid JSON file.');
+      show('Error', 'Invalid JSON file.', 'error');
     }
   };
 
@@ -163,6 +165,7 @@ const NessusReport: React.FC = () => {
           accept=".json"
           className="text-black p-1 rounded"
           onChange={handleFile}
+          aria-label="import report"
         />
         <label htmlFor="severity-filter" className="text-sm">
           Filter severity
@@ -302,6 +305,7 @@ const NessusReport: React.FC = () => {
           </p>
         </div>
       )}
+      {modal}
     </div>
   );
 };
