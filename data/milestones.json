@@ -2,6 +2,7 @@
   {
     "date": "2012-09",
     "title": "Began Nuclear Engineering at Ontario Tech.",
+    "summary": "Started nuclear engineering studies at Ontario Tech.",
     "image": "https://via.placeholder.com/150",
     "link": "https://ontariotechu.ca/",
     "tags": ["education", "nuclear"]
@@ -9,6 +10,7 @@
   {
     "date": "2016-06",
     "title": "Graduated with B. Eng.",
+    "summary": "Completed Bachelor of Engineering degree.",
     "image": "https://via.placeholder.com/150",
     "link": "https://ontariotechu.ca/",
     "tags": ["graduation", "education"]
@@ -16,6 +18,7 @@
   {
     "date": "2020-01",
     "title": "Started Networking and I.T. Security program.",
+    "summary": "Enrolled in networking and IT security program.",
     "image": "https://via.placeholder.com/150",
     "link": "https://example.com/networking",
     "tags": ["education", "security"]
@@ -23,6 +26,7 @@
   {
     "date": "2021-03",
     "title": "Completed first capture-the-flag competition.",
+    "summary": "Participated in and completed first CTF event.",
     "image": "https://via.placeholder.com/150",
     "link": "https://example.com/ctf",
     "tags": ["ctf", "competition"]
@@ -30,6 +34,7 @@
   {
     "date": "2023-07",
     "title": "Built portfolio showcasing 20+ security projects.",
+    "summary": "Created portfolio highlighting numerous security projects.",
     "image": "https://via.placeholder.com/150",
     "link": "https://example.com/portfolio",
     "tags": ["portfolio", "projects"]
@@ -37,6 +42,7 @@
   {
     "date": "2024-04",
     "title": "Graduated with BIT in Networking and I.T. Security.",
+    "summary": "Earned BIT in networking and IT security.",
     "image": "https://via.placeholder.com/150",
     "link": "https://example.com/bit",
     "tags": ["graduation", "security"]
