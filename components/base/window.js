@@ -678,6 +678,15 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
     return (
         <div
             className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
+            style={
+                typeof document !== "undefined" &&
+                document.documentElement.dataset.theme === "kali"
+                    ? {
+                        backgroundImage:
+                            "repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 6px)"
+                    }
+                    : undefined
+            }
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
