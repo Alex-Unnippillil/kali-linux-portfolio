@@ -146,6 +146,20 @@ function MyApp(props) {
     };
   }, []);
 
+  useEffect(() => {
+    const connection = navigator.connection;
+    if (connection?.saveData) {
+      document.body.style.backgroundImage = 'none';
+      const images = document.querySelectorAll('img');
+      images.forEach((img) => {
+        const isCritical = img.getAttribute('data-critical') === 'true';
+        if (!isCritical && img.getAttribute('loading') !== 'eager') {
+          img.loading = 'lazy';
+        }
+      });
+    }
+  }, []);
+
   return (
     <ErrorBoundary>
       <Script src="/a2hs.js" strategy="beforeInteractive" />
