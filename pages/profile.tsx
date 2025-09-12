@@ -1,8 +1,9 @@
 import ScrollableTimeline from '../components/ScrollableTimeline';
+import TerminalCard from '../components/terminal/TerminalCard';
 
 const ProfilePage = () => (
-  <main className="min-h-screen p-4 bg-gray-900 text-white">
-    <h1 className="mb-4 text-2xl">Timeline</h1>
+  <main className="min-h-screen p-4 bg-gray-900 text-white space-y-4">
+    <TerminalCard title="Timeline" content="Explore professional milestones" />
     <ScrollableTimeline />
   </main>
 );
