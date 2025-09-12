@@ -1,3 +1,4 @@
+import js from '@eslint/js';
 import { FlatCompat } from '@eslint/eslintrc';
 import noTopLevelWindow from './eslint-plugin-no-top-level-window/index.js';
 
@@ -5,6 +6,10 @@ const compat = new FlatCompat();
 
 const config = [
   { ignores: ['components/apps/Chrome/index.tsx'] },
+  {
+    files: ['assets/js/*.js'],
+    ...js.configs.recommended,
+  },
   {
     plugins: {
       'no-top-level-window': noTopLevelWindow,
