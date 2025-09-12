@@ -530,3 +530,9 @@ textarea:focus-visible {
     color: #000 !important;
 }
 
+@media (prefers-reduced-motion: no-preference) {
+    [data-active="true"] {
+        box-shadow: 0 0 0 2px color-mix(in oklab, var(--win-accent) 30%, transparent);
+    }
+}
+
