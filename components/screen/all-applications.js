@@ -1,9 +1,11 @@
 import React from 'react';
 import UbuntuApp from '../base/ubuntu_app';
+import { trapFocus, releaseFocus } from '../../utils/kali-ui';
 
 class AllApplications extends React.Component {
     constructor() {
         super();
+        this.containerRef = React.createRef();
         this.state = {
             query: '',
             apps: [],
@@ -18,6 +20,11 @@ class AllApplications extends React.Component {
             if (!combined.some((app) => app.id === game.id)) combined.push(game);
         });
         this.setState({ apps: combined, unfilteredApps: combined });
+        trapFocus(this.containerRef.current);
+    }
+
+    componentWillUnmount() {
+        releaseFocus();
     }
 
     handleChange = (e) => {
@@ -55,8 +62,14 @@ class AllApplications extends React.Component {
 
     render() {
         return (
-            <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim">
+            <div
+                ref={this.containerRef}
+                role="dialog"
+                aria-modal="true"
+                className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim"
+            >
                 <input
+                    aria-label="Search applications"
                     className="mt-10 mb-8 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
                     placeholder="Search"
                     value={this.state.query}

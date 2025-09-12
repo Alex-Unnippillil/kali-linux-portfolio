@@ -142,7 +142,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       '--color-ub-border-orange': border,
       '--color-primary': accent,
       '--color-accent': accent,
-      '--color-focus-ring': accent,
       '--color-selection': accent,
       '--color-control-accent': accent,
     };
