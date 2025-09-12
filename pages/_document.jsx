@@ -21,6 +21,9 @@ class MyDocument extends Document {
           <script nonce={nonce} src="/theme.js" />
         </Head>
         <body>
+          <a href="#main" className="skip">
+            Skip to content
+          </a>
           <Main />
           <NextScript nonce={nonce} />
         </body>

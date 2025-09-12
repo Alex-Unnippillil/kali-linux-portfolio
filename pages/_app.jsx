@@ -159,7 +159,9 @@ function MyApp(props) {
         <SettingsProvider>
           <PipPortalProvider>
             <div aria-live="polite" id="live-region" />
-            <Component {...pageProps} />
+            <main id="main">
+              <Component {...pageProps} />
+            </main>
             <ShortcutOverlay />
             <Analytics
               beforeSend={(e) => {
