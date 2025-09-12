@@ -30,6 +30,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.appMenuFocusElement = null;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -233,6 +234,7 @@ export class Desktop extends Component {
 
     checkContextMenu = (e) => {
         e.preventDefault();
+        const currentActive = document.activeElement;
         this.hideAllContextMenu();
         const target = e.target.closest('[data-context]');
         const context = target ? target.dataset.context : null;
@@ -250,6 +252,7 @@ export class Desktop extends Component {
                     category: `Context Menu`,
                     action: `Opened App Context Menu`
                 });
+                this.appMenuFocusElement = currentActive;
                 this.setState({ context_app: appId }, () => this.showContextMenu(e, "app"));
                 break;
             case "taskbar":
@@ -271,6 +274,7 @@ export class Desktop extends Component {
     handleContextKey = (e) => {
         if (!(e.shiftKey && e.key === 'F10')) return;
         e.preventDefault();
+        const currentActive = document.activeElement;
         this.hideAllContextMenu();
         const target = e.target.closest('[data-context]');
         const context = target ? target.dataset.context : null;
@@ -284,6 +288,7 @@ export class Desktop extends Component {
                 break;
             case "app":
                 ReactGA.event({ category: `Context Menu`, action: `Opened App Context Menu` });
+                this.appMenuFocusElement = currentActive;
                 this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "app"));
                 break;
             case "taskbar":
@@ -315,6 +320,10 @@ export class Desktop extends Component {
     }
 
     hideAllContextMenu = () => {
+        if (this.appMenuFocusElement) {
+            this.appMenuFocusElement.focus();
+            this.appMenuFocusElement = null;
+        }
         const menus = { ...this.state.context_menus };
         Object.keys(menus).forEach(key => {
             menus[key] = false;
