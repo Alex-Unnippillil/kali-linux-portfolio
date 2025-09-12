@@ -71,25 +71,26 @@ export class Window extends Component {
         }
     }
 
-    setDefaultWindowDimenstion = () => {
-        if (this.props.defaultHeight && this.props.defaultWidth) {
-            this.setState(
-                { height: this.props.defaultHeight, width: this.props.defaultWidth },
-                this.resizeBoundries
-            );
-            return;
-        }
+      setDefaultWindowDimenstion = () => {
+          const isSheet = window.innerWidth < 640 || window.innerHeight > window.innerWidth;
+          if (this.props.defaultHeight && this.props.defaultWidth && !isSheet) {
+              this.setState(
+                  { height: this.props.defaultHeight, width: this.props.defaultWidth },
+                  this.resizeBoundries
+              );
+              return;
+          }
 
-        const isPortrait = window.innerHeight > window.innerWidth;
-        if (isPortrait) {
-            this.startX = window.innerWidth * 0.05;
-            this.setState({ height: 85, width: 90 }, this.resizeBoundries);
-        } else if (window.innerWidth < 640) {
-            this.setState({ height: 60, width: 85 }, this.resizeBoundries);
-        } else {
-            this.setState({ height: 85, width: 60 }, this.resizeBoundries);
-        }
-    }
+          const isPortrait = window.innerHeight > window.innerWidth;
+          if (isPortrait) {
+              this.startX = window.innerWidth * 0.05;
+              this.setState({ height: 85, width: 90 }, this.resizeBoundries);
+          } else if (window.innerWidth < 640) {
+              this.setState({ height: 60, width: 85 }, this.resizeBoundries);
+          } else {
+              this.setState({ height: 85, width: 60 }, this.resizeBoundries);
+          }
+      }
 
     resizeBoundries = () => {
         this.setState({
