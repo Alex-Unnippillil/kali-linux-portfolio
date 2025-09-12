@@ -11,6 +11,10 @@ body{
     color: var(--color-text);
 }
 
+section {
+    scroll-margin-top: var(--panel-height);
+}
+
 button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .hit-area {
     min-width: var(--hit-area);
     min-height: var(--hit-area);
