@@ -199,7 +199,7 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true, preventDefault() {}, stopPropagation() {} } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
@@ -319,6 +319,38 @@ describe('Edge resistance', () => {
     });
 
     expect(winEl.style.transform).toBe('translate(0px, 0px)');
+  });
+});
+
+describe('Symmetric resizing', () => {
+  it('expands from center with Alt+Shift+Arrow keys', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.style.transform = 'translate(0px, 0px)';
+    winEl.style.setProperty('--window-transform-x', '0px');
+    winEl.style.setProperty('--window-transform-y', '0px');
+    const before = ref.current!.state.width;
+    act(() => {
+      ref.current!.handleKeyDown({ key: 'ArrowRight', shiftKey: true, altKey: true, preventDefault() {}, stopPropagation() {} } as any);
+    });
+    const after = ref.current!.state.width;
+    expect(after - before).toBeCloseTo((2 / window.innerWidth) * 100);
+    const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(winEl.style.transform);
+    expect(match && parseFloat(match[1])).toBeCloseTo(-1);
   });
 });
 

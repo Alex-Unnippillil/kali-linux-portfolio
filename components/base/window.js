@@ -205,19 +205,103 @@ export class Window extends Component {
         return Math.round(value / 8) * 8;
     }
 
-    handleVerticleResize = () => {
-        if (this.props.resizable === false) return;
-        const px = (this.state.height / 100) * window.innerHeight + 1;
+    startResize = (e, axis) => {
+        const node = document.getElementById(this.id);
+        if (!node) return;
+        const rect = node.getBoundingClientRect();
+        this._resizeAxis = axis;
+        if (axis === 'horizontal') {
+            this._resizeOrigin = (e.clientX - rect.left) < rect.width / 2 ? 'left' : 'right';
+        } else {
+            this._resizeOrigin = (e.clientY - rect.top) < rect.height / 2 ? 'top' : 'bottom';
+        }
+        this._lastClientX = e.clientX;
+        this._lastClientY = e.clientY;
+    }
+
+    endResize = () => {
+        this._resizeAxis = null;
+        this._resizeOrigin = null;
+        this._lastClientX = null;
+        this._lastClientY = null;
+    }
+
+    updateTransform = (dx, dy) => {
+        if (dx === 0 && dy === 0) return;
+        const node = document.getElementById(this.id);
+        if (!node) return;
+        let tx = parseFloat(node.style.getPropertyValue('--window-transform-x')) || 0;
+        let ty = parseFloat(node.style.getPropertyValue('--window-transform-y')) || 0;
+        tx += dx;
+        ty += dy;
+        node.style.transform = `translate(${tx}px, ${ty}px)`;
+        node.style.setProperty('--window-transform-x', `${tx}px`);
+        node.style.setProperty('--window-transform-y', `${ty}px`);
+    }
+
+    adjustWidth = (delta, shift = 0) => {
+        let px = (this.state.width / 100) * window.innerWidth + delta;
+        const snapped = this.snapToGrid(px);
+        const widthPercent = snapped / window.innerWidth * 100;
+        if (shift) this.updateTransform(shift, 0);
+        this.setState({ width: Math.min(Math.max(widthPercent, 20), 100) }, this.resizeBoundries);
+    }
+
+    adjustHeight = (delta, shift = 0) => {
+        let px = (this.state.height / 100) * window.innerHeight + delta;
         const snapped = this.snapToGrid(px);
         const heightPercent = snapped / window.innerHeight * 100;
+        if (shift) this.updateTransform(0, shift);
+        this.setState({ height: Math.min(Math.max(heightPercent, 20), 100) }, this.resizeBoundries);
+    }
+
+    handleVerticleResize = (e) => {
+        if (this.props.resizable === false) return;
+        const dy = e.clientY - (this._lastClientY ?? e.clientY);
+        this._lastClientY = e.clientY;
+        let px = (this.state.height / 100) * window.innerHeight;
+        let transformY = 0;
+        if (this._resizeOrigin === 'bottom') {
+            px += dy;
+            if (e.altKey) {
+                px += dy;
+                transformY -= dy;
+            }
+        } else {
+            px -= dy;
+            transformY += dy;
+            if (e.altKey) {
+                px -= dy;
+            }
+        }
+        const snapped = this.snapToGrid(px);
+        const heightPercent = snapped / window.innerHeight * 100;
+        if (transformY) this.updateTransform(0, transformY);
         this.setState({ height: heightPercent }, this.resizeBoundries);
     }
 
-    handleHorizontalResize = () => {
+    handleHorizontalResize = (e) => {
         if (this.props.resizable === false) return;
-        const px = (this.state.width / 100) * window.innerWidth + 1;
+        const dx = e.clientX - (this._lastClientX ?? e.clientX);
+        this._lastClientX = e.clientX;
+        let px = (this.state.width / 100) * window.innerWidth;
+        let transformX = 0;
+        if (this._resizeOrigin === 'right') {
+            px += dx;
+            if (e.altKey) {
+                px += dx;
+                transformX -= dx;
+            }
+        } else {
+            px -= dx;
+            transformX += dx;
+            if (e.altKey) {
+                px -= dx;
+            }
+        }
         const snapped = this.snapToGrid(px);
         const widthPercent = snapped / window.innerWidth * 100;
+        if (transformX) this.updateTransform(transformX, 0);
         this.setState({ width: widthPercent }, this.resizeBoundries);
     }
 
@@ -523,6 +607,26 @@ export class Window extends Component {
             this.closeWindow();
         } else if (e.key === 'Tab') {
             this.focusWindow();
+        } else if (e.shiftKey) {
+            const step = 1;
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                e.stopPropagation();
+                this.adjustWidth(-step * (e.altKey ? 2 : 1), e.altKey ? step : 0);
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                e.stopPropagation();
+                this.adjustWidth(step * (e.altKey ? 2 : 1), e.altKey ? -step : 0);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                e.stopPropagation();
+                this.adjustHeight(-step * (e.altKey ? 2 : 1), e.altKey ? step : 0);
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                e.stopPropagation();
+                this.adjustHeight(step * (e.altKey ? 2 : 1), e.altKey ? -step : 0);
+            }
+            this.focusWindow();
         } else if (e.altKey) {
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
@@ -540,26 +644,6 @@ export class Window extends Component {
                 e.preventDefault();
                 e.stopPropagation();
                 this.snapWindow('top');
-            }
-            this.focusWindow();
-        } else if (e.shiftKey) {
-            const step = 1;
-            if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
-            } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
-            } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
             }
             this.focusWindow();
         }
@@ -642,8 +726,20 @@ export class Window extends Component {
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                        {this.props.resizable !== false && (
+                            <WindowYBorder
+                                resize={this.handleHorizontalResize}
+                                resizeStart={(e) => this.startResize(e, 'horizontal')}
+                                resizeEnd={this.endResize}
+                            />
+                        )}
+                        {this.props.resizable !== false && (
+                            <WindowXBorder
+                                resize={this.handleVerticleResize}
+                                resizeStart={(e) => this.startResize(e, 'vertical')}
+                                resizeEnd={this.endResize}
+                            />
+                        )}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
@@ -703,8 +799,9 @@ export class WindowYBorder extends Component {
             return (
                 <div
                     className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
+                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0); this.props.resizeStart && this.props.resizeStart(e); }}
                     onDrag={this.props.resize}
+                    onDragEnd={this.props.resizeEnd}
                 ></div>
             )
         }
@@ -722,8 +819,9 @@ export class WindowXBorder extends Component {
             return (
                 <div
                     className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
+                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0); this.props.resizeStart && this.props.resizeStart(e); }}
                     onDrag={this.props.resize}
+                    onDragEnd={this.props.resizeEnd}
                 ></div>
             )
         }
