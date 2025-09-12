@@ -72,7 +72,6 @@ body {
   font-size: 1rem;
   cursor: pointer;
   min-height: 48px;
-  transition: transform 150ms;
 }
 
 .btn:hover {
@@ -94,6 +93,12 @@ body {
 
 .button-grid .btn {
   font-family: monospace;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .btn {
+    transition: transform 150ms;
+  }
 }
 
 

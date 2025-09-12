@@ -13,7 +13,6 @@ h1 {
   border-radius: 4px;
   cursor: pointer;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  transition: transform 0.2s ease;
 }
 #color-input:hover {
   transform: scale(1.05);
@@ -30,9 +29,18 @@ h1 {
   border: 1px solid #ccc;
   border-radius: 4px;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .swatch:hover {
   transform: scale(1.1);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  #color-input {
+    transition: transform 0.2s ease;
+  }
+
+  .swatch {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
 }
