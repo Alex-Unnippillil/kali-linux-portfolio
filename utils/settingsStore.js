@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  watermark: false,
 };
 
 export async function getAccent() {
@@ -123,6 +124,16 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getWatermark() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.watermark;
+  return window.localStorage.getItem('watermark') === 'true';
+}
+
+export async function setWatermark(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('watermark', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +148,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('watermark');
 }
 
 export async function exportSettings() {
@@ -162,6 +174,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getWatermark(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +188,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    watermark,
     theme,
   });
 }
@@ -199,6 +213,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    watermark,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +226,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (watermark !== undefined) await setWatermark(watermark);
   if (theme !== undefined) setTheme(theme);
 }
 
