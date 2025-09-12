@@ -3,7 +3,7 @@ import Image from 'next/image';
 import Clock from '../util-components/clock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
-import WhiskerMenu from '../menu/WhiskerMenu';
+import WhiskerMenu, { toggleAppMenu } from '../menu/WhiskerMenu';
 
 export default class Navbar extends Component {
 	constructor() {
@@ -19,6 +19,20 @@ export default class Navbar extends Component {
                                 <div className="pl-3 pr-1">
                                         <Image src="/themes/Yaru/status/network-wireless-signal-good-symbolic.svg" alt="network icon" width={16} height={16} className="w-4 h-4" />
                                 </div>
+                                <button
+                                        type="button"
+                                        onClick={() => toggleAppMenu()}
+                                        className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+                                >
+                                        <Image
+                                                src="/themes/Yaru/status/decompiler-symbolic.svg"
+                                                alt="Menu"
+                                                width={16}
+                                                height={16}
+                                                className="inline mr-1"
+                                        />
+                                        Applications
+                                </button>
                                 <WhiskerMenu />
                                 <div
                                         className={

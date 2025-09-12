@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
@@ -20,13 +19,17 @@ const CATEGORIES = [
   { id: 'games', label: 'Games' }
 ];
 
+export let toggleAppMenu: () => void;
+
 const WhiskerMenu: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState('all');
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
-  const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  toggleAppMenu = () => setOpen(o => !o);
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
@@ -80,7 +83,7 @@ const WhiskerMenu: React.FC = () => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Meta' && !e.ctrlKey && !e.shiftKey && !e.altKey) {
         e.preventDefault();
-        setOpen(o => !o);
+        toggleAppMenu();
         return;
       }
       if (!open) return;
@@ -106,7 +109,7 @@ const WhiskerMenu: React.FC = () => {
     const handleClick = (e: MouseEvent) => {
       if (!open) return;
       const target = e.target as Node;
-      if (!menuRef.current?.contains(target) && !buttonRef.current?.contains(target)) {
+      if (!menuRef.current?.contains(target)) {
         setOpen(false);
       }
     };
@@ -114,71 +117,53 @@ const WhiskerMenu: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [open]);
 
+  useEffect(() => {
+    if (open) searchRef.current?.focus();
+  }, [open]);
+
   return (
-    <div className="relative">
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
-      >
-        <Image
-          src="/themes/Yaru/status/decompiler-symbolic.svg"
-          alt="Menu"
-          width={16}
-          height={16}
-          className="inline mr-1"
+    <div
+      ref={menuRef}
+      className="appmenu fixed left-0 right-0 bottom-0 z-50 flex bg-ub-grey text-white"
+      style={{ top: '2rem' }}
+      hidden={!open}
+    >
+      <div className="cats flex flex-col bg-gray-800 p-2 border-r border-gray-700">
+        {CATEGORIES.map(cat => (
+          <button
+            key={cat.id}
+            className={`text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
+            onClick={() => setCategory(cat.id)}
+          >
+            {cat.label}
+          </button>
+        ))}
+      </div>
+      <div className="apps flex-1 p-3">
+        <input
+          ref={searchRef}
+          className="mb-3 w-full px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
+          placeholder="Search"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
         />
-        Applications
-      </button>
-      {open && (
-        <div
-          ref={menuRef}
-          className="absolute left-0 mt-1 z-50 flex bg-ub-grey text-white shadow-lg"
-          tabIndex={-1}
-          onBlur={(e) => {
-            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-              setOpen(false);
-            }
-          }}
-        >
-          <div className="flex flex-col bg-gray-800 p-2">
-            {CATEGORIES.map(cat => (
-              <button
-                key={cat.id}
-                className={`text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
-                onClick={() => setCategory(cat.id)}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-          <div className="p-3">
-            <input
-              className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
-              placeholder="Search"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              autoFocus
-            />
-            <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
-              {currentApps.map((app, idx) => (
-                <div key={app.id} className={idx === highlight ? 'ring-2 ring-ubb-orange' : ''}>
-                  <UbuntuApp
-                    id={app.id}
-                    icon={app.icon}
-                    name={app.title}
-                    openApp={() => openSelectedApp(app.id)}
-                    disabled={app.disabled}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+        <ul className="grid grid-cols-3 gap-2 max-h-full overflow-y-auto">
+          {currentApps.map((app, idx) => (
+            <li key={app.id} className={idx === highlight ? 'ring-2 ring-ubb-orange' : ''}>
+              <UbuntuApp
+                id={app.id}
+                icon={app.icon}
+                name={app.title}
+                openApp={() => openSelectedApp(app.id)}
+                disabled={app.disabled}
+              />
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 };
 
 export default WhiskerMenu;
+export { toggleAppMenu };
