@@ -14,6 +14,7 @@
   --color-surface: #1a1f26; /* panel surfaces */
   --color-inverse: #000000; /* inverse of text */
   --color-border: #2a2e36; /* subtle borders */
+  --panel-border: var(--color-border);
   --color-terminal: #00ff00; /* terminal green */
   --color-dark: #0c0f12; /* card back */
   --color-focus-ring: var(--color-accent);
