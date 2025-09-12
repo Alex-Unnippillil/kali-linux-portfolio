@@ -67,6 +67,22 @@ const WhiskerMenu: React.FC = () => {
   }, [category, query, allApps, favoriteApps, recentApps, utilityApps, gameApps]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const hash = window.location.hash;
+    if (hash === '#menu' || hash.startsWith('#menu?')) {
+      setOpen(true);
+      const query = hash.split('?')[1];
+      if (query) {
+        const params = new URLSearchParams(query);
+        const cat = params.get('cat');
+        if (cat && CATEGORIES.some(c => c.id === cat)) {
+          setCategory(cat);
+        }
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     if (!open) return;
     setHighlight(0);
   }, [open, category, query]);
@@ -133,6 +149,7 @@ const WhiskerMenu: React.FC = () => {
       </button>
       {open && (
         <div
+          id="appmenu"
           ref={menuRef}
           className="absolute left-0 mt-1 z-50 flex bg-ub-grey text-white shadow-lg"
           tabIndex={-1}
