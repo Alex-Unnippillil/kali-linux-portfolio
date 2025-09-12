@@ -108,6 +108,17 @@ export class Window extends Component {
         });
     }
 
+    triggerOvershoot = () => {
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        const el = document.getElementById(this.id);
+        if (!el) return;
+        el.style.setProperty('--overshoot-width', el.style.width);
+        el.style.setProperty('--overshoot-height', el.style.height);
+        el.classList.remove('resize-overshoot');
+        void el.offsetWidth;
+        el.classList.add('resize-overshoot');
+    }
+
     computeContentUsage = () => {
         const root = document.getElementById(this.id);
         if (!root) return 100;
@@ -209,16 +220,38 @@ export class Window extends Component {
         if (this.props.resizable === false) return;
         const px = (this.state.height / 100) * window.innerHeight + 1;
         const snapped = this.snapToGrid(px);
-        const heightPercent = snapped / window.innerHeight * 100;
-        this.setState({ height: heightPercent }, this.resizeBoundries);
+        let heightPercent = snapped / window.innerHeight * 100;
+        let overshoot = false;
+        if (heightPercent < 20) {
+            heightPercent = 20;
+            overshoot = true;
+        } else if (heightPercent > 100) {
+            heightPercent = 100;
+            overshoot = true;
+        }
+        this.setState({ height: heightPercent }, () => {
+            this.resizeBoundries();
+            if (overshoot) this.triggerOvershoot();
+        });
     }
 
     handleHorizontalResize = () => {
         if (this.props.resizable === false) return;
         const px = (this.state.width / 100) * window.innerWidth + 1;
         const snapped = this.snapToGrid(px);
-        const widthPercent = snapped / window.innerWidth * 100;
-        this.setState({ width: widthPercent }, this.resizeBoundries);
+        let widthPercent = snapped / window.innerWidth * 100;
+        let overshoot = false;
+        if (widthPercent < 20) {
+            widthPercent = 20;
+            overshoot = true;
+        } else if (widthPercent > 100) {
+            widthPercent = 100;
+            overshoot = true;
+        }
+        this.setState({ width: widthPercent }, () => {
+            this.resizeBoundries();
+            if (overshoot) this.triggerOvershoot();
+        });
     }
 
     setWinowsPosition = () => {
@@ -547,19 +580,35 @@ export class Window extends Component {
             if (e.key === 'ArrowLeft') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
+                const overshoot = this.state.width <= 20;
+                this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), () => {
+                    this.resizeBoundries();
+                    if (overshoot) this.triggerOvershoot();
+                });
             } else if (e.key === 'ArrowRight') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
+                const overshoot = this.state.width >= 100;
+                this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), () => {
+                    this.resizeBoundries();
+                    if (overshoot) this.triggerOvershoot();
+                });
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
+                const overshoot = this.state.height <= 20;
+                this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), () => {
+                    this.resizeBoundries();
+                    if (overshoot) this.triggerOvershoot();
+                });
             } else if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
+                const overshoot = this.state.height >= 100;
+                this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), () => {
+                    this.resizeBoundries();
+                    if (overshoot) this.triggerOvershoot();
+                });
             }
             this.focusWindow();
         }
