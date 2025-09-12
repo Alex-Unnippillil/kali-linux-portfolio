@@ -485,7 +485,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         <div className="relative">
           <TerminalContainer
             ref={containerRef}
-            className="resize overflow-hidden font-mono"
+            className="terminal resize overflow-hidden font-mono"
             style={{
               width: '80ch',
               height: '24em',

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { getUnlockedThemes } from '../utils/theme';
 import { useSettings, ACCENT_OPTIONS } from '../hooks/useSettings';
+import ToggleSwitch from './ToggleSwitch';
 
 interface Props {
   highScore?: number;
@@ -9,7 +10,8 @@ interface Props {
 const SettingsDrawer = ({ highScore = 0 }: Props) => {
   const [open, setOpen] = useState(false);
   const unlocked = getUnlockedThemes(highScore);
-  const { accent, setAccent, theme, setTheme } = useSettings();
+  const { accent, setAccent, theme, setTheme, codeLigatures, setCodeLigatures } =
+    useSettings();
 
   return (
     <div>
@@ -51,6 +53,14 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
                 />
               ))}
             </div>
+          </label>
+          <label className="flex items-center gap-2 mt-4">
+            <ToggleSwitch
+              checked={codeLigatures}
+              onChange={setCodeLigatures}
+              ariaLabel="Enable code ligatures"
+            />
+            <span>Enable code ligatures</span>
           </label>
         </div>
       )}
