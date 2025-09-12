@@ -120,6 +120,16 @@ function DesktopMenu(props) {
             </button>
             <Devider />
             <button
+                onClick={props.toggleTileWindows}
+                type="button"
+                role="menuitem"
+                aria-label="Tile Windows"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
+                <span className="ml-5">Tile Windows</span>
+            </button>
+            <Devider />
+            <button
                 onClick={props.clearSession}
                 type="button"
                 role="menuitem"
