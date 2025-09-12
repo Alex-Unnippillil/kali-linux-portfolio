@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
+import useFocusTrap from '../../../hooks/useFocusTrap';
 
 const STORAGE_KEY = 'beefHelpDismissed';
 
@@ -17,10 +18,7 @@ export default function GuideOverlay({ onClose }) {
   const [step, setStep] = useState(0);
   const [dontShow, setDontShow] = useState(false);
   const containerRef = useRef(null);
-
-  useEffect(() => {
-    containerRef.current?.focus();
-  }, []);
+  useFocusTrap(containerRef, true);
 
   const handleClose = () => {
     if (dontShow) {
@@ -79,6 +77,7 @@ export default function GuideOverlay({ onClose }) {
         <label className="flex items-center space-x-2">
           <input
             type="checkbox"
+            aria-label="Don't show again"
             checked={dontShow}
             onChange={(e) => setDontShow(e.target.checked)}
           />

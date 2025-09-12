@@ -6,10 +6,12 @@ import React, {
   useCallback,
   createContext,
   useContext,
+  useRef,
 } from 'react';
 import HelpOverlay from './HelpOverlay';
 import PerfOverlay from './Games/common/perf';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import {
   serialize as serializeRng,
   deserialize as deserializeRng,
@@ -209,26 +211,30 @@ const GameLayout: React.FC<GameLayoutProps> = ({
 
   const contextValue = { record, registerReplay };
 
+  const pausedRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(pausedRef, paused);
+
   return (
     <RecorderContext.Provider value={contextValue}>
       <div className="relative h-full w-full" data-reduced-motion={prefersReducedMotion}>
         {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
         {paused && (
           <div
+            ref={pausedRef}
             className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
             role="dialog"
-          aria-modal="true"
-        >
-          <button
-            type="button"
-            onClick={resume}
-            className="px-4 py-2 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-            autoFocus
+            aria-modal="true"
           >
-            Resume
-          </button>
-        </div>
-      )}
+            <button
+              type="button"
+              onClick={resume}
+              className="px-4 py-2 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+              autoFocus
+            >
+              Resume
+            </button>
+          </div>
+        )}
       <div className="absolute top-2 right-2 z-40 flex space-x-2">
         <button
           type="button"
