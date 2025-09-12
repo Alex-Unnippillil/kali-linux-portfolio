@@ -56,6 +56,13 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        this.updateActiveState(this.props.isFocused);
+    }
+
+    componentDidUpdate(prevProps) {
+        if (prevProps.isFocused !== this.props.isFocused) {
+            this.updateActiveState(this.props.isFocused);
+        }
     }
 
     componentWillUnmount() {
@@ -69,6 +76,22 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+    }
+
+    updateActiveState = (active) => {
+        const root = document.getElementById(this.id);
+        if (root) {
+            root.setAttribute('data-active', active ? 'true' : 'false');
+        }
+    }
+
+    handleRootFocus = () => {
+        this.updateActiveState(true);
+        this.focusWindow();
+    }
+
+    handleRootBlur = () => {
+        this.updateActiveState(false);
     }
 
     setDefaultWindowDimenstion = () => {
@@ -641,6 +664,8 @@ export class Window extends Component {
                         aria-label={this.props.title}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
+                        onFocus={this.handleRootFocus}
+                        onBlur={this.handleRootBlur}
                     >
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
