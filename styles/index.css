@@ -530,3 +530,13 @@ textarea:focus-visible {
     color: #000 !important;
 }
 
+html[data-theme="kali"] [data-active="true"] {
+    outline: 1px solid var(--win-border-active);
+    box-shadow: var(--win-shadow-1);
+}
+
+html[data-theme="kali"] [data-active="false"] {
+    outline: 1px solid var(--win-border-inactive);
+    box-shadow: none;
+}
+
