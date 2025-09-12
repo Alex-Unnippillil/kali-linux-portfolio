@@ -1,54 +1,75 @@
-import React, { useState, useEffect } from 'react'
-import logger from '../../utils/logger'
+import React, { useState, useEffect } from 'react';
+import logger from '../../utils/logger';
+import apps from '../../apps.config';
 
-function DesktopMenu(props) {
+interface DesktopMenuProps {
+    active: boolean;
+    openApp: (id: string) => void;
+    addNewFolder: () => void;
+    openShortcutSelector: () => void;
+    clearSession: () => void;
+    /** ID of the app/folder that triggered the menu */
+    contextApp?: string | null;
+}
 
-    const [isFullScreen, setIsFullScreen] = useState(false)
+function DesktopMenu(props: DesktopMenuProps) {
+    const [isFullScreen, setIsFullScreen] = useState(false);
 
     useEffect(() => {
         document.addEventListener('fullscreenchange', checkFullScreen);
         return () => {
             document.removeEventListener('fullscreenchange', checkFullScreen);
         };
-    }, [])
-
+    }, []);
 
     const openTerminal = () => {
-        props.openApp("terminal");
-    }
+        if (props.contextApp && props.contextApp.startsWith('new-folder-')) {
+            const folder = apps.find(a => a.id === props.contextApp);
+            const terminal = apps.find(a => a.id === 'terminal');
+            if (folder && terminal) {
+                const termId = `terminal-${props.contextApp}`;
+                if (!apps.find(a => a.id === termId)) {
+                    apps.push({ ...terminal, id: termId, title: folder.title });
+                }
+                props.openApp(termId);
+                return;
+            }
+        }
+        props.openApp('terminal');
+    };
 
     const openSettings = () => {
-        props.openApp("settings");
-    }
+        props.openApp('settings');
+    };
 
     const checkFullScreen = () => {
         if (document.fullscreenElement) {
-            setIsFullScreen(true)
+            setIsFullScreen(true);
         } else {
-            setIsFullScreen(false)
+            setIsFullScreen(false);
         }
-    }
+    };
 
     const goFullScreen = () => {
         // make website full screen
         try {
             if (document.fullscreenElement) {
-                document.exitFullscreen()
+                document.exitFullscreen();
             } else {
-                document.documentElement.requestFullscreen()
+                document.documentElement.requestFullscreen();
             }
         }
         catch (e) {
-            logger.error(e)
+            logger.error(e);
         }
-    }
+    };
 
     return (
         <div
             id="desktop-menu"
             role="menu"
             aria-label="Desktop context menu"
-            className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
+            className={(props.active ? ' block ' : ' hidden ') + ' cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm'}
         >
             <button
                 onClick={props.addNewFolder}
