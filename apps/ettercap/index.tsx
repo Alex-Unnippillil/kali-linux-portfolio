@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import FilterEditor from './components/FilterEditor';
 import LogPane, { LogEntry } from './components/LogPane';
 import ArpDiagram from './components/ArpDiagram';
+import { useSettings } from '../../hooks/useSettings';
 
 const MODES = ['Unified', 'Sniff', 'ARP'];
 
@@ -11,17 +12,18 @@ export default function EttercapPage() {
   const [mode, setMode] = useState('Unified');
   const [started, setStarted] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const { twentyFourHour } = useSettings();
 
   useEffect(() => {
     if (!started) return;
     const id = setInterval(() => {
       const levels: LogEntry['level'][] = ['info', 'warn', 'error'];
       const level = levels[Math.floor(Math.random() * levels.length)];
-      const message = `Sample ${level} message ${new Date().toLocaleTimeString()}`;
+      const message = `Sample ${level} message ${new Date().toLocaleTimeString([], twentyFourHour ? { hour12: false } : undefined)}`;
       setLogs((l) => [...l, { id: Date.now(), level, message }]);
     }, 2000);
     return () => clearInterval(id);
-  }, [started]);
+  }, [started, twentyFourHour]);
 
   return (
     <div className="p-4">

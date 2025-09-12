@@ -52,9 +52,11 @@ function convertTemp(celsius) {
 }
 
 function formatTime(timestamp) {
+  const use24h = safeLocalStorage?.getItem('24h-time') === 'true';
   return new Date(timestamp * 1000).toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
+    hour12: !use24h,
   });
 }
 

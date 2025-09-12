@@ -9,7 +9,7 @@ interface Props {
 const SettingsDrawer = ({ highScore = 0 }: Props) => {
   const [open, setOpen] = useState(false);
   const unlocked = getUnlockedThemes(highScore);
-  const { accent, setAccent, theme, setTheme } = useSettings();
+  const { accent, setAccent, theme, setTheme, twentyFourHour, setTwentyFourHour } = useSettings();
 
   return (
     <div>
@@ -51,6 +51,15 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
                 />
               ))}
             </div>
+          </label>
+          <label className="flex items-center gap-2 mt-2">
+            <input
+              type="checkbox"
+              aria-label="toggle-24h-time"
+              checked={twentyFourHour}
+              onChange={(e) => setTwentyFourHour(e.target.checked)}
+            />
+            24-hour clock
           </label>
         </div>
       )}

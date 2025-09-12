@@ -31,6 +31,7 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    setTwentyFourHour,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -101,6 +102,7 @@ export default function Settings() {
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
     setTheme("default");
+    setTwentyFourHour(defaults.twentyFourHour);
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
