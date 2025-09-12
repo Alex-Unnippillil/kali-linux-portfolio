@@ -406,3 +406,29 @@ describe('Window overlay inert behaviour', () => {
     document.body.removeChild(opener);
   });
 });
+
+describe('Window collapse', () => {
+  it('toggles collapsed state via mouse and keyboard', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+    const titleBar = screen.getByText('Test').parentElement!;
+    fireEvent.mouseDown(titleBar, { button: 1, detail: 2 });
+    expect(ref.current!.state.collapsed).toBe(true);
+    expect(document.activeElement).toBe(titleBar);
+    fireEvent.keyDown(titleBar, { key: 'm', ctrlKey: true });
+    expect(ref.current!.state.collapsed).toBe(false);
+    expect(document.activeElement).toBe(titleBar);
+  });
+});
