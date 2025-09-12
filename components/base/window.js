@@ -33,6 +33,8 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            shaded: false,
+            prevHeight: null,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
@@ -517,6 +519,17 @@ export class Window extends Component {
             this.handleStop();
         }
     }
+    toggleShade = () => {
+        this.setState(prev => {
+            if (prev.shaded) {
+                const restored = prev.prevHeight ?? prev.height;
+                return { shaded: false, height: restored, prevHeight: null };
+            }
+            const titleHeight = 44; // px
+            const percent = (titleHeight / window.innerHeight) * 100;
+            return { shaded: true, prevHeight: prev.height, height: percent };
+        }, this.resizeBoundries);
+    }
 
     handleKeyDown = (e) => {
         if (e.key === 'Escape') {
@@ -642,13 +655,14 @@ export class Window extends Component {
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                        {!this.state.shaded && this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
+                        {!this.state.shaded && this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
+                            toggleShade={this.toggleShade}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -659,7 +673,7 @@ export class Window extends Component {
                             allowMaximize={this.props.allowMaximize !== false}
                             pip={() => this.props.screen(this.props.addFolder, this.props.openApp)}
                         />
-                        {(this.id === "settings"
+                        {!this.state.shaded && (this.id === "settings"
                             ? <Settings />
                             : <WindowMainScreen screen={this.props.screen} title={this.props.title}
                                 addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
@@ -674,7 +688,13 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, toggleShade }) {
+    const handleAuxClick = (e) => {
+        if (e.button === 1 && !('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
+            e.preventDefault();
+            toggleShade();
+        }
+    };
     return (
         <div
             className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
@@ -683,6 +703,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
+            onAuxClick={handleAuxClick}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>
