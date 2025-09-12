@@ -1,84 +1,86 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
+// Carousel window switcher opened via keyboard or gesture. Displays
+// window screenshots when available and falls back to titles. Uses
+// requestAnimationFrame for smooth ~60fps translations.
 export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
-  const [query, setQuery] = useState('');
-  const [selected, setSelected] = useState(0);
-  const inputRef = useRef(null);
+    const [selected, setSelected] = useState(0);
+    const listRef = useRef(null);
+    const frameRef = useRef(null);
+    const ITEM_WIDTH = 160; // width including margins
 
-  const filtered = windows.filter((w) =>
-    w.title.toLowerCase().includes(query.toLowerCase())
-  );
+    // Select current window when Ctrl is released
+    useEffect(() => {
+        const handleKeyUp = (e) => {
+            if (e.key === 'Control') {
+                const win = windows[selected];
+                if (win && typeof onSelect === 'function') {
+                    onSelect(win.id);
+                } else if (typeof onClose === 'function') {
+                    onClose();
+                }
+            }
+        };
+        window.addEventListener('keyup', handleKeyUp);
+        return () => window.removeEventListener('keyup', handleKeyUp);
+    }, [windows, selected, onSelect, onClose]);
 
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+    // Keyboard navigation
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const len = windows.length;
+                if (!len) return;
+                const dir = e.shiftKey ? -1 : 1;
+                setSelected((selected + dir + len) % len);
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                if (typeof onClose === 'function') onClose();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [windows, selected, onClose]);
 
-  useEffect(() => {
-    const handleKeyUp = (e) => {
-      if (e.key === 'Alt') {
-        const win = filtered[selected];
-        if (win && typeof onSelect === 'function') {
-          onSelect(win.id);
-        } else if (typeof onClose === 'function') {
-          onClose();
-        }
-      }
-    };
-    window.addEventListener('keyup', handleKeyUp);
-    return () => window.removeEventListener('keyup', handleKeyUp);
-  }, [filtered, selected, onSelect, onClose]);
+    // animate carousel using requestAnimationFrame
+    useEffect(() => {
+        const animate = () => {
+            if (listRef.current) {
+                listRef.current.style.transform = `translateX(${-selected * ITEM_WIDTH}px)`;
+            }
+            frameRef.current = requestAnimationFrame(animate);
+        };
+        frameRef.current = requestAnimationFrame(animate);
+        return () => cancelAnimationFrame(frameRef.current);
+    }, [selected]);
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const len = filtered.length;
-      if (!len) return;
-      const dir = e.shiftKey ? -1 : 1;
-      setSelected((selected + dir + len) % len);
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      const len = filtered.length;
-      if (!len) return;
-      setSelected((selected + 1) % len);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      const len = filtered.length;
-      if (!len) return;
-      setSelected((selected - 1 + len) % len);
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      if (typeof onClose === 'function') onClose();
-    }
-  };
-
-  const handleChange = (e) => {
-    setQuery(e.target.value);
-    setSelected(0);
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 text-white">
-      <div className="bg-ub-grey p-4 rounded w-3/4 md:w-1/3">
-        <input
-          ref={inputRef}
-          value={query}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          className="w-full mb-4 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
-          placeholder="Search windows"
-        />
-        <ul>
-          {filtered.map((w, i) => (
-            <li
-              key={w.id}
-              className={`px-2 py-1 rounded ${i === selected ? 'bg-ub-orange text-black' : ''}`}
-            >
-              {w.title}
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  );
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 text-white">
+            <div className="overflow-hidden w-3/4 md:w-1/2">
+                <ul ref={listRef} className="flex">
+                    {windows.map((w, i) => (
+                        <li
+                            key={w.id}
+                            className={`w-40 h-32 mx-2 flex flex-col items-center justify-center rounded ${i === selected ? 'text-ub-orange' : ''}`}
+                        >
+                            {w.image ? (
+                                <img
+                                    src={w.image}
+                                    alt={w.title}
+                                    className="w-full h-24 object-cover rounded"
+                                />
+                            ) : (
+                                <div className="w-full h-24 flex items-center justify-center bg-ub-grey rounded text-sm">
+                                    {w.title}
+                                </div>
+                            )}
+                            <span className="mt-1 text-sm">{w.title}</span>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        </div>
+    );
 }
 
