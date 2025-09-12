@@ -10,6 +10,7 @@ const BackgroundImage = dynamic(
 import SideBar from './side_bar';
 import apps, { games } from '../../apps.config';
 import Window from '../base/window';
+import BottomSheet from '../base/BottomSheet';
 import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
@@ -456,7 +457,8 @@ export class Desktop extends Component {
 
     renderWindows = () => {
         let windowsJsx = [];
-        apps.forEach((app, index) => {
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+        apps.forEach((app) => {
             if (this.state.closed_windows[app.id] === false) {
 
                 const pos = this.state.window_positions[app.id];
@@ -482,9 +484,23 @@ export class Desktop extends Component {
                     snapEnabled: this.props.snapEnabled,
                 }
 
-                windowsJsx.push(
-                    <Window key={app.id} {...props} />
-                )
+                if (isMobile && app.utility) {
+                    windowsJsx.push(
+                        <BottomSheet
+                            key={app.id}
+                            id={app.id}
+                            title={app.title}
+                            screen={app.screen}
+                            addFolder={this.addToDesktop}
+                            closed={this.closeApp}
+                            openApp={this.openApp}
+                        />
+                    );
+                } else {
+                    windowsJsx.push(
+                        <Window key={app.id} {...props} />
+                    );
+                }
             }
         });
         return windowsJsx;
