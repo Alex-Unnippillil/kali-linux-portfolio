@@ -14,8 +14,15 @@ export default class Navbar extends Component {
 	}
 
 	render() {
-		return (
-                        <div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
+                return (
+                        <div
+                                className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50"
+                                style={{
+                                        paddingTop: 'env(safe-area-inset-top)',
+                                        paddingLeft: 'env(safe-area-inset-left)',
+                                        paddingRight: 'env(safe-area-inset-right)',
+                                }}
+                        >
                                 <div className="pl-3 pr-1">
                                         <Image src="/themes/Yaru/status/network-wireless-signal-good-symbolic.svg" alt="network icon" width={16} height={16} className="w-4 h-4" />
                                 </div>
