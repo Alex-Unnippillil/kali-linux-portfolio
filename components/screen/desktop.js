@@ -52,6 +52,8 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            selected_apps: {},
+            selectionBox: null,
         }
     }
 
@@ -431,6 +433,70 @@ export class Desktop extends Component {
         this.initFavourite = { ...favourite_apps };
     }
 
+    clearSelection = () => {
+        this.setState({ selected_apps: {} });
+    }
+
+    handleIconClick = (e, id) => {
+        e.stopPropagation();
+        const additive = e.shiftKey;
+        this.setState(prev => {
+            let selected = additive ? { ...prev.selected_apps } : {};
+            if (additive && selected[id]) {
+                delete selected[id];
+            } else {
+                selected[id] = true;
+            }
+            return { selected_apps: selected };
+        });
+    }
+
+    handleDesktopMouseDown = (e) => {
+        if (e.button !== 0) return;
+        if (e.target.closest('[data-context="app"]') || e.target.closest('.opened-window')) return;
+        this.clearSelection();
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const selectionBox = { startX, startY, x: startX, y: startY, width: 0, height: 0, active: true };
+        this.setState({ selectionBox });
+        document.addEventListener('mousemove', this.handleDesktopMouseMove);
+        document.addEventListener('mouseup', this.handleDesktopMouseUp);
+    }
+
+    handleDesktopMouseMove = (e) => {
+        const box = this.state.selectionBox;
+        if (!box || !box.active) return;
+        const currentX = e.clientX;
+        const currentY = e.clientY;
+        const selectionBox = {
+            ...box,
+            x: Math.min(currentX, box.startX),
+            y: Math.min(currentY, box.startY),
+            width: Math.abs(currentX - box.startX),
+            height: Math.abs(currentY - box.startY),
+        };
+        this.setState({ selectionBox }, () => this.updateSelection(selectionBox));
+    }
+
+    handleDesktopMouseUp = () => {
+        document.removeEventListener('mousemove', this.handleDesktopMouseMove);
+        document.removeEventListener('mouseup', this.handleDesktopMouseUp);
+        this.setState({ selectionBox: null });
+    }
+
+    updateSelection = (rect) => {
+        const selected = {};
+        this.state.desktop_apps.forEach(id => {
+            const el = document.getElementById('app-' + id);
+            if (!el) return;
+            const r = el.getBoundingClientRect();
+            if (rect.x < r.right && rect.x + rect.width > r.left && rect.y < r.bottom && rect.y + rect.height > r.top) {
+                selected[id] = true;
+            }
+        });
+        this.setState({ selected_apps: selected });
+    }
+
     renderDesktopApps = () => {
         if (Object.keys(this.state.closed_windows).length === 0) return;
         let appsJsx = [];
@@ -444,6 +510,8 @@ export class Desktop extends Component {
                     openApp: this.openApp,
                     disabled: this.state.disabled_apps[app.id],
                     prefetch: app.screen?.prefetch,
+                    onClick: (e) => this.handleIconClick(e, app.id),
+                    selected: !!this.state.selected_apps[app.id],
                 }
 
                 appsJsx.push(
@@ -865,7 +933,7 @@ export class Desktop extends Component {
 
     render() {
         return (
-            <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+            <main id="desktop" role="main" onMouseDown={this.handleDesktopMouseDown} className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
 
                 {/* Window Area */}
                 <div
@@ -904,6 +972,19 @@ export class Desktop extends Component {
 
                 {/* Desktop Apps */}
                 {this.renderDesktopApps()}
+
+                {/* Selection Rectangle */}
+                {this.state.selectionBox && this.state.selectionBox.active && (
+                    <div
+                        className="fixed border-2 border-blue-400 bg-blue-400 bg-opacity-20 pointer-events-none z-40"
+                        style={{
+                            left: this.state.selectionBox.x,
+                            top: this.state.selectionBox.y,
+                            width: this.state.selectionBox.width,
+                            height: this.state.selectionBox.height,
+                        }}
+                    />
+                )}
 
                 {/* Context Menus */}
                 <DesktopMenu
