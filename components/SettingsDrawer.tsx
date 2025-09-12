@@ -37,7 +37,7 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
             <div
               aria-label="accent-color-picker"
               role="radiogroup"
-              className="flex gap-2 mt-1"
+              className="flex gap-[var(--navbar-gap)] mt-1"
             >
               {ACCENT_OPTIONS.map((c) => (
                 <button

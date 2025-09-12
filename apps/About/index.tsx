@@ -32,7 +32,7 @@ function LinkedInIcon({ className }: { className?: string }) {
 export default function AboutPage() {
   return (
     <div className="min-h-screen w-full bg-[var(--kali-bg)] text-sm">
-      <div className="max-w-screen-md mx-auto my-4 sm:my-8 p-4 sm:p-6">
+      <div className="mx-auto my-4 sm:my-8 p-4 sm:p-6 max-w-[var(--content-max)]">
         <section className="flex items-center mb-8">
           <Image
             src="/images/logos/bitmoji.png"

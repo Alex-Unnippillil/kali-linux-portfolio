@@ -71,7 +71,7 @@ body {
   border-radius: 4px;
   font-size: 1rem;
   cursor: pointer;
-  min-height: 48px;
+  min-height: var(--panel-height);
   transition: transform 150ms;
 }
 
