@@ -85,6 +85,26 @@ function DesktopMenu(props) {
             >
                 <span className="ml-5">Open in Terminal</span>
             </button>
+            <button
+                onClick={props.mosaicWindows}
+                type="button"
+                role="menuitem"
+                aria-label="Mosaic Windows"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
+                <span className="ml-5">Mosaic Windows</span>
+            </button>
+            {props.canUndoMosaic && (
+                <button
+                    onClick={props.undoMosaic}
+                    type="button"
+                    role="menuitem"
+                    aria-label="Undo Mosaic"
+                    className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                >
+                    <span className="ml-5">Undo Mosaic</span>
+                </button>
+            )}
             <Devider />
             <button
                 onClick={openSettings}
