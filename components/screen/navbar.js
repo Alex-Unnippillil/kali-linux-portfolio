@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import Image from 'next/image';
 import Clock from '../util-components/clock';
 import Status from '../util-components/status';
-import QuickSettings from '../ui/QuickSettings';
+import QuickSettings from '../panels/QuickSettings';
 import WhiskerMenu from '../menu/WhiskerMenu';
 
 export default class Navbar extends Component {
