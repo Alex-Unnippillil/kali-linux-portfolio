@@ -11,6 +11,32 @@ body{
     color: var(--color-text);
 }
 
+:root {
+    --cursor-pointer: url('/cursors/pointer.svg') 0 0, pointer;
+    --cursor-text: url('/cursors/text.svg') 8 8, text;
+    --cursor-resize: url('/cursors/resize.svg') 8 8, nwse-resize;
+}
+
+a, button, [role="button"], .cursor-pointer {
+    cursor: var(--cursor-pointer);
+}
+
+input[type="text"], input[type="email"], input[type="search"], input[type="url"], input[type="tel"], textarea, .cursor-text {
+    cursor: var(--cursor-text);
+}
+
+[class*='-resize'], .cursor-ew-resize, .cursor-ns-resize, .cursor-nesw-resize, .cursor-nwse-resize, .cursor-col-resize, .cursor-row-resize {
+    cursor: var(--cursor-resize);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --cursor-pointer: pointer;
+        --cursor-text: text;
+        --cursor-resize: nwse-resize;
+    }
+}
+
 button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .hit-area {
     min-width: var(--hit-area);
     min-height: var(--hit-area);
