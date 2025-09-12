@@ -711,23 +711,46 @@ export class WindowYBorder extends Component {
     }
 
 export class WindowXBorder extends Component {
+    constructor(props) {
+        super(props);
+        this.state = { isTouch: false };
+    }
     componentDidMount() {
         // Use the global Image constructor instead of Next.js Image component
 
         this.trpImg = new window.Image(0, 0);
         this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
         this.trpImg.style.opacity = 0;
+        const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
+        this.setState({ isTouch });
     }
     render() {
+        const { isTouch } = this.state;
+        if (isTouch) {
             return (
                 <div
-                    className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
+                    className="absolute bottom-0 left-0 w-full h-3 cursor-[n-resize] flex items-center justify-center bg-white/10"
+                    draggable
+                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0); }}
                     onDrag={this.props.resize}
-                ></div>
-            )
+                >
+                    <svg width="24" height="6" viewBox="0 0 24 6" aria-hidden="true" className="text-white opacity-60">
+                        <rect x="0" y="0" width="24" height="2" fill="currentColor" />
+                        <rect x="0" y="4" width="24" height="2" fill="currentColor" />
+                    </svg>
+                </div>
+            );
         }
+        return (
+            <div
+                className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
+                draggable
+                onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0); }}
+                onDrag={this.props.resize}
+            ></div>
+        );
     }
+}
 
 // Window's Edit Buttons
 export function WindowEditButtons(props) {
