@@ -7,6 +7,7 @@ import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
+import { SettingsContext } from '../hooks/useSettings';
 
 export default class Ubuntu extends Component {
 	constructor() {
@@ -127,8 +128,16 @@ export default class Ubuntu extends Component {
 					turnOn={this.turnOn}
 				/>
 				<Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
-				<Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
-			</div>
-		);
-	}
+                                <SettingsContext.Consumer>
+                                        {({ winGap }) => (
+                                                <Desktop
+                                                        bg_image_name={this.state.bg_image_name}
+                                                        changeBackgroundImage={this.changeBackgroundImage}
+                                                        winGap={winGap}
+                                                />
+                                        )}
+                                </SettingsContext.Consumer>
+                        </div>
+                );
+        }
 }

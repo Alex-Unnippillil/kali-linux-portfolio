@@ -59,6 +59,8 @@
   /* Focus outline */
   --focus-outline-color: var(--color-ubt-blue);
   --focus-outline-width: 2px;
+  /* Window gap */
+  --win-gap: 8px;
 }
 
 /* High contrast theme */
