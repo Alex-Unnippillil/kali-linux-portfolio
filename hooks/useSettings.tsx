@@ -165,6 +165,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         '--space-4': '1rem',
         '--space-5': '1.5rem',
         '--space-6': '2rem',
+        '--menu-item-height': 'var(--menu-item-height-comfortable)',
       },
       compact: {
         '--space-1': '0.125rem',
@@ -173,6 +174,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         '--space-4': '0.75rem',
         '--space-5': '1rem',
         '--space-6': '1.5rem',
+        '--menu-item-height': 'var(--menu-item-height-compact)',
       },
     };
     const vars = spacing[density];

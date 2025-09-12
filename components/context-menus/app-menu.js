@@ -35,9 +35,10 @@ function AppMenu(props) {
                 onClick={handlePin}
                 role="menuitem"
                 aria-label={props.pinned ? 'Unpin from Favorites' : 'Pin to Favorites'}
-                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                className="w-full text-left cursor-default hover:bg-gray-700 mb-1.5 flex items-center"
+                style={{ minHeight: 'var(--menu-item-height)' }}
             >
-                <span className="ml-5">{props.pinned ? 'Unpin from Favorites' : 'Pin to Favorites'}</span>
+                <span className="ml-5 flex-1 whitespace-normal break-words">{props.pinned ? 'Unpin from Favorites' : 'Pin to Favorites'}</span>
             </button>
         </div>
     )
