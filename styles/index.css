@@ -11,6 +11,30 @@ body{
     color: var(--color-text);
 }
 
+/* Subtle animated gradient for hero sections or page backgrounds */
+.hero-band {
+    background: linear-gradient(var(--hero-gradient-angle, 0deg), var(--color-primary), var(--color-secondary));
+    animation: hero-band-shift 90s linear infinite;
+}
+
+@keyframes hero-band-shift {
+    0% {
+        --hero-gradient-angle: 0deg;
+    }
+    50% {
+        --hero-gradient-angle: 180deg;
+    }
+    100% {
+        --hero-gradient-angle: 360deg;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hero-band {
+        animation: none;
+    }
+}
+
 button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .hit-area {
     min-width: var(--hit-area);
     min-height: var(--hit-area);
