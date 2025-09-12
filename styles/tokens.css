@@ -45,6 +45,9 @@
   --radius-md: 4px;
   --radius-lg: 8px;
   --radius-round: 9999px;
+  /* Window radius */
+  --win-radius: var(--radius-lg);
+  --win-radius-tight: var(--radius-md);
 
   /* Motion durations */
   --motion-fast: 150ms;
