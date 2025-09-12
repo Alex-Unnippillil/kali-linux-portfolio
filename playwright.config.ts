@@ -5,5 +5,6 @@ export default defineConfig({
   testMatch: /.*\.spec\.ts/,
   use: {
     baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    ignoreHTTPSErrors: true,
   },
 });
