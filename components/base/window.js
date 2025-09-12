@@ -7,6 +7,7 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import { getReservedRegions, subscribeReservedRegions } from '../../utils/reservedRegions';
 
 export class Window extends Component {
     constructor(props) {
@@ -37,6 +38,8 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this.reservedRegions = getReservedRegions();
+        this._reservedUnsub = null;
     }
 
     componentDidMount() {
@@ -56,6 +59,10 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        this._reservedUnsub = subscribeReservedRegions((regions) => {
+            this.reservedRegions = regions;
+            this.clampToReservedRegions();
+        });
     }
 
     componentWillUnmount() {
@@ -69,6 +76,7 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        if (this._reservedUnsub) this._reservedUnsub();
     }
 
     setDefaultWindowDimenstion = () => {
@@ -357,9 +365,44 @@ export class Window extends Component {
         node.style.transform = `translate(${x}px, ${y}px)`;
     }
 
+    avoidReservedRegions = (node) => {
+        if (!node || !this.reservedRegions || this.reservedRegions.length === 0) return;
+        const rect = node.getBoundingClientRect();
+        let { left, top, width, height } = rect;
+        let moved = false;
+        for (const r of this.reservedRegions) {
+            const right = left + width;
+            const bottom = top + height;
+            if (left < r.right && right > r.left && top < r.bottom && bottom > r.top) {
+                const moveRight = r.right - left;
+                const moveLeft = right - r.left;
+                const moveDown = r.bottom - top;
+                const moveUp = bottom - r.top;
+                const min = Math.min(moveRight, moveLeft, moveDown, moveUp);
+                if (min === moveRight) left += moveRight;
+                else if (min === moveLeft) left -= moveLeft;
+                else if (min === moveDown) top += moveDown;
+                else top -= moveUp;
+                moved = true;
+            }
+        }
+        if (moved) {
+            node.style.transform = `translate(${left}px, ${top}px)`;
+            this.setWinowsPosition();
+        }
+    }
+
+    clampToReservedRegions = () => {
+        const node = document.getElementById(this.id);
+        if (node) {
+            this.avoidReservedRegions(node);
+        }
+    }
+
     handleDrag = (e, data) => {
         if (data && data.node) {
             this.applyEdgeResistance(data.node, data);
+            this.avoidReservedRegions(data.node);
         }
         this.checkOverlap();
         this.checkSnapPreview();
