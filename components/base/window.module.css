@@ -7,3 +7,10 @@
   height: calc(100% + 10px);
   width: calc(100% - 10px);
 }
+.collapsed {
+  height: 2.75rem !important;
+}
+
+.collapsed :global(.windowMainScreen) {
+  display: none;
+}

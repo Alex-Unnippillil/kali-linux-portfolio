@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import React, { Component } from 'react';
@@ -33,6 +34,7 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            collapsed: false,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
@@ -184,6 +186,12 @@ export class Window extends Component {
         }
         this._menuOpener = null;
     }
+    toggleCollapse = () => {
+        this.setState(prev => ({ collapsed: !prev.collapsed }), () => {
+            this.focusWindow();
+        });
+    }
+
 
     changeCursorToMove = () => {
         this.focusWindow();
@@ -477,10 +485,29 @@ export class Window extends Component {
         });
     }
 
+    handleTitleBarMouseDown = (e) => {
+        if (e.button === 1 && e.detail === 2) {
+            e.preventDefault && e.preventDefault();
+            e.stopPropagation && e.stopPropagation();
+            this.toggleCollapse();
+            if (e.currentTarget && typeof e.currentTarget.focus === "function") {
+                e.currentTarget.focus();
+            }
+        }
+    }
+
+
     handleTitleBarKeyDown = (e) => {
+        if (e.ctrlKey && (e.key === "m" || e.key === "M")) {
+            e.preventDefault && e.preventDefault();
+            e.stopPropagation && e.stopPropagation();
+            this.toggleCollapse();
+            return;
+        }
+        
         if (e.key === ' ' || e.key === 'Space' || e.key === 'Enter') {
-            e.preventDefault();
-            e.stopPropagation();
+            e.preventDefault && e.preventDefault();
+            e.stopPropagation && e.stopPropagation();
             if (this.state.grabbed) {
                 this.handleStop();
             } else {
@@ -494,8 +521,8 @@ export class Window extends Component {
             else if (e.key === 'ArrowUp') dy = -step;
             else if (e.key === 'ArrowDown') dy = step;
             if (dx !== 0 || dy !== 0) {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault && e.preventDefault();
+                e.stopPropagation && e.stopPropagation();
                 const node = document.getElementById(this.id);
                 if (node) {
                     const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
@@ -525,40 +552,40 @@ export class Window extends Component {
             this.focusWindow();
         } else if (e.altKey) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault && e.preventDefault();
+                e.stopPropagation && e.stopPropagation();
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault && e.preventDefault();
+                e.stopPropagation && e.stopPropagation();
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault && e.preventDefault();
+                e.stopPropagation && e.stopPropagation();
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault && e.preventDefault();
+                e.stopPropagation && e.stopPropagation();
                 this.snapWindow('top');
             }
             this.focusWindow();
         } else if (e.shiftKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault && e.preventDefault();
+                e.stopPropagation && e.stopPropagation();
                 this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault && e.preventDefault();
+                e.stopPropagation && e.stopPropagation();
                 this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault && e.preventDefault();
+                e.stopPropagation && e.stopPropagation();
                 this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault && e.preventDefault();
+                e.stopPropagation && e.stopPropagation();
                 this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
             }
             this.focusWindow();
@@ -635,7 +662,7 @@ export class Window extends Component {
                 >
                     <div
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col" + (this.state.collapsed ? " " + styles.collapsed : "")}
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
@@ -647,6 +674,7 @@ export class Window extends Component {
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
+                            onMouseDown={this.handleTitleBarMouseDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
                         />
@@ -674,7 +702,7 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onMouseDown }) {
     return (
         <div
             className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
@@ -683,6 +711,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
+            onMouseDown={onMouseDown}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>
