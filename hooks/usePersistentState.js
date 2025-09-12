@@ -49,3 +49,10 @@ export const useSnapSetting = () =>
     true,
     (value) => typeof value === "boolean",
   );
+
+export const useTerminalEditorSplitSetting = () =>
+  usePersistentState(
+    "terminal-editor-split",
+    true,
+    (value) => typeof value === "boolean",
+  );

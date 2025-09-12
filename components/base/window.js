@@ -584,20 +584,17 @@ export class Window extends Component {
         }
     }
 
-    snapWindow = (pos) => {
+    snapWindow = (pos, widthPercent = 50) => {
         this.focusWindow();
         const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
+        const newWidth = widthPercent;
+        const newHeight = 96.3;
         let transform = '';
         if (pos === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
             transform = 'translate(-1pt,-2pt)';
         } else if (pos === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
+            const offset = window.innerWidth * (1 - widthPercent / 100);
+            transform = `translate(${offset}px,-2pt)`;
         }
         const node = document.getElementById(this.id);
         if (node && transform) {
