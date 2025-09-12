@@ -399,6 +399,16 @@ dialog {
     list-style: "🌟";
 }
 
+html.warm-tone::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: rgba(255, 153, 51, 0.15);
+    mix-blend-mode: multiply;
+    z-index: 9999;
+}
+
 .list-arrow {
     list-style: "⇀";
 }
