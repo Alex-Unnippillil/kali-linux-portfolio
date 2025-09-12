@@ -13,8 +13,9 @@ class MyDocument extends Document {
   render() {
     const { nonce } = this.props;
     return (
-      <Html lang="en" data-csp-nonce={nonce}>
+      <Html data-theme="" lang="en" data-csp-nonce={nonce}>
         <Head>
+          <meta name="color-scheme" content="light dark" />
           <link rel="icon" href="/favicon.ico" />
           <link rel="manifest" href="/manifest.webmanifest" />
           <meta name="theme-color" content="#0f1317" />
