@@ -146,7 +146,7 @@ const WhiskerMenu: React.FC = () => {
             {CATEGORIES.map(cat => (
               <button
                 key={cat.id}
-                className={`text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
+                className={`menu-item text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
                 onClick={() => setCategory(cat.id)}
               >
                 {cat.label}
@@ -157,6 +157,7 @@ const WhiskerMenu: React.FC = () => {
             <input
               className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
               placeholder="Search"
+              aria-label="Search applications"
               value={query}
               onChange={e => setQuery(e.target.value)}
               autoFocus
