@@ -12,6 +12,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import { useAutoSplitSetting } from "../../hooks/usePersistentState";
 
 export default function Settings() {
   const {
@@ -32,6 +33,7 @@ export default function Settings() {
     theme,
     setTheme,
   } = useSettings();
+  const [autoSplit, setAutoSplit] = useAutoSplitSetting();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const tabs = [
@@ -258,6 +260,14 @@ export default function Settings() {
               checked={haptics}
               onChange={setHaptics}
               ariaLabel="Haptics"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Auto-snap editor & terminal:</span>
+            <ToggleSwitch
+              checked={autoSplit}
+              onChange={setAutoSplit}
+              ariaLabel="Auto-snap editor and terminal"
             />
           </div>
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
