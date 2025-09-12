@@ -42,6 +42,81 @@ describe('Window lifecycle', () => {
   });
 });
 
+describe('Window maximize', () => {
+  it('uses available rect when maximizing', () => {
+    const originalRAF = (global as any).requestAnimationFrame;
+    (global as any).requestAnimationFrame = (cb: any) => {
+      cb(0);
+      return 0;
+    };
+
+    render(
+      <>
+        <div className="main-navbar-vp" />
+        <nav aria-label="Dock" />
+        <div role="toolbar" />
+        <Window
+          id="test-window"
+          title="Test"
+          screen={() => <div>content</div>}
+          focus={() => {}}
+          hasMinimised={() => {}}
+          closed={() => {}}
+          hideSideBar={() => {}}
+          openApp={() => {}}
+        />
+      </>
+    );
+
+    const top = document.querySelector('.main-navbar-vp')!;
+    top.getBoundingClientRect = () => ({
+      top: 0,
+      left: 0,
+      right: 1024,
+      bottom: 30,
+      width: 1024,
+      height: 30,
+      x: 0,
+      y: 0,
+      toJSON: () => {}
+    });
+    const dock = document.querySelector('nav[aria-label="Dock"]')!;
+    dock.getBoundingClientRect = () => ({
+      top: 30,
+      left: 0,
+      right: 40,
+      bottom: 748,
+      width: 40,
+      height: 718,
+      x: 0,
+      y: 30,
+      toJSON: () => {}
+    });
+    const bottom = document.querySelector('div[role="toolbar"]')!;
+    bottom.getBoundingClientRect = () => ({
+      top: 748,
+      left: 0,
+      right: 1024,
+      bottom: 768,
+      width: 1024,
+      height: 20,
+      x: 0,
+      y: 748,
+      toJSON: () => {}
+    });
+
+    const button = screen.getByRole('button', { name: /window maximize/i });
+    act(() => {
+      fireEvent.click(button);
+    });
+
+    const winEl = document.getElementById('test-window')!;
+    expect(winEl.style.transform).toBe('translate(40px,30px)');
+
+    (global as any).requestAnimationFrame = originalRAF;
+  });
+});
+
 describe('Window snapping preview', () => {
   it('shows preview when dragged near left edge', () => {
     const ref = React.createRef<Window>();
@@ -199,7 +274,12 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault() {},
+        stopPropagation() {},
+      } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();

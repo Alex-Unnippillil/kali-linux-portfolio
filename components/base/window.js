@@ -313,6 +313,41 @@ export class Window extends Component {
         }
     }
 
+    getAvailableRect = () => {
+        const rect = {
+            left: 0,
+            top: 0,
+            width: window.innerWidth,
+            height: window.innerHeight,
+        };
+        const elements = [
+            document.querySelector('.main-navbar-vp'),
+            document.querySelector('div[role="toolbar"]'),
+            document.querySelector('nav[aria-label="Dock"]'),
+        ];
+        elements.forEach(el => {
+            if (!el) return;
+            const r = el.getBoundingClientRect();
+            if (r.width <= 0 || r.height <= 0) return;
+            if (r.width > r.height) {
+                if (r.top === 0) {
+                    rect.top += r.height;
+                    rect.height -= r.height;
+                } else if (r.bottom === window.innerHeight) {
+                    rect.height -= r.height;
+                }
+            } else {
+                if (r.left === 0) {
+                    rect.left += r.width;
+                    rect.width -= r.width;
+                } else if (r.right === window.innerWidth) {
+                    rect.width -= r.width;
+                }
+            }
+        });
+        return rect;
+    }
+
     checkSnapPreview = () => {
         var r = document.querySelector("#" + this.id);
         if (!r) return;
@@ -457,12 +492,19 @@ export class Window extends Component {
         }
         else {
             this.focusWindow();
-            var r = document.querySelector("#" + this.id);
             this.setWinowsPosition();
-            // translate window to maximize position
-            r.style.transform = `translate(-1pt,-2pt)`;
-            this.setState({ maximized: true, height: 96.3, width: 100.2 });
             this.props.hideSideBar(this.id, true);
+            requestAnimationFrame(() => {
+                const node = document.querySelector("#" + this.id);
+                if (!node) return;
+                const rect = this.getAvailableRect();
+                node.style.transform = `translate(${rect.left}px,${rect.top}px)`;
+                this.setState({
+                    maximized: true,
+                    height: (rect.height / window.innerHeight) * 100,
+                    width: (rect.width / window.innerWidth) * 100,
+                });
+            });
         }
     }
 
