@@ -7,3 +7,13 @@
   height: calc(100% + 10px);
   width: calc(100% - 10px);
 }
+
+:global([data-active="true"]::before) {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  background: var(--win-accent);
+}
