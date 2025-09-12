@@ -50,6 +50,13 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
                   style={{ backgroundColor: c }}
                 />
               ))}
+              <input
+                type="color"
+                aria-label="custom-accent"
+                value={accent}
+                onChange={(e) => setAccent(e.target.value)}
+                className="w-6 h-6 p-0 border-none bg-transparent"
+              />
             </div>
           </label>
         </div>

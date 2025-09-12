@@ -18,12 +18,13 @@ const DEFAULT_SETTINGS = {
 
 export async function getAccent() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.accent;
-  return (await get('accent')) || DEFAULT_SETTINGS.accent;
+  const stored = window.localStorage.getItem('accent');
+  return stored || DEFAULT_SETTINGS.accent;
 }
 
 export async function setAccent(accent) {
   if (typeof window === 'undefined') return;
-  await set('accent', accent);
+  window.localStorage.setItem('accent', accent);
 }
 
 export async function getWallpaper() {
@@ -125,10 +126,8 @@ export async function setAllowNetwork(value) {
 
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
-  await Promise.all([
-    del('accent'),
-    del('bg-image'),
-  ]);
+  await del('bg-image');
+  window.localStorage.removeItem('accent');
   window.localStorage.removeItem('density');
   window.localStorage.removeItem('reduced-motion');
   window.localStorage.removeItem('font-scale');

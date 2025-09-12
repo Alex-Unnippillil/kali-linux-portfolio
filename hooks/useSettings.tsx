@@ -145,6 +145,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       '--color-focus-ring': accent,
       '--color-selection': accent,
       '--color-control-accent': accent,
+      '--accent': accent,
     };
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
