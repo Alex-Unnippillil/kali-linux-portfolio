@@ -10,7 +10,7 @@ const BackgroundImage = dynamic(
 import SideBar from './side_bar';
 import apps, { games } from '../../apps.config';
 import Window from '../base/window';
-import UbuntuApp from '../base/ubuntu_app';
+import DesktopIcon from '../desktop/DesktopIcon';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
 import WindowSwitcher from '../screen/window-switcher'
@@ -447,7 +447,7 @@ export class Desktop extends Component {
                 }
 
                 appsJsx.push(
-                    <UbuntuApp key={app.id} {...props} />
+                    <DesktopIcon key={app.id} {...props} />
                 );
             }
         });
