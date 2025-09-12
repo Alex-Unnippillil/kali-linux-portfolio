@@ -93,8 +93,13 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     position: relative;
 }
 
-.notFocused {
-    filter: brightness(90%);
+/* Window focus state */
+.bg-ub-window-title {
+    color: var(--kali-text);
+}
+
+.notFocused .bg-ub-window-title {
+    color: var(--kali-muted);
 }
 
 .root,
