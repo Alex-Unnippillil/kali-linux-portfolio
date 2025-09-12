@@ -273,6 +273,10 @@ export class Window extends Component {
             newWidth = 100.2;
             newHeight = 50;
             transform = 'translate(-1pt,-2pt)';
+        } else if (position === 'center') {
+            newWidth = 50;
+            newHeight = 96.3;
+            transform = `translate(${window.innerWidth / 4}px,-2pt)`;
         }
         const r = document.querySelector("#" + this.id);
         if (r && transform) {
@@ -330,6 +334,10 @@ export class Window extends Component {
         else if (rect.top <= threshold) {
             snap = { left: '0', top: '0', width: '100%', height: '50%' };
             this.setState({ snapPreview: snap, snapPosition: 'top' });
+        }
+        else if (Math.abs((rect.left + rect.width / 2) - window.innerWidth / 2) <= threshold) {
+            snap = { left: '25%', top: '0', width: '50%', height: '100%' };
+            this.setState({ snapPreview: snap, snapPosition: 'center' });
         }
         else {
             if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
@@ -586,6 +594,7 @@ export class Window extends Component {
 
     snapWindow = (pos) => {
         this.focusWindow();
+        this.setWinowsPosition();
         const { width, height } = this.state;
         let newWidth = width;
         let newHeight = height;
@@ -598,12 +607,22 @@ export class Window extends Component {
             newWidth = 50;
             newHeight = 96.3;
             transform = `translate(${window.innerWidth / 2}px,-2pt)`;
+        } else if (pos === 'top') {
+            newWidth = 100.2;
+            newHeight = 50;
+            transform = 'translate(-1pt,-2pt)';
+        } else if (pos === 'center') {
+            newWidth = 50;
+            newHeight = 96.3;
+            transform = `translate(${window.innerWidth / 4}px,-2pt)`;
         }
         const node = document.getElementById(this.id);
         if (node && transform) {
             node.style.transform = transform;
         }
         this.setState({
+            snapPreview: null,
+            snapPosition: null,
             snapped: pos,
             lastSize: { width, height },
             width: newWidth,
