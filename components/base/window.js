@@ -354,7 +354,63 @@ export class Window extends Component {
 
         x = resist(x, 0, maxX);
         y = resist(y, 0, maxY);
+
+        // After applying boundary resistance, adjust position to stick
+        // to nearby window edges for smoother alignment.
+        ({ x, y } = this.applyWindowStickiness(node, { x, y }));
+
         node.style.transform = `translate(${x}px, ${y}px)`;
+    }
+
+    applyWindowStickiness = (node, pos) => {
+        const threshold = 6; // proximity in px to trigger sticking
+        let { x, y } = pos;
+        const rect = node.getBoundingClientRect();
+        let left = x;
+        let top = y;
+        let right = left + rect.width;
+        let bottom = top + rect.height;
+
+        const windows = document.querySelectorAll('.opened-window');
+        windows.forEach(el => {
+            if (el === node || el.id === this.id) return;
+            if (el.classList.contains('invisible')) return; // skip hidden windows
+            const other = el.getBoundingClientRect();
+
+            // horizontal sticking
+            const verticalOverlap = bottom > other.top && top < other.bottom;
+            if (verticalOverlap) {
+                if (Math.abs(left - other.right) <= threshold) {
+                    const delta = other.right - left;
+                    x += delta;
+                    left += delta;
+                    right += delta;
+                } else if (Math.abs(right - other.left) <= threshold) {
+                    const delta = other.left - right;
+                    x += delta;
+                    left += delta;
+                    right += delta;
+                }
+            }
+
+            // vertical sticking
+            const horizontalOverlap = right > other.left && left < other.right;
+            if (horizontalOverlap) {
+                if (Math.abs(top - other.bottom) <= threshold) {
+                    const delta = other.bottom - top;
+                    y += delta;
+                    top += delta;
+                    bottom += delta;
+                } else if (Math.abs(bottom - other.top) <= threshold) {
+                    const delta = other.top - bottom;
+                    y += delta;
+                    top += delta;
+                    bottom += delta;
+                }
+            }
+        });
+
+        return { x, y };
     }
 
     handleDrag = (e, data) => {

@@ -199,7 +199,12 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault: () => {},
+        stopPropagation: () => {}
+      } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
@@ -319,6 +324,77 @@ describe('Edge resistance', () => {
     });
 
     expect(winEl.style.transform).toBe('translate(0px, 0px)');
+  });
+});
+
+describe('Window edge sticking', () => {
+  it('aligns window when near another window edge', () => {
+    const ref1 = React.createRef<Window>();
+    const ref2 = React.createRef<Window>();
+
+    render(
+      <>
+        <Window
+          id="win1"
+          title="Win1"
+          screen={() => <div>content</div>}
+          focus={() => {}}
+          hasMinimised={() => {}}
+          closed={() => {}}
+          hideSideBar={() => {}}
+          openApp={() => {}}
+          ref={ref1}
+          initialX={0}
+          initialY={0}
+        />
+        <Window
+          id="win2"
+          title="Win2"
+          screen={() => <div>content</div>}
+          focus={() => {}}
+          hasMinimised={() => {}}
+          closed={() => {}}
+          hideSideBar={() => {}}
+          openApp={() => {}}
+          ref={ref2}
+          initialX={200}
+          initialY={0}
+        />
+      </>
+    );
+
+    const win1 = document.getElementById('win1')!;
+    const win2 = document.getElementById('win2')!;
+
+    win1.getBoundingClientRect = () => ({
+      left: 0,
+      top: 0,
+      right: 100,
+      bottom: 100,
+      width: 100,
+      height: 100,
+      x: 0,
+      y: 0,
+      toJSON: () => {}
+    });
+
+    win2.getBoundingClientRect = () => ({
+      left: 200,
+      top: 0,
+      right: 300,
+      bottom: 100,
+      width: 100,
+      height: 100,
+      x: 200,
+      y: 0,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref1.current!.handleDrag({}, { node: win1, x: 94, y: 0 } as any);
+    });
+
+    expect(win1.style.transform).toBe('translate(100px, 0px)');
   });
 });
 
