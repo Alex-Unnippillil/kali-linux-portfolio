@@ -37,6 +37,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._attentionObserver = null;
     }
 
     componentDidMount() {
@@ -53,6 +54,18 @@ export class Window extends Component {
         window.addEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.addEventListener('super-arrow', this.handleSuperArrow);
+        if (root) {
+            this._attentionObserver = new MutationObserver((mutations) => {
+                for (const mutation of mutations) {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'data-attention') {
+                        if (mutation.target.getAttribute('data-attention') === 'true') {
+                            this.handleAttention(mutation.target);
+                        }
+                    }
+                }
+            });
+            this._attentionObserver.observe(root, { attributes: true });
+        }
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -66,9 +79,32 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        if (this._attentionObserver) {
+            this._attentionObserver.disconnect();
+        }
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+    }
+
+    handleAttention = (node) => {
+        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (prefersReducedMotion) {
+            node.removeAttribute('data-attention');
+            return;
+        }
+        const startShadow = getComputedStyle(node).boxShadow;
+        const animation = node.animate(
+            [
+                { boxShadow: startShadow },
+                { boxShadow: '1px 4px 25px 8px color-mix(in srgb, var(--color-inverse), transparent 60%)' },
+                { boxShadow: startShadow }
+            ],
+            { duration: 600, easing: 'ease-in-out' }
+        );
+        animation.onfinish = () => {
+            node.removeAttribute('data-attention');
+        };
     }
 
     setDefaultWindowDimenstion = () => {
@@ -525,40 +561,40 @@ export class Window extends Component {
             this.focusWindow();
         } else if (e.altKey) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('top');
             }
             this.focusWindow();
         } else if (e.shiftKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
             }
             this.focusWindow();
