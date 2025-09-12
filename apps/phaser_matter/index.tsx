@@ -411,13 +411,25 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
 
   return (
     <div ref={containerRef} className="relative" tabIndex={0}>
-      <button className="absolute left-4 bottom-4" {...bind('left')}>
+      <button
+        className="absolute left-4 bottom-4"
+        {...bind('left')}
+        aria-label="Move left"
+      >
         ◀
       </button>
-      <button className="absolute left-20 bottom-4" {...bind('right')}>
+      <button
+        className="absolute left-20 bottom-4"
+        {...bind('right')}
+        aria-label="Move right"
+      >
         ▶
       </button>
-      <button className="absolute right-4 bottom-4" {...bind('jump')}>
+      <button
+        className="absolute right-4 bottom-4"
+        {...bind('jump')}
+        aria-label="Jump"
+      >
         ⇧
       </button>
       <div className="absolute top-4 left-4 bg-white bg-opacity-80 p-2 rounded text-xs space-y-1">

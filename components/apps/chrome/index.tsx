@@ -536,9 +536,24 @@ const Chrome: React.FC = () => {
           <div key={i} className="flex flex-col items-center">
             {editingTiles && (
               <div className="mb-1 space-x-1">
-                <button onClick={() => moveTile(i, -1)}>↑</button>
-                <button onClick={() => moveTile(i, 1)}>↓</button>
-                <button onClick={() => removeTile(i)}>×</button>
+                <button
+                  onClick={() => moveTile(i, -1)}
+                  aria-label="Move tile up"
+                >
+                  ↑
+                </button>
+                <button
+                  onClick={() => moveTile(i, 1)}
+                  aria-label="Move tile down"
+                >
+                  ↓
+                </button>
+                <button
+                  onClick={() => removeTile(i)}
+                  aria-label="Remove tile"
+                >
+                  ×
+                </button>
               </div>
             )}
             {(() => {

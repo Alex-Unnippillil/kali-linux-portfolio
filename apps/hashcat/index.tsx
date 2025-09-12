@@ -274,6 +274,7 @@ const Hashcat: React.FC = () => {
                 type="button"
                 onClick={() => removeDictionary(d)}
                 className="ml-1"
+                aria-label={`Remove dictionary ${d}`}
               >
                 ×
               </button>

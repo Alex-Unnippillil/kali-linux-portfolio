@@ -160,6 +160,7 @@ const SpotifyApp = () => {
             title="Previous"
             disabled={!queue.length}
             className="w-9 h-9 flex items-center justify-center"
+            aria-label="Previous track"
           >
             ⏮
           </button>
@@ -168,6 +169,7 @@ const SpotifyApp = () => {
             title="Play/Pause"
             disabled={!queue.length}
             className="w-9 h-9 flex items-center justify-center"
+            aria-label="Play/Pause"
           >
             ⏯
           </button>
@@ -176,6 +178,7 @@ const SpotifyApp = () => {
             title="Next"
             disabled={!queue.length}
             className="w-9 h-9 flex items-center justify-center"
+            aria-label="Next track"
           >
             ⏭
           </button>

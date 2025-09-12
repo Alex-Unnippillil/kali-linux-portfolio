@@ -146,6 +146,7 @@ export default function PlaylistBuilder({ quotes, playlist, setPlaylist }: Playl
                   <button
                     onClick={() => deletePlaylist(name)}
                     className="px-2 py-1 bg-gray-700 rounded"
+                    aria-label={`Delete playlist ${name}`}
                   >
                     ✕
                   </button>
@@ -170,6 +171,7 @@ export default function PlaylistBuilder({ quotes, playlist, setPlaylist }: Playl
                 setPlaylist(playlist.filter((_, j) => j !== idx))
               }
               className="px-2 py-1 bg-gray-700 rounded"
+              aria-label="Remove quote"
             >
               ✕
             </button>
