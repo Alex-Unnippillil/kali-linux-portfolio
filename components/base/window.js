@@ -649,6 +649,7 @@ export class Window extends Component {
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
+                            active={this.props.isFocused}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -674,10 +675,11 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, active }) {
     return (
         <div
-            className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
+            data-active={active}
+            className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11 before:hidden before:content-[''] data-[active=true]:before:block data-[active=true]:before:absolute data-[active=true]:before:top-0 data-[active=true]:before:left-0 data-[active=true]:before:w-full data-[active=true]:before:h-[2px] data-[active=true]:before:bg-[var(--win-accent)]"}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
