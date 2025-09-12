@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import ReleaseTicker from '../home/ReleaseTicker';
 
 export class Desktop extends Component {
     constructor() {
@@ -901,6 +902,9 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
                 />
+
+                {/* Release Ticker */}
+                <ReleaseTicker />
 
                 {/* Desktop Apps */}
                 {this.renderDesktopApps()}
