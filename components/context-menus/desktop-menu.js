@@ -55,35 +55,38 @@ function DesktopMenu(props) {
                 type="button"
                 role="menuitem"
                 aria-label="New Folder"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 flex items-center"
+                style={{ minHeight: 'var(--menu-item-height)' }}
             >
-                <span className="ml-5">New Folder</span>
+                <span className="ml-5 flex-1 whitespace-normal break-words">New Folder</span>
             </button>
             <button
                 onClick={props.openShortcutSelector}
                 type="button"
                 role="menuitem"
                 aria-label="Create Shortcut"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 flex items-center"
+                style={{ minHeight: 'var(--menu-item-height)' }}
             >
-                <span className="ml-5">Create Shortcut...</span>
+                <span className="ml-5 flex-1 whitespace-normal break-words">Create Shortcut...</span>
             </button>
             <Devider />
-            <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Paste</span>
+            <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400 flex items-center" style={{ minHeight: 'var(--menu-item-height)' }}>
+                <span className="ml-5 flex-1 whitespace-normal break-words">Paste</span>
             </div>
             <Devider />
-            <div role="menuitem" aria-label="Show Desktop in Files" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Show Desktop in Files</span>
+            <div role="menuitem" aria-label="Show Desktop in Files" aria-disabled="true" className="w-full hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400 flex items-center" style={{ minHeight: 'var(--menu-item-height)' }}>
+                <span className="ml-5 flex-1 whitespace-normal break-words">Show Desktop in Files</span>
             </div>
             <button
                 onClick={openTerminal}
                 type="button"
                 role="menuitem"
                 aria-label="Open in Terminal"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 flex items-center"
+                style={{ minHeight: 'var(--menu-item-height)' }}
             >
-                <span className="ml-5">Open in Terminal</span>
+                <span className="ml-5 flex-1 whitespace-normal break-words">Open in Terminal</span>
             </button>
             <Devider />
             <button
@@ -91,22 +94,24 @@ function DesktopMenu(props) {
                 type="button"
                 role="menuitem"
                 aria-label="Change Background"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 flex items-center"
+                style={{ minHeight: 'var(--menu-item-height)' }}
             >
-                <span className="ml-5">Change Background...</span>
+                <span className="ml-5 flex-1 whitespace-normal break-words">Change Background...</span>
             </button>
             <Devider />
-            <div role="menuitem" aria-label="Display Settings" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Display Settings</span>
+            <div role="menuitem" aria-label="Display Settings" aria-disabled="true" className="w-full hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400 flex items-center" style={{ minHeight: 'var(--menu-item-height)' }}>
+                <span className="ml-5 flex-1 whitespace-normal break-words">Display Settings</span>
             </div>
             <button
                 onClick={openSettings}
                 type="button"
                 role="menuitem"
                 aria-label="Settings"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 flex items-center"
+                style={{ minHeight: 'var(--menu-item-height)' }}
             >
-                <span className="ml-5">Settings</span>
+                <span className="ml-5 flex-1 whitespace-normal break-words">Settings</span>
             </button>
             <Devider />
             <button
@@ -114,9 +119,10 @@ function DesktopMenu(props) {
                 type="button"
                 role="menuitem"
                 aria-label={isFullScreen ? "Exit Full Screen" : "Enter Full Screen"}
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 flex items-center"
+                style={{ minHeight: 'var(--menu-item-height)' }}
             >
-                <span className="ml-5">{isFullScreen ? "Exit" : "Enter"} Full Screen</span>
+                <span className="ml-5 flex-1 whitespace-normal break-words">{isFullScreen ? "Exit" : "Enter"} Full Screen</span>
             </button>
             <Devider />
             <button
@@ -124,9 +130,10 @@ function DesktopMenu(props) {
                 type="button"
                 role="menuitem"
                 aria-label="Clear Session"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 flex items-center"
+                style={{ minHeight: 'var(--menu-item-height)' }}
             >
-                <span className="ml-5">Clear Session</span>
+                <span className="ml-5 flex-1 whitespace-normal break-words">Clear Session</span>
             </button>
         </div>
     )
