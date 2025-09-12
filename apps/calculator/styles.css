@@ -1,5 +1,5 @@
 body {
-  font-family: Arial, sans-serif;
+  font-family: var(--font-inter), sans-serif;
   background: var(--color-bg);
   height: 100vh;
   display: flex;
@@ -93,7 +93,7 @@ body {
 }
 
 .button-grid .btn {
-  font-family: monospace;
+  font-family: var(--font-fira-code), monospace;
 }
 
 

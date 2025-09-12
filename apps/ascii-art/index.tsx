@@ -251,7 +251,7 @@ const AsciiArtApp = () => {
             ref={textAreaRef}
             rows={1}
             className="px-2 py-1 text-black rounded resize-none overflow-hidden font-mono leading-none"
-            style={{ fontFamily: 'monospace', lineHeight: '1', fontSize: `${fontSize}px` }}
+            style={{ fontFamily: 'var(--font-fira-code), monospace', lineHeight: '1', fontSize: `${fontSize}px` }}
             placeholder="Enter text"
             value={text}
             onChange={(e) => setText(e.target.value)}
