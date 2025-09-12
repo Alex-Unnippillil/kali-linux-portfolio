@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
+import WallpaperManager from "../../components/settings/WallpaperManager";
 import {
   resetSettings,
   defaults,
@@ -52,8 +53,6 @@ export default function Settings() {
     "wall-7",
     "wall-8",
   ];
-
-  const changeBackground = (name: string) => setWallpaper(name);
 
   const handleExport = async () => {
     const data = await exportSettingsData();
@@ -115,7 +114,7 @@ export default function Settings() {
           <div
             className="md:w-2/5 w-2/3 h-1/3 m-auto my-4"
             style={{
-              backgroundImage: `url(/wallpapers/${wallpaper}.webp)`,
+              backgroundImage: `url(${wallpaper.startsWith("data:") ? wallpaper : `/wallpapers/${wallpaper}.webp`})`,
               backgroundSize: "cover",
               backgroundRepeat: "no-repeat",
               backgroundPosition: "center center",
@@ -158,9 +157,9 @@ export default function Settings() {
               min="0"
               max={wallpapers.length - 1}
               step="1"
-              value={wallpapers.indexOf(wallpaper)}
+              value={Math.max(wallpapers.indexOf(wallpaper), 0)}
               onChange={(e) =>
-                changeBackground(wallpapers[parseInt(e.target.value, 10)])
+                setWallpaper(wallpapers[parseInt(e.target.value, 10)])
               }
               className="ubuntu-slider"
               aria-label="Wallpaper"
@@ -169,36 +168,11 @@ export default function Settings() {
           <div className="flex justify-center my-4">
             <BackgroundSlideshow />
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 justify-items-center border-t border-gray-900">
-            {wallpapers.map((name) => (
-              <div
-                key={name}
-                role="button"
-                aria-label={`Select ${name.replace("wall-", "wallpaper ")}`}
-                aria-pressed={name === wallpaper}
-                tabIndex={0}
-                onClick={() => changeBackground(name)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    changeBackground(name);
-                  }
-                }}
-                className={
-                  (name === wallpaper
-                    ? " border-yellow-700 "
-                    : " border-transparent ") +
-                  " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"
-                }
-                style={{
-                  backgroundImage: `url(/wallpapers/${name}.webp)`,
-                  backgroundSize: "cover",
-                  backgroundRepeat: "no-repeat",
-                  backgroundPosition: "center center",
-                }}
-              ></div>
-            ))}
-          </div>
+          <WallpaperManager
+            wallpapers={wallpapers}
+            selected={wallpaper}
+            onSelect={setWallpaper}
+          />
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
             <button
               onClick={handleReset}
