@@ -24,10 +24,8 @@ export class Window extends Component {
             height: props.defaultHeight || 85,
             closed: false,
             maximized: false,
-            parentSize: {
-                height: 100,
-                width: 100
-            },
+            availableRect: { left: 0, top: 0, right: 0, bottom: 0 },
+            bounds: { left: 0, top: 0, right: 0, bottom: 0 },
             snapPreview: null,
             snapPosition: null,
             snapped: null,
@@ -92,20 +90,76 @@ export class Window extends Component {
     }
 
     resizeBoundries = () => {
-        this.setState({
-            parentSize: {
-                height: window.innerHeight //parent height
-                    - (window.innerHeight * (this.state.height / 100.0))  // this window's height
-                    - 28 // some padding
-                ,
-                width: window.innerWidth // parent width
-                    - (window.innerWidth * (this.state.width / 100.0)) //this window's width
-            }
-        }, () => {
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        const getInset = (side) => {
+            const div = document.createElement('div');
+            div.style.cssText = `position:fixed;top:0;left:0;width:0;height:0;padding:env(safe-area-inset-${side})`;
+            document.body.appendChild(div);
+            const value = parseFloat(getComputedStyle(div).padding) || 0;
+            document.body.removeChild(div);
+            return value;
+        };
+
+        const safe = {
+            top: getInset('top'),
+            right: getInset('right'),
+            bottom: getInset('bottom'),
+            left: getInset('left'),
+        };
+
+        const dock = document.querySelector('nav[aria-label="Dock"]');
+        const dockWidth = dock ? dock.getBoundingClientRect().width : 0;
+        const taskbar = document.querySelector('[role="toolbar"]');
+        const taskbarHeight = taskbar ? taskbar.getBoundingClientRect().height : 0;
+        const panel = document.querySelector('[aria-label="Panel"]');
+        const panelHeight = panel ? panel.getBoundingClientRect().height : 0;
+
+        const availableRect = {
+            left: dockWidth + safe.left,
+            top: panelHeight + safe.top,
+            right: viewportWidth - safe.right,
+            bottom: viewportHeight - taskbarHeight - safe.bottom,
+        };
+
+        const winWidth = viewportWidth * (this.state.width / 100);
+        const winHeight = viewportHeight * (this.state.height / 100);
+
+        const bounds = {
+            left: availableRect.left,
+            top: availableRect.top - panelHeight,
+            right: availableRect.right - winWidth,
+            bottom: availableRect.bottom - panelHeight - winHeight,
+        };
+
+        this.startX = Math.min(Math.max(this.startX, bounds.left), bounds.right);
+        this.startY = Math.min(Math.max(this.startY, bounds.top), bounds.bottom);
+
+        this.setState({ availableRect, bounds }, () => {
+            this.clampWindowPosition();
             if (this._uiExperiments) {
                 this.scheduleUsageCheck();
             }
         });
+    }
+
+    clampWindowPosition = () => {
+        const node = document.getElementById(this.id);
+        if (!node) return;
+        let x = parseFloat(node.style.getPropertyValue('--window-transform-x'));
+        let y = parseFloat(node.style.getPropertyValue('--window-transform-y'));
+        if (isNaN(x)) x = this.startX;
+        if (isNaN(y)) y = this.startY;
+        const { left, top, right, bottom } = this.state.bounds;
+        x = Math.min(Math.max(x, left), right);
+        y = Math.min(Math.max(y, top), bottom);
+        node.style.transform = `translate(${x}px, ${y}px)`;
+        node.style.setProperty('--window-transform-x', `${x}px`);
+        node.style.setProperty('--window-transform-y', `${y}px`);
+        if (this.props.onPositionChange) {
+            this.props.onPositionChange(x, y);
+        }
     }
 
     computeContentUsage = () => {
@@ -225,10 +279,12 @@ export class Window extends Component {
         var r = document.querySelector("#" + this.id);
         if (!r) return;
         var rect = r.getBoundingClientRect();
+        const panel = document.querySelector('[aria-label="Panel"]');
+        const panelHeight = panel ? panel.getBoundingClientRect().height : 0;
         const x = this.snapToGrid(rect.x);
-        const y = this.snapToGrid(rect.y - 32);
-        r.style.setProperty('--window-transform-x', x.toFixed(1).toString() + "px");
-        r.style.setProperty('--window-transform-y', y.toFixed(1).toString() + "px");
+        const y = this.snapToGrid(rect.y - panelHeight);
+        r.style.setProperty('--window-transform-x', x.toFixed(1) + "px");
+        r.style.setProperty('--window-transform-y', y.toFixed(1) + "px");
         if (this.props.onPositionChange) {
             this.props.onPositionChange(x, y);
         }
@@ -341,8 +397,7 @@ export class Window extends Component {
         const threshold = 30;
         const resistance = 0.35; // how much to slow near edges
         let { x, y } = data;
-        const maxX = this.state.parentSize.width;
-        const maxY = this.state.parentSize.height;
+        const { left: minX, top: minY, right: maxX, bottom: maxY } = this.state.bounds;
 
         const resist = (pos, min, max) => {
             if (pos < min) return min;
@@ -350,10 +405,10 @@ export class Window extends Component {
             if (pos > max) return max;
             if (pos > max - threshold) return max - (max - pos) * resistance;
             return pos;
-        }
+        };
 
-        x = resist(x, 0, maxX);
-        y = resist(y, 0, maxY);
+        x = resist(x, minX, maxX);
+        y = resist(y, minY, maxY);
         node.style.transform = `translate(${x}px, ${y}px)`;
     }
 
@@ -631,7 +686,7 @@ export class Window extends Component {
                     onDrag={this.handleDrag}
                     allowAnyClick={false}
                     defaultPosition={{ x: this.startX, y: this.startY }}
-                    bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
+                    bounds={this.state.bounds}
                 >
                     <div
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
