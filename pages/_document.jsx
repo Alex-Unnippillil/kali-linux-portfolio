@@ -17,6 +17,8 @@ class MyDocument extends Document {
         <Head>
           <link rel="icon" href="/favicon.ico" />
           <link rel="manifest" href="/manifest.webmanifest" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+          <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
           <meta name="theme-color" content="#0f1317" />
           <script nonce={nonce} src="/theme.js" />
         </Head>
