@@ -1,0 +1,5 @@
+body { font-family: sans-serif; margin: 1rem; display: flex; flex-direction: column; }
+textarea { width: 100%; margin-bottom: 0.5rem; }
+#input { height: 100px; }
+#output { height: 2.5rem; }
+button { width: fit-content; margin-bottom: 0.5rem; }
