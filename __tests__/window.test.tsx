@@ -118,6 +118,41 @@ describe('Window snapping preview', () => {
   });
 });
 
+describe('Snap slot highlighting', () => {
+  it('shows snap slots while dragging and clears on stop', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    act(() => {
+      ref.current!.changeCursorToMove();
+    });
+
+    expect(screen.getByTestId('snap-slot-left')).toBeInTheDocument();
+    expect(screen.getByTestId('snap-slot-right')).toBeInTheDocument();
+    expect(screen.getByTestId('snap-slot-top')).toBeInTheDocument();
+
+    act(() => {
+      ref.current!.handleStop();
+    });
+
+    expect(screen.queryByTestId('snap-slot-left')).toBeNull();
+    expect(screen.queryByTestId('snap-slot-right')).toBeNull();
+    expect(screen.queryByTestId('snap-slot-top')).toBeNull();
+  });
+});
+
 describe('Window snapping finalize and release', () => {
   it('snaps window on drag stop near left edge', () => {
     const ref = React.createRef<Window>();
@@ -199,7 +234,12 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault: () => {},
+        stopPropagation: () => {}
+      } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
