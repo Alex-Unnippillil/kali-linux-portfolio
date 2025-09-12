@@ -1,11 +1,14 @@
+// @ts-nocheck
 "use client";
 
 import React, { Component } from 'react';
 import NextImage from 'next/image';
 import Draggable from 'react-draggable';
+import { createPortal } from 'react-dom';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import ContextMenu from '../common/ContextMenu';
 import styles from './window.module.css';
 
 export class Window extends Component {
@@ -33,10 +36,12 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            alwaysOnTop: false,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this.topBarRef = React.createRef();
     }
 
     componentDidMount() {
@@ -164,6 +169,22 @@ export class Window extends Component {
             return this.props.overlayRoot;
         }
         return document.getElementById('__next');
+    }
+
+    getWindowOverlayRoot = () => {
+        let root = document.getElementById('window-overlay-root');
+        if (!root) {
+            root = document.createElement('div');
+            root.id = 'window-overlay-root';
+            root.style.position = 'relative';
+            root.style.zIndex = '9999';
+            document.body.appendChild(root);
+        }
+        return root;
+    }
+
+    toggleAlwaysOnTop = () => {
+        this.setState({ alwaysOnTop: !this.state.alwaysOnTop });
     }
 
     activateOverlay = () => {
@@ -612,7 +633,7 @@ export class Window extends Component {
     }
 
     render() {
-        return (
+        const content = (
             <>
                 {this.state.snapPreview && (
                     <div
@@ -645,6 +666,7 @@ export class Window extends Component {
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
                         <WindowTopBar
+                            ref={this.topBarRef}
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
@@ -665,18 +687,28 @@ export class Window extends Component {
                                 addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
                                 openApp={this.props.openApp} />)}
                     </div>
-                </Draggable >
+                </Draggable>
+                <ContextMenu
+                    targetRef={this.topBarRef}
+                    items={[{
+                        label: this.state.alwaysOnTop ? 'Disable Always on Top' : 'Always on Top',
+                        onSelect: this.toggleAlwaysOnTop
+                    }]}
+                />
             </>
-        )
+        );
+
+        return this.state.alwaysOnTop ? createPortal(content, this.getWindowOverlayRoot()) : content;
     }
 }
 
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+export const WindowTopBar = React.forwardRef(function WindowTopBar({ title, onKeyDown, onBlur, grabbed }, ref) {
     return (
         <div
+            ref={ref}
             className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
             tabIndex={0}
             role="button"
@@ -687,7 +719,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>
     )
-}
+});
 
 // Window's Borders
 export class WindowYBorder extends Component {

@@ -199,7 +199,7 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true, preventDefault: () => {}, stopPropagation: () => {} } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
@@ -319,6 +319,34 @@ describe('Edge resistance', () => {
     });
 
     expect(winEl.style.transform).toBe('translate(0px, 0px)');
+  });
+});
+
+describe('Always on top flag', () => {
+  it('toggles state and moves window to overlay root', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    expect(ref.current!.state.alwaysOnTop).toBe(false);
+    act(() => {
+      ref.current!.toggleAlwaysOnTop();
+    });
+    expect(ref.current!.state.alwaysOnTop).toBe(true);
+    const overlay = document.getElementById('window-overlay-root');
+    expect(overlay).not.toBeNull();
+    expect(overlay!.contains(document.getElementById('test-window'))).toBe(true);
   });
 });
 
