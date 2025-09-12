@@ -1,5 +1,11 @@
 @import './globals.css';
 
+:root {
+    --grid-baseline: 8px;
+    --desktop-grid-size: calc(var(--grid-baseline) * 12);
+    --desktop-grid-gap: var(--grid-baseline);
+}
+
 html {
     font-size: clamp(12px, calc(16px * var(--font-multiplier)), 24px);
 }
