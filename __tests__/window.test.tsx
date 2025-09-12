@@ -199,7 +199,12 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault: () => {},
+        stopPropagation: () => {},
+      } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
@@ -252,6 +257,77 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBeNull();
     expect(ref.current!.state.width).toBe(60);
     expect(ref.current!.state.height).toBe(85);
+  });
+});
+
+describe('Window snapping swap', () => {
+  it('swaps positions when dragging over another snapped window', () => {
+    const refA = React.createRef<Window>();
+    const refB = React.createRef<Window>();
+    render(
+      <>
+        <Window
+          id="window-a"
+          title="A"
+          screen={() => <div>content</div>}
+          focus={() => {}}
+          hasMinimised={() => {}}
+          closed={() => {}}
+          hideSideBar={() => {}}
+          openApp={() => {}}
+          ref={refA}
+        />
+        <Window
+          id="window-b"
+          title="B"
+          screen={() => <div>content</div>}
+          focus={() => {}}
+          hasMinimised={() => {}}
+          closed={() => {}}
+          hideSideBar={() => {}}
+          openApp={() => {}}
+          ref={refB}
+        />
+      </>
+    );
+
+    act(() => {
+      refA.current!.snapWindow('left');
+      refB.current!.snapWindow('right');
+    });
+
+    const aEl = document.getElementById('window-a')!;
+    const bEl = document.getElementById('window-b')!;
+    aEl.getBoundingClientRect = () => ({
+      left: 500,
+      top: 10,
+      right: 600,
+      bottom: 110,
+      width: 100,
+      height: 100,
+      x: 500,
+      y: 10,
+      toJSON: () => {}
+    });
+    bEl.getBoundingClientRect = () => ({
+      left: 500,
+      top: 10,
+      right: 600,
+      bottom: 110,
+      width: 100,
+      height: 100,
+      x: 500,
+      y: 10,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      refA.current!.changeCursorToMove();
+      refA.current!.handleStop();
+    });
+
+    expect(refA.current!.state.snapped).toBe('right');
+    expect(refB.current!.state.snapped).toBe('left');
   });
 });
 
