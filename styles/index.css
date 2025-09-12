@@ -94,7 +94,13 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 }
 
 .notFocused {
-    filter: brightness(90%);
+    /* filter removed to prevent dimming body content */
+}
+
+[data-active="false"] .bg-ub-window-title,
+[data-active="false"] [class*="windowYBorder"],
+[data-active="false"] [class*="windowXBorder"] {
+    filter: brightness(0.94) saturate(0.98);
 }
 
 .root,
