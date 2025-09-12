@@ -116,6 +116,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot })
             ref={modalRef}
             onKeyDown={handleKeyDown}
             tabIndex={-1}
+            style={{ borderRadius: 'var(--win-radius-tight)' }}
         >
             {children}
         </div>,
