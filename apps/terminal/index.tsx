@@ -11,6 +11,7 @@ import React, {
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
+import { getMotdLines } from './theme';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -88,6 +89,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const filesRef = useRef<Record<string, string>>(files);
   const aliasesRef = useRef<Record<string, string>>({});
   const historyRef = useRef<string[]>([]);
+  const motdRef = useRef({ lines: 0, visible: false });
   const contextRef = useRef<CommandContext>({
     writeLine: () => {},
     files: filesRef.current,
@@ -124,12 +126,33 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     '#FFFFFF',
   ];
 
+  const prompt = useCallback(() => {
+    if (termRef.current) termRef.current.write('$ ');
+  }, []);
+
+  const hideMotd = useCallback(() => {
+    const term = termRef.current;
+    if (!term) return;
+    const allLines = contentRef.current.split('\n');
+    const remaining = allLines.slice(motdRef.current.lines).filter(Boolean);
+    term.clear();
+    contentRef.current = '';
+    remaining.forEach((l) => {
+      term.writeln(l);
+      contentRef.current += `${l}\n`;
+    });
+    motdRef.current.visible = false;
+    prompt();
+    setOverflow({ top: false, bottom: false });
+  }, [prompt]);
+
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
     if (!term || !term.buffer) return;
     const { viewportY, baseY } = term.buffer.active;
     setOverflow({ top: viewportY > 0, bottom: viewportY < baseY });
-  }, []);
+    if (motdRef.current.visible && viewportY > 0) hideMotd();
+  }, [hideMotd]);
 
   const writeLine = useCallback(
     (text: string) => {
@@ -144,10 +167,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   );
 
   contextRef.current.writeLine = writeLine;
-
-  const prompt = useCallback(() => {
-    if (termRef.current) termRef.current.write('$ ');
-  }, []);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(contentRef.current).catch(() => {});
@@ -330,7 +349,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
             : `${existing}\n`;
         }
       }
-      writeLine('Welcome to the web terminal!');
+      const motd = getMotdLines();
+      motd.forEach((l) => writeLine(l));
+      motdRef.current = { lines: motd.length, visible: true };
       writeLine('Type "help" to see available commands.');
       prompt();
       term.onData((d: string) => handleInput(d));
@@ -407,6 +428,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           <div className="mt-10 w-80 bg-gray-800 p-4 rounded">
             <input
               autoFocus
+              aria-label="Command palette input"
               className="w-full mb-2 bg-black text-white p-2"
               value={paletteInput}
               onChange={(e) => setPaletteInput(e.target.value)}
