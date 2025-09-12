@@ -102,12 +102,22 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 #docs-root {
     --window-transform-x: 0px;
     --window-transform-y: 0px;
+    --window-outline: var(--focus-outline-width) solid var(--focus-outline-color);
+    --window-outer-shadow: 0 0 0 calc(var(--focus-outline-width) + 2px) var(--focus-outline-color);
 }
 
 .window-shadow {
-    box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
-    -webkit-box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
-    -moz-box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
+    --window-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
+    box-shadow: var(--window-shadow);
+    -webkit-box-shadow: var(--window-shadow);
+    -moz-box-shadow: var(--window-shadow);
+}
+
+.main-window:focus-visible {
+    outline: var(--window-outline);
+    box-shadow: var(--window-shadow), var(--window-outer-shadow);
+    -webkit-box-shadow: var(--window-shadow), var(--window-outer-shadow);
+    -moz-box-shadow: var(--window-shadow), var(--window-outer-shadow);
 }
 
 .closed-window {
