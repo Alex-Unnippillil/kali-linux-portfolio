@@ -11,12 +11,14 @@ export interface DesktopSession {
   windows: SessionWindow[];
   wallpaper: string;
   dock: string[];
+  maximize_preferences: Record<string, 'fill' | 'full'>;
 }
 
 const initialSession: DesktopSession = {
   windows: [],
   wallpaper: defaults.wallpaper,
   dock: [],
+  maximize_preferences: {},
 };
 
 function isSession(value: unknown): value is DesktopSession {
@@ -25,7 +27,8 @@ function isSession(value: unknown): value is DesktopSession {
   return (
     Array.isArray(s.windows) &&
     typeof s.wallpaper === 'string' &&
-    Array.isArray(s.dock)
+    Array.isArray(s.dock) &&
+    (typeof s.maximize_preferences === 'object')
   );
 }
 
