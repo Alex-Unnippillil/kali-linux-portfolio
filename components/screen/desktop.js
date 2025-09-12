@@ -62,6 +62,12 @@ export class Desktop extends Component {
         this.fetchAppsData(() => {
             const session = this.props.session || {};
             const positions = {};
+            let savedStack = [];
+            try {
+                savedStack = JSON.parse(safeLocalStorage?.getItem('window-stack') || '[]');
+            } catch (e) {
+                savedStack = [];
+            }
             if (session.dock && session.dock.length) {
                 let favourite_apps = { ...this.state.favourite_apps };
                 session.dock.forEach(id => {
@@ -74,8 +80,20 @@ export class Desktop extends Component {
                 session.windows.forEach(({ id, x, y }) => {
                     positions[id] = { x, y };
                 });
+                const ids = session.windows.map(w => w.id);
+                let order = [];
+                if (savedStack.length) {
+                    savedStack.forEach(id => {
+                        if (ids.includes(id)) order.push(id);
+                    });
+                    ids.forEach(id => {
+                        if (!order.includes(id)) order.push(id);
+                    });
+                } else {
+                    order = ids;
+                }
                 this.setState({ window_positions: positions }, () => {
-                    session.windows.forEach(({ id }) => this.openApp(id));
+                    order.forEach(id => this.openApp(id));
                 });
             } else {
                 this.openApp('about-alex');
@@ -511,6 +529,10 @@ export class Desktop extends Component {
         this.props.setSession({ ...this.props.session, windows, dock });
     }
 
+    saveWindowStack = () => {
+        safeLocalStorage?.setItem('window-stack', JSON.stringify(this.app_stack));
+    }
+
     hideSideBar = (objId, hide) => {
         if (hide === this.state.hideSideBar) return;
 
@@ -651,7 +673,6 @@ export class Desktop extends Component {
                     this.focus(objId);
                     this.saveSession();
                 });
-                this.app_stack.push(objId);
             }, 200);
         }
     }
@@ -689,6 +710,7 @@ export class Desktop extends Component {
 
         // remove app from the app stack
         this.app_stack.splice(this.app_stack.indexOf(objId), 1);
+        this.saveWindowStack();
 
         this.giveFocusToLastApp();
 
@@ -733,7 +755,7 @@ export class Desktop extends Component {
     }
 
     focus = (objId) => {
-        // removes focus from all window and 
+        // removes focus from all window and
         // gives focus to window with 'id = objId'
         var focused_windows = this.state.focused_windows;
         focused_windows[objId] = true;
@@ -744,7 +766,12 @@ export class Desktop extends Component {
                 }
             }
         }
-        this.setState({ focused_windows });
+        const index = this.app_stack.indexOf(objId);
+        if (index !== -1) {
+            this.app_stack.splice(index, 1);
+        }
+        this.app_stack.push(objId);
+        this.setState({ focused_windows }, this.saveWindowStack);
     }
 
     addNewFolder = () => {
@@ -838,8 +865,16 @@ export class Desktop extends Component {
         return (
             <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
                 <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
-                    <span>New folder name</span>
-                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
+                    <label htmlFor="folder-name-input">New folder name</label>
+                    <input
+                        className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5"
+                        id="folder-name-input"
+                        type="text"
+                        autoComplete="off"
+                        spellCheck="false"
+                        autoFocus={true}
+                        aria-label="Folder name"
+                    />
                 </div>
                 <div className="flex">
                     <button
