@@ -269,7 +269,16 @@ const utilityList = [
   },
 ];
 
-export const utilities = utilityList;
+// Default window constraints for applications
+const windowDefaults = {
+  minW: 20,
+  minH: 20,
+  preferRatio: null,
+};
+
+const applyWindowDefaults = (app) => ({ ...windowDefaults, ...app });
+
+export const utilities = utilityList.map(applyWindowDefaults);
 
 // Default window sizing for games to prevent oversized frames
 export const gameDefaults = {
@@ -592,9 +601,9 @@ const gameList = [
   },
 ];
 
-export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
+export const games = gameList.map((game) => applyWindowDefaults({ ...gameDefaults, ...game }));
 
-const apps = [
+const coreApps = [
   {
     id: 'chrome',
     title: 'Google Chrome',
@@ -1051,9 +1060,11 @@ const apps = [
     desktop_shortcut: false,
     screen: displaySecurityTools,
   },
-  // Utilities are grouped separately
+];
+
+const apps = [
+  ...coreApps.map(applyWindowDefaults),
   ...utilities,
-  // Games are included so they appear alongside apps
   ...games,
 ];
 
