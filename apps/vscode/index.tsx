@@ -38,13 +38,22 @@ export default function VsCode() {
           className="flex items-center justify-end gap-2 px-2 py-1 border-b border-black/20"
           style={{ backgroundColor: kaliTheme.background }}
         >
-          <button aria-label="Minimize">
+          <button
+            aria-label="Minimize"
+            className="opacity-0 transition-opacity hover:opacity-100 focus:opacity-100"
+          >
             <MinimizeIcon />
           </button>
-          <button aria-label="Maximize">
+          <button
+            aria-label="Maximize"
+            className="opacity-0 transition-opacity hover:opacity-100 focus:opacity-100"
+          >
             <MaximizeIcon />
           </button>
-          <button aria-label="Close">
+          <button
+            aria-label="Close"
+            className="opacity-0 transition-opacity hover:opacity-100 focus:opacity-100"
+          >
             <CloseIcon />
           </button>
         </div>
