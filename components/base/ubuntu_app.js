@@ -50,14 +50,21 @@ export class UbuntuApp extends Component {
                 onMouseEnter={this.handlePrefetch}
                 onFocus={this.handlePrefetch}
             >
-                <Image
-                    width={40}
-                    height={40}
-                    className="mb-1 w-10"
-                    src={this.props.icon.replace('./', '/')}
-                    alt={"Kali " + this.props.name}
-                    sizes="40px"
-                />
+                {(() => {
+                    const iconSrc = this.props.icon
+                        .replace('./', '/')
+                        .replace('/themes/Yaru/', '/themes/Flat-Remix-Blue/');
+                    return (
+                        <Image
+                            width={40}
+                            height={40}
+                            className="mb-1 w-10"
+                            src={iconSrc}
+                            alt={"Kali " + this.props.name}
+                            sizes="40px"
+                        />
+                    );
+                })()}
                 {this.props.displayName || this.props.name}
 
             </div>

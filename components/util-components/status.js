@@ -3,7 +3,7 @@ import Image from 'next/image';
 import SmallArrow from "./small_arrow";
 import { useSettings } from '../../hooks/useSettings';
 
-const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
+const VOLUME_ICON = "/themes/Flat-Remix-Blue/status/audio-volume-medium-symbolic.svg";
 
 export default function Status() {
   const { allowNetwork } = useSettings();
@@ -47,7 +47,7 @@ export default function Status() {
         <Image
           width={16}
           height={16}
-          src={online ? "/themes/Yaru/status/network-wireless-signal-good-symbolic.svg" : "/themes/Yaru/status/network-wireless-signal-none-symbolic.svg"}
+          src={online ? "/themes/Flat-Remix-Blue/status/network-wireless-signal-good-symbolic.svg" : "/themes/Flat-Remix-Blue/status/network-wireless-signal-none-symbolic.svg"}
           alt={online ? "online" : "offline"}
           className="inline status-symbol w-4 h-4"
           sizes="16px"
@@ -70,7 +70,7 @@ export default function Status() {
         <Image
           width={16}
           height={16}
-          src="/themes/Yaru/status/battery-good-symbolic.svg"
+          src="/themes/Flat-Remix-Blue/status/battery-good-symbolic.svg"
           alt="ubuntu battry"
           className="inline status-symbol w-4 h-4"
           sizes="16px"
