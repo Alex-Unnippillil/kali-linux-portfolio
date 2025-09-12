@@ -1,0 +1,17 @@
+[
+  {
+    "version": "2.1.0",
+    "date": "2025-09-03",
+    "notes": "Added safe copy script and integrated into build process."
+  },
+  {
+    "version": "2.0.0",
+    "date": "2025-04-18",
+    "notes": "Major upgrade with new features."
+  },
+  {
+    "version": "1.9.0",
+    "date": "2024-12-10",
+    "notes": "Improved performance and bug fixes."
+  }
+]
