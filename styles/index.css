@@ -22,6 +22,28 @@ button:focus-visible {
     outline-offset: 2px;
 }
 
+.skip-links {
+    position: fixed;
+    top: 0;
+    left: 0;
+}
+
+.skip-link {
+    position: absolute;
+    left: 0;
+    top: 0;
+    padding: 0.5rem 1rem;
+    background: var(--color-bg);
+    color: var(--color-text);
+    transform: translateY(-100%);
+    z-index: 1000;
+    transition: transform 0.2s;
+}
+
+.skip-link:focus {
+    transform: translateY(0);
+}
+
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
         animation-duration: 0.01ms !important;
