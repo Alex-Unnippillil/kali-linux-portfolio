@@ -12,6 +12,7 @@ const QuickSettings = ({ open }: Props) => {
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
+  const [accent, setAccent] = usePersistentState('qs-accent', 'blue');
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -20,6 +21,10 @@ const QuickSettings = ({ open }: Props) => {
   useEffect(() => {
     document.documentElement.classList.toggle('reduce-motion', reduceMotion);
   }, [reduceMotion]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('accent-cyan', accent === 'cyan');
+  }, [accent]);
 
   return (
     <div
@@ -34,6 +39,15 @@ const QuickSettings = ({ open }: Props) => {
         >
           <span>Theme</span>
           <span>{theme === 'light' ? 'Light' : 'Dark'}</span>
+        </button>
+      </div>
+      <div className="px-4 pb-2">
+        <button
+          className="w-full flex justify-between"
+          onClick={() => setAccent(accent === 'blue' ? 'cyan' : 'blue')}
+        >
+          <span>Accent</span>
+          <span>{accent === 'blue' ? 'Blue' : 'Cyan'}</span>
         </button>
       </div>
       <div className="px-4 pb-2 flex justify-between">
