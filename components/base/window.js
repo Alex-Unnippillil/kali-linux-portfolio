@@ -683,8 +683,9 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
+            data-drag="true"
         >
-            <div className="flex justify-center w-full text-sm font-bold">{title}</div>
+            <div className="flex justify-center w-full text-sm font-bold" data-drag="true">{title}</div>
         </div>
     )
 }
@@ -741,6 +742,7 @@ export function WindowEditButtons(props) {
                     aria-label="Window pin"
                     className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
                     onClick={togglePin}
+                    data-drag="false"
                 >
                     <NextImage
                         src="/themes/Yaru/window/window-pin-symbolic.svg"
@@ -757,6 +759,7 @@ export function WindowEditButtons(props) {
                 aria-label="Window minimize"
                 className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
                 onClick={props.minimize}
+                data-drag="false"
             >
                 <NextImage
                     src="/themes/Yaru/window/window-minimize-symbolic.svg"
@@ -775,6 +778,7 @@ export function WindowEditButtons(props) {
                             aria-label="Window restore"
                             className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
                             onClick={props.maximize}
+                            data-drag="false"
                         >
                             <NextImage
                                 src="/themes/Yaru/window/window-restore-symbolic.svg"
@@ -791,6 +795,7 @@ export function WindowEditButtons(props) {
                             aria-label="Window maximize"
                             className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
                             onClick={props.maximize}
+                            data-drag="false"
                         >
                             <NextImage
                                 src="/themes/Yaru/window/window-maximize-symbolic.svg"
@@ -809,6 +814,7 @@ export function WindowEditButtons(props) {
                 aria-label="Window close"
                 className="mx-1 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6"
                 onClick={props.close}
+                data-drag="false"
             >
                 <NextImage
                     src="/themes/Yaru/window/window-close-symbolic.svg"

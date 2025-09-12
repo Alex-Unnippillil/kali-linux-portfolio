@@ -168,7 +168,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
-      <div className="flex flex-shrink-0 bg-gray-800 text-white text-sm overflow-x-auto">
+      <div className="flex flex-shrink-0 bg-gray-800 text-white text-sm overflow-x-auto" data-drag="true">
         {tabs.map((t, i) => (
           <div
             key={t.id}
@@ -180,6 +180,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             onDragOver={handleDragOver(i)}
             onDrop={handleDrop(i)}
             onClick={() => setActive(t.id)}
+            data-drag="false"
           >
             <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
             {t.closable !== false && tabs.length > 1 && (
@@ -190,6 +191,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
                   closeTab(t.id);
                 }}
                 aria-label="Close Tab"
+                data-drag="false"
               >
                 ×
               </button>
@@ -201,6 +203,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             className="px-2 py-1 bg-gray-800 hover:bg-gray-700"
             onClick={addTab}
             aria-label="New Tab"
+            data-drag="false"
           >
             +
           </button>
