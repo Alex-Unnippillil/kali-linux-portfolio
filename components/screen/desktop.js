@@ -246,11 +246,19 @@ export class Desktop extends Component {
                 this.showContextMenu(e, "desktop");
                 break;
             case "app":
-                ReactGA.event({
-                    category: `Context Menu`,
-                    action: `Opened App Context Menu`
-                });
-                this.setState({ context_app: appId }, () => this.showContextMenu(e, "app"));
+                if (appId && appId.startsWith('new-folder-')) {
+                    ReactGA.event({
+                        category: `Context Menu`,
+                        action: `Opened Folder Context Menu`
+                    });
+                    this.setState({ context_app: appId }, () => this.showContextMenu(e, "desktop"));
+                } else {
+                    ReactGA.event({
+                        category: `Context Menu`,
+                        action: `Opened App Context Menu`
+                    });
+                    this.setState({ context_app: appId }, () => this.showContextMenu(e, "app"));
+                }
                 break;
             case "taskbar":
                 ReactGA.event({
@@ -912,6 +920,7 @@ export class Desktop extends Component {
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                    contextApp={this.state.context_app}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
                 <AppMenu
