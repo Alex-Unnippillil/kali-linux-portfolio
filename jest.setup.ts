@@ -80,10 +80,12 @@ if (typeof HTMLCanvasElement !== 'undefined') {
   });
 }
 
+// Use `globalThis` to avoid referencing `window` at the top level
+const g: any = typeof globalThis !== 'undefined' ? globalThis : {};
+
 // Basic matchMedia mock for libraries that expect it
-if (typeof window !== 'undefined' && !window.matchMedia) {
-  // @ts-ignore
-  window.matchMedia = () => ({
+if (!g.matchMedia) {
+  g.matchMedia = () => ({
     matches: false,
     addEventListener: () => {},
     removeEventListener: () => {},
@@ -93,7 +95,7 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
 }
 
 // Minimal IntersectionObserver mock so components relying on it don't crash in tests
-if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
+if (!('IntersectionObserver' in g)) {
   class IntersectionObserverMock {
     constructor() {}
     observe() {}
@@ -101,17 +103,28 @@ if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
     disconnect() {}
     takeRecords() { return []; }
   }
-  // @ts-ignore
-  window.IntersectionObserver = IntersectionObserverMock;
+  g.IntersectionObserver = IntersectionObserverMock;
   // @ts-ignore
   global.IntersectionObserver = IntersectionObserverMock as any;
 }
 
-// Simple localStorage mock for environments without it
-if (typeof window !== 'undefined' && !window.localStorage) {
-  const store: Record<string, string> = {};
+// Minimal ResizeObserver mock so components depending on it don't fail in tests
+if (!('ResizeObserver' in g)) {
+  class ResizeObserverMock {
+    constructor(_cb: ResizeObserverCallback) {}
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  g.ResizeObserver = ResizeObserverMock;
   // @ts-ignore
-  window.localStorage = {
+  global.ResizeObserver = ResizeObserverMock as any;
+}
+
+// Simple localStorage mock for environments without it
+if (!g.localStorage) {
+  const store: Record<string, string> = {};
+  g.localStorage = {
     getItem: (key: string) => (key in store ? store[key] : null),
     setItem: (key: string, value: string) => {
       store[key] = String(value);
