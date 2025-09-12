@@ -63,13 +63,13 @@ describe('Window snapping preview', () => {
     // Simulate being near the left edge
     winEl.getBoundingClientRect = () => ({
       left: 5,
-      top: 10,
+      top: 50,
       right: 105,
-      bottom: 110,
+      bottom: 150,
       width: 100,
       height: 100,
       x: 5,
-      y: 10,
+      y: 50,
       toJSON: () => {}
     });
 
@@ -138,13 +138,13 @@ describe('Window snapping finalize and release', () => {
     const winEl = document.getElementById('test-window')!;
     winEl.getBoundingClientRect = () => ({
       left: 5,
-      top: 10,
+      top: 50,
       right: 105,
-      bottom: 110,
+      bottom: 150,
       width: 100,
       height: 100,
       x: 5,
-      y: 10,
+      y: 50,
       toJSON: () => {}
     });
 
@@ -158,6 +158,47 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
     expect(ref.current!.state.width).toBe(50);
     expect(ref.current!.state.height).toBe(96.3);
+  });
+
+  it('snaps window on drag stop near top-left corner', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 5,
+      top: 5,
+      right: 105,
+      bottom: 105,
+      width: 100,
+      height: 100,
+      x: 5,
+      y: 5,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+    act(() => {
+      ref.current!.handleStop();
+    });
+
+    expect(ref.current!.state.snapped).toBe('top-left');
+    expect(ref.current!.state.width).toBe(50);
+    expect(ref.current!.state.height).toBeCloseTo(48.1);
   });
 
   it('releases snap with Alt+ArrowDown restoring size', () => {
@@ -179,13 +220,13 @@ describe('Window snapping finalize and release', () => {
     const winEl = document.getElementById('test-window')!;
     winEl.getBoundingClientRect = () => ({
       left: 5,
-      top: 10,
+      top: 50,
       right: 105,
-      bottom: 110,
+      bottom: 150,
       width: 100,
       height: 100,
       x: 5,
-      y: 10,
+      y: 50,
       toJSON: () => {}
     });
 
@@ -199,7 +240,7 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true, preventDefault() {}, stopPropagation() {} } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
@@ -226,13 +267,13 @@ describe('Window snapping finalize and release', () => {
     const winEl = document.getElementById('test-window')!;
     winEl.getBoundingClientRect = () => ({
       left: 5,
-      top: 10,
+      top: 50,
       right: 105,
-      bottom: 110,
+      bottom: 150,
       width: 100,
       height: 100,
       x: 5,
-      y: 10,
+      y: 50,
       toJSON: () => {}
     });
 
@@ -252,6 +293,43 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBeNull();
     expect(ref.current!.state.width).toBe(60);
     expect(ref.current!.state.height).toBe(85);
+  });
+});
+
+describe('Window Super+Arrow snapping', () => {
+  it('snaps to corners using Super+Arrow keys', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    act(() => {
+      ref.current!.handleSuperArrow({ detail: 'ArrowLeft' } as any);
+    });
+    act(() => {
+      ref.current!.handleSuperArrow({ detail: 'ArrowUp' } as any);
+    });
+
+    expect(ref.current!.state.snapped).toBe('top-left');
+
+    act(() => {
+      ref.current!.handleSuperArrow({ detail: 'ArrowRight' } as any);
+    });
+    act(() => {
+      ref.current!.handleSuperArrow({ detail: 'ArrowDown' } as any);
+    });
+
+    expect(ref.current!.state.snapped).toBe('bottom-right');
   });
 });
 
