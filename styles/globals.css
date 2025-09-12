@@ -16,6 +16,7 @@
   --color-border: #2a2e36; /* subtle borders */
   --color-terminal: #00ff00; /* terminal green */
   --color-dark: #0c0f12; /* card back */
+  --win-border-boosted: 0;
   --color-focus-ring: var(--color-accent);
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
