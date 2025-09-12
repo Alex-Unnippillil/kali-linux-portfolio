@@ -9,7 +9,8 @@ export default function BackgroundImage() {
 
     useEffect(() => {
         const img = new Image();
-        img.src = `/wallpapers/${wallpaper}.webp`;
+        const src = wallpaper.startsWith('data:') ? wallpaper : `/wallpapers/${wallpaper}.webp`;
+        img.src = src;
         img.onload = () => {
             const canvas = document.createElement('canvas');
             canvas.width = img.width;
@@ -39,7 +40,7 @@ export default function BackgroundImage() {
     return (
         <div className="bg-ubuntu-img absolute -z-10 top-0 right-0 overflow-hidden h-full w-full">
             <img
-                src={`/wallpapers/${wallpaper}.webp`}
+                src={wallpaper.startsWith('data:') ? wallpaper : `/wallpapers/${wallpaper}.webp`}
                 alt=""
                 className="w-full h-full object-cover"
             />

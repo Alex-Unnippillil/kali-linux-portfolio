@@ -17,7 +17,7 @@ export default function LockScreen(props) {
             style={{ zIndex: "100", contentVisibility: 'auto' }}
             className={(props.isLocked ? " visible translate-y-0 " : " invisible -translate-y-full ") + " absolute outline-none bg-black bg-opacity-90 transform duration-500 select-none top-0 right-0 overflow-hidden m-0 p-0 h-screen w-screen"}>
             <img
-                src={`/wallpapers/${wallpaper}.webp`}
+                src={wallpaper.startsWith('data:') ? wallpaper : `/wallpapers/${wallpaper}.webp`}
                 alt=""
                 className={`absolute top-0 left-0 w-full h-full object-cover transform z-20 transition duration-500 ${props.isLocked ? 'blur-sm' : 'blur-none'}`}
             />
