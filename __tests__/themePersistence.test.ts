@@ -23,7 +23,9 @@ describe('theme persistence and unlocking', () => {
 
   test('themes unlock at score milestones', () => {
     const unlocked = getUnlockedThemes(600);
-    expect(unlocked).toEqual(expect.arrayContaining(['default', 'neon', 'dark']));
+    expect(unlocked).toEqual(
+      expect.arrayContaining(['default', 'undercover', 'neon', 'dark'])
+    );
     expect(unlocked).not.toContain('matrix');
   });
 
