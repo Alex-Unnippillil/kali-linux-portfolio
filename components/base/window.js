@@ -194,9 +194,20 @@ export class Window extends Component {
             this.unsnapWindow();
         }
         this.setState({ cursorType: "cursor-move", grabbed: true })
+
+        const root = document.getElementById(this.id);
+        if (root) {
+            root.setAttribute('data-dragging', 'true');
+            root.style.outline = `2px solid var(--win-accent)`;
+        }
     }
 
     changeCursorToDefault = () => {
+        const root = document.getElementById(this.id);
+        if (root) {
+            root.removeAttribute('data-dragging');
+            root.style.outline = '';
+        }
         this.setState({ cursorType: "cursor-default", grabbed: false })
     }
 
