@@ -675,6 +675,9 @@ export default Window
 
 // Window's title bar
 export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+    const showKaliDots =
+        typeof document !== "undefined" &&
+        document.documentElement.dataset.appearance === "kali";
     return (
         <div
             className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
@@ -684,6 +687,20 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
             onKeyDown={onKeyDown}
             onBlur={onBlur}
         >
+            {showKaliDots && (
+                <svg
+                    width="18"
+                    height="4"
+                    viewBox="0 0 18 4"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 kali-titlebar-dots"
+                    aria-hidden="true"
+                    focusable="false"
+                >
+                    <circle cx="2" cy="2" r="2" fill="currentColor" />
+                    <circle cx="9" cy="2" r="2" fill="currentColor" />
+                    <circle cx="16" cy="2" r="2" fill="currentColor" />
+                </svg>
+            )}
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>
     )
