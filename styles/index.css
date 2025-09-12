@@ -105,9 +105,21 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 }
 
 .window-shadow {
-    box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
-    -webkit-box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
-    -moz-box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
+    box-shadow: var(--win-shadow-2);
+    -webkit-box-shadow: var(--win-shadow-2);
+    -moz-box-shadow: var(--win-shadow-2);
+}
+
+.inactive-window {
+    box-shadow: var(--win-shadow-1);
+    -webkit-box-shadow: var(--win-shadow-1);
+    -moz-box-shadow: var(--win-shadow-1);
+}
+
+.modal-window {
+    box-shadow: var(--win-shadow-3);
+    -webkit-box-shadow: var(--win-shadow-3);
+    -moz-box-shadow: var(--win-shadow-3);
 }
 
 .closed-window {
