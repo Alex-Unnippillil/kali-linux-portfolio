@@ -56,6 +56,8 @@
   --font-multiplier: 1;
   /* Minimum interactive target size */
   --hit-area: 32px;
+  /* Default icon size */
+  --icon: 64px;
   /* Focus outline */
   --focus-outline-color: var(--color-ubt-blue);
   --focus-outline-width: 2px;

@@ -16,6 +16,19 @@ button, [role="button"], input[type="button"], input[type="submit"], input[type=
     min-height: var(--hit-area);
 }
 
+.icon {
+    width: var(--icon);
+    height: var(--icon);
+}
+
+.icon-sm {
+    --icon: calc(var(--icon) * 0.75);
+}
+
+.icon-lg {
+    --icon: calc(var(--icon) * 1.25);
+}
+
 a:focus-visible,
 button:focus-visible {
     outline: var(--focus-outline-width) solid var(--focus-outline-color) !important;
