@@ -6,6 +6,9 @@ import { getTheme, setTheme } from './theme';
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
   wallpaper: 'wall-2',
+  lockWallpaper: 'wall-2',
+  lockSameAsDesktop: true,
+  lockBlur: 5,
   density: 'regular',
   reducedMotion: false,
   fontScale: 1,
@@ -34,6 +37,38 @@ export async function getWallpaper() {
 export async function setWallpaper(wallpaper) {
   if (typeof window === 'undefined') return;
   await set('bg-image', wallpaper);
+}
+
+export async function getLockWallpaper() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.lockWallpaper;
+  return (await get('lock-bg-image')) || DEFAULT_SETTINGS.lockWallpaper;
+}
+
+export async function setLockWallpaper(wallpaper) {
+  if (typeof window === 'undefined') return;
+  await set('lock-bg-image', wallpaper);
+}
+
+export async function getLockSameAsDesktop() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.lockSameAsDesktop;
+  const stored = await get('lock-use-desktop');
+  return stored === undefined ? DEFAULT_SETTINGS.lockSameAsDesktop : stored;
+}
+
+export async function setLockSameAsDesktop(value) {
+  if (typeof window === 'undefined') return;
+  await set('lock-use-desktop', value);
+}
+
+export async function getLockBlur() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.lockBlur;
+  const stored = await get('lock-blur');
+  return typeof stored === 'number' ? stored : DEFAULT_SETTINGS.lockBlur;
+}
+
+export async function setLockBlur(value) {
+  if (typeof window === 'undefined') return;
+  await set('lock-blur', value);
 }
 
 export async function getDensity() {
@@ -128,6 +163,9 @@ export async function resetSettings() {
   await Promise.all([
     del('accent'),
     del('bg-image'),
+    del('lock-bg-image'),
+    del('lock-use-desktop'),
+    del('lock-blur'),
   ]);
   window.localStorage.removeItem('density');
   window.localStorage.removeItem('reduced-motion');
@@ -143,6 +181,9 @@ export async function exportSettings() {
   const [
     accent,
     wallpaper,
+    lockWallpaper,
+    lockSameAsDesktop,
+    lockBlur,
     density,
     reducedMotion,
     fontScale,
@@ -154,6 +195,9 @@ export async function exportSettings() {
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
+    getLockWallpaper(),
+    getLockSameAsDesktop(),
+    getLockBlur(),
     getDensity(),
     getReducedMotion(),
     getFontScale(),
@@ -167,6 +211,9 @@ export async function exportSettings() {
   return JSON.stringify({
     accent,
     wallpaper,
+    lockWallpaper,
+    lockSameAsDesktop,
+    lockBlur,
     density,
     reducedMotion,
     fontScale,
@@ -191,6 +238,9 @@ export async function importSettings(json) {
   const {
     accent,
     wallpaper,
+    lockWallpaper,
+    lockSameAsDesktop,
+    lockBlur,
     density,
     reducedMotion,
     fontScale,
@@ -203,6 +253,10 @@ export async function importSettings(json) {
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
+  if (lockWallpaper !== undefined) await setLockWallpaper(lockWallpaper);
+  if (lockSameAsDesktop !== undefined)
+    await setLockSameAsDesktop(lockSameAsDesktop);
+  if (lockBlur !== undefined) await setLockBlur(lockBlur);
   if (density !== undefined) await setDensity(density);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
   if (fontScale !== undefined) await setFontScale(fontScale);

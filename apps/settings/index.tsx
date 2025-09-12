@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
+import WallpaperManager from "./components/WallpaperManager";
 import {
   resetSettings,
   defaults,
@@ -169,6 +170,7 @@ export default function Settings() {
           <div className="flex justify-center my-4">
             <BackgroundSlideshow />
           </div>
+          <WallpaperManager />
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 justify-items-center border-t border-gray-900">
             {wallpapers.map((name) => (
               <div
