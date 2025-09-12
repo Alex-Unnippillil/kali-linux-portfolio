@@ -8,6 +8,7 @@ export interface Shortcut {
 const DEFAULT_SHORTCUTS: Shortcut[] = [
   { description: 'Show keyboard shortcuts', keys: '?' },
   { description: 'Open settings', keys: 'Ctrl+,' },
+  { description: 'Toggle Quake terminal', keys: '`' },
 ];
 
 const validator = (value: unknown): value is Record<string, string> => {
