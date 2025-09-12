@@ -20,7 +20,7 @@ export default function Tabs<T extends string>({
   className = "",
 }: TabsProps<T>) {
   return (
-    <div role="tablist" className={`flex ${className}`.trim()}>
+    <div role="tablist" className={`flex ${className}`.trim()} data-drag="true">
       {tabs.map((t) => (
         <button
           key={t.id}
@@ -31,6 +31,7 @@ export default function Tabs<T extends string>({
           className={`px-4 py-2 focus:outline-none ${
             active === t.id ? "bg-ub-orange text-white" : "text-ubt-grey"
           }`}
+          data-drag="false"
         >
           {t.label}
         </button>
