@@ -7,6 +7,7 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import appRegistry from '../../apps/app-registry';
 
 export class Window extends Component {
     constructor(props) {
@@ -205,11 +206,20 @@ export class Window extends Component {
         return Math.round(value / 8) * 8;
     }
 
+    getSizeConstraints = () => {
+        return appRegistry[this.props.id] || { minW: 20, minH: 20, maxW: 100, maxH: 100 };
+    }
+
     handleVerticleResize = () => {
         if (this.props.resizable === false) return;
         const px = (this.state.height / 100) * window.innerHeight + 1;
         const snapped = this.snapToGrid(px);
-        const heightPercent = snapped / window.innerHeight * 100;
+        const { minH, maxH } = this.getSizeConstraints();
+        let heightPercent = snapped / window.innerHeight * 100;
+        heightPercent = Math.max(heightPercent, minH);
+        if (typeof maxH === 'number') {
+            heightPercent = Math.min(heightPercent, maxH);
+        }
         this.setState({ height: heightPercent }, this.resizeBoundries);
     }
 
@@ -217,7 +227,12 @@ export class Window extends Component {
         if (this.props.resizable === false) return;
         const px = (this.state.width / 100) * window.innerWidth + 1;
         const snapped = this.snapToGrid(px);
-        const widthPercent = snapped / window.innerWidth * 100;
+        const { minW, maxW } = this.getSizeConstraints();
+        let widthPercent = snapped / window.innerWidth * 100;
+        widthPercent = Math.max(widthPercent, minW);
+        if (typeof maxW === 'number') {
+            widthPercent = Math.min(widthPercent, maxW);
+        }
         this.setState({ width: widthPercent }, this.resizeBoundries);
     }
 
@@ -525,41 +540,42 @@ export class Window extends Component {
             this.focusWindow();
         } else if (e.altKey) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('top');
             }
             this.focusWindow();
         } else if (e.shiftKey) {
             const step = 1;
+            const { minW, maxW, minH, maxH } = this.getSizeConstraints();
             if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
+                e.preventDefault?.();
+                e.stopPropagation?.();
+                this.setState(prev => ({ width: Math.max(prev.width - step, minW) }), this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
+                e.preventDefault?.();
+                e.stopPropagation?.();
+                this.setState(prev => ({ width: Math.min(prev.width + step, maxW) }), this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
+                e.preventDefault?.();
+                e.stopPropagation?.();
+                this.setState(prev => ({ height: Math.max(prev.height - step, minH) }), this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
+                e.preventDefault?.();
+                e.stopPropagation?.();
+                this.setState(prev => ({ height: Math.min(prev.height + step, maxH) }), this.resizeBoundries);
             }
             this.focusWindow();
         }
