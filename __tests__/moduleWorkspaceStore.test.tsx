@@ -24,4 +24,33 @@ describe('ModuleWorkspace key-value store', () => {
     expect(stored).toBeDefined();
     expect(stored).toContain('port-scan TARGET=host');
   });
+
+  it('persists window gap per workspace', () => {
+    render(<ModuleWorkspace />);
+
+    fireEvent.change(screen.getByPlaceholderText('New workspace'), {
+      target: { value: 'ws1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    fireEvent.change(screen.getByLabelText('Window gap'), {
+      target: { value: '10' },
+    });
+
+    fireEvent.change(screen.getByPlaceholderText('New workspace'), {
+      target: { value: 'ws2' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    fireEvent.change(screen.getByLabelText('Window gap'), {
+      target: { value: '20' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'ws1' }));
+
+    expect(screen.getByLabelText('Window gap')).toHaveValue('10');
+    expect(
+      document.documentElement.style.getPropertyValue('--win-gap'),
+    ).toBe('10px');
+  });
 });
