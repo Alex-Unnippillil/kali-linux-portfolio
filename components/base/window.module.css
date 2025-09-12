@@ -7,3 +7,7 @@
   height: calc(100% + 10px);
   width: calc(100% - 10px);
 }
+
+.windowControlButton:focus-visible {
+  outline: 2px solid var(--win-border-focus);
+}
