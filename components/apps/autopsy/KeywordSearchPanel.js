@@ -15,7 +15,11 @@ const typeIcons = {
   Document: '📄',
   Image: '🖼️',
   Log: '📜',
-  File: '📁',
+  File: (
+    <svg className="i">
+      <use href="#folder" />
+    </svg>
+  ),
   Registry: '🗃️',
 };
 
@@ -43,14 +47,15 @@ function KeywordSearchPanel({ keyword, setKeyword, artifacts, onSelect }) {
 
   return (
     <>
-      <div className="flex space-x-2">
-        <input
-          type="text"
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-          placeholder="Keyword search"
-          className="flex-grow bg-ub-grey text-white px-2 py-1 rounded"
-        />
+        <div className="flex space-x-2">
+          <input
+            type="text"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            placeholder="Keyword search"
+            aria-label="Keyword search"
+            className="flex-grow bg-ub-grey text-white px-2 py-1 rounded"
+          />
         <button
           onClick={exportHits}
           className="bg-ub-orange px-2 py-1 rounded text-sm text-black"
@@ -68,7 +73,11 @@ function KeywordSearchPanel({ keyword, setKeyword, artifacts, onSelect }) {
           >
             <div className="flex items-center font-bold">
               <span className="mr-1" aria-hidden="true">
-                {typeIcons[a.type] || '📁'}
+                {typeIcons[a.type] || (
+                  <svg className="i">
+                    <use href="#folder" />
+                  </svg>
+                )}
               </span>
               <span
                 dangerouslySetInnerHTML={{ __html: highlight(a.name) }}
