@@ -56,6 +56,8 @@
   --font-multiplier: 1;
   /* Minimum interactive target size */
   --hit-area: 32px;
+  /* Window resize handle thickness */
+  --win-grab-size: 8px;
   /* Focus outline */
   --focus-outline-color: var(--color-ubt-blue);
   --focus-outline-width: 2px;

@@ -6,7 +6,6 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
-import styles from './window.module.css';
 
 export class Window extends Component {
     constructor(props) {
@@ -41,6 +40,9 @@ export class Window extends Component {
 
     componentDidMount() {
         this.id = this.props.id;
+        this.trpImg = new window.Image(0, 0);
+        this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        this.trpImg.style.opacity = 0;
         this.setDefaultWindowDimenstion();
 
         // google analytics
@@ -642,8 +644,38 @@ export class Window extends Component {
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                        {this.props.resizable !== false && (
+                            <div className="pointer-events-none absolute inset-0 z-40">
+                                <div
+                                    className="absolute top-0 left-0 w-full pointer-events-auto cursor-[ns-resize]"
+                                    style={{ height: 'var(--win-grab-size)' }}
+                                    draggable
+                                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0); }}
+                                    onDrag={this.handleVerticleResize}
+                                />
+                                <div
+                                    className="absolute bottom-0 left-0 w-full pointer-events-auto cursor-[ns-resize]"
+                                    style={{ height: 'var(--win-grab-size)' }}
+                                    draggable
+                                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0); }}
+                                    onDrag={this.handleVerticleResize}
+                                />
+                                <div
+                                    className="absolute top-0 left-0 h-full pointer-events-auto cursor-[ew-resize]"
+                                    style={{ width: 'var(--win-grab-size)' }}
+                                    draggable
+                                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0); }}
+                                    onDrag={this.handleHorizontalResize}
+                                />
+                                <div
+                                    className="absolute top-0 right-0 h-full pointer-events-auto cursor-[ew-resize]"
+                                    style={{ width: 'var(--win-grab-size)' }}
+                                    draggable
+                                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0); }}
+                                    onDrag={this.handleHorizontalResize}
+                                />
+                            </div>
+                        )}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
@@ -688,46 +720,6 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
         </div>
     )
 }
-
-// Window's Borders
-export class WindowYBorder extends Component {
-    componentDidMount() {
-        // Use the browser's Image constructor rather than the imported Next.js
-        // Image component to avoid runtime errors when running in tests.
-
-        this.trpImg = new window.Image(0, 0);
-        this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        this.trpImg.style.opacity = 0;
-    }
-    render() {
-            return (
-                <div
-                    className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
-                    onDrag={this.props.resize}
-                ></div>
-            )
-        }
-    }
-
-export class WindowXBorder extends Component {
-    componentDidMount() {
-        // Use the global Image constructor instead of Next.js Image component
-
-        this.trpImg = new window.Image(0, 0);
-        this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        this.trpImg.style.opacity = 0;
-    }
-    render() {
-            return (
-                <div
-                    className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
-                    onDrag={this.props.resize}
-                ></div>
-            )
-        }
-    }
 
 // Window's Edit Buttons
 export function WindowEditButtons(props) {
