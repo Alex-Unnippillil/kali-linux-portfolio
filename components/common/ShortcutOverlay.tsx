@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import useKeymap from '../../apps/settings/keymapRegistry';
+import useFocusTrap from '../../hooks/useFocusTrap';
 
 const formatEvent = (e: KeyboardEvent) => {
   const parts = [
@@ -17,6 +18,9 @@ const formatEvent = (e: KeyboardEvent) => {
 const ShortcutOverlay: React.FC = () => {
   const [open, setOpen] = useState(false);
   const { shortcuts } = useKeymap();
+
+  const overlayRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(overlayRef, open);
 
   const toggle = useCallback(() => setOpen((o) => !o), []);
 
@@ -68,6 +72,7 @@ const ShortcutOverlay: React.FC = () => {
 
   return (
     <div
+      ref={overlayRef}
       className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 text-white p-4 overflow-auto"
       role="dialog"
       aria-modal="true"
