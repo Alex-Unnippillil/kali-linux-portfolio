@@ -8,6 +8,8 @@ import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
 
+const SIZE_KEY_PREFIX = 'app-size:';
+
 export class Window extends Component {
     constructor(props) {
         super(props);
@@ -41,7 +43,7 @@ export class Window extends Component {
 
     componentDidMount() {
         this.id = this.props.id;
-        this.setDefaultWindowDimenstion();
+        this.initWindowDimensions();
 
         // google analytics
         ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
@@ -58,6 +60,20 @@ export class Window extends Component {
         }
     }
 
+    componentDidUpdate(prevProps, prevState) {
+        if (
+            prevState.width !== this.state.width ||
+            prevState.height !== this.state.height
+        ) {
+            try {
+                window.localStorage.setItem(
+                    `${SIZE_KEY_PREFIX}${this.id}`,
+                    JSON.stringify({ w: this.state.width, h: this.state.height })
+                );
+            } catch { }
+        }
+    }
+
     componentWillUnmount() {
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
@@ -69,6 +85,33 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+    }
+
+    initWindowDimensions = () => {
+        const params = new URLSearchParams(window.location.search);
+        const wParam = params.get('w');
+        const hParam = params.get('h');
+        const w = wParam !== null && !isNaN(parseFloat(wParam)) ? parseFloat(wParam) : null;
+        const h = hParam !== null && !isNaN(parseFloat(hParam)) ? parseFloat(hParam) : null;
+        if (w !== null || h !== null) {
+            this.setState(
+                {
+                    width: w !== null ? w : this.state.width,
+                    height: h !== null ? h : this.state.height,
+                },
+                this.resizeBoundries
+            );
+            return;
+        }
+        try {
+            const raw = window.localStorage.getItem(`${SIZE_KEY_PREFIX}${this.id}`);
+            if (raw) {
+                const { w, h } = JSON.parse(raw);
+                this.setState({ width: w, height: h }, this.resizeBoundries);
+                return;
+            }
+        } catch { }
+        this.setDefaultWindowDimenstion();
     }
 
     setDefaultWindowDimenstion = () => {

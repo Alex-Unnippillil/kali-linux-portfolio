@@ -9,6 +9,16 @@ jest.mock('react-draggable', () => ({
 }));
 jest.mock('../components/apps/terminal', () => ({ displayTerminal: jest.fn() }));
 
+beforeEach(() => {
+  window.localStorage.clear();
+  window.history.replaceState(null, '', '');
+});
+
+afterEach(() => {
+  window.localStorage.clear();
+  window.history.replaceState(null, '', '');
+});
+
 describe('Window lifecycle', () => {
   it('invokes callbacks on close', () => {
     jest.useFakeTimers();
@@ -199,7 +209,12 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault: () => {},
+        stopPropagation: () => {},
+      } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
@@ -404,5 +419,79 @@ describe('Window overlay inert behaviour', () => {
 
     document.body.removeChild(root);
     document.body.removeChild(opener);
+  });
+});
+
+describe('Window size persistence', () => {
+  beforeEach(() => {
+    // handled by global beforeEach
+  });
+
+  it('stores size changes and restores on mount', () => {
+    const ref = React.createRef<Window>();
+    const { unmount } = render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    act(() => {
+      ref.current!.setState({ width: 70, height: 80 });
+    });
+
+    expect(window.localStorage.getItem('app-size:test-window')).toBe(
+      JSON.stringify({ w: 70, h: 80 })
+    );
+    unmount();
+
+    const ref2 = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref2}
+      />
+    );
+
+    expect(ref2.current!.state.width).toBe(70);
+    expect(ref2.current!.state.height).toBe(80);
+  });
+
+  it('route parameters override stored size', () => {
+    window.localStorage.setItem(
+      'app-size:test-window',
+      JSON.stringify({ w: 70, h: 80 })
+    );
+    window.history.replaceState(null, '', '?w=10&h=20');
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+    expect(ref.current!.state.width).toBe(10);
+    expect(ref.current!.state.height).toBe(20);
   });
 });

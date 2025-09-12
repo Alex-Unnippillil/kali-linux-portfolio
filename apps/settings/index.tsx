@@ -103,6 +103,13 @@ export default function Settings() {
     setTheme("default");
   };
 
+  const handleClearSizes = () => {
+    if (!window.confirm("Clear saved window sizes?")) return;
+    Object.keys(window.localStorage)
+      .filter((k) => k.startsWith('app-size:'))
+      .forEach((k) => window.localStorage.removeItem(k));
+  };
+
   const [showKeymap, setShowKeymap] = useState(false);
 
   return (
@@ -284,6 +291,12 @@ export default function Settings() {
               className="px-4 py-2 rounded bg-ub-orange text-white"
             >
               Import Settings
+            </button>
+            <button
+              onClick={handleClearSizes}
+              className="px-4 py-2 rounded bg-ub-orange text-white"
+            >
+              Clear Window Sizes
             </button>
           </div>
         </>
