@@ -273,6 +273,10 @@ export class Window extends Component {
             newWidth = 100.2;
             newHeight = 50;
             transform = 'translate(-1pt,-2pt)';
+        } else if (position === 'bottom') {
+            newWidth = 100.2;
+            newHeight = 50;
+            transform = `translate(-1pt,${window.innerHeight / 2}px)`;
         }
         const r = document.querySelector("#" + this.id);
         if (r && transform) {
@@ -314,26 +318,33 @@ export class Window extends Component {
     }
 
     checkSnapPreview = () => {
+        if (this.props.snapEnabled === false) return;
         var r = document.querySelector("#" + this.id);
         if (!r) return;
-        var rect = r.getBoundingClientRect();
+        const rect = r.getBoundingClientRect();
+        const snap = this.getSnapRegion(rect);
+        if (snap) {
+            this.setState({ snapPreview: snap.preview, snapPosition: snap.position });
+        } else if (this.state.snapPreview) {
+            this.setState({ snapPreview: null, snapPosition: null });
+        }
+    }
+
+    getSnapRegion = (rect) => {
         const threshold = 30;
-        let snap = null;
         if (rect.left <= threshold) {
-            snap = { left: '0', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'left' });
+            return { position: 'left', preview: { left: '0', top: '0', width: '50%', height: '100%' } };
         }
-        else if (rect.right >= window.innerWidth - threshold) {
-            snap = { left: '50%', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'right' });
+        if (rect.right >= window.innerWidth - threshold) {
+            return { position: 'right', preview: { left: '50%', top: '0', width: '50%', height: '100%' } };
         }
-        else if (rect.top <= threshold) {
-            snap = { left: '0', top: '0', width: '100%', height: '50%' };
-            this.setState({ snapPreview: snap, snapPosition: 'top' });
+        if (rect.top <= threshold) {
+            return { position: 'top', preview: { left: '0', top: '0', width: '100%', height: '50%' } };
         }
-        else {
-            if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
+        if (rect.bottom >= window.innerHeight - threshold) {
+            return { position: 'bottom', preview: { left: '0', top: '50%', width: '100%', height: '50%' } };
         }
+        return null;
     }
 
     applyEdgeResistance = (node, data) => {
@@ -367,7 +378,15 @@ export class Window extends Component {
 
     handleStop = () => {
         this.changeCursorToDefault();
-        const snapPos = this.state.snapPosition;
+        let snapPos = null;
+        if (this.props.snapEnabled !== false) {
+            const r = document.querySelector("#" + this.id);
+            if (r) {
+                const rect = r.getBoundingClientRect();
+                const snap = this.getSnapRegion(rect);
+                snapPos = snap ? snap.position : null;
+            }
+        }
         if (snapPos) {
             this.snapWindow(snapPos);
         } else {
