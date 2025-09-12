@@ -33,6 +33,7 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            borderless: props.borderless || false,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
@@ -55,6 +56,10 @@ export class Window extends Component {
         root?.addEventListener('super-arrow', this.handleSuperArrow);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
+        }
+
+        if (this.props.borderless) {
+            this.maximizeWindow();
         }
     }
 
@@ -423,7 +428,7 @@ export class Window extends Component {
 
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
-            this.setState({ maximized: false });
+            this.setState({ maximized: false, borderless: false });
             this.checkOverlap();
             return;
         }
@@ -431,7 +436,7 @@ export class Window extends Component {
         if (this._dockAnimation) {
             this._dockAnimation.onfinish = () => {
                 node.style.transform = endTransform;
-                this.setState({ maximized: false });
+                this.setState({ maximized: false, borderless: false });
                 this.checkOverlap();
                 this._dockAnimation.onfinish = null;
             };
@@ -443,7 +448,7 @@ export class Window extends Component {
             );
             this._dockAnimation.onfinish = () => {
                 node.style.transform = endTransform;
-                this.setState({ maximized: false });
+                this.setState({ maximized: false, borderless: false });
                 this.checkOverlap();
                 this._dockAnimation.onfinish = null;
             };
@@ -461,7 +466,7 @@ export class Window extends Component {
             this.setWinowsPosition();
             // translate window to maximize position
             r.style.transform = `translate(-1pt,-2pt)`;
-            this.setState({ maximized: true, height: 96.3, width: 100.2 });
+            this.setState({ maximized: true, height: 96.3, width: 100.2, borderless: this.props.borderless || false });
             this.props.hideSideBar(this.id, true);
         }
     }
@@ -520,25 +525,29 @@ export class Window extends Component {
 
     handleKeyDown = (e) => {
         if (e.key === 'Escape') {
-            this.closeWindow();
+            if (this.state.borderless && this.state.maximized) {
+                this.setState({ borderless: false }, this.restoreWindow);
+            } else {
+                this.closeWindow();
+            }
         } else if (e.key === 'Tab') {
             this.focusWindow();
         } else if (e.altKey) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('top');
             }
             this.focusWindow();
@@ -635,12 +644,25 @@ export class Window extends Component {
                 >
                     <div
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        className={
+                            this.state.cursorType +
+                            " " +
+                            (this.state.closed ? " closed-window " : "") +
+                            (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") +
+                            (this.props.minimized ? " opacity-0 invisible duration-200 " : "") +
+                            (this.state.grabbed ? " opacity-70 " : "") +
+                            (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") +
+                            (this.props.isFocused ? " z-30 " : " z-20 notFocused") +
+                            " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow " +
+                            (this.state.borderless ? "" : "border-black border-opacity-40 border border-t-0 ") +
+                            "flex flex-col"
+                        }
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
+                        data-borderless={this.state.borderless ? "true" : undefined}
                     >
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
