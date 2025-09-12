@@ -36,7 +36,7 @@ const AppsPage = () => {
         className="mb-4 w-full rounded border p-2"
       />
       <div
-        id="app-grid"
+        id="appList"
         tabIndex="-1"
         className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
       >
@@ -60,6 +60,9 @@ const AppsPage = () => {
             <span className="mt-2">{app.title}</span>
           </Link>
         ))}
+      </div>
+      <div id="menuStatus" aria-live="polite" className="sr-only">
+        {`${filteredApps.length} result${filteredApps.length === 1 ? '' : 's'} found`}
       </div>
     </div>
   );
