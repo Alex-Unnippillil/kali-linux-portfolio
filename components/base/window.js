@@ -519,6 +519,19 @@ export class Window extends Component {
     }
 
     handleKeyDown = (e) => {
+        if (this.state.snapPosition) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                this.handleStop();
+                return;
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                this.setState({ snapPreview: null, snapPosition: null });
+                return;
+            }
+        }
         if (e.key === 'Escape') {
             this.closeWindow();
         } else if (e.key === 'Tab') {
