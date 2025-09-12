@@ -11,6 +11,13 @@ body{
     color: var(--color-text);
 }
 
+[data-theme="kali"] {
+    --kali-menu: color-mix(in srgb, var(--color-bg), transparent 60%);
+    --kali-menu-hover: color-mix(in srgb, var(--color-bg), transparent 45%);
+    --kali-toast: color-mix(in srgb, var(--color-bg), transparent 60%);
+    --kali-toast-border: color-mix(in srgb, var(--color-bg), transparent 40%);
+}
+
 button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .hit-area {
     min-width: var(--hit-area);
     min-height: var(--hit-area);
@@ -367,7 +374,7 @@ dialog {
 /* Context Menu & Panels */
 .context-menu-bg,
 .windowMainScreen {
-    background-color: color-mix(in srgb, var(--color-bg), transparent 15%); /* Fallback for unsupported browsers */
+    background-color: var(--kali-menu, color-mix(in srgb, var(--color-bg), transparent 15%));
 }
 
 @supports ((-webkit-backdrop-filter: blur(0)) or (backdrop-filter: blur(0))) {
@@ -375,8 +382,12 @@ dialog {
     .windowMainScreen {
         -webkit-backdrop-filter: blur(10px);
         backdrop-filter: blur(10px);
-        background-color: color-mix(in srgb, var(--color-bg), transparent 60%);
+        background-color: var(--kali-menu, color-mix(in srgb, var(--color-bg), transparent 60%));
     }
+}
+
+.context-menu-item:hover {
+    background-color: var(--kali-menu-hover, #374151);
 }
 
 .emoji-list>li {
