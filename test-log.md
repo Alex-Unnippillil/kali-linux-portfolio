@@ -1,6 +1,8 @@
 # Test Log
 
-## pages/apps routes console error check
+
+<details class="terminal-section">
+<summary>pages/apps routes console error check</summary>
 
 Attempted to load each route under `/apps` in Chromium, Firefox, and WebKit. All requests returned HTTP 500 responses, so console errors could not be verified.
 
@@ -21,14 +23,22 @@ Attempted to load each route under `/apps` in Chromium, Firefox, and WebKit. All
 | /apps/weather_widget | HTTP 500 | HTTP 500 | HTTP 500 |
 | /apps/word_search | HTTP 500 | HTTP 500 | HTTP 500 |
 
-## Serverful and Static modes (2025-02-13)
+</details>
+
+<details class="terminal-section">
+<summary>Serverful and Static modes (2025-02-13)</summary>
 
 - `yarn build` failed: Module not found: Can't resolve '../../ui/FormError' in `components/apps/serial-terminal.tsx`.
 - `yarn export` now uses `output: 'export'` in `next.config.js` to generate a static build.
 - `yarn test` reported failing tests: `hashcat.test.tsx`, `beef.test.tsx`, `mimikatz.test.ts`.
 
-## bare-fs warning (2025-08-29)
+</details>
+
+<details class="terminal-section">
+<summary>bare-fs warning (2025-08-29)</summary>
 
 - `yarn why bare-fs` shows the module is required by `tar-fs@3.1.0` via `@puppeteer/browsers@2.10.7`.
 - Latest versions (`@puppeteer/browsers@2.10.8`, `tar-fs@3.1.0`) still depend on `bare-fs@4.2.1`, so the warning remains.
 - `puppeteer` and `puppeteer-core` require this chain; removing them would break existing tooling, so the warning is ignored.
+
+</details>
