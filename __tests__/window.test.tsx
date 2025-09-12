@@ -199,7 +199,12 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault: () => {},
+        stopPropagation: () => {}
+      } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
@@ -252,6 +257,47 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBeNull();
     expect(ref.current!.state.width).toBe(60);
     expect(ref.current!.state.height).toBe(85);
+  });
+});
+
+describe('Window triple snapping', () => {
+  it('snaps a third window right when others occupy left and center', () => {
+    const refLeft = React.createRef<Window>();
+    const refCenter = React.createRef<Window>();
+    const refRight = React.createRef<Window>();
+
+    const baseProps = {
+      title: 'Test',
+      screen: () => <div>content</div>,
+      focus: () => {},
+      hasMinimised: () => {},
+      closed: () => {},
+      hideSideBar: () => {},
+      openApp: () => {}
+    };
+
+    render(
+      <>
+        <Window id="w1" {...baseProps} ref={refLeft} />
+        <Window id="w2" {...baseProps} ref={refCenter} />
+        <Window id="w3" {...baseProps} ref={refRight} />
+      </>
+    );
+
+    act(() => {
+      refLeft.current!.snapWindow('left');
+    });
+
+    act(() => {
+      refCenter.current!.snapWindow('center');
+    });
+
+    act(() => {
+      refRight.current!.snapWindow('right');
+    });
+
+    expect(refRight.current!.state.snapped).toBe('right');
+    expect(refRight.current!.state.width).toBeCloseTo(100 / 3, 2);
   });
 });
 
