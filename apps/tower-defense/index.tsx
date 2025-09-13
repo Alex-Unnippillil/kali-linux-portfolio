@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import GameLayout from "../../components/apps/GameLayout";
 import DpsCharts from "../games/tower-defense/components/DpsCharts";
 import RangeUpgradeTree from "../games/tower-defense/components/RangeUpgradeTree";
+import useAlertModal from '../../hooks/useAlertModal';
 import {
   ENEMY_TYPES,
   Tower,
@@ -118,6 +119,7 @@ const TowerDefense = () => {
     (keyof typeof ENEMY_TYPES)[][]
   >([Array(5).fill("fast") as (keyof typeof ENEMY_TYPES)[]]);
   const [waveJson, setWaveJson] = useState("");
+  const { show, modal } = useAlertModal();
   useEffect(() => {
     setWaveJson(JSON.stringify(waveConfig, null, 2));
   }, [waveConfig]);
@@ -137,7 +139,7 @@ const TowerDefense = () => {
       const data = JSON.parse(waveJson) as (keyof typeof ENEMY_TYPES)[][];
       if (Array.isArray(data)) setWaveConfig(data);
     } catch {
-      alert("Invalid wave JSON");
+      show('Error', 'Invalid wave JSON', 'error');
     }
   };
   const exportWaves = () => {
@@ -469,6 +471,7 @@ const TowerDefense = () => {
             className="w-full bg-black text-white p-1 rounded h-24"
             value={waveJson}
             onChange={(e) => setWaveJson(e.target.value)}
+            aria-label="wave-configuration"
           />
           <div className="space-x-2">
             <button
@@ -494,6 +497,7 @@ const TowerDefense = () => {
             onClick={handleCanvasClick}
             onMouseMove={handleCanvasMove}
             onMouseLeave={handleCanvasLeave}
+            aria-label="tower-defense-grid"
           />
           {selected !== null && (
             <div className="ml-2 flex flex-col space-y-1 items-center">
@@ -514,6 +518,7 @@ const TowerDefense = () => {
           )}
         </div>
         {!editing && <DpsCharts towers={towers} />}
+        {modal}
       </div>
     </GameLayout>
   );

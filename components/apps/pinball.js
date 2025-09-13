@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import Matter from 'matter-js';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import usePersistentState from '../../hooks/usePersistentState';
+import useAlertModal from '../../hooks/useAlertModal';
 
 const WIDTH = 400;
 const HEIGHT = 500;
@@ -47,6 +48,7 @@ const Pinball = () => {
   const [layouts, setLayouts] = usePersistentState('pinball-layouts', DEFAULT_LAYOUTS);
   const layout = layouts[table] || DEFAULT_LAYOUT;
   const setLayout = (l) => setLayouts((prev) => ({ ...prev, [table]: l }));
+  const { show, modal } = useAlertModal();
   const [editing, setEditing] = useState(false);
   const [tilt, setTilt] = useState(false);
   const [lightsEnabled, setLightsEnabled] = useState(true);
@@ -413,7 +415,7 @@ const Pinball = () => {
     const json = JSON.stringify(layout);
     if (navigator.clipboard) {
       navigator.clipboard.writeText(json);
-      alert('Layout copied to clipboard');
+      show('Success', 'Layout copied to clipboard', 'success');
     }
   };
 
@@ -468,6 +470,7 @@ const Pinball = () => {
         className="bg-black"
         width={WIDTH}
         height={HEIGHT}
+        aria-label="pinball-table"
       />
       {tilt && (
         <div
@@ -482,6 +485,7 @@ const Pinball = () => {
       <div className="text-xs p-1">
         Press ArrowUp/N or gamepad RB to nudge. Three nudges in 3s causes tilt.
       </div>
+      {modal}
     </div>
   );
 };

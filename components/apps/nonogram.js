@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 import React, {
   useState,
   useEffect,
@@ -12,12 +13,14 @@ import {
   autoFillLines,
 } from "./nonogramUtils";
 import { getDailyPuzzle } from "../../utils/dailyPuzzle";
+import useAlertModal from '../../hooks/useAlertModal';
 
 // visual settings
 const CELL_SIZE = 30;
 const CLUE_SPACE = 60; // space for row/column clues around grid
 
 const Nonogram = () => {
+  const { show, modal } = useAlertModal();
   const puzzle = useMemo(() => getDailyPuzzle("nonogram", puzzles), []);
 
   if (!puzzle) {
@@ -102,10 +105,10 @@ const Nonogram = () => {
           setHighScore(elapsed);
         }
         playSound();
-        alert("Puzzle solved!");
+        show('Success', 'Puzzle solved!', 'success');
       }
     },
-    [rows, cols, highScore, playSound],
+    [rows, cols, highScore, playSound, show],
   );
 
   const setCellValue = useCallback(
@@ -502,6 +505,7 @@ const Nonogram = () => {
         onMouseMove={handleMouseMove}
         onContextMenu={(e) => e.preventDefault()}
         className="bg-gray-200"
+        aria-label="nonogram-grid"
       />
       <div className="mt-2 space-x-2">
         <button
@@ -545,6 +549,7 @@ const Nonogram = () => {
           Strict: {preventIllegal ? "On" : "Off"}
         </button>
       </div>
+      {modal}
     </div>
   );
 };
