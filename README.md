@@ -245,10 +245,10 @@ These external domains are whitelisted in the default CSP. Update this list when
 | `cdn.syndication.twimg.com` | Twitter asset CDN |
 | `*.twitter.com` | Additional Twitter content |
 | `*.x.com` | X (Twitter) domain equivalents |
-| `*.google.com` | Google services and Chrome app favicons |
-| `example.com` | Chrome app demo origin |
-| `developer.mozilla.org` | Chrome app demo origin |
-| `en.wikipedia.org` | Chrome app demo origin |
+| `*.google.com` | Google services and Firefox app favicons |
+| `example.com` | Firefox app demo origin |
+| `developer.mozilla.org` | Firefox app demo origin |
+| `en.wikipedia.org` | Firefox app demo origin |
 | `cdn.jsdelivr.net` | Math.js library |
 | `cdnjs.cloudflare.com` | PDF.js worker |
 | `stackblitz.com` | StackBlitz IDE embeds |
@@ -364,7 +364,7 @@ Browse all apps, games, and security tool demos at `/apps`, which presents a sea
 | App | Route | Category |
 | --- | --- | --- |
 | Alex | /apps/alex | Utility / Media |
-| Chrome | /apps/chrome | Utility / Media |
+| Firefox | /apps/firefox | Utility / Media |
 | VS Code | /apps/vscode | StackBlitz IDE embed |
 | Spotify | /apps/spotify | Utility / Media |
 | Youtube | /apps/youtube | Utility / Media |
@@ -500,7 +500,7 @@ play/pause and track controls include keyboard hotkeys.
 ## Known Constraints
 
 - **Static export** disables Next API routes; security/demo apps requiring `/api/*` will be stubbed client-side.
-- Some embeds (e.g., arbitrary external sites in the **Chrome** app) may refuse to render in iframes due to **X-Frame-Options** or CSP set by the target site.
+- Some embeds (e.g., arbitrary external sites in the **Firefox** app) may refuse to render in iframes due to **X-Frame-Options** or CSP set by the target site.
 
 ---
 
