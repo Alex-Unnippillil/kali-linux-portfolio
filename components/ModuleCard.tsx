@@ -41,7 +41,7 @@ export default function ModuleCard({
         <h3 className="font-bold">{highlight(module.name, query)}</h3>
         <p className="text-sm">{highlight(module.description, query)}</p>
       </div>
-      <div className="flex flex-col gap-2 items-center">
+      <div className="flex flex-col items-center gap-[var(--navbar-gap)]">
         <Image
           src="/themes/Yaru/status/about.svg"
           alt="Details"
