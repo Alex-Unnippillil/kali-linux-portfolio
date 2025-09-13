@@ -5,8 +5,8 @@ import Ubuntu from '../components/ubuntu';
 jest.mock('../components/screen/desktop', () => function DesktopMock() {
   return <div data-testid="desktop" />;
 });
-jest.mock('../components/screen/navbar', () => function NavbarMock() {
-  return <div data-testid="navbar" />;
+jest.mock('../components/kali/TopPanel', () => function TopPanelMock() {
+  return <div data-testid="top-panel" />;
 });
 jest.mock('../components/screen/lock_screen', () => function LockScreenMock() {
   return <div data-testid="lock-screen" />;
