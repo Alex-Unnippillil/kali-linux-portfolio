@@ -1,0 +1,9 @@
+/* Kali theme specific utilities */
+
+.kali-divider {
+  /* Create a diagonal cut from top-right to bottom-left */
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 2rem), 0% 100%);
+  /* Prevent clipped content from overflowing horizontally */
+  overflow-x: hidden;
+}
+
