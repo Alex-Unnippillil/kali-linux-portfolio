@@ -1,30 +1,30 @@
 [
   {
     "id": 1,
-    "title": "Alpha",
-    "description": "Example project Alpha",
-    "stack": ["JS"],
-    "tags": ["frontend", "react"],
-    "year": 2021,
-    "type": "web",
-    "thumbnail": "/demo/alpha.png",
-    "repo": "https://example.com/alpha",
-    "demo": "https://example.com/alpha-demo",
-    "snippet": "console.log('Alpha');",
-    "language": "javascript"
+    "title": "Text-Encryption-Decryption-AES-PKCS7",
+    "description": "Text file encryption/decryption using AES with PKCS7 padding in Python.",
+    "stack": ["Python"],
+    "tags": ["security", "encryption"],
+    "year": 2023,
+    "type": "tool",
+    "thumbnail": "/demo/encryption.png",
+    "repo": "https://github.com/Alex-Unnippillil/Text-Encryption-Decryption-AES-PKCS7",
+    "demo": "https://github.com/Alex-Unnippillil/Text-Encryption-Decryption-AES-PKCS7",
+    "snippet": "print('Encrypting with AES')",
+    "language": "python"
   },
   {
     "id": 2,
-    "title": "Beta",
-    "description": "Example project Beta",
-    "stack": ["TS"],
-    "tags": ["backend"],
-    "year": 2022,
-    "type": "app",
-    "thumbnail": "/demo/beta.png",
-    "repo": "https://example.com/beta",
-    "demo": "https://example.com/beta-demo",
-    "snippet": "console.log('Beta');",
-    "language": "typescript"
+    "title": "Password Generator",
+    "description": "Generates strong passwords with selectable character sets and strength meter.",
+    "stack": ["Python"],
+    "tags": ["security", "utility"],
+    "year": 2023,
+    "type": "tool",
+    "thumbnail": "/demo/password-generator.png",
+    "repo": "https://github.com/Alex-Unnippillil/PasswordGenerator.py",
+    "demo": "https://github.com/Alex-Unnippillil/PasswordGenerator.py",
+    "snippet": "print('Generated password')",
+    "language": "python"
   }
 ]
