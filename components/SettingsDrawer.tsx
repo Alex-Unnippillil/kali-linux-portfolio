@@ -6,6 +6,14 @@ interface Props {
   highScore?: number;
 }
 
+const THEME_LABELS: Record<string, string> = {
+  default: 'Default',
+  work: 'Work mode',
+  dark: 'Dark',
+  neon: 'Neon',
+  matrix: 'Matrix',
+};
+
 const SettingsDrawer = ({ highScore = 0 }: Props) => {
   const [open, setOpen] = useState(false);
   const unlocked = getUnlockedThemes(highScore);
@@ -27,7 +35,7 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
             >
               {unlocked.map((t) => (
                 <option key={t} value={t}>
-                  {t}
+                  {THEME_LABELS[t] ?? t}
                 </option>
               ))}
             </select>
