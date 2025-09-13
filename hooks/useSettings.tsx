@@ -20,6 +20,8 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getWatermark as loadWatermark,
+  setWatermark as saveWatermark,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -62,6 +64,7 @@ interface SettingsContextValue {
   pongSpin: boolean;
   allowNetwork: boolean;
   haptics: boolean;
+  watermark: boolean;
   theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
@@ -73,6 +76,7 @@ interface SettingsContextValue {
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
+  setWatermark: (value: boolean) => void;
   setTheme: (value: string) => void;
 }
 
@@ -87,6 +91,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
+  watermark: defaults.watermark,
   theme: 'default',
   setAccent: () => {},
   setWallpaper: () => {},
@@ -98,6 +103,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setPongSpin: () => {},
   setAllowNetwork: () => {},
   setHaptics: () => {},
+  setWatermark: () => {},
   setTheme: () => {},
 });
 
@@ -112,6 +118,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
+  const [watermark, setWatermark] = useState<boolean>(defaults.watermark);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
@@ -127,6 +134,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setWatermark(await loadWatermark());
       setTheme(loadTheme());
     })();
   }, []);
@@ -198,6 +206,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [highContrast]);
 
   useEffect(() => {
+    document.body.classList.toggle('watermark', watermark && !highContrast);
+    saveWatermark(watermark);
+  }, [watermark, highContrast]);
+
+  useEffect(() => {
     document.documentElement.classList.toggle('large-hit-area', largeHitAreas);
     saveLargeHitAreas(largeHitAreas);
   }, [largeHitAreas]);
@@ -249,6 +262,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         pongSpin,
         allowNetwork,
         haptics,
+        watermark,
         theme,
         setAccent,
         setWallpaper,
@@ -260,6 +274,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
+        setWatermark,
         setTheme,
       }}
     >
