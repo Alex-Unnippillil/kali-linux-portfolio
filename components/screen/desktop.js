@@ -22,12 +22,13 @@ import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
-import { useSnapSetting } from '../../hooks/usePersistentState';
+import { useSnapSetting, useTerminalEditorSplitSetting } from '../../hooks/usePersistentState';
 
 export class Desktop extends Component {
     constructor() {
         super();
         this.app_stack = [];
+        this.windowRefs = {};
         this.initFavourite = {};
         this.allWindowClosed = false;
         this.state = {
@@ -483,7 +484,11 @@ export class Desktop extends Component {
                 }
 
                 windowsJsx.push(
-                    <Window key={app.id} {...props} />
+                    <Window
+                        key={app.id}
+                        {...props}
+                        ref={(w) => { if (w) this.windowRefs[app.id] = w; }}
+                    />
                 )
             }
         });
@@ -650,9 +655,22 @@ export class Desktop extends Component {
                 this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
                     this.focus(objId);
                     this.saveSession();
+                    this.arrangeEditorTerminal();
                 });
                 this.app_stack.push(objId);
             }, 200);
+        }
+    }
+
+    arrangeEditorTerminal = () => {
+        if (!this.props.editorTerminalSplit) return;
+        const termOpen = this.state.closed_windows['terminal'] === false;
+        const editorOpen = this.state.closed_windows['vscode'] === false;
+        if (termOpen && editorOpen) {
+            const termWin = this.windowRefs['terminal'];
+            const editorWin = this.windowRefs['vscode'];
+            termWin?.snapWindow('left', 38);
+            editorWin?.snapWindow('right', 62);
         }
     }
 
@@ -838,8 +856,10 @@ export class Desktop extends Component {
         return (
             <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
                 <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
-                    <span>New folder name</span>
-                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
+                    <label htmlFor="folder-name-input" className="w-full flex flex-col">
+                        New folder name
+                        <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />{/* eslint-disable-line jsx-a11y/control-has-associated-label */}
+                    </label>
                 </div>
                 <div className="flex">
                     <button
@@ -974,5 +994,6 @@ export class Desktop extends Component {
 
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
-    return <Desktop {...props} snapEnabled={snapEnabled} />;
+    const [editorTerminalSplit] = useTerminalEditorSplitSetting();
+    return <Desktop {...props} snapEnabled={snapEnabled} editorTerminalSplit={editorTerminalSplit} />;
 }
