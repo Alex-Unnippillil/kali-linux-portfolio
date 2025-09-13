@@ -110,7 +110,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
             item.onSelect();
             setOpen(false);
           }}
-          className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+          className="w-full text-left cursor-default hover:bg-gray-700 mb-1.5 flex items-center whitespace-normal break-words"
+          style={{ minHeight: 'var(--menu-item-height)' }}
         >
           {item.label}
         </button>

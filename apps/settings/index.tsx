@@ -232,7 +232,7 @@ export default function Settings() {
               onChange={(e) => setDensity(e.target.value as any)}
               className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
             >
-              <option value="regular">Regular</option>
+              <option value="regular">Comfortable</option>
               <option value="compact">Compact</option>
             </select>
           </div>
