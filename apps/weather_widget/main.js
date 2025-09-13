@@ -72,14 +72,14 @@ function renderWeather(data) {
       if (data.icon) {
         iconEl.src = `https://openweathermap.org/img/wn/${data.icon}@2x.png`;
         iconEl.alt = data.condition;
-        iconEl.className = 'icon animated-icon';
+        iconEl.className = 'icon icon-lg animated-icon';
       }
       forecastEl.textContent = data.condition;
       if (data.forecast) {
         dailyEl.innerHTML = data.forecast
           .map(
             (d) =>
-              `<div class="day"><img class="forecast-icon animated-icon" src="https://openweathermap.org/img/wn/${d.icon}.png" alt="${d.condition}"><div>${d.day} ${Math.round(
+              `<div class="day"><img class="icon icon-sm animated-icon" src="https://openweathermap.org/img/wn/${d.icon}.png" alt="${d.condition}"><div>${d.day} ${Math.round(
                 convertTemp(d.tempC)
               )}°${unit === 'metric' ? 'C' : 'F'}</div></div>`
           )

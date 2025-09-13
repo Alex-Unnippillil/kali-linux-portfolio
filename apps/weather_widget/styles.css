@@ -55,8 +55,16 @@ body {
 }
 
 .icon {
-  width: 80px;
-  height: 80px;
+  width: var(--icon);
+  height: var(--icon);
+}
+
+.icon-sm {
+  --icon: calc(var(--icon) * 0.75);
+}
+
+.icon-lg {
+  --icon: calc(var(--icon) * 1.25);
 }
 
 .forecast {
