@@ -91,21 +91,54 @@ export class Window extends Component {
         }
     }
 
+    getViewportInsets = () => {
+        const style = getComputedStyle(document.documentElement);
+        const top = parseFloat(style.getPropertyValue('--sat')) || 0;
+        const right = parseFloat(style.getPropertyValue('--sar')) || 0;
+        const bottom = parseFloat(style.getPropertyValue('--sab')) || 0;
+        const left = parseFloat(style.getPropertyValue('--sal')) || 0;
+        const dock = document.querySelector('nav[aria-label="Dock"]');
+        let dockWidth = 0;
+        if (dock) {
+            const rect = dock.getBoundingClientRect();
+            if (rect.right > 0) {
+                dockWidth = rect.width;
+            }
+        }
+        return { top, right, bottom, left: left + dockWidth };
+    }
+
     resizeBoundries = () => {
+        const { top, right, bottom, left } = this.getViewportInsets();
+        const winH = window.innerHeight * (this.state.height / 100);
+        const winW = window.innerWidth * (this.state.width / 100);
         this.setState({
             parentSize: {
-                height: window.innerHeight //parent height
-                    - (window.innerHeight * (this.state.height / 100.0))  // this window's height
-                    - 28 // some padding
-                ,
-                width: window.innerWidth // parent width
-                    - (window.innerWidth * (this.state.width / 100.0)) //this window's width
+                height: window.innerHeight - winH - bottom - top,
+                width: window.innerWidth - winW - right - left,
             }
         }, () => {
             if (this._uiExperiments) {
                 this.scheduleUsageCheck();
             }
+            this.clampPosition();
         });
+    }
+
+    clampPosition = () => {
+        const node = document.getElementById(this.id);
+        if (!node) return;
+        const { top, right, bottom, left } = this.getViewportInsets();
+        const rect = node.getBoundingClientRect();
+        const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
+        let x = match ? parseFloat(match[1]) : rect.left;
+        let y = match ? parseFloat(match[2]) : rect.top;
+        const maxX = window.innerWidth - rect.width - right;
+        const maxY = window.innerHeight - rect.height - bottom;
+        x = Math.min(Math.max(x, left), maxX);
+        y = Math.min(Math.max(y, top), maxY);
+        node.style.transform = `translate(${x}px, ${y}px)`;
+        this.setWinowsPosition();
     }
 
     computeContentUsage = () => {
@@ -341,6 +374,7 @@ export class Window extends Component {
         const threshold = 30;
         const resistance = 0.35; // how much to slow near edges
         let { x, y } = data;
+        const { top, left } = this.getViewportInsets();
         const maxX = this.state.parentSize.width;
         const maxY = this.state.parentSize.height;
 
@@ -352,8 +386,8 @@ export class Window extends Component {
             return pos;
         }
 
-        x = resist(x, 0, maxX);
-        y = resist(y, 0, maxY);
+        x = resist(x, left, maxX);
+        y = resist(y, top, maxY);
         node.style.transform = `translate(${x}px, ${y}px)`;
     }
 
@@ -363,6 +397,7 @@ export class Window extends Component {
         }
         this.checkOverlap();
         this.checkSnapPreview();
+        this.clampPosition();
     }
 
     handleStop = () => {
@@ -373,6 +408,7 @@ export class Window extends Component {
         } else {
             this.setState({ snapPreview: null, snapPosition: null });
         }
+        this.clampPosition();
     }
 
     focusWindow = () => {
@@ -479,8 +515,7 @@ export class Window extends Component {
 
     handleTitleBarKeyDown = (e) => {
         if (e.key === ' ' || e.key === 'Space' || e.key === 'Enter') {
-            e.preventDefault();
-            e.stopPropagation();
+            this.safelyPrevent(e);
             if (this.state.grabbed) {
                 this.handleStop();
             } else {
@@ -494,8 +529,7 @@ export class Window extends Component {
             else if (e.key === 'ArrowUp') dy = -step;
             else if (e.key === 'ArrowDown') dy = step;
             if (dx !== 0 || dy !== 0) {
-                e.preventDefault();
-                e.stopPropagation();
+                this.safelyPrevent(e);
                 const node = document.getElementById(this.id);
                 if (node) {
                     const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
@@ -518,6 +552,11 @@ export class Window extends Component {
         }
     }
 
+    safelyPrevent = (e) => {
+        if (typeof e.preventDefault === 'function') e.preventDefault();
+        if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
+
     handleKeyDown = (e) => {
         if (e.key === 'Escape') {
             this.closeWindow();
@@ -525,40 +564,32 @@ export class Window extends Component {
             this.focusWindow();
         } else if (e.altKey) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.safelyPrevent(e);
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.safelyPrevent(e);
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.safelyPrevent(e);
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.safelyPrevent(e);
                 this.snapWindow('top');
             }
             this.focusWindow();
         } else if (e.shiftKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.safelyPrevent(e);
                 this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.safelyPrevent(e);
                 this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.safelyPrevent(e);
                 this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.safelyPrevent(e);
                 this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
             }
             this.focusWindow();
@@ -612,6 +643,7 @@ export class Window extends Component {
     }
 
     render() {
+        const insets = this.getViewportInsets();
         return (
             <>
                 {this.state.snapPreview && (
@@ -631,7 +663,7 @@ export class Window extends Component {
                     onDrag={this.handleDrag}
                     allowAnyClick={false}
                     defaultPosition={{ x: this.startX, y: this.startY }}
-                    bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
+                    bounds={{ left: insets.left, top: insets.top, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
                 >
                     <div
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
