@@ -1,0 +1,14 @@
+/* Purple theme design tokens */
+html[data-theme='purple'] {
+  --color-bg: #1b1039;
+  --color-text: #f5f5f5;
+  --color-primary: #805ad5;
+  --color-secondary: #120b26;
+  --color-accent: #805ad5;
+  --color-muted: #261b4d;
+  --color-surface: #1b1039;
+  --color-inverse: #ffffff;
+  --color-border: #433160;
+  --color-terminal: #00ff00;
+  --color-dark: #0d071a;
+}

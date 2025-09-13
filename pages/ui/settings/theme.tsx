@@ -1,8 +1,13 @@
-"use client";
-
-import { ChangeEvent } from 'react';
+import { useEffect, useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
-import { useSettings } from '../../../hooks/useSettings';
+import { useSettings, ACCENT_OPTIONS } from '../../../hooks/useSettings';
+import type { GetStaticProps } from 'next';
+import PanelProfilesDialog from '../../../src/components/panel/PanelProfilesDialog';
+import {
+  DEFAULT_PANEL_LAYOUT,
+  PANEL_LAYOUT_KEY,
+  PanelLayout,
+} from '../../../src/components/panel/types';
 
 /** Simple Adwaita-like toggle switch */
 function Toggle({
@@ -16,9 +21,10 @@ function Toggle({
     <button
       type="button"
       role="switch"
+      aria-label="Toggle setting"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
+      className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${
         checked ? 'bg-ubt-blue' : 'bg-ubt-grey'
       }`}
     >
@@ -31,16 +37,41 @@ function Toggle({
   );
 }
 
-export default function ThemeSettings() {
-  const { theme, setTheme } = useSettings();
+type ThemeSettingsProps = {
+  wallpapers: string[];
+};
+
+export default function ThemeSettings({ wallpapers }: ThemeSettingsProps) {
+  const {
+    theme,
+    setTheme,
+    highContrast,
+    setHighContrast,
+    accent,
+    setAccent,
+    wallpaper,
+    setWallpaper,
+  } = useSettings();
   const [panelSize, setPanelSize] = usePersistentState('app:panel-icons', 16);
   const [gridSize, setGridSize] = usePersistentState('app:grid-icons', 64);
+  const [panelLayout, setPanelLayout] = useState<PanelLayout>(
+    DEFAULT_PANEL_LAYOUT,
+  );
+  const [profilesOpen, setProfilesOpen] = useState(false);
 
-  const handleChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    setTheme(e.target.value);
-  };
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(PANEL_LAYOUT_KEY);
+      if (stored) {
+        setPanelLayout(JSON.parse(stored));
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   return (
+    <>
     <div className="flex h-full">
       <nav className="w-48 p-4 border-r border-ubt-cool-grey text-sm">
         <ul className="space-y-1.5">
@@ -54,16 +85,72 @@ export default function ThemeSettings() {
       </nav>
       <div className="flex-1 p-4 overflow-y-auto">
         <h1 className="text-xl mb-4">Theme</h1>
-        <select
-          value={theme}
-          onChange={handleChange}
-          className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
-        >
-          <option value="default">Default</option>
-          <option value="dark">Dark</option>
-          <option value="neon">Neon</option>
-          <option value="matrix">Matrix</option>
-        </select>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {['default', 'kali-dark', 'kali-light', 'undercover', 'dark', 'neon', 'matrix'].map(
+            (t) => (
+              <button
+                key={t}
+                onClick={() => setTheme(t)}
+                className={`p-4 rounded border text-left capitalize ${
+                  theme === t ? 'border-ubt-blue' : 'border-ubt-cool-grey'
+                }`}
+              >
+                {t.replace('-', ' ')}
+              </button>
+            ),
+          )}
+        </div>
+
+        <div className="mt-4 flex items-center gap-2">
+          <input
+            id="theme-high-contrast"
+            type="checkbox"
+            aria-label="High Contrast"
+            checked={highContrast}
+            onChange={(e) => setHighContrast(e.target.checked)}
+          />
+          <label htmlFor="theme-high-contrast">High Contrast</label>
+        </div>
+
+        <div className="mt-6">
+          <h2 className="text-lg mb-2">Accent Color</h2>
+          <div role="radiogroup" className="flex gap-2">
+            {ACCENT_OPTIONS.map((c) => (
+              <button
+                key={c}
+                role="radio"
+                aria-label={`Accent color ${c}`}
+                aria-checked={accent === c}
+                onClick={() => setAccent(c)}
+                className={`w-6 h-6 rounded-full border-2 ${
+                  accent === c ? 'border-white' : 'border-transparent'
+                }`}
+                style={{ backgroundColor: c }}
+              />
+              ))}
+            </div>
+          </div>
+
+        <div className="mt-6">
+          <h2 className="text-lg mb-2">Wallpapers</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {wallpapers.map((src) => {
+              const base = src.replace(/^\/wallpapers\//, '').replace(/\.[^.]+$/, '');
+              return (
+                <button
+                  key={src}
+                  aria-label={`Select wallpaper ${base}`}
+                  onClick={() => setWallpaper(base)}
+                  className={`relative border-2 ${
+                    wallpaper === base ? 'border-ubt-blue' : 'border-transparent'
+                  }`}
+                >
+                  <img src={src} alt="" className="w-full h-24 object-cover" />
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         <div className="mt-6">
           <h2 className="text-lg mb-2">Panel Icons</h2>
@@ -91,28 +178,61 @@ export default function ThemeSettings() {
           </div>
         </div>
 
-        <div className="mt-6">
-          <h2 className="text-lg mb-2">Grid Icons</h2>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="w-6 h-6 bg-ubt-grey rounded"></span>
-            <Toggle
-              checked={gridSize === 96}
-              onChange={(val) => setGridSize(val ? 96 : 64)}
-            />
-            <span className="w-6 h-6 bg-ubt-grey rounded"></span>
+          <div className="mt-6">
+            <h2 className="text-lg mb-2">Grid Icons</h2>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-6 h-6 bg-ubt-grey rounded"></span>
+              <Toggle
+                checked={gridSize === 96}
+                onChange={(val) => setGridSize(val ? 96 : 64)}
+              />
+              <span className="w-6 h-6 bg-ubt-grey rounded"></span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 p-2 bg-ub-cool-grey rounded">
+              {[1, 2, 3, 4].map((n) => (
+                <div
+                  key={n}
+                  className="bg-ubt-grey rounded"
+                  style={{ width: gridSize, height: gridSize }}
+                ></div>
+              ))}
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-2 p-2 bg-ub-cool-grey rounded">
-            {[1, 2, 3, 4].map((n) => (
-              <div
-                key={n}
-                className="bg-ubt-grey rounded"
-                style={{ width: gridSize, height: gridSize }}
-              ></div>
-            ))}
+
+          <div className="mt-6">
+            <h2 className="text-lg mb-2">Panel Profiles</h2>
+            <button
+              type="button"
+              onClick={() => setProfilesOpen(true)}
+              className="px-3 py-1 bg-ubt-blue text-white rounded"
+            >
+              Manage Profiles
+            </button>
           </div>
         </div>
       </div>
-    </div>
+
+      <PanelProfilesDialog
+        isOpen={profilesOpen}
+        onClose={() => setProfilesOpen(false)}
+        layout={panelLayout}
+        onLayoutChange={setPanelLayout}
+        defaultLayout={DEFAULT_PANEL_LAYOUT}
+      />
+    </>
   );
 }
+
+export const getStaticProps: GetStaticProps<ThemeSettingsProps> = async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+  let wallpapers: string[] = [];
+  try {
+    const dir = path.join(process.cwd(), 'public/wallpapers');
+    wallpapers = (await fs.readdir(dir)).map((f) => `/wallpapers/${f}`);
+  } catch {
+    // ignore
+  }
+  return { props: { wallpapers } };
+};
 
