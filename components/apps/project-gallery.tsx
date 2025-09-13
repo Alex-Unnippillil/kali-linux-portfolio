@@ -26,6 +26,17 @@ const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
 const STORAGE_KEY = 'project-gallery-filters';
 const STORAGE_FILE = 'project-gallery-filters.json';
 
+const ProjectCardSkeleton: React.FC = () => (
+  <div className="mb-4 break-inside-avoid rounded bg-gray-800 shadow overflow-hidden">
+    <div className="h-48 w-full skeleton" />
+    <div className="p-4 space-y-2">
+      <div className="skeleton h-6 w-3/4" />
+      <div className="skeleton h-4 w-full" />
+      <div className="skeleton h-4 w-1/2" />
+    </div>
+  </div>
+);
+
 const ProjectGallery: React.FC<Props> = ({ openApp }) => {
   const projects: Project[] = projectsData as Project[];
   const [search, setSearch] = useState('');
@@ -35,6 +46,7 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
   const [tags, setTags] = useState<string[]>([]);
   const [ariaMessage, setAriaMessage] = useState('');
   const [selected, setSelected] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const readFilters = async () => {
     try {
@@ -90,6 +102,8 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
       setTags(data.tags || []);
       setAriaMessage(`Showing ${projects.length} projects`);
     });
+    const id = setTimeout(() => setLoading(false), 300);
+    return () => clearTimeout(id);
   }, [projects.length]);
 
   const stacks = useMemo(
@@ -230,7 +244,7 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
           <table className="w-full text-sm text-left" role="table">
             <thead>
               <tr>
-                <th />
+                  <th aria-hidden="true" />
                 {selected.map((p) => (
                   <th key={p.id}>{p.title}</th>
                 ))}
@@ -254,99 +268,103 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
         </div>
       )}
       <div className="columns-1 sm:columns-2 md:columns-3 gap-4">
-        {filtered.map((project) => (
-          <div
-            key={project.id}
-            className="mb-4 break-inside-avoid bg-gray-800 rounded shadow overflow-hidden"
-          >
-            <div className="flex flex-col md:flex-row h-48">
-              <img
-                src={project.thumbnail}
-                alt={project.title}
-                className="w-full md:w-1/2 h-48 object-cover"
-                loading="lazy"
-              />
-              <div className="w-full md:w-1/2 h-48">
-                <Editor
-                  height="100%"
-                  theme="vs-dark"
-                  language={project.language}
-                  value={project.snippet}
-                  options={{ readOnly: true, minimap: { enabled: false } }}
-                />
-              </div>
-            </div>
-            <div className="p-4 space-y-2">
-              <h3 className="text-lg font-semibold">{project.title}</h3>
-              <p className="text-sm">{project.description}</p>
-              <button
-                onClick={() => toggleSelect(project)}
-                aria-label={`Select ${project.title} for comparison`}
-                className="bg-gray-700 text-xs px-2 py-1 rounded-full"
+        {loading
+          ? Array.from({ length: 3 }).map((_, i) => (
+              <ProjectCardSkeleton key={i} />
+            ))
+          : filtered.map((project) => (
+              <div
+                key={project.id}
+                className="mb-4 break-inside-avoid bg-gray-800 rounded shadow overflow-hidden"
               >
-                {selected.some((p) => p.id === project.id)
-                  ? 'Deselect'
-                  : 'Compare'}
-              </button>
-              <div className="flex flex-wrap gap-1">
-                {project.stack.map((s) => (
+                <div className="flex flex-col md:flex-row h-48">
+                  <img
+                    src={project.thumbnail}
+                    alt={project.title}
+                    className="w-full md:w-1/2 h-48 object-cover"
+                    loading="lazy"
+                  />
+                  <div className="w-full md:w-1/2 h-48">
+                    <Editor
+                      height="100%"
+                      theme="vs-dark"
+                      language={project.language}
+                      value={project.snippet}
+                      options={{ readOnly: true, minimap: { enabled: false } }}
+                    />
+                  </div>
+                </div>
+                <div className="p-4 space-y-2">
+                  <h3 className="text-lg font-semibold">{project.title}</h3>
+                  <p className="text-sm">{project.description}</p>
                   <button
-                    key={s}
-                    onClick={() => setStack(s)}
+                    onClick={() => toggleSelect(project)}
+                    aria-label={`Select ${project.title} for comparison`}
                     className="bg-gray-700 text-xs px-2 py-1 rounded-full"
                   >
-                    {s}
+                    {selected.some((p) => p.id === project.id)
+                      ? 'Deselect'
+                      : 'Compare'}
                   </button>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {project.tags.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() =>
-                      setTags((prev) =>
-                        prev.includes(t)
-                          ? prev.filter((tag) => tag !== t)
-                          : [...prev, t]
-                      )
-                    }
-                    className="bg-gray-700 text-xs px-2 py-1 rounded-full"
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-3 text-sm pt-2">
-                <a
-                  href={project.repo}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-400 hover:underline"
-                >
-                  Repo
-                </a>
-                {project.demo && (
-                  <>
+                  <div className="flex flex-wrap gap-1">
+                    {project.stack.map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setStack(s)}
+                        className="bg-gray-700 text-xs px-2 py-1 rounded-full"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {project.tags.map((t) => (
+                      <button
+                        key={t}
+                        onClick={() =>
+                          setTags((prev) =>
+                            prev.includes(t)
+                              ? prev.filter((tag) => tag !== t)
+                              : [...prev, t]
+                          )
+                        }
+                        className="bg-gray-700 text-xs px-2 py-1 rounded-full"
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-3 text-sm pt-2">
                     <a
-                      href={project.demo}
+                      href={project.repo}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-400 hover:underline"
                     >
-                      Live Demo
+                      Repo
                     </a>
-                    <button
-                      onClick={() => openInChrome(project.demo)}
-                      className="text-blue-400 hover:underline"
-                    >
-                      Open in Chrome
-                    </button>
-                  </>
-                )}
+                    {project.demo && (
+                      <>
+                        <a
+                          href={project.demo}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:underline"
+                        >
+                          Live Demo
+                        </a>
+                        <button
+                          onClick={() => openInChrome(project.demo)}
+                          className="text-blue-400 hover:underline"
+                        >
+                          Open in Chrome
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        ))}
+            ))}
       </div>
       <div aria-live="polite" className="sr-only">
         {ariaMessage}
