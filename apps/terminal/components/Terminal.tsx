@@ -1,6 +1,7 @@
 'use client';
 
 import React, { forwardRef } from 'react';
+import { kaliTheme } from '../../../styles/themes/kali';
 
 export type TerminalContainerProps = React.HTMLAttributes<HTMLDivElement>;
 
@@ -9,9 +10,10 @@ const Terminal = forwardRef<HTMLDivElement, TerminalContainerProps>(
     <div
       ref={ref}
       data-testid="xterm-container"
-      className={`text-white ${className}`}
+      className={className}
       style={{
-        background: 'var(--kali-bg)',
+        backgroundColor: kaliTheme.background,
+        color: kaliTheme.text,
         fontFamily: 'monospace',
         fontSize: 'clamp(1rem, 0.6vw + 1rem, 1.1rem)',
         lineHeight: 1.4,

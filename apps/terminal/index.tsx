@@ -132,8 +132,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   }, []);
 
   const writeLine = useCallback(
-    (text: string) => {
-      if (termRef.current) termRef.current.writeln(text);
+    (text: string, color?: string) => {
+      if (termRef.current) {
+        const colored = color ? `\x1b[${color}m${text}\x1b[0m` : text;
+        termRef.current.writeln(colored);
+      }
       contentRef.current += `${text}\n`;
       if (opfsSupported && dirRef.current) {
         writeFile('history.txt', contentRef.current, dirRef.current);
@@ -143,10 +146,10 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     [opfsSupported, updateOverflow, writeFile],
   );
 
-  contextRef.current.writeLine = writeLine;
+  contextRef.current.writeLine = (text: string) => writeLine(text);
 
   const prompt = useCallback(() => {
-    if (termRef.current) termRef.current.write('$ ');
+    if (termRef.current) termRef.current.write('\x1b[36m$ \x1b[0m');
   }, []);
 
   const handleCopy = () => {
@@ -214,7 +217,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           writeLine('Usage: open <app>');
         } else {
           openApp?.(arg.trim());
-          writeLine(`Opening ${arg}`);
+          writeLine(`Opening ${arg}`, '32');
         }
       },
       date: () => writeLine(new Date().toString()),
@@ -304,6 +307,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         scrollback: 1000,
         cols: 80,
         rows: 24,
+        theme: {
+          background: '#000000',
+          foreground: '#ffffff',
+          cyan: '#00ffff',
+          brightCyan: '#00ffff',
+          green: '#00ff00',
+          brightGreen: '#00ff00',
+        },
       });
       const fit = new FitAddon();
       const search = new SearchAddon();
@@ -330,8 +341,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
             : `${existing}\n`;
         }
       }
-      writeLine('Welcome to the web terminal!');
-      writeLine('Type "help" to see available commands.');
+      writeLine('Welcome to the web terminal!', '32');
+      writeLine('Type "help" to see available commands.', '32');
       prompt();
       term.onData((d: string) => handleInput(d));
       term.onKey(({ domEvent }: any) => {
