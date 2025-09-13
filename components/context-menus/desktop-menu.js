@@ -21,6 +21,23 @@ function DesktopMenu(props) {
         props.openApp("settings");
     }
 
+    const saveLayout = () => {
+        const name = prompt('Save workspace as:');
+        if (name) props.saveWorkspace(name);
+    }
+
+    const loadLayout = () => {
+        let names = [];
+        try {
+            const store = JSON.parse(localStorage.getItem('workspace-snapshots') || '{}');
+            names = Object.keys(store);
+        } catch (e) {
+            names = [];
+        }
+        const name = prompt('Load workspace:', names.join(', '));
+        if (name) props.loadWorkspace(name);
+    }
+
     const checkFullScreen = () => {
         if (document.fullscreenElement) {
             setIsFullScreen(true)
@@ -117,6 +134,25 @@ function DesktopMenu(props) {
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
             >
                 <span className="ml-5">{isFullScreen ? "Exit" : "Enter"} Full Screen</span>
+            </button>
+            <Devider />
+            <button
+                onClick={saveLayout}
+                type="button"
+                role="menuitem"
+                aria-label="Save Workspace"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
+                <span className="ml-5">Save Workspace...</span>
+            </button>
+            <button
+                onClick={loadLayout}
+                type="button"
+                role="menuitem"
+                aria-label="Load Workspace"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
+                <span className="ml-5">Load Workspace...</span>
             </button>
             <Devider />
             <button

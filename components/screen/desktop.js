@@ -499,6 +499,45 @@ export class Desktop extends Component {
         }), this.saveSession);
     }
 
+    saveWorkspaceLayout = (name) => {
+        if (!name) return;
+        const nodes = document.querySelectorAll('.opened-window');
+        const snapshot = Array.from(nodes).map(node => {
+            const rect = node.getBoundingClientRect();
+            return { id: node.id, x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+        });
+        let store = {};
+        try {
+            store = JSON.parse(safeLocalStorage?.getItem('workspace-snapshots') || '{}');
+        } catch (e) {
+            store = {};
+        }
+        store[name] = snapshot;
+        safeLocalStorage?.setItem('workspace-snapshots', JSON.stringify(store));
+    }
+
+    loadWorkspaceLayout = (name) => {
+        if (!name) return;
+        let store = {};
+        try {
+            store = JSON.parse(safeLocalStorage?.getItem('workspace-snapshots') || '{}');
+        } catch (e) {
+            store = {};
+        }
+        const snapshot = store[name];
+        if (!snapshot) return;
+        requestAnimationFrame(() => {
+            snapshot.forEach(({ id, x, y, width, height }) => {
+                const node = document.getElementById(id);
+                if (!node) return;
+                node.style.width = `${width}px`;
+                node.style.height = `${height}px`;
+                node.style.transform = `translate(${x}px, ${y}px)`;
+                this.updateWindowPosition(id, x, y);
+            });
+        });
+    }
+
     saveSession = () => {
         if (!this.props.setSession) return;
         const openWindows = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
@@ -912,6 +951,8 @@ export class Desktop extends Component {
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                    saveWorkspace={this.saveWorkspaceLayout}
+                    loadWorkspace={this.loadWorkspaceLayout}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
                 <AppMenu
