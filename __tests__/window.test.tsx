@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Window from '../components/base/window';
+import { addReservedRegion, removeReservedRegion } from '../utils/reservedRegions';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('react-draggable', () => ({
@@ -39,6 +40,53 @@ describe('Window lifecycle', () => {
 
     expect(closed).toHaveBeenCalledWith('test-window');
     jest.useRealTimers();
+  });
+});
+
+describe('Reserved region clamping', () => {
+  it('moves window away when region overlaps', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+        initialX={0}
+        initialY={0}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 0,
+      top: 0,
+      right: 100,
+      bottom: 100,
+      width: 100,
+      height: 100,
+      x: 0,
+      y: 0,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      addReservedRegion('pop', { left: 0, top: 0, right: 80, bottom: 80 });
+    });
+
+    expect(winEl.style.transform).toBe('translate(80px, 0px)');
+
+    act(() => {
+      removeReservedRegion('pop');
+      ref.current!.handleDrag({}, { node: winEl, x: 0, y: 0 } as any);
+    });
+
+    expect(winEl.style.transform).toBe('translate(0px, 0px)');
   });
 });
 
@@ -199,7 +247,7 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true, preventDefault: () => {}, stopPropagation: () => {} } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
