@@ -24,6 +24,27 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
+function bspLayout(ids, area) {
+    if (!ids.length) return [];
+    if (ids.length === 1) {
+        return [{ id: ids[0], ...area }];
+    }
+    const vertical = area.width >= area.height;
+    const half = Math.ceil(ids.length / 2);
+    const first = ids.slice(0, half);
+    const second = ids.slice(half);
+    if (vertical) {
+        const w1 = area.width * (first.length / ids.length);
+        const area1 = { x: area.x, y: area.y, width: w1, height: area.height };
+        const area2 = { x: area.x + w1, y: area.y, width: area.width - w1, height: area.height };
+        return [...bspLayout(first, area1), ...bspLayout(second, area2)];
+    } else {
+        const h1 = area.height * (first.length / ids.length);
+        const area1 = { x: area.x, y: area.y, width: area.width, height: h1 };
+        const area2 = { x: area.x, y: area.y + h1, width: area.width, height: area.height - h1 };
+        return [...bspLayout(first, area1), ...bspLayout(second, area2)];
+    }
+}
 export class Desktop extends Component {
     constructor() {
         super();
@@ -52,6 +73,8 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            tiled: false,
+            savedLayout: {},
         }
     }
 
@@ -209,6 +232,48 @@ export class Desktop extends Component {
         let index = windows.indexOf(currentId);
         let next = (index + direction + windows.length) % windows.length;
         this.focus(windows[next]);
+    }
+
+    toggleTileWindows = () => {
+        if (this.state.tiled) {
+            Object.entries(this.state.savedLayout).forEach(([id, layout]) => {
+                const el = document.getElementById(id);
+                if (el && layout) {
+                    el.style.transform = layout.transform;
+                    el.style.width = layout.width;
+                    el.style.height = layout.height;
+                }
+            });
+            this.setState({ tiled: false, savedLayout: {} });
+            return;
+        }
+        const ids = apps
+            .filter(app => this.state.closed_windows[app.id] === false && !this.state.minimized_windows[app.id])
+            .map(app => app.id);
+        const root = document.getElementById('desktop');
+        if (!root || !ids.length) return;
+        const rect = root.getBoundingClientRect();
+        const prev = {};
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                prev[id] = {
+                    transform: el.style.transform,
+                    width: el.style.width,
+                    height: el.style.height,
+                };
+            }
+        });
+        const layouts = bspLayout(ids, { x: 0, y: 0, width: rect.width, height: rect.height });
+        layouts.forEach(l => {
+            const el = document.getElementById(l.id);
+            if (el) {
+                el.style.transform = `translate(${l.x}px, ${l.y}px)`;
+                el.style.width = `${l.width}px`;
+                el.style.height = `${l.height}px`;
+            }
+        });
+        this.setState({ tiled: true, savedLayout: prev });
     }
 
     openWindowSwitcher = () => {
@@ -911,6 +976,7 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
+                    toggleTileWindows={this.toggleTileWindows}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
