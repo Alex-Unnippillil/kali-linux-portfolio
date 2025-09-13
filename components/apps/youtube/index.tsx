@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import rafThrottle from '../../../utils/rafThrottle';
 import useWatchLater, {
   Video as WatchLaterVideo,
 } from '../../../apps/youtube/state/watchLater';
@@ -182,7 +183,7 @@ function VirtualGrid({
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const update = () => {
+    const run = () => {
       const width = el.clientWidth;
       const newCols = Math.max(1, Math.floor(width / 216));
       const height = el.clientHeight;
@@ -192,12 +193,14 @@ function VirtualGrid({
       setCols(newCols);
       setRange([startRow * newCols, (startRow + visibleRows) * newCols]);
     };
+    const update = rafThrottle(run);
     update();
     el.addEventListener('scroll', update);
     window.addEventListener('resize', update);
     return () => {
       el.removeEventListener('scroll', update);
       window.removeEventListener('resize', update);
+      update.cancel();
     };
   }, [items.length]);
 
@@ -272,9 +275,14 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const [solidHeader, setSolidHeader] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setSolidHeader(window.scrollY > 0);
+    const onScroll = rafThrottle(() => {
+      setSolidHeader(window.scrollY > 0);
+    });
     window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      onScroll.cancel();
+    };
   }, []);
 
   const downloadCurrent = useCallback(async () => {
