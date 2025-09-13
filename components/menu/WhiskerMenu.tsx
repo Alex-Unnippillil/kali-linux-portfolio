@@ -27,6 +27,7 @@ const WhiskerMenu: React.FC = () => {
   const [highlight, setHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
@@ -78,9 +79,12 @@ const WhiskerMenu: React.FC = () => {
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Meta' && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+      if (e.ctrlKey && e.key === ' ' && !e.altKey && !e.metaKey && !e.shiftKey) {
         e.preventDefault();
         setOpen(o => !o);
+        if (!open) {
+          setTimeout(() => inputRef.current?.focus(), 0);
+        }
         return;
       }
       if (!open) return;
@@ -96,6 +100,12 @@ const WhiskerMenu: React.FC = () => {
         e.preventDefault();
         const app = currentApps[highlight];
         if (app) openSelectedApp(app.id);
+      } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        setQuery(q => q + e.key);
+        inputRef.current?.focus();
+      } else if (e.key === 'Backspace') {
+        setQuery(q => q.slice(0, -1));
+        inputRef.current?.focus();
       }
     };
     window.addEventListener('keydown', handleKey);
@@ -118,23 +128,27 @@ const WhiskerMenu: React.FC = () => {
     <div className="relative">
       <button
         ref={buttonRef}
+        id="dragon-start"
         type="button"
-        onClick={() => setOpen(o => !o)}
-        className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        onClick={() => {
+          setOpen(o => !o);
+          if (!open) {
+            setTimeout(() => inputRef.current?.focus(), 0);
+          }
+        }}
+        className="p-1 rounded focus:outline-none focus:ring-2 focus:ring-cyan-400"
       >
         <Image
-          src="/themes/Yaru/status/decompiler-symbolic.svg"
-          alt="Menu"
-          width={16}
-          height={16}
-          className="inline mr-1"
+          src="/themes/Yaru/status/icons8-kali-linux.svg"
+          alt="Start menu"
+          width={20}
+          height={20}
         />
-        Applications
       </button>
       {open && (
         <div
           ref={menuRef}
-          className="absolute left-0 mt-1 z-50 flex bg-ub-grey text-white shadow-lg"
+          className="absolute left-0 mt-1 z-50 flex bg-ub-drk-abrgn text-white shadow-lg"
           tabIndex={-1}
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
@@ -142,11 +156,11 @@ const WhiskerMenu: React.FC = () => {
             }
           }}
         >
-          <div className="flex flex-col bg-gray-800 p-2">
+          <div className="flex flex-col bg-ub-med-abrgn p-2 space-y-1">
             {CATEGORIES.map(cat => (
               <button
                 key={cat.id}
-                className={`text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
+                className={`text-left px-3 py-1 rounded focus:outline-none focus:ring-2 focus:ring-cyan-400 ${category === cat.id ? 'bg-ub-lite-abrgn' : 'hover:bg-ub-lite-abrgn'}`}
                 onClick={() => setCategory(cat.id)}
               >
                 {cat.label}
@@ -155,7 +169,8 @@ const WhiskerMenu: React.FC = () => {
           </div>
           <div className="p-3">
             <input
-              className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
+              ref={inputRef}
+              className="mb-3 w-64 px-3 py-1 rounded-full bg-ub-med-abrgn text-white placeholder-ubt-grey focus:outline-none focus:ring-2 focus:ring-cyan-400"
               placeholder="Search"
               value={query}
               onChange={e => setQuery(e.target.value)}
@@ -163,7 +178,7 @@ const WhiskerMenu: React.FC = () => {
             />
             <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
               {currentApps.map((app, idx) => (
-                <div key={app.id} className={idx === highlight ? 'ring-2 ring-ubb-orange' : ''}>
+                <div key={app.id} className={idx === highlight ? 'ring-2 ring-cyan-400 rounded' : ''}>
                   <UbuntuApp
                     id={app.id}
                     icon={app.icon}
