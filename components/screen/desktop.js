@@ -1,28 +1,13 @@
-"use client";
-
 import React, { Component } from 'react';
-import dynamic from 'next/dynamic';
-
-const BackgroundImage = dynamic(
-    () => import('../util-components/background-image'),
-    { ssr: false }
-);
+import BackgroundImage from '../util-components/background-image';
 import SideBar from './side_bar';
 import apps, { games } from '../../apps.config';
 import Window from '../base/window';
 import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
-import ShortcutSelector from '../screen/shortcut-selector'
-import WindowSwitcher from '../screen/window-switcher'
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
-import AppMenu from '../context-menus/app-menu';
-import Taskbar from './taskbar';
-import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
-import { toPng } from 'html-to-image';
-import { safeLocalStorage } from '../../utils/safeStorage';
-import { useSnapSetting } from '../../hooks/usePersistentState';
 
 export class Desktop extends Component {
     constructor() {
@@ -39,19 +24,12 @@ export class Desktop extends Component {
             favourite_apps: {},
             hideSideBar: false,
             minimized_windows: {},
-            window_positions: {},
             desktop_apps: [],
             context_menus: {
                 desktop: false,
                 default: false,
-                app: false,
-                taskbar: false,
             },
-            context_app: null,
             showNameBar: false,
-            showShortcutSelector: false,
-            showWindowSwitcher: false,
-            switcherWindows: [],
         }
     }
 
@@ -59,58 +37,28 @@ export class Desktop extends Component {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
-        this.fetchAppsData(() => {
-            const session = this.props.session || {};
-            const positions = {};
-            if (session.dock && session.dock.length) {
-                let favourite_apps = { ...this.state.favourite_apps };
-                session.dock.forEach(id => {
-                    favourite_apps[id] = true;
-                });
-                this.setState({ favourite_apps });
-            }
-
-            if (session.windows && session.windows.length) {
-                session.windows.forEach(({ id, x, y }) => {
-                    positions[id] = { x, y };
-                });
-                this.setState({ window_positions: positions }, () => {
-                    session.windows.forEach(({ id }) => this.openApp(id));
-                });
-            } else {
-                this.openApp('about-alex');
-            }
-        });
+        this.fetchAppsData();
         this.setContextListeners();
         this.setEventListeners();
         this.checkForNewFolders();
-        this.checkForAppShortcuts();
-        this.updateTrashIcon();
-        window.addEventListener('trash-change', this.updateTrashIcon);
-        document.addEventListener('keydown', this.handleGlobalShortcut);
-        window.addEventListener('open-app', this.handleOpenAppEvent);
     }
 
     componentWillUnmount() {
         this.removeContextListeners();
-        document.removeEventListener('keydown', this.handleGlobalShortcut);
-        window.removeEventListener('trash-change', this.updateTrashIcon);
-        window.removeEventListener('open-app', this.handleOpenAppEvent);
     }
 
     checkForNewFolders = () => {
-        const stored = safeLocalStorage?.getItem('new_folders');
-        if (!stored) {
-            safeLocalStorage?.setItem('new_folders', JSON.stringify([]));
-            return;
+        var new_folders = localStorage.getItem('new_folders');
+        if (new_folders === null && new_folders !== undefined) {
+            localStorage.setItem("new_folders", JSON.stringify([]));
         }
-        try {
-            const new_folders = JSON.parse(stored);
+        else {
+            new_folders = JSON.parse(new_folders);
             new_folders.forEach(folder => {
                 apps.push({
                     id: `new-folder-${folder.id}`,
                     title: folder.name,
-                    icon: '/themes/Yaru/system/folder.png',
+                    icon: './themes/Yaru/system/folder.png',
                     disabled: true,
                     favourite: false,
                     desktop_shortcut: true,
@@ -118,8 +66,6 @@ export class Desktop extends Component {
                 });
             });
             this.updateAppsData();
-        } catch (e) {
-            safeLocalStorage?.setItem('new_folders', JSON.stringify([]));
         }
     }
 
@@ -136,108 +82,17 @@ export class Desktop extends Component {
         document.addEventListener('contextmenu', this.checkContextMenu);
         // on click, anywhere, hide all menus
         document.addEventListener('click', this.hideAllContextMenu);
-        // allow keyboard activation of context menus
-        document.addEventListener('keydown', this.handleContextKey);
     }
 
     removeContextListeners = () => {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
-        document.removeEventListener('keydown', this.handleContextKey);
-    }
-
-    handleGlobalShortcut = (e) => {
-        if (e.altKey && e.key === 'Tab') {
-            e.preventDefault();
-            if (!this.state.showWindowSwitcher) {
-                this.openWindowSwitcher();
-            }
-        } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
-            e.preventDefault();
-            this.openApp('clipboard-manager');
-        }
-        else if (e.altKey && e.key === 'Tab') {
-            e.preventDefault();
-            this.cycleApps(e.shiftKey ? -1 : 1);
-        }
-        else if (e.altKey && (e.key === '`' || e.key === '~')) {
-            e.preventDefault();
-            this.cycleAppWindows(e.shiftKey ? -1 : 1);
-        }
-        else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-            e.preventDefault();
-            const id = this.getFocusedWindowId();
-            if (id) {
-                const event = new CustomEvent('super-arrow', { detail: e.key });
-                document.getElementById(id)?.dispatchEvent(event);
-            }
-        }
-    }
-
-    getFocusedWindowId = () => {
-        for (const key in this.state.focused_windows) {
-            if (this.state.focused_windows[key]) {
-                return key;
-            }
-        }
-        return null;
-    }
-
-    cycleApps = (direction) => {
-        if (!this.app_stack.length) return;
-        const currentId = this.getFocusedWindowId();
-        let index = this.app_stack.indexOf(currentId);
-        if (index === -1) index = 0;
-        let next = (index + direction + this.app_stack.length) % this.app_stack.length;
-        // Skip minimized windows
-        for (let i = 0; i < this.app_stack.length; i++) {
-            const id = this.app_stack[next];
-            if (!this.state.minimized_windows[id]) {
-                this.focus(id);
-                break;
-            }
-            next = (next + direction + this.app_stack.length) % this.app_stack.length;
-        }
-    }
-
-    cycleAppWindows = (direction) => {
-        const currentId = this.getFocusedWindowId();
-        if (!currentId) return;
-        const base = currentId.split('#')[0];
-        const windows = this.app_stack.filter(id => id.startsWith(base));
-        if (windows.length <= 1) return;
-        let index = windows.indexOf(currentId);
-        let next = (index + direction + windows.length) % windows.length;
-        this.focus(windows[next]);
-    }
-
-    openWindowSwitcher = () => {
-        const windows = this.app_stack
-            .filter(id => this.state.closed_windows[id] === false)
-            .map(id => apps.find(a => a.id === id))
-            .filter(Boolean);
-        if (windows.length) {
-            this.setState({ showWindowSwitcher: true, switcherWindows: windows });
-        }
-    }
-
-    closeWindowSwitcher = () => {
-        this.setState({ showWindowSwitcher: false, switcherWindows: [] });
-    }
-
-    selectWindow = (id) => {
-        this.setState({ showWindowSwitcher: false, switcherWindows: [] }, () => {
-            this.openApp(id);
-        });
     }
 
     checkContextMenu = (e) => {
         e.preventDefault();
         this.hideAllContextMenu();
-        const target = e.target.closest('[data-context]');
-        const context = target ? target.dataset.context : null;
-        const appId = target ? target.dataset.appId : null;
-        switch (context) {
+        switch (e.target.dataset.context) {
             case "desktop-area":
                 ReactGA.event({
                     category: `Context Menu`,
@@ -245,54 +100,12 @@ export class Desktop extends Component {
                 });
                 this.showContextMenu(e, "desktop");
                 break;
-            case "app":
-                ReactGA.event({
-                    category: `Context Menu`,
-                    action: `Opened App Context Menu`
-                });
-                this.setState({ context_app: appId }, () => this.showContextMenu(e, "app"));
-                break;
-            case "taskbar":
-                ReactGA.event({
-                    category: `Context Menu`,
-                    action: `Opened Taskbar Context Menu`
-                });
-                this.setState({ context_app: appId }, () => this.showContextMenu(e, "taskbar"));
-                break;
             default:
                 ReactGA.event({
                     category: `Context Menu`,
                     action: `Opened Default Context Menu`
                 });
                 this.showContextMenu(e, "default");
-        }
-    }
-
-    handleContextKey = (e) => {
-        if (!(e.shiftKey && e.key === 'F10')) return;
-        e.preventDefault();
-        this.hideAllContextMenu();
-        const target = e.target.closest('[data-context]');
-        const context = target ? target.dataset.context : null;
-        const appId = target ? target.dataset.appId : null;
-        const rect = target ? target.getBoundingClientRect() : { left: 0, top: 0, height: 0 };
-        const fakeEvent = { pageX: rect.left, pageY: rect.top + rect.height };
-        switch (context) {
-            case "desktop-area":
-                ReactGA.event({ category: `Context Menu`, action: `Opened Desktop Context Menu` });
-                this.showContextMenu(fakeEvent, "desktop");
-                break;
-            case "app":
-                ReactGA.event({ category: `Context Menu`, action: `Opened App Context Menu` });
-                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "app"));
-                break;
-            case "taskbar":
-                ReactGA.event({ category: `Context Menu`, action: `Opened Taskbar Context Menu` });
-                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "taskbar"));
-                break;
-            default:
-                ReactGA.event({ category: `Context Menu`, action: `Opened Default Context Menu` });
-                this.showContextMenu(fakeEvent, "default");
         }
     }
 
@@ -315,11 +128,11 @@ export class Desktop extends Component {
     }
 
     hideAllContextMenu = () => {
-        const menus = { ...this.state.context_menus };
+        let menus = this.state.context_menus;
         Object.keys(menus).forEach(key => {
             menus[key] = false;
         });
-        this.setState({ context_menus: menus, context_app: null });
+        this.setState({ context_menus: menus });
     }
 
     getMenuPosition = (e) => {
@@ -342,15 +155,7 @@ export class Desktop extends Component {
         }
     }
 
-    fetchAppsData = (callback) => {
-        let pinnedApps = safeLocalStorage?.getItem('pinnedApps');
-        if (pinnedApps) {
-            pinnedApps = JSON.parse(pinnedApps);
-            apps.forEach(app => { app.favourite = pinnedApps.includes(app.id); });
-        } else {
-            pinnedApps = apps.filter(app => app.favourite).map(app => app.id);
-            safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps));
-        }
+    fetchAppsData = () => {
         let focused_windows = {}, closed_windows = {}, disabled_apps = {}, favourite_apps = {}, overlapped_windows = {}, minimized_windows = {};
         let desktop_apps = [];
         apps.forEach((app) => {
@@ -388,8 +193,6 @@ export class Desktop extends Component {
             overlapped_windows,
             minimized_windows,
             desktop_apps
-        }, () => {
-            if (typeof callback === 'function') callback();
         });
         this.initFavourite = { ...favourite_apps };
     }
@@ -441,13 +244,11 @@ export class Desktop extends Component {
                     name: app.title,
                     id: app.id,
                     icon: app.icon,
-                    openApp: this.openApp,
-                    disabled: this.state.disabled_apps[app.id],
-                    prefetch: app.screen?.prefetch,
+                    openApp: this.openApp
                 }
 
                 appsJsx.push(
-                    <UbuntuApp key={app.id} {...props} />
+                    <UbuntuApp key={index} {...props} />
                 );
             }
         });
@@ -459,7 +260,6 @@ export class Desktop extends Component {
         apps.forEach((app, index) => {
             if (this.state.closed_windows[app.id] === false) {
 
-                const pos = this.state.window_positions[app.id];
                 const props = {
                     title: app.title,
                     id: app.id,
@@ -472,43 +272,20 @@ export class Desktop extends Component {
                     hideSideBar: this.hideSideBar,
                     hasMinimised: this.hasMinimised,
                     minimized: this.state.minimized_windows[app.id],
+                    changeBackgroundImage: this.props.changeBackgroundImage,
+                    bg_image_name: this.props.bg_image_name,
                     resizable: app.resizable,
                     allowMaximize: app.allowMaximize,
                     defaultWidth: app.defaultWidth,
                     defaultHeight: app.defaultHeight,
-                    initialX: pos ? pos.x : undefined,
-                    initialY: pos ? pos.y : undefined,
-                    onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
-                    snapEnabled: this.props.snapEnabled,
                 }
 
                 windowsJsx.push(
-                    <Window key={app.id} {...props} />
+                    <Window key={index} {...props} />
                 )
             }
         });
         return windowsJsx;
-    }
-
-    updateWindowPosition = (id, x, y) => {
-        const snap = this.props.snapEnabled
-            ? (v) => Math.round(v / 8) * 8
-            : (v) => v;
-        this.setState(prev => ({
-            window_positions: { ...prev.window_positions, [id]: { x: snap(x), y: snap(y) } }
-        }), this.saveSession);
-    }
-
-    saveSession = () => {
-        if (!this.props.setSession) return;
-        const openWindows = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
-        const windows = openWindows.map(id => ({
-            id,
-            x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
-            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10
-        }));
-        const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
-        this.props.setSession({ ...this.props.session, windows, dock });
     }
 
     hideSideBar = (objId, hide) => {
@@ -576,13 +353,6 @@ export class Desktop extends Component {
         return result;
     }
 
-    handleOpenAppEvent = (e) => {
-        const id = e.detail;
-        if (id) {
-            this.openApp(id);
-        }
-    }
-
     openApp = (objId) => {
 
         // google analytics
@@ -594,26 +364,27 @@ export class Desktop extends Component {
         // if the app is disabled
         if (this.state.disabled_apps[objId]) return;
 
-        // if app is already open, focus it instead of spawning a new window
-        if (this.state.closed_windows[objId] === false) {
-            // if it's minimised, restore its last position
-            if (this.state.minimized_windows[objId]) {
-                this.focus(objId);
-                var r = document.querySelector("#" + objId);
-                r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
-                let minimized_windows = this.state.minimized_windows;
-                minimized_windows[objId] = false;
-                this.setState({ minimized_windows: minimized_windows }, this.saveSession);
-            } else {
-                this.focus(objId);
-                this.saveSession();
-            }
+        if (this.state.minimized_windows[objId]) {
+            // focus this app's window
+            this.focus(objId);
+
+            // set window's last position
+            var r = document.querySelector("#" + objId);
+            r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
+
+            // tell childs that his app has been not minimised
+            let minimized_windows = this.state.minimized_windows;
+            minimized_windows[objId] = false;
+            this.setState({ minimized_windows: minimized_windows });
             return;
-        } else {
+        }
+
+        //if app is already opened
+        if (this.app_stack.includes(objId)) this.focus(objId);
+        else {
             let closed_windows = this.state.closed_windows;
             let favourite_apps = this.state.favourite_apps;
-            let frequentApps = [];
-            try { frequentApps = JSON.parse(safeLocalStorage?.getItem('frequentApps') || '[]'); } catch (e) { frequentApps = []; }
+            var frequentApps = localStorage.getItem('frequentApps') ? JSON.parse(localStorage.getItem('frequentApps')) : [];
             var currentApp = frequentApps.find(app => app.id === objId);
             if (currentApp) {
                 frequentApps.forEach((app) => {
@@ -635,57 +406,18 @@ export class Desktop extends Component {
                 return 0; // sort according to decreasing frequencies
             });
 
-            safeLocalStorage?.setItem('frequentApps', JSON.stringify(frequentApps));
-
-            let recentApps = [];
-            try { recentApps = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]'); } catch (e) { recentApps = []; }
-            recentApps = recentApps.filter(id => id !== objId);
-            recentApps.unshift(objId);
-            recentApps = recentApps.slice(0, 10);
-            safeLocalStorage?.setItem('recentApps', JSON.stringify(recentApps));
+            localStorage.setItem("frequentApps", JSON.stringify(frequentApps));
 
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
-                this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
-                    this.focus(objId);
-                    this.saveSession();
-                });
+                this.setState({ closed_windows, favourite_apps, allAppsView: false }, this.focus(objId));
                 this.app_stack.push(objId);
             }, 200);
         }
     }
 
-    closeApp = async (objId) => {
-
-        // capture window snapshot
-        let image = null;
-        const node = document.getElementById(objId);
-        if (node) {
-            try {
-                image = await toPng(node);
-            } catch (e) {
-                // ignore snapshot errors
-            }
-        }
-
-        // persist in trash with autopurge
-        const appMeta = apps.find(a => a.id === objId) || {};
-        const purgeDays = parseInt(safeLocalStorage?.getItem('trash-purge-days') || '30', 10);
-        const ms = purgeDays * 24 * 60 * 60 * 1000;
-        const now = Date.now();
-        let trash = [];
-        try { trash = JSON.parse(safeLocalStorage?.getItem('window-trash') || '[]'); } catch (e) { trash = []; }
-        trash = trash.filter(item => now - item.closedAt <= ms);
-        trash.push({
-            id: objId,
-            title: appMeta.title || objId,
-            icon: appMeta.icon,
-            image,
-            closedAt: now,
-        });
-        safeLocalStorage?.setItem('window-trash', JSON.stringify(trash));
-        this.updateTrashIcon();
+    closeApp = (objId) => {
 
         // remove app from the app stack
         this.app_stack.splice(this.app_stack.indexOf(objId), 1);
@@ -701,35 +433,7 @@ export class Desktop extends Component {
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
-        this.setState({ closed_windows, favourite_apps }, this.saveSession);
-    }
-
-    pinApp = (id) => {
-        let favourite_apps = { ...this.state.favourite_apps }
-        favourite_apps[id] = true
-        this.initFavourite[id] = true
-        const app = apps.find(a => a.id === id)
-        if (app) app.favourite = true
-        let pinnedApps = [];
-        try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
-        if (!pinnedApps.includes(id)) pinnedApps.push(id)
-        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
-        this.setState({ favourite_apps }, () => { this.saveSession(); })
-        this.hideAllContextMenu()
-    }
-
-    unpinApp = (id) => {
-        let favourite_apps = { ...this.state.favourite_apps }
-        if (this.state.closed_windows[id]) favourite_apps[id] = false
-        this.initFavourite[id] = false
-        const app = apps.find(a => a.id === id)
-        if (app) app.favourite = false
-        let pinnedApps = [];
-        try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
-        pinnedApps = pinnedApps.filter(appId => appId !== id)
-        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
-        this.setState({ favourite_apps }, () => { this.saveSession(); })
-        this.hideAllContextMenu()
+        this.setState({ closed_windows, favourite_apps });
     }
 
     focus = (objId) => {
@@ -751,74 +455,22 @@ export class Desktop extends Component {
         this.setState({ showNameBar: true });
     }
 
-    openShortcutSelector = () => {
-        this.setState({ showShortcutSelector: true });
-    }
-
-    addShortcutToDesktop = (app_id) => {
-        const appIndex = apps.findIndex(app => app.id === app_id);
-        if (appIndex === -1) return;
-        apps[appIndex].desktop_shortcut = true;
-        let shortcuts = [];
-        try { shortcuts = JSON.parse(safeLocalStorage?.getItem('app_shortcuts') || '[]'); } catch (e) { shortcuts = []; }
-        if (!shortcuts.includes(app_id)) {
-            shortcuts.push(app_id);
-            safeLocalStorage?.setItem('app_shortcuts', JSON.stringify(shortcuts));
-        }
-        this.setState({ showShortcutSelector: false }, this.updateAppsData);
-    }
-
-    checkForAppShortcuts = () => {
-        const shortcuts = safeLocalStorage?.getItem('app_shortcuts');
-        if (!shortcuts) {
-            safeLocalStorage?.setItem('app_shortcuts', JSON.stringify([]));
-        } else {
-            try {
-                JSON.parse(shortcuts).forEach(id => {
-                    const appIndex = apps.findIndex(app => app.id === id);
-                    if (appIndex !== -1) {
-                        apps[appIndex].desktop_shortcut = true;
-                    }
-                });
-            } catch (e) {
-                safeLocalStorage?.setItem('app_shortcuts', JSON.stringify([]));
-            }
-            this.updateAppsData();
-        }
-    }
-
-    updateTrashIcon = () => {
-        let trash = [];
-        try { trash = JSON.parse(safeLocalStorage?.getItem('window-trash') || '[]'); } catch (e) { trash = []; }
-        const appIndex = apps.findIndex(app => app.id === 'trash');
-        if (appIndex !== -1) {
-            const icon = trash.length
-                ? '/themes/Yaru/status/user-trash-full-symbolic.svg'
-                : '/themes/Yaru/status/user-trash-symbolic.svg';
-            if (apps[appIndex].icon !== icon) {
-                apps[appIndex].icon = icon;
-                this.forceUpdate();
-            }
-        }
-    }
-
     addToDesktop = (folder_name) => {
         folder_name = folder_name.trim();
         let folder_id = folder_name.replace(/\s+/g, '-').toLowerCase();
         apps.push({
             id: `new-folder-${folder_id}`,
             title: folder_name,
-            icon: '/themes/Yaru/system/folder.png',
+            icon: './themes/Yaru/system/folder.png',
             disabled: true,
             favourite: false,
             desktop_shortcut: true,
             screen: () => { },
         });
         // store in local storage
-        let new_folders = [];
-        try { new_folders = JSON.parse(safeLocalStorage?.getItem('new_folders') || '[]'); } catch (e) { new_folders = []; }
+        var new_folders = JSON.parse(localStorage.getItem('new_folders'));
         new_folders.push({ id: `new-folder-${folder_id}`, name: folder_name });
-        safeLocalStorage?.setItem('new_folders', JSON.stringify(new_folders));
+        localStorage.setItem("new_folders", JSON.stringify(new_folders));
 
         this.setState({ showNameBar: false }, this.updateAppsData);
     }
@@ -842,22 +494,8 @@ export class Desktop extends Component {
                     <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
                 </div>
                 <div className="flex">
-                    <button
-                        type="button"
-                        onClick={addFolder}
-                        aria-label="Create folder"
-                        className="w-1/2 px-4 py-2 border border-gray-900 border-opacity-50 border-r-0 hover:bg-ub-warm-grey hover:bg-opacity-10 hover:border-opacity-50"
-                    >
-                        Create
-                    </button>
-                    <button
-                        type="button"
-                        onClick={removeCard}
-                        aria-label="Cancel folder creation"
-                        className="w-1/2 px-4 py-2 border border-gray-900 border-opacity-50 hover:bg-ub-warm-grey hover:bg-opacity-10 hover:border-opacity-50"
-                    >
-                        Cancel
-                    </button>
+                    <div onClick={addFolder} className="w-1/2 px-4 py-2 border border-gray-900 border-opacity-50 border-r-0 hover:bg-ub-warm-grey hover:bg-opacity-10 hover:border-opacity-50">Create</div>
+                    <div onClick={removeCard} className="w-1/2 px-4 py-2 border border-gray-900 border-opacity-50 hover:bg-ub-warm-grey hover:bg-opacity-10 hover:border-opacity-50">Cancel</div>
                 </div>
             </div>
         );
@@ -865,20 +503,15 @@ export class Desktop extends Component {
 
     render() {
         return (
-            <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+            <div className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
 
                 {/* Window Area */}
-                <div
-                    id="window-area"
-                    role="main"
-                    className="absolute h-full w-full bg-transparent"
-                    data-context="desktop-area"
-                >
+                <div className="absolute h-full w-full bg-transparent" data-context="desktop-area">
                     {this.renderWindows()}
                 </div>
 
                 {/* Background Image */}
-                <BackgroundImage />
+                <BackgroundImage img={this.props.bg_image_name} />
 
                 {/* Ubuntu Side Menu Bar */}
                 <SideBar apps={apps}
@@ -892,54 +525,12 @@ export class Desktop extends Component {
                     isMinimized={this.state.minimized_windows}
                     openAppByAppId={this.openApp} />
 
-                {/* Taskbar */}
-                <Taskbar
-                    apps={apps}
-                    closed_windows={this.state.closed_windows}
-                    minimized_windows={this.state.minimized_windows}
-                    focused_windows={this.state.focused_windows}
-                    openApp={this.openApp}
-                    minimize={this.hasMinimised}
-                />
-
                 {/* Desktop Apps */}
                 {this.renderDesktopApps()}
 
                 {/* Context Menus */}
-                <DesktopMenu
-                    active={this.state.context_menus.desktop}
-                    openApp={this.openApp}
-                    addNewFolder={this.addNewFolder}
-                    openShortcutSelector={this.openShortcutSelector}
-                    clearSession={() => { this.props.clearSession(); window.location.reload(); }}
-                />
-                <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
-                <AppMenu
-                    active={this.state.context_menus.app}
-                    pinned={this.initFavourite[this.state.context_app]}
-                    pinApp={() => this.pinApp(this.state.context_app)}
-                    unpinApp={() => this.unpinApp(this.state.context_app)}
-                    onClose={this.hideAllContextMenu}
-                />
-                <TaskbarMenu
-                    active={this.state.context_menus.taskbar}
-                    minimized={this.state.context_app ? this.state.minimized_windows[this.state.context_app] : false}
-                    onMinimize={() => {
-                        const id = this.state.context_app;
-                        if (!id) return;
-                        if (this.state.minimized_windows[id]) {
-                            this.openApp(id);
-                        } else {
-                            this.hasMinimised(id);
-                        }
-                    }}
-                    onClose={() => {
-                        const id = this.state.context_app;
-                        if (!id) return;
-                        this.closeApp(id);
-                    }}
-                    onCloseMenu={this.hideAllContextMenu}
-                />
+                <DesktopMenu active={this.state.context_menus.desktop} openApp={this.openApp} addNewFolder={this.addNewFolder} />
+                <DefaultMenu active={this.state.context_menus.default} />
 
                 {/* Folder Input Name Bar */}
                 {
@@ -955,24 +546,9 @@ export class Desktop extends Component {
                         recentApps={this.app_stack}
                         openApp={this.openApp} /> : null}
 
-                { this.state.showShortcutSelector ?
-                    <ShortcutSelector apps={apps}
-                        games={games}
-                        onSelect={this.addShortcutToDesktop}
-                        onClose={() => this.setState({ showShortcutSelector: false })} /> : null}
-
-                { this.state.showWindowSwitcher ?
-                    <WindowSwitcher
-                        windows={this.state.switcherWindows}
-                        onSelect={this.selectWindow}
-                        onClose={this.closeWindowSwitcher} /> : null}
-
-            </main>
+            </div>
         )
     }
 }
 
-export default function DesktopWithSnap(props) {
-    const [snapEnabled] = useSnapSetting();
-    return <Desktop {...props} snapEnabled={snapEnabled} />;
-}
+export default Desktop

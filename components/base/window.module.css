@@ -1,9 +1,0 @@
-.windowYBorder {
-  height: calc(100% - 10px);
-  width: calc(100% + 10px);
-}
-
-.windowXBorder {
-  height: calc(100% + 10px);
-  width: calc(100% - 10px);
-}

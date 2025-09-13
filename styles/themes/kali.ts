@@ -1,8 +1,7 @@
 export const kaliTheme = {
-  background: 'var(--color-bg)',
-  text: 'var(--color-text)',
-  accent: 'var(--color-primary)',
-  sidebar: 'var(--color-secondary)',
+  background: '#000',
+  text: '#fff',
+  sidebar: '#222',
+  accent: '#555',
 };
-
-export type KaliTheme = typeof kaliTheme;
+export default kaliTheme;
