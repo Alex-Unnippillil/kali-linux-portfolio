@@ -146,7 +146,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   contextRef.current.writeLine = writeLine;
 
   const prompt = useCallback(() => {
-    if (termRef.current) termRef.current.write('$ ');
+    if (!termRef.current) return;
+    termRef.current.writeln(
+      '\x1b[1;34m┌──(\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m㉿\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m)-[\x1b[0m\x1b[1;32m~\x1b[0m\x1b[1;34m]\x1b[0m',
+    );
+    termRef.current.write('\x1b[1;34m└─\x1b[0m$ ');
   }, []);
 
   const handleCopy = () => {
@@ -304,6 +308,12 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         scrollback: 1000,
         cols: 80,
         rows: 24,
+        fontFamily: '"Fira Code", monospace',
+        theme: {
+          background: '#0f1317',
+          foreground: '#f5f5f5',
+          cursor: '#1793d1',
+        },
       });
       const fit = new FitAddon();
       const search = new SearchAddon();
