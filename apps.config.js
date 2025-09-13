@@ -62,7 +62,7 @@ const SpaceInvadersApp = createDynamicApp('space-invaders', 'Space Invaders');
 const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
-const FileExplorerApp = createDynamicApp('file-explorer', 'Files');
+const FilesApp = createDynamicApp('files', 'Files');
 const Radare2App = createDynamicApp('radare2', 'Radare2');
 const AboutAlexApp = createDynamicApp('alex', 'About Alex');
 
@@ -152,7 +152,7 @@ const displaySpaceInvaders = createDisplay(SpaceInvadersApp);
 const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
-const displayFileExplorer = createDisplay(FileExplorerApp);
+const displayFiles = createDisplay(FilesApp);
 const displayRadare2 = createDisplay(Radare2App);
 const displayAboutAlex = createDisplay(AboutAlexApp);
 
@@ -699,7 +699,7 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayFileExplorer,
+    screen: displayFiles,
   },
   {
     id: 'resource-monitor',
