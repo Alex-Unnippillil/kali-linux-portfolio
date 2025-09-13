@@ -7460,6 +7460,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"focus-visible@npm:^5.2.1":
+  version: 5.2.1
+  resolution: "focus-visible@npm:5.2.1"
+  checksum: 10c0/1c0e4e8b22be8684a664acc340efd6a41aafb560ce09979186a1c934de321ce8d6a3d7175c946aab1c87409b0e10f623274d7ce7d42ff16a0e4dc862fa151623
+  languageName: node
+  linkType: hard
+
 "follow-redirects@npm:^1.0.0, follow-redirects@npm:^1.15.6":
   version: 1.15.11
   resolution: "follow-redirects@npm:1.15.11"
@@ -13911,6 +13918,7 @@ __metadata:
     fast-glob: "npm:^3.3.3"
     fast-xml-parser: "npm:^4.3.5"
     figlet: "npm:^1.8.2"
+    focus-visible: "npm:^5.2.1"
     hash-wasm: "npm:^4.12.0"
     howler: "npm:^2.2.4"
     html-to-image: "npm:^1.11.13"
