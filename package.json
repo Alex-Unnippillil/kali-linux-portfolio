@@ -21,6 +21,7 @@
     "module-report": "node scripts/generate-module-report.mjs",
     "analyze": "ANALYZE=true yarn build",
     "preinstall": "corepack enable && corepack prepare yarn@4.9.2 --activate",
+    "check:images": "node scripts/check-images.js",
     "verify:all": "node scripts/verify.mjs"
   },
   "engines": {
