@@ -16,9 +16,18 @@ button, [role="button"], input[type="button"], input[type="submit"], input[type=
     min-height: var(--hit-area);
 }
 
+input,
+select,
+button {
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+}
+
 a:focus-visible,
-button:focus-visible {
-    outline: var(--focus-outline-width) solid var(--focus-outline-color) !important;
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+    outline: var(--focus-outline-width) solid var(--color-accent) !important;
     outline-offset: 2px;
 }
 
