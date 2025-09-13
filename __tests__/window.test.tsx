@@ -406,3 +406,43 @@ describe('Window overlay inert behaviour', () => {
     document.body.removeChild(opener);
   });
 });
+
+describe('Window keyboard accessibility', () => {
+  const baseProps = {
+    id: 'test-window',
+    title: 'Test',
+    screen: () => <div>content</div>,
+    focus: jest.fn(),
+    hasMinimised: () => {},
+    closed: () => {},
+    hideSideBar: () => {},
+    openApp: () => {},
+  };
+
+  it('invokes focus prop on focus event', () => {
+    const focus = jest.fn();
+    render(<Window {...baseProps} focus={focus} />);
+    const win = screen.getByRole('dialog', { name: /test/i });
+    fireEvent.focus(win);
+    expect(focus).toHaveBeenCalledWith('test-window');
+  });
+
+  it('cycles between close button and title bar with Tab and Shift+Tab', () => {
+    render(<Window {...baseProps} />);
+    const closeBtn = screen.getByRole('button', { name: /window close/i });
+    const titleBar = screen.getByRole('button', { name: /test/i });
+
+    closeBtn.focus();
+    fireEvent.keyDown(closeBtn, { key: 'Tab' });
+    expect(titleBar).toHaveFocus();
+
+    fireEvent.keyDown(titleBar, { key: 'Tab', shiftKey: true });
+    expect(closeBtn).toHaveFocus();
+  });
+
+  it('highlights title bar when window is focused', () => {
+    render(<Window {...baseProps} isFocused />);
+    const titleBar = screen.getByRole('button', { name: /test/i });
+    expect(titleBar.className).toContain('bg-ub-border-orange');
+  });
+});

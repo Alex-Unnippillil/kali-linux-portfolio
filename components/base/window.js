@@ -12,6 +12,8 @@ export class Window extends Component {
     constructor(props) {
         super(props);
         this.id = null;
+        this.titleBarRef = React.createRef();
+        this.closeButtonRef = React.createRef();
         const isPortrait =
             typeof window !== "undefined" && window.innerHeight > window.innerWidth;
         this.startX =
@@ -478,7 +480,10 @@ export class Window extends Component {
     }
 
     handleTitleBarKeyDown = (e) => {
-        if (e.key === ' ' || e.key === 'Space' || e.key === 'Enter') {
+        if (e.key === 'Tab' && e.shiftKey) {
+            e.preventDefault();
+            this.closeButtonRef.current?.focus();
+        } else if (e.key === ' ' || e.key === 'Space' || e.key === 'Enter') {
             e.preventDefault();
             e.stopPropagation();
             if (this.state.grabbed) {
@@ -494,8 +499,8 @@ export class Window extends Component {
             else if (e.key === 'ArrowUp') dy = -step;
             else if (e.key === 'ArrowDown') dy = step;
             if (dx !== 0 || dy !== 0) {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 const node = document.getElementById(this.id);
                 if (node) {
                     const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
@@ -521,44 +526,44 @@ export class Window extends Component {
     handleKeyDown = (e) => {
         if (e.key === 'Escape') {
             this.closeWindow();
-        } else if (e.key === 'Tab') {
+        } else if (e.key === 'Tab' && e.target === e.currentTarget) {
             this.focusWindow();
         } else if (e.altKey) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('top');
             }
             this.focusWindow();
         } else if (e.shiftKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
             }
             this.focusWindow();
@@ -641,6 +646,7 @@ export class Window extends Component {
                         aria-label={this.props.title}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
+                        onFocus={this.focusWindow}
                     >
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
@@ -649,6 +655,8 @@ export class Window extends Component {
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
+                            isFocused={this.props.isFocused}
+                            titleRef={this.titleBarRef}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -658,6 +666,8 @@ export class Window extends Component {
                             id={this.id}
                             allowMaximize={this.props.allowMaximize !== false}
                             pip={() => this.props.screen(this.props.addFolder, this.props.openApp)}
+                            titleRef={this.titleBarRef}
+                            closeRef={this.closeButtonRef}
                         />
                         {(this.id === "settings"
                             ? <Settings />
@@ -674,10 +684,11 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, isFocused, titleRef }) {
     return (
         <div
-            className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
+            ref={titleRef}
+            className={" relative " + (isFocused ? "bg-ub-border-orange" : "bg-ub-window-title") + " border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
@@ -733,6 +744,12 @@ export class WindowXBorder extends Component {
 export function WindowEditButtons(props) {
     const { togglePin } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
+    const handleCloseKeyDown = (e) => {
+        if (e.key === 'Tab' && !e.shiftKey) {
+            e.preventDefault();
+            props.titleRef?.current?.focus();
+        }
+    };
     return (
         <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center h-11 min-w-[8.25rem]">
             {pipSupported && props.pip && (
@@ -809,6 +826,8 @@ export function WindowEditButtons(props) {
                 aria-label="Window close"
                 className="mx-1 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6"
                 onClick={props.close}
+                onKeyDown={handleCloseKeyDown}
+                ref={props.closeRef}
             >
                 <NextImage
                     src="/themes/Yaru/window/window-close-symbolic.svg"
