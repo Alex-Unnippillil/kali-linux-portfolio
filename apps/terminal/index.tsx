@@ -9,7 +9,7 @@ import React, {
   useCallback,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
-import commandRegistry, { CommandContext } from './commands';
+import type { CommandContext, CommandHandler } from './commands';
 import TerminalContainer from './components/Terminal';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -83,7 +83,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const searchRef = useRef<any>(null);
   const commandRef = useRef('');
   const contentRef = useRef('');
-  const registryRef = useRef(commandRegistry);
+  const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
+    useOPFS();
+  const registryRef = useRef<Record<string, CommandHandler>>({});
   const workerRef = useRef<Worker | null>(null);
   const filesRef = useRef<Record<string, string>>(files);
   const aliasesRef = useRef<Record<string, string>>({});
@@ -101,8 +103,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
-    useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
   const [overflow, setOverflow] = useState({ top: false, bottom: false });
   const ansiColors = [
@@ -149,6 +149,41 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     if (termRef.current) termRef.current.write('$ ');
   }, []);
 
+  const loadRegistry = useCallback(async () => {
+    if (Object.keys(registryRef.current).length) return;
+    const mod = await import('./commands');
+    registryRef.current = {
+      ...mod.default,
+      help: () => {
+        writeLine(
+          `Available commands: ${Object.keys(registryRef.current).join(', ')}`,
+        );
+        writeLine(
+          'Example scripts: https://github.com/unnippillil/kali-linux-portfolio/tree/main/scripts/examples',
+        );
+      },
+      ls: () => writeLine(Object.keys(filesRef.current).join('  ')),
+      clear: () => {
+        termRef.current?.clear();
+        contentRef.current = '';
+        if (opfsSupported && dirRef.current) {
+          deleteFile('history.txt', dirRef.current);
+        }
+        setOverflow({ top: false, bottom: false });
+      },
+      open: (arg) => {
+        if (!arg) {
+          writeLine('Usage: open <app>');
+        } else {
+          openApp?.(arg.trim());
+          writeLine(`Opening ${arg}`);
+        }
+      },
+      date: () => writeLine(new Date().toString()),
+      about: () => writeLine('This terminal is powered by xterm.js'),
+    };
+  }, [openApp, opfsSupported, deleteFile, writeLine]);
+
   const handleCopy = () => {
     navigator.clipboard.writeText(contentRef.current).catch(() => {});
   };
@@ -190,37 +225,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   contextRef.current.runWorker = runWorker;
 
   useEffect(() => {
-    registryRef.current = {
-      ...commandRegistry,
-      help: () => {
-        writeLine(
-          `Available commands: ${Object.keys(registryRef.current).join(', ')}`,
-        );
-        writeLine(
-          'Example scripts: https://github.com/unnippillil/kali-linux-portfolio/tree/main/scripts/examples',
-        );
-      },
-      ls: () => writeLine(Object.keys(filesRef.current).join('  ')),
-      clear: () => {
-        termRef.current?.clear();
-        contentRef.current = '';
-        if (opfsSupported && dirRef.current) {
-          deleteFile('history.txt', dirRef.current);
-        }
-        setOverflow({ top: false, bottom: false });
-      },
-      open: (arg) => {
-        if (!arg) {
-          writeLine('Usage: open <app>');
-        } else {
-          openApp?.(arg.trim());
-          writeLine(`Opening ${arg}`);
-        }
-      },
-      date: () => writeLine(new Date().toString()),
-      about: () => writeLine('This terminal is powered by xterm.js'),
-    };
-    }, [openApp, opfsSupported, deleteFile, writeLine]);
+    loadRegistry();
+  }, [loadRegistry]);
 
   useEffect(() => {
     if (typeof Worker === 'function') {
@@ -233,6 +239,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
     const runCommand = useCallback(
       async (cmd: string) => {
+        await loadRegistry();
         const [name, ...rest] = cmd.trim().split(/\s+/);
         const expanded =
           aliasesRef.current[name]
@@ -244,10 +251,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         if (handler) await handler(cmdRest.join(' '), contextRef.current);
         else if (cmdName) await runWorker(expanded);
       },
-      [runWorker],
+      [loadRegistry, runWorker],
     );
 
     const autocomplete = useCallback(() => {
+      if (!Object.keys(registryRef.current).length) {
+        loadRegistry();
+        return;
+      }
       const current = commandRef.current;
       const registry = registryRef.current;
       const matches = Object.keys(registry).filter((c) => c.startsWith(current));
@@ -260,7 +271,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         prompt();
         termRef.current?.write(commandRef.current);
       }
-    }, [prompt, writeLine]);
+    }, [loadRegistry, prompt, writeLine]);
 
     const handleInput = useCallback(
       (data: string) => {
@@ -390,15 +401,17 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         e.preventDefault();
         setPaletteOpen((v) => {
           const next = !v;
-          if (next) termRef.current?.blur();
-          else termRef.current?.focus();
+          if (next) {
+            loadRegistry();
+            termRef.current?.blur();
+          } else termRef.current?.focus();
           return next;
         });
       }
     };
     window.addEventListener('keydown', listener);
     return () => window.removeEventListener('keydown', listener);
-  }, [paletteOpen]);
+  }, [loadRegistry, paletteOpen]);
 
   return (
     <div className="relative h-full w-full">
