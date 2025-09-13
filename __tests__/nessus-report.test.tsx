@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import NessusReport from '../pages/nessus-report';
 
 describe('Nessus sample report', () => {
@@ -46,5 +47,16 @@ describe('Nessus sample report', () => {
     const rows = screen.getAllByRole('row');
     expect(rows.length).toBe(2); // header + 1 finding
     expect(screen.getByText('Weak SSH Cipher')).toBeInTheDocument();
+  });
+
+  test('keeps focus trapped in drawer', async () => {
+    render(<NessusReport />);
+    fireEvent.click(screen.getByText('Weak SSH Cipher'));
+    const closeBtn = screen.getByText('Close');
+    expect(closeBtn).toHaveFocus();
+    await userEvent.tab();
+    expect(closeBtn).toHaveFocus();
+    await userEvent.tab({ shift: true });
+    expect(closeBtn).toHaveFocus();
   });
 });
