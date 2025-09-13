@@ -134,14 +134,17 @@ const WhiskerMenu: React.FC = () => {
       {open && (
         <div
           ref={menuRef}
-          className="absolute left-0 mt-1 z-50 flex bg-ub-grey text-white shadow-lg"
+          className="absolute left-0 mt-1 z-50 flex bg-ub-grey text-white shadow-lg appmenu-shell"
           tabIndex={-1}
+          role="document"
+          aria-labelledby="menuHeading"
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
               setOpen(false);
             }
           }}
         >
+          <h2 id="menuHeading" className="sr-only">Application menu</h2>
           <div className="flex flex-col bg-gray-800 p-2">
             {CATEGORIES.map(cat => (
               <button
