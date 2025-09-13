@@ -51,6 +51,12 @@
   --motion-medium: 300ms;
   --motion-slow: 500ms;
 
+  /* Window shadows */
+  --win-shadow-0: none;
+  --win-shadow-1: 0 2px 4px color-mix(in srgb, var(--color-inverse), transparent 85%);
+  --win-shadow-2: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
+  --win-shadow-3: 2px 8px 20px 6px color-mix(in srgb, var(--color-inverse), transparent 75%);
+
   /* Fonts */
   --font-family-base: 'Ubuntu', sans-serif;
   --font-multiplier: 1;
