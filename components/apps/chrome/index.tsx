@@ -10,6 +10,7 @@ import { Readability } from '@mozilla/readability';
 import DOMPurify from 'dompurify';
 import AddressBar from './AddressBar';
 import { getCachedFavicon, cacheFavicon } from './bookmarks';
+import rafThrottle from '../../../utils/rafThrottle';
 
 interface Tile {
   title: string;
@@ -391,7 +392,7 @@ const Chrome: React.FC = () => {
   }, [activeId, activeTab.url, activeTab.muted, articles, fetchArticle, setIframeMuted, isAllowed, activeTab.blocked]);
 
   useEffect(() => {
-    const handleScroll = () => {
+    const handleScroll = rafThrottle(() => {
       try {
         setTabs((prev) =>
           prev.map((t) =>
@@ -403,10 +404,13 @@ const Chrome: React.FC = () => {
       } catch {
         /* ignore cross-origin */
       }
-    };
+    });
     const win = iframeRef.current?.contentWindow;
     win?.addEventListener('scroll', handleScroll);
-    return () => win?.removeEventListener('scroll', handleScroll);
+    return () => {
+      win?.removeEventListener('scroll', handleScroll);
+      handleScroll.cancel();
+    };
   }, [activeId]);
 
   useEffect(() => {
