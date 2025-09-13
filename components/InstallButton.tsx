@@ -28,7 +28,7 @@ const InstallButton: React.FC = () => {
       onClick={handleInstall}
       className="fixed bottom-4 right-4 bg-ubt-blue text-white px-3 py-1 rounded"
     >
-      Install
+      <span data-i18n="install">Install</span>
     </button>
   );
 };
