@@ -530,3 +530,26 @@ textarea:focus-visible {
     color: #000 !important;
 }
 
+/* Attention shadow pulse */
+[data-attention="true"] {
+    animation: attention-shadow-pulse 1s ease-out;
+}
+
+@keyframes attention-shadow-pulse {
+    0% {
+        box-shadow: 0 0 0 0 var(--color-primary);
+    }
+    70% {
+        box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary), transparent);
+    }
+    100% {
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary), transparent);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-attention="true"] {
+        animation: none;
+    }
+}
+
