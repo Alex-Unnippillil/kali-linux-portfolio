@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import FormError from '../components/ui/FormError';
 
 const STORAGE_KEY = 'dummy-form-draft';
 
@@ -9,7 +8,7 @@ const DummyForm: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+  const [errors, setErrors] = useState<{ name?: string; email?: string; message?: string }>({});
   const [success, setSuccess] = useState(false);
   const [recovered, setRecovered] = useState(false);
 
@@ -58,15 +57,15 @@ const DummyForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!name || !email || !message) {
-      setError('All fields are required');
+    const newErrors: { name?: string; email?: string; message?: string } = {};
+    if (!name) newErrors.name = 'Name is required';
+    if (!email) newErrors.email = 'Email is required';
+    else if (!emailRegex.test(email)) newErrors.email = 'Please enter a valid email';
+    if (!message) newErrors.message = 'Message is required';
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length) {
       return;
     }
-    if (!emailRegex.test(email)) {
-      setError('Please enter a valid email');
-      return;
-    }
-    setError('');
     setSuccess(false);
     if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
       await fetch('/api/dummy', {
@@ -90,31 +89,57 @@ const DummyForm: React.FC = () => {
       <form onSubmit={handleSubmit} className="w-full max-w-md rounded bg-white p-6 shadow-md">
         <h1 className="mb-4 text-xl font-bold">Contact Us</h1>
         {recovered && <p className="mb-4 text-sm text-blue-600">Recovered draft</p>}
-        {error && <FormError className="mb-4 mt-0">{error}</FormError>}
         {success && <p className="mb-4 text-sm text-green-600">Form submitted successfully!</p>}
         <label className="mb-2 block text-sm font-medium" htmlFor="name">Name</label>
         <input
           id="name"
-          className="mb-4 w-full rounded border p-2"
+          className={`mb-1 w-full rounded border p-2 ${errors.name ? 'is-invalid' : ''}`}
           type="text"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          aria-label="Name"
+          onChange={(e) => {
+            setName(e.target.value);
+            setErrors((prev) => ({ ...prev, name: '' }));
+          }}
         />
+        {errors.name && (
+          <small role="alert" className="mb-4 block text-sm text-red-600">
+            {errors.name}
+          </small>
+        )}
         <label className="mb-2 block text-sm font-medium" htmlFor="email">Email</label>
         <input
           id="email"
-          className="mb-4 w-full rounded border p-2"
+          className={`mb-1 w-full rounded border p-2 ${errors.email ? 'is-invalid' : ''}`}
           type="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          aria-label="Email"
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setErrors((prev) => ({ ...prev, email: '' }));
+          }}
         />
+        {errors.email && (
+          <small role="alert" className="mb-4 block text-sm text-red-600">
+            {errors.email}
+          </small>
+        )}
         <label className="mb-2 block text-sm font-medium" htmlFor="message">Message</label>
         <textarea
           id="message"
-          className="mb-4 w-full rounded border p-2"
+          className={`mb-1 w-full rounded border p-2 ${errors.message ? 'is-invalid' : ''}`}
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          aria-label="Message"
+          onChange={(e) => {
+            setMessage(e.target.value);
+            setErrors((prev) => ({ ...prev, message: '' }));
+          }}
         />
+        {errors.message && (
+          <small role="alert" className="mb-4 block text-sm text-red-600">
+            {errors.message}
+          </small>
+        )}
         <button type="submit" className="w-full rounded bg-blue-600 p-2 text-white">Submit</button>
         <p className="mt-4 text-xs text-gray-500">
           This form posts to a dummy endpoint. No data is stored. By submitting, you consent to this temporary processing of your information.
