@@ -7,11 +7,17 @@ import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
+import {
+        SHOW_CHOOSER_KEY,
+        AUTO_SAVE_KEY,
+        PROMPT_LOGOUT_KEY,
+} from '../utils/sessionSettings';
 
 export default class Ubuntu extends Component {
-	constructor() {
-		super();
-		this.state = {
+        constructor() {
+                super();
+                this.desktopRef = React.createRef();
+                this.state = {
 			screen_locked: false,
 			bg_image_name: 'wall-2',
 			booting_screen: true,
@@ -19,9 +25,10 @@ export default class Ubuntu extends Component {
 		};
 	}
 
-	componentDidMount() {
-		this.getLocalData();
-	}
+        componentDidMount() {
+                this.getLocalData();
+                this.maybeShowSessionChooser();
+        }
 
 	setTimeOutBootScreen = () => {
 		setTimeout(() => {
@@ -29,7 +36,7 @@ export default class Ubuntu extends Component {
 		}, 2000);
 	};
 
-	getLocalData = () => {
+        getLocalData = () => {
 		// Get Previously selected Background Image
                 let bg_image_name = safeLocalStorage?.getItem('bg-image');
 		if (bg_image_name !== null && bg_image_name !== undefined) {
@@ -55,16 +62,34 @@ export default class Ubuntu extends Component {
 			if (screen_locked !== null && screen_locked !== undefined) {
 				this.setState({ screen_locked: screen_locked === 'true' ? true : false });
 			}
-		}
-	};
+                }
+        };
 
-	lockScreen = () => {
-		// google analytics
-		ReactGA.send({ hitType: "pageview", page: "/lock-screen", title: "Lock Screen" });
-		ReactGA.event({
-			category: `Screen Change`,
-			action: `Set Screen to Locked`
-		});
+        maybeShowSessionChooser = () => {
+                const show = safeLocalStorage?.getItem(SHOW_CHOOSER_KEY) === 'true';
+                const hasSession = safeLocalStorage?.getItem('desktop-session');
+                if (show && hasSession) {
+                        const restore = window.confirm('Restore previous session?');
+                        if (!restore) {
+                                this.props.resetSession && this.props.resetSession();
+                                window.location.reload();
+                        }
+                }
+        };
+
+        lockScreen = () => {
+                const promptLogout = safeLocalStorage?.getItem(PROMPT_LOGOUT_KEY) === 'true';
+                if (promptLogout && !window.confirm('Log out of this session?')) return;
+                const autoSave = safeLocalStorage?.getItem(AUTO_SAVE_KEY) === 'true';
+                if (autoSave) {
+                        this.desktopRef.current?.saveSession?.();
+                }
+                // google analytics
+                ReactGA.send({ hitType: "pageview", page: "/lock-screen", title: "Lock Screen" });
+                ReactGA.event({
+                        category: `Screen Change`,
+                        action: `Set Screen to Locked`
+                });
 
                 const statusBar = document.getElementById('status-bar');
                 // Consider using a React ref if the status bar element lives within this component tree
@@ -75,23 +100,33 @@ export default class Ubuntu extends Component {
                 safeLocalStorage?.setItem('screen-locked', true);
 	};
 
-	unLockScreen = () => {
-		ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+        unLockScreen = () => {
+                ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
 		window.removeEventListener('click', this.unLockScreen);
 		window.removeEventListener('keypress', this.unLockScreen);
 
-		this.setState({ screen_locked: false });
+                this.setState({ screen_locked: false });
                 safeLocalStorage?.setItem('screen-locked', false);
-	};
+                this.maybeShowSessionChooser();
+        };
 
-	changeBackgroundImage = (img_name) => {
-		this.setState({ bg_image_name: img_name });
+        changeBackgroundImage = (img_name) => {
+                this.setState({ bg_image_name: img_name });
                 safeLocalStorage?.setItem('bg-image', img_name);
-	};
+        };
 
-	shutDown = () => {
-		ReactGA.send({ hitType: "pageview", page: "/switch-off", title: "Custom Title" });
+        logOut = () => {
+                this.props.resetSession && this.props.resetSession();
+                this.lockScreen();
+        };
+
+        shutDown = () => {
+                const autoSave = safeLocalStorage?.getItem(AUTO_SAVE_KEY) === 'true';
+                if (autoSave) {
+                        this.desktopRef.current?.saveSession?.();
+                }
+                ReactGA.send({ hitType: "pageview", page: "/switch-off", title: "Custom Title" });
 
 		ReactGA.event({
 			category: `Screen Change`,
@@ -116,19 +151,25 @@ export default class Ubuntu extends Component {
 	render() {
 		return (
 			<div className="w-screen h-screen overflow-hidden" id="monitor-screen">
-				<LockScreen
-					isLocked={this.state.screen_locked}
-					bgImgName={this.state.bg_image_name}
-					unLockScreen={this.unLockScreen}
-				/>
+                                <LockScreen
+                                        mode="lock"
+                                        isLocked={this.state.screen_locked}
+                                        onSubmit={this.unLockScreen}
+                                />
 				<BootingScreen
 					visible={this.state.booting_screen}
 					isShutDown={this.state.shutDownScreen}
 					turnOn={this.turnOn}
 				/>
-				<Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
-				<Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
-			</div>
-		);
-	}
+                                <Navbar lockScreen={this.lockScreen} logOut={this.logOut} />
+                                <Desktop
+                                        ref={this.desktopRef}
+                                        bg_image_name={this.state.bg_image_name}
+                                        changeBackgroundImage={this.changeBackgroundImage}
+                                        session={this.props.session}
+                                        setSession={this.props.setSession}
+                                />
+                        </div>
+                );
+        }
 }
