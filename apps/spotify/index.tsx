@@ -226,7 +226,7 @@ const SpotifyApp = () => {
         <div className="mt-2">
           <div className="relative w-32 aspect-square mb-2 shadow-lg overflow-hidden">
             {currentTrack.cover ? (
-              <img
+              <img loading="lazy"
                 src={currentTrack.cover}
                 alt={currentTrack.title}
                 className="w-full h-full object-cover"

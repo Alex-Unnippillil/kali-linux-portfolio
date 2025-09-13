@@ -30,7 +30,7 @@ export default function WeatherWidget() {
       <div id="weather" className="weather">
         <div className="temp">--°C</div>
         <div className="feels-like">Feels like --°C</div>
-        <img className="icon" src="" alt="Weather icon" />
+        <img loading="lazy" className="icon" src="" alt="Weather icon" />
         <div className="forecast">Loading...</div>
         <div className="daily"></div>
         <div className="sunrise">Sunrise: --</div>

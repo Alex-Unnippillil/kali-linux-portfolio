@@ -49,7 +49,7 @@ const Scan: React.FC<Props> = ({ onResult }) => {
       className="w-full h-full relative flex items-center justify-center border-2 border-dashed border-gray-500 text-gray-400"
     >
       {preview ? (
-        <img src={preview} alt="Dropped" className="max-w-full max-h-full" />
+        <img loading="lazy" src={preview} alt="Dropped" className="max-w-full max-h-full" />
       ) : (
         <p>Drop image</p>
       )}

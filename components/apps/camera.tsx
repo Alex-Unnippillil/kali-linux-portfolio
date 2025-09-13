@@ -124,7 +124,7 @@ const CameraApp: React.FC = () => {
         </button>
       </div>
       {snapshot && (
-        <img
+        <img loading="lazy"
           src={snapshot}
           alt="Snapshot"
           className="max-w-full border border-gray-700 rounded"

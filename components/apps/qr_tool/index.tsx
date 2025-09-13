@@ -177,7 +177,7 @@ const QRTool: React.FC = () => {
             SVG
           </button>
         </div>
-        {png && <img src={png} alt="QR preview" className="h-48 w-48 bg-white" />}
+        {png && <img loading="lazy" src={png} alt="QR preview" className="h-48 w-48 bg-white" />}
       </div>
       <div className="space-y-2">
         <label htmlFor="qr-csv" className="block">
@@ -201,7 +201,7 @@ const QRTool: React.FC = () => {
           <div className="grid grid-cols-2 gap-4 pt-2 sm:grid-cols-3">
             {batch.map((item) => (
               <div key={item.name} className="flex flex-col items-center space-y-1">
-                <img src={item.png} alt={item.name} className="w-32 h-32 bg-white" />
+                <img loading="lazy" src={item.png} alt={item.name} className="w-32 h-32 bg-white" />
                 <div className="text-center text-xs break-all">{item.name}</div>
                 <div className="flex gap-1">
                   <button

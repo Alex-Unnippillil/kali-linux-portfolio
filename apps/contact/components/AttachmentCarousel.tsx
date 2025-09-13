@@ -39,7 +39,7 @@ const AttachmentCarousel: React.FC<AttachmentCarouselProps> = ({
     <div className="mt-6">
       <div className="relative">
         {isImage ? (
-          <img src={url} alt={file.name} className="max-h-48 object-contain" />
+          <img loading="lazy" src={url} alt={file.name} className="max-h-48 object-contain" />
         ) : (
           <div className="p-3 bg-gray-800 rounded">{file.name}</div>
         )}

@@ -115,7 +115,7 @@ const NmapNSE: React.FC = () => {
   return (
     <div className="flex flex-col h-full min-h-screen bg-gray-900 text-white">
       <header className="flex items-center gap-2 p-2 bg-gray-800">
-        <img
+        <img loading="lazy"
           src="/themes/Yaru/apps/radar-symbolic.svg"
           alt="Radar"
           className="w-5 h-5"

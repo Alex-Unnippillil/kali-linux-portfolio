@@ -290,7 +290,7 @@ export default function ProjectGalleryPage() {
                 aria-label={`${p.title}: ${p.description}`}
               >
                 <div className="w-full aspect-video overflow-hidden">
-                  <img src={p.thumbnail} alt={p.title} className="w-full h-full object-cover" />
+                  <img loading="lazy" src={p.thumbnail} alt={p.title} className="w-full h-full object-cover" />
                 </div>
                 <div className="p-2 flex-1">
                   <h3 className="font-semibold text-base line-clamp-2">{p.title}</h3>

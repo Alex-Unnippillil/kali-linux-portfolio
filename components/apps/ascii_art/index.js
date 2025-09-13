@@ -550,7 +550,7 @@ export default function AsciiArt() {
         </button>
       </div>
       {imgSrc && !typingMode && (
-        <img
+        <img loading="lazy"
           src={imgSrc}
           alt="original image preview"
           className="max-h-48 mb-2 object-contain"
