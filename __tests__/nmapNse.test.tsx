@@ -52,6 +52,7 @@ describe('NmapNSEApp', () => {
     expect(writeText).toHaveBeenCalledWith(
       expect.stringContaining('nmap')
     );
+    expect(await screen.findByRole('alert')).toHaveTextContent(/copied/i);
 
     mockFetch.mockRestore();
   });

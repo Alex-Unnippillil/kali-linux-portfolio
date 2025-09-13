@@ -88,6 +88,11 @@ const NmapNSEApp = () => {
   const outputRef = useRef(null);
   const phases = ['prerule', 'hostrule', 'portrule'];
 
+  const showToast = (msg) => {
+    setToast('');
+    setTimeout(() => setToast(msg), 0);
+  };
+
   useEffect(() => {
     fetch('/demo/nmap-nse.json')
       .then((r) => r.json())
@@ -134,7 +139,7 @@ const NmapNSEApp = () => {
     if (typeof window !== 'undefined') {
       try {
         await navigator.clipboard.writeText(command);
-        setToast('Command copied');
+        showToast('Command copied');
       } catch (e) {
         // ignore
       }
@@ -148,7 +153,7 @@ const NmapNSEApp = () => {
     if (!text.trim()) return;
     try {
       await navigator.clipboard.writeText(text);
-      setToast('Output copied');
+      showToast('Output copied');
     } catch (e) {
       // ignore
     }
@@ -162,7 +167,7 @@ const NmapNSEApp = () => {
     const sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(range);
-    setToast('Output selected');
+    showToast('Output selected');
   };
 
   const handleOutputKey = (e) => {
