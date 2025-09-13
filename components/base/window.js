@@ -644,6 +644,12 @@ export class Window extends Component {
                     >
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                        {this.props.resizable !== false && (
+                            <WindowCornerBorders
+                                resizeX={this.handleHorizontalResize}
+                                resizeY={this.handleVerticleResize}
+                            />
+                        )}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
@@ -728,6 +734,47 @@ export class WindowXBorder extends Component {
             )
         }
     }
+
+export class WindowCornerBorders extends Component {
+    componentDidMount() {
+        // Prevent default drag image for corner handles
+        this.trpImg = new window.Image(0, 0);
+        this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        this.trpImg.style.opacity = 0;
+    }
+    render() {
+        const { resizeX, resizeY } = this.props;
+        const common = "absolute w-4 h-4 z-20";
+        return (
+            <>
+                <div
+                    className={`${common} top-0 left-0 cursor-nwse-resize`}
+                    draggable
+                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
+                    onDrag={() => { resizeX(); resizeY(); }}
+                ></div>
+                <div
+                    className={`${common} top-0 right-0 cursor-nesw-resize`}
+                    draggable
+                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
+                    onDrag={() => { resizeX(); resizeY(); }}
+                ></div>
+                <div
+                    className={`${common} bottom-0 left-0 cursor-nesw-resize`}
+                    draggable
+                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
+                    onDrag={() => { resizeX(); resizeY(); }}
+                ></div>
+                <div
+                    className={`${common} bottom-0 right-0 cursor-nwse-resize`}
+                    draggable
+                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
+                    onDrag={() => { resizeX(); resizeY(); }}
+                ></div>
+            </>
+        )
+    }
+}
 
 // Window's Edit Buttons
 export function WindowEditButtons(props) {
