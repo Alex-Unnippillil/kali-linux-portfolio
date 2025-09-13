@@ -199,7 +199,12 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault: () => {},
+        stopPropagation: () => {},
+      } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
@@ -404,5 +409,44 @@ describe('Window overlay inert behaviour', () => {
 
     document.body.removeChild(root);
     document.body.removeChild(opener);
+  });
+});
+
+describe('Resize mode keyboard interactions', () => {
+  it('toggles resize mode, resizes with arrows and cancels with Esc', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    const initialWidth = ref.current!.state.width;
+    const initialHeight = ref.current!.state.height;
+
+    fireEvent.keyDown(winEl, { key: 'r', altKey: true });
+    expect(winEl.classList.contains('outline')).toBe(true);
+
+    fireEvent.keyDown(winEl, { key: 'ArrowRight' });
+    const widthDelta = (8 / window.innerWidth) * 100;
+    expect(ref.current!.state.width).toBeCloseTo(initialWidth + widthDelta);
+
+    fireEvent.keyDown(winEl, { key: 'ArrowDown', shiftKey: true });
+    const heightDelta = (1 / window.innerHeight) * 100;
+    expect(ref.current!.state.height).toBeCloseTo(initialHeight + heightDelta);
+
+    fireEvent.keyDown(winEl, { key: 'Escape' });
+    expect(ref.current!.state.width).toBeCloseTo(initialWidth);
+    expect(ref.current!.state.height).toBeCloseTo(initialHeight);
+    expect(winEl.classList.contains('outline')).toBe(false);
   });
 });

@@ -33,6 +33,8 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            resizeMode: false,
+            resizeStart: null,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
@@ -519,6 +521,61 @@ export class Window extends Component {
     }
 
     handleKeyDown = (e) => {
+        // Toggle resize mode with Alt+R
+        if (e.altKey && (e.key === 'r' || e.key === 'R')) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (this.state.resizeMode) {
+                this.setState({ resizeMode: false, resizeStart: null });
+            } else {
+                this.focusWindow();
+                this.setState({ resizeMode: true, resizeStart: { width: this.state.width, height: this.state.height } });
+            }
+            return;
+        }
+
+        // Handle key events while in resize mode
+        if (this.state.resizeMode) {
+            const stepPx = e.shiftKey ? 1 : 8;
+            const adjust = (field, deltaPx, max) => {
+                const percent = (deltaPx / (field === 'width' ? window.innerWidth : window.innerHeight)) * 100;
+                this.setState(prev => ({
+                    [field]: Math.min(Math.max(prev[field] + percent, 20), max)
+                }), this.resizeBoundries);
+            };
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                if (this.state.resizeStart) {
+                    this.setState({
+                        width: this.state.resizeStart.width,
+                        height: this.state.resizeStart.height,
+                        resizeMode: false,
+                        resizeStart: null
+                    }, this.resizeBoundries);
+                } else {
+                    this.setState({ resizeMode: false, resizeStart: null });
+                }
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                e.stopPropagation();
+                adjust('width', -stepPx, 100);
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                e.stopPropagation();
+                adjust('width', stepPx, 100);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                e.stopPropagation();
+                adjust('height', -stepPx, 100);
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                e.stopPropagation();
+                adjust('height', stepPx, 100);
+            }
+            return;
+        }
+
         if (e.key === 'Escape') {
             this.closeWindow();
         } else if (e.key === 'Tab') {
@@ -635,7 +692,17 @@ export class Window extends Component {
                 >
                     <div
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        className={
+                            this.state.cursorType + " " +
+                            (this.state.closed ? " closed-window " : "") +
+                            (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") +
+                            (this.props.minimized ? " opacity-0 invisible duration-200 " : "") +
+                            (this.state.grabbed ? " opacity-70 " : "") +
+                            (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") +
+                            (this.state.resizeMode ? " outline outline-2 outline-yellow-400 " : "") +
+                            (this.props.isFocused ? " z-30 " : " z-20 notFocused") +
+                            " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"
+                        }
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
