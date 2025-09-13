@@ -1,12 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
+import trustedOrigins from '../security/trusted-origins.json';
 
-const ALLOWLIST = ['https://vscode.dev', 'https://stackblitz.com'];
+const ALLOWLIST = trustedOrigins.origins;
+
+const matches = (origin, allowed) =>
+  allowed.includes('*')
+    ? origin.endsWith(allowed.replace('*.', ''))
+    : origin === allowed;
 
 const isAllowed = (src) => {
   try {
-    const url = new URL(src);
-    return ALLOWLIST.some((allowed) => url.href.startsWith(allowed));
+    const { origin } = new URL(src);
+    return ALLOWLIST.some((allowed) => matches(origin, allowed));
   } catch {
     return false;
   }

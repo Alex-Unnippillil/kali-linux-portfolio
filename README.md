@@ -236,7 +236,7 @@ Defined in `next.config.js`. See [CSP External Domains](#csp-external-domains) f
 
 ### CSP External Domains
 
-These external domains are whitelisted in the default CSP. Update this list whenever `next.config.js` changes.
+These external domains are whitelisted in the default CSP. `security/trusted-origins.json` is the source of truth; update it whenever domains change.
 
 | Domain | Purpose |
 | --- | --- |
@@ -252,10 +252,16 @@ These external domains are whitelisted in the default CSP. Update this list when
 | `cdn.jsdelivr.net` | Math.js library |
 | `cdnjs.cloudflare.com` | PDF.js worker |
 | `stackblitz.com` | StackBlitz IDE embeds |
+| `vscode.dev` | VS Code IDE embeds |
+| `ghbtns.com` | GitHub buttons |
+| `todoist.com` | Todoist embeds |
 | `www.youtube.com` | YouTube IFrame API |
 | `www.youtube-nocookie.com` | YouTube video embeds (privacy-enhanced) |
 | `open.spotify.com` | Spotify embeds |
 | `vercel.live` | Vercel toolbar |
+| `www.gstatic.com` | Google static assets |
+| `fonts.googleapis.com` | Google Fonts stylesheet |
+| `fonts.gstatic.com` | Google Fonts assets |
 
 **Notes for prod hardening**
 - Review `connect-src` and `frame-src` to ensure only required domains are present for your deployment.

@@ -1,8 +1,10 @@
 // Security headers configuration for Next.js.
 // Allows external badges and same-origin PDF embedding.
-// Update README (section "CSP External Domains") when editing domains below.
+// External domains are sourced from security/trusted-origins.json.
 
 const { validateServerEnv: validateEnv } = require('./lib/validate.js');
+const { origins: trustedOrigins } = require('./security/trusted-origins.json');
+const trusted = trustedOrigins.join(' ');
 
 const ContentSecurityPolicy = [
   "default-src 'self'",
@@ -21,11 +23,11 @@ const ContentSecurityPolicy = [
   // Restrict fonts to same origin
   "font-src 'self'",
   // External scripts required for embedded timelines
-  "script-src 'self' 'unsafe-inline' https://vercel.live https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
+  `script-src 'self' 'unsafe-inline' ${trusted}`,
   // Allow outbound connections for embeds and the in-browser Chrome app
-  "connect-src 'self' https://example.com https://developer.mozilla.org https://en.wikipedia.org https://www.google.com https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.google.com https://stackblitz.com",
+  `connect-src 'self' ${trusted}`,
   // Allow iframes from specific providers so the Chrome and StackBlitz apps can load allowed content
-  "frame-src 'self' https://vercel.live https://stackblitz.com https://*.google.com https://platform.twitter.com https://syndication.twitter.com https://*.twitter.com https://*.x.com https://www.youtube-nocookie.com https://open.spotify.com https://example.com https://developer.mozilla.org https://en.wikipedia.org",
+  `frame-src 'self' ${trusted}`,
 
   // Allow this site to embed its own resources (resume PDF)
   "frame-ancestors 'self'",
