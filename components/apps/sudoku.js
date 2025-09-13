@@ -309,10 +309,7 @@ const Sudoku = () => {
           100% { box-shadow: 0 0 0 0 rgba(248,113,113,0); }
         }
         .error-pulse {
-          animation: errorPulse 1s ease-in-out infinite;
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .error-pulse { animation: none; }
+          animation: errorPulse calc(var(--motion-enabled) * 1s) ease-in-out infinite;
         }
       `}</style>
     </div>

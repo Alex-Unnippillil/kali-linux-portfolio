@@ -86,11 +86,11 @@ body {
 }
 
 .fade-in {
-  animation: fadeIn 0.5s forwards;
+  animation: fadeIn calc(var(--motion-enabled) * 0.5s) forwards;
 }
 
 .fade-out {
-  animation: fadeOut 0.5s forwards;
+  animation: fadeOut calc(var(--motion-enabled) * 0.5s) forwards;
 }
 
 @keyframes fadeIn {
@@ -104,7 +104,7 @@ body {
 }
 
 .animated-icon {
-  animation: float 3s ease-in-out infinite;
+  animation: float calc(var(--motion-enabled) * 3s) ease-in-out infinite;
 }
 
 @keyframes float {

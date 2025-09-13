@@ -22,22 +22,6 @@ button:focus-visible {
     outline-offset: 2px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-        scroll-behavior: auto !important;
-    }
-}
-
-.reduced-motion *, .reduced-motion *::before, .reduced-motion *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-}
-
 /* Top NavBar styling */
 
 .top-arrow-up {
@@ -48,7 +32,7 @@ button:focus-visible {
 
 
 .animateShow {
-    animation: transformDownShow 200ms 1 forwards;
+    animation: transformDownShow calc(var(--motion-enabled) * 200ms) 1 forwards;
 }
 
 @keyframes transformDownShow {
@@ -111,7 +95,7 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 }
 
 .closed-window {
-    animation: closeWindow 200ms 1 forwards;
+    animation: closeWindow calc(var(--motion-enabled) * 200ms) 1 forwards;
 }
 
 @keyframes closeWindow {
@@ -153,7 +137,7 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 }
 
 .scalable-app-icon.scale {
-    animation: scaleAppImage 400ms 1 forwards;
+    animation: scaleAppImage calc(var(--motion-enabled) * 400ms) 1 forwards;
 }
 
 /* Terminal enhancements */
@@ -170,7 +154,7 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 }
 
 .xterm .xterm-cursor {
-    animation: cursor-pulse 1s steps(2) infinite;
+    animation: cursor-pulse calc(var(--motion-enabled) * 1s) steps(2) infinite;
 }
 
 dialog {
@@ -197,12 +181,6 @@ dialog {
     100% { opacity: 1; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .xterm .xterm-cursor {
-        animation: none;
-    }
-}
-
 @keyframes scaleAppImage {
     from {
         transform: translate(-50%, -50%) scale(1);
@@ -219,7 +197,7 @@ dialog {
 
 /* Show Applications overlay animation */
 .all-apps-anim {
-    animation: allAppsScale 200ms ease-out;
+    animation: allAppsScale calc(var(--motion-enabled) * 200ms) ease-out;
 }
 
 @keyframes allAppsScale {
@@ -236,7 +214,7 @@ dialog {
 
 /* App icon click animation */
 .app-icon-launch {
-    animation: appIconLaunch 200ms ease-in-out;
+    animation: appIconLaunch calc(var(--motion-enabled) * 200ms) ease-in-out;
 }
 
 @keyframes appIconLaunch {
@@ -257,7 +235,7 @@ dialog {
 .card {
     position: relative;
     transform-style: preserve-3d;
-    transition: transform 0.6s ease, opacity 0.3s ease;
+    transition: transform calc(var(--motion-enabled) * 0.6s) ease, opacity calc(var(--motion-enabled) * 0.3s) ease;
 }
 
 .card-face {
@@ -289,7 +267,7 @@ dialog {
 .animate-deal {
     transform: translateY(-20px);
     opacity: 0;
-    animation: dealCard 0.3s forwards ease-out;
+    animation: dealCard calc(var(--motion-enabled) * 0.3s) forwards ease-out;
 }
 
 @keyframes dealCard {
@@ -300,7 +278,7 @@ dialog {
 }
 
 .peek {
-    animation: dealerPeek 0.6s ease-in-out;
+    animation: dealerPeek calc(var(--motion-enabled) * 0.6s) ease-in-out;
 }
 
 @keyframes dealerPeek {
@@ -322,11 +300,11 @@ dialog {
     border: 2px solid var(--color-inverse);
     position: absolute;
     inset-inline-start: 0;
-    transition: transform 0.3s;
+    transition: transform calc(var(--motion-enabled) * 0.3s);
 }
 
 .chip-pop {
-    animation: chipPop 0.3s ease-out forwards;
+    animation: chipPop calc(var(--motion-enabled) * 0.3s) ease-out forwards;
 }
 
 @keyframes chipPop {
@@ -335,25 +313,7 @@ dialog {
 }
 
 .shuffle {
-    animation: shuffleDeck 0.5s;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .card,
-    .chip {
-        transition: none;
-    }
-    .card.flipped {
-        transform: none;
-    }
-    .chip-pop,
-    .animate-deal,
-    .peek,
-    .shuffle {
-        animation: none;
-        transform: none;
-        opacity: 1;
-    }
+    animation: shuffleDeck calc(var(--motion-enabled) * 0.5s);
 }
 
 @keyframes shuffleDeck {
@@ -411,7 +371,7 @@ dialog {
 }
 
 .shake {
-    animation: shake 0.5s;
+    animation: shake calc(var(--motion-enabled) * 0.5s);
 }
 
 @keyframes keypress {
@@ -420,7 +380,7 @@ dialog {
 }
 
 .key-press {
-    animation: keypress 0.1s;
+    animation: keypress calc(var(--motion-enabled) * 0.1s);
 }
 
 @keyframes reveal {
@@ -429,7 +389,7 @@ dialog {
 }
 
 .reveal {
-    animation: reveal 0.3s ease-out;
+    animation: reveal calc(var(--motion-enabled) * 0.3s) ease-out;
 }
 
 @keyframes tile-pop {
@@ -438,7 +398,7 @@ dialog {
 }
 
 .tile-pop {
-    animation: tile-pop 0.15s ease-out;
+    animation: tile-pop calc(var(--motion-enabled) * 0.15s) ease-out;
 
 }
 
@@ -452,7 +412,7 @@ dialog {
     inset: 0;
     border-radius: inherit;
     background: color-mix(in srgb, var(--color-text), transparent 50%);
-    animation: merge-ripple 0.4s ease-out;
+    animation: merge-ripple calc(var(--motion-enabled) * 0.4s) ease-out;
     pointer-events: none;
 }
 
@@ -464,7 +424,7 @@ dialog {
 
 .score-pop {
     display: inline-block;
-    animation: score-pop 0.3s ease-out;
+    animation: score-pop calc(var(--motion-enabled) * 0.3s) ease-out;
 }
 
 @keyframes hangman-draw {
@@ -475,7 +435,7 @@ dialog {
 .hangman-part {
     stroke-dasharray: 100;
     stroke-dashoffset: 100;
-    animation: hangman-draw 0.5s ease-out forwards;
+    animation: hangman-draw calc(var(--motion-enabled) * 0.5s) ease-out forwards;
 
 }
 
@@ -492,7 +452,7 @@ dialog {
     );
     background-repeat: no-repeat;
     background-size: 0% 100%;
-    animation: word-found-highlight 0.6s forwards;
+    animation: word-found-highlight calc(var(--motion-enabled) * 0.6s) forwards;
     display: inline-block;
 }
 

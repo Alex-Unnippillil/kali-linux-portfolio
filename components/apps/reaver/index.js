@@ -115,10 +115,10 @@ const ReaverStepper = () => {
           justify-content: center;
         }
         .arrow-right {
-          animation: move-right 1s forwards;
+          animation: move-right calc(var(--motion-enabled) * 1s) forwards;
         }
         .arrow-left {
-          animation: move-left 1s forwards;
+          animation: move-left calc(var(--motion-enabled) * 1s) forwards;
         }
         @keyframes move-right {
           from {

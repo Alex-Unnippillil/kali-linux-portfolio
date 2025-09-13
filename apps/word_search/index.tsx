@@ -446,7 +446,7 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
             r={radius}
             cx="18"
             cy="18"
-            style={{ transition: 'stroke-dashoffset 0.5s' }}
+            style={{ transition: 'stroke-dashoffset calc(var(--motion-enabled) * 0.5s)' }}
           />
           <text x="18" y="20.5" textAnchor="middle" className="text-xs">{`${found.size}/${words.length}`}</text>
         </svg>

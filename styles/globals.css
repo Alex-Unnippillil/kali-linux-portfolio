@@ -20,6 +20,17 @@
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
   accent-color: var(--color-control-accent);
+  --motion-enabled: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-enabled: 0;
+  }
+}
+
+.reduced-motion {
+  --motion-enabled: 0;
 }
 
 /* Dark theme */

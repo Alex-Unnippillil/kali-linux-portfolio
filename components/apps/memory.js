@@ -290,7 +290,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
         style={{
           width: `${size * 120}px`,
           transform: nudge ? 'translateX(2px)' : 'none',
-          transition: 'transform 150ms',
+          transition: 'transform calc(var(--motion-enabled) * 150ms)',
         }}
       >
         <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${size}, minmax(0,1fr))` }}>
