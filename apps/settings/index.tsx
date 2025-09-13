@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
+import wallpaperManifest from "../../public/wallpapers-manifest.json";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
   resetSettings,
@@ -42,16 +43,7 @@ export default function Settings() {
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
 
-  const wallpapers = [
-    "wall-1",
-    "wall-2",
-    "wall-3",
-    "wall-4",
-    "wall-5",
-    "wall-6",
-    "wall-7",
-    "wall-8",
-  ];
+  const wallpapers = Object.keys(wallpaperManifest);
 
   const changeBackground = (name: string) => setWallpaper(name);
 
@@ -115,7 +107,7 @@ export default function Settings() {
           <div
             className="md:w-2/5 w-2/3 h-1/3 m-auto my-4"
             style={{
-              backgroundImage: `url(/wallpapers/${wallpaper}.webp)`,
+              backgroundImage: `url(/wallpapers/${wallpaperManifest[wallpaper]})`,
               backgroundSize: "cover",
               backgroundRepeat: "no-repeat",
               backgroundPosition: "center center",
@@ -159,9 +151,9 @@ export default function Settings() {
               max={wallpapers.length - 1}
               step="1"
               value={wallpapers.indexOf(wallpaper)}
-              onChange={(e) =>
-                changeBackground(wallpapers[parseInt(e.target.value, 10)])
-              }
+                onChange={(e) =>
+                  changeBackground(wallpapers[parseInt(e.target.value, 10)])
+                }
               className="ubuntu-slider"
               aria-label="Wallpaper"
             />
@@ -191,7 +183,7 @@ export default function Settings() {
                   " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"
                 }
                 style={{
-                  backgroundImage: `url(/wallpapers/${name}.webp)`,
+                  backgroundImage: `url(/wallpapers/${wallpaperManifest[name]})`,
                   backgroundSize: "cover",
                   backgroundRepeat: "no-repeat",
                   backgroundPosition: "center center",

@@ -2,14 +2,16 @@
 
 import React, { useEffect, useState } from 'react'
 import { useSettings } from '../../hooks/useSettings';
+import wallpaperManifest from '../../public/wallpapers-manifest.json';
 
 export default function BackgroundImage() {
     const { wallpaper } = useSettings();
     const [needsOverlay, setNeedsOverlay] = useState(false);
+    const file = wallpaperManifest[wallpaper] || `${wallpaper}.webp`;
 
     useEffect(() => {
         const img = new Image();
-        img.src = `/wallpapers/${wallpaper}.webp`;
+        img.src = `/wallpapers/${file}`;
         img.onload = () => {
             const canvas = document.createElement('canvas');
             canvas.width = img.width;
@@ -34,12 +36,12 @@ export default function BackgroundImage() {
             const contrast = (1.05) / (lum + 0.05); // white text luminance is 1
             setNeedsOverlay(contrast < 4.5);
         };
-    }, [wallpaper]);
+    }, [file]);
 
     return (
         <div className="bg-ubuntu-img absolute -z-10 top-0 right-0 overflow-hidden h-full w-full">
             <img
-                src={`/wallpapers/${wallpaper}.webp`}
+                src={`/wallpapers/${file}`}
                 alt=""
                 className="w-full h-full object-cover"
             />
