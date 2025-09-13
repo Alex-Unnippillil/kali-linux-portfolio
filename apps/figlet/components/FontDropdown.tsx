@@ -91,7 +91,11 @@ const FontDropdown: React.FC<Props> = ({ fonts, value, onChange }) => {
               role="option"
               aria-selected={value === f.name}
               className={`cursor-pointer px-2 ${i === active ? 'bg-blue-600' : ''}`}
-              style={{ height: '24px', lineHeight: '24px', fontFamily: 'monospace' }}
+              style={{
+                height: '24px',
+                lineHeight: '24px',
+                fontFamily: 'var(--font-fira-code), monospace',
+              }}
               onMouseEnter={() => setActive(i)}
               onMouseDown={(e) => {
                 e.preventDefault();

@@ -34,7 +34,7 @@ const contrastRatio = (c1: string, c2: string) => {
 const STYLES = [
   { name: 'Classic', bg: '#000000', fg: '#ffffff', font: 'serif' },
   { name: 'Inverted', bg: '#ffffff', fg: '#000000', font: 'sans-serif' },
-  { name: 'Retro', bg: '#1e3a8a', fg: '#fef3c7', font: 'monospace' },
+  { name: 'Retro', bg: '#1e3a8a', fg: '#fef3c7', font: '"Fira Code", monospace' },
 ];
 
 export default function Posterizer({ quote }: { quote: Quote | null }) {

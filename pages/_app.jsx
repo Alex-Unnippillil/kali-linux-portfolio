@@ -17,11 +17,18 @@ import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 
-import { Ubuntu } from 'next/font/google';
+import { Inter, Fira_Code } from 'next/font/google';
 
-const ubuntu = Ubuntu({
+const inter = Inter({
   subsets: ['latin'],
   weight: ['300', '400', '500', '700'],
+  variable: '--font-inter',
+});
+
+const firaCode = Fira_Code({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '700'],
+  variable: '--font-fira-code',
 });
 
 
@@ -149,7 +156,7 @@ function MyApp(props) {
   return (
     <ErrorBoundary>
       <Script src="/a2hs.js" strategy="beforeInteractive" />
-      <div className={ubuntu.className}>
+      <div className={`${inter.className} ${inter.variable} ${firaCode.variable}`}>
         <a
           href="#app-grid"
           className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"

@@ -12,7 +12,7 @@ const Terminal = forwardRef<HTMLDivElement, TerminalContainerProps>(
       className={`text-white ${className}`}
       style={{
         background: 'var(--kali-bg)',
-        fontFamily: 'monospace',
+        fontFamily: 'var(--font-fira-code), monospace',
         fontSize: 'clamp(1rem, 0.6vw + 1rem, 1.1rem)',
         lineHeight: 1.4,
         ...style,
