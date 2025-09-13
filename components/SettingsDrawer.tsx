@@ -17,7 +17,7 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
         Settings
       </button>
       {open && (
-        <div role="dialog">
+        <div role="dialog" aria-modal="true">
           <label>
             Theme
             <select

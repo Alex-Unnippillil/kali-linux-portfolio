@@ -16,10 +16,10 @@
   --color-border: #2a2e36; /* subtle borders */
   --color-terminal: #00ff00; /* terminal green */
   --color-dark: #0c0f12; /* card back */
-  --color-focus-ring: var(--color-accent);
-  --color-selection: var(--color-accent);
-  --color-control-accent: var(--color-accent);
-  accent-color: var(--color-control-accent);
+  --accent: var(--color-accent);
+  --color-selection: var(--accent);
+  --color-control-accent: var(--accent);
+  accent-color: var(--accent);
 }
 
 /* Dark theme */
@@ -29,6 +29,7 @@ html[data-theme='dark'] {
   --color-primary: #1e88e5;
   --color-secondary: #121212;
   --color-accent: #bb86fc;
+  --accent: var(--color-accent);
   --color-muted: #1f1f1f;
   --color-surface: #121212;
   --color-inverse: #ffffff;
@@ -44,6 +45,7 @@ html[data-theme='neon'] {
   --color-primary: #39ff14;
   --color-secondary: #1a1a1a;
   --color-accent: #ff00ff;
+  --accent: var(--color-accent);
   --color-muted: #222222;
   --color-surface: #111111;
   --color-inverse: #ffffff;
@@ -59,6 +61,7 @@ html[data-theme='matrix'] {
   --color-primary: #00ff00;
   --color-secondary: #001100;
   --color-accent: #00ff00;
+  --accent: var(--color-accent);
   --color-muted: #003300;
   --color-surface: #001100;
   --color-inverse: #ffffff;
@@ -74,6 +77,6 @@ html[data-theme='matrix'] {
 }
 
 *:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
