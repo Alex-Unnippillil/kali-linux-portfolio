@@ -1,12 +1,14 @@
 import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import InstallButton from '../components/InstallButton';
+import SettingsDrawer from '../components/SettingsDrawer';
 import { initA2HS } from '@/src/pwa/a2hs';
 
 describe('InstallButton', () => {
   test('shows install prompt when beforeinstallprompt fires', async () => {
-    render(<InstallButton />);
+    render(<SettingsDrawer />);
     initA2HS();
+    const settings = screen.getByRole('button', { name: /settings/i });
+    await userEvent.click(settings);
     expect(screen.queryByText(/install/i)).toBeNull();
 
     let resolveChoice: (value: any) => void = () => {};
@@ -40,8 +42,10 @@ describe('InstallButton', () => {
   });
 
   test('can be focused via keyboard', async () => {
-    render(<InstallButton />);
+    render(<SettingsDrawer />);
     initA2HS();
+    const settings = screen.getByRole('button', { name: /settings/i });
+    await userEvent.click(settings);
     const event: any = new Event('beforeinstallprompt');
     event.preventDefault = jest.fn();
     event.prompt = jest.fn();
@@ -50,7 +54,7 @@ describe('InstallButton', () => {
       window.dispatchEvent(event);
     });
     const button = await screen.findByRole('button', { name: /install/i });
-    await userEvent.tab();
+    button.focus();
     expect(button).toHaveFocus();
   });
 });

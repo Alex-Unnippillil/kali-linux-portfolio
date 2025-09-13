@@ -13,11 +13,13 @@ export const createDynamicApp = (id, title) =>
         return mod.default;
       } catch (err) {
         console.error(`Failed to load ${title}`, err);
-        return () => (
-          <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
-            {`Unable to load ${title}`}
-          </div>
-        );
+        return function DynamicAppFallback() {
+          return (
+            <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+              {`Unable to load ${title}`}
+            </div>
+          );
+        };
       }
     },
     {
