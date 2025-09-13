@@ -257,6 +257,7 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayProjectGallery,
+    mediaViewer: true,
   },
   {
     id: 'input-lab',
@@ -664,6 +665,7 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displayYouTube,
+    mediaViewer: true,
   },
   {
     id: 'beef',
@@ -1005,6 +1007,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayEvidenceVault,
+    mediaViewer: true,
   },
   {
     id: 'dsniff',
