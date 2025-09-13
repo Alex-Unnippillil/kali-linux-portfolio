@@ -24,17 +24,27 @@ const AppsPage = () => {
 
   return (
     <div className="p-4">
-      <label htmlFor="app-search" className="sr-only">
-        Search apps
-      </label>
-      <input
-        id="app-search"
-        type="search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search apps"
-        className="mb-4 w-full rounded border p-2"
-      />
+      <div className="mb-4 flex items-center gap-2">
+        <label htmlFor="app-search" className="sr-only">
+          Search apps
+        </label>
+        <input
+          id="app-search"
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search apps"
+          className="flex-1 rounded border p-2"
+        />
+        <button
+          type="button"
+          data-accent-toggle
+          aria-label="toggle accent color"
+          className="rounded border p-2"
+        >
+          🎨
+        </button>
+      </div>
       <div
         id="app-grid"
         tabIndex="-1"

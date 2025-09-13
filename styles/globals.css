@@ -9,6 +9,7 @@
   --color-primary: #1793d1; /* kali blue accent */
   --color-secondary: #1a1f26; /* complementary dark */
   --color-accent: #1793d1; /* accent matches primary */
+  --accent-2: #805ad5; /* alternate accent */
   /* Utility colors */
   --color-muted: #2a2e36; /* muted surfaces */
   --color-surface: #1a1f26; /* panel surfaces */
