@@ -1,15 +1,43 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import Image from 'next/image'
 
+export const bootLines = [
+    'Boot sequence initiated…',
+    'Loading kernel modules…',
+    'Mounting file systems…',
+    'Starting services…',
+    'Launching desktop environment…'
+]
+
 function BootingScreen(props) {
+    const [visibleCount, setVisibleCount] = useState(0)
+
+    useEffect(() => {
+        if (props.visible && !props.isShutDown) {
+            setVisibleCount(0)
+            const id = setInterval(() => {
+                setVisibleCount((c) => {
+                    if (c >= bootLines.length) {
+                        clearInterval(id)
+                        return c
+                    }
+                    return c + 1
+                })
+            }, 200)
+            return () => clearInterval(id)
+        }
+        setVisibleCount(0)
+        return () => {}
+    }, [props.visible, props.isShutDown])
 
     return (
         <div
             style={{
-                ...(props.visible || props.isShutDown ? { zIndex: "100" } : { zIndex: "-20" }),
+                ...(props.visible || props.isShutDown ? { zIndex: '100' } : { zIndex: '-20' }),
                 contentVisibility: 'auto',
             }}
-            className={(props.visible || props.isShutDown ? " visible opacity-100" : " invisible opacity-0 ") + " absolute duration-500 select-none flex flex-col justify-around items-center top-0 right-0 overflow-hidden m-0 p-0 h-screen w-screen bg-black"}>
+            className={(props.visible || props.isShutDown ? ' visible opacity-100' : ' invisible opacity-0') + ' absolute duration-500 select-none flex flex-col justify-around items-center top-0 right-0 overflow-hidden m-0 p-0 h-screen w-screen bg-black'}
+        >
             <Image
                 width={400}
                 height={400}
@@ -20,9 +48,11 @@ function BootingScreen(props) {
                 priority
             />
             <div className="w-10 h-10 flex justify-center items-center rounded-full outline-none cursor-pointer" onClick={props.turnOn} >
-                {(props.isShutDown
-                    ? <div className="bg-white rounded-full flex justify-center items-center w-10 h-10 hover:bg-gray-300"><Image width={32} height={32} className="w-8" src="/themes/Yaru/status/power-button.svg" alt="Power Button" sizes="32px" priority/></div>
-                    : <Image width={40} height={40} className={" w-10 " + (props.visible ? " animate-spin " : "")} src="/themes/Yaru/status/process-working-symbolic.svg" alt="Ubuntu Process Symbol" sizes="40px" priority/>)}
+                {(
+                    props.isShutDown
+                        ? <div className="bg-white rounded-full flex justify-center items-center w-10 h-10 hover:bg-gray-300"><Image width={32} height={32} className="w-8" src="/themes/Yaru/status/power-button.svg" alt="Power Button" sizes="32px" priority/></div>
+                        : <Image width={40} height={40} className={' w-10 ' + (props.visible ? ' animate-spin ' : '')} src="/themes/Yaru/status/process-working-symbolic.svg" alt="Ubuntu Process Symbol" sizes="40px" priority/>
+                )}
             </div>
             <Image
                 width={200}
@@ -37,8 +67,15 @@ function BootingScreen(props) {
                 <span className="font-bold mx-1">|</span>
                 <a href="https://github.com/Alex-Unnippillil" rel="noopener noreferrer" target="_blank" className="underline">github</a>
             </div>
+            <div
+                data-testid="boot-lines"
+                className="absolute bottom-0 left-0 m-4 font-mono text-green-400 text-xs whitespace-pre"
+            >
+                {bootLines.slice(0, visibleCount).join('\n')}
+            </div>
         </div>
     )
 }
 
 export default BootingScreen
+
