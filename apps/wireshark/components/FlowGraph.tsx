@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { toPng } from 'html-to-image';
 import type cytoscape from 'cytoscape';
@@ -33,12 +33,39 @@ interface FlowGraphProps {
 const FlowGraph: React.FC<FlowGraphProps> = ({ packets }) => {
   const cyRef = useRef<cytoscape.Core | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [displayPackets, setDisplayPackets] = useState<Packet[]>(packets);
+  const lastUpdateRef = useRef(0);
+
+  useEffect(() => {
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    let idleId: any;
+    const schedule = () => {
+      idleId = ((window as any).requestIdleCallback || ((cb: any) => setTimeout(cb, 1)))(
+        () => {
+          setDisplayPackets(packets);
+          lastUpdateRef.current = Date.now();
+        },
+      );
+    };
+    const elapsed = Date.now() - lastUpdateRef.current;
+    if (elapsed >= 1000) {
+      schedule();
+    } else {
+      timeout = setTimeout(schedule, 1000 - elapsed);
+    }
+    return () => {
+      if (timeout) clearTimeout(timeout);
+      if (idleId) {
+        ((window as any).cancelIdleCallback || clearTimeout)(idleId);
+      }
+    };
+  }, [packets]);
 
   const { elements, stats } = useMemo(() => {
     const nodes: Record<string, any> = {};
     const edges: Record<string, any> = {};
     let bytes = 0;
-    packets.forEach((p) => {
+    displayPackets.forEach((p) => {
       if (!nodes[p.src]) nodes[p.src] = { data: { id: p.src, label: p.src } };
       if (!nodes[p.dest]) nodes[p.dest] = { data: { id: p.dest, label: p.dest } };
       const key = `${p.src}_${p.dest}`;
@@ -57,18 +84,24 @@ const FlowGraph: React.FC<FlowGraphProps> = ({ packets }) => {
       }))
     ];
     const stats = {
-      packets: packets.length,
+      packets: displayPackets.length,
       hosts: Object.keys(nodes).length,
       conversations: Object.keys(edges).length,
       bytes
     };
     return { elements, stats };
-  }, [packets]);
+  }, [displayPackets]);
 
   useEffect(() => {
-    if (cyRef.current) {
-      cyRef.current.layout({ name: 'cose-bilkent' }).run();
-    }
+    if (!cyRef.current) return;
+    const id = ((window as any).requestIdleCallback || ((cb: any) => setTimeout(cb, 1)))(
+      () => {
+        cyRef.current?.layout({ name: 'cose-bilkent' }).run();
+      },
+    );
+    return () => {
+      ((window as any).cancelIdleCallback || clearTimeout)(id);
+    };
   }, [elements]);
 
   const exportPNG = () => {
