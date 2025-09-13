@@ -13,17 +13,6 @@ const Ubuntu = dynamic(
     loading: () => <p>Loading Ubuntu...</p>,
   }
 );
-const InstallButton = dynamic(
-  () =>
-    import('../components/InstallButton').catch((err) => {
-      console.error('Failed to load InstallButton component', err);
-      throw err;
-    }),
-  {
-    ssr: false,
-    loading: () => <p>Loading install options...</p>,
-  }
-);
 
 /**
  * @returns {JSX.Element}
@@ -36,7 +25,6 @@ const App = () => (
     <Meta />
     <Ubuntu />
     <BetaBadge />
-    <InstallButton />
   </>
 );
 

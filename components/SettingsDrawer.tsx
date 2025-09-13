@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { getUnlockedThemes } from '../utils/theme';
 import { useSettings, ACCENT_OPTIONS } from '../hooks/useSettings';
+import InstallButton from './InstallButton';
 
 interface Props {
   highScore?: number;
@@ -52,6 +53,7 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
               ))}
             </div>
           </label>
+          <InstallButton className="mt-2 px-3 py-1 bg-ubt-blue text-white rounded" />
         </div>
       )}
     </div>
