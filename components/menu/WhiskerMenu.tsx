@@ -27,6 +27,7 @@ const WhiskerMenu: React.FC = () => {
   const [highlight, setHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [recentVersion, setRecentVersion] = useState(0);
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
@@ -37,7 +38,7 @@ const WhiskerMenu: React.FC = () => {
     } catch {
       return [];
     }
-  }, [allApps, open]);
+  }, [allApps, open, recentVersion]);
   const utilityApps: AppMeta[] = utilities as any;
   const gameApps: AppMeta[] = games as any;
 
@@ -74,6 +75,11 @@ const WhiskerMenu: React.FC = () => {
   const openSelectedApp = (id: string) => {
     window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
     setOpen(false);
+  };
+
+  const clearRecent = () => {
+    safeLocalStorage?.setItem('recentApps', JSON.stringify([]));
+    setRecentVersion(v => v + 1);
   };
 
   useEffect(() => {
@@ -154,13 +160,24 @@ const WhiskerMenu: React.FC = () => {
             ))}
           </div>
           <div className="p-3">
-            <input
-              className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
-              placeholder="Search"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              autoFocus
-            />
+            <div className="mb-3 flex items-center">
+              <input
+                className="w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
+                placeholder="Search"
+                aria-label="Search applications"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                autoFocus
+              />
+              {category === 'recent' && recentApps.length > 0 && (
+                <button
+                  className="ml-2 px-2 py-1 text-sm bg-gray-700 rounded"
+                  onClick={clearRecent}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
             <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
               {currentApps.map((app, idx) => (
                 <div key={app.id} className={idx === highlight ? 'ring-2 ring-ubb-orange' : ''}>
