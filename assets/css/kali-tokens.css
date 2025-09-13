@@ -1,0 +1,144 @@
+@layer reset, base, components, utilities;
+
+@layer reset {
+  *,
+  *::before,
+  *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+}
+
+@layer base {
+  :root {
+    /* Theme colors */
+    --color-ub-grey: #0f1317;
+    --color-ub-warm-grey: #7d7f83;
+    --color-ub-cool-grey: #1a1f26;
+    --color-ub-orange: #1793d1;
+    --color-ub-lite-abrgn: #22262c;
+    --color-ub-med-abrgn: #1b1f24;
+    --color-ub-drk-abrgn: #13171b;
+    --color-ub-window-title: #0c0f12;
+    --color-ub-gedit-dark: #021B33;
+    --color-ub-gedit-light: #003B70;
+    --color-ub-gedit-darker: #010D1A;
+    --color-ubt-grey: #F6F6F5;
+    --color-ubt-warm-grey: #AEA79F;
+    --color-ubt-cool-grey: #333333;
+    --color-ubt-blue: #62A0EA;
+    --color-ubt-green: #73D216;
+    --color-ubt-gedit-orange: #F39A21;
+    --color-ubt-gedit-blue: #50B6C6;
+    --color-ubt-gedit-dark: #003B70;
+    --color-ub-border-orange: #1793d1;
+    --color-ub-dark-grey: #2a2e36;
+    --color-bg: #0f1317;
+    --color-text: #F5F5F5;
+
+    /* Game palette tokens */
+    --game-color-secondary: #1d4ed8;
+    --game-color-success: #15803d;
+    --game-color-warning: #d97706;
+    --game-color-danger: #b91c1c;
+
+    /* Spacing scale */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.5rem;
+    --space-6: 2rem;
+
+    /* Radius */
+    --radius-sm: 2px;
+    --radius-md: 4px;
+    --radius-lg: 8px;
+    --radius-round: 9999px;
+
+    /* Motion durations */
+    --motion-fast: 150ms;
+    --motion-medium: 300ms;
+    --motion-slow: 500ms;
+
+    /* Fonts */
+    --font-family-base: 'Ubuntu', sans-serif;
+    --font-multiplier: 1;
+
+    /* Minimum interactive target size */
+    --hit-area: 32px;
+
+    /* Focus outline */
+    --focus-outline-color: var(--color-ubt-blue);
+    --focus-outline-width: 2px;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-family-base);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      --motion-fast: 0ms;
+      --motion-medium: 0ms;
+      --motion-slow: 0ms;
+    }
+  }
+
+  @media (prefers-contrast: more) {
+    :root {
+      --color-bg: #000000;
+      --color-text: #ffffff;
+      --color-ub-grey: #000000;
+      --color-ub-cool-grey: #000000;
+      --color-ubt-grey: #ffffff;
+      --color-ubt-cool-grey: #ffffff;
+      --color-ub-orange: #ffff00;
+      --color-ub-lite-abrgn: #00ffff;
+      --color-ub-border-orange: #ffff00;
+    }
+  }
+}
+
+@layer components {
+  /* component styles go here */
+}
+
+@layer utilities {
+  /* High contrast theme */
+  .high-contrast {
+    --color-bg: #000000;
+    --color-text: #ffffff;
+    --color-ub-grey: #000000;
+    --color-ub-cool-grey: #000000;
+    --color-ubt-grey: #ffffff;
+    --color-ubt-cool-grey: #ffffff;
+    --color-ub-orange: #ffff00;
+    --color-ub-lite-abrgn: #00ffff;
+    --color-ub-border-orange: #ffff00;
+    --game-color-secondary: #ffff00;
+    --game-color-success: #00ffff;
+    --game-color-warning: #ff00ff;
+    --game-color-danger: #ff0000;
+  }
+
+  /* Dyslexia-friendly fonts */
+  .dyslexia {
+    --font-family-base: 'OpenDyslexic', 'Comic Sans MS', Arial, sans-serif;
+  }
+
+  /* Larger hit areas */
+  .large-hit-area {
+    --hit-area: 48px;
+  }
+
+  /* Reduced motion */
+  .reduced-motion {
+    --motion-fast: 0ms;
+    --motion-medium: 0ms;
+    --motion-slow: 0ms;
+  }
+}
