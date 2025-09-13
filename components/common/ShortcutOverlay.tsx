@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import useKeymap from '../../apps/settings/keymapRegistry';
+import Modal from '../base/Modal';
 
 const formatEvent = (e: KeyboardEvent) => {
   const parts = [
@@ -18,7 +19,7 @@ const ShortcutOverlay: React.FC = () => {
   const [open, setOpen] = useState(false);
   const { shortcuts } = useKeymap();
 
-  const toggle = useCallback(() => setOpen((o) => !o), []);
+  const handleClose = useCallback(() => setOpen(false), []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -33,15 +34,12 @@ const ShortcutOverlay: React.FC = () => {
         '?';
       if (formatEvent(e) === show) {
         e.preventDefault();
-        toggle();
-      } else if (e.key === 'Escape' && open) {
-        e.preventDefault();
-        setOpen(false);
+        setOpen(true);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [open, toggle, shortcuts]);
+  }, [shortcuts]);
 
   const handleExport = () => {
     const data = JSON.stringify(shortcuts, null, 2);
@@ -54,8 +52,6 @@ const ShortcutOverlay: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  if (!open) return null;
-
   const keyCounts = shortcuts.reduce<Map<string, number>>((map, s) => {
     map.set(s.keys, (map.get(s.keys) || 0) + 1);
     return map;
@@ -67,47 +63,45 @@ const ShortcutOverlay: React.FC = () => {
   );
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 text-white p-4 overflow-auto"
-      role="dialog"
-      aria-modal="true"
-    >
-      <div className="max-w-lg w-full space-y-4">
-        <div className="flex justify-between items-center">
-          <h2 className="text-xl font-bold">Keyboard Shortcuts</h2>
+    <Modal isOpen={open} onClose={handleClose}>
+      <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 text-white p-4 overflow-auto">
+        <div className="max-w-lg w-full space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">Keyboard Shortcuts</h2>
+            <button
+              type="button"
+              onClick={handleClose}
+              className="text-sm underline"
+            >
+              Close
+            </button>
+          </div>
           <button
             type="button"
-            onClick={() => setOpen(false)}
-            className="text-sm underline"
+            onClick={handleExport}
+            className="px-2 py-1 bg-gray-700 rounded text-sm"
           >
-            Close
+            Export JSON
           </button>
+          <ul className="space-y-1">
+            {shortcuts.map((s, i) => (
+              <li
+                key={i}
+                data-conflict={conflicts.has(s.keys) ? 'true' : 'false'}
+                className={
+                  conflicts.has(s.keys)
+                    ? 'flex justify-between bg-red-600/70 px-2 py-1 rounded'
+                    : 'flex justify-between px-2 py-1'
+                }
+              >
+                <span className="font-mono mr-4">{s.keys}</span>
+                <span className="flex-1">{s.description}</span>
+              </li>
+            ))}
+          </ul>
         </div>
-        <button
-          type="button"
-          onClick={handleExport}
-          className="px-2 py-1 bg-gray-700 rounded text-sm"
-        >
-          Export JSON
-        </button>
-        <ul className="space-y-1">
-          {shortcuts.map((s, i) => (
-            <li
-              key={i}
-              data-conflict={conflicts.has(s.keys) ? 'true' : 'false'}
-              className={
-                conflicts.has(s.keys)
-                  ? 'flex justify-between bg-red-600/70 px-2 py-1 rounded'
-                  : 'flex justify-between px-2 py-1'
-              }
-            >
-              <span className="font-mono mr-4">{s.keys}</span>
-              <span className="flex-1">{s.description}</span>
-            </li>
-          ))}
-        </ul>
       </div>
-    </div>
+    </Modal>
   );
 };
 
