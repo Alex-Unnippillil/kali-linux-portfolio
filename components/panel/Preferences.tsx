@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Tabs from "../Tabs";
 import ToggleSwitch from "../ToggleSwitch";
+import useHashState from "../../hooks/useHashState";
 
 const PANEL_PREFIX = "xfce.panel.";
 
@@ -16,7 +17,10 @@ export default function Preferences() {
     { id: "items", label: "Items" },
   ];
 
-  const [active, setActive] = useState<TabId>("display");
+  const [active, setActive] = useHashState<TabId>(
+    "display",
+    TABS.map((t) => t.id) as TabId[]
+  );
 
   const [size, setSize] = useState(() => {
     if (typeof window === "undefined") return 24;
