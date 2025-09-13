@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "title": "Intro to Kali Tools",
+    "excerpt": "Getting started with the desktop-style Kali Linux portfolio.",
+    "tags": ["guide", "kali"]
+  },
+  {
+    "id": 2,
+    "title": "Building Custom Apps",
+    "excerpt": "How to extend the portfolio with new apps and plugins.",
+    "tags": ["development", "guide"]
+  },
+  {
+    "id": 3,
+    "title": "UI/UX Notes",
+    "excerpt": "Design decisions behind the Ubuntu-like interface.",
+    "tags": ["design"]
+  }
+]
