@@ -8,6 +8,7 @@ import '../styles/globals.css';
 import '../styles/index.css';
 import '../styles/resume-print.css';
 import '../styles/print.css';
+import '../assets/css/kali-components.css';
 import '@xterm/xterm/css/xterm.css';
 import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
@@ -16,6 +17,7 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { supportsCSSHas } from '../utils/feature';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -143,6 +145,42 @@ function MyApp(props) {
       if (OriginalNotification) {
         window.Notification = OriginalNotification;
       }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (supportsCSSHas()) return;
+    const observers = [];
+
+    document.querySelectorAll('.menu-btn').forEach((btn) => {
+      const sibling = btn.nextElementSibling;
+      if (!sibling) return;
+      const toggle = () => {
+        btn.classList.toggle('menu-btn-active', sibling.classList.contains('active'));
+      };
+      const observer = new MutationObserver(toggle);
+      observer.observe(sibling, { attributes: true, attributeFilter: ['class'] });
+      observers.push(observer);
+      toggle();
+    });
+
+    const handlers = [];
+    document.querySelectorAll('.appmenu').forEach((menu) => {
+      const input = menu.querySelector('.search input');
+      if (!input) return;
+      const focus = () => menu.classList.add('appmenu-search-focus');
+      const blur = () => menu.classList.remove('appmenu-search-focus');
+      input.addEventListener('focus', focus);
+      input.addEventListener('blur', blur);
+      handlers.push({ input, focus, blur });
+    });
+
+    return () => {
+      observers.forEach((o) => o.disconnect());
+      handlers.forEach(({ input, focus, blur }) => {
+        input.removeEventListener('focus', focus);
+        input.removeEventListener('blur', blur);
+      });
     };
   }, []);
 

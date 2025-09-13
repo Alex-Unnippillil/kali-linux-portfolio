@@ -1,0 +1,10 @@
+.menu-btn:has(+ .active),
+.menu-btn-active {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
+.appmenu:has(.search input:focus),
+.appmenu-search-focus {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
