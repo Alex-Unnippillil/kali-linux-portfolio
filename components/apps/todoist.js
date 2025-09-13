@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import Image from 'next/image';
 import * as chrono from 'chrono-node';
 import { RRule } from 'rrule';
 import { parseRecurring } from '../../apps/todoist/utils/recurringParser';
@@ -672,7 +673,13 @@ export default function Todoist() {
         </h2>
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center text-gray-500 mt-3">
-            <img src="/empty-tasks.svg" alt="" className="w-16 h-16 mb-1.5" />
+            <Image
+              src="/empty-tasks.svg"
+              alt=""
+              width={64}
+              height={64}
+              className="w-16 h-16 mb-1.5"
+            />
             <span className="text-sm">No tasks</span>
           </div>
         ) : (
