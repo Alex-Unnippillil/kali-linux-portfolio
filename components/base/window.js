@@ -365,13 +365,25 @@ export class Window extends Component {
         this.checkSnapPreview();
     }
 
-    handleStop = () => {
+    handleStop = (_, data) => {
         this.changeCursorToDefault();
         const snapPos = this.state.snapPosition;
         if (snapPos) {
             this.snapWindow(snapPos);
         } else {
             this.setState({ snapPreview: null, snapPosition: null });
+            if (data && data.node) {
+                const grid = 8;
+                const maxX = this.state.parentSize.width;
+                const maxY = this.state.parentSize.height;
+                const snap = (value, max) => {
+                    const snapped = Math.round(value / grid) * grid;
+                    return Math.min(Math.max(0, snapped), max);
+                };
+                const x = snap(data.x, maxX);
+                const y = snap(data.y, maxY);
+                data.node.style.transform = `translate(${x}px, ${y}px)`;
+            }
         }
     }
 
