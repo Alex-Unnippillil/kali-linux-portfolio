@@ -149,6 +149,7 @@ function MyApp(props) {
   return (
     <ErrorBoundary>
       <Script src="/a2hs.js" strategy="beforeInteractive" />
+      <Script src="/assets/js/kali-commands.js" strategy="afterInteractive" />
       <div className={ubuntu.className}>
         <a
           href="#app-grid"
