@@ -31,6 +31,7 @@ const WhiskerMenu: React.FC = () => {
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
   const recentApps = useMemo(() => {
+    if (!open) return [];
     try {
       const ids: string[] = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]');
       return ids.map(id => allApps.find(a => a.id === id)).filter(Boolean) as AppMeta[];
@@ -117,6 +118,7 @@ const WhiskerMenu: React.FC = () => {
   return (
     <div className="relative">
       <button
+        id="whisker-menu-button"
         ref={buttonRef}
         type="button"
         onClick={() => setOpen(o => !o)}
@@ -153,14 +155,15 @@ const WhiskerMenu: React.FC = () => {
               </button>
             ))}
           </div>
-          <div className="p-3">
-            <input
-              className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
-              placeholder="Search"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              autoFocus
-            />
+            <div className="p-3">
+              <input
+                className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
+                placeholder="Search"
+                aria-label="Search apps"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                autoFocus
+              />
             <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
               {currentApps.map((app, idx) => (
                 <div key={app.id} className={idx === highlight ? 'ring-2 ring-ubb-orange' : ''}>
