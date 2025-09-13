@@ -1,0 +1,8 @@
+repos:
+  - repo: local
+    hooks:
+      - id: check-images
+        name: Check oversized images
+        entry: node scripts/check-images.js
+        language: node
+        pass_filenames: false
