@@ -10,12 +10,16 @@ export class Window extends Component {
         this.id = null;
         this.startX = 60;
         this.startY = 10;
+        this.overlayRootEl = null;
         this.state = {
             cursorType: "cursor-default",
             width: props.defaultWidth || 60,
             height: props.defaultHeight || 85,
             closed: false,
             maximized: false,
+            snapPreview: null,
+            snapped: null,
+            grabbed: false,
             parentSize: {
                 height: 100,
                 width: 100
@@ -70,11 +74,82 @@ export class Window extends Component {
         if (this.state.maximized) {
             this.restoreWindow();
         }
-        this.setState({ cursorType: "cursor-move" })
+        // release snap if any
+        if (this.state.snapped) {
+            this.setState({ snapped: null, width: 60, height: 85 });
+        }
+        this.setState({ cursorType: "cursor-move", snapPreview: null })
     }
 
     changeCursorToDefault = () => {
         this.setState({ cursorType: "cursor-default" })
+    }
+
+    handleDrag = (_e = null, data = null) => {
+        const el = document.getElementById(this.id);
+        if (!el) return;
+        // apply edge resistance when data with coordinates provided
+        if (data && data.node) {
+            const x = Math.max(0, data.x);
+            const y = Math.max(0, data.y);
+            data.node.style.transform = `translate(${x}px, ${y}px)`;
+        }
+        const rect = el.getBoundingClientRect();
+        const threshold = 10;
+        if (rect.left <= threshold) {
+            this.setState({ snapPreview: 'left' });
+        } else if (window.innerWidth - rect.right <= threshold) {
+            this.setState({ snapPreview: 'right' });
+        } else {
+            this.setState({ snapPreview: null });
+        }
+    }
+
+    handleStop = () => {
+        if (this.state.snapPreview) {
+            this.setState({
+                snapped: this.state.snapPreview,
+                width: 50,
+                height: 96.3,
+                snapPreview: null
+            }, this.resizeBoundries);
+        }
+    }
+
+    handleKeyDown = (e) => {
+        if (e.altKey && e.key === 'ArrowDown' && this.state.snapped) {
+            this.setState({ snapped: null, width: 60, height: 85 }, this.resizeBoundries);
+        }
+    }
+
+    handleTitleKeyDown = (e) => {
+        if (e.key === ' ' || e.code === 'Space') {
+            e.preventDefault();
+            this.setState({ grabbed: !this.state.grabbed });
+            return;
+        }
+        if (!this.state.grabbed) return;
+        const winEl = document.getElementById(this.id);
+        if (!winEl) return;
+        const match = winEl.style.transform.match(/translate\(([-\d]+)px, ([-\d]+)px\)/);
+        let currX = match ? parseInt(match[1], 10) : 0;
+        let currY = match ? parseInt(match[2], 10) : 0;
+        if (e.key === 'ArrowRight') currX += 10;
+        if (e.key === 'ArrowLeft') currX -= 10;
+        if (e.key === 'ArrowDown') currY += 10;
+        if (e.key === 'ArrowUp') currY -= 10;
+        currX = Math.max(0, currX);
+        currY = Math.max(0, currY);
+        winEl.style.transform = `translate(${currX}px, ${currY}px)`;
+    }
+
+    activateOverlay = () => {
+        const rootId = this.props.overlayRoot || '__next';
+        const root = document.getElementById(rootId);
+        if (root) {
+            root.setAttribute('inert', '');
+            this.overlayRootEl = root;
+        }
     }
 
     handleVerticleResize = () => {
@@ -158,23 +233,29 @@ export class Window extends Component {
     closeWindow = () => {
         this.setWinowsPosition();
         this.setState({ closed: true }, () => {
+            if (this.overlayRootEl) {
+                this.overlayRootEl.removeAttribute('inert');
+                this.overlayRootEl = null;
+            }
             this.props.hideSideBar(this.id, false);
             setTimeout(() => {
                 this.props.closed(this.id)
-            }, 300) // after 300ms this window will be unmounted from parent (Desktop)
+            }, 300); // after 300ms this window will be unmounted from parent (Desktop)
         });
     }
 
     render() {
         return (
+            <>
+            {this.state.snapPreview && <div data-testid="snap-preview"></div>}
             <Draggable
                 axis="both"
                 handle=".bg-ub-window-title"
                 grid={[1, 1]}
                 scale={1}
                 onStart={this.changeCursorToMove}
-                onStop={this.changeCursorToDefault}
-                onDrag={this.checkOverlap}
+                onStop={this.handleStop}
+                onDrag={(e, data) => { this.checkOverlap(); this.handleDrag(e, data); }}
                 allowAnyClick={false}
                 defaultPosition={{ x: this.startX, y: this.startY }}
                 bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
@@ -185,7 +266,7 @@ export class Window extends Component {
                 >
                     {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
                     {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
-                    <WindowTopBar title={this.props.title} />
+                    <WindowTopBar title={this.props.title} onKeyDown={this.handleTitleKeyDown} grabbed={this.state.grabbed} />
                     <WindowEditButtons minimize={this.minimizeWindow} maximize={this.maximizeWindow} isMaximised={this.state.maximized} close={this.closeWindow} id={this.id} allowMaximize={this.props.allowMaximize !== false} />
                     {(this.id === "settings"
                         ? <Settings changeBackgroundImage={this.props.changeBackgroundImage} currBgImgName={this.props.bg_image_name} />
@@ -194,6 +275,7 @@ export class Window extends Component {
                             openApp={this.props.openApp} />)}
                 </div>
             </Draggable >
+            </>
         )
     }
 }
@@ -203,7 +285,12 @@ export default Window
 // Window's title bar
 export function WindowTopBar(props) {
     return (
-        <div className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 py-1.5 px-3 text-white w-full select-none rounded-b-none"}>
+        <div
+            className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 py-1.5 px-3 text-white w-full select-none rounded-b-none"}
+            tabIndex={0}
+            onKeyDown={props.onKeyDown}
+            aria-grabbed={props.grabbed ? 'true' : 'false'}
+        >
             <div className="flex justify-center text-sm font-bold">{props.title}</div>
         </div>
     )
