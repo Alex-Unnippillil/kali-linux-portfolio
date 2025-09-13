@@ -228,6 +228,8 @@ export default function YouTubePlayer({ videoId }) {
                 height="48"
                 viewBox="0 0 68 48"
                 className="relative z-10"
+                aria-hidden="true"
+                focusable="false"
               >
                 <path
                   className="ytp-large-play-button-bg"
