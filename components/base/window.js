@@ -75,7 +75,10 @@ export class Window extends Component {
         if (this.props.defaultHeight && this.props.defaultWidth) {
             this.setState(
                 { height: this.props.defaultHeight, width: this.props.defaultWidth },
-                this.resizeBoundries
+                () => {
+                    this.resizeBoundries();
+                    this.notifySizeChange();
+                }
             );
             return;
         }
@@ -83,11 +86,20 @@ export class Window extends Component {
         const isPortrait = window.innerHeight > window.innerWidth;
         if (isPortrait) {
             this.startX = window.innerWidth * 0.05;
-            this.setState({ height: 85, width: 90 }, this.resizeBoundries);
+            this.setState({ height: 85, width: 90 }, () => {
+                this.resizeBoundries();
+                this.notifySizeChange();
+            });
         } else if (window.innerWidth < 640) {
-            this.setState({ height: 60, width: 85 }, this.resizeBoundries);
+            this.setState({ height: 60, width: 85 }, () => {
+                this.resizeBoundries();
+                this.notifySizeChange();
+            });
         } else {
-            this.setState({ height: 85, width: 60 }, this.resizeBoundries);
+            this.setState({ height: 85, width: 60 }, () => {
+                this.resizeBoundries();
+                this.notifySizeChange();
+            });
         }
     }
 
@@ -106,6 +118,12 @@ export class Window extends Component {
                 this.scheduleUsageCheck();
             }
         });
+    }
+
+    notifySizeChange = () => {
+        if (this.props.onSizeChange) {
+            this.props.onSizeChange(this.state.width, this.state.height);
+        }
     }
 
     computeContentUsage = () => {
@@ -148,6 +166,7 @@ export class Window extends Component {
                 width: Math.max(prev.width - 1, 20),
                 height: Math.max(prev.height - 1, 20)
             }), () => {
+                this.notifySizeChange();
                 if (this.computeContentUsage() < 80) {
                     setTimeout(shrink, 50);
                 }
@@ -209,16 +228,24 @@ export class Window extends Component {
         if (this.props.resizable === false) return;
         const px = (this.state.height / 100) * window.innerHeight + 1;
         const snapped = this.snapToGrid(px);
-        const heightPercent = snapped / window.innerHeight * 100;
-        this.setState({ height: heightPercent }, this.resizeBoundries);
+        const minH = this.props.minHeight || 0;
+        const heightPercent = Math.max(snapped / window.innerHeight * 100, minH);
+        this.setState({ height: heightPercent }, () => {
+            this.resizeBoundries();
+            this.notifySizeChange();
+        });
     }
 
     handleHorizontalResize = () => {
         if (this.props.resizable === false) return;
         const px = (this.state.width / 100) * window.innerWidth + 1;
         const snapped = this.snapToGrid(px);
-        const widthPercent = snapped / window.innerWidth * 100;
-        this.setState({ width: widthPercent }, this.resizeBoundries);
+        const minW = this.props.minWidth || 0;
+        const widthPercent = Math.max(snapped / window.innerWidth * 100, minW);
+        this.setState({ width: widthPercent }, () => {
+            this.resizeBoundries();
+            this.notifySizeChange();
+        });
     }
 
     setWinowsPosition = () => {
@@ -249,9 +276,15 @@ export class Window extends Component {
                 width: this.state.lastSize.width,
                 height: this.state.lastSize.height,
                 snapped: null
-            }, this.resizeBoundries);
+            }, () => {
+                this.resizeBoundries();
+                this.notifySizeChange();
+            });
         } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            this.setState({ snapped: null }, () => {
+                this.resizeBoundries();
+                this.notifySizeChange();
+            });
         }
     }
 
@@ -285,7 +318,10 @@ export class Window extends Component {
             lastSize: { width, height },
             width: newWidth,
             height: newHeight
-        }, this.resizeBoundries);
+        }, () => {
+            this.resizeBoundries();
+            this.notifySizeChange();
+        });
     }
 
     checkOverlap = () => {
@@ -461,7 +497,10 @@ export class Window extends Component {
             this.setWinowsPosition();
             // translate window to maximize position
             r.style.transform = `translate(-1pt,-2pt)`;
-            this.setState({ maximized: true, height: 96.3, width: 100.2 });
+            this.setState({ maximized: true, height: 96.3, width: 100.2 }, () => {
+                this.resizeBoundries();
+                this.notifySizeChange();
+            });
             this.props.hideSideBar(this.id, true);
         }
     }
@@ -634,7 +673,13 @@ export class Window extends Component {
                     bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
                 >
                     <div
-                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
+                        style={{
+                            width: `${this.state.width}%`,
+                            height: `${this.state.height}%`,
+                            minWidth: this.props.minWidth ? `${this.props.minWidth}%` : undefined,
+                            minHeight: this.props.minHeight ? `${this.props.minHeight}%` : undefined,
+                            aspectRatio: this.props.aspectRatio,
+                        }}
                         className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                         id={this.id}
                         role="dialog"
