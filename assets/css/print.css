@@ -1,0 +1,33 @@
+@media print {
+  @page {
+    margin: 1in;
+  }
+
+  :root {
+    color-scheme: light;
+    --color-surface: #ffffff;
+    --color-inverse: #000000;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: system-ui, Arial, sans-serif !important;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .no-print,
+  .main-navbar-vp,
+  .bg-ubuntu-img,
+  [role="toolbar"] {
+    display: none !important;
+  }
+
+  * {
+    font-family: system-ui, Arial, sans-serif !important;
+  }
+
+  .timeline-item {
+    page-break-inside: avoid;
+  }
+}
