@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useMemo, useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import FilterChip from '../components/FilterChip';
+import TerminalCard from '../../../components/terminal/TerminalCard';
 
 const TagIcon = () => (
   <svg
@@ -205,6 +206,7 @@ export default function ProjectGalleryPage() {
 
   return (
     <div className="p-4 space-y-4 text-black">
+      <TerminalCard title="Projects" content="Browse my work" />
       <div className="flex flex-wrap gap-2 items-center">
         <input
           type="text"
@@ -283,32 +285,11 @@ export default function ProjectGalleryPage() {
               </div>
             ))
           : filtered.map((p) => (
-              <div
+              <TerminalCard
                 key={p.id}
-                tabIndex={0}
-                className="group relative h-72 flex flex-col border rounded overflow-hidden transition-transform transition-opacity duration-300 hover:scale-105 hover:opacity-90 focus:scale-105 focus:opacity-90 focus:outline-none"
-                aria-label={`${p.title}: ${p.description}`}
-              >
-                <div className="w-full aspect-video overflow-hidden">
-                  <img src={p.thumbnail} alt={p.title} className="w-full h-full object-cover" />
-                </div>
-                <div className="p-2 flex-1">
-                  <h3 className="font-semibold text-base line-clamp-2">{p.title}</h3>
-                  <p className="text-sm">{p.description}</p>
-                </div>
-                <div className="absolute inset-0 opacity-0 pointer-events-none group-hover:opacity-100 group-focus-within:opacity-100 group-hover:pointer-events-auto group-focus-within:pointer-events-auto transition-opacity bg-black/60 text-white flex flex-col">
-                  <div className="p-2 flex flex-wrap gap-1">
-                    {p.tags.map((t) => (
-                      <span key={t} className="bg-white text-black rounded px-1 text-xs">
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="mt-auto p-2 text-right">
-                    <button className="bg-blue-600 text-white px-4 h-10 rounded">Launch</button>
-                  </div>
-                </div>
-              </div>
+                title={p.title}
+                content={p.description}
+              />
             ))}
       </div>
     </div>

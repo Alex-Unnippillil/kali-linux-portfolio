@@ -530,3 +530,40 @@ textarea:focus-visible {
     color: #000 !important;
 }
 
+
+/* Terminal card styles */
+.terminal {
+    border-radius: 0.375rem;
+    overflow: hidden;
+    background: #2d2d2d;
+    color: #e5e5e5;
+    font-family: monospace;
+    box-shadow: 0 0 6px rgba(0,0,0,0.2);
+}
+.titlebar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    background: #3b3b3b;
+}
+.titlebar .title {
+    margin-left: 0.5rem;
+}
+.winbtn {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 9999px;
+    display: inline-block;
+}
+.titlebar .winbtn:nth-child(1) { background: #ff5f56; }
+.titlebar .winbtn:nth-child(2) { background: #ffbd2e; }
+.titlebar .winbtn:nth-child(3) { background: #27c93f; }
+.screen {
+    background: #000;
+    padding: 0.5rem;
+    overflow-x: auto;
+}
+.screen pre {
+    font-family: monospace;
+}

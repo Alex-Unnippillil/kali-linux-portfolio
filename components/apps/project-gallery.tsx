@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import dynamic from 'next/dynamic';
 import projectsData from '../../data/projects.json';
+import TerminalCard from '../terminal/TerminalCard';
 
 interface Project {
   id: number;
@@ -17,16 +17,10 @@ interface Project {
   language: string;
 }
 
-interface Props {
-  openApp?: (id: string) => void;
-}
-
-const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
-
 const STORAGE_KEY = 'project-gallery-filters';
 const STORAGE_FILE = 'project-gallery-filters.json';
 
-const ProjectGallery: React.FC<Props> = ({ openApp }) => {
+const ProjectGallery: React.FC = () => {
   const projects: Project[] = projectsData as Project[];
   const [search, setSearch] = useState('');
   const [stack, setStack] = useState('');
@@ -34,7 +28,7 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
   const [type, setType] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [ariaMessage, setAriaMessage] = useState('');
-  const [selected, setSelected] = useState<Project[]>([]);
+  const [selected] = useState<Project[]>([]);
 
   const readFilters = async () => {
     try {
@@ -133,26 +127,6 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
       `Showing ${filtered.length} project${filtered.length === 1 ? '' : 's'}${stack ? ` filtered by ${stack}` : ''}${tags.length ? ` with tags ${tags.join(', ')}` : ''}${year ? ` in ${year}` : ''}${type ? ` of type ${type}` : ''}${search ? ` matching "${search}"` : ''}`
     );
   }, [filtered.length, stack, year, type, tags, search]);
-
-  const openInChrome = (url: string) => {
-    try {
-      const id = Date.now();
-      const tab = { id, url, history: [url], historyIndex: 0, scroll: 0 };
-      localStorage.setItem('chrome-tabs', JSON.stringify({ tabs: [tab], active: id }));
-    } catch {
-      /* ignore */
-    }
-    openApp && openApp('chrome');
-  };
-
-  const toggleSelect = (project: Project) => {
-    setSelected((prev) => {
-      const exists = prev.find((p) => p.id === project.id);
-      if (exists) return prev.filter((p) => p.id !== project.id);
-      if (prev.length === 2) return [prev[1], project];
-      return [...prev, project];
-    });
-  };
 
   return (
     <div className="p-4 h-full overflow-auto bg-ub-cool-grey text-white">
@@ -255,97 +229,11 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
       )}
       <div className="columns-1 sm:columns-2 md:columns-3 gap-4">
         {filtered.map((project) => (
-          <div
+          <TerminalCard
             key={project.id}
-            className="mb-4 break-inside-avoid bg-gray-800 rounded shadow overflow-hidden"
-          >
-            <div className="flex flex-col md:flex-row h-48">
-              <img
-                src={project.thumbnail}
-                alt={project.title}
-                className="w-full md:w-1/2 h-48 object-cover"
-                loading="lazy"
-              />
-              <div className="w-full md:w-1/2 h-48">
-                <Editor
-                  height="100%"
-                  theme="vs-dark"
-                  language={project.language}
-                  value={project.snippet}
-                  options={{ readOnly: true, minimap: { enabled: false } }}
-                />
-              </div>
-            </div>
-            <div className="p-4 space-y-2">
-              <h3 className="text-lg font-semibold">{project.title}</h3>
-              <p className="text-sm">{project.description}</p>
-              <button
-                onClick={() => toggleSelect(project)}
-                aria-label={`Select ${project.title} for comparison`}
-                className="bg-gray-700 text-xs px-2 py-1 rounded-full"
-              >
-                {selected.some((p) => p.id === project.id)
-                  ? 'Deselect'
-                  : 'Compare'}
-              </button>
-              <div className="flex flex-wrap gap-1">
-                {project.stack.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setStack(s)}
-                    className="bg-gray-700 text-xs px-2 py-1 rounded-full"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {project.tags.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() =>
-                      setTags((prev) =>
-                        prev.includes(t)
-                          ? prev.filter((tag) => tag !== t)
-                          : [...prev, t]
-                      )
-                    }
-                    className="bg-gray-700 text-xs px-2 py-1 rounded-full"
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-3 text-sm pt-2">
-                <a
-                  href={project.repo}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-400 hover:underline"
-                >
-                  Repo
-                </a>
-                {project.demo && (
-                  <>
-                    <a
-                      href={project.demo}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-400 hover:underline"
-                    >
-                      Live Demo
-                    </a>
-                    <button
-                      onClick={() => openInChrome(project.demo)}
-                      className="text-blue-400 hover:underline"
-                    >
-                      Open in Chrome
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
+            title={project.title}
+            content={project.description}
+          />
         ))}
       </div>
       <div aria-live="polite" className="sr-only">
