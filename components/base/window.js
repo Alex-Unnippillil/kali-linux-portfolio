@@ -257,6 +257,7 @@ export class Window extends Component {
 
     snapWindow = (position) => {
         this.setWinowsPosition();
+        this.focusWindow();
         const { width, height } = this.state;
         let newWidth = width;
         let newHeight = height;
@@ -273,6 +274,10 @@ export class Window extends Component {
             newWidth = 100.2;
             newHeight = 50;
             transform = 'translate(-1pt,-2pt)';
+        } else if (position === 'bottom') {
+            newWidth = 100.2;
+            newHeight = 50;
+            transform = `translate(-1pt,${window.innerHeight / 2}px)`;
         }
         const r = document.querySelector("#" + this.id);
         if (r && transform) {
@@ -330,6 +335,10 @@ export class Window extends Component {
         else if (rect.top <= threshold) {
             snap = { left: '0', top: '0', width: '100%', height: '50%' };
             this.setState({ snapPreview: snap, snapPosition: 'top' });
+        }
+        else if (rect.bottom >= window.innerHeight - threshold) {
+            snap = { left: '0', top: '50%', width: '100%', height: '50%' };
+            this.setState({ snapPreview: snap, snapPosition: 'bottom' });
         }
         else {
             if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
@@ -582,33 +591,6 @@ export class Window extends Component {
                 this.unsnapWindow();
             }
         }
-    }
-
-    snapWindow = (pos) => {
-        this.focusWindow();
-        const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
-        let transform = '';
-        if (pos === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (pos === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        }
-        const node = document.getElementById(this.id);
-        if (node && transform) {
-            node.style.transform = transform;
-        }
-        this.setState({
-            snapped: pos,
-            lastSize: { width, height },
-            width: newWidth,
-            height: newHeight
-        }, this.resizeBoundries);
     }
 
     render() {
