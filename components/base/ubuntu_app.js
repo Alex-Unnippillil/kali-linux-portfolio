@@ -50,14 +50,20 @@ export class UbuntuApp extends Component {
                 onMouseEnter={this.handlePrefetch}
                 onFocus={this.handlePrefetch}
             >
-                <Image
-                    width={40}
-                    height={40}
-                    className="mb-1 w-10"
-                    src={this.props.icon.replace('./', '/')}
-                    alt={"Kali " + this.props.name}
-                    sizes="40px"
-                />
+                {this.props.iconId ? (
+                    <svg className="mb-1 w-10 h-10">
+                        <use href={`/${'assets/icons/flat-remix/icon.svg'}#${this.props.iconId}`} />
+                    </svg>
+                ) : (
+                    <Image
+                        width={40}
+                        height={40}
+                        className="mb-1 w-10"
+                        src={this.props.icon.replace('./', '/')}
+                        alt={"Kali " + this.props.name}
+                        sizes="40px"
+                    />
+                )}
                 {this.props.displayName || this.props.name}
 
             </div>

@@ -41,16 +41,17 @@ class AllApplications extends React.Component {
     renderApps = () => {
         const apps = this.state.apps || [];
         return apps.map((app) => (
-            <UbuntuApp
-                key={app.id}
-                name={app.title}
-                id={app.id}
-                icon={app.icon}
-                openApp={() => this.openApp(app.id)}
-                disabled={app.disabled}
-                prefetch={app.screen?.prefetch}
-            />
-        ));
+                <UbuntuApp
+                    key={app.id}
+                    name={app.title}
+                    id={app.id}
+                    icon={app.icon}
+                    iconId={app.iconId}
+                    openApp={() => this.openApp(app.id)}
+                    disabled={app.disabled}
+                    prefetch={app.screen?.prefetch}
+                />
+            ));
     };
 
     render() {

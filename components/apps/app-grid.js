@@ -80,6 +80,7 @@ export default function AppGrid({ openApp }) {
         <UbuntuApp
           id={app.id}
           icon={app.icon}
+          iconId={app.iconId}
           name={app.title}
           displayName={<>{app.nodes}</>}
           openApp={() => openApp && openApp(app.id)}
