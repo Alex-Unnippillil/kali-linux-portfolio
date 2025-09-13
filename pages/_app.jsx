@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -16,6 +17,7 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { safeLocalStorage } from '../utils/safeStorage';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -27,6 +29,7 @@ const ubuntu = Ubuntu({
 
 function MyApp(props) {
   const { Component, pageProps } = props;
+  const router = useRouter();
 
 
   useEffect(() => {
@@ -145,6 +148,43 @@ function MyApp(props) {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!safeLocalStorage) return;
+    if (safeLocalStorage.getItem('kali:restore') !== '1') return;
+
+    const section = safeLocalStorage.getItem('kali:lastSection');
+    const scroll = Number(safeLocalStorage.getItem('kali:lastScroll') || '0');
+
+    const restore = () => {
+      window.scrollTo(0, scroll);
+    };
+
+    if (section && section !== router.asPath) {
+      router.replace(section).then(() => {
+        requestAnimationFrame(restore);
+      });
+    } else {
+      requestAnimationFrame(restore);
+    }
+  }, [router]);
+
+  useEffect(() => {
+    if (!safeLocalStorage) return;
+
+    const save = () => {
+      safeLocalStorage.setItem('kali:lastSection', router.asPath);
+      safeLocalStorage.setItem('kali:lastScroll', String(window.scrollY));
+    };
+
+    router.events.on('routeChangeComplete', save);
+    window.addEventListener('scroll', save);
+
+    return () => {
+      router.events.off('routeChangeComplete', save);
+      window.removeEventListener('scroll', save);
+    };
+  }, [router]);
 
   return (
     <ErrorBoundary>
