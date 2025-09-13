@@ -19,6 +19,7 @@
   --color-focus-ring: var(--color-accent);
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
+  --color-accent-contrast: #ffffff;
   accent-color: var(--color-control-accent);
 }
 
@@ -76,4 +77,13 @@ html[data-theme='matrix'] {
 *:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
+}
+
+.kali-chip {
+  background-color: var(--color-accent);
+  color: var(--color-accent-contrast);
+  border-radius: 9999px;
+  padding: 0 0.5rem;
+  display: inline-flex;
+  align-items: center;
 }
