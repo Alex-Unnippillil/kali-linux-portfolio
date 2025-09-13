@@ -30,53 +30,66 @@ function MyApp(props) {
 
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && typeof window.initA2HS === 'function') {
-      window.initA2HS();
-    }
-    const initAnalytics = async () => {
-      const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
-      if (trackingId) {
-        const { default: ReactGA } = await import('react-ga4');
-        ReactGA.initialize(trackingId);
+    const markJsFailed = () => {
+      if (typeof document !== 'undefined') {
+        document.documentElement.dataset.jsFailed = 'true';
       }
     };
-    initAnalytics().catch((err) => {
-      console.error('Analytics initialization failed', err);
-    });
-
-    if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
-      // Register PWA service worker generated via @ducanh2912/next-pwa
-      const register = async () => {
-        try {
-          const registration = await navigator.serviceWorker.register('/sw.js');
-
-          window.manualRefresh = () => registration.update();
-
-          if ('periodicSync' in registration) {
-            try {
-              const status = await navigator.permissions.query({
-                name: 'periodic-background-sync',
-              });
-              if (status.state === 'granted') {
-                await registration.periodicSync.register('content-sync', {
-                  minInterval: 24 * 60 * 60 * 1000,
-                });
-              } else {
-                registration.update();
-              }
-            } catch {
-              registration.update();
-            }
-          } else {
-            registration.update();
-          }
-        } catch (err) {
-          console.error('Service worker registration failed', err);
+    try {
+      if (typeof window !== 'undefined' && typeof window.initA2HS === 'function') {
+        window.initA2HS();
+      }
+      const initAnalytics = async () => {
+        const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
+        if (trackingId) {
+          const { default: ReactGA } = await import('react-ga4');
+          ReactGA.initialize(trackingId);
         }
       };
-      register().catch((err) => {
-        console.error('Service worker setup failed', err);
+      initAnalytics().catch((err) => {
+        console.error('Analytics initialization failed', err);
+        markJsFailed();
       });
+
+      if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
+        // Register PWA service worker generated via @ducanh2912/next-pwa
+        const register = async () => {
+          try {
+            const registration = await navigator.serviceWorker.register('/sw.js');
+
+            window.manualRefresh = () => registration.update();
+
+            if ('periodicSync' in registration) {
+              try {
+                const status = await navigator.permissions.query({
+                  name: 'periodic-background-sync',
+                });
+                if (status.state === 'granted') {
+                  await registration.periodicSync.register('content-sync', {
+                    minInterval: 24 * 60 * 60 * 1000,
+                  });
+                } else {
+                  registration.update();
+                }
+              } catch {
+                registration.update();
+              }
+            } else {
+              registration.update();
+            }
+          } catch (err) {
+            console.error('Service worker registration failed', err);
+            markJsFailed();
+          }
+        };
+        register().catch((err) => {
+          console.error('Service worker setup failed', err);
+          markJsFailed();
+        });
+      }
+    } catch (err) {
+      console.error('App initialization failed', err);
+      markJsFailed();
     }
   }, []);
 

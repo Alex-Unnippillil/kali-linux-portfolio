@@ -19,5 +19,6 @@
     console.error('Failed to apply theme', e);
     document.documentElement.dataset.theme = 'default';
     document.documentElement.classList.remove('dark');
+    document.documentElement.dataset.jsFailed = 'true';
   }
 })();
