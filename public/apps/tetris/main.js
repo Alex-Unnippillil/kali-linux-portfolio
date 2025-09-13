@@ -1,3 +1,5 @@
+/* eslint-env browser */
+(function () {
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
 const info = document.getElementById('info');
@@ -552,3 +554,4 @@ document.addEventListener('keydown', e=>{
 });
 
 showLeaderboard('sprint');
+})();
