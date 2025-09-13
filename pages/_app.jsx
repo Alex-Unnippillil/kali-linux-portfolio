@@ -146,6 +146,35 @@ function MyApp(props) {
     };
   }, []);
 
+  useEffect(() => {
+    const addButtons = () => {
+      document.querySelectorAll('.terminal .titlebar').forEach((bar) => {
+        if (bar.querySelector('button[data-copy-target]')) return;
+        const terminal = bar.closest('.terminal');
+        const screen = terminal?.querySelector('.screen');
+        if (!screen) return;
+        if (!screen.id) {
+          screen.id = `terminal-screen-${Math.random().toString(36).slice(2, 9)}`;
+        }
+        const button = document.createElement('button');
+        button.textContent = 'Copy';
+        button.setAttribute('data-copy-target', `#${screen.id}`);
+        button.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(screen.textContent || '');
+            const original = button.textContent;
+            button.textContent = 'Copied';
+            setTimeout(() => {
+              button.textContent = original;
+            }, 2000);
+          } catch {}
+        });
+        bar.appendChild(button);
+      });
+    };
+    addButtons();
+  }, [Component]);
+
   return (
     <ErrorBoundary>
       <Script src="/a2hs.js" strategy="beforeInteractive" />
