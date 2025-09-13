@@ -20,7 +20,7 @@ const CATEGORIES = [
   { id: 'games', label: 'Games' }
 ];
 
-const WhiskerMenu: React.FC = () => {
+const WhiskerMenu: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState('all');
   const [query, setQuery] = useState('');
@@ -119,17 +119,26 @@ const WhiskerMenu: React.FC = () => {
       <button
         ref={buttonRef}
         type="button"
+        aria-label="Applications"
         onClick={() => setOpen(o => !o)}
-        className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        className={
+          compact
+            ? 'w-10 h-10 rounded-full bg-ub-grey flex items-center justify-center'
+            : 'pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1'
+        }
       >
         <Image
-          src="/themes/Yaru/status/decompiler-symbolic.svg"
+          src={
+            compact
+              ? '/themes/Yaru/status/chrome_home.svg'
+              : '/themes/Yaru/status/decompiler-symbolic.svg'
+          }
           alt="Menu"
           width={16}
           height={16}
-          className="inline mr-1"
+          className={compact ? 'w-4 h-4' : 'inline mr-1'}
         />
-        Applications
+        {!compact && 'Applications'}
       </button>
       {open && (
         <div

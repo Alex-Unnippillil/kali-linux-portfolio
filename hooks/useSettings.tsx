@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import { useKiosk } from './useKiosk';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -112,8 +113,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
-  const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [theme, setThemeState] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
+  const isKiosk = useKiosk();
 
   useEffect(() => {
     (async () => {
@@ -127,7 +129,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
-      setTheme(loadTheme());
+      setThemeState(loadTheme());
     })();
   }, []);
 
@@ -235,6 +237,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveHaptics(haptics);
   }, [haptics]);
+
+  const setTheme = (value: string) => {
+    if (isKiosk) return;
+    setThemeState(value);
+  };
 
   return (
     <SettingsContext.Provider
