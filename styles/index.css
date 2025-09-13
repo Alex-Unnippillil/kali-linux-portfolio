@@ -11,6 +11,12 @@ body{
     color: var(--color-text);
 }
 
+a {
+    text-decoration-thickness: from-font;
+    text-underline-offset: 0.15em;
+    text-decoration-skip-ink: auto;
+}
+
 button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .hit-area {
     min-width: var(--hit-area);
     min-height: var(--hit-area);
