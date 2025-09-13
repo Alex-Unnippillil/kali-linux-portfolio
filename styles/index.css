@@ -530,3 +530,14 @@ textarea:focus-visible {
     color: #000 !important;
 }
 
+/* Hide Kali titlebar dots in high contrast modes */
+.high-contrast .kali-titlebar-dots {
+    display: none;
+}
+
+@media (prefers-contrast: more), (forced-colors: active) {
+    .kali-titlebar-dots {
+        display: none;
+    }
+}
+
