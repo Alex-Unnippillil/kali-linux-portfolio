@@ -9,7 +9,7 @@ interface Props {
 const SettingsDrawer = ({ highScore = 0 }: Props) => {
   const [open, setOpen] = useState(false);
   const unlocked = getUnlockedThemes(highScore);
-  const { accent, setAccent, theme, setTheme } = useSettings();
+  const { accent, setAccent, theme, setTheme, solidBg, setSolidBg } = useSettings();
 
   return (
     <div>
@@ -51,6 +51,15 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
                 />
               ))}
             </div>
+          </label>
+          <label>
+            Solid background
+            <input
+              type="checkbox"
+              aria-label="solid-background-toggle"
+              checked={solidBg}
+              onChange={(e) => setSolidBg(e.target.checked)}
+            />
           </label>
         </div>
       )}
