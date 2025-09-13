@@ -68,6 +68,30 @@ html[data-theme='matrix'] {
 
 }
 
+/* Undercover theme - Windows-like light blues */
+html[data-theme='undercover'] {
+  --color-bg: #f3f4f6;
+  --color-text: #1e293b;
+  --color-primary: #3b82f6;
+  --color-secondary: #e5e7eb;
+  --color-accent: #2563eb;
+  --color-muted: #cbd5e1;
+  --color-surface: #ffffff;
+  --color-inverse: #ffffff;
+  --color-border: #cbd5e1;
+  --color-terminal: #008000;
+  --color-dark: #dbeafe;
+  --font-family-base: 'Segoe UI', 'Ubuntu', sans-serif;
+
+  /* Ubuntu token overrides for light theme */
+  --color-ub-grey: #f3f4f6;
+  --color-ub-cool-grey: #e5e7eb;
+  --color-ubt-grey: #1e293b;
+  --color-ubt-cool-grey: #94a3b8;
+  --color-ubt-blue: #60a5fa;
+  --color-ub-dark-grey: #94a3b8;
+}
+
 ::selection {
   background: var(--color-selection);
   color: var(--color-inverse);
