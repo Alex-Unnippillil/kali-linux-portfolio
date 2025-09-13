@@ -20,10 +20,13 @@ export default function useGameAudio() {
   const sfxBuffersRef = useRef({});
   const musicLayersRef = useRef({});
 
-  // Global mute is persisted across the portfolio, but per‑game volume lives
-  // only for the lifetime of the hook instance.
+  // Global mute and volume are persisted across the portfolio so different
+  // apps share the same audio levels.
   const [muted, setMuted] = usePersistedState('settings:audioMuted', false);
-  const [gameVolume, setGameVolume] = useState(1);
+  const [gameVolume, setGameVolume] = usePersistedState(
+    'settings:audioVolume',
+    1,
+  );
   const [ready, setReady] = useState(false);
 
   // Create the audio graph after the first user interaction to comply with
