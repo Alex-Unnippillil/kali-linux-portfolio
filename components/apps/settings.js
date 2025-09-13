@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
+import wallpaperManifest from '../../public/wallpapers-manifest.json';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 
 export function Settings() {
@@ -8,7 +9,7 @@ export function Settings() {
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
 
-    const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
+    const wallpapers = Object.keys(wallpaperManifest);
 
     const changeBackgroundImage = (e) => {
         const name = e.currentTarget.dataset.path;
@@ -57,7 +58,7 @@ export function Settings() {
 
     return (
         <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"}>
-            <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4" style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}>
+            <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4" style={{ backgroundImage: `url(/wallpapers/${wallpaperManifest[wallpaper]})`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}>
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Theme:</label>
@@ -100,9 +101,11 @@ export function Settings() {
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Font Size:</label>
+                <label htmlFor="font-size" className="mr-2 text-ubt-grey">Font Size:</label>
                 <input
+                    id="font-size"
                     type="range"
+                    aria-label="Font Size"
                     min="0.75"
                     max="1.5"
                     step="0.05"
@@ -115,6 +118,7 @@ export function Settings() {
                 <label className="mr-2 text-ubt-grey flex items-center">
                     <input
                         type="checkbox"
+                        aria-label="Reduced Motion"
                         checked={reducedMotion}
                         onChange={(e) => setReducedMotion(e.target.checked)}
                         className="mr-2"
@@ -126,6 +130,7 @@ export function Settings() {
                 <label className="mr-2 text-ubt-grey flex items-center">
                     <input
                         type="checkbox"
+                        aria-label="Large Hit Areas"
                         checked={largeHitAreas}
                         onChange={(e) => setLargeHitAreas(e.target.checked)}
                         className="mr-2"
@@ -137,6 +142,7 @@ export function Settings() {
                 <label className="mr-2 text-ubt-grey flex items-center">
                     <input
                         type="checkbox"
+                        aria-label="High Contrast"
                         checked={highContrast}
                         onChange={(e) => setHighContrast(e.target.checked)}
                         className="mr-2"
@@ -148,6 +154,7 @@ export function Settings() {
                 <label className="mr-2 text-ubt-grey flex items-center">
                     <input
                         type="checkbox"
+                        aria-label="Allow Network Requests"
                         checked={allowNetwork}
                         onChange={(e) => setAllowNetwork(e.target.checked)}
                         className="mr-2"
@@ -159,6 +166,7 @@ export function Settings() {
                 <label className="mr-2 text-ubt-grey flex items-center">
                     <input
                         type="checkbox"
+                        aria-label="Haptics"
                         checked={haptics}
                         onChange={(e) => setHaptics(e.target.checked)}
                         className="mr-2"
@@ -170,6 +178,7 @@ export function Settings() {
                 <label className="mr-2 text-ubt-grey flex items-center">
                     <input
                         type="checkbox"
+                        aria-label="Pong Spin"
                         checked={pongSpin}
                         onChange={(e) => setPongSpin(e.target.checked)}
                         className="mr-2"
@@ -214,7 +223,7 @@ export function Settings() {
                             }}
                             data-path={name}
                             className={((name === wallpaper) ? " border-yellow-700 " : " border-transparent ") + " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"}
-                            style={{ backgroundImage: `url(/wallpapers/${name}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}
+                            style={{ backgroundImage: `url(/wallpapers/${wallpaperManifest[name]})`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}
                         ></div>
                     ))
                 }
@@ -261,6 +270,7 @@ export function Settings() {
             <input
                 type="file"
                 accept="application/json"
+                aria-label="Import settings"
                 ref={fileInput}
                 onChange={async (e) => {
                     const file = e.target.files && e.target.files[0];

@@ -5,11 +5,12 @@
   "homepage": "https://unnippillil.com/",
   "scripts": {
     "build:gamepad": "tsc -p tsconfig.gamepad.json",
-    "prebuild": "tsc -p tsconfig.gamepad.json",
+    "prebuild": "node scripts/hash-wallpapers.mjs && tsc -p tsconfig.gamepad.json",
     "dev": "next dev",
     "build": "next build",
     "postbuild": "node scripts/safe-copy.mjs",
     "start": "next start",
+    "preexport": "node scripts/hash-wallpapers.mjs && tsc -p tsconfig.gamepad.json",
     "export": "NEXT_PUBLIC_STATIC_EXPORT=true next build",
     "test": "jest",
     "test:watch": "jest --watch",
