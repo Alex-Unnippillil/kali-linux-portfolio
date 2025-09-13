@@ -23,11 +23,11 @@ export default class Ubuntu extends Component {
 		this.getLocalData();
 	}
 
-	setTimeOutBootScreen = () => {
-		setTimeout(() => {
-			this.setState({ booting_screen: false });
-		}, 2000);
-	};
+        setTimeOutBootScreen = () => {
+                setTimeout(() => {
+                        this.setState({ booting_screen: false });
+                }, 2100);
+        };
 
 	getLocalData = () => {
 		// Get Previously selected Background Image
