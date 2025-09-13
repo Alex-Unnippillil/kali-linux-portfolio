@@ -65,6 +65,11 @@ const SettingsIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export interface TerminalProps {
   openApp?: (id: string) => void;
+  /**
+   * Optional initial content to populate the terminal with. This is used by the
+   * tabbed interface to restore the buffer when a tab is re‑activated.
+   */
+  initialContent?: string;
 }
 
 export interface TerminalHandle {
@@ -76,13 +81,16 @@ const files: Record<string, string> = {
   'README.md': 'Welcome to the web terminal.\nThis is a fake file used for demos.',
 };
 
-const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref) => {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const termRef = useRef<any>(null);
-  const fitRef = useRef<any>(null);
-  const searchRef = useRef<any>(null);
-  const commandRef = useRef('');
-  const contentRef = useRef('');
+const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(
+  ({ openApp, initialContent = '' }, ref) => {
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    const termRef = useRef<any>(null);
+    const fitRef = useRef<any>(null);
+    const searchRef = useRef<any>(null);
+    const commandRef = useRef('');
+    // Start the content ref with any supplied initial buffer so the caller can
+    // restore output when mounting a tab that previously existed.
+    const contentRef = useRef(initialContent);
   const registryRef = useRef(commandRegistry);
   const workerRef = useRef<Worker | null>(null);
   const filesRef = useRef<Record<string, string>>(files);
@@ -315,7 +323,17 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       term.open(containerRef.current!);
       fit.fit();
       term.focus();
-      if (opfsSupported) {
+      if (initialContent) {
+        initialContent
+          .split('\n')
+          .filter(Boolean)
+          .forEach((l) => {
+            if (termRef.current) termRef.current.writeln(l);
+          });
+        contentRef.current = initialContent.endsWith('\n')
+          ? initialContent
+          : `${initialContent}\n`;
+      } else if (opfsSupported) {
         dirRef.current = await getDir('terminal');
         const existing = await readFile('history.txt', dirRef.current || undefined);
         if (existing) {
@@ -330,8 +348,10 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
             : `${existing}\n`;
         }
       }
-      writeLine('Welcome to the web terminal!');
-      writeLine('Type "help" to see available commands.');
+      if (!initialContent) {
+        writeLine('Welcome to the web terminal!');
+        writeLine('Type "help" to see available commands.');
+      }
       prompt();
       term.onData((d: string) => handleInput(d));
       term.onKey(({ domEvent }: any) => {
@@ -368,7 +388,17 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       disposed = true;
       termRef.current?.dispose();
     };
-    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow]);
+    }, [
+      opfsSupported,
+      getDir,
+      readFile,
+      writeLine,
+      prompt,
+      handleInput,
+      autocomplete,
+      updateOverflow,
+      initialContent,
+    ]);
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();
