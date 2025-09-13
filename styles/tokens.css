@@ -5,10 +5,22 @@
   --color-ub-grey: #0f1317;
   --color-ub-warm-grey: #7d7f83;
   --color-ub-cool-grey: #1a1f26;
-  --color-ub-orange: #1793d1;
-  --color-ub-lite-abrgn: #22262c;
-  --color-ub-med-abrgn: #1b1f24;
-  --color-ub-drk-abrgn: #13171b;
+
+  /* Kali design tokens */
+  --color-kali-accent: #1793d1;
+  --color-kali-panel-light: #22262c;
+  --color-kali-panel-medium: #1b1f24;
+  --color-kali-panel-dark: #13171b;
+  --color-kali-border-accent: #1793d1;
+  --size-kali-hit-area: 32px;
+
+  /* Ubuntu aliases */
+  --color-ub-orange: var(--color-kali-accent);
+  --color-ub-lite-abrgn: var(--color-kali-panel-light);
+  --color-ub-med-abrgn: var(--color-kali-panel-medium);
+  --color-ub-drk-abrgn: var(--color-kali-panel-dark);
+  --color-ub-border-orange: var(--color-kali-border-accent);
+  --hit-area: var(--size-kali-hit-area);
   --color-ub-window-title: #0c0f12;
   --color-ub-gedit-dark: #021B33;
   --color-ub-gedit-light: #003B70;
@@ -21,7 +33,6 @@
   --color-ubt-gedit-orange: #F39A21;
   --color-ubt-gedit-blue: #50B6C6;
   --color-ubt-gedit-dark: #003B70;
-  --color-ub-border-orange: #1793d1;
   --color-ub-dark-grey: #2a2e36;
   --color-bg: #0f1317;
   --color-text: #F5F5F5;
@@ -54,8 +65,6 @@
   /* Fonts */
   --font-family-base: 'Ubuntu', sans-serif;
   --font-multiplier: 1;
-  /* Minimum interactive target size */
-  --hit-area: 32px;
   /* Focus outline */
   --focus-outline-color: var(--color-ubt-blue);
   --focus-outline-width: 2px;
@@ -69,9 +78,9 @@
   --color-ub-cool-grey: #000000;
   --color-ubt-grey: #ffffff;
   --color-ubt-cool-grey: #ffffff;
-  --color-ub-orange: #ffff00;
-  --color-ub-lite-abrgn: #00ffff;
-  --color-ub-border-orange: #ffff00;
+  --color-kali-accent: #ffff00;
+  --color-kali-panel-light: #00ffff;
+  --color-kali-border-accent: #ffff00;
   --game-color-secondary: #ffff00;
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
@@ -85,7 +94,7 @@
 
 /* Larger hit areas */
 .large-hit-area {
-  --hit-area: 48px;
+  --size-kali-hit-area: 48px;
 }
 
 /* Reduced motion */
@@ -112,8 +121,8 @@
     --color-ub-cool-grey: #000000;
     --color-ubt-grey: #ffffff;
     --color-ubt-cool-grey: #ffffff;
-    --color-ub-orange: #ffff00;
-    --color-ub-lite-abrgn: #00ffff;
-    --color-ub-border-orange: #ffff00;
+    --color-kali-accent: #ffff00;
+    --color-kali-panel-light: #00ffff;
+    --color-kali-border-accent: #ffff00;
   }
 }
