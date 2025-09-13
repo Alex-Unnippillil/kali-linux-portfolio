@@ -530,3 +530,58 @@ textarea:focus-visible {
     color: #000 !important;
 }
 
+/* Kali landing hero */
+.kali-hero {
+    position: relative;
+    padding: 5rem 1rem;
+    text-align: center;
+    color: #fff;
+    background: linear-gradient(135deg, #0a0f2d, #123c69);
+    overflow: hidden;
+}
+
+.kali-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: url('/themes/Yaru/status/icons8-kali-linux.svg') center/60% no-repeat;
+    opacity: 0.05;
+    pointer-events: none;
+}
+
+.kali-hero__content {
+    position: relative;
+    z-index: 1;
+}
+
+.kali-hero__title {
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.kali-hero__tagline {
+    font-size: 1.25rem;
+    margin-bottom: 2rem;
+}
+
+.kali-hero__actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.kali-hero__btn {
+    padding: 0.75rem 1.5rem;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 0.375rem;
+    color: #fff;
+    text-decoration: none;
+    transition: background 0.2s ease;
+}
+
+.kali-hero__btn:hover,
+.kali-hero__btn:focus {
+    background: rgba(0, 0, 0, 0.5);
+}
+
