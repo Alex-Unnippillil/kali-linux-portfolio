@@ -53,6 +53,8 @@ export class Window extends Component {
         window.addEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.addEventListener('super-arrow', this.handleSuperArrow);
+        root?.addEventListener('auto-snap', this.handleAutoSnap);
+        root?.addEventListener('auto-unsnap', this.handleAutoUnsnap);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -66,6 +68,8 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        root?.removeEventListener('auto-snap', this.handleAutoSnap);
+        root?.removeEventListener('auto-unsnap', this.handleAutoUnsnap);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
@@ -255,38 +259,7 @@ export class Window extends Component {
         }
     }
 
-    snapWindow = (position) => {
-        this.setWinowsPosition();
-        const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
-        let transform = '';
-        if (position === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (position === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        } else if (position === 'top') {
-            newWidth = 100.2;
-            newHeight = 50;
-            transform = 'translate(-1pt,-2pt)';
-        }
-        const r = document.querySelector("#" + this.id);
-        if (r && transform) {
-            r.style.transform = transform;
-        }
-        this.setState({
-            snapPreview: null,
-            snapPosition: null,
-            snapped: position,
-            lastSize: { width, height },
-            width: newWidth,
-            height: newHeight
-        }, this.resizeBoundries);
-    }
+    // legacy snapWindow removed in favor of enhanced version below
 
     checkOverlap = () => {
         var r = document.querySelector("#" + this.id);
@@ -584,20 +557,36 @@ export class Window extends Component {
         }
     }
 
-    snapWindow = (pos) => {
+    handleAutoSnap = (e) => {
+        const { position, width } = e.detail || {};
+        if (position) {
+            this.snapWindow(position, width);
+        }
+    }
+
+    handleAutoUnsnap = () => {
+        this.unsnapWindow();
+    }
+
+    snapWindow = (pos, w = 50) => {
         this.focusWindow();
         const { width, height } = this.state;
         let newWidth = width;
         let newHeight = height;
         let transform = '';
         if (pos === 'left') {
-            newWidth = 50;
+            newWidth = w;
             newHeight = 96.3;
             transform = 'translate(-1pt,-2pt)';
         } else if (pos === 'right') {
-            newWidth = 50;
+            newWidth = w;
             newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
+            const offset = window.innerWidth * ((100 - w) / 100);
+            transform = `translate(${offset}px,-2pt)`;
+        } else if (pos === 'top') {
+            newWidth = 100.2;
+            newHeight = 50;
+            transform = 'translate(-1pt,-2pt)';
         }
         const node = document.getElementById(this.id);
         if (node && transform) {

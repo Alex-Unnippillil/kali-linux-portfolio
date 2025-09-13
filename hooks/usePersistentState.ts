@@ -60,3 +60,10 @@ export const useSnapSetting = () =>
     true,
     (v): v is boolean => typeof v === 'boolean',
   );
+
+export const useAutoSplitSetting = () =>
+  usePersistentState<boolean>(
+    'editor-terminal-auto-split',
+    true,
+    (v): v is boolean => typeof v === 'boolean',
+  );

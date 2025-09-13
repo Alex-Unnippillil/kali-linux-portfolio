@@ -22,7 +22,7 @@ import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
-import { useSnapSetting } from '../../hooks/usePersistentState';
+import { useSnapSetting, useAutoSplitSetting } from '../../hooks/usePersistentState';
 
 export class Desktop extends Component {
     constructor() {
@@ -96,6 +96,16 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        if (
+            prevProps.autoSplitEnabled !== this.props.autoSplitEnabled ||
+            prevState.closed_windows !== this.state.closed_windows ||
+            prevState.minimized_windows !== this.state.minimized_windows
+        ) {
+            this.checkAutoSnap();
+        }
     }
 
     checkForNewFolders = () => {
@@ -825,6 +835,29 @@ export class Desktop extends Component {
 
     showAllApps = () => { this.setState({ allAppsView: !this.state.allAppsView }) }
 
+    checkAutoSnap = () => {
+        const vs = document.getElementById('vscode');
+        const term = document.getElementById('terminal');
+
+        if (!this.props.autoSplitEnabled) {
+            vs?.dispatchEvent(new Event('auto-unsnap'));
+            term?.dispatchEvent(new Event('auto-unsnap'));
+            return;
+        }
+
+        const open = Object.keys(this.state.closed_windows).filter(
+            id => this.state.closed_windows[id] === false && !this.state.minimized_windows[id]
+        );
+        const onlyPair = open.length === 2 && open.includes('vscode') && open.includes('terminal');
+        if (onlyPair) {
+            vs?.dispatchEvent(new CustomEvent('auto-snap', { detail: { position: 'left', width: 62 } }));
+            term?.dispatchEvent(new CustomEvent('auto-snap', { detail: { position: 'right', width: 38 } }));
+        } else {
+            vs?.dispatchEvent(new Event('auto-unsnap'));
+            term?.dispatchEvent(new Event('auto-unsnap'));
+        }
+    }
+
     renderNameBar = () => {
         let addFolder = () => {
             let folder_name = document.getElementById("folder-name-input").value;
@@ -974,5 +1007,6 @@ export class Desktop extends Component {
 
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
-    return <Desktop {...props} snapEnabled={snapEnabled} />;
+    const [autoSplitEnabled] = useAutoSplitSetting();
+    return <Desktop {...props} snapEnabled={snapEnabled} autoSplitEnabled={autoSplitEnabled} />;
 }
