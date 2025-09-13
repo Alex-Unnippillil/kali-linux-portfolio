@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import AboutApp from '../../components/apps/About';
+import AboutApp from '../../components/apps/alex';
 
 function GitHubIcon({ className }: { className?: string }) {
   return (
@@ -29,7 +29,7 @@ function LinkedInIcon({ className }: { className?: string }) {
   );
 }
 
-export default function AboutPage() {
+export default function AlexPage() {
   return (
     <div className="min-h-screen w-full bg-[var(--kali-bg)] text-sm">
       <div className="max-w-screen-md mx-auto my-4 sm:my-8 p-4 sm:p-6">
