@@ -322,17 +322,14 @@ export class Window extends Component {
         if (rect.left <= threshold) {
             snap = { left: '0', top: '0', width: '50%', height: '100%' };
             this.setState({ snapPreview: snap, snapPosition: 'left' });
-        }
-        else if (rect.right >= window.innerWidth - threshold) {
+        } else if (rect.right >= window.innerWidth - threshold) {
             snap = { left: '50%', top: '0', width: '50%', height: '100%' };
             this.setState({ snapPreview: snap, snapPosition: 'right' });
-        }
-        else if (rect.top <= threshold) {
+        } else if (rect.top <= threshold) {
             snap = { left: '0', top: '0', width: '100%', height: '50%' };
             this.setState({ snapPreview: snap, snapPosition: 'top' });
-        }
-        else {
-            if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
+        } else if (this.state.snapPreview) {
+            this.setState({ snapPreview: null, snapPosition: null });
         }
     }
 
@@ -520,7 +517,12 @@ export class Window extends Component {
 
     handleKeyDown = (e) => {
         if (e.key === 'Escape') {
-            this.closeWindow();
+            if (this.state.snapPreview) {
+                e.preventDefault();
+                this.setState({ snapPreview: null, snapPosition: null });
+            } else {
+                this.closeWindow();
+            }
         } else if (e.key === 'Tab') {
             this.focusWindow();
         } else if (e.altKey) {
@@ -598,12 +600,18 @@ export class Window extends Component {
             newWidth = 50;
             newHeight = 96.3;
             transform = `translate(${window.innerWidth / 2}px,-2pt)`;
+        } else if (pos === 'top') {
+            newWidth = 100.2;
+            newHeight = 50;
+            transform = 'translate(-1pt,-2pt)';
         }
         const node = document.getElementById(this.id);
         if (node && transform) {
             node.style.transform = transform;
         }
         this.setState({
+            snapPreview: null,
+            snapPosition: null,
             snapped: pos,
             lastSize: { width, height },
             width: newWidth,
@@ -617,7 +625,7 @@ export class Window extends Component {
                 {this.state.snapPreview && (
                     <div
                         data-testid="snap-preview"
-                        className="fixed border-2 border-dashed border-white bg-white bg-opacity-10 pointer-events-none z-40 transition-opacity"
+                        className="fixed border-2 border-blue-500 bg-blue-500 bg-opacity-10 pointer-events-none z-40 transition-opacity"
                         style={{ left: this.state.snapPreview.left, top: this.state.snapPreview.top, width: this.state.snapPreview.width, height: this.state.snapPreview.height }}
                     />
                 )}
