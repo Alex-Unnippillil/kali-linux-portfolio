@@ -33,10 +33,13 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            borderless: false,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._borderlessObserver = null;
+        this._borderlessPrev = null;
     }
 
     componentDidMount() {
@@ -53,6 +56,19 @@ export class Window extends Component {
         window.addEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.addEventListener('super-arrow', this.handleSuperArrow);
+        if (root) {
+            this._borderlessObserver = new MutationObserver(() => {
+                if (root.dataset.borderless === 'true') {
+                    this.enterBorderless();
+                } else if (this.state.borderless) {
+                    this.exitBorderless();
+                }
+            });
+            this._borderlessObserver.observe(root, { attributes: true, attributeFilter: ['data-borderless'] });
+            if (root.dataset.borderless === 'true') {
+                this.enterBorderless();
+            }
+        }
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -66,6 +82,10 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        if (this._borderlessObserver) {
+            this._borderlessObserver.disconnect();
+            this._borderlessObserver = null;
+        }
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
@@ -379,6 +399,64 @@ export class Window extends Component {
         this.props.focus(this.id);
     }
 
+    enterBorderless = () => {
+        const node = document.getElementById(this.id);
+        if (!node || this.state.borderless) return;
+        this._borderlessPrev = {
+            width: this.state.width,
+            height: this.state.height,
+            transform: node.style.transform,
+            maximized: this.state.maximized,
+            snapped: this.state.snapped,
+            lastSize: this.state.lastSize,
+        };
+        const s = window.screen;
+        const rect = s?.availableRect ?? {
+            x: s?.availLeft ?? 0,
+            y: s?.availTop ?? 0,
+            width: s?.availWidth ?? window.innerWidth,
+            height: s?.availHeight ?? window.innerHeight,
+        };
+        node.style.transform = `translate(${rect.x}px, ${rect.y}px)`;
+        const widthPercent = (rect.width / window.innerWidth) * 100;
+        const heightPercent = (rect.height / window.innerHeight) * 100;
+        this.setState({
+            borderless: true,
+            maximized: true,
+            snapped: null,
+            lastSize: null,
+            width: widthPercent,
+            height: heightPercent,
+        }, () => {
+            this.resizeBoundries();
+            this.props.hideSideBar(this.id, true);
+            node.focus();
+            this.focusWindow();
+        });
+    }
+
+    exitBorderless = () => {
+        const node = document.getElementById(this.id);
+        if (!node || !this.state.borderless) return;
+        const prev = this._borderlessPrev || { width: 60, height: 85, transform: node.style.transform, maximized: false, snapped: null, lastSize: null };
+        node.style.transform = prev.transform;
+        this.setState({
+            borderless: false,
+            width: prev.width,
+            height: prev.height,
+            maximized: prev.maximized,
+            snapped: prev.snapped,
+            lastSize: prev.lastSize,
+        }, () => {
+            this.resizeBoundries();
+            this.props.hideSideBar(this.id, false);
+            this.checkOverlap();
+            node.focus();
+            node.removeAttribute('data-borderless');
+        });
+        this._borderlessPrev = null;
+    }
+
     minimizeWindow = () => {
         let posx = -310;
         if (this.state.maximized) {
@@ -520,45 +598,49 @@ export class Window extends Component {
 
     handleKeyDown = (e) => {
         if (e.key === 'Escape') {
-            this.closeWindow();
+            if (this.state.borderless) {
+                this.exitBorderless();
+            } else {
+                this.closeWindow();
+            }
         } else if (e.key === 'Tab') {
             this.focusWindow();
-        } else if (e.altKey) {
+        } else if (e.altKey && !this.state.borderless) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('top');
             }
             this.focusWindow();
-        } else if (e.shiftKey) {
+        } else if (e.shiftKey && !this.state.borderless) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
             }
             this.focusWindow();
@@ -632,40 +714,55 @@ export class Window extends Component {
                     allowAnyClick={false}
                     defaultPosition={{ x: this.startX, y: this.startY }}
                     bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
+                    disabled={this.state.borderless}
                 >
                     <div
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        className={
+                            this.state.cursorType + " " +
+                            (this.state.closed ? " closed-window " : "") +
+                            (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") +
+                            (this.props.minimized ? " opacity-0 invisible duration-200 " : "") +
+                            (this.state.grabbed ? " opacity-70 " : "") +
+                            (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") +
+                            (this.props.isFocused ? " z-30 " : " z-20 notFocused") +
+                            " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow flex flex-col " +
+                            (this.state.borderless ? " border-0 outline-none focus:ring-1 focus:ring-inset focus:ring-white" : " border-black border-opacity-40 border border-t-0")
+                        }
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
-                        <WindowTopBar
-                            title={this.props.title}
-                            onKeyDown={this.handleTitleBarKeyDown}
-                            onBlur={this.releaseGrab}
-                            grabbed={this.state.grabbed}
-                        />
-                        <WindowEditButtons
-                            minimize={this.minimizeWindow}
-                            maximize={this.maximizeWindow}
-                            isMaximised={this.state.maximized}
-                            close={this.closeWindow}
-                            id={this.id}
-                            allowMaximize={this.props.allowMaximize !== false}
-                            pip={() => this.props.screen(this.props.addFolder, this.props.openApp)}
-                        />
+                        {this.props.resizable !== false && !this.state.borderless && <WindowYBorder resize={this.handleHorizontalResize} />}
+                        {this.props.resizable !== false && !this.state.borderless && <WindowXBorder resize={this.handleVerticleResize} />}
+                        {!this.state.borderless && (
+                            <WindowTopBar
+                                title={this.props.title}
+                                onKeyDown={this.handleTitleBarKeyDown}
+                                onBlur={this.releaseGrab}
+                                grabbed={this.state.grabbed}
+                            />
+                        )}
+                        {!this.state.borderless && (
+                            <WindowEditButtons
+                                minimize={this.minimizeWindow}
+                                maximize={this.maximizeWindow}
+                                isMaximised={this.state.maximized}
+                                close={this.closeWindow}
+                                id={this.id}
+                                allowMaximize={this.props.allowMaximize !== false}
+                                pip={() => this.props.screen(this.props.addFolder, this.props.openApp)}
+                            />
+                        )}
                         {(this.id === "settings"
                             ? <Settings />
                             : <WindowMainScreen screen={this.props.screen} title={this.props.title}
                                 addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
                                 openApp={this.props.openApp} />)}
                     </div>
-                </Draggable >
+                </Draggable>
             </>
         )
     }
