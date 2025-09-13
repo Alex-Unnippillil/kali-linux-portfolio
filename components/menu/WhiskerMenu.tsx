@@ -3,6 +3,7 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import Fuse from 'fuse.js';
 
 type AppMeta = {
   id: string;
@@ -10,6 +11,7 @@ type AppMeta = {
   icon: string;
   disabled?: boolean;
   favourite?: boolean;
+  keywords?: string;
 };
 
 const CATEGORIES = [
@@ -60,8 +62,12 @@ const WhiskerMenu: React.FC = () => {
         list = allApps;
     }
     if (query) {
-      const q = query.toLowerCase();
-      list = list.filter(a => a.title.toLowerCase().includes(q));
+      const fuse = new Fuse(list, {
+        keys: ['title', 'keywords'],
+        threshold: 0.3,
+        ignoreLocation: true,
+      });
+      list = fuse.search(query).map(r => r.item);
     }
     return list;
   }, [category, query, allApps, favoriteApps, recentApps, utilityApps, gameApps]);
@@ -164,12 +170,13 @@ const WhiskerMenu: React.FC = () => {
             <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
               {currentApps.map((app, idx) => (
                 <div key={app.id} className={idx === highlight ? 'ring-2 ring-ubb-orange' : ''}>
-                  <UbuntuApp
+                <UbuntuApp
                     id={app.id}
                     icon={app.icon}
                     name={app.title}
                     openApp={() => openSelectedApp(app.id)}
                     disabled={app.disabled}
+                    keywords={app.keywords}
                   />
                 </div>
               ))}

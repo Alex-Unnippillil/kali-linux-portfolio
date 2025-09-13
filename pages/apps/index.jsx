@@ -1,6 +1,7 @@
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
+import Fuse from 'fuse.js';
 
 const AppsPage = () => {
   const [apps, setApps] = useState([]);
@@ -18,9 +19,20 @@ const AppsPage = () => {
     };
   }, []);
 
-  const filteredApps = apps.filter(
-    (app) => !app.disabled && app.title.toLowerCase().includes(query.toLowerCase()),
+  const fuse = useMemo(
+    () =>
+      new Fuse(apps, {
+        keys: ['title', 'keywords'],
+        threshold: 0.3,
+        ignoreLocation: true,
+      }),
+    [apps],
   );
+
+  const filteredApps = useMemo(() => {
+    if (!query) return apps.filter((app) => !app.disabled);
+    return fuse.search(query).map((r) => r.item).filter((app) => !app.disabled);
+  }, [apps, fuse, query]);
 
   return (
     <div className="p-4">
@@ -46,6 +58,7 @@ const AppsPage = () => {
             href={`/apps/${app.id}`}
             className="flex flex-col items-center rounded border p-4 text-center focus:outline-none focus:ring"
             aria-label={app.title}
+            data-keywords={app.keywords}
           >
             {app.icon && (
               <Image
