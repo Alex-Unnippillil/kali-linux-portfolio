@@ -164,16 +164,16 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
 
   return (
     <div
-      className={`flex flex-col w-full h-full ${className}`.trim()}
+      className={`flex flex-col w-full h-full bg-[var(--color-surface)] text-[var(--color-text)] border border-[var(--color-border)] shadow-[0_4px_12px_4px_color-mix(in_srgb,var(--color-inverse),transparent_80%)] p-3 md:p-4 ${className}`.trim()}
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
-      <div className="flex flex-shrink-0 bg-gray-800 text-white text-sm overflow-x-auto">
+      <div className="flex flex-shrink-0 bg-[var(--color-muted)] text-[var(--color-text)] text-sm overflow-x-auto border-b border-[var(--color-border)]">
         {tabs.map((t, i) => (
           <div
             key={t.id}
             className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none ${
-              t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
+              t.id === activeId ? 'bg-[var(--color-surface)]' : 'bg-[var(--color-muted)]'
             }`}
             draggable
             onDragStart={handleDragStart(i)}
@@ -198,7 +198,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         ))}
         {onNewTab && (
           <button
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700"
+            className="px-2 py-1 bg-[var(--color-muted)] hover:bg-[var(--color-surface)]"
             onClick={addTab}
             aria-label="New Tab"
           >
