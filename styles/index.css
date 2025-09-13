@@ -530,3 +530,23 @@ textarea:focus-visible {
     color: #000 !important;
 }
 
+
+@media (prefers-contrast: no-more) {
+  html[data-theme='default'] .hero,
+  html[data-theme='default'] .feature,
+  html[data-theme='default'] .features {
+    position: relative;
+  }
+
+  html[data-theme='default'] .hero::before,
+  html[data-theme='default'] .feature::before,
+  html[data-theme='default'] .features::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url('/assets/kali-watermark.svg') center/60% no-repeat;
+    opacity: 0.05;
+    pointer-events: none;
+  }
+}
+
