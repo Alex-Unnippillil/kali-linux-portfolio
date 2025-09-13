@@ -24,6 +24,17 @@ const InstallButton = dynamic(
     loading: () => <p>Loading install options...</p>,
   }
 );
+const NewsStrip = dynamic(
+  () =>
+    import('../components/landing/NewsStrip').catch((err) => {
+      console.error('Failed to load NewsStrip component', err);
+      throw err;
+    }),
+  {
+    ssr: false,
+    loading: () => <p>Loading news...</p>,
+  }
+);
 
 /**
  * @returns {JSX.Element}
@@ -37,6 +48,7 @@ const App = () => (
     <Ubuntu />
     <BetaBadge />
     <InstallButton />
+    <NewsStrip />
   </>
 );
 
