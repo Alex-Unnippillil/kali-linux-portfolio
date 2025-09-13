@@ -37,6 +37,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._prevSnap = null;
     }
 
     componentDidMount() {
@@ -56,6 +57,10 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        if (typeof window !== 'undefined') {
+            window.__windowInstances = window.__windowInstances || {};
+            window.__windowInstances[this.id] = this;
+        }
     }
 
     componentWillUnmount() {
@@ -68,6 +73,9 @@ export class Window extends Component {
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+        if (typeof window !== 'undefined' && window.__windowInstances) {
+            delete window.__windowInstances[this.id];
         }
     }
 
@@ -191,7 +199,10 @@ export class Window extends Component {
             this.restoreWindow();
         }
         if (this.state.snapped) {
+            this._prevSnap = this.state.snapped;
             this.unsnapWindow();
+        } else {
+            this._prevSnap = null;
         }
         this.setState({ cursorType: "cursor-move", grabbed: true })
     }
@@ -243,6 +254,7 @@ export class Window extends Component {
             if (x && y) {
                 r.style.transform = `translate(${x},${y})`;
             }
+            r.removeAttribute('data-snapped');
         }
         if (this.state.lastSize) {
             this.setState({
@@ -277,6 +289,7 @@ export class Window extends Component {
         const r = document.querySelector("#" + this.id);
         if (r && transform) {
             r.style.transform = transform;
+            r.setAttribute('data-snapped', position);
         }
         this.setState({
             snapPreview: null,
@@ -370,9 +383,38 @@ export class Window extends Component {
         const snapPos = this.state.snapPosition;
         if (snapPos) {
             this.snapWindow(snapPos);
+            this.swapIfNeeded();
         } else {
-            this.setState({ snapPreview: null, snapPosition: null });
+            this.setState({ snapPreview: null, snapPosition: null }, this.swapIfNeeded);
         }
+    }
+
+    swapIfNeeded = () => {
+        if (!this._prevSnap || typeof window === 'undefined') return;
+        const myNode = document.getElementById(this.id);
+        if (!myNode) { this._prevSnap = null; return; }
+        const myRect = myNode.getBoundingClientRect();
+        const others = Array.from(document.querySelectorAll('[data-snapped]'));
+        for (const other of others) {
+            if (other.id === this.id) continue;
+            const rect = other.getBoundingClientRect();
+            const overlap = !(myRect.right <= rect.left || myRect.left >= rect.right || myRect.bottom <= rect.top || myRect.top >= rect.bottom);
+            if (overlap) {
+                const otherSide = other.getAttribute('data-snapped');
+                if (!otherSide) break;
+                const instances = window.__windowInstances || {};
+                const otherInstance = instances[other.id];
+                if (otherInstance && typeof otherInstance.snapWindow === 'function') {
+                    requestAnimationFrame(() => {
+                        otherInstance.snapWindow(this._prevSnap);
+                        this.snapWindow(otherSide);
+                    });
+                    this.props.focus(other.id);
+                }
+                break;
+            }
+        }
+        this._prevSnap = null;
     }
 
     focusWindow = () => {
@@ -602,6 +644,7 @@ export class Window extends Component {
         const node = document.getElementById(this.id);
         if (node && transform) {
             node.style.transform = transform;
+            node.setAttribute('data-snapped', pos);
         }
         this.setState({
             snapped: pos,
