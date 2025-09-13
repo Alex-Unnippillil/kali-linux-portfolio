@@ -1,12 +1,12 @@
 import React from 'react';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import AboutApp from '../components/apps/About';
+import AboutAlexApp from '../components/apps/alex';
 
-describe('AboutApp accessibility', () => {
+describe('AboutAlex accessibility', () => {
   it('supports roving tabindex for navigation tabs', async () => {
     const user = userEvent.setup();
-    render(<AboutApp />);
+    render(<AboutAlexApp />);
     const tablist = screen.getAllByRole('tablist')[0];
     const tabs = within(tablist).getAllByRole('tab');
     expect(tablist).toHaveAttribute('aria-orientation', 'vertical');

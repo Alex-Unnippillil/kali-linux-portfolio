@@ -4,7 +4,7 @@ import Head from 'next/head';
 import ReactGA from 'react-ga4';
 import GitHubStars from '../../GitHubStars';
 import Certs from '../certs';
-import data from '../alex/data.json';
+import data from './data.json';
 import SafetyNote from './SafetyNote';
 import { getCspNonce } from '../../../utils/csp';
 import AboutSlides from './slides';
@@ -349,13 +349,14 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
   return (
     <div className="px-2 w-full">
       <div className="text-sm text-center md:text-base font-bold">{title}</div>
-      <input
-        type="text"
-        placeholder="Filter..."
-        className="mt-2 w-full px-2 py-1 rounded text-black"
-        value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-      />
+        <input
+          type="text"
+          placeholder="Filter..."
+          aria-label="Filter badges"
+          className="mt-2 w-full px-2 py-1 rounded text-black"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        />
       <div className="flex flex-wrap justify-center items-start w-full mt-2">
         {filteredBadges.map((badge) => (
           <img
