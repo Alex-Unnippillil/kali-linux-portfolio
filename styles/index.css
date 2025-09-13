@@ -110,6 +110,10 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     -moz-box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
 }
 
+.opened-window {
+    background-color: color-mix(in srgb, var(--color-surface), transparent calc((1 - var(--window-opacity, 1)) * 100%));
+}
+
 .closed-window {
     animation: closeWindow 200ms 1 forwards;
 }

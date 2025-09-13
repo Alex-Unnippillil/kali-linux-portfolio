@@ -7,6 +7,7 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import ContextMenu from '../common/ContextMenu';
 
 export class Window extends Component {
     constructor(props) {
@@ -33,10 +34,12 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            opacity: 1,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this.windowRef = React.createRef();
     }
 
     componentDidMount() {
@@ -612,6 +615,27 @@ export class Window extends Component {
     }
 
     render() {
+        const menuItems = [
+            {
+                label: (
+                    <div className="flex items-center">
+                        <span className="mr-2">Opacity</span>
+                        <input
+                            type="range"
+                            min={0.8}
+                            max={1}
+                            step={0.05}
+                            value={this.state.opacity}
+                            onChange={(e) => this.setState({ opacity: parseFloat(e.target.value) })}
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            className="w-24 ubuntu-slider"
+                        />
+                    </div>
+                ),
+                onSelect: () => { },
+            },
+        ];
         return (
             <>
                 {this.state.snapPreview && (
@@ -634,9 +658,10 @@ export class Window extends Component {
                     bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
                 >
                     <div
-                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
+                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%`, '--window-opacity': this.state.opacity }}
                         className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                         id={this.id}
+                        ref={this.windowRef}
                         role="dialog"
                         aria-label={this.props.title}
                         tabIndex={0}
@@ -666,6 +691,7 @@ export class Window extends Component {
                                 openApp={this.props.openApp} />)}
                     </div>
                 </Draggable >
+                <ContextMenu targetRef={this.windowRef} items={menuItems} />
             </>
         )
     }
@@ -838,7 +864,10 @@ export class WindowMainScreen extends Component {
     }
     render() {
         return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
+            <div
+                className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}
+                style={{ backgroundColor: `color-mix(in srgb, var(--color-surface), transparent calc((1 - var(--window-opacity,1)) * 100%))` }}
+            >
                 {this.props.screen(this.props.addFolder, this.props.openApp)}
             </div>
         )
