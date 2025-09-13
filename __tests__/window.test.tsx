@@ -199,7 +199,7 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true, preventDefault: () => {}, stopPropagation: () => {} } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
@@ -319,6 +319,52 @@ describe('Edge resistance', () => {
     });
 
     expect(winEl.style.transform).toBe('translate(0px, 0px)');
+  });
+});
+
+describe('Workspace edge switch', () => {
+  it('invokes switchWorkspace when hovering at edge long enough', () => {
+    jest.useFakeTimers();
+    const switchWorkspace = jest.fn();
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        switchWorkspace={switchWorkspace}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 5,
+      top: 10,
+      right: 105,
+      bottom: 110,
+      width: 100,
+      height: 100,
+      x: 5,
+      y: 10,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(300);
+    });
+
+    expect(switchWorkspace).toHaveBeenCalledWith('left');
+    jest.useRealTimers();
   });
 });
 

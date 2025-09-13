@@ -3,12 +3,13 @@
 import React, { Component } from 'react';
 import NextImage from 'next/image';
 import Draggable from 'react-draggable';
-import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import { SettingsContext } from '../../hooks/useSettings';
 
 export class Window extends Component {
+    static contextType = SettingsContext;
     constructor(props) {
         super(props);
         this.id = null;
@@ -37,6 +38,8 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._edgeSwitchTimer = null;
+        this._edgeSwitchDirection = null;
     }
 
     componentDidMount() {
@@ -68,6 +71,9 @@ export class Window extends Component {
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+        if (this._edgeSwitchTimer) {
+            clearTimeout(this._edgeSwitchTimer);
         }
     }
 
@@ -336,6 +342,41 @@ export class Window extends Component {
         }
     }
 
+    checkWorkspaceEdge = () => {
+        const r = document.querySelector("#" + this.id);
+        if (!r) return;
+        const rect = r.getBoundingClientRect();
+        const threshold = 30;
+        let dir = null;
+        if (rect.left <= threshold) {
+            dir = 'left';
+        } else if (rect.right >= window.innerWidth - threshold) {
+            dir = 'right';
+        }
+        if (dir) {
+            if (this._edgeSwitchDirection !== dir) {
+                if (this._edgeSwitchTimer) clearTimeout(this._edgeSwitchTimer);
+                const delay = this.context?.edgeSwitchDelay ?? 300;
+                this._edgeSwitchDirection = dir;
+                this._edgeSwitchTimer = setTimeout(() => {
+                    if (this.props.switchWorkspace) {
+                        this.props.switchWorkspace(dir);
+                    } else {
+                        window.dispatchEvent(new CustomEvent('switch-workspace', { detail: dir }));
+                    }
+                    this._edgeSwitchTimer = null;
+                    this._edgeSwitchDirection = null;
+                }, delay);
+            }
+        } else {
+            if (this._edgeSwitchTimer) {
+                clearTimeout(this._edgeSwitchTimer);
+                this._edgeSwitchTimer = null;
+                this._edgeSwitchDirection = null;
+            }
+        }
+    }
+
     applyEdgeResistance = (node, data) => {
         if (!node || !data) return;
         const threshold = 30;
@@ -363,6 +404,7 @@ export class Window extends Component {
         }
         this.checkOverlap();
         this.checkSnapPreview();
+        this.checkWorkspaceEdge();
     }
 
     handleStop = () => {

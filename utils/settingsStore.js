@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  edgeSwitchDelay: 300,
 };
 
 export async function getAccent() {
@@ -38,89 +39,100 @@ export async function setWallpaper(wallpaper) {
 
 export async function getDensity() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.density;
-  return window.localStorage.getItem('density') || DEFAULT_SETTINGS.density;
+  return window.localStorage?.getItem('density') || DEFAULT_SETTINGS.density;
 }
 
 export async function setDensity(density) {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || !window.localStorage) return;
   window.localStorage.setItem('density', density);
 }
 
 export async function getReducedMotion() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.reducedMotion;
-  const stored = window.localStorage.getItem('reduced-motion');
-  if (stored !== null) {
+  const stored = window.localStorage?.getItem('reduced-motion');
+  if (stored !== null && stored !== undefined) {
     return stored === 'true';
   }
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 export async function setReducedMotion(value) {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || !window.localStorage) return;
   window.localStorage.setItem('reduced-motion', value ? 'true' : 'false');
 }
 
 export async function getFontScale() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.fontScale;
-  const stored = window.localStorage.getItem('font-scale');
+  const stored = window.localStorage?.getItem('font-scale');
   return stored ? parseFloat(stored) : DEFAULT_SETTINGS.fontScale;
 }
 
 export async function setFontScale(scale) {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || !window.localStorage) return;
   window.localStorage.setItem('font-scale', String(scale));
 }
 
 export async function getHighContrast() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.highContrast;
-  return window.localStorage.getItem('high-contrast') === 'true';
+  return window.localStorage?.getItem('high-contrast') === 'true';
 }
 
 export async function setHighContrast(value) {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || !window.localStorage) return;
   window.localStorage.setItem('high-contrast', value ? 'true' : 'false');
 }
 
 export async function getLargeHitAreas() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.largeHitAreas;
-  return window.localStorage.getItem('large-hit-areas') === 'true';
+  return window.localStorage?.getItem('large-hit-areas') === 'true';
 }
 
 export async function setLargeHitAreas(value) {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || !window.localStorage) return;
   window.localStorage.setItem('large-hit-areas', value ? 'true' : 'false');
 }
 
 export async function getHaptics() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.haptics;
-  const val = window.localStorage.getItem('haptics');
-  return val === null ? DEFAULT_SETTINGS.haptics : val === 'true';
+  const val = window.localStorage?.getItem('haptics');
+  return val === null || val === undefined ? DEFAULT_SETTINGS.haptics : val === 'true';
 }
 
 export async function setHaptics(value) {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || !window.localStorage) return;
   window.localStorage.setItem('haptics', value ? 'true' : 'false');
 }
 
 export async function getPongSpin() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
-  const val = window.localStorage.getItem('pong-spin');
-  return val === null ? DEFAULT_SETTINGS.pongSpin : val === 'true';
+  const val = window.localStorage?.getItem('pong-spin');
+  return val === null || val === undefined ? DEFAULT_SETTINGS.pongSpin : val === 'true';
 }
 
 export async function setPongSpin(value) {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || !window.localStorage) return;
   window.localStorage.setItem('pong-spin', value ? 'true' : 'false');
 }
 
 export async function getAllowNetwork() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.allowNetwork;
-  return window.localStorage.getItem('allow-network') === 'true';
+  return window.localStorage?.getItem('allow-network') === 'true';
 }
 
 export async function setAllowNetwork(value) {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || !window.localStorage) return;
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
+}
+
+export async function getEdgeSwitchDelay() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.edgeSwitchDelay;
+  const stored = window.localStorage?.getItem('edge-switch-delay');
+  return stored ? parseInt(stored, 10) : DEFAULT_SETTINGS.edgeSwitchDelay;
+}
+
+export async function setEdgeSwitchDelay(value) {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  window.localStorage.setItem('edge-switch-delay', String(value));
 }
 
 export async function resetSettings() {
@@ -137,6 +149,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('edge-switch-delay');
 }
 
 export async function exportSettings() {
@@ -151,6 +164,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    edgeSwitchDelay,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +176,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getEdgeSwitchDelay(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +190,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    edgeSwitchDelay,
     theme,
   });
 }
@@ -199,6 +215,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    edgeSwitchDelay,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +228,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (edgeSwitchDelay !== undefined) await setEdgeSwitchDelay(edgeSwitchDelay);
   if (theme !== undefined) setTheme(theme);
 }
 
