@@ -77,3 +77,8 @@ html[data-theme='matrix'] {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
+
+html[data-color='reduced'] .bg-ubuntu-img img,
+html[data-color='reduced'] [data-wallpaper-preview] {
+  filter: saturate(0.7);
+}

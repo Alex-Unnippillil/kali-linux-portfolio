@@ -23,6 +23,8 @@ export default function Settings() {
     setDensity,
     reducedMotion,
     setReducedMotion,
+    reducedColor,
+    setReducedColor,
     fontScale,
     setFontScale,
     highContrast,
@@ -76,6 +78,8 @@ export default function Settings() {
       if (parsed.density !== undefined) setDensity(parsed.density);
       if (parsed.reducedMotion !== undefined)
         setReducedMotion(parsed.reducedMotion);
+      if (parsed.reducedColor !== undefined)
+        setReducedColor(parsed.reducedColor);
       if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
@@ -98,6 +102,7 @@ export default function Settings() {
     setWallpaper(defaults.wallpaper);
     setDensity(defaults.density as any);
     setReducedMotion(defaults.reducedMotion);
+    setReducedColor(defaults.reducedColor);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
     setTheme("default");
@@ -113,6 +118,7 @@ export default function Settings() {
       {activeTab === "appearance" && (
         <>
           <div
+            data-wallpaper-preview
             className="md:w-2/5 w-2/3 h-1/3 m-auto my-4"
             style={{
               backgroundImage: `url(/wallpapers/${wallpaper}.webp)`,
@@ -174,6 +180,7 @@ export default function Settings() {
               <div
                 key={name}
                 role="button"
+                data-wallpaper-preview
                 aria-label={`Select ${name.replace("wall-", "wallpaper ")}`}
                 aria-pressed={name === wallpaper}
                 tabIndex={0}
@@ -242,6 +249,14 @@ export default function Settings() {
               checked={reducedMotion}
               onChange={setReducedMotion}
               ariaLabel="Reduced Motion"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Reduced Colors:</span>
+            <ToggleSwitch
+              checked={reducedColor}
+              onChange={setReducedColor}
+              ariaLabel="Reduced Colors"
             />
           </div>
           <div className="flex justify-center my-4 items-center">
