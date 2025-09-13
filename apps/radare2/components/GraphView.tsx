@@ -190,6 +190,7 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
             backgroundColor: "var(--r2-surface)",
             border: "1px solid var(--r2-border)",
           }}
+          aria-label="Zoom in"
         >
           +
         </button>
@@ -200,6 +201,7 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
             backgroundColor: "var(--r2-surface)",
             border: "1px solid var(--r2-border)",
           }}
+          aria-label="Zoom out"
         >
           -
         </button>
@@ -210,6 +212,7 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
             backgroundColor: "var(--r2-surface)",
             border: "1px solid var(--r2-border)",
           }}
+          aria-label="Pan up"
         >
           ↑
         </button>
@@ -220,6 +223,7 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
             backgroundColor: "var(--r2-surface)",
             border: "1px solid var(--r2-border)",
           }}
+          aria-label="Pan down"
         >
           ↓
         </button>
@@ -230,6 +234,7 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
             backgroundColor: "var(--r2-surface)",
             border: "1px solid var(--r2-border)",
           }}
+          aria-label="Pan left"
         >
           ←
         </button>
@@ -240,6 +245,7 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
             backgroundColor: "var(--r2-surface)",
             border: "1px solid var(--r2-border)",
           }}
+          aria-label="Pan right"
         >
           →
         </button>

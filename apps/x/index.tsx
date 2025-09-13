@@ -364,6 +364,7 @@ export default function XTimeline() {
                     type="button"
                     onClick={() => removeScheduled(t.id)}
                     className="ml-2 px-2 py-1 rounded bg-[var(--color-muted)] text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+                    aria-label="Remove scheduled item"
                   >
                     ×
                   </button>

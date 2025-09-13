@@ -110,6 +110,7 @@ const MoodTuner = () => {
               onClick={previous}
               title="Prev (P)"
               className="w-8 h-8 flex items-center justify-center"
+              aria-label="Previous track"
             >
               ⏮<span className="sr-only">(P)</span>
             </button>
@@ -117,6 +118,7 @@ const MoodTuner = () => {
               onClick={togglePlay}
               title="Play/Pause (Space)"
               className="w-8 h-8 flex items-center justify-center"
+              aria-label={isPlaying ? 'Pause' : 'Play'}
             >
               {isPlaying ? "⏸" : "▶"}
               <span className="sr-only">(Space)</span>
@@ -125,6 +127,7 @@ const MoodTuner = () => {
               onClick={next}
               title="Next (N)"
               className="w-8 h-8 flex items-center justify-center"
+              aria-label="Next track"
             >
               ⏭<span className="sr-only">(N)</span>
             </button>

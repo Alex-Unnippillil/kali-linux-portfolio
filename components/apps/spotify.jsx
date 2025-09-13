@@ -61,9 +61,9 @@ export default function SpotifyApp() {
     <div className="h-full w-full flex flex-col items-center justify-center gap-4 bg-black bg-opacity-30 text-white">
       <p>Spotify player connected.</p>
       <div className="flex gap-4">
-        <button onClick={() => player.previousTrack()}>⏮</button>
-        <button onClick={() => player.togglePlay()}>⏯</button>
-        <button onClick={() => player.nextTrack()}>⏭</button>
+        <button onClick={() => player.previousTrack()} aria-label="Previous track">⏮</button>
+        <button onClick={() => player.togglePlay()} aria-label="Play/Pause">⏯</button>
+        <button onClick={() => player.nextTrack()} aria-label="Next track">⏭</button>
       </div>
     </div>
   ) : (
@@ -71,9 +71,9 @@ export default function SpotifyApp() {
       <p>Sample tracks (CC‑licensed)</p>
       <audio ref={audioRef} src={SAMPLE_TRACKS[index].url} onEnded={nextSample} />
       <div className="flex gap-4">
-        <button onClick={prevSample}>⏮</button>
-        <button onClick={toggleSample}>⏯</button>
-        <button onClick={nextSample}>⏭</button>
+        <button onClick={prevSample} aria-label="Previous sample">⏮</button>
+        <button onClick={toggleSample} aria-label="Play/Pause sample">⏯</button>
+        <button onClick={nextSample} aria-label="Next sample">⏭</button>
       </div>
       <p className="text-xs">{SAMPLE_TRACKS[index].title}</p>
     </div>

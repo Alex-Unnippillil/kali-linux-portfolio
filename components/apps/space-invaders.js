@@ -842,6 +842,7 @@ const SpaceInvaders = () => {
             className="bg-gray-700 px-4 py-2 rounded"
             onTouchStart={touchStart('left')}
             onTouchEnd={touchEnd('left')}
+            aria-label="Move left"
           >
             ◀
           </button>
@@ -849,6 +850,7 @@ const SpaceInvaders = () => {
             className="bg-gray-700 px-4 py-2 rounded"
             onTouchStart={touchStart('fire')}
             onTouchEnd={touchEnd('fire')}
+            aria-label="Fire"
           >
             🔥
           </button>
@@ -856,6 +858,7 @@ const SpaceInvaders = () => {
             className="bg-gray-700 px-4 py-2 rounded"
             onTouchStart={touchStart('right')}
             onTouchEnd={touchEnd('right')}
+            aria-label="Move right"
           >
             ▶
           </button>
