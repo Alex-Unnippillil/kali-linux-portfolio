@@ -7,7 +7,7 @@ export const contactSchema = z.object({
     .min(1)
     .max(100)
     .transform((v) => v.replace(/\s+/g, ' ')),
-  email: z.string().trim().email(),
+  email: z.string().trim().email().max(100),
   message: z
     .string()
     .trim()

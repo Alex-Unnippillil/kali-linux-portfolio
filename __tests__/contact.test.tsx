@@ -40,4 +40,23 @@ describe('contact form', () => {
     );
     expect(result.success).toBe(true);
   });
+
+  it('strips html from inputs', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({ ok: true });
+    await processContactForm(
+      {
+        name: '<b>Alex</b>',
+        email: 'a@example.com',
+        message: '<i>hello</i>',
+        honeypot: '',
+        csrfToken: 'csrf',
+        recaptchaToken: 'rc',
+      },
+      fetchMock
+    );
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.name).toBe('Alex');
+    expect(body.message).toBe('hello');
+    expect(body.message).not.toMatch(/<|>/);
+  });
 });

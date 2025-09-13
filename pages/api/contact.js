@@ -3,6 +3,9 @@ import { contactSchema } from '../../utils/contactSchema';
 import { validateServerEnv } from '../../lib/validate';
 import { getServiceSupabase } from '../../lib/supabase';
 
+const stripHtml = (str = '') => String(str).replace(/<[^>]*>/g, '');
+const limit = (str, max) => stripHtml(str).slice(0, max);
+
 // Simple in-memory rate limiter. Not suitable for distributed environments.
 export const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 5;
@@ -111,7 +114,11 @@ export default async function handler(req, res) {
       res.status(400).json({ ok: false, code: 'invalid_input' });
       return;
     }
-    sanitized = { name: parsed.name, email: parsed.email, message: parsed.message };
+    sanitized = {
+      name: limit(parsed.name, 100),
+      email: limit(parsed.email, 100),
+      message: limit(parsed.message, 1000),
+    };
   } catch {
     console.warn('Contact submission rejected', { ip, reason: 'invalid_input' });
     res.status(400).json({ ok: false, code: 'invalid_input' });

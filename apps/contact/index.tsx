@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import FormError from "../../components/ui/FormError";
 import Toast from "../../components/ui/Toast";
 import { processContactForm } from "../../components/apps/contact";
@@ -34,6 +34,7 @@ const ContactApp: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [messageError, setMessageError] = useState("");
+  const lastSubmit = useRef(0);
 
   useEffect(() => {
     const saved = localStorage.getItem(DRAFT_KEY);
@@ -58,7 +59,9 @@ const ContactApp: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (submitting) return;
+    const now = Date.now();
+    if (now - lastSubmit.current < 1000 || submitting) return;
+    lastSubmit.current = now;
     setSubmitting(true);
     setError("");
     setEmailError("");
@@ -151,6 +154,7 @@ const ContactApp: React.FC = () => {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
+              maxLength={100}
             />
             <svg
               className="pointer-events-none absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 text-gray-400"
@@ -182,6 +186,7 @@ const ContactApp: React.FC = () => {
               required
               aria-invalid={!!emailError}
               aria-describedby={emailError ? "contact-email-error" : undefined}
+              maxLength={100}
             />
             <svg
               className="pointer-events-none absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 text-gray-400"
@@ -218,6 +223,7 @@ const ContactApp: React.FC = () => {
               required
               aria-invalid={!!messageError}
               aria-describedby={messageError ? "contact-message-error" : undefined}
+              maxLength={1000}
             />
             <svg
               className="pointer-events-none absolute left-3 top-3 h-6 w-6 text-gray-400"
@@ -242,11 +248,13 @@ const ContactApp: React.FC = () => {
         </div>
         <input
           type="text"
+          name="hp"
           value={honeypot}
           onChange={(e) => setHoneypot(e.target.value)}
           className="hidden"
           tabIndex={-1}
           autoComplete="off"
+          aria-hidden="true"
         />
         {error && <FormError>{error}</FormError>}
         <button
