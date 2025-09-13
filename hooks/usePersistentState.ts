@@ -2,6 +2,37 @@
 
 import { useState, useEffect } from 'react';
 
+export function loadPersistentState<T>(
+  key: string,
+  initial: T | (() => T),
+  validator?: (value: unknown) => value is T,
+): T {
+  const getInitial = () =>
+    typeof initial === 'function' ? (initial as () => T)() : initial;
+  if (typeof window === 'undefined') return getInitial();
+  try {
+    const stored = window.localStorage.getItem(key);
+    if (stored !== null) {
+      const parsed = JSON.parse(stored);
+      if (!validator || validator(parsed)) {
+        return parsed as T;
+      }
+    }
+  } catch {
+    // ignore parse errors
+  }
+  return getInitial();
+}
+
+export function savePersistentState<T>(key: string, value: T) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // ignore write errors
+  }
+}
+
 /**
  * Persist state in localStorage.
  * Safely falls back to the provided initial value if stored data is missing or corrupt.
@@ -14,34 +45,15 @@ export default function usePersistentState<T>(
   initial: T | (() => T),
   validator?: (value: unknown) => value is T,
 ) {
-  const getInitial = () =>
-    typeof initial === 'function' ? (initial as () => T)() : initial;
-
-  const [state, setState] = useState<T>(() => {
-    if (typeof window === 'undefined') return getInitial();
-    try {
-      const stored = window.localStorage.getItem(key);
-      if (stored !== null) {
-        const parsed = JSON.parse(stored);
-        if (!validator || validator(parsed)) {
-          return parsed as T;
-        }
-      }
-    } catch {
-      // ignore parsing errors and fall back
-    }
-    return getInitial();
-  });
+  const [state, setState] = useState<T>(() =>
+    loadPersistentState(key, initial, validator),
+  );
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem(key, JSON.stringify(state));
-    } catch {
-      // ignore write errors
-    }
+    savePersistentState(key, state);
   }, [key, state]);
 
-  const reset = () => setState(getInitial());
+  const reset = () => setState(loadPersistentState(key, initial, validator));
   const clear = () => {
     try {
       window.localStorage.removeItem(key);
