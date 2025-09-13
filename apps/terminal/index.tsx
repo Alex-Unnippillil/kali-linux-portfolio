@@ -400,6 +400,26 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     return () => window.removeEventListener('keydown', listener);
   }, [paletteOpen]);
 
+  useEffect(() => {
+    const screen = containerRef.current?.querySelector(
+      '.terminal .screen',
+    ) as HTMLElement | null;
+    if (!screen) return;
+    const fade = '1rem';
+    if (!overflow.top && !overflow.bottom) {
+      screen.style.removeProperty('mask-image');
+      screen.style.removeProperty('-webkit-mask-image');
+      return;
+    }
+    const maskImage = `linear-gradient(to bottom, ${
+      overflow.top ? 'transparent' : '#000'
+    } 0, #000 ${fade}, #000 calc(100% - ${fade}), ${
+      overflow.bottom ? 'transparent' : '#000'
+    } 100%)`;
+    screen.style.setProperty('mask-image', maskImage);
+    screen.style.setProperty('-webkit-mask-image', maskImage);
+  }, [overflow]);
+
   return (
     <div className="relative h-full w-full">
       {paletteOpen && (
@@ -493,12 +513,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               lineHeight: 1.4,
             }}
           />
-          {overflow.top && (
-            <div className="pointer-events-none absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-black" />
-          )}
-          {overflow.bottom && (
-            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-black" />
-          )}
         </div>
       </div>
     </div>
