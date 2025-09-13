@@ -5,6 +5,7 @@ import KeywordSearchPanel from './KeywordSearchPanel';
 import demoArtifacts from './data/sample-artifacts.json';
 import ReportExport from '../../../apps/autopsy/components/ReportExport';
 import demoCase from '../../../apps/autopsy/data/case.json';
+import { useSettings } from '../../../hooks/useSettings';
 
 const escapeFilename = (str = '') =>
   str
@@ -22,6 +23,7 @@ function Timeline({ events, onSelect }) {
   const workerRef = useRef(null);
   const positionsRef = useRef([]);
   const [sorted, setSorted] = useState([]);
+  const { twentyFourHour } = useSettings();
   const MIN_ZOOM = 1 / (24 * 60); // 1 pixel per day
   const MAX_ZOOM = 60; // 60 pixels per minute
   const [zoom, setZoom] = useState(1 / 60); // start at 1 pixel per hour
@@ -139,11 +141,12 @@ function Timeline({ events, onSelect }) {
         if (tickMinutes >= 1440) {
           label = date.toLocaleDateString();
         } else if (tickMinutes >= 60) {
-          label = date.toLocaleTimeString([], { hour: '2-digit' });
+          label = date.toLocaleTimeString([], { hour: '2-digit', hour12: !twentyFourHour });
         } else {
           label = date.toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit',
+            hour12: !twentyFourHour,
           });
         }
         ctx.fillText(label, x + 2, height / 2 + 25);
@@ -193,7 +196,7 @@ function Timeline({ events, onSelect }) {
     } else {
       requestAnimationFrame(render);
     }
-  }, [sorted, zoom]);
+  }, [sorted, zoom, twentyFourHour]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -283,11 +286,9 @@ function Timeline({ events, onSelect }) {
           />
           <datalist id="timeline-day-markers">
             {dayMarkers.map((m) => (
-              <option
-                key={m.day}
-                value={m.idx}
-                label={new Date(m.day).toLocaleDateString()}
-              />
+              <option key={m.day} value={m.idx}>
+                {new Date(m.day).toLocaleDateString()}
+              </option>
             ))}
           </datalist>
           {hoverIndex !== null && sorted[hoverIndex] && (
@@ -598,6 +599,7 @@ function Autopsy({ initialArtifacts = null }) {
           value={caseName}
           onChange={(e) => setCaseName(e.target.value)}
           placeholder="Case name"
+          aria-label="Case name"
           className="flex-grow bg-ub-grey text-white px-2 py-1 rounded"
         />
         <button
@@ -644,6 +646,7 @@ function Autopsy({ initialArtifacts = null }) {
         <textarea
           readOnly
           value={analysis}
+          aria-label="Analysis output"
           className="bg-ub-grey text-xs text-white p-2 rounded resize-none"
         />
       )}
