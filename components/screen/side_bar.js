@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import Image from 'next/image'
 import SideBarApp from '../base/side_bar_app';
+import Tooltip from '../ui/Tooltip';
 
 let renderApps = (props) => {
     let sideBarAppsJsx = [];
@@ -49,17 +50,29 @@ export default function SideBar(props) {
 export function AllApps(props) {
 
     const [title, setTitle] = useState(false);
+    const tooltipId = 'all-apps-tooltip';
 
     return (
         <div
             className={`w-10 h-10 rounded m-1 hover:bg-white hover:bg-opacity-10 flex items-center justify-center transition-hover transition-active`}
             style={{ marginTop: 'auto' }}
+            role="button"
+            tabIndex={0}
+            aria-label="Show Applications"
+            aria-describedby={tooltipId}
             onMouseEnter={() => {
                 setTitle(true);
             }}
             onMouseLeave={() => {
                 setTitle(false);
             }}
+            onFocus={() => {
+                setTitle(true);
+            }}
+            onBlur={() => {
+                setTitle(false);
+            }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); props.showApps(); } }}
             onClick={props.showApps}
         >
             <div className="relative">
@@ -71,14 +84,12 @@ export function AllApps(props) {
                     alt="Ubuntu view app"
                     sizes="28px"
                 />
-                <div
-                    className={
-                        (title ? " visible " : " invisible ") +
-                        " w-max py-0.5 px-1.5 absolute top-1 left-full ml-5 text-ubt-grey text-opacity-90 text-sm bg-ub-grey bg-opacity-70 border-gray-400 border border-opacity-40 rounded-md"
-                    }
+                <Tooltip
+                    id={tooltipId}
+                    className={(title ? " visible " : " invisible ") + " absolute top-1 left-full ml-5"}
                 >
                     Show Applications
-                </div>
+                </Tooltip>
             </div>
         </div>
     );

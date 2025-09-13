@@ -1,6 +1,7 @@
 import React, { Component } from "react";
 import Image from 'next/image';
 import { toCanvas } from 'html-to-image';
+import Tooltip from '../ui/Tooltip';
 
 export class SideBarApp extends Component {
     constructor() {
@@ -86,10 +87,12 @@ export class SideBarApp extends Component {
     };
 
     render() {
+        const tooltipId = `${this.props.id}-tooltip`;
         return (
             <button
                 type="button"
                 aria-label={this.props.title}
+                aria-describedby={tooltipId}
                 data-context="app"
                 data-app-id={this.props.id}
                 onClick={this.openApp}
@@ -98,6 +101,13 @@ export class SideBarApp extends Component {
                     this.setState({ showTitle: true });
                 }}
                 onMouseLeave={() => {
+                    this.setState({ showTitle: false, thumbnail: null });
+                }}
+                onFocus={() => {
+                    this.captureThumbnail();
+                    this.setState({ showTitle: true });
+                }}
+                onBlur={() => {
                     this.setState({ showTitle: false, thumbnail: null });
                 }}
                 className={(this.props.isClose[this.id] === false && this.props.isFocus[this.id] ? "bg-white bg-opacity-10 " : "") +
@@ -145,14 +155,12 @@ export class SideBarApp extends Component {
                         />
                     </div>
                 )}
-                <div
-                    className={
-                        (this.state.showTitle ? " visible " : " invisible ") +
-                        " w-max py-0.5 px-1.5 absolute top-1.5 left-full ml-3 m-1 text-ubt-grey text-opacity-90 text-sm bg-ub-grey bg-opacity-70 border-gray-400 border border-opacity-40 rounded-md"
-                    }
+                <Tooltip
+                    id={tooltipId}
+                    className={(this.state.showTitle ? " visible " : " invisible ") + " absolute top-1.5 left-full ml-3 m-1"}
                 >
                     {this.props.title}
-                </div>
+                </Tooltip>
             </button>
         );
     }
