@@ -32,6 +32,7 @@ const WhiskerMenu: React.FC = () => {
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
   const recentApps = useMemo(() => {
     try {
+      if (!open) return [];
       const ids: string[] = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]');
       return ids.map(id => allApps.find(a => a.id === id)).filter(Boolean) as AppMeta[];
     } catch {
@@ -120,16 +121,17 @@ const WhiskerMenu: React.FC = () => {
         ref={buttonRef}
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        aria-label="Application menu"
+        className="flex items-center gap-2 pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
       >
         <Image
-          src="/themes/Yaru/status/decompiler-symbolic.svg"
-          alt="Menu"
+          src="/kali-logo.svg"
+          alt="Kali logo"
           width={16}
           height={16}
-          className="inline mr-1"
+          className="inline w-4 h-4"
         />
-        Applications
+        <span className="hidden sm:inline">Menu</span>
       </button>
       {open && (
         <div
@@ -157,6 +159,7 @@ const WhiskerMenu: React.FC = () => {
             <input
               className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
               placeholder="Search"
+              aria-label="Search applications"
               value={query}
               onChange={e => setQuery(e.target.value)}
               autoFocus
