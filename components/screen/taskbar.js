@@ -22,6 +22,7 @@ export default function Taskbar(props) {
                     key={app.id}
                     type="button"
                     aria-label={app.title}
+                    aria-pressed={!props.minimized_windows[app.id] && props.focused_windows[app.id]}
                     data-context="taskbar"
                     data-app-id={app.id}
                     onClick={() => handleClick(app)}

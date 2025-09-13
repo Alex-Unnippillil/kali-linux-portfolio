@@ -123,6 +123,7 @@ const ModuleWorkspace: React.FC = () => {
           {workspaces.map((ws) => (
             <button
               key={ws}
+              aria-pressed={currentWorkspace === ws}
               onClick={() => setCurrentWorkspace(ws)}
               className={`px-2 py-1 rounded ${
                 currentWorkspace === ws ? 'bg-blue-600' : 'bg-gray-700'
@@ -138,6 +139,7 @@ const ModuleWorkspace: React.FC = () => {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setFilter('')}
+              aria-pressed={filter === ''}
               className={`px-2 py-1 text-sm rounded ${
                 filter === '' ? 'bg-blue-600' : 'bg-gray-700'
               }`}
@@ -147,6 +149,7 @@ const ModuleWorkspace: React.FC = () => {
             {tags.map((t) => (
               <button
                 key={t}
+                aria-pressed={filter === t}
                 onClick={() => setFilter(t)}
                 className={`px-2 py-1 text-sm rounded ${
                   filter === t ? 'bg-blue-600' : 'bg-gray-700'

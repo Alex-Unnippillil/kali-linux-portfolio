@@ -59,6 +59,7 @@
   /* Focus outline */
   --focus-outline-color: var(--color-ubt-blue);
   --focus-outline-width: 2px;
+  --kali-focus-ring: var(--focus-outline-width) solid var(--focus-outline-color);
 }
 
 /* High contrast theme */
