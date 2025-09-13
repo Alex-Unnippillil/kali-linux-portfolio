@@ -4,13 +4,15 @@ import Clock from '../util-components/clock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
 import WhiskerMenu from '../menu/WhiskerMenu';
+import Calendar from '../ui/Calendar';
 
 export default class Navbar extends Component {
 	constructor() {
 		super();
-		this.state = {
-			status_card: false
-		};
+                this.state = {
+                        status_card: false,
+                        calendar: false
+                };
 	}
 
 	render() {
@@ -20,13 +22,16 @@ export default class Navbar extends Component {
                                         <Image src="/themes/Yaru/status/network-wireless-signal-good-symbolic.svg" alt="network icon" width={16} height={16} className="w-4 h-4" />
                                 </div>
                                 <WhiskerMenu />
-                                <div
-                                        className={
-                                                'pl-2 pr-2 text-xs md:text-sm outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1'
+                                <button
+                                        type="button"
+                                        onClick={() =>
+                                                this.setState({ calendar: !this.state.calendar })
                                         }
+                                        className="relative pl-2 pr-2 text-xs md:text-sm outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
                                 >
                                         <Clock />
-                                </div>
+                                        <Calendar open={this.state.calendar} />
+                                </button>
                                 <button
                                         type="button"
                                         id="status-bar"
