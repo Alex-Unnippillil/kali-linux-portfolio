@@ -5,9 +5,11 @@ import { useEffect } from 'react';
 
 interface Props {
   open: boolean;
+  showSeconds: boolean;
+  setShowSeconds: (value: boolean) => void;
 }
 
-const QuickSettings = ({ open }: Props) => {
+const QuickSettings = ({ open, showSeconds, setShowSeconds }: Props) => {
   const [theme, setTheme] = usePersistentState('qs-theme', 'light');
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
@@ -43,6 +45,14 @@ const QuickSettings = ({ open }: Props) => {
       <div className="px-4 pb-2 flex justify-between">
         <span>Network</span>
         <input type="checkbox" checked={online} onChange={() => setOnline(!online)} />
+      </div>
+      <div className="px-4 pb-2 flex justify-between">
+        <span>Show seconds</span>
+        <input
+          type="checkbox"
+          checked={showSeconds}
+          onChange={() => setShowSeconds(!showSeconds)}
+        />
       </div>
       <div className="px-4 flex justify-between">
         <span>Reduced motion</span>
