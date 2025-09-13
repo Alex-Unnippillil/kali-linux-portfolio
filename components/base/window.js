@@ -37,6 +37,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._overlayRoot = null;
     }
 
     componentDidMount() {
@@ -170,12 +171,13 @@ export class Window extends Component {
         const root = this.getOverlayRoot();
         if (root) {
             root.setAttribute('inert', '');
+            this._overlayRoot = root;
         }
         this._menuOpener = document.activeElement;
     }
 
     deactivateOverlay = () => {
-        const root = this.getOverlayRoot();
+        const root = this._overlayRoot || this.getOverlayRoot();
         if (root) {
             root.removeAttribute('inert');
         }
@@ -183,6 +185,7 @@ export class Window extends Component {
             this._menuOpener.focus();
         }
         this._menuOpener = null;
+        this._overlayRoot = null;
     }
 
     changeCursorToMove = () => {
@@ -248,10 +251,12 @@ export class Window extends Component {
             this.setState({
                 width: this.state.lastSize.width,
                 height: this.state.lastSize.height,
-                snapped: null
+                snapped: null,
+                snapPreview: null,
+                snapPosition: null
             }, this.resizeBoundries);
         } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            this.setState({ snapped: null, snapPreview: null, snapPosition: null }, this.resizeBoundries);
         }
     }
 
@@ -313,21 +318,24 @@ export class Window extends Component {
         }
     }
 
-    checkSnapPreview = () => {
-        var r = document.querySelector("#" + this.id);
-        if (!r) return;
-        var rect = r.getBoundingClientRect();
+    checkSnapPreview = (rect) => {
+        let r = rect;
+        if (!r) {
+            const node = document.querySelector("#" + this.id);
+            if (!node) return;
+            r = node.getBoundingClientRect();
+        }
         const threshold = 30;
         let snap = null;
-        if (rect.left <= threshold) {
+        if (r.left <= threshold) {
             snap = { left: '0', top: '0', width: '50%', height: '100%' };
             this.setState({ snapPreview: snap, snapPosition: 'left' });
         }
-        else if (rect.right >= window.innerWidth - threshold) {
+        else if (r.right >= window.innerWidth - threshold) {
             snap = { left: '50%', top: '0', width: '50%', height: '100%' };
             this.setState({ snapPreview: snap, snapPosition: 'right' });
         }
-        else if (rect.top <= threshold) {
+        else if (r.top <= threshold) {
             snap = { left: '0', top: '0', width: '100%', height: '50%' };
             this.setState({ snapPreview: snap, snapPosition: 'top' });
         }
@@ -357,16 +365,23 @@ export class Window extends Component {
         node.style.transform = `translate(${x}px, ${y}px)`;
     }
 
-    handleDrag = (e, data) => {
+    handleDrag = (_, data) => {
+        let rect;
         if (data && data.node) {
             this.applyEdgeResistance(data.node, data);
+            rect = data.node.getBoundingClientRect();
         }
         this.checkOverlap();
-        this.checkSnapPreview();
+        this.checkSnapPreview(rect);
     }
 
-    handleStop = () => {
+    handleStop = (_, data) => {
         this.changeCursorToDefault();
+        let rect;
+        if (data && data.node) {
+            rect = data.node.getBoundingClientRect();
+        }
+        this.checkSnapPreview(rect);
         const snapPos = this.state.snapPosition;
         if (snapPos) {
             this.snapWindow(snapPos);
@@ -468,8 +483,8 @@ export class Window extends Component {
 
     closeWindow = () => {
         this.setWinowsPosition();
+        this.deactivateOverlay();
         this.setState({ closed: true }, () => {
-            this.deactivateOverlay();
             this.props.hideSideBar(this.id, false);
             setTimeout(() => {
                 this.props.closed(this.id)
