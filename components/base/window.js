@@ -221,6 +221,27 @@ export class Window extends Component {
         this.setState({ width: widthPercent }, this.resizeBoundries);
     }
 
+    expandWidth = () => {
+        const node = document.getElementById(this.id);
+        if (!node) return;
+        const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
+        const y = match ? `${match[2]}px` : '0px';
+        node.style.transform = `translate(-1pt, ${y})`;
+        this.setState({ width: 100.2 }, () => {
+            this.resizeBoundries();
+            this.checkOverlap();
+        });
+    }
+
+    expandHeight = () => {
+        const node = document.getElementById(this.id);
+        if (!node) return;
+        const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
+        const x = match ? `${match[1]}px` : '0px';
+        node.style.transform = `translate(${x}, -2pt)`;
+        this.setState({ height: 96.3 }, this.resizeBoundries);
+    }
+
     setWinowsPosition = () => {
         var r = document.querySelector("#" + this.id);
         if (!r) return;
@@ -642,8 +663,8 @@ export class Window extends Component {
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} expand={this.expandWidth} />}
+                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} expand={this.expandHeight} />}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
@@ -702,9 +723,11 @@ export class WindowYBorder extends Component {
     render() {
             return (
                 <div
+                    data-testid="window-y-border"
                     className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
                     onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
                     onDrag={this.props.resize}
+                    onDoubleClick={this.props.expand}
                 ></div>
             )
         }
@@ -721,9 +744,11 @@ export class WindowXBorder extends Component {
     render() {
             return (
                 <div
+                    data-testid="window-x-border"
                     className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
                     onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
                     onDrag={this.props.resize}
+                    onDoubleClick={this.props.expand}
                 ></div>
             )
         }
