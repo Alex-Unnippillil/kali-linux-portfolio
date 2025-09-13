@@ -200,6 +200,20 @@ export class Window extends Component {
         this.setState({ cursorType: "cursor-default", grabbed: false })
     }
 
+    startResize = (cursor) => {
+        if (typeof document !== 'undefined') {
+            document.body.style.userSelect = 'none';
+        }
+        this.setState({ cursorType: `cursor-[${cursor}]`, grabbed: true });
+    }
+
+    stopResize = () => {
+        if (typeof document !== 'undefined') {
+            document.body.style.userSelect = '';
+        }
+        this.changeCursorToDefault();
+    }
+
     snapToGrid = (value) => {
         if (!this.props.snapEnabled) return value;
         return Math.round(value / 8) * 8;
@@ -642,8 +656,20 @@ export class Window extends Component {
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                        {this.props.resizable !== false && (
+                            <WindowYBorder
+                                resize={this.handleHorizontalResize}
+                                startResize={() => this.startResize('e-resize')}
+                                stopResize={this.stopResize}
+                            />
+                        )}
+                        {this.props.resizable !== false && (
+                            <WindowXBorder
+                                resize={this.handleVerticleResize}
+                                startResize={() => this.startResize('n-resize')}
+                                stopResize={this.stopResize}
+                            />
+                        )}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
@@ -702,9 +728,11 @@ export class WindowYBorder extends Component {
     render() {
             return (
                 <div
+                    draggable
                     className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
+                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0); this.props.startResize(); }}
                     onDrag={this.props.resize}
+                    onDragEnd={this.props.stopResize}
                 ></div>
             )
         }
@@ -721,9 +749,11 @@ export class WindowXBorder extends Component {
     render() {
             return (
                 <div
+                    draggable
                     className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
+                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0); this.props.startResize(); }}
                     onDrag={this.props.resize}
+                    onDragEnd={this.props.stopResize}
                 ></div>
             )
         }
