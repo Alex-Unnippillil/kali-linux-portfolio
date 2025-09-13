@@ -14,7 +14,7 @@ const FeedStatusCard = () => {
       <p className="text-sm">VTs: {feed.vtCount.toLocaleString()}</p>
       <p className="text-sm">Last Update: {feed.lastUpdate}</p>
       <p className="text-xs text-gray-400 mt-2">
-        Data based on <a href={feed.docs} className="underline" target="_blank" rel="noreferrer">Greenbone docs</a> (canned demo)
+        Data based on <a href={feed.docs} className="underline" target="_blank" rel="noopener noreferrer">Greenbone docs</a> (canned demo)
       </p>
     </div>
   );

@@ -326,7 +326,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
         <a
           href="https://wiki.wireshark.org/SampleCaptures"
           target="_blank"
-          rel="noreferrer"
+          rel="noopener noreferrer"
           className="text-xs underline"
         >
           Sample sources
