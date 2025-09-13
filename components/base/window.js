@@ -14,14 +14,26 @@ export class Window extends Component {
         this.id = null;
         const isPortrait =
             typeof window !== "undefined" && window.innerHeight > window.innerWidth;
+        const isUtility =
+            typeof window !== "undefined" && props.utility && props.id !== 'terminal';
+        const utilityWidth = 420;
+        const utilityHeight = 320;
+        const widthPercent = isUtility
+            ? (utilityWidth / window.innerWidth) * 100
+            : props.defaultWidth || (isPortrait ? 90 : 60);
+        const heightPercent = isUtility
+            ? (utilityHeight / window.innerHeight) * 100
+            : props.defaultHeight || 85;
         this.startX =
             props.initialX ??
-            (isPortrait ? window.innerWidth * 0.05 : 60);
-        this.startY = props.initialY ?? 10;
+            (isUtility
+                ? (window.innerWidth - utilityWidth) / 2
+                : (isPortrait ? window.innerWidth * 0.05 : 60));
+        this.startY = props.initialY ?? (isUtility ? (window.innerHeight - utilityHeight) / 2 : 10);
         this.state = {
             cursorType: "cursor-default",
-            width: props.defaultWidth || (isPortrait ? 90 : 60),
-            height: props.defaultHeight || 85,
+            width: widthPercent,
+            height: heightPercent,
             closed: false,
             maximized: false,
             parentSize: {
@@ -75,6 +87,16 @@ export class Window extends Component {
         if (this.props.defaultHeight && this.props.defaultWidth) {
             this.setState(
                 { height: this.props.defaultHeight, width: this.props.defaultWidth },
+                this.resizeBoundries
+            );
+            return;
+        }
+
+        if (this.props.utility && this.props.id !== 'terminal') {
+            const widthPercent = (420 / window.innerWidth) * 100;
+            const heightPercent = (320 / window.innerHeight) * 100;
+            this.setState(
+                { width: widthPercent, height: heightPercent },
                 this.resizeBoundries
             );
             return;

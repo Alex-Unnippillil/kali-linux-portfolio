@@ -212,6 +212,7 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayQr,
+    utility: true,
   },
   {
     id: 'ascii-art',
@@ -221,6 +222,7 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayAsciiArt,
+    utility: true,
   },
   {
     id: 'clipboard-manager',
@@ -230,6 +232,7 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayClipboardManager,
+    utility: true,
   },
   {
     id: 'figlet',
@@ -239,6 +242,7 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayFiglet,
+    utility: true,
   },
   {
     id: 'quote',
@@ -248,6 +252,7 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayQuote,
+    utility: true,
   },
   {
     id: 'project-gallery',
@@ -257,6 +262,7 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayProjectGallery,
+    utility: true,
   },
   {
     id: 'input-lab',
@@ -266,6 +272,7 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayInputLab,
+    utility: true,
   },
 ];
 
@@ -625,6 +632,7 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displayTerminal,
+    utility: true,
   },
   {
     // VSCode app uses a Stack iframe, so no editor dependencies are required
@@ -960,6 +968,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displaySerialTerminal,
+    utility: true,
   },
   {
     id: 'radare2',
