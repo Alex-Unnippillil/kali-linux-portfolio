@@ -168,8 +168,10 @@ const OpenVASReport: React.FC = () => {
         </div>
       </div>
 
-      <section>
-        <h2 className="text-xl mb-2">Scan Overview</h2>
+      <section role="region" aria-labelledby="scan-overview-title">
+        <h2 id="scan-overview-title" className="text-xl mb-2">
+          Scan Overview
+        </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
           {Object.entries(riskSummary).map(([risk, count]) => (
             <div
@@ -190,8 +192,10 @@ const OpenVASReport: React.FC = () => {
         </svg>
       </section>
 
-      <section>
-        <h2 className="text-xl mb-2">Findings</h2>
+      <section role="region" aria-labelledby="findings-title">
+        <h2 id="findings-title" className="text-xl mb-2">
+          Findings
+        </h2>
         <table className="w-full text-left text-sm">
           <thead>
             <tr>

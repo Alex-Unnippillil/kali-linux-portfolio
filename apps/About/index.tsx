@@ -33,7 +33,11 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen w-full bg-[var(--kali-bg)] text-sm">
       <div className="max-w-screen-md mx-auto my-4 sm:my-8 p-4 sm:p-6">
-        <section className="flex items-center mb-8">
+        <section
+          role="region"
+          aria-labelledby="profile-title"
+          className="flex items-center mb-8"
+        >
           <Image
             src="/images/logos/bitmoji.png"
             alt="Alex Unnippillil"
@@ -43,7 +47,9 @@ export default function AboutPage() {
             priority
           />
           <div className="ml-4 flex-1 space-y-1.5">
-            <h1 className="text-xl font-bold">Alex Unnippillil</h1>
+            <h1 id="profile-title" className="text-xl font-bold">
+              Alex Unnippillil
+            </h1>
             <p className="text-gray-200">Cybersecurity Specialist</p>
           </div>
           <div className="ml-4 flex gap-3">

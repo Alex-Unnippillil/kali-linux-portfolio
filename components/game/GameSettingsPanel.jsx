@@ -121,8 +121,8 @@ export default function GameSettingsPanel({
 
   return (
     <div className="game-settings-panel">
-      <section>
-        <h3>Controls</h3>
+      <section role="region" aria-labelledby="controls-title">
+        <h3 id="controls-title">Controls</h3>
         {Object.entries(keymap).map(([action, key]) => (
           <div key={action} className="flex gap-2 items-center">
             <span className="w-20 capitalize">{action}</span>
@@ -136,8 +136,8 @@ export default function GameSettingsPanel({
         </p>
       </section>
 
-      <section>
-        <h3>Gameplay</h3>
+      <section role="region" aria-labelledby="gameplay-title">
+        <h3 id="gameplay-title">Gameplay</h3>
         <label className="block">
           Speed:
           <input
@@ -155,8 +155,8 @@ export default function GameSettingsPanel({
         </button>
       </section>
 
-      <section>
-        <h3>Progress</h3>
+      <section role="region" aria-labelledby="progress-title">
+        <h3 id="progress-title">Progress</h3>
         <div className="flex gap-2">
           <button onClick={saveSnapshot}>Save Snapshot</button>
           <button onClick={loadSnapshotClick}>Load Snapshot</button>
@@ -167,8 +167,8 @@ export default function GameSettingsPanel({
         </div>
       </section>
 
-      <section>
-        <h3>Display</h3>
+      <section role="region" aria-labelledby="display-title">
+        <h3 id="display-title">Display</h3>
         <label className="block mb-2">
           Palette:
           <select
@@ -200,8 +200,8 @@ export default function GameSettingsPanel({
         </label>
       </section>
 
-      <section>
-        <h3>Input Latency</h3>
+      <section role="region" aria-labelledby="input-latency-title">
+        <h3 id="input-latency-title">Input Latency</h3>
         <button onClick={startLatencyTest}>Start Test</button>
         {latency !== null && <div>{latency.toFixed(0)} ms</div>}
       </section>

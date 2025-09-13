@@ -275,8 +275,12 @@ function WorkerStatus() {
   }, []);
 
   return (
-    <section aria-labelledby="app-status-heading" className="mt-8 w-5/6 md:w-3/4">
-      <h2 id="app-status-heading" className="text-lg font-bold text-center">
+    <section
+      role="region"
+      aria-labelledby="app-status-title"
+      className="mt-8 w-5/6 md:w-3/4"
+    >
+      <h2 id="app-status-title" className="text-lg font-bold text-center">
         Worker App Availability
       </h2>
       <ul role="list" className="mt-2">

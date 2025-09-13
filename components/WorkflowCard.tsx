@@ -25,8 +25,14 @@ const steps: Step[] = [
 ];
 
 const WorkflowCard: React.FC = () => (
-  <section className="p-4 rounded bg-ub-grey text-white">
-    <h2 className="text-xl font-bold mb-2">Workflow</h2>
+  <section
+    role="region"
+    aria-labelledby="workflow-title"
+    className="p-4 rounded bg-ub-grey text-white"
+  >
+    <h2 id="workflow-title" className="text-xl font-bold mb-2">
+      Workflow
+    </h2>
     <ul>
       {steps.map((s) => (
         <li key={s.title} className="mb-2">

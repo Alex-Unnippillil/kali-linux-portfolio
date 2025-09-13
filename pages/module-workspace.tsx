@@ -103,8 +103,14 @@ const ModuleWorkspace: React.FC = () => {
 
   return (
     <div className="p-4 space-y-4 bg-ub-cool-grey text-white min-h-screen">
-      <section className="space-y-2">
-        <h1 className="text-xl font-semibold">Workspaces</h1>
+      <section
+        role="region"
+        aria-labelledby="workspaces-title"
+        className="space-y-2"
+      >
+        <h1 id="workspaces-title" className="text-xl font-semibold">
+          Workspaces
+        </h1>
         <div className="flex gap-2">
           <input
             value={newWorkspace}

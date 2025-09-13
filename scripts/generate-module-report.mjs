@@ -28,8 +28,8 @@ function render(mods) {
   ${mods
     .map(
       (m) => `
-  <section>
-    <h2>${escapeHtml(m.name)}</h2>
+  <section role="region" aria-labelledby="${m.id}-title" id="${m.id}">
+    <h2 id="${m.id}-title">${escapeHtml(m.name)}</h2>
     <p>${escapeHtml(m.description)}</p>
     <h3>Logs</h3>
     <ul>

@@ -64,8 +64,13 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
       {children}
       <div className="notification-center">
         {Object.entries(notifications).map(([appId, list]) => (
-          <section key={appId} className="notification-group">
-            <h3>{appId}</h3>
+          <section
+            key={appId}
+            role="region"
+            aria-labelledby={`${appId}-title`}
+            className="notification-group"
+          >
+            <h3 id={`${appId}-title`}>{appId}</h3>
             <ul>
               {list.map(n => (
                 <li key={n.id}>{n.message}</li>
