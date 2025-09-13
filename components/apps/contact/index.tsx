@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import FormError from '../../ui/FormError';
 import { copyToClipboard } from '../../../utils/clipboard';
 import { openMailto } from '../../../utils/mailto';
@@ -10,14 +10,17 @@ import AttachmentUploader, {
 } from '../../../apps/contact/components/AttachmentUploader';
 import AttachmentCarousel from '../../../apps/contact/components/AttachmentCarousel';
 
-const sanitize = (str: string) =>
-  str.replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-  }[c]!));
+const stripHtml = (str: string) => str.replace(/<[^>]*>/g, '');
+const sanitize = (str: string, max: number) =>
+  stripHtml(str)
+    .slice(0, max)
+    .replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    }[c]!));
 
 const errorMap: Record<string, string> = {
   rate_limit: 'Too many requests. Please try again later.',
@@ -49,9 +52,9 @@ export const processContactForm = async (
         'X-CSRF-Token': parsed.csrfToken,
       },
       body: JSON.stringify({
-        name: sanitize(parsed.name),
-        email: parsed.email,
-        message: sanitize(parsed.message),
+        name: sanitize(parsed.name, 100),
+        email: stripHtml(parsed.email).slice(0, 100),
+        message: sanitize(parsed.message, 1000),
         honeypot: parsed.honeypot,
         recaptchaToken: parsed.recaptchaToken,
       }),
@@ -152,6 +155,7 @@ const ContactApp: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [csrfToken, setCsrfToken] = useState('');
   const [fallback, setFallback] = useState(false);
+  const lastSubmit = useRef(0);
   const [emailError, setEmailError] = useState('');
   const [messageError, setMessageError] = useState('');
 
@@ -178,7 +182,9 @@ const ContactApp: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (submitting) return;
+    const now = Date.now();
+    if (now - lastSubmit.current < 1000 || submitting) return;
+    lastSubmit.current = now;
     setSubmitting(true);
     setError('');
     setBanner(null);
@@ -306,6 +312,7 @@ const ContactApp: React.FC = () => {
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
+            maxLength={100}
             placeholder=" "
           />
           <label
@@ -325,6 +332,7 @@ const ContactApp: React.FC = () => {
             required
             aria-invalid={!!emailError}
             aria-describedby={emailError ? 'contact-email-error' : undefined}
+            maxLength={100}
             placeholder=" "
           />
           <label
@@ -349,6 +357,7 @@ const ContactApp: React.FC = () => {
             required
             aria-invalid={!!messageError}
             aria-describedby={messageError ? 'contact-message-error' : undefined}
+            maxLength={1000}
             placeholder=" "
           />
           <label
@@ -376,11 +385,13 @@ const ContactApp: React.FC = () => {
         />
         <input
           type="text"
+          name="hp"
           value={honeypot}
           onChange={(e) => setHoneypot(e.target.value)}
           className="hidden"
           tabIndex={-1}
           autoComplete="off"
+          aria-hidden="true"
         />
         {error && <FormError className="mt-3">{error}</FormError>}
         <button
