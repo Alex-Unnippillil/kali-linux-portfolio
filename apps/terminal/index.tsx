@@ -146,7 +146,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   contextRef.current.writeLine = writeLine;
 
   const prompt = useCallback(() => {
-    if (termRef.current) termRef.current.write('$ ');
+    if (termRef.current) termRef.current.write('\x1b[36m$ \x1b[0m');
   }, []);
 
   const handleCopy = () => {
@@ -300,7 +300,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       await import('@xterm/xterm/css/xterm.css');
       if (disposed) return;
       const term = new XTerm({
-        cursorBlink: true,
+        cursorBlink: false,
+        cursorStyle: 'block',
         scrollback: 1000,
         cols: 80,
         rows: 24,

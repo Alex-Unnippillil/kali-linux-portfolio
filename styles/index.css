@@ -170,7 +170,7 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 }
 
 .xterm .xterm-cursor {
-    animation: cursor-pulse 1s steps(2) infinite;
+    animation: none;
 }
 
 dialog {
@@ -191,17 +191,6 @@ dialog {
     }
 }
 
-@keyframes cursor-pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.2; }
-    100% { opacity: 1; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .xterm .xterm-cursor {
-        animation: none;
-    }
-}
 
 @keyframes scaleAppImage {
     from {

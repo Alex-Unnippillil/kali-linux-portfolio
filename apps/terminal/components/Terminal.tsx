@@ -18,7 +18,17 @@ const Terminal = forwardRef<HTMLDivElement, TerminalContainerProps>(
         ...style,
       }}
       {...props}
-    />
+    >
+      {/* Initial styles to avoid flash before xterm.css loads */}
+      <style>{`
+        .xterm .xterm-cursor {
+          animation: none;
+        }
+        .xterm-screen, .xterm-viewport {
+          background: transparent;
+        }
+      `}</style>
+    </div>
   ),
 );
 
