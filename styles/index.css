@@ -1,5 +1,23 @@
 @import './globals.css';
 
+:root {
+    --card-radius: var(--radius-md);
+    --card-front-bg: var(--color-surface);
+    --card-front-color: var(--color-inverse);
+    --card-back-bg: var(--color-dark);
+    --card-back-color: var(--color-surface);
+
+    --menu-bg: color-mix(in srgb, var(--color-bg), transparent 15%);
+    --menu-backdrop-bg: color-mix(in srgb, var(--color-bg), transparent 60%);
+    --menu-backdrop-blur: 10px;
+
+    --popover-bg: var(--color-surface);
+    --popover-color: var(--color-text);
+    --popover-radius: var(--radius-md);
+    --popover-padding: var(--space-2);
+    --popover-shadow: 0 4px 6px color-mix(in srgb, var(--color-inverse), transparent 80%);
+}
+
 html {
     font-size: clamp(12px, calc(16px * var(--font-multiplier)), 24px);
 }
@@ -268,18 +286,18 @@ dialog {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 0.25rem;
+    border-radius: var(--card-radius);
 }
 
 .card-front {
-    background: var(--color-surface);
-    color: var(--color-inverse);
+    background: var(--card-front-bg);
+    color: var(--card-front-color);
     transform: rotateY(180deg);
 }
 
 .card-back {
-    background: var(--color-dark);
-    color: var(--color-surface);
+    background: var(--card-back-bg);
+    color: var(--card-back-color);
 }
 
 .card.flipped {
@@ -367,16 +385,24 @@ dialog {
 /* Context Menu & Panels */
 .context-menu-bg,
 .windowMainScreen {
-    background-color: color-mix(in srgb, var(--color-bg), transparent 15%); /* Fallback for unsupported browsers */
+    background-color: var(--menu-bg); /* Fallback for unsupported browsers */
 }
 
 @supports ((-webkit-backdrop-filter: blur(0)) or (backdrop-filter: blur(0))) {
     .context-menu-bg,
     .windowMainScreen {
-        -webkit-backdrop-filter: blur(10px);
-        backdrop-filter: blur(10px);
-        background-color: color-mix(in srgb, var(--color-bg), transparent 60%);
+        -webkit-backdrop-filter: blur(var(--menu-backdrop-blur));
+        backdrop-filter: blur(var(--menu-backdrop-blur));
+        background-color: var(--menu-backdrop-bg);
     }
+}
+
+.popover {
+    background-color: var(--popover-bg);
+    color: var(--popover-color);
+    border-radius: var(--popover-radius);
+    padding: var(--popover-padding);
+    box-shadow: var(--popover-shadow);
 }
 
 .emoji-list>li {
