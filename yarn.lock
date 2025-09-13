@@ -3659,6 +3659,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/react-onclickoutside@npm:^6":
+  version: 6.7.10
+  resolution: "@types/react-onclickoutside@npm:6.7.10"
+  dependencies:
+    "@types/react": "npm:*"
+  checksum: 10c0/2ce1c401e142fab4ce6d4212f85e01555c45e52c1e153de29c89e89ce33e2c771302c128e933382f330766db68274c2bdf829e893a6bce95f3791ef12697e826
+  languageName: node
+  linkType: hard
+
 "@types/react-transition-group@npm:^4, @types/react-transition-group@npm:^4.4.6":
   version: 4.4.12
   resolution: "@types/react-transition-group@npm:4.4.12"
@@ -11958,6 +11967,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"react-onclickoutside@npm:^6.13.2":
+  version: 6.13.2
+  resolution: "react-onclickoutside@npm:6.13.2"
+  peerDependencies:
+    react: ^15.5.x || ^16.x || ^17.x || ^18.x
+    react-dom: ^15.5.x || ^16.x || ^17.x || ^18.x
+  checksum: 10c0/fafe6fd036729d7e8f6b5d59046aa0dbc7b547269e167f3c7ab3fa30508ce768133ad46654014449bc1a697d1473bad78a1b869071bd81256c89f225c7c4f2ed
+  languageName: node
+  linkType: hard
+
 "react-transition-group@npm:^4.4.5":
   version: 4.4.5
   resolution: "react-transition-group@npm:4.4.5"
@@ -13878,6 +13897,7 @@ __metadata:
     "@types/react": "npm:19.1.12"
     "@types/react-cytoscapejs": "npm:^1.2.5"
     "@types/react-dom": "npm:19.1.9"
+    "@types/react-onclickoutside": "npm:^6"
     "@types/react-transition-group": "npm:^4"
     "@types/seedrandom": "npm:^3"
     "@types/three": "npm:^0.179.0"
@@ -13950,6 +13970,7 @@ __metadata:
     react-ga4: "npm:^2.1.0"
     react-github-calendar: "npm:^4.5.9"
     react-leaflet: "npm:^5.0.0"
+    react-onclickoutside: "npm:^6.13.2"
     react-transition-group: "npm:^4.4.5"
     react-virtualized-auto-sizer: "npm:^1.0.26"
     react-window: "npm:^2.0.2"

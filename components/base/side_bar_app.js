@@ -1,6 +1,5 @@
 import React, { Component } from "react";
 import Image from 'next/image';
-import { toCanvas } from 'html-to-image';
 
 export class SideBarApp extends Component {
     constructor() {
@@ -9,41 +8,12 @@ export class SideBarApp extends Component {
         this.state = {
             showTitle: false,
             scaleImage: false,
-            thumbnail: null,
         };
     }
 
     componentDidMount() {
         this.id = this.props.id;
-        this.updateBadge();
     }
-
-    componentDidUpdate(prevProps) {
-        if (prevProps.notifications !== this.props.notifications || prevProps.tasks !== this.props.tasks) {
-            this.updateBadge();
-        }
-    }
-
-    updateBadge = () => {
-        if (typeof navigator === 'undefined') return;
-        const hasSet = 'setAppBadge' in navigator;
-        const hasClear = 'clearAppBadge' in navigator;
-        if (!hasSet && !hasClear) return;
-
-        const notifications = Array.isArray(this.props.notifications)
-            ? this.props.notifications.length
-            : (typeof this.props.notifications === 'number' ? this.props.notifications : 0);
-        const tasks = Array.isArray(this.props.tasks)
-            ? this.props.tasks.length
-            : (typeof this.props.tasks === 'number' ? this.props.tasks : 0);
-        const count = notifications + tasks;
-
-        if (count > 0 && hasSet) {
-            navigator.setAppBadge(count).catch(() => {});
-        } else if (hasClear) {
-            navigator.clearAppBadge().catch(() => {});
-        }
-    };
 
     scaleImage = () => {
         setTimeout(() => {
@@ -57,51 +27,21 @@ export class SideBarApp extends Component {
             this.scaleImage();
         }
         this.props.openApp(this.id);
-        this.setState({ showTitle: false, thumbnail: null });
-    };
-
-    captureThumbnail = async () => {
-        const win = document.getElementById(this.id);
-        if (!win) return;
-        let dataUrl = null;
-        const canvas = win.querySelector('canvas');
-        if (canvas && canvas.toDataURL) {
-            try {
-                dataUrl = canvas.toDataURL();
-            } catch (e) {
-                dataUrl = null;
-            }
-        }
-        if (!dataUrl) {
-            try {
-                const temp = await toCanvas(win);
-                dataUrl = temp.toDataURL();
-            } catch (e) {
-                dataUrl = null;
-            }
-        }
-        if (dataUrl) {
-            this.setState({ thumbnail: dataUrl });
-        }
+        this.setState({ showTitle: false });
     };
 
     render() {
         return (
-            <button
-                type="button"
-                aria-label={this.props.title}
-                data-context="app"
-                data-app-id={this.props.id}
+            <div
+                tabIndex="0"
                 onClick={this.openApp}
                 onMouseEnter={() => {
-                    this.captureThumbnail();
                     this.setState({ showTitle: true });
                 }}
                 onMouseLeave={() => {
-                    this.setState({ showTitle: false, thumbnail: null });
+                    this.setState({ showTitle: false });
                 }}
-                className={(this.props.isClose[this.id] === false && this.props.isFocus[this.id] ? "bg-white bg-opacity-10 " : "") +
-                    " w-auto p-2 outline-none relative hover:bg-white hover:bg-opacity-10 rounded m-1 transition-hover transition-active"}
+                className={(this.props.isClose[this.id] === false && this.props.isFocus[this.id] ? "bg-white bg-opacity-10 " : "") + " w-auto p-2 outline-none relative transition hover:bg-white hover:bg-opacity-10 rounded m-1"}
                 id={"sidebar-" + this.props.id}
             >
                 <Image
@@ -123,28 +63,10 @@ export class SideBarApp extends Component {
                 {
                     (
                         this.props.isClose[this.id] === false
-                            ? <div className=" w-2 h-1 absolute bottom-0 left-1/2 transform -translate-x-1/2 bg-white rounded-md"></div>
+                            ? <div className=" w-1 h-1 absolute left-0 top-1/2 bg-white rounded-sm"></div>
                             : null
                     )
                 }
-                {this.state.thumbnail && (
-                    <div
-                        className={
-                            (this.state.showTitle ? " visible " : " invisible ") +
-                            " pointer-events-none absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2" +
-                            " rounded border border-gray-400 border-opacity-40 shadow-lg overflow-hidden bg-black bg-opacity-50"
-                        }
-                    >
-                        <Image
-                            width={128}
-                            height={80}
-                            src={this.state.thumbnail}
-                            alt={`Preview of ${this.props.title}`}
-                            className="w-32 h-20 object-cover"
-                            sizes="128px"
-                        />
-                    </div>
-                )}
                 <div
                     className={
                         (this.state.showTitle ? " visible " : " invisible ") +
@@ -153,7 +75,7 @@ export class SideBarApp extends Component {
                 >
                     {this.props.title}
                 </div>
-            </button>
+            </div>
         );
     }
 }
