@@ -41,6 +41,7 @@ const VideoGallery: React.FC = () => {
     <main className="p-4">
       <input
         type="text"
+        aria-label="Search videos"
         placeholder="Search videos..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}

@@ -75,6 +75,7 @@ const VCardPage: React.FC = () => {
           Full Name
           <input
             type="text"
+            aria-label="Full Name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="mt-1 w-full rounded border p-2"
@@ -84,6 +85,7 @@ const VCardPage: React.FC = () => {
           Organization
           <input
             type="text"
+            aria-label="Organization"
             value={org}
             onChange={(e) => setOrg(e.target.value)}
             className="mt-1 w-full rounded border p-2"
@@ -93,6 +95,7 @@ const VCardPage: React.FC = () => {
           Phone
           <input
             type="tel"
+            aria-label="Phone"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             className="mt-1 w-full rounded border p-2"
@@ -102,6 +105,7 @@ const VCardPage: React.FC = () => {
           Email
           <input
             type="email"
+            aria-label="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="mt-1 w-full rounded border p-2"

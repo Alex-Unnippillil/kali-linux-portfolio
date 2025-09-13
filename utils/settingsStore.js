@@ -38,7 +38,11 @@ export async function setWallpaper(wallpaper) {
 
 export async function getDensity() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.density;
-  return window.localStorage.getItem('density') || DEFAULT_SETTINGS.density;
+  try {
+    return window.localStorage.getItem('density') || DEFAULT_SETTINGS.density;
+  } catch {
+    return DEFAULT_SETTINGS.density;
+  }
 }
 
 export async function setDensity(density) {
@@ -48,9 +52,13 @@ export async function setDensity(density) {
 
 export async function getReducedMotion() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.reducedMotion;
-  const stored = window.localStorage.getItem('reduced-motion');
-  if (stored !== null) {
-    return stored === 'true';
+  try {
+    const stored = window.localStorage.getItem('reduced-motion');
+    if (stored !== null) {
+      return stored === 'true';
+    }
+  } catch {
+    return DEFAULT_SETTINGS.reducedMotion;
   }
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
@@ -115,12 +123,18 @@ export async function setPongSpin(value) {
 
 export async function getAllowNetwork() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.allowNetwork;
-  return window.localStorage.getItem('allow-network') === 'true';
+  try {
+    return window.localStorage.getItem('allow-network') === 'true';
+  } catch {
+    return DEFAULT_SETTINGS.allowNetwork;
+  }
 }
 
 export async function setAllowNetwork(value) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('allow-network', value ? 'true' : 'false');
+  try {
+    window.localStorage.setItem('allow-network', value ? 'true' : 'false');
+  } catch {}
 }
 
 export async function resetSettings() {
