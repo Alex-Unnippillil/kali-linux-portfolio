@@ -39,12 +39,12 @@ const BeefPage: React.FC = () => {
         </div>
         <div className="flex gap-2">
           <img
-            src="/themes/Yaru/window/window-minimize-symbolic.svg"
+            src="/themes/Kali/window/window-minimize-symbolic.svg"
             alt="minimize"
             className="w-6 h-6"
           />
           <img
-            src="/themes/Yaru/window/window-close-symbolic.svg"
+            src="/themes/Kali/window/window-close-symbolic.svg"
             alt="close"
             className="w-6 h-6"
           />
