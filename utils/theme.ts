@@ -1,3 +1,5 @@
+import { createContext, useContext } from 'react';
+
 export const THEME_KEY = 'app:theme';
 
 // Score required to unlock each theme
@@ -45,3 +47,11 @@ export const getUnlockedThemes = (highScore: number): string[] =>
 
 export const isThemeUnlocked = (theme: string, highScore: number): boolean =>
   highScore >= (THEME_UNLOCKS[theme] ?? Infinity);
+
+export const ThemeContext = createContext<string | undefined>(undefined);
+
+export function useTheme(): string {
+  return (
+    useContext(ThemeContext) ?? process.env.NEXT_PUBLIC_THEME ?? 'ubuntu'
+  );
+}
