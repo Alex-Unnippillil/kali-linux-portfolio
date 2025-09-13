@@ -17,6 +17,7 @@ function Toggle({
       type="button"
       role="switch"
       aria-checked={checked}
+      aria-label="toggle setting"
       onClick={() => onChange(!checked)}
       className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
         checked ? 'bg-ubt-blue' : 'bg-ubt-grey'
