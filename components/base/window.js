@@ -459,9 +459,19 @@ export class Window extends Component {
             this.focusWindow();
             var r = document.querySelector("#" + this.id);
             this.setWinowsPosition();
-            // translate window to maximize position
-            r.style.transform = `translate(-1pt,-2pt)`;
-            this.setState({ maximized: true, height: 96.3, width: 100.2 });
+            if (this.props.maximizePreference === 'full') {
+                const availableRect = this.props.availableRect || { x: 0, y: 0, width: window.innerWidth, height: window.innerHeight };
+                const x = availableRect.x ?? availableRect.left ?? 0;
+                const y = availableRect.y ?? availableRect.top ?? 0;
+                r.style.transform = `translate(${x}px,${y}px)`;
+                const height = (availableRect.height / window.innerHeight) * 100;
+                const width = (availableRect.width / window.innerWidth) * 100;
+                this.setState({ maximized: true, height, width });
+            } else {
+                // translate window to maximize position with gaps
+                r.style.transform = `translate(-1pt,-2pt)`;
+                this.setState({ maximized: true, height: 96.3, width: 100.2 });
+            }
             this.props.hideSideBar(this.id, true);
         }
     }

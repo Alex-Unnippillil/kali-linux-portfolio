@@ -40,6 +40,7 @@ export class Desktop extends Component {
             hideSideBar: false,
             minimized_windows: {},
             window_positions: {},
+            maximize_preferences: {},
             desktop_apps: [],
             context_menus: {
                 desktop: false,
@@ -62,13 +63,15 @@ export class Desktop extends Component {
         this.fetchAppsData(() => {
             const session = this.props.session || {};
             const positions = {};
+            let favourite_apps = { ...this.state.favourite_apps };
             if (session.dock && session.dock.length) {
-                let favourite_apps = { ...this.state.favourite_apps };
                 session.dock.forEach(id => {
                     favourite_apps[id] = true;
                 });
-                this.setState({ favourite_apps });
             }
+
+            const maximize_preferences = session.maximize_preferences || {};
+            this.setState({ favourite_apps, maximize_preferences });
 
             if (session.windows && session.windows.length) {
                 session.windows.forEach(({ id, x, y }) => {
@@ -480,6 +483,8 @@ export class Desktop extends Component {
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
+                    maximizePreference: this.state.maximize_preferences[app.id] || 'fill',
+                    setMaximizePreference: (mode) => this.setMaximizePreference(app.id, mode),
                 }
 
                 windowsJsx.push(
@@ -499,6 +504,12 @@ export class Desktop extends Component {
         }), this.saveSession);
     }
 
+    setMaximizePreference = (id, mode) => {
+        this.setState(prev => ({
+            maximize_preferences: { ...prev.maximize_preferences, [id]: mode }
+        }), this.saveSession);
+    }
+
     saveSession = () => {
         if (!this.props.setSession) return;
         const openWindows = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
@@ -508,7 +519,8 @@ export class Desktop extends Component {
             y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10
         }));
         const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
-        this.props.setSession({ ...this.props.session, windows, dock });
+        const maximize_preferences = this.state.maximize_preferences;
+        this.props.setSession({ ...this.props.session, windows, dock, maximize_preferences });
     }
 
     hideSideBar = (objId, hide) => {
