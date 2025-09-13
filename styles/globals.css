@@ -1,5 +1,11 @@
 @import './tokens.css';
 
+@property --accent {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #1793d1;
+}
+
 /* Accessible theme color palette meeting WCAG AA contrast ratios */
 :root {
   /* Base colors */
@@ -20,6 +26,8 @@
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
   accent-color: var(--color-control-accent);
+  --accent: var(--color-accent);
+  transition: --accent 150ms linear;
 }
 
 /* Dark theme */
