@@ -30,6 +30,10 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        let currentWorkspace = 0;
+        try { currentWorkspace = parseInt(safeLocalStorage?.getItem('currentWorkspace') || '0', 10); } catch (e) { currentWorkspace = 0; }
+        let windowWorkspaces = {};
+        try { windowWorkspaces = JSON.parse(safeLocalStorage?.getItem('windowWorkspaces') || '{}'); } catch (e) { windowWorkspaces = {}; }
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -52,6 +56,8 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            currentWorkspace,
+            windowWorkspaces,
         }
     }
 
@@ -184,19 +190,20 @@ export class Desktop extends Component {
     }
 
     cycleApps = (direction) => {
-        if (!this.app_stack.length) return;
+        const stack = this.app_stack.filter(id => this.state.windowWorkspaces[id] === this.state.currentWorkspace && this.state.closed_windows[id] === false);
+        if (!stack.length) return;
         const currentId = this.getFocusedWindowId();
-        let index = this.app_stack.indexOf(currentId);
+        let index = stack.indexOf(currentId);
         if (index === -1) index = 0;
-        let next = (index + direction + this.app_stack.length) % this.app_stack.length;
+        let next = (index + direction + stack.length) % stack.length;
         // Skip minimized windows
-        for (let i = 0; i < this.app_stack.length; i++) {
-            const id = this.app_stack[next];
+        for (let i = 0; i < stack.length; i++) {
+            const id = stack[next];
             if (!this.state.minimized_windows[id]) {
                 this.focus(id);
                 break;
             }
-            next = (next + direction + this.app_stack.length) % this.app_stack.length;
+            next = (next + direction + stack.length) % stack.length;
         }
     }
 
@@ -213,7 +220,7 @@ export class Desktop extends Component {
 
     openWindowSwitcher = () => {
         const windows = this.app_stack
-            .filter(id => this.state.closed_windows[id] === false)
+            .filter(id => this.state.closed_windows[id] === false && (this.state.windowWorkspaces[id] ?? 0) === this.state.currentWorkspace)
             .map(id => apps.find(a => a.id === id))
             .filter(Boolean);
         if (windows.length) {
@@ -228,6 +235,12 @@ export class Desktop extends Component {
     selectWindow = (id) => {
         this.setState({ showWindowSwitcher: false, switcherWindows: [] }, () => {
             this.openApp(id);
+        });
+    }
+
+    switchWorkspace = (id) => {
+        this.setState({ currentWorkspace: id }, () => {
+            safeLocalStorage?.setItem('currentWorkspace', id.toString());
         });
     }
 
@@ -457,7 +470,7 @@ export class Desktop extends Component {
     renderWindows = () => {
         let windowsJsx = [];
         apps.forEach((app, index) => {
-            if (this.state.closed_windows[app.id] === false) {
+            if (this.state.closed_windows[app.id] === false && (this.state.windowWorkspaces[app.id] ?? 0) === this.state.currentWorkspace) {
 
                 const pos = this.state.window_positions[app.id];
                 const props = {
@@ -612,6 +625,7 @@ export class Desktop extends Component {
         } else {
             let closed_windows = this.state.closed_windows;
             let favourite_apps = this.state.favourite_apps;
+            let windowWorkspaces = { ...this.state.windowWorkspaces };
             let frequentApps = [];
             try { frequentApps = JSON.parse(safeLocalStorage?.getItem('frequentApps') || '[]'); } catch (e) { frequentApps = []; }
             var currentApp = frequentApps.find(app => app.id === objId);
@@ -647,7 +661,11 @@ export class Desktop extends Component {
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
-                this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
+                if (windowWorkspaces[objId] === undefined) {
+                    windowWorkspaces[objId] = this.state.currentWorkspace;
+                    safeLocalStorage?.setItem('windowWorkspaces', JSON.stringify(windowWorkspaces));
+                }
+                this.setState({ closed_windows, favourite_apps, allAppsView: false, windowWorkspaces }, () => {
                     this.focus(objId);
                     this.saveSession();
                 });
@@ -697,11 +715,14 @@ export class Desktop extends Component {
         // close window
         let closed_windows = this.state.closed_windows;
         let favourite_apps = this.state.favourite_apps;
+        let windowWorkspaces = { ...this.state.windowWorkspaces };
 
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
+        delete windowWorkspaces[objId];
+        safeLocalStorage?.setItem('windowWorkspaces', JSON.stringify(windowWorkspaces));
 
-        this.setState({ closed_windows, favourite_apps }, this.saveSession);
+        this.setState({ closed_windows, favourite_apps, windowWorkspaces }, this.saveSession);
     }
 
     pinApp = (id) => {
@@ -904,6 +925,17 @@ export class Desktop extends Component {
 
                 {/* Desktop Apps */}
                 {this.renderDesktopApps()}
+
+                {/* Workspace Switcher */}
+                <div className="fixed bottom-2 right-2 grid grid-cols-2 gap-1 z-40">
+                    {[0, 1, 2, 3].map((i) => (
+                        <div
+                            key={i}
+                            onClick={() => this.switchWorkspace(i)}
+                            className={`w-4 h-4 border border-gray-400 cursor-pointer ${this.state.currentWorkspace === i ? 'bg-white' : 'bg-gray-600'}`}
+                        />
+                    ))}
+                </div>
 
                 {/* Context Menus */}
                 <DesktopMenu
