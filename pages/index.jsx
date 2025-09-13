@@ -34,9 +34,16 @@ const App = () => (
       Skip to content
     </a>
     <Meta />
-    <Ubuntu />
-    <BetaBadge />
-    <InstallButton />
+    <main>
+      <Ubuntu />
+      <BetaBadge />
+      <InstallButton />
+      {/* Section anchors for workspace navigation */}
+      <section id="about" />
+      <section id="projects" />
+      <section id="blog" />
+      <section id="contact" />
+    </main>
   </>
 );
 
