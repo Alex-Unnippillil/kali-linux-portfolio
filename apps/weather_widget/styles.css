@@ -85,30 +85,32 @@ body {
   margin-top: 5px;
 }
 
-.fade-in {
-  animation: fadeIn 0.5s forwards;
-}
+@media (prefers-reduced-motion: no-preference) {
+  .fade-in {
+    animation: fadeIn 0.5s forwards;
+  }
 
-.fade-out {
-  animation: fadeOut 0.5s forwards;
-}
+  .fade-out {
+    animation: fadeOut 0.5s forwards;
+  }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
+  .animated-icon {
+    animation: float 3s ease-in-out infinite;
+  }
 
-@keyframes fadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
 
-.animated-icon {
-  animation: float 3s ease-in-out infinite;
-}
+  @keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
 
-@keyframes float {
-  0% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
-  100% { transform: translateY(0); }
+  @keyframes float {
+    0% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+    100% { transform: translateY(0); }
+  }
 }

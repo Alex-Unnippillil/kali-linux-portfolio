@@ -303,16 +303,15 @@ const Sudoku = () => {
       {completed && <div className="mt-2">Completed!</div>}
       {hint && <div className="mt-2 text-yellow-300">{hint}</div>}
       <style jsx>{`
-        @keyframes errorPulse {
-          0% { box-shadow: 0 0 0 0 rgba(248,113,113,0.7); }
-          70% { box-shadow: 0 0 0 4px rgba(248,113,113,0); }
-          100% { box-shadow: 0 0 0 0 rgba(248,113,113,0); }
-        }
-        .error-pulse {
-          animation: errorPulse 1s ease-in-out infinite;
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .error-pulse { animation: none; }
+        @media (prefers-reduced-motion: no-preference) {
+          @keyframes errorPulse {
+            0% { box-shadow: 0 0 0 0 rgba(248,113,113,0.7); }
+            70% { box-shadow: 0 0 0 4px rgba(248,113,113,0); }
+            100% { box-shadow: 0 0 0 0 rgba(248,113,113,0); }
+          }
+          .error-pulse {
+            animation: errorPulse 1s ease-in-out infinite;
+          }
         }
       `}</style>
     </div>

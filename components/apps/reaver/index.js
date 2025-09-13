@@ -114,26 +114,28 @@ const ReaverStepper = () => {
           align-items: center;
           justify-content: center;
         }
-        .arrow-right {
-          animation: move-right 1s forwards;
-        }
-        .arrow-left {
-          animation: move-left 1s forwards;
-        }
-        @keyframes move-right {
-          from {
-            left: 0;
+        @media (prefers-reduced-motion: no-preference) {
+          .arrow-right {
+            animation: move-right 1s forwards;
           }
-          to {
-            left: calc(100% - 1rem);
+          .arrow-left {
+            animation: move-left 1s forwards;
           }
-        }
-        @keyframes move-left {
-          from {
-            left: calc(100% - 1rem);
+          @keyframes move-right {
+            from {
+              left: 0;
+            }
+            to {
+              left: calc(100% - 1rem);
+            }
           }
-          to {
-            left: 0;
+          @keyframes move-left {
+            from {
+              left: calc(100% - 1rem);
+            }
+            to {
+              left: 0;
+            }
           }
         }
         @media print {
