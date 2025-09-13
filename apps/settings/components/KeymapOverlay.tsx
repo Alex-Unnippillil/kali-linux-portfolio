@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import useKeymap from '../keymapRegistry';
+import useFocusTrap from '../../../hooks/useFocusTrap';
 
 interface KeymapOverlayProps {
   open: boolean;
@@ -22,6 +23,8 @@ const formatEvent = (e: KeyboardEvent) => {
 export default function KeymapOverlay({ open, onClose }: KeymapOverlayProps) {
   const { shortcuts, updateShortcut } = useKeymap();
   const [rebinding, setRebinding] = useState<string | null>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(overlayRef, open);
 
   useEffect(() => {
     if (!rebinding) return;
@@ -49,6 +52,7 @@ export default function KeymapOverlay({ open, onClose }: KeymapOverlayProps) {
 
   return (
     <div
+      ref={overlayRef}
       className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 text-white p-4 overflow-auto"
       role="dialog"
       aria-modal="true"
