@@ -8,6 +8,8 @@ import {
   setDensity as saveDensity,
   getReducedMotion as loadReducedMotion,
   setReducedMotion as saveReducedMotion,
+  getReducedColor as loadReducedColor,
+  setReducedColor as saveReducedColor,
   getFontScale as loadFontScale,
   setFontScale as saveFontScale,
   getHighContrast as loadHighContrast,
@@ -51,11 +53,70 @@ const shadeColor = (color: string, percent: number): string => {
     .slice(1)}`;
 };
 
+const hexToHsl = (hex: string): [number, number, number] => {
+  hex = hex.replace('#', '');
+  const r = parseInt(hex.substring(0, 2), 16) / 255;
+  const g = parseInt(hex.substring(2, 4), 16) / 255;
+  const b = parseInt(hex.substring(4, 6), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0);
+        break;
+      case g:
+        h = (b - r) / d + 2;
+        break;
+      case b:
+        h = (r - g) / d + 4;
+        break;
+    }
+    h /= 6;
+  }
+  return [h * 360, s, l];
+};
+
+const hslToHex = (h: number, s: number, l: number): string => {
+  h /= 360;
+  const hue2rgb = (p: number, q: number, t: number) => {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  };
+  let r: number, g: number, b: number;
+  if (s === 0) {
+    r = g = b = l;
+  } else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1 / 3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1 / 3);
+  }
+  const toHex = (x: number) => Math.round(x * 255).toString(16).padStart(2, '0');
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+};
+
+const desaturateColor = (hex: string, amount: number): string => {
+  const [h, s, l] = hexToHsl(hex);
+  return hslToHex(h, s * (1 - amount), l);
+};
+
 interface SettingsContextValue {
   accent: string;
   wallpaper: string;
   density: Density;
   reducedMotion: boolean;
+  reducedColor: boolean;
   fontScale: number;
   highContrast: boolean;
   largeHitAreas: boolean;
@@ -67,6 +128,7 @@ interface SettingsContextValue {
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
   setReducedMotion: (value: boolean) => void;
+  setReducedColor: (value: boolean) => void;
   setFontScale: (value: number) => void;
   setHighContrast: (value: boolean) => void;
   setLargeHitAreas: (value: boolean) => void;
@@ -81,6 +143,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   wallpaper: defaults.wallpaper,
   density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
+  reducedColor: defaults.reducedColor,
   fontScale: defaults.fontScale,
   highContrast: defaults.highContrast,
   largeHitAreas: defaults.largeHitAreas,
@@ -92,6 +155,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setWallpaper: () => {},
   setDensity: () => {},
   setReducedMotion: () => {},
+  setReducedColor: () => {},
   setFontScale: () => {},
   setHighContrast: () => {},
   setLargeHitAreas: () => {},
@@ -106,6 +170,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
+  const [reducedColor, setReducedColor] = useState<boolean>(defaults.reducedColor);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
   const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
@@ -121,6 +186,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setWallpaper(await loadWallpaper());
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
+      setReducedColor(await loadReducedColor());
       setFontScale(await loadFontScale());
       setHighContrast(await loadHighContrast());
       setLargeHitAreas(await loadLargeHitAreas());
@@ -136,21 +202,22 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [theme]);
 
   useEffect(() => {
-    const border = shadeColor(accent, -0.2);
+    const baseAccent = reducedColor ? desaturateColor(accent, 0.3) : accent;
+    const border = shadeColor(baseAccent, -0.2);
     const vars: Record<string, string> = {
-      '--color-ub-orange': accent,
+      '--color-ub-orange': baseAccent,
       '--color-ub-border-orange': border,
-      '--color-primary': accent,
-      '--color-accent': accent,
-      '--color-focus-ring': accent,
-      '--color-selection': accent,
-      '--color-control-accent': accent,
+      '--color-primary': baseAccent,
+      '--color-accent': baseAccent,
+      '--color-focus-ring': baseAccent,
+      '--color-selection': baseAccent,
+      '--color-control-accent': baseAccent,
     };
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
     saveAccent(accent);
-  }, [accent]);
+  }, [accent, reducedColor]);
 
   useEffect(() => {
     saveWallpaper(wallpaper);
@@ -186,6 +253,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     document.documentElement.classList.toggle('reduced-motion', reducedMotion);
     saveReducedMotion(reducedMotion);
   }, [reducedMotion]);
+
+  useEffect(() => {
+    if (reducedColor) {
+      document.documentElement.dataset.color = 'reduced';
+    } else {
+      delete document.documentElement.dataset.color;
+    }
+    saveReducedColor(reducedColor);
+  }, [reducedColor]);
 
   useEffect(() => {
     document.documentElement.style.setProperty('--font-multiplier', fontScale.toString());
@@ -243,6 +319,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         wallpaper,
         density,
         reducedMotion,
+        reducedColor,
         fontScale,
         highContrast,
         largeHitAreas,
@@ -254,6 +331,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setWallpaper,
         setDensity,
         setReducedMotion,
+        setReducedColor,
         setFontScale,
         setHighContrast,
         setLargeHitAreas,

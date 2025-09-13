@@ -8,6 +8,7 @@ const DEFAULT_SETTINGS = {
   wallpaper: 'wall-2',
   density: 'regular',
   reducedMotion: false,
+  reducedColor: false,
   fontScale: 1,
   highContrast: false,
   largeHitAreas: false,
@@ -58,6 +59,16 @@ export async function getReducedMotion() {
 export async function setReducedMotion(value) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem('reduced-motion', value ? 'true' : 'false');
+}
+
+export async function getReducedColor() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.reducedColor;
+  return window.localStorage.getItem('reduced-color') === 'true';
+}
+
+export async function setReducedColor(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('reduced-color', value ? 'true' : 'false');
 }
 
 export async function getFontScale() {
@@ -131,6 +142,7 @@ export async function resetSettings() {
   ]);
   window.localStorage.removeItem('density');
   window.localStorage.removeItem('reduced-motion');
+  window.localStorage.removeItem('reduced-color');
   window.localStorage.removeItem('font-scale');
   window.localStorage.removeItem('high-contrast');
   window.localStorage.removeItem('large-hit-areas');
@@ -145,6 +157,7 @@ export async function exportSettings() {
     wallpaper,
     density,
     reducedMotion,
+    reducedColor,
     fontScale,
     highContrast,
     largeHitAreas,
@@ -156,6 +169,7 @@ export async function exportSettings() {
     getWallpaper(),
     getDensity(),
     getReducedMotion(),
+    getReducedColor(),
     getFontScale(),
     getHighContrast(),
     getLargeHitAreas(),
@@ -169,6 +183,7 @@ export async function exportSettings() {
     wallpaper,
     density,
     reducedMotion,
+    reducedColor,
     fontScale,
     highContrast,
     largeHitAreas,
@@ -193,6 +208,7 @@ export async function importSettings(json) {
     wallpaper,
     density,
     reducedMotion,
+    reducedColor,
     fontScale,
     highContrast,
     largeHitAreas,
@@ -205,6 +221,7 @@ export async function importSettings(json) {
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
   if (density !== undefined) await setDensity(density);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
+  if (reducedColor !== undefined) await setReducedColor(reducedColor);
   if (fontScale !== undefined) await setFontScale(fontScale);
   if (highContrast !== undefined) await setHighContrast(highContrast);
   if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas);
