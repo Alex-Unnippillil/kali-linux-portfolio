@@ -1,0 +1,27 @@
+.panel {
+  background-color: var(--color-ub-grey);
+  height: var(--hit-area);
+  border-bottom: 1px solid var(--color-ub-border-orange);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: var(--space-2);
+}
+
+.left,
+.right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.start {
+  background: transparent;
+  border: none;
+  color: inherit;
+}
+
+.start:focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-outline-color);
+  outline-offset: 2px;
+}
