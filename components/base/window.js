@@ -8,6 +8,9 @@ import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
 
+// track all window instances so they can coordinate snapping behavior
+const windowRegistry = new Map();
+
 export class Window extends Component {
     constructor(props) {
         super(props);
@@ -37,6 +40,8 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        // remember the snap position when starting a drag
+        this._draggedFromSnap = null;
     }
 
     componentDidMount() {
@@ -56,6 +61,7 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        windowRegistry.set(this.id, this);
     }
 
     componentWillUnmount() {
@@ -69,6 +75,7 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        windowRegistry.delete(this.id);
     }
 
     setDefaultWindowDimenstion = () => {
@@ -191,6 +198,7 @@ export class Window extends Component {
             this.restoreWindow();
         }
         if (this.state.snapped) {
+            this._draggedFromSnap = this.state.snapped;
             this.unsnapWindow();
         }
         this.setState({ cursorType: "cursor-move", grabbed: true })
@@ -253,39 +261,6 @@ export class Window extends Component {
         } else {
             this.setState({ snapped: null }, this.resizeBoundries);
         }
-    }
-
-    snapWindow = (position) => {
-        this.setWinowsPosition();
-        const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
-        let transform = '';
-        if (position === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (position === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        } else if (position === 'top') {
-            newWidth = 100.2;
-            newHeight = 50;
-            transform = 'translate(-1pt,-2pt)';
-        }
-        const r = document.querySelector("#" + this.id);
-        if (r && transform) {
-            r.style.transform = transform;
-        }
-        this.setState({
-            snapPreview: null,
-            snapPosition: null,
-            snapped: position,
-            lastSize: { width, height },
-            width: newWidth,
-            height: newHeight
-        }, this.resizeBoundries);
     }
 
     checkOverlap = () => {
@@ -367,11 +342,33 @@ export class Window extends Component {
 
     handleStop = () => {
         this.changeCursorToDefault();
-        const snapPos = this.state.snapPosition;
-        if (snapPos) {
-            this.snapWindow(snapPos);
-        } else {
-            this.setState({ snapPreview: null, snapPosition: null });
+        let swapped = false;
+        const node = document.getElementById(this.id);
+        if (node && this._draggedFromSnap) {
+            const rect = node.getBoundingClientRect();
+            for (const [id, win] of windowRegistry.entries()) {
+                if (win === this || !win.state.snapped) continue;
+                const other = document.getElementById(id);
+                if (!other) continue;
+                const orect = other.getBoundingClientRect();
+                const overlap = rect.left < orect.right && rect.right > orect.left && rect.top < orect.bottom && rect.bottom > orect.top;
+                if (overlap) {
+                    const targetPos = win.state.snapped;
+                    win.snapWindow(this._draggedFromSnap);
+                    this.snapWindow(targetPos);
+                    swapped = true;
+                    break;
+                }
+            }
+        }
+        this._draggedFromSnap = null;
+        if (!swapped) {
+            const snapPos = this.state.snapPosition;
+            if (snapPos) {
+                this.snapWindow(snapPos);
+            } else {
+                this.setState({ snapPreview: null, snapPosition: null });
+            }
         }
     }
 
@@ -586,6 +583,7 @@ export class Window extends Component {
 
     snapWindow = (pos) => {
         this.focusWindow();
+        this.setWinowsPosition();
         const { width, height } = this.state;
         let newWidth = width;
         let newHeight = height;
@@ -598,12 +596,18 @@ export class Window extends Component {
             newWidth = 50;
             newHeight = 96.3;
             transform = `translate(${window.innerWidth / 2}px,-2pt)`;
+        } else if (pos === 'top') {
+            newWidth = 100.2;
+            newHeight = 50;
+            transform = 'translate(-1pt,-2pt)';
         }
         const node = document.getElementById(this.id);
         if (node && transform) {
             node.style.transform = transform;
         }
         this.setState({
+            snapPreview: null,
+            snapPosition: null,
             snapped: pos,
             lastSize: { width, height },
             width: newWidth,
