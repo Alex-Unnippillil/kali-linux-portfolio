@@ -1,5 +1,11 @@
 @import './globals.css';
 
+:root {
+    --win-border-info: var(--game-color-secondary);
+    --win-border-warning: var(--game-color-warning);
+    --win-border-error: var(--game-color-danger);
+}
+
 html {
     font-size: clamp(12px, calc(16px * var(--font-multiplier)), 24px);
 }
