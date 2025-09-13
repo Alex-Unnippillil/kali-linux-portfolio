@@ -199,7 +199,7 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true, preventDefault: () => {}, stopPropagation: () => {} } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
@@ -404,5 +404,65 @@ describe('Window overlay inert behaviour', () => {
 
     document.body.removeChild(root);
     document.body.removeChild(opener);
+  });
+});
+
+describe('visualViewport keyboard avoidance', () => {
+  it('moves focused window above virtual keyboard and restores on close', () => {
+    const resizeListeners: Array<() => void> = [];
+    const vv: any = {
+      height: 600,
+      addEventListener: (_: string, cb: () => void) => resizeListeners.push(cb),
+      removeEventListener: jest.fn(),
+    };
+    Object.defineProperty(window, 'visualViewport', {
+      configurable: true,
+      value: vv,
+    });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 600 });
+
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+        isFocused
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.style.transform = 'translate(0px, 400px)';
+    winEl.getBoundingClientRect = () => ({
+      left: 0,
+      top: 400,
+      right: 100,
+      bottom: 500,
+      width: 100,
+      height: 100,
+      x: 0,
+      y: 400,
+      toJSON: () => {},
+    });
+
+    vv.height = 300;
+    act(() => {
+      resizeListeners.forEach((cb) => cb());
+    });
+
+    expect(winEl.style.transform).toBe('translate(0px, 190px)');
+
+    vv.height = 600;
+    act(() => {
+      resizeListeners.forEach((cb) => cb());
+    });
+
+    expect(winEl.style.transform).toBe('translate(0px, 400px)');
   });
 });

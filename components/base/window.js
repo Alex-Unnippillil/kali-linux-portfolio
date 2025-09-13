@@ -37,6 +37,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._preKeyboardTransform = null;
     }
 
     componentDidMount() {
@@ -51,6 +52,9 @@ export class Window extends Component {
         // Listen for context menu events to toggle inert background
         window.addEventListener('context-menu-open', this.setInertBackground);
         window.addEventListener('context-menu-close', this.removeInertBackground);
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', this.handleViewportResize);
+        }
         const root = document.getElementById(this.id);
         root?.addEventListener('super-arrow', this.handleSuperArrow);
         if (this._uiExperiments) {
@@ -64,6 +68,9 @@ export class Window extends Component {
         window.removeEventListener('resize', this.resizeBoundries);
         window.removeEventListener('context-menu-open', this.setInertBackground);
         window.removeEventListener('context-menu-close', this.removeInertBackground);
+        if (window.visualViewport) {
+            window.visualViewport.removeEventListener('resize', this.handleViewportResize);
+        }
         const root = document.getElementById(this.id);
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
@@ -106,6 +113,33 @@ export class Window extends Component {
                 this.scheduleUsageCheck();
             }
         });
+    }
+
+    handleViewportResize = () => {
+        if (!window.visualViewport) return;
+        const vv = window.visualViewport;
+        const node = document.getElementById(this.id);
+        if (!node) return;
+        const keyboardHeight = window.innerHeight - vv.height;
+        if (keyboardHeight > 0 && this.props.isFocused) {
+            const rect = node.getBoundingClientRect();
+            const overlap = rect.bottom - vv.height;
+            if (overlap > 0) {
+                if (this._preKeyboardTransform === null) {
+                    this._preKeyboardTransform = node.style.transform || '';
+                }
+                const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform || '');
+                let x = 0, y = 0;
+                if (match) {
+                    x = parseFloat(match[1]);
+                    y = parseFloat(match[2]);
+                }
+                node.style.transform = `translate(${x}px, ${y - overlap - 10}px)`;
+            }
+        } else if (keyboardHeight <= 0 && this._preKeyboardTransform !== null) {
+            node.style.transform = this._preKeyboardTransform;
+            this._preKeyboardTransform = null;
+        }
     }
 
     computeContentUsage = () => {
