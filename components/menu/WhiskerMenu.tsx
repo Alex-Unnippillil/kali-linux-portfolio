@@ -123,7 +123,7 @@ const WhiskerMenu: React.FC = () => {
         className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
       >
         <Image
-          src="/themes/Yaru/status/decompiler-symbolic.svg"
+          src="/themes/Flat-Remix/actions/application-menu-symbolic.svg"
           alt="Menu"
           width={16}
           height={16}
@@ -134,7 +134,7 @@ const WhiskerMenu: React.FC = () => {
       {open && (
         <div
           ref={menuRef}
-          className="absolute left-0 mt-1 z-50 flex bg-ub-grey text-white shadow-lg"
+          className="absolute left-0 mt-1 z-50 flex bg-kali-panel text-kali-text shadow-lg"
           tabIndex={-1}
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
@@ -163,7 +163,7 @@ const WhiskerMenu: React.FC = () => {
             />
             <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
               {currentApps.map((app, idx) => (
-                <div key={app.id} className={idx === highlight ? 'ring-2 ring-ubb-orange' : ''}>
+                <div key={app.id} className={idx === highlight ? 'ring-2 ring-kali-accent' : ''}>
                   <UbuntuApp
                     id={app.id}
                     icon={app.icon}

@@ -36,6 +36,12 @@ module.exports = {
         'ubt-gedit-dark': 'var(--color-ubt-gedit-dark)',
         'ub-border-orange': 'var(--color-ub-border-orange)',
         'ub-dark-grey': 'var(--color-ub-dark-grey)',
+
+        // Kali color aliases
+        'kali-bg': 'var(--kali-bg)',
+        'kali-panel': 'var(--kali-panel-bg)',
+        'kali-accent': 'var(--kali-accent)',
+        'kali-text': 'var(--kali-text)',
       },
       fontFamily: {
         ubuntu: ['Ubuntu', 'sans-serif'],

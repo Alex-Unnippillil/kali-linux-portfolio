@@ -20,6 +20,13 @@
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
   accent-color: var(--color-control-accent);
+
+  /* Kali theme aliases */
+  --kali-bg: var(--color-bg);
+  --kali-panel-bg: var(--color-surface);
+  --kali-panel: var(--color-surface);
+  --kali-accent: var(--color-primary);
+  --kali-text: var(--color-text);
 }
 
 /* Dark theme */
