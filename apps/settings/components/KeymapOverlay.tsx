@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import useKeymap from '../keymapRegistry';
+import { getMetaKeyLabel } from '../../../utils/metaKey';
 
 interface KeymapOverlayProps {
   open: boolean;
@@ -13,7 +14,7 @@ const formatEvent = (e: KeyboardEvent) => {
     e.ctrlKey ? 'Ctrl' : '',
     e.altKey ? 'Alt' : '',
     e.shiftKey ? 'Shift' : '',
-    e.metaKey ? 'Meta' : '',
+    e.metaKey ? getMetaKeyLabel() : '',
     e.key.length === 1 ? e.key.toUpperCase() : e.key,
   ];
   return parts.filter(Boolean).join('+');

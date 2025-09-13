@@ -2,13 +2,14 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import useKeymap from '../../apps/settings/keymapRegistry';
+import { getMetaKeyLabel } from '../../utils/metaKey';
 
 const formatEvent = (e: KeyboardEvent) => {
   const parts = [
     e.ctrlKey ? 'Ctrl' : '',
     e.altKey ? 'Alt' : '',
     e.shiftKey ? 'Shift' : '',
-    e.metaKey ? 'Meta' : '',
+    e.metaKey ? getMetaKeyLabel() : '',
     e.key.length === 1 ? e.key.toUpperCase() : e.key,
   ];
   return parts.filter(Boolean).join('+');
