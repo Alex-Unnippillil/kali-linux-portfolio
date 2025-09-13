@@ -269,12 +269,19 @@ const utilityList = [
   },
 ];
 
-export const utilities = utilityList;
+const windowDefaults = {
+  preferred: [60, 85],
+  min: [20, 20],
+  ratio: 16 / 9,
+};
+
+export const utilities = utilityList.map((app) => ({ ...windowDefaults, ...app }));
 
 // Default window sizing for games to prevent oversized frames
 export const gameDefaults = {
-  defaultWidth: 50,
-  defaultHeight: 60,
+  preferred: [50, 60],
+  min: [30, 30],
+  ratio: 4 / 3,
 };
 
 // Games list used for the "Games" folder on the desktop
@@ -287,8 +294,7 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayGame2048,
-    defaultWidth: 35,
-    defaultHeight: 45,
+    preferred: [35, 45],
   },
   {
     id: 'asteroids',
@@ -316,7 +322,6 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayBlackjack,
-    ...gameDefaults,
   },
   {
     id: 'breakout',
@@ -489,7 +494,6 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayTicTacToe,
-    ...gameDefaults,
   },
   {
     id: 'tetris',
@@ -594,7 +598,7 @@ const gameList = [
 
 export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
 
-const apps = [
+const appList = [
   {
     id: 'chrome',
     title: 'Google Chrome',
@@ -614,8 +618,7 @@ const apps = [
     screen: displayCalculator,
     resizable: false,
     allowMaximize: false,
-    defaultWidth: 28,
-    defaultHeight: 50,
+    preferred: [28, 50],
   },
   {
     id: 'terminal',
@@ -635,8 +638,7 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displayVsCode,
-    defaultWidth: 85,
-    defaultHeight: 85,
+    preferred: [85, 85],
   },
   {
     id: 'x',
@@ -1056,5 +1058,7 @@ const apps = [
   // Games are included so they appear alongside apps
   ...games,
 ];
+
+const apps = appList.map((app) => ({ ...windowDefaults, ...app }));
 
 export default apps;

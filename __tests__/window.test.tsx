@@ -37,7 +37,7 @@ describe('Window lifecycle', () => {
       jest.advanceTimersByTime(300);
     });
 
-    expect(closed).toHaveBeenCalledWith('test-window');
+    expect(closed).toHaveBeenCalledWith('test-window', 60, 85);
     jest.useRealTimers();
   });
 });
@@ -199,7 +199,12 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault() {},
+        stopPropagation() {},
+      } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();

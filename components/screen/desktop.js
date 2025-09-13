@@ -40,6 +40,7 @@ export class Desktop extends Component {
             hideSideBar: false,
             minimized_windows: {},
             window_positions: {},
+            window_sizes: {},
             desktop_apps: [],
             context_menus: {
                 desktop: false,
@@ -62,6 +63,7 @@ export class Desktop extends Component {
         this.fetchAppsData(() => {
             const session = this.props.session || {};
             const positions = {};
+            const sizes = {};
             if (session.dock && session.dock.length) {
                 let favourite_apps = { ...this.state.favourite_apps };
                 session.dock.forEach(id => {
@@ -71,10 +73,13 @@ export class Desktop extends Component {
             }
 
             if (session.windows && session.windows.length) {
-                session.windows.forEach(({ id, x, y }) => {
+                session.windows.forEach(({ id, x, y, width, height }) => {
                     positions[id] = { x, y };
+                    if (typeof width === 'number' && typeof height === 'number') {
+                        sizes[id] = { width, height };
+                    }
                 });
-                this.setState({ window_positions: positions }, () => {
+                this.setState({ window_positions: positions, window_sizes: sizes }, () => {
                     session.windows.forEach(({ id }) => this.openApp(id));
                 });
             } else {
@@ -460,6 +465,7 @@ export class Desktop extends Component {
             if (this.state.closed_windows[app.id] === false) {
 
                 const pos = this.state.window_positions[app.id];
+                const size = this.state.window_sizes[app.id] || { width: app.preferred[0], height: app.preferred[1] };
                 const props = {
                     title: app.title,
                     id: app.id,
@@ -474,8 +480,8 @@ export class Desktop extends Component {
                     minimized: this.state.minimized_windows[app.id],
                     resizable: app.resizable,
                     allowMaximize: app.allowMaximize,
-                    defaultWidth: app.defaultWidth,
-                    defaultHeight: app.defaultHeight,
+                    defaultWidth: size.width,
+                    defaultHeight: size.height,
                     initialX: pos ? pos.x : undefined,
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
@@ -502,11 +508,17 @@ export class Desktop extends Component {
     saveSession = () => {
         if (!this.props.setSession) return;
         const openWindows = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
-        const windows = openWindows.map(id => ({
-            id,
-            x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
-            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10
-        }));
+        const windows = openWindows.map(id => {
+            const app = apps.find(a => a.id === id);
+            const size = this.state.window_sizes[id] || { width: app?.preferred[0] || 60, height: app?.preferred[1] || 85 };
+            return {
+                id,
+                x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
+                y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10,
+                width: size.width,
+                height: size.height,
+            };
+        });
         const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
         this.props.setSession({ ...this.props.session, windows, dock });
     }
@@ -656,7 +668,7 @@ export class Desktop extends Component {
         }
     }
 
-    closeApp = async (objId) => {
+    closeApp = async (objId, width, height) => {
 
         // capture window snapshot
         let image = null;
@@ -697,11 +709,15 @@ export class Desktop extends Component {
         // close window
         let closed_windows = this.state.closed_windows;
         let favourite_apps = this.state.favourite_apps;
+        let window_sizes = { ...this.state.window_sizes };
 
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
+        if (typeof width === 'number' && typeof height === 'number') {
+            window_sizes[objId] = { width, height };
+        }
 
-        this.setState({ closed_windows, favourite_apps }, this.saveSession);
+        this.setState({ closed_windows, favourite_apps, window_sizes }, this.saveSession);
     }
 
     pinApp = (id) => {
