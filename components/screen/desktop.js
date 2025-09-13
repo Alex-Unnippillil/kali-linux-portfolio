@@ -53,6 +53,7 @@ export class Desktop extends Component {
             showWindowSwitcher: false,
             switcherWindows: [],
         }
+        this.touchStart = null;
     }
 
     componentDidMount() {
@@ -89,6 +90,9 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        window.addEventListener('touchstart', this.handleTouchStart, { passive: false });
+        window.addEventListener('touchmove', this.handleTouchMove, { passive: false });
+        window.addEventListener('touchend', this.handleTouchEnd);
     }
 
     componentWillUnmount() {
@@ -96,6 +100,9 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        window.removeEventListener('touchstart', this.handleTouchStart);
+        window.removeEventListener('touchmove', this.handleTouchMove);
+        window.removeEventListener('touchend', this.handleTouchEnd);
     }
 
     checkForNewFolders = () => {
@@ -147,18 +154,16 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcut = (e) => {
-        if (e.altKey && e.key === 'Tab') {
+        if (e.ctrlKey && e.key === 'Tab') {
             e.preventDefault();
             if (!this.state.showWindowSwitcher) {
                 this.openWindowSwitcher();
+            } else {
+                this.cycleApps(e.shiftKey ? -1 : 1);
             }
         } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
             e.preventDefault();
             this.openApp('clipboard-manager');
-        }
-        else if (e.altKey && e.key === 'Tab') {
-            e.preventDefault();
-            this.cycleApps(e.shiftKey ? -1 : 1);
         }
         else if (e.altKey && (e.key === '`' || e.key === '~')) {
             e.preventDefault();
@@ -172,6 +177,32 @@ export class Desktop extends Component {
                 document.getElementById(id)?.dispatchEvent(event);
             }
         }
+    }
+
+    handleTouchStart = (e) => {
+        if (e.touches.length === 3) {
+            this.touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        } else {
+            this.touchStart = null;
+        }
+    }
+
+    handleTouchMove = (e) => {
+        if (this.touchStart && e.touches.length === 3) {
+            const dx = e.touches[0].clientX - this.touchStart.x;
+            const dy = e.touches[0].clientY - this.touchStart.y;
+            if (Math.abs(dx) > 50 || Math.abs(dy) > 50) {
+                e.preventDefault();
+                if (!this.state.showWindowSwitcher) {
+                    this.openWindowSwitcher();
+                }
+                this.touchStart = null;
+            }
+        }
+    }
+
+    handleTouchEnd = () => {
+        this.touchStart = null;
     }
 
     getFocusedWindowId = () => {
@@ -211,11 +242,23 @@ export class Desktop extends Component {
         this.focus(windows[next]);
     }
 
-    openWindowSwitcher = () => {
-        const windows = this.app_stack
-            .filter(id => this.state.closed_windows[id] === false)
-            .map(id => apps.find(a => a.id === id))
-            .filter(Boolean);
+    openWindowSwitcher = async () => {
+        const ids = this.app_stack.filter(id => this.state.closed_windows[id] === false);
+        const windows = [];
+        for (const id of ids) {
+            const meta = apps.find(a => a.id === id);
+            if (!meta) continue;
+            let image = null;
+            const node = document.getElementById(id);
+            if (node) {
+                try {
+                    image = await toPng(node);
+                } catch (e) {
+                    // ignore screenshot errors
+                }
+            }
+            windows.push({ id, title: meta.title || id, image });
+        }
         if (windows.length) {
             this.setState({ showWindowSwitcher: true, switcherWindows: windows });
         }
