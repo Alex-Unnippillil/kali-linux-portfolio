@@ -614,10 +614,26 @@ export class Window extends Component {
     render() {
         return (
             <>
+                {this.state.grabbed && (
+                    <>
+                        <div
+                            data-testid="snap-slot-left"
+                            className="fixed inset-y-0 left-0 w-1/2 border border-blue-400/40 bg-blue-400/10 pointer-events-none z-40"
+                        />
+                        <div
+                            data-testid="snap-slot-right"
+                            className="fixed inset-y-0 right-0 w-1/2 border border-blue-400/40 bg-blue-400/10 pointer-events-none z-40"
+                        />
+                        <div
+                            data-testid="snap-slot-top"
+                            className="fixed inset-x-0 top-0 h-1/2 border border-blue-400/40 bg-blue-400/10 pointer-events-none z-40"
+                        />
+                    </>
+                )}
                 {this.state.snapPreview && (
                     <div
                         data-testid="snap-preview"
-                        className="fixed border-2 border-dashed border-white bg-white bg-opacity-10 pointer-events-none z-40 transition-opacity"
+                        className="fixed border-2 border-blue-400/70 bg-blue-400/20 pointer-events-none z-50 transition-opacity"
                         style={{ left: this.state.snapPreview.left, top: this.state.snapPreview.top, width: this.state.snapPreview.width, height: this.state.snapPreview.height }}
                     />
                 )}
