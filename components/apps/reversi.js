@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import {
   SIZE,
   DIRECTIONS,
@@ -414,7 +415,12 @@ const Reversi = () => {
           onClick={reset}
           aria-label="Reset"
         >
-          <img src="/themes/Yaru/status/chrome_refresh.svg" width="24" height="24" alt="" />
+          <Image
+            src="/themes/Yaru/status/chrome_refresh.svg"
+            alt=""
+            width={24}
+            height={24}
+          />
         </button>
         <button
           className="w-6 h-6 bg-gray-700 hover:bg-gray-600 rounded flex items-center justify-center disabled:opacity-50"
