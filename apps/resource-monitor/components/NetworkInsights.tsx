@@ -9,6 +9,7 @@ import {
 } from '../../../lib/fetchProxy';
 import { exportMetrics } from '../export';
 import RequestChart from './RequestChart';
+import NetworkGraph from './NetworkGraph';
 
 const HISTORY_KEY = 'network-insights-history';
 
@@ -33,6 +34,10 @@ export default function NetworkInsights() {
 
   return (
     <div className="p-2 text-xs text-white bg-[var(--kali-bg)]">
+      <div className="mb-2">
+        <h2 className="font-bold">Downlink (Mbps)</h2>
+        <NetworkGraph />
+      </div>
       <h2 className="font-bold mb-1">Active Fetches</h2>
       <ul className="mb-2 divide-y divide-gray-700 border border-gray-700 rounded bg-[var(--kali-panel)]">
         {active.length === 0 && <li className="p-1 text-gray-400">None</li>}
