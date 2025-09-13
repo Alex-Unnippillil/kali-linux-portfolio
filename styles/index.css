@@ -530,3 +530,19 @@ textarea:focus-visible {
     color: #000 !important;
 }
 
+@media (max-width: 640px) {
+    :root {
+        --win-titlebar-height: 48px;
+    }
+
+    .opened-window .bg-ub-window-title {
+        height: var(--win-titlebar-height);
+    }
+
+    button[aria-label^="Window"] {
+        width: 32px;
+        height: 32px;
+        min-width: 24px;
+        min-height: 24px;
+    }
+}
