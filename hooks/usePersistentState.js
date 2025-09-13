@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { getTheme } from '../utils/theme';
 
 // Persist state in localStorage with validation and helpers.
 export default function usePersistentState(key, initial, validator) {
@@ -46,6 +47,6 @@ export default function usePersistentState(key, initial, validator) {
 export const useSnapSetting = () =>
   usePersistentState(
     "snap-enabled",
-    true,
+    () => getTheme() === 'default',
     (value) => typeof value === "boolean",
   );
