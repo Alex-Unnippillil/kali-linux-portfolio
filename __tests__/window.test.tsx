@@ -14,6 +14,7 @@ describe('Window lifecycle', () => {
     jest.useFakeTimers();
     const closed = jest.fn();
     const hideSideBar = jest.fn();
+    const hideDock = jest.fn();
 
     render(
       <Window
@@ -24,6 +25,7 @@ describe('Window lifecycle', () => {
         hasMinimised={() => {}}
         closed={closed}
         hideSideBar={hideSideBar}
+        hideDock={hideDock}
         openApp={() => {}}
       />
     );
@@ -54,6 +56,7 @@ describe('Window snapping preview', () => {
         hasMinimised={() => {}}
         closed={() => {}}
         hideSideBar={() => {}}
+        hideDock={() => {}}
         openApp={() => {}}
         ref={ref}
       />
@@ -91,6 +94,7 @@ describe('Window snapping preview', () => {
         hasMinimised={() => {}}
         closed={() => {}}
         hideSideBar={() => {}}
+        hideDock={() => {}}
         openApp={() => {}}
         ref={ref}
       />
@@ -130,6 +134,7 @@ describe('Window snapping finalize and release', () => {
         hasMinimised={() => {}}
         closed={() => {}}
         hideSideBar={() => {}}
+        hideDock={() => {}}
         openApp={() => {}}
         ref={ref}
       />
@@ -171,6 +176,7 @@ describe('Window snapping finalize and release', () => {
         hasMinimised={() => {}}
         closed={() => {}}
         hideSideBar={() => {}}
+        hideDock={() => {}}
         openApp={() => {}}
         ref={ref}
       />
@@ -199,7 +205,7 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true, preventDefault: () => {}, stopPropagation: () => {} } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
@@ -218,6 +224,7 @@ describe('Window snapping finalize and release', () => {
         hasMinimised={() => {}}
         closed={() => {}}
         hideSideBar={() => {}}
+        hideDock={() => {}}
         openApp={() => {}}
         ref={ref}
       />
@@ -266,6 +273,7 @@ describe('Window keyboard dragging', () => {
         hasMinimised={() => {}}
         closed={() => {}}
         hideSideBar={() => {}}
+        hideDock={() => {}}
         openApp={() => {}}
       />
     );
@@ -296,6 +304,7 @@ describe('Edge resistance', () => {
         hasMinimised={() => {}}
         closed={() => {}}
         hideSideBar={() => {}}
+        hideDock={() => {}}
         openApp={() => {}}
         ref={ref}
       />
@@ -342,6 +351,7 @@ describe('Window overlay inert behaviour', () => {
         hasMinimised={() => {}}
         closed={() => {}}
         hideSideBar={() => {}}
+        hideDock={() => {}}
         openApp={() => {}}
         ref={ref}
       />,
@@ -383,6 +393,7 @@ describe('Window overlay inert behaviour', () => {
         hasMinimised={() => {}}
         closed={() => {}}
         hideSideBar={() => {}}
+        hideDock={() => {}}
         openApp={() => {}}
         ref={ref}
         overlayRoot="custom-root"

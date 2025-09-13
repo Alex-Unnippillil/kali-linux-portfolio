@@ -249,9 +249,15 @@ export class Window extends Component {
                 width: this.state.lastSize.width,
                 height: this.state.lastSize.height,
                 snapped: null
-            }, this.resizeBoundries);
+            }, () => {
+                this.resizeBoundries();
+                this.checkOverlap();
+            });
         } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            this.setState({ snapped: null }, () => {
+                this.resizeBoundries();
+                this.checkOverlap();
+            });
         }
     }
 
@@ -285,7 +291,10 @@ export class Window extends Component {
             lastSize: { width, height },
             width: newWidth,
             height: newHeight
-        }, this.resizeBoundries);
+        }, () => {
+            this.resizeBoundries();
+            this.checkOverlap();
+        });
     }
 
     checkOverlap = () => {
@@ -296,6 +305,12 @@ export class Window extends Component {
         }
         else {
             this.props.hideSideBar(this.id, false);
+        }
+        const dockThreshold = 40;
+        if (rect.bottom >= window.innerHeight - dockThreshold) {
+            this.props.hideDock(this.id, true);
+        } else {
+            this.props.hideDock(this.id, false);
         }
     }
 
@@ -320,11 +335,11 @@ export class Window extends Component {
         const threshold = 30;
         let snap = null;
         if (rect.left <= threshold) {
-            snap = { left: '0', top: '0', width: '50%', height: '100%' };
+            snap = { left: '0', top: '0', width: 'calc(50% - var(--win-gap))', height: '100%' };
             this.setState({ snapPreview: snap, snapPosition: 'left' });
         }
         else if (rect.right >= window.innerWidth - threshold) {
-            snap = { left: '50%', top: '0', width: '50%', height: '100%' };
+            snap = { left: '50%', top: '0', width: 'calc(50% - var(--win-gap))', height: '100%' };
             this.setState({ snapPreview: snap, snapPosition: 'right' });
         }
         else if (rect.top <= threshold) {
@@ -463,6 +478,7 @@ export class Window extends Component {
             r.style.transform = `translate(-1pt,-2pt)`;
             this.setState({ maximized: true, height: 96.3, width: 100.2 });
             this.props.hideSideBar(this.id, true);
+            this.props.hideDock(this.id, true);
         }
     }
 
@@ -471,6 +487,7 @@ export class Window extends Component {
         this.setState({ closed: true }, () => {
             this.deactivateOverlay();
             this.props.hideSideBar(this.id, false);
+            this.props.hideDock(this.id, false);
             setTimeout(() => {
                 this.props.closed(this.id)
             }, 300) // after 300ms this window will be unmounted from parent (Desktop)
@@ -608,7 +625,10 @@ export class Window extends Component {
             lastSize: { width, height },
             width: newWidth,
             height: newHeight
-        }, this.resizeBoundries);
+        }, () => {
+            this.resizeBoundries();
+            this.checkOverlap();
+        });
     }
 
     render() {
@@ -634,7 +654,7 @@ export class Window extends Component {
                     bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
                 >
                     <div
-                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
+                        style={{ width: (this.state.snapped === 'left' || this.state.snapped === 'right') ? `calc(50% - var(--win-gap))` : `${this.state.width}%`, height: `${this.state.height}%` }}
                         className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                         id={this.id}
                         role="dialog"

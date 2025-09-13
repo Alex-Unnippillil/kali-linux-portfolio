@@ -35,9 +35,11 @@ export class Desktop extends Component {
             closed_windows: {},
             allAppsView: false,
             overlapped_windows: {},
+            dock_overlapped_windows: {},
             disabled_apps: {},
             favourite_apps: {},
             hideSideBar: false,
+            hideDock: false,
             minimized_windows: {},
             window_positions: {},
             desktop_apps: [],
@@ -470,6 +472,7 @@ export class Desktop extends Component {
                     focus: this.focus,
                     isFocused: this.state.focused_windows[app.id],
                     hideSideBar: this.hideSideBar,
+                    hideDock: this.hideDock,
                     hasMinimised: this.hasMinimised,
                     minimized: this.state.minimized_windows[app.id],
                     resizable: app.resizable,
@@ -540,6 +543,35 @@ export class Desktop extends Component {
         this.setState({ hideSideBar: hide, overlapped_windows });
     }
 
+    hideDock = (objId, hide) => {
+        if (hide === this.state.hideDock) return;
+
+        if (objId === null) {
+            if (hide === false) {
+                this.setState({ hideDock: false });
+            }
+            else {
+                for (const key in this.state.dock_overlapped_windows) {
+                    if (this.state.dock_overlapped_windows[key]) {
+                        this.setState({ hideDock: true });
+                        return;
+                    }
+                }
+            }
+            return;
+        }
+
+        if (hide === false) {
+            for (const key in this.state.dock_overlapped_windows) {
+                if (this.state.dock_overlapped_windows[key] && key !== objId) return;
+            }
+        }
+
+        let dock_overlapped_windows = this.state.dock_overlapped_windows;
+        dock_overlapped_windows[objId] = hide;
+        this.setState({ hideDock: hide, dock_overlapped_windows });
+    }
+
     hasMinimised = (objId) => {
         let minimized_windows = this.state.minimized_windows;
         var focused_windows = this.state.focused_windows;
@@ -550,6 +582,7 @@ export class Desktop extends Component {
         this.setState({ minimized_windows, focused_windows });
 
         this.hideSideBar(null, false);
+        this.hideDock(null, false);
 
         this.giveFocusToLastApp();
     }
@@ -693,6 +726,7 @@ export class Desktop extends Component {
         this.giveFocusToLastApp();
 
         this.hideSideBar(null, false);
+        this.hideDock(null, false);
 
         // close window
         let closed_windows = this.state.closed_windows;
@@ -900,6 +934,7 @@ export class Desktop extends Component {
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    hide={this.state.hideDock}
                 />
 
                 {/* Desktop Apps */}
