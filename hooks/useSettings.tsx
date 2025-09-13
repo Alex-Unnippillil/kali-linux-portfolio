@@ -25,6 +25,12 @@ import {
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
 
+declare global {
+  interface Window {
+    __announce?: (message: string) => void;
+  }
+}
+
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
   '#1793d1', // kali blue (default)
@@ -131,8 +137,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     })();
   }, []);
 
+  const firstTheme = useRef(true);
   useEffect(() => {
     saveTheme(theme);
+    if (firstTheme.current) {
+      firstTheme.current = false;
+      return;
+    }
+    if (typeof window !== 'undefined') {
+      window.__announce?.(`Theme changed to ${theme}`);
+    }
   }, [theme]);
 
   useEffect(() => {
