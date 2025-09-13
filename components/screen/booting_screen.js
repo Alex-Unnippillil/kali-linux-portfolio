@@ -1,44 +1,122 @@
-import React from 'react'
-import Image from 'next/image'
+"use client";
 
-function BootingScreen(props) {
+import React, { useEffect } from "react";
+import Image from "next/image";
 
-    return (
-        <div
-            style={{
-                ...(props.visible || props.isShutDown ? { zIndex: "100" } : { zIndex: "-20" }),
-                contentVisibility: 'auto',
-            }}
-            className={(props.visible || props.isShutDown ? " visible opacity-100" : " invisible opacity-0 ") + " absolute duration-500 select-none flex flex-col justify-around items-center top-0 right-0 overflow-hidden m-0 p-0 h-screen w-screen bg-black"}>
+/**
+ * BootingScreen
+ * - Shows on first visit (controlled by parent via `visible`)
+ * - Shows power button when `isShutDown` is true
+ * - Calls `turnOn` when the power button is clicked or any key is pressed while shut down
+ */
+export default function BootingScreen({ visible, isShutDown, turnOn }) {
+  // Enable keyboard/click to power on when in shut-down state
+  useEffect(() => {
+    if (!isShutDown) return;
+    const handle = () => turnOn?.();
+    window.addEventListener("keydown", handle);
+    window.addEventListener("click", handle);
+    return () => {
+      window.removeEventListener("keydown", handle);
+      window.removeEventListener("click", handle);
+    };
+  }, [isShutDown, turnOn]);
+
+  const show = visible || isShutDown;
+
+  return (
+    <div
+      style={{
+        ...(show ? { zIndex: 100 } : { zIndex: -20 }),
+        contentVisibility: "auto",
+      }}
+      className={[
+        "fixed inset-0 m-0 p-0 h-screen w-screen overflow-hidden bg-black",
+        "transition-opacity duration-700",
+        show ? "opacity-100" : "opacity-0",
+      ].join(" ")}
+    >
+      <div className="h-full w-full flex flex-col items-center justify-center gap-8 select-none">
+        {!isShutDown ? (
+          <>
+            {/* Kali dragon mark */}
             <Image
-                width={400}
-                height={400}
-                className="md:w-1/4 w-1/2"
-                src="/themes/Yaru/status/cof_orange_hex.svg"
-                alt="Ubuntu Logo"
-                sizes="(max-width: 768px) 50vw, 25vw"
+              src="/themes/Yaru/status/icons8-kali-linux.svg"
+              width={128}
+              height={128}
+              alt="Kali dragon mark"
+              priority
+            />
+
+            {/* Spinner */}
+            <div
+              className="relative h-12 w-12"
+              role="progressbar"
+              aria-label="Booting Kali Linux"
+            >
+              {/* Track */}
+              <div className="absolute inset-0 rounded-full border-4 border-zinc-700/40" />
+              {/* Animated arc */}
+              <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-white animate-spin" />
+            </div>
+
+            {/* Wordmark */}
+            <Image
+              src="/images/logos/logo_1200.png"
+              width={360}
+              height={80}
+              alt="KALI LINUX"
+              sizes="(max-width: 768px) 60vw, 360px"
+              priority
+            />
+
+            <p className="text-zinc-400 text-xs tracking-widest">
+              Initializing services…
+            </p>
+          </>
+        ) : (
+          <>
+            {/* Power-on button when shut down */}
+            <button
+              type="button"
+              onClick={turnOn}
+              className="h-16 w-16 rounded-full outline-none ring-0 focus:ring-2 focus:ring-white/40 flex items-center justify-center bg-white/0 hover:bg-white/5 transition"
+              aria-label="Power on"
+            >
+              <Image
+                src="/themes/Yaru/status/power-button.svg"
+                width={40}
+                height={40}
+                alt="Power"
                 priority
-            />
-            <div className="w-10 h-10 flex justify-center items-center rounded-full outline-none cursor-pointer" onClick={props.turnOn} >
-                {(props.isShutDown
-                    ? <div className="bg-white rounded-full flex justify-center items-center w-10 h-10 hover:bg-gray-300"><Image width={32} height={32} className="w-8" src="/themes/Yaru/status/power-button.svg" alt="Power Button" sizes="32px" priority/></div>
-                    : <Image width={40} height={40} className={" w-10 " + (props.visible ? " animate-spin " : "")} src="/themes/Yaru/status/process-working-symbolic.svg" alt="Ubuntu Process Symbol" sizes="40px" priority/>)}
-            </div>
-            <Image
-                width={200}
-                height={100}
-                className="md:w-1/5 w-1/2"
-                src="/themes/Yaru/status/ubuntu_white_hex.svg"
-                alt="Kali Linux Name"
-                sizes="(max-width: 768px) 50vw, 20vw"
-            />
-            <div className="text-white mb-4">
-                <a className="underline" href="https://www.linkedin.com/in/unnippillil/" rel="noopener noreferrer" target="_blank">linkedin</a>
-                <span className="font-bold mx-1">|</span>
-                <a href="https://github.com/Alex-Unnippillil" rel="noopener noreferrer" target="_blank" className="underline">github</a>
-            </div>
-        </div>
-    )
+              />
+            </button>
+            <p className="text-zinc-400 text-sm mt-4">Click to power on</p>
+          </>
+        )}
+      </div>
+
+      {/* Footer links */}
+      <div className="absolute bottom-6 left-0 right-0 flex items-center justify-center gap-3 text-white text-sm">
+        <a
+          className="underline"
+          href="https://www.linkedin.com/in/unnippillil/"
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          linkedin
+        </a>
+        <span className="font-bold mx-1">|</span>
+        <a
+          className="underline"
+          href="https://github.com/Alex-Unnippillil"
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          github
+        </a>
+      </div>
+    </div>
+  );
 }
 
-export default BootingScreen
