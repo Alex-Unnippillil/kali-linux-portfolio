@@ -78,7 +78,7 @@ export class Desktop extends Component {
                     session.windows.forEach(({ id }) => this.openApp(id));
                 });
             } else {
-                this.openApp('about-alex');
+                this.openApp('about');
             }
         });
         this.setContextListeners();
