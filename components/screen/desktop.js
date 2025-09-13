@@ -491,12 +491,31 @@ export class Desktop extends Component {
     }
 
     updateWindowPosition = (id, x, y) => {
-        const snap = this.props.snapEnabled
-            ? (v) => Math.round(v / 8) * 8
+        const gap = Math.max(0, Math.min(16, this.props.winGap || 0));
+        const snap = this.props.snapEnabled && gap > 0
+            ? (v) => Math.round(v / gap) * gap
             : (v) => v;
         this.setState(prev => ({
             window_positions: { ...prev.window_positions, [id]: { x: snap(x), y: snap(y) } }
         }), this.saveSession);
+    }
+
+    componentDidUpdate(prevProps) {
+        if (prevProps.winGap !== this.props.winGap) {
+            const gap = Math.max(0, Math.min(16, this.props.winGap || 0));
+            if (this.props.snapEnabled && gap > 0) {
+                this.setState(prev => {
+                    const updated = {};
+                    for (const [id, pos] of Object.entries(prev.window_positions)) {
+                        updated[id] = {
+                            x: Math.round(pos.x / gap) * gap,
+                            y: Math.round(pos.y / gap) * gap,
+                        };
+                    }
+                    return { window_positions: updated };
+                }, this.saveSession);
+            }
+        }
     }
 
     saveSession = () => {

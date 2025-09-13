@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  winGap: 8,
 };
 
 export async function getAccent() {
@@ -69,6 +70,18 @@ export async function getFontScale() {
 export async function setFontScale(scale) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem('font-scale', String(scale));
+}
+
+export async function getWinGap() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.winGap;
+  const stored = window.localStorage.getItem('win-gap');
+  return stored ? parseInt(stored, 10) : DEFAULT_SETTINGS.winGap;
+}
+
+export async function setWinGap(value) {
+  if (typeof window === 'undefined') return;
+  const clamped = Math.max(0, Math.min(16, value));
+  window.localStorage.setItem('win-gap', String(clamped));
 }
 
 export async function getHighContrast() {
@@ -137,6 +150,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('win-gap');
 }
 
 export async function exportSettings() {
@@ -151,6 +165,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    winGap,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +177,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getWinGap(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +191,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    winGap,
     theme,
   });
 }
@@ -199,6 +216,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    winGap,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +229,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (winGap !== undefined) await setWinGap(winGap);
   if (theme !== undefined) setTheme(theme);
 }
 

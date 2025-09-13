@@ -21,6 +21,8 @@ export default function Settings() {
     setWallpaper,
     density,
     setDensity,
+    winGap,
+    setWinGap,
     reducedMotion,
     setReducedMotion,
     fontScale,
@@ -79,6 +81,7 @@ export default function Settings() {
       if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
+      if (parsed.winGap !== undefined) setWinGap(parsed.winGap);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
     } catch (err) {
       console.error("Invalid settings", err);
@@ -100,6 +103,7 @@ export default function Settings() {
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
+    setWinGap(defaults.winGap);
     setTheme("default");
   };
 
@@ -149,6 +153,24 @@ export default function Settings() {
                 />
               ))}
             </div>
+          </div>
+          <div className="flex justify-center my-4">
+            <label htmlFor="win-gap" className="mr-2 text-ubt-grey">Window gap:</label>
+            <input
+              id="win-gap"
+              type="range"
+              min="0"
+              max="16"
+              step="1"
+              value={winGap}
+              onChange={(e) =>
+                setWinGap(
+                  Math.max(0, Math.min(16, parseInt(e.target.value, 10)))
+                )
+              }
+              className="ubuntu-slider"
+              aria-label="Window gap"
+            />
           </div>
           <div className="flex justify-center my-4">
             <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">Wallpaper:</label>
