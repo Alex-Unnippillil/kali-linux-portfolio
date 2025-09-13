@@ -33,7 +33,8 @@ export default class Clock extends Component {
 
     render() {
         const { current_time } = this.state;
-        if (!current_time) return <span suppressHydrationWarning></span>;
+        const title = new Date().toLocaleDateString();
+        if (!current_time) return <span suppressHydrationWarning title={title}></span>;
 
         let day = this.day_list[current_time.getDay()];
         let hour = current_time.getHours();
@@ -56,6 +57,6 @@ export default class Clock extends Component {
             display_time = day + " " + month + " " + date;
         }
         else display_time = day + " " + month + " " + date + " " + hour + ":" + minute + " " + meridiem;
-        return <span suppressHydrationWarning>{display_time}</span>;
+        return <span suppressHydrationWarning title={title}>{display_time}</span>;
     }
 }
