@@ -29,6 +29,8 @@ export default function Settings() {
     setHighContrast,
     haptics,
     setHaptics,
+    metricsConsent,
+    setMetricsConsent,
     theme,
     setTheme,
   } = useSettings();
@@ -272,6 +274,16 @@ export default function Settings() {
       )}
       {activeTab === "privacy" && (
         <>
+          <div className="flex justify-center my-4">
+            <span className="text-ubt-grey mr-2">
+              Allow usage metrics (stored locally)
+            </span>
+            <ToggleSwitch
+              checked={metricsConsent}
+              onChange={setMetricsConsent}
+              ariaLabel="Metrics consent"
+            />
+          </div>
           <div className="flex justify-center my-4 space-x-4">
             <button
               onClick={handleExport}

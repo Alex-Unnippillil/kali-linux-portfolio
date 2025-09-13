@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { logFeatureUsage } from '../../utils/metrics';
 
 export class Desktop extends Component {
     constructor() {
@@ -591,6 +592,8 @@ export class Desktop extends Component {
             action: `Opened ${objId} window`
         });
 
+        logFeatureUsage(`app:${objId}`);
+
         // if the app is disabled
         if (this.state.disabled_apps[objId]) return;
 
@@ -838,8 +841,8 @@ export class Desktop extends Component {
         return (
             <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
                 <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
-                    <span>New folder name</span>
-                    <input className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
+                    <label htmlFor="folder-name-input">New folder name</label>
+                    <input aria-label="New folder name" className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5" id="folder-name-input" type="text" autoComplete="off" spellCheck="false" autoFocus={true} />
                 </div>
                 <div className="flex">
                     <button
