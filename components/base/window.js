@@ -33,6 +33,8 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            keyboardMode: null,
+            keyboardOrigin: null,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
@@ -198,6 +200,78 @@ export class Window extends Component {
 
     changeCursorToDefault = () => {
         this.setState({ cursorType: "cursor-default", grabbed: false })
+    }
+
+    startKeyboardMove = () => {
+        if (this.state.keyboardMode) return;
+        this.changeCursorToMove();
+        const node = document.getElementById(this.id);
+        let x = 0, y = 0;
+        if (node) {
+            const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
+            x = match ? parseFloat(match[1]) : 0;
+            y = match ? parseFloat(match[2]) : 0;
+        }
+        this.setState({ keyboardMode: 'move', keyboardOrigin: { x, y } });
+    }
+
+    startKeyboardResize = () => {
+        if (this.state.keyboardMode) return;
+        this.focusWindow();
+        if (this.state.maximized) {
+            this.restoreWindow();
+        }
+        if (this.state.snapped) {
+            this.unsnapWindow();
+        }
+        this.setState({
+            keyboardMode: 'resize',
+            keyboardOrigin: { width: this.state.width, height: this.state.height },
+            cursorType: 'cursor-se-resize',
+            grabbed: true,
+        });
+    }
+
+    cancelKeyboardMode = () => {
+        if (this.state.keyboardMode === 'move' && this.state.keyboardOrigin) {
+            const { x, y } = this.state.keyboardOrigin;
+            const node = document.getElementById(this.id);
+            if (node) {
+                node.style.transform = `translate(${x}px, ${y}px)`;
+            }
+            this.setState({
+                keyboardMode: null,
+                keyboardOrigin: null,
+                snapPreview: null,
+                snapPosition: null,
+            }, () => {
+                this.changeCursorToDefault();
+                this.setWinowsPosition();
+            });
+        } else if (this.state.keyboardMode === 'resize' && this.state.keyboardOrigin) {
+            const { width, height } = this.state.keyboardOrigin;
+            this.setState({
+                width,
+                height,
+                keyboardMode: null,
+                keyboardOrigin: null,
+                cursorType: 'cursor-default',
+                grabbed: false,
+            }, this.resizeBoundries);
+        }
+    }
+
+    commitKeyboardMode = () => {
+        if (this.state.keyboardMode === 'move') {
+            this.setState({ keyboardMode: null, keyboardOrigin: null }, this.handleStop);
+        } else if (this.state.keyboardMode === 'resize') {
+            this.setState({
+                keyboardMode: null,
+                keyboardOrigin: null,
+                cursorType: 'cursor-default',
+                grabbed: false,
+            }, this.resizeBoundries);
+        }
     }
 
     snapToGrid = (value) => {
@@ -519,32 +593,48 @@ export class Window extends Component {
     }
 
     handleKeyDown = (e) => {
-        if (e.key === 'Escape') {
-            this.closeWindow();
-        } else if (e.key === 'Tab') {
-            this.focusWindow();
-        } else if (e.altKey) {
-            if (e.key === 'ArrowDown') {
+        if (this.state.keyboardMode === 'move') {
+            const step = 10;
+            let dx = 0, dy = 0;
+            if (e.key === 'Escape') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.unsnapWindow();
-            } else if (e.key === 'ArrowLeft') {
+                this.cancelKeyboardMode();
+            } else if (e.key === 'Enter') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.snapWindow('left');
-            } else if (e.key === 'ArrowRight') {
+                this.commitKeyboardMode();
+            } else if (e.key === 'ArrowLeft') dx = -step;
+            else if (e.key === 'ArrowRight') dx = step;
+            else if (e.key === 'ArrowUp') dy = -step;
+            else if (e.key === 'ArrowDown') dy = step;
+            if (dx !== 0 || dy !== 0) {
                 e.preventDefault();
                 e.stopPropagation();
-                this.snapWindow('right');
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('top');
+                const node = document.getElementById(this.id);
+                if (node) {
+                    const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
+                    let x = match ? parseFloat(match[1]) : 0;
+                    let y = match ? parseFloat(match[2]) : 0;
+                    x += dx;
+                    y += dy;
+                    node.style.transform = `translate(${x}px, ${y}px)`;
+                    this.checkOverlap();
+                    this.checkSnapPreview();
+                    this.setWinowsPosition();
+                }
             }
-            this.focusWindow();
-        } else if (e.shiftKey) {
+        } else if (this.state.keyboardMode === 'resize') {
             const step = 1;
-            if (e.key === 'ArrowLeft') {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                this.cancelKeyboardMode();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                this.commitKeyboardMode();
+            } else if (e.key === 'ArrowLeft') {
                 e.preventDefault();
                 e.stopPropagation();
                 this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
@@ -559,6 +649,56 @@ export class Window extends Component {
             } else if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 e.stopPropagation();
+                this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
+            }
+        } else if (e.key === 'Escape') {
+            this.closeWindow();
+        } else if (e.key === 'Tab') {
+            this.focusWindow();
+        } else if (e.altKey && e.key === 'F7') {
+            e.preventDefault?.();
+            e.stopPropagation?.();
+            this.startKeyboardMove();
+        } else if (e.altKey && e.key === 'F8') {
+            e.preventDefault?.();
+            e.stopPropagation?.();
+            this.startKeyboardResize();
+        } else if (e.altKey) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault?.();
+                e.stopPropagation?.();
+                this.unsnapWindow();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault?.();
+                e.stopPropagation?.();
+                this.snapWindow('left');
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault?.();
+                e.stopPropagation?.();
+                this.snapWindow('right');
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault?.();
+                e.stopPropagation?.();
+                this.snapWindow('top');
+            }
+            this.focusWindow();
+        } else if (e.shiftKey) {
+            const step = 1;
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault?.();
+                e.stopPropagation?.();
+                this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault?.();
+                e.stopPropagation?.();
+                this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault?.();
+                e.stopPropagation?.();
+                this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
             }
             this.focusWindow();
@@ -635,7 +775,7 @@ export class Window extends Component {
                 >
                     <div
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : this.state.keyboardMode === 'move' ? " ring-2 ring-yellow-400 " : this.state.keyboardMode === 'resize' ? " ring-2 ring-green-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}

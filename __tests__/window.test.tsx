@@ -406,3 +406,52 @@ describe('Window overlay inert behaviour', () => {
     document.body.removeChild(opener);
   });
 });
+
+describe('Window Alt+F7/F8 keyboard modes', () => {
+  it('moves window with Alt+F7 and arrow keys, Escape cancels', () => {
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    fireEvent.keyDown(winEl, { key: 'F7', altKey: true });
+    fireEvent.keyDown(winEl, { key: 'ArrowRight' });
+    expect(winEl.style.transform).toBe('translate(10px, 0px)');
+    fireEvent.keyDown(winEl, { key: 'Escape' });
+    expect(winEl.style.transform).toBe('translate(0px, 0px)');
+  });
+
+  it('resizes window with Alt+F8 and arrow keys, Enter commits', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    const initialWidth = ref.current!.state.width;
+    fireEvent.keyDown(winEl, { key: 'F8', altKey: true });
+    fireEvent.keyDown(winEl, { key: 'ArrowRight' });
+    expect(ref.current!.state.width).toBe(initialWidth + 1);
+    fireEvent.keyDown(winEl, { key: 'Enter' });
+    expect(ref.current!.state.keyboardMode).toBe(null);
+  });
+});
