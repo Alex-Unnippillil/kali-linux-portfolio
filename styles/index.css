@@ -11,6 +11,10 @@ body{
     color: var(--color-text);
 }
 
+pre, code, kbd, samp {
+    font-family: var(--font-family-code);
+}
+
 button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .hit-area {
     min-width: var(--hit-area);
     min-height: var(--hit-area);
