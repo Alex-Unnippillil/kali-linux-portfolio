@@ -3,7 +3,7 @@ import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
 import { displayX } from './components/apps/x';
 import { displaySpotify } from './components/apps/spotify';
 import { displaySettings } from './components/apps/settings';
-import { displayChrome } from './components/apps/chrome';
+import { displayFirefox } from './components/apps/firefox';
 import { displayGedit } from './components/apps/gedit';
 import { displayTodoist } from './components/apps/todoist';
 import { displayWeather } from './components/apps/weather';
@@ -13,11 +13,6 @@ import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayScreenRecorder } from './components/apps/screen-recorder';
 import { displayNikto } from './components/apps/nikto';
 
-export const chromeDefaultTiles = [
-  { title: 'MDN', url: 'https://developer.mozilla.org/' },
-  { title: 'Wikipedia', url: 'https://en.wikipedia.org' },
-  { title: 'Example', url: 'https://example.com' },
-];
 
 // Dynamic applications and games
 const TerminalApp = createDynamicApp('terminal', 'Terminal');
@@ -596,13 +591,13 @@ export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
 
 const apps = [
   {
-    id: 'chrome',
-    title: 'Google Chrome',
-    icon: '/themes/Yaru/apps/chrome.png',
+    id: 'firefox',
+    title: 'Firefox',
+    icon: '/themes/Yaru/apps/firefox.png',
     disabled: false,
     favourite: true,
     desktop_shortcut: true,
-    screen: displayChrome,
+    screen: displayFirefox,
   },
   {
     id: 'calculator',

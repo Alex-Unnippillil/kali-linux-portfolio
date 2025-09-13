@@ -134,15 +134,13 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
     );
   }, [filtered.length, stack, year, type, tags, search]);
 
-  const openInChrome = (url: string) => {
+  const openInFirefox = (url: string) => {
     try {
-      const id = Date.now();
-      const tab = { id, url, history: [url], historyIndex: 0, scroll: 0 };
-      localStorage.setItem('chrome-tabs', JSON.stringify({ tabs: [tab], active: id }));
+      localStorage.setItem('firefox-history', JSON.stringify([url]));
     } catch {
       /* ignore */
     }
-    openApp && openApp('chrome');
+    openApp && openApp('firefox');
   };
 
   const toggleSelect = (project: Project) => {
@@ -336,7 +334,7 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
                       Live Demo
                     </a>
                     <button
-                      onClick={() => openInChrome(project.demo)}
+                      onClick={() => openInFirefox(project.demo)}
                       className="text-blue-400 hover:underline"
                     >
                       Open in Chrome
