@@ -40,6 +40,30 @@ button:focus-visible {
 
 /* Top NavBar styling */
 
+.header {
+    height: 48px;
+    transition: height 120ms ease;
+}
+
+.header__logo {
+    transition: transform 120ms ease;
+}
+
+.header--compact {
+    height: 40px;
+}
+
+.header--compact .header__logo {
+    transform: scale(0.85);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .header,
+    .header__logo {
+        transition: none;
+    }
+}
+
 .top-arrow-up {
     border-inline-start: 5px solid transparent;
     border-inline-end: 5px solid transparent;
