@@ -4,13 +4,15 @@ import Clock from '../util-components/clock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
 import WhiskerMenu from '../menu/WhiskerMenu';
+import CalendarPopover from '../ui/CalendarPopover';
 
 export default class Navbar extends Component {
 	constructor() {
 		super();
-		this.state = {
-			status_card: false
-		};
+                this.state = {
+                        status_card: false,
+                        calendar_card: false
+                };
 	}
 
 	render() {
@@ -20,23 +22,31 @@ export default class Navbar extends Component {
                                         <Image src="/themes/Yaru/status/network-wireless-signal-good-symbolic.svg" alt="network icon" width={16} height={16} className="w-4 h-4" />
                                 </div>
                                 <WhiskerMenu />
-                                <div
-                                        className={
-                                                'pl-2 pr-2 text-xs md:text-sm outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1'
-                                        }
+                                <button
+                                        type="button"
+                                        aria-label="Show calendar"
+                                        aria-haspopup="dialog"
+                                        aria-expanded={this.state.calendar_card}
+                                        aria-pressed={this.state.calendar_card}
+                                        onClick={() => {
+                                                this.setState({ calendar_card: !this.state.calendar_card });
+                                        }}
+                                        className="relative pl-2 pr-2 text-xs md:text-sm transition duration-100 ease-in-out border-b-2 border-transparent py-1"
                                 >
                                         <Clock />
-                                </div>
+                                        <CalendarPopover open={this.state.calendar_card} />
+                                </button>
                                 <button
                                         type="button"
                                         id="status-bar"
                                         aria-label="System status"
+                                        aria-haspopup="dialog"
+                                        aria-expanded={this.state.status_card}
+                                        aria-pressed={this.state.status_card}
                                         onClick={() => {
                                                 this.setState({ status_card: !this.state.status_card });
                                         }}
-                                        className={
-                                                'relative pr-3 pl-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent focus:border-ubb-orange py-1 '
-                                        }
+                                        className="relative pr-3 pl-3 transition duration-100 ease-in-out border-b-2 border-transparent py-1"
                                 >
                                         <Status />
                                         <QuickSettings open={this.state.status_card} />

@@ -119,8 +119,12 @@ const WhiskerMenu: React.FC = () => {
       <button
         ref={buttonRef}
         type="button"
+        aria-label="Applications menu"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-pressed={open}
         onClick={() => setOpen(o => !o)}
-        className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        className="pl-3 pr-3 transition duration-100 ease-in-out border-b-2 border-transparent py-1"
       >
         <Image
           src="/themes/Yaru/status/decompiler-symbolic.svg"
@@ -136,6 +140,7 @@ const WhiskerMenu: React.FC = () => {
           ref={menuRef}
           className="absolute left-0 mt-1 z-50 flex bg-ub-grey text-white shadow-lg"
           tabIndex={-1}
+          role="dialog"
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
               setOpen(false);
@@ -146,6 +151,7 @@ const WhiskerMenu: React.FC = () => {
             {CATEGORIES.map(cat => (
               <button
                 key={cat.id}
+                aria-pressed={category === cat.id}
                 className={`text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
                 onClick={() => setCategory(cat.id)}
               >
@@ -155,7 +161,7 @@ const WhiskerMenu: React.FC = () => {
           </div>
           <div className="p-3">
             <input
-              className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
+              className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20"
               placeholder="Search"
               value={query}
               onChange={e => setQuery(e.target.value)}

@@ -23,6 +23,7 @@ const QuickSettings = ({ open }: Props) => {
 
   return (
     <div
+      role="dialog"
       className={`absolute bg-ub-cool-grey rounded-md py-4 top-9 right-3 shadow border-black border border-opacity-20 ${
         open ? '' : 'hidden'
       }`}
