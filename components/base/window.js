@@ -37,6 +37,8 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._origTransform = null;
+        this._keyboardOffset = 0;
     }
 
     componentDidMount() {
@@ -51,6 +53,9 @@ export class Window extends Component {
         // Listen for context menu events to toggle inert background
         window.addEventListener('context-menu-open', this.setInertBackground);
         window.addEventListener('context-menu-close', this.removeInertBackground);
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', this.handleViewportResize);
+        }
         const root = document.getElementById(this.id);
         root?.addEventListener('super-arrow', this.handleSuperArrow);
         if (this._uiExperiments) {
@@ -64,10 +69,22 @@ export class Window extends Component {
         window.removeEventListener('resize', this.resizeBoundries);
         window.removeEventListener('context-menu-open', this.setInertBackground);
         window.removeEventListener('context-menu-close', this.removeInertBackground);
+        window.visualViewport?.removeEventListener('resize', this.handleViewportResize);
         const root = document.getElementById(this.id);
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+    }
+
+    componentDidUpdate(prevProps) {
+        if (prevProps.isFocused && !this.props.isFocused && this._keyboardOffset) {
+            const node = document.getElementById(this.id);
+            if (node) {
+                node.style.transform = this._origTransform || '';
+            }
+            this._keyboardOffset = 0;
+            this._origTransform = null;
         }
     }
 
@@ -106,6 +123,27 @@ export class Window extends Component {
                 this.scheduleUsageCheck();
             }
         });
+    }
+
+    handleViewportResize = () => {
+        if (!this.props.isFocused) return;
+        const vv = window.visualViewport;
+        if (!vv) return;
+        const node = document.getElementById(this.id);
+        if (!node) return;
+        const rect = node.getBoundingClientRect();
+        const overlap = rect.bottom - vv.height;
+        if (overlap > 0) {
+            if (!this._keyboardOffset) {
+                this._origTransform = node.style.transform || '';
+            }
+            node.style.transform = `${this._origTransform} translateY(${-overlap}px)`;
+            this._keyboardOffset = overlap;
+        } else if (this._keyboardOffset) {
+            node.style.transform = this._origTransform || '';
+            this._keyboardOffset = 0;
+            this._origTransform = null;
+        }
     }
 
     computeContentUsage = () => {
