@@ -11,6 +11,10 @@ interface ModalProps {
      * Defaults to the Next.js root (`__next`).
      */
     overlayRoot?: string | HTMLElement;
+    /** Maximum width in pixels the modal is allowed to grow to */
+    maxWidth?: number;
+    /** Maximum height in pixels the modal is allowed to grow to */
+    maxHeight?: number;
 }
 
 const FOCUSABLE_SELECTORS = [
@@ -27,8 +31,9 @@ const FOCUSABLE_SELECTORS = [
     '[contenteditable]'
 ].join(',');
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot, maxWidth, maxHeight }) => {
     const modalRef = useRef<HTMLDivElement>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
     const triggerRef = useRef<HTMLElement | null>(null);
     const portalRef = useRef<HTMLDivElement | null>(null);
     const inertRootRef = useRef<HTMLElement | null>(null);
@@ -87,6 +92,42 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot })
     }, []);
 
     useEffect(() => {
+        if (!isOpen) {
+            if (modalRef.current) {
+                modalRef.current.style.width = '';
+                modalRef.current.style.height = '';
+            }
+            return;
+        }
+
+        const modal = modalRef.current;
+        const content = contentRef.current;
+        if (!modal || !content || typeof ResizeObserver === 'undefined') return;
+
+        const maxW = maxWidth ?? window.innerWidth * 0.9;
+        const maxH = maxHeight ?? window.innerHeight * 0.9;
+
+        const resize = () => {
+            if (!modal || !content) return;
+            const neededWidth = Math.min(maxW, content.scrollWidth);
+            const neededHeight = Math.min(maxH, content.scrollHeight);
+            if (neededWidth > modal.clientWidth) {
+                modal.style.width = `${neededWidth}px`;
+            }
+            if (neededHeight > modal.clientHeight) {
+                modal.style.height = `${neededHeight}px`;
+            }
+        };
+
+        const observer = new ResizeObserver(resize);
+        observer.observe(content);
+        observer.observe(modal);
+        resize();
+
+        return () => observer.disconnect();
+    }, [isOpen, maxWidth, maxHeight]);
+
+    useEffect(() => {
         inertRootRef.current = getOverlayRoot();
         if (isOpen) {
             triggerRef.current = document.activeElement as HTMLElement;
@@ -117,7 +158,9 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot })
             onKeyDown={handleKeyDown}
             tabIndex={-1}
         >
-            {children}
+            <div ref={contentRef}>
+                {children}
+            </div>
         </div>,
         portalRef.current
     );
