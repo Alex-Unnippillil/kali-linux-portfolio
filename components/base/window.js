@@ -205,10 +205,107 @@ export class Window extends Component {
         return Math.round(value / 8) * 8;
     }
 
+    snapToEdges = (node, x, y) => {
+        const threshold = 6;
+        const parentRect = node.parentElement ? node.parentElement.getBoundingClientRect() : { left: 0, top: 0 };
+        const rect = node.getBoundingClientRect();
+        const width = rect.width;
+        const height = rect.height;
+        let left = x + parentRect.left;
+        let top = y + parentRect.top;
+        let right = left + width;
+        let bottom = top + height;
+
+        const windows = Array.from(document.querySelectorAll('.opened-window')).filter(el => el !== node);
+        windows.forEach(el => {
+            const r = el.getBoundingClientRect();
+            if (Math.abs(left - r.left) <= threshold) {
+                left = r.left; right = left + width;
+            } else if (Math.abs(left - r.right) <= threshold) {
+                left = r.right; right = left + width;
+            } else if (Math.abs(right - r.left) <= threshold) {
+                right = r.left; left = right - width;
+            } else if (Math.abs(right - r.right) <= threshold) {
+                right = r.right; left = right - width;
+            }
+
+            if (Math.abs(top - r.top) <= threshold) {
+                top = r.top; bottom = top + height;
+            } else if (Math.abs(top - r.bottom) <= threshold) {
+                top = r.bottom; bottom = top + height;
+            } else if (Math.abs(bottom - r.top) <= threshold) {
+                bottom = r.top; top = bottom - height;
+            } else if (Math.abs(bottom - r.bottom) <= threshold) {
+                bottom = r.bottom; top = bottom - height;
+            }
+        });
+
+        if (Math.abs(left) <= threshold) {
+            left = 0; right = left + width;
+        } else if (Math.abs(right - window.innerWidth) <= threshold) {
+            right = window.innerWidth; left = right - width;
+        }
+        if (Math.abs(top) <= threshold) {
+            top = 0; bottom = top + height;
+        } else if (Math.abs(bottom - window.innerHeight) <= threshold) {
+            bottom = window.innerHeight; top = bottom - height;
+        }
+
+        return { x: left - parentRect.left, y: top - parentRect.top };
+    }
+
+    snapWidth = (node, width) => {
+        const threshold = 6;
+        const rect = node.getBoundingClientRect();
+        let newWidth = width;
+        let right = rect.left + newWidth;
+        const windows = Array.from(document.querySelectorAll('.opened-window')).filter(el => el !== node);
+        windows.forEach(el => {
+            const r = el.getBoundingClientRect();
+            if (Math.abs(right - r.left) <= threshold) {
+                newWidth = r.left - rect.left;
+                right = rect.left + newWidth;
+            } else if (Math.abs(right - r.right) <= threshold) {
+                newWidth = r.right - rect.left;
+                right = rect.left + newWidth;
+            }
+        });
+        if (Math.abs(right - window.innerWidth) <= threshold) {
+            newWidth = window.innerWidth - rect.left;
+        }
+        return newWidth;
+    }
+
+    snapHeight = (node, height) => {
+        const threshold = 6;
+        const rect = node.getBoundingClientRect();
+        let newHeight = height;
+        let bottom = rect.top + newHeight;
+        const windows = Array.from(document.querySelectorAll('.opened-window')).filter(el => el !== node);
+        windows.forEach(el => {
+            const r = el.getBoundingClientRect();
+            if (Math.abs(bottom - r.top) <= threshold) {
+                newHeight = r.top - rect.top;
+                bottom = rect.top + newHeight;
+            } else if (Math.abs(bottom - r.bottom) <= threshold) {
+                newHeight = r.bottom - rect.top;
+                bottom = rect.top + newHeight;
+            }
+        });
+        if (Math.abs(bottom - window.innerHeight) <= threshold) {
+            newHeight = window.innerHeight - rect.top;
+        }
+        return newHeight;
+    }
+
     handleVerticleResize = () => {
         if (this.props.resizable === false) return;
         const px = (this.state.height / 100) * window.innerHeight + 1;
-        const snapped = this.snapToGrid(px);
+        let snapped = this.snapToGrid(px);
+        const node = document.getElementById(this.id);
+        if (node) {
+            snapped = this.snapHeight(node, snapped);
+        }
         const heightPercent = snapped / window.innerHeight * 100;
         this.setState({ height: heightPercent }, this.resizeBoundries);
     }
@@ -216,7 +313,11 @@ export class Window extends Component {
     handleHorizontalResize = () => {
         if (this.props.resizable === false) return;
         const px = (this.state.width / 100) * window.innerWidth + 1;
-        const snapped = this.snapToGrid(px);
+        let snapped = this.snapToGrid(px);
+        const node = document.getElementById(this.id);
+        if (node) {
+            snapped = this.snapWidth(node, snapped);
+        }
         const widthPercent = snapped / window.innerWidth * 100;
         this.setState({ width: widthPercent }, this.resizeBoundries);
     }
@@ -354,7 +455,8 @@ export class Window extends Component {
 
         x = resist(x, 0, maxX);
         y = resist(y, 0, maxY);
-        node.style.transform = `translate(${x}px, ${y}px)`;
+        const snap = this.snapToEdges(node, x, y);
+        node.style.transform = `translate(${snap.x}px, ${snap.y}px)`;
     }
 
     handleDrag = (e, data) => {

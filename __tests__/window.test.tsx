@@ -199,7 +199,7 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true, preventDefault: () => {}, stopPropagation: () => {} } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
@@ -319,6 +319,68 @@ describe('Edge resistance', () => {
     });
 
     expect(winEl.style.transform).toBe('translate(0px, 0px)');
+  });
+});
+
+describe('Edge snapping to other windows', () => {
+  it('snaps to nearby window edge while dragging', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <>
+        <Window
+          id="win1"
+          title="Win1"
+          screen={() => <div>content</div>}
+          focus={() => {}}
+          hasMinimised={() => {}}
+          closed={() => {}}
+          hideSideBar={() => {}}
+          openApp={() => {}}
+          ref={ref}
+        />
+        <Window
+          id="win2"
+          title="Win2"
+          screen={() => <div>content</div>}
+          focus={() => {}}
+          hasMinimised={() => {}}
+          closed={() => {}}
+          hideSideBar={() => {}}
+          openApp={() => {}}
+        />
+      </>
+    );
+
+    const win1 = document.getElementById('win1')!;
+    const win2 = document.getElementById('win2')!;
+    win1.getBoundingClientRect = () => ({
+      left: 95,
+      top: 10,
+      right: 195,
+      bottom: 110,
+      width: 100,
+      height: 100,
+      x: 95,
+      y: 10,
+      toJSON: () => {}
+    });
+    win2.getBoundingClientRect = () => ({
+      left: 200,
+      top: 10,
+      right: 300,
+      bottom: 110,
+      width: 100,
+      height: 100,
+      x: 200,
+      y: 10,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag({}, { node: win1, x: 95, y: 10 } as any);
+    });
+
+    expect(win1.style.transform).toBe('translate(100px, 0px)');
   });
 });
 
