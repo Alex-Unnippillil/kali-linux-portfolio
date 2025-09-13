@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import usePersistentState from '../hooks/usePersistentState';
 import { setValue, getAll } from '../utils/moduleStore';
 
@@ -53,6 +53,10 @@ const ModuleWorkspace: React.FC = () => {
   );
   const [newWorkspace, setNewWorkspace] = useState('');
   const [currentWorkspace, setCurrentWorkspace] = useState('');
+  const [workspaceGaps, setWorkspaceGaps] = usePersistentState<Record<string, number>>(
+    'workspace-gaps',
+    {},
+  );
 
   const [filter, setFilter] = useState('');
   const [selected, setSelected] = useState<Module | null>(null);
@@ -78,6 +82,21 @@ const ModuleWorkspace: React.FC = () => {
     setCurrentWorkspace(name);
     setNewWorkspace('');
   }, [newWorkspace, workspaces, setWorkspaces]);
+
+  const DEFAULT_GAP = 16;
+  const gap = currentWorkspace
+    ? workspaceGaps[currentWorkspace] ?? DEFAULT_GAP
+    : DEFAULT_GAP;
+
+  const handleGapChange = (value: number) => {
+    if (!currentWorkspace) return;
+    setWorkspaceGaps({ ...workspaceGaps, [currentWorkspace]: value });
+  };
+
+  useEffect(() => {
+    if (!currentWorkspace) return;
+    document.documentElement.style.setProperty('--win-gap', `${gap}px`);
+  }, [currentWorkspace, gap]);
 
   const selectModule = useCallback((mod: Module) => {
     setSelected(mod);
@@ -156,7 +175,24 @@ const ModuleWorkspace: React.FC = () => {
               </button>
             ))}
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="flex items-center gap-2 mt-2">
+            <label htmlFor="win-gap" className="text-sm">
+              Window gap
+            </label>
+            <input
+              id="win-gap"
+              type="range"
+              min={0}
+              max={64}
+              value={gap}
+              onChange={(e) => handleGapChange(Number(e.target.value))}
+            />
+            <span className="text-xs">{gap}px</span>
+          </div>
+          <div
+            className="grid sm:grid-cols-2 lg:grid-cols-3"
+            style={{ gap: `var(--win-gap, ${DEFAULT_GAP}px)` }}
+          >
             {filteredModules.map((m) => (
               <button
                 key={m.id}
