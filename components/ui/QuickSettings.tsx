@@ -8,13 +8,13 @@ interface Props {
 }
 
 const QuickSettings = ({ open }: Props) => {
-  const [theme, setTheme] = usePersistentState('qs-theme', 'light');
+  const [theme, setTheme] = usePersistentState('qs-theme', '');
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
+    document.documentElement.dataset.theme = theme;
   }, [theme]);
 
   useEffect(() => {
@@ -30,10 +30,18 @@ const QuickSettings = ({ open }: Props) => {
       <div className="px-4 pb-2">
         <button
           className="w-full flex justify-between"
-          onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+          onClick={() => {
+            const themes = ['', 'light', 'undercover'];
+            const next = themes[(themes.indexOf(theme) + 1) % themes.length];
+            setTheme(next);
+          }}
         >
           <span>Theme</span>
-          <span>{theme === 'light' ? 'Light' : 'Dark'}</span>
+          <span>
+            {theme === ''
+              ? 'Default'
+              : theme.charAt(0).toUpperCase() + theme.slice(1)}
+          </span>
         </button>
       </div>
       <div className="px-4 pb-2 flex justify-between">
