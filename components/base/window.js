@@ -7,8 +7,10 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import { SettingsContext } from '../../hooks/useSettings';
 
 export class Window extends Component {
+    static contextType = SettingsContext;
     constructor(props) {
         super(props);
         this.id = null;
@@ -33,6 +35,8 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            shaded: false,
+            lastHeight: null,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
@@ -423,7 +427,7 @@ export class Window extends Component {
 
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
-            this.setState({ maximized: false });
+            this.setState({ maximized: false, shaded: false });
             this.checkOverlap();
             return;
         }
@@ -431,7 +435,7 @@ export class Window extends Component {
         if (this._dockAnimation) {
             this._dockAnimation.onfinish = () => {
                 node.style.transform = endTransform;
-                this.setState({ maximized: false });
+                this.setState({ maximized: false, shaded: false });
                 this.checkOverlap();
                 this._dockAnimation.onfinish = null;
             };
@@ -443,7 +447,7 @@ export class Window extends Component {
             );
             this._dockAnimation.onfinish = () => {
                 node.style.transform = endTransform;
-                this.setState({ maximized: false });
+                this.setState({ maximized: false, shaded: false });
                 this.checkOverlap();
                 this._dockAnimation.onfinish = null;
             };
@@ -461,8 +465,38 @@ export class Window extends Component {
             this.setWinowsPosition();
             // translate window to maximize position
             r.style.transform = `translate(-1pt,-2pt)`;
-            this.setState({ maximized: true, height: 96.3, width: 100.2 });
+            this.setState({ maximized: true, height: 96.3, width: 100.2, shaded: false, lastHeight: null });
             this.props.hideSideBar(this.id, true);
+        }
+    }
+
+    shadeWindow = () => {
+        if (this.state.maximized) {
+            this.restoreWindow();
+        }
+        if (this.state.shaded) {
+            this.setState({
+                shaded: false,
+                height: this.state.lastHeight || this.state.height,
+                lastHeight: null,
+            }, this.resizeBoundries);
+        } else {
+            const barHeight = 44; // px, approx title bar height
+            const pct = (barHeight / window.innerHeight) * 100;
+            this.setState({
+                shaded: true,
+                lastHeight: this.state.height,
+                height: pct,
+            }, this.resizeBoundries);
+        }
+    }
+
+    handleTitleBarDoubleClick = () => {
+        const action = (this.context && this.context.doubleClickAction) || 'maximize';
+        if (action === 'shade') {
+            this.shadeWindow();
+        } else {
+            this.maximizeWindow();
         }
     }
 
@@ -649,6 +683,7 @@ export class Window extends Component {
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
+                            onDoubleClick={this.handleTitleBarDoubleClick}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -674,7 +709,7 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onDoubleClick }) {
     return (
         <div
             className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
@@ -683,6 +718,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
+            onDoubleClick={onDoubleClick}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>

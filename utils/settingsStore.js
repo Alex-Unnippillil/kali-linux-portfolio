@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  doubleClickAction: 'maximize',
 };
 
 export async function getAccent() {
@@ -123,6 +124,16 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getDoubleClickAction() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.doubleClickAction;
+  return window.localStorage.getItem('double-click-action') || DEFAULT_SETTINGS.doubleClickAction;
+}
+
+export async function setDoubleClickAction(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('double-click-action', value);
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +148,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('double-click-action');
 }
 
 export async function exportSettings() {
@@ -151,6 +163,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    doubleClickAction,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +175,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getDoubleClickAction(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +189,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    doubleClickAction,
     theme,
   });
 }
@@ -199,6 +214,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    doubleClickAction,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +227,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (doubleClickAction !== undefined) await setDoubleClickAction(doubleClickAction);
   if (theme !== undefined) setTheme(theme);
 }
 

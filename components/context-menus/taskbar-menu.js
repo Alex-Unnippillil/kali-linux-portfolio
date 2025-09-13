@@ -1,11 +1,13 @@
 import React, { useRef } from 'react';
 import useFocusTrap from '../../hooks/useFocusTrap';
 import useRovingTabIndex from '../../hooks/useRovingTabIndex';
+import { useSettings } from '../../hooks/useSettings';
 
 function TaskbarMenu(props) {
     const menuRef = useRef(null);
     useFocusTrap(menuRef, props.active);
     useRovingTabIndex(menuRef, props.active, 'vertical');
+    const { doubleClickAction, setDoubleClickAction } = useSettings();
 
     const handleKeyDown = (e) => {
         if (e.key === 'Escape') {
@@ -49,6 +51,27 @@ function TaskbarMenu(props) {
                 className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
                 <span className="ml-5">Close</span>
+            </button>
+            <div className="flex justify-center w-full">
+                <div className="border-t border-gray-900 py-1 w-2/5"></div>
+            </div>
+            <button
+                type="button"
+                onClick={() => { setDoubleClickAction('maximize'); props.onCloseMenu && props.onCloseMenu(); }}
+                role="menuitem"
+                aria-label="Set double-click to maximize"
+                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+            >
+                <span className="ml-5">{doubleClickAction === 'maximize' ? '✓ ' : ''}Double-click: Maximize</span>
+            </button>
+            <button
+                type="button"
+                onClick={() => { setDoubleClickAction('shade'); props.onCloseMenu && props.onCloseMenu(); }}
+                role="menuitem"
+                aria-label="Set double-click to shade"
+                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+            >
+                <span className="ml-5">{doubleClickAction === 'shade' ? '✓ ' : ''}Double-click: Shade</span>
             </button>
         </div>
     );
