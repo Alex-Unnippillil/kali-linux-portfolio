@@ -68,6 +68,38 @@ function DesktopMenu(props) {
             >
                 <span className="ml-5">Create Shortcut...</span>
             </button>
+            <button
+                onClick={props.saveLayoutPreset}
+                type="button"
+                role="menuitem"
+                aria-label="Save Layout"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
+                <span className="ml-5">Save Layout...</span>
+            </button>
+            {props.presets && props.presets.map(preset => (
+                <button
+                    key={preset.name}
+                    onClick={() => props.applyLayoutPreset(preset.name)}
+                    type="button"
+                    role="menuitem"
+                    aria-label={`Apply ${preset.name} layout`}
+                    className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                >
+                    <span className="ml-5">{preset.name}</span>
+                </button>
+            ))}
+            {props.canUndo && (
+                <button
+                    onClick={props.undoLayout}
+                    type="button"
+                    role="menuitem"
+                    aria-label="Undo Layout"
+                    className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                >
+                    <span className="ml-5">Undo Layout</span>
+                </button>
+            )}
             <Devider />
             <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
                 <span className="ml-5">Paste</span>

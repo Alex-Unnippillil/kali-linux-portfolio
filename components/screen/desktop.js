@@ -52,6 +52,8 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            layout_presets: [],
+            last_layout: null,
         }
     }
 
@@ -89,6 +91,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        this.loadLayoutPresets();
     }
 
     componentWillUnmount() {
@@ -511,6 +514,58 @@ export class Desktop extends Component {
         this.props.setSession({ ...this.props.session, windows, dock });
     }
 
+    loadLayoutPresets = () => {
+        let presets = [];
+        try { presets = JSON.parse(safeLocalStorage?.getItem('desktop-layout-presets') || '[]'); } catch (e) { presets = []; }
+        this.setState({ layout_presets: presets });
+    }
+
+    captureCurrentLayout = () => {
+        const openWindows = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
+        const windows = openWindows.map(id => ({
+            id,
+            x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
+            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10,
+        }));
+        return { windows };
+    }
+
+    saveLayoutPreset = () => {
+        const name = typeof window !== 'undefined' ? window.prompt('Layout name?') : null;
+        if (!name) return;
+        const layout = { name, ...this.captureCurrentLayout() };
+        let presets = [];
+        try { presets = JSON.parse(safeLocalStorage?.getItem('desktop-layout-presets') || '[]'); } catch (e) { presets = []; }
+        const idx = presets.findIndex(p => p.name === name);
+        if (idx >= 0) presets[idx] = layout; else presets.push(layout);
+        safeLocalStorage?.setItem('desktop-layout-presets', JSON.stringify(presets));
+        this.setState({ layout_presets: presets });
+    }
+
+    applyLayout = (layout, remember = true) => {
+        if (!layout) return;
+        if (remember) {
+            this.setState({ last_layout: this.captureCurrentLayout() });
+        }
+        const positions = { ...this.state.window_positions };
+        layout.windows.forEach(({ id, x, y }) => { positions[id] = { x, y }; });
+        this.setState({ window_positions: positions }, () => {
+            layout.windows.forEach(({ id }) => this.openApp(id));
+        });
+    }
+
+    applyLayoutPreset = (name) => {
+        const preset = this.state.layout_presets.find(p => p.name === name);
+        if (!preset) return;
+        this.applyLayout(preset);
+    }
+
+    undoLayout = () => {
+        const layout = this.state.last_layout;
+        if (!layout) return;
+        this.setState({ last_layout: null }, () => this.applyLayout(layout, false));
+    }
+
     hideSideBar = (objId, hide) => {
         if (hide === this.state.hideSideBar) return;
 
@@ -912,6 +967,11 @@ export class Desktop extends Component {
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                    saveLayoutPreset={this.saveLayoutPreset}
+                    applyLayoutPreset={this.applyLayoutPreset}
+                    undoLayout={this.undoLayout}
+                    presets={this.state.layout_presets}
+                    canUndo={!!this.state.last_layout}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
                 <AppMenu
