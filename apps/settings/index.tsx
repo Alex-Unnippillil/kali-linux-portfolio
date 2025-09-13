@@ -29,6 +29,8 @@ export default function Settings() {
     setHighContrast,
     haptics,
     setHaptics,
+    codeLigatures,
+    setCodeLigatures,
     theme,
     setTheme,
   } = useSettings();
@@ -258,6 +260,14 @@ export default function Settings() {
               checked={haptics}
               onChange={setHaptics}
               ariaLabel="Haptics"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Enable code ligatures:</span>
+            <ToggleSwitch
+              checked={codeLigatures}
+              onChange={setCodeLigatures}
+              ariaLabel="Enable code ligatures"
             />
           </div>
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">

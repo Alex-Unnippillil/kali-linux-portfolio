@@ -169,6 +169,11 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     background: transparent;
 }
 
+.code-ligatures .terminal .screen,
+.code-ligatures .terminal .xterm-screen {
+    font-variant-ligatures: contextual;
+}
+
 .xterm .xterm-cursor {
     animation: cursor-pulse 1s steps(2) infinite;
 }
