@@ -508,6 +508,10 @@ play/pause and track controls include keyboard hotkeys.
 
 See [`LICENSE`](./LICENSE).
 
+### Trademarks
+
+"Kali Linux" and the Kali dragon logo are trademarks of Offensive Security. Their use in this project is for identification purposes only and does not imply any endorsement.
+
 ---
 
 *Generated on 2025-08-26*
