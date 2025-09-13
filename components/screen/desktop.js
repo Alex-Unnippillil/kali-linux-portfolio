@@ -476,6 +476,7 @@ export class Desktop extends Component {
                     allowMaximize: app.allowMaximize,
                     defaultWidth: app.defaultWidth,
                     defaultHeight: app.defaultHeight,
+                    icon: app.icon,
                     initialX: pos ? pos.x : undefined,
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
