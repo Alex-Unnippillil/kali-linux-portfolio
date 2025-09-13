@@ -167,6 +167,7 @@ const WhiskerMenu: React.FC = () => {
                   <UbuntuApp
                     id={app.id}
                     icon={app.icon}
+                    iconId={app.iconId}
                     name={app.title}
                     openApp={() => openSelectedApp(app.id)}
                     disabled={app.disabled}

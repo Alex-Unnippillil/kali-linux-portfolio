@@ -441,6 +441,7 @@ export class Desktop extends Component {
                     name: app.title,
                     id: app.id,
                     icon: app.icon,
+                    iconId: app.iconId,
                     openApp: this.openApp,
                     disabled: this.state.disabled_apps[app.id],
                     prefetch: app.screen?.prefetch,
