@@ -41,6 +41,7 @@ export class Desktop extends Component {
             minimized_windows: {},
             window_positions: {},
             desktop_apps: [],
+            preMosaic: null,
             context_menus: {
                 desktop: false,
                 default: false,
@@ -163,6 +164,14 @@ export class Desktop extends Component {
         else if (e.altKey && (e.key === '`' || e.key === '~')) {
             e.preventDefault();
             this.cycleAppWindows(e.shiftKey ? -1 : 1);
+        }
+        else if (e.metaKey && e.key.toLowerCase() === 'm') {
+            e.preventDefault();
+            this.mosaicWindows();
+        }
+        else if (e.metaKey && e.key.toLowerCase() === 'u') {
+            e.preventDefault();
+            this.undoMosaic();
         }
         else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
             e.preventDefault();
@@ -509,6 +518,60 @@ export class Desktop extends Component {
         }));
         const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
         this.props.setSession({ ...this.props.session, windows, dock });
+    }
+
+    partitionRect = (rect, count) => {
+        const rects = [rect];
+        while (rects.length < count) {
+            const r = rects.shift();
+            if (!r) break;
+            const splitVertically = r.width > r.height;
+            if (splitVertically) {
+                const half = Math.floor(r.width / 2);
+                rects.push({ x: r.x, y: r.y, width: half, height: r.height });
+                rects.push({ x: r.x + half, y: r.y, width: r.width - half, height: r.height });
+            } else {
+                const half = Math.floor(r.height / 2);
+                rects.push({ x: r.x, y: r.y, width: r.width, height: half });
+                rects.push({ x: r.x, y: r.y + half, width: r.width, height: r.height - half });
+            }
+        }
+        return rects.slice(0, count);
+    }
+
+    mosaicWindows = () => {
+        const ids = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
+        if (!ids.length) return;
+        const pre = {};
+        ids.forEach(id => {
+            const node = document.getElementById(id);
+            if (node) {
+                const r = node.getBoundingClientRect();
+                pre[id] = { x: r.x, y: r.y, width: r.width, height: r.height };
+            }
+        });
+        const rects = this.partitionRect({ x: 0, y: 0, width: window.innerWidth, height: window.innerHeight }, ids.length);
+        const positions = {};
+        ids.forEach((id, i) => {
+            const r = rects[i];
+            positions[id] = { x: r.x, y: r.y };
+            const event = new CustomEvent('set-bounds', { detail: r });
+            document.getElementById(id)?.dispatchEvent(event);
+        });
+        this.setState(prev => ({ window_positions: { ...prev.window_positions, ...positions }, preMosaic: pre }), this.saveSession);
+    }
+
+    undoMosaic = () => {
+        const pre = this.state.preMosaic;
+        if (!pre) return;
+        const positions = {};
+        Object.keys(pre).forEach(id => {
+            const r = pre[id];
+            positions[id] = { x: r.x, y: r.y };
+            const event = new CustomEvent('set-bounds', { detail: r });
+            document.getElementById(id)?.dispatchEvent(event);
+        });
+        this.setState(prev => ({ window_positions: { ...prev.window_positions, ...positions }, preMosaic: null }), this.saveSession);
     }
 
     hideSideBar = (objId, hide) => {
@@ -911,6 +974,9 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
+                    mosaicWindows={this.mosaicWindows}
+                    undoMosaic={this.undoMosaic}
+                    canUndoMosaic={!!this.state.preMosaic}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
