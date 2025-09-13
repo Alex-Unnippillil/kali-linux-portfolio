@@ -41,15 +41,16 @@ class AllApplications extends React.Component {
     renderApps = () => {
         const apps = this.state.apps || [];
         return apps.map((app) => (
-            <UbuntuApp
-                key={app.id}
-                name={app.title}
-                id={app.id}
-                icon={app.icon}
-                openApp={() => this.openApp(app.id)}
-                disabled={app.disabled}
-                prefetch={app.screen?.prefetch}
-            />
+            <div key={app.id} className="terminal">
+                <UbuntuApp
+                    name={app.title}
+                    id={app.id}
+                    icon={app.icon}
+                    openApp={() => this.openApp(app.id)}
+                    disabled={app.disabled}
+                    prefetch={app.screen?.prefetch}
+                />
+            </div>
         ));
     };
 
@@ -62,8 +63,10 @@ class AllApplications extends React.Component {
                     value={this.state.query}
                     onChange={this.handleChange}
                 />
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 pb-10 place-items-center">
-                    {this.renderApps()}
+                <div className="cq">
+                    <div className="kali-grid grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 pb-10 place-items-center">
+                        {this.renderApps()}
+                    </div>
                 </div>
             </div>
         );

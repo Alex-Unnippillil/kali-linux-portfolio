@@ -76,7 +76,10 @@ export default function AppGrid({ openApp }) {
     if (index >= data.items.length) return null;
     const app = data.items[index];
     return (
-      <div style={{ ...style, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 12 }}>
+      <div
+        style={{ ...style, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+        className="terminal"
+      >
         <UbuntuApp
           id={app.id}
           icon={app.icon}
@@ -96,7 +99,7 @@ export default function AppGrid({ openApp }) {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
-      <div className="w-full flex-1 h-[70vh] outline-none" onKeyDown={handleKeyDown}>
+      <div className="cq w-full flex-1 h-[70vh] outline-none" onKeyDown={handleKeyDown}>
         <AutoSizer>
           {({ height, width }) => {
             const columnCount = getColumnCount(width);
@@ -111,7 +114,7 @@ export default function AppGrid({ openApp }) {
                 rowCount={rowCount}
                 rowHeight={112}
                 width={width}
-                className="scroll-smooth"
+                className="kali-grid scroll-smooth"
               >
                 {(props) => <Cell {...props} data={{ items: filtered, columnCount }} />}
               </Grid>

@@ -530,3 +530,20 @@ textarea:focus-visible {
     color: #000 !important;
 }
 
+/* Container query utilities */
+.cq {
+    container-type: inline-size;
+}
+
+.kali-grid > .terminal > div {
+    padding: 0.25rem;
+    font-size: 0.75rem;
+}
+
+@container (min-width: 520px) {
+    .kali-grid > .terminal > div {
+        padding: 1rem;
+        font-size: 0.875rem;
+    }
+}
+
