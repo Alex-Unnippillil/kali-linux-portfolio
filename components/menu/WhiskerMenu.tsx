@@ -3,6 +3,8 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import usePersistentState from '../../hooks/usePersistentState';
+import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 
 type AppMeta = {
   id: string;
@@ -41,6 +43,11 @@ const WhiskerMenu: React.FC = () => {
   const utilityApps: AppMeta[] = utilities as any;
   const gameApps: AppMeta[] = games as any;
 
+  const { highContrast, setHighContrast, allowNetwork, setAllowNetwork, accent, setAccent } = useSettings();
+  const [clock24, setClock24] = usePersistentState('clock-format-24h', false, (v: any) => typeof v === 'boolean');
+  const [bgEnabled, setBgEnabled] = usePersistentState('background-enabled', true, (v: any) => typeof v === 'boolean');
+  const [opacity, setOpacity] = usePersistentState('wallpaper-opacity', 1, (v: any) => typeof v === 'number');
+
   const currentApps = useMemo(() => {
     let list: AppMeta[];
     switch (category) {
@@ -75,6 +82,19 @@ const WhiskerMenu: React.FC = () => {
     window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
     setOpen(false);
   };
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('clock-format', { detail: clock24 }));
+  }, [clock24]);
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('background-enabled', { detail: bgEnabled }));
+  }, [bgEnabled]);
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('wallpaper-opacity', { detail: opacity }));
+    document.documentElement.style.setProperty('--wallpaper-opacity', String(opacity));
+  }, [opacity]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -154,6 +174,7 @@ const WhiskerMenu: React.FC = () => {
             ))}
           </div>
           <div className="p-3">
+            <h2 className="mb-2 font-bold">Applications</h2>
             <input
               className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
               placeholder="Search"
@@ -173,6 +194,51 @@ const WhiskerMenu: React.FC = () => {
                   />
                 </div>
               ))}
+            </div>
+          </div>
+          <div className="p-3 border-l border-gray-700 w-56">
+            <h2 className="mb-2 font-bold">Settings</h2>
+            <div className="space-y-2">
+              <label className="flex justify-between items-center">
+                <span>24h Clock</span>
+                <input type="checkbox" checked={clock24} onChange={() => setClock24(!clock24)} />
+              </label>
+              <label className="flex justify-between items-center">
+                <span>Background</span>
+                <input type="checkbox" checked={bgEnabled} onChange={() => setBgEnabled(!bgEnabled)} />
+              </label>
+              <label className="flex justify-between items-center">
+                <span>High Contrast</span>
+                <input type="checkbox" checked={highContrast} onChange={() => setHighContrast(!highContrast)} />
+              </label>
+              <label className="flex justify-between items-center">
+                <span>Data Saving</span>
+                <input type="checkbox" checked={!allowNetwork} onChange={() => setAllowNetwork(!allowNetwork)} />
+              </label>
+              <label className="flex justify-between items-center">
+                <span>Accent</span>
+                <button
+                  aria-label="cycle-accent"
+                  onClick={() => {
+                    const idx = ACCENT_OPTIONS.indexOf(accent);
+                    const next = ACCENT_OPTIONS[(idx + 1) % ACCENT_OPTIONS.length];
+                    setAccent(next);
+                  }}
+                  className="w-6 h-6 rounded-full border-2 border-white"
+                  style={{ backgroundColor: accent }}
+                />
+              </label>
+              <label className="flex justify-between items-center">
+                <span>Wallpaper Opacity</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={opacity}
+                  onChange={e => setOpacity(parseFloat(e.target.value))}
+                />
+              </label>
             </div>
           </div>
         </div>
