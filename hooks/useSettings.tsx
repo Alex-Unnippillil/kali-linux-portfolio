@@ -193,7 +193,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [fontScale]);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('high-contrast', highContrast);
+    if (highContrast) {
+      document.documentElement.setAttribute('data-contrast', 'high');
+    } else {
+      document.documentElement.removeAttribute('data-contrast');
+    }
     saveHighContrast(highContrast);
   }, [highContrast]);
 

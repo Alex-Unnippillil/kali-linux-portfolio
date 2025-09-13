@@ -526,7 +526,17 @@ textarea:focus-visible {
 }
 
 /* High contrast overrides */
-.high-contrast .bg-ub-orange {
+[data-contrast="high"] {
+    color: var(--color-text);
+}
+
+[data-contrast="high"] *,
+[data-contrast="high"] *::before,
+[data-contrast="high"] *::after {
+    border-color: color-mix(in srgb, currentColor, transparent 15%);
+}
+
+[data-contrast="high"] .bg-ub-orange {
     color: #000 !important;
 }
 

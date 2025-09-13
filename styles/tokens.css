@@ -62,7 +62,7 @@
 }
 
 /* High contrast theme */
-.high-contrast {
+[data-contrast="high"] {
   --color-bg: #000000;
   --color-text: #ffffff;
   --color-ub-grey: #000000;
@@ -76,6 +76,7 @@
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
   --game-color-danger: #ff0000;
+  --color-border: #ffffff;
 }
 
 /* Dyslexia-friendly fonts */
