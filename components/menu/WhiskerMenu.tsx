@@ -68,6 +68,14 @@ const WhiskerMenu: React.FC = () => {
 
   useEffect(() => {
     if (!open) return;
+    const lastCat = safeLocalStorage?.getItem('kali:lastCat');
+    if (lastCat && CATEGORIES.some(c => c.id === lastCat)) {
+      setCategory(lastCat);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
     setHighlight(0);
   }, [open, category, query]);
 
@@ -146,8 +154,12 @@ const WhiskerMenu: React.FC = () => {
             {CATEGORIES.map(cat => (
               <button
                 key={cat.id}
+                data-cat={cat.id}
                 className={`text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
-                onClick={() => setCategory(cat.id)}
+                onClick={() => {
+                  setCategory(cat.id);
+                  safeLocalStorage?.setItem('kali:lastCat', cat.id);
+                }}
               >
                 {cat.label}
               </button>
