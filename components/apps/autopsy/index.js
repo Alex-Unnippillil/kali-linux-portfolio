@@ -281,15 +281,13 @@ function Timeline({ events, onSelect }) {
             className="w-full"
             aria-label="Timeline scrub bar"
           />
-          <datalist id="timeline-day-markers">
-            {dayMarkers.map((m) => (
-              <option
-                key={m.day}
-                value={m.idx}
-                label={new Date(m.day).toLocaleDateString()}
-              />
-            ))}
-          </datalist>
+            <datalist id="timeline-day-markers">
+              {dayMarkers.map((m) => (
+                <option key={m.day} value={m.idx}>
+                  {new Date(m.day).toLocaleDateString()}
+                </option>
+              ))}
+            </datalist>
           {hoverIndex !== null && sorted[hoverIndex] && (
             <div
               className="absolute -top-10 bg-ub-grey text-xs p-1 rounded"
@@ -553,7 +551,15 @@ function Autopsy({ initialArtifacts = null }) {
     return (
       <div key={node.name} className="pl-2">
         <div className="flex items-center h-8">
-          <span className="mr-1">{isFolder ? '📁' : '📄'}</span>
+          <span className="mr-1">
+            {isFolder ? (
+              <svg className="i">
+                <use href="#folder" />
+              </svg>
+            ) : (
+              '📄'
+            )}
+          </span>
           {isFolder ? (
             <span className="font-bold">{node.name}</span>
           ) : (
@@ -592,14 +598,15 @@ function Autopsy({ initialArtifacts = null }) {
         className="sr-only"
         dangerouslySetInnerHTML={{ __html: announcement }}
       />
-      <div className="flex space-x-2">
-        <input
-          type="text"
-          value={caseName}
-          onChange={(e) => setCaseName(e.target.value)}
-          placeholder="Case name"
-          className="flex-grow bg-ub-grey text-white px-2 py-1 rounded"
-        />
+        <div className="flex space-x-2">
+          <input
+            type="text"
+            value={caseName}
+            onChange={(e) => setCaseName(e.target.value)}
+            placeholder="Case name"
+            aria-label="Case name"
+            className="flex-grow bg-ub-grey text-white px-2 py-1 rounded"
+          />
         <button
           onClick={createCase}
           className="bg-ub-orange px-3 py-1 rounded"
@@ -640,13 +647,14 @@ function Autopsy({ initialArtifacts = null }) {
           </div>
         </div>
       )}
-      {analysis && (
-        <textarea
-          readOnly
-          value={analysis}
-          className="bg-ub-grey text-xs text-white p-2 rounded resize-none"
-        />
-      )}
+        {analysis && (
+          <textarea
+            readOnly
+            value={analysis}
+            aria-label="Analysis output"
+            className="bg-ub-grey text-xs text-white p-2 rounded resize-none"
+          />
+        )}
       {artifacts.length > 0 && (
         <div className="space-y-2">
           <div className="flex flex-wrap gap-2">

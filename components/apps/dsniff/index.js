@@ -43,7 +43,11 @@ const protocolIcons = {
   HTTP: '🌐',
   HTTPS: '🔒',
   ARP: '🔁',
-  FTP: '📁',
+  FTP: (
+    <svg className="i">
+      <use href="#folder" />
+    </svg>
+  ),
   SSH: '🔐',
 };
 
@@ -583,14 +587,15 @@ const Dsniff = () => {
           </button>
         ))}
       </div>
-      <div className="mb-2">
-        <input
-          className="w-full text-black p-1"
-          placeholder="Search logs"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
+        <div className="mb-2">
+          <input
+            className="w-full text-black p-1"
+            placeholder="Search logs"
+            aria-label="Search logs"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
       <div className="mb-2">
         <div className="flex space-x-2 mb-2">
           <select
@@ -601,12 +606,13 @@ const Dsniff = () => {
             <option value="host">host</option>
             <option value="protocol">protocol</option>
           </select>
-          <input
-            className="flex-1 text-black p-1"
-            placeholder="Value"
-            value={newValue}
-            onChange={(e) => setNewValue(e.target.value)}
-          />
+            <input
+              className="flex-1 text-black p-1"
+              placeholder="Value"
+              aria-label="Value"
+              value={newValue}
+              onChange={(e) => setNewValue(e.target.value)}
+            />
           <button
             className="bg-ub-blue text-white px-2"
             onClick={addFilter}
