@@ -40,6 +40,7 @@ export class Desktop extends Component {
             hideSideBar: false,
             minimized_windows: {},
             window_positions: {},
+            icon_positions: {},
             desktop_apps: [],
             context_menus: {
                 desktop: false,
@@ -444,11 +445,21 @@ export class Desktop extends Component {
                     openApp: this.openApp,
                     disabled: this.state.disabled_apps[app.id],
                     prefetch: app.screen?.prefetch,
+                    onDrop: (e) => this.handleIconDrop(app.id, e),
                 }
 
-                appsJsx.push(
-                    <UbuntuApp key={app.id} {...props} />
-                );
+                const pos = this.state.icon_positions[app.id];
+                if (pos) {
+                    appsJsx.push(
+                        <div key={app.id} style={{ position: 'absolute', left: pos.x, top: pos.y }}>
+                            <UbuntuApp {...props} />
+                        </div>
+                    );
+                } else {
+                    appsJsx.push(
+                        <UbuntuApp key={app.id} {...props} />
+                    );
+                }
             }
         });
         return appsJsx;
@@ -497,6 +508,23 @@ export class Desktop extends Component {
         this.setState(prev => ({
             window_positions: { ...prev.window_positions, [id]: { x: snap(x), y: snap(y) } }
         }), this.saveSession);
+    }
+
+    handleIconDrop = (id, e) => {
+        const desktop = document.getElementById('desktop');
+        if (!desktop) return;
+        const rect = desktop.getBoundingClientRect();
+        const style = getComputedStyle(document.documentElement);
+        const cell = parseInt(style.getPropertyValue('--desktop-grid-size')) || 96;
+        const gap = parseInt(style.getPropertyValue('--desktop-grid-gap')) || 0;
+        const size = cell + gap;
+        const x = e.clientX - rect.left - cell / 2;
+        const y = e.clientY - rect.top - cell / 2;
+        const snappedX = Math.round(x / size) * size;
+        const snappedY = Math.round(y / size) * size;
+        this.setState(prev => ({
+            icon_positions: { ...prev.icon_positions, [id]: { x: snappedX, y: snappedY } }
+        }));
     }
 
     saveSession = () => {
