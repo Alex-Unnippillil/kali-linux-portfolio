@@ -52,6 +52,7 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            isMobileView: false,
         }
     }
 
@@ -89,6 +90,8 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        this.updateViewport();
+        window.addEventListener('resize', this.updateViewport);
     }
 
     componentWillUnmount() {
@@ -96,6 +99,31 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        window.removeEventListener('resize', this.updateViewport);
+    }
+
+    updateViewport = () => {
+        const isMobile = window.innerWidth < 640;
+        this.setState(prev => {
+            if (prev.isMobileView === isMobile) return null;
+            return { isMobileView: isMobile };
+        }, () => {
+            if (isMobile) this.enforceSingleWindow();
+        });
+    }
+
+    enforceSingleWindow = () => {
+        this.setState(prev => {
+            if (!prev.isMobileView) return null;
+            const focusedId = this.getFocusedWindowId();
+            const minimized_windows = { ...prev.minimized_windows };
+            for (const id in prev.closed_windows) {
+                if (prev.closed_windows[id] === false) {
+                    minimized_windows[id] = id !== focusedId;
+                }
+            }
+            return { minimized_windows };
+        });
     }
 
     checkForNewFolders = () => {
@@ -601,9 +629,9 @@ export class Desktop extends Component {
                 this.focus(objId);
                 var r = document.querySelector("#" + objId);
                 r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
-                let minimized_windows = this.state.minimized_windows;
-                minimized_windows[objId] = false;
-                this.setState({ minimized_windows: minimized_windows }, this.saveSession);
+                this.setState(prev => ({
+                    minimized_windows: { ...prev.minimized_windows, [objId]: false }
+                }), this.saveSession);
             } else {
                 this.focus(objId);
                 this.saveSession();
@@ -733,18 +761,27 @@ export class Desktop extends Component {
     }
 
     focus = (objId) => {
-        // removes focus from all window and 
-        // gives focus to window with 'id = objId'
-        var focused_windows = this.state.focused_windows;
-        focused_windows[objId] = true;
-        for (let key in focused_windows) {
-            if (focused_windows.hasOwnProperty(key)) {
+        this.setState(prev => {
+            const focused_windows = { ...prev.focused_windows };
+            focused_windows[objId] = true;
+            for (let key in focused_windows) {
                 if (key !== objId) {
                     focused_windows[key] = false;
                 }
             }
-        }
-        this.setState({ focused_windows });
+
+            if (!prev.isMobileView) {
+                return { focused_windows };
+            }
+
+            const minimized_windows = { ...prev.minimized_windows };
+            for (const id in prev.closed_windows) {
+                if (prev.closed_windows[id] === false) {
+                    minimized_windows[id] = id !== objId;
+                }
+            }
+            return { focused_windows, minimized_windows };
+        });
     }
 
     addNewFolder = () => {
