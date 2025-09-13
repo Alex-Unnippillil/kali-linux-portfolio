@@ -20,6 +20,8 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getMetricsConsent as loadMetricsConsent,
+  setMetricsConsent as saveMetricsConsent,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -62,6 +64,7 @@ interface SettingsContextValue {
   pongSpin: boolean;
   allowNetwork: boolean;
   haptics: boolean;
+  metricsConsent: boolean;
   theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
@@ -73,6 +76,7 @@ interface SettingsContextValue {
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
+  setMetricsConsent: (value: boolean) => void;
   setTheme: (value: string) => void;
 }
 
@@ -87,6 +91,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
+  metricsConsent: defaults.metricsConsent,
   theme: 'default',
   setAccent: () => {},
   setWallpaper: () => {},
@@ -98,6 +103,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setPongSpin: () => {},
   setAllowNetwork: () => {},
   setHaptics: () => {},
+  setMetricsConsent: () => {},
   setTheme: () => {},
 });
 
@@ -112,6 +118,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
+  const [metricsConsent, setMetricsConsent] = useState<boolean>(
+    defaults.metricsConsent,
+  );
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
@@ -127,6 +136,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setMetricsConsent(await loadMetricsConsent());
       setTheme(loadTheme());
     })();
   }, []);
@@ -236,6 +246,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveMetricsConsent(metricsConsent);
+  }, [metricsConsent]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -249,6 +263,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         pongSpin,
         allowNetwork,
         haptics,
+        metricsConsent,
         theme,
         setAccent,
         setWallpaper,
@@ -260,6 +275,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
+        setMetricsConsent,
         setTheme,
       }}
     >
