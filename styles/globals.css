@@ -77,3 +77,15 @@ html[data-theme='matrix'] {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
+
+/* RTL support for terminal command palette */
+[dir="rtl"] .command-palette {
+  direction: rtl;
+}
+[dir="rtl"] .command-palette input {
+  text-align: right;
+}
+[dir="rtl"] .command-palette ul {
+  direction: rtl;
+  text-align: right;
+}
