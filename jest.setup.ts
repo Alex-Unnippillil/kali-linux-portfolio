@@ -1,3 +1,4 @@
+/* eslint-disable no-top-level-window/no-top-level-window-or-document */
 import { TextEncoder, TextDecoder } from 'util';
 // Polyfill structuredClone before requiring modules that depend on it
 // @ts-ignore
@@ -107,22 +108,45 @@ if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
   global.IntersectionObserver = IntersectionObserverMock as any;
 }
 
-// Simple localStorage mock for environments without it
-if (typeof window !== 'undefined' && !window.localStorage) {
+// Simple localStorage mock so tests don't crash under JSDOM's opaque origin
+if (typeof window !== 'undefined') {
   const store: Record<string, string> = {};
+  Object.defineProperty(window, 'localStorage', {
+    value: {
+      getItem: (key: string) => (key in store ? store[key] : null),
+      setItem: (key: string, value: string) => {
+        store[key] = String(value);
+      },
+      removeItem: (key: string) => {
+        delete store[key];
+      },
+      clear: () => {
+        for (const k in store) delete store[k];
+      },
+    } as Storage,
+    configurable: true,
+  });
+}
+
+// Basic alert mock for tests
+// @ts-ignore
+if (!global.alert) {
   // @ts-ignore
-  window.localStorage = {
-    getItem: (key: string) => (key in store ? store[key] : null),
-    setItem: (key: string, value: string) => {
-      store[key] = String(value);
-    },
-    removeItem: (key: string) => {
-      delete store[key];
-    },
-    clear: () => {
-      for (const k in store) delete store[k];
-    },
-  } as Storage;
+  global.alert = jest.fn();
+}
+
+// Minimal clipboard mock so copy-to-clipboard tests work
+if (typeof navigator !== 'undefined') {
+  // @ts-ignore
+  navigator.clipboard = {
+    writeText: jest.fn().mockResolvedValue(undefined),
+  } as any;
+}
+
+// documentPictureInPicture mock for components that query it
+if (typeof window !== 'undefined' && !('documentPictureInPicture' in window)) {
+  // @ts-ignore
+  window.documentPictureInPicture = { requestWindow: jest.fn() } as any;
 }
 
 // Minimal Worker mock for tests
