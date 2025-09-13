@@ -27,6 +27,9 @@ const WhiskerMenu: React.FC = () => {
   const [highlight, setHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const openRef = useRef(open);
+  const highlightRef = useRef(highlight);
+  const appsRef = useRef<AppMeta[]>([]);
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
@@ -37,7 +40,9 @@ const WhiskerMenu: React.FC = () => {
     } catch {
       return [];
     }
-  }, [allApps, open]);
+  },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [allApps, open]);
   const utilityApps: AppMeta[] = utilities as any;
   const gameApps: AppMeta[] = games as any;
 
@@ -65,6 +70,10 @@ const WhiskerMenu: React.FC = () => {
     }
     return list;
   }, [category, query, allApps, favoriteApps, recentApps, utilityApps, gameApps]);
+  useEffect(() => { appsRef.current = currentApps; }, [currentApps]);
+
+  useEffect(() => { openRef.current = open; }, [open]);
+  useEffect(() => { highlightRef.current = highlight; }, [highlight]);
 
   useEffect(() => {
     if (!open) return;
@@ -83,24 +92,24 @@ const WhiskerMenu: React.FC = () => {
         setOpen(o => !o);
         return;
       }
-      if (!open) return;
+      if (!openRef.current) return;
       if (e.key === 'Escape') {
         setOpen(false);
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setHighlight(h => Math.min(h + 1, currentApps.length - 1));
+        setHighlight(h => Math.min(h + 1, appsRef.current.length - 1));
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         setHighlight(h => Math.max(h - 1, 0));
       } else if (e.key === 'Enter') {
         e.preventDefault();
-        const app = currentApps[highlight];
+        const app = appsRef.current[highlightRef.current];
         if (app) openSelectedApp(app.id);
       }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [open, currentApps, highlight]);
+  }, []);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -157,6 +166,7 @@ const WhiskerMenu: React.FC = () => {
             <input
               className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
               placeholder="Search"
+              aria-label="Search"
               value={query}
               onChange={e => setQuery(e.target.value)}
               autoFocus
