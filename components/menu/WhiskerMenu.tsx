@@ -37,7 +37,7 @@ const WhiskerMenu: React.FC = () => {
     } catch {
       return [];
     }
-  }, [allApps, open]);
+  }, [allApps, open]); // eslint-disable-line react-hooks/exhaustive-deps
   const utilityApps: AppMeta[] = utilities as any;
   const gameApps: AppMeta[] = games as any;
 

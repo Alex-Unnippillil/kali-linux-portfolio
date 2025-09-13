@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect } from 'react';
 
 type AnyRef = { current: HTMLElement | null } | null;

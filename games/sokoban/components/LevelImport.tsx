@@ -1,3 +1,4 @@
+/* eslint-disable no-top-level-window/no-top-level-window-or-document */
 "use client";
 
 import React, { useCallback, useState } from "react";

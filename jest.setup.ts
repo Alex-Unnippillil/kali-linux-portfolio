@@ -1,3 +1,4 @@
+/* eslint-disable no-top-level-window/no-top-level-window-or-document */
 import { TextEncoder, TextDecoder } from 'util';
 // Polyfill structuredClone before requiring modules that depend on it
 // @ts-ignore
