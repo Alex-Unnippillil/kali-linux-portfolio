@@ -35,6 +35,8 @@ const SSHBuilder: React.FC = () => {
             className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
             value={user}
             onChange={(e) => setUser(e.target.value)}
+            autoComplete="username"
+            inputMode="text"
           />
         </div>
         <div>
@@ -47,6 +49,8 @@ const SSHBuilder: React.FC = () => {
             className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
             value={host}
             onChange={(e) => setHost(e.target.value)}
+            autoComplete="off"
+            inputMode="text"
           />
         </div>
         <div>
@@ -59,6 +63,8 @@ const SSHBuilder: React.FC = () => {
             className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
             value={port}
             onChange={(e) => setPort(e.target.value)}
+            autoComplete="off"
+            inputMode="numeric"
           />
         </div>
       </form>

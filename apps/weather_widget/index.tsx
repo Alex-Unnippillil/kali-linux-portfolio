@@ -16,13 +16,15 @@ export default function WeatherWidget() {
           id="city-search"
           placeholder="Search city"
           list="saved-cities"
+          autoComplete="off"
+          inputMode="text"
         />
         <datalist id="saved-cities"></datalist>
         <select id="unit-toggle">
           <option value="metric">°C</option>
           <option value="imperial">°F</option>
         </select>
-        <input type="text" id="api-key-input" placeholder="API Key (optional)" />
+        <input type="text" id="api-key-input" placeholder="API Key (optional)" autoComplete="off" inputMode="text" />
         <button id="save-api-key">Save</button>
         <button id="pin-city">Pin</button>
       </div>
