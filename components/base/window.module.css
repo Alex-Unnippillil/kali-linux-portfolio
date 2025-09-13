@@ -7,3 +7,14 @@
   height: calc(100% + 10px);
   width: calc(100% - 10px);
 }
+
+.topBarDots {
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+@media (prefers-contrast: more), (forced-colors: active) {
+  .topBarDots {
+    display: none;
+  }
+}

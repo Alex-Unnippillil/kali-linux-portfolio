@@ -684,6 +684,16 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
             onKeyDown={onKeyDown}
             onBlur={onBlur}
         >
+            <svg
+                className={`${styles.topBarDots} absolute left-3 h-2 w-6`}
+                viewBox="0 0 24 6"
+                fill="currentColor"
+                aria-hidden="true"
+            >
+                <circle cx="3" cy="3" r="3" />
+                <circle cx="12" cy="3" r="3" />
+                <circle cx="21" cy="3" r="3" />
+            </svg>
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>
     )
