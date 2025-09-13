@@ -110,6 +110,12 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     -moz-box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
 }
 
+:root[data-theme='undercover'] .window-shadow {
+    box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 84%);
+    -webkit-box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 84%);
+    -moz-box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 84%);
+}
+
 .closed-window {
     animation: closeWindow 200ms 1 forwards;
 }
