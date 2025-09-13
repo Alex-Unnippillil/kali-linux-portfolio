@@ -1,5 +1,6 @@
 import React from 'react';
 import UbuntuApp from '../base/ubuntu_app';
+import Fuse from 'fuse.js';
 
 class AllApplications extends React.Component {
     constructor() {
@@ -23,12 +24,15 @@ class AllApplications extends React.Component {
     handleChange = (e) => {
         const value = e.target.value;
         const { unfilteredApps } = this.state;
-        const apps =
-            value === '' || value === null
-                ? unfilteredApps
-                : unfilteredApps.filter((app) =>
-                      app.title.toLowerCase().includes(value.toLowerCase())
-                  );
+        let apps = unfilteredApps;
+        if (value) {
+            const fuse = new Fuse(unfilteredApps, {
+                keys: ['title', 'keywords'],
+                threshold: 0.3,
+                ignoreLocation: true,
+            });
+            apps = fuse.search(value).map(r => r.item);
+        }
         this.setState({ query: value, apps });
     };
 
@@ -49,6 +53,7 @@ class AllApplications extends React.Component {
                 openApp={() => this.openApp(app.id)}
                 disabled={app.disabled}
                 prefetch={app.screen?.prefetch}
+                keywords={app.keywords}
             />
         ));
     };
