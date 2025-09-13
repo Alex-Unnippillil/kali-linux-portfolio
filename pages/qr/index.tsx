@@ -5,6 +5,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { BrowserQRCodeReader, NotFoundException } from '@zxing/library';
 import Tabs from '../../components/Tabs';
+import useHashState from '../../hooks/useHashState';
 import FormError from '../../components/ui/FormError';
 import { clearScans, loadScans, saveScans } from '../../utils/qrStorage';
 
@@ -18,7 +19,7 @@ const tabs = [
 type TabId = (typeof tabs)[number]['id'];
 
 const QRPage: React.FC = () => {
-  const [active, setActive] = useState<TabId>('text');
+  const [active, setActive] = useHashState<TabId>('text', tabs.map(t => t.id) as TabId[]);
   const [text, setText] = useState('');
   const [url, setUrl] = useState('');
   const [ssid, setSsid] = useState('');
@@ -196,132 +197,148 @@ const QRPage: React.FC = () => {
           onChange={setActive}
           className="mb-4 justify-center"
         />
-        {active === 'text' && (
-          <form onSubmit={generateQr} className="space-y-2">
-            <label className="block text-sm" htmlFor="qr-text">
-              Text
-            </label>
-            <input
-              id="qr-text"
-              type="text"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              className="w-full rounded border p-2"
-            />
-            <button
-              type="submit"
-              className="w-full rounded bg-blue-600 p-2 text-white"
-            >
-              Generate
-            </button>
-          </form>
-        )}
-        {active === 'url' && (
-          <form onSubmit={generateQr} className="space-y-2">
-            <label className="block text-sm" htmlFor="qr-url">
-              URL
-            </label>
-            <input
-              id="qr-url"
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              className="w-full rounded border p-2"
-            />
-            <button
-              type="submit"
-              className="w-full rounded bg-blue-600 p-2 text-white"
-            >
-              Generate
-            </button>
-          </form>
-        )}
-        {active === 'wifi' && (
-          <form onSubmit={generateQr} className="space-y-2">
-            <label className="block text-sm">
-              SSID
-              <input
-                type="text"
-                value={ssid}
-                onChange={(e) => setSsid(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
-              />
-            </label>
-            <label className="block text-sm">
-              Password
-              <input
-                type="text"
-                value={wifiPassword}
-                onChange={(e) => setWifiPassword(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
-              />
-            </label>
-            <label className="block text-sm">
-              Encryption
-              <select
-                value={wifiType}
-                onChange={(e) => setWifiType(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
+          {active === 'text' && (
+            <form onSubmit={generateQr} className="space-y-2">
+                <label className="block text-sm">
+                  Text
+                  <input
+                    id="qr-text"
+                    type="text"
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    className="mt-1 w-full rounded border p-2"
+                    aria-label="Text input"
+                  />
+                </label>
+              <button
+                type="submit"
+                className="w-full rounded bg-blue-600 p-2 text-white"
               >
-                <option value="WPA">WPA/WPA2</option>
-                <option value="WEP">WEP</option>
-                <option value="nopass">None</option>
-              </select>
-            </label>
-            <button
-              type="submit"
-              className="w-full rounded bg-blue-600 p-2 text-white"
-            >
-              Generate
-            </button>
-          </form>
-        )}
-        {active === 'vcard' && (
-          <form onSubmit={generateQr} className="space-y-2">
-            <label className="block text-sm">
-              Full Name
-              <input
-                type="text"
-                value={vName}
-                onChange={(e) => setVName(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
-              />
-            </label>
-            <label className="block text-sm">
-              Organization
-              <input
-                type="text"
-                value={vOrg}
-                onChange={(e) => setVOrg(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
-              />
-            </label>
-            <label className="block text-sm">
-              Phone
-              <input
-                type="tel"
-                value={vPhone}
-                onChange={(e) => setVPhone(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
-              />
-            </label>
-            <label className="block text-sm">
-              Email
-              <input
-                type="email"
-                value={vEmail}
-                onChange={(e) => setVEmail(e.target.value)}
-                className="mt-1 w-full rounded border p-2"
-              />
-            </label>
-            <button
-              type="submit"
-              className="w-full rounded bg-blue-600 p-2 text-white"
-            >
-              Generate
-            </button>
-          </form>
-        )}
+                Generate
+              </button>
+            </form>
+          )}
+          {active === 'url' && (
+            <form onSubmit={generateQr} className="space-y-2">
+                <label className="block text-sm">
+                  URL
+                  <input
+                    id="qr-url"
+                    type="url"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    className="mt-1 w-full rounded border p-2"
+                    aria-label="URL input"
+                  />
+                </label>
+              <button
+                type="submit"
+                className="w-full rounded bg-blue-600 p-2 text-white"
+              >
+                Generate
+              </button>
+            </form>
+          )}
+          {active === 'wifi' && (
+            <form onSubmit={generateQr} className="space-y-2">
+                <label className="block text-sm">
+                  SSID
+                  <input
+                    id="qr-ssid"
+                    type="text"
+                    value={ssid}
+                    onChange={(e) => setSsid(e.target.value)}
+                    className="mt-1 w-full rounded border p-2"
+                    aria-label="Wi-Fi SSID"
+                  />
+              </label>
+                <label className="block text-sm">
+                  Password
+                  <input
+                    id="qr-wifi-pass"
+                    type="text"
+                    value={wifiPassword}
+                    onChange={(e) => setWifiPassword(e.target.value)}
+                    className="mt-1 w-full rounded border p-2"
+                    aria-label="Wi-Fi password"
+                  />
+              </label>
+                <label className="block text-sm">
+                  Encryption
+                  <select
+                    id="qr-wifi-type"
+                    value={wifiType}
+                    onChange={(e) => setWifiType(e.target.value)}
+                    className="mt-1 w-full rounded border p-2"
+                    aria-label="Wi-Fi encryption"
+                  >
+                  <option value="WPA">WPA/WPA2</option>
+                  <option value="WEP">WEP</option>
+                  <option value="nopass">None</option>
+                </select>
+              </label>
+              <button
+                type="submit"
+                className="w-full rounded bg-blue-600 p-2 text-white"
+              >
+                Generate
+              </button>
+            </form>
+          )}
+          {active === 'vcard' && (
+            <form onSubmit={generateQr} className="space-y-2">
+                <label className="block text-sm">
+                  Full Name
+                  <input
+                    id="qr-v-name"
+                    type="text"
+                    value={vName}
+                    onChange={(e) => setVName(e.target.value)}
+                    className="mt-1 w-full rounded border p-2"
+                    aria-label="Full name"
+                  />
+              </label>
+                <label className="block text-sm">
+                  Organization
+                  <input
+                    id="qr-v-org"
+                    type="text"
+                    value={vOrg}
+                    onChange={(e) => setVOrg(e.target.value)}
+                    className="mt-1 w-full rounded border p-2"
+                    aria-label="Organization"
+                  />
+              </label>
+                <label className="block text-sm">
+                  Phone
+                  <input
+                    id="qr-v-phone"
+                    type="tel"
+                    value={vPhone}
+                    onChange={(e) => setVPhone(e.target.value)}
+                    className="mt-1 w-full rounded border p-2"
+                    aria-label="Phone"
+                  />
+              </label>
+                <label className="block text-sm">
+                  Email
+                  <input
+                    id="qr-v-email"
+                    type="email"
+                    value={vEmail}
+                    onChange={(e) => setVEmail(e.target.value)}
+                    className="mt-1 w-full rounded border p-2"
+                    aria-label="Email"
+                  />
+              </label>
+              <button
+                type="submit"
+                className="w-full rounded bg-blue-600 p-2 text-white"
+              >
+                Generate
+              </button>
+            </form>
+          )}
         {error && <FormError className="mt-2">{error}</FormError>}
         {qrPng && (
           <div className="mt-4 flex flex-col items-center gap-2">
@@ -351,7 +368,11 @@ const QRPage: React.FC = () => {
         )}
       </div>
       <div className="w-full max-w-md">
-        <video ref={videoRef} className="h-48 w-full rounded border" />
+        <video
+          ref={videoRef}
+          className="h-48 w-full rounded border"
+          aria-label="Camera preview"
+        />
         {scanResult && (
           <p className="mt-2 text-center text-sm">Decoded: {scanResult}</p>
         )}
