@@ -4,6 +4,12 @@ import {
   setAccent as saveAccent,
   getWallpaper as loadWallpaper,
   setWallpaper as saveWallpaper,
+  getLockWallpaper as loadLockWallpaper,
+  setLockWallpaper as saveLockWallpaper,
+  getLockSameAsDesktop as loadLockSameAsDesktop,
+  setLockSameAsDesktop as saveLockSameAsDesktop,
+  getLockBlur as loadLockBlur,
+  setLockBlur as saveLockBlur,
   getDensity as loadDensity,
   setDensity as saveDensity,
   getReducedMotion as loadReducedMotion,
@@ -54,6 +60,9 @@ const shadeColor = (color: string, percent: number): string => {
 interface SettingsContextValue {
   accent: string;
   wallpaper: string;
+  lockWallpaper: string;
+  lockSameAsDesktop: boolean;
+  lockBlur: number;
   density: Density;
   reducedMotion: boolean;
   fontScale: number;
@@ -65,6 +74,9 @@ interface SettingsContextValue {
   theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
+  setLockWallpaper: (wallpaper: string) => void;
+  setLockSameAsDesktop: (value: boolean) => void;
+  setLockBlur: (value: number) => void;
   setDensity: (density: Density) => void;
   setReducedMotion: (value: boolean) => void;
   setFontScale: (value: number) => void;
@@ -79,6 +91,9 @@ interface SettingsContextValue {
 export const SettingsContext = createContext<SettingsContextValue>({
   accent: defaults.accent,
   wallpaper: defaults.wallpaper,
+  lockWallpaper: defaults.lockWallpaper,
+  lockSameAsDesktop: defaults.lockSameAsDesktop,
+  lockBlur: defaults.lockBlur,
   density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
   fontScale: defaults.fontScale,
@@ -90,6 +105,9 @@ export const SettingsContext = createContext<SettingsContextValue>({
   theme: 'default',
   setAccent: () => {},
   setWallpaper: () => {},
+  setLockWallpaper: () => {},
+  setLockSameAsDesktop: () => {},
+  setLockBlur: () => {},
   setDensity: () => {},
   setReducedMotion: () => {},
   setFontScale: () => {},
@@ -104,6 +122,9 @@ export const SettingsContext = createContext<SettingsContextValue>({
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [accent, setAccent] = useState<string>(defaults.accent);
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
+  const [lockWallpaper, setLockWallpaper] = useState<string>(defaults.lockWallpaper);
+  const [lockSameAsDesktop, setLockSameAsDesktop] = useState<boolean>(defaults.lockSameAsDesktop);
+  const [lockBlur, setLockBlur] = useState<number>(defaults.lockBlur);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
@@ -119,6 +140,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     (async () => {
       setAccent(await loadAccent());
       setWallpaper(await loadWallpaper());
+      setLockWallpaper(await loadLockWallpaper());
+      setLockSameAsDesktop(await loadLockSameAsDesktop());
+      setLockBlur(await loadLockBlur());
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
       setFontScale(await loadFontScale());
@@ -155,6 +179,24 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveWallpaper(wallpaper);
   }, [wallpaper]);
+
+  useEffect(() => {
+    if (lockSameAsDesktop) {
+      setLockWallpaper(wallpaper);
+    }
+  }, [wallpaper, lockSameAsDesktop]);
+
+  useEffect(() => {
+    saveLockWallpaper(lockWallpaper);
+  }, [lockWallpaper]);
+
+  useEffect(() => {
+    saveLockSameAsDesktop(lockSameAsDesktop);
+  }, [lockSameAsDesktop]);
+
+  useEffect(() => {
+    saveLockBlur(lockBlur);
+  }, [lockBlur]);
 
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {
@@ -241,6 +283,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       value={{
         accent,
         wallpaper,
+        lockWallpaper,
+        lockSameAsDesktop,
+        lockBlur,
         density,
         reducedMotion,
         fontScale,
@@ -252,6 +297,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         theme,
         setAccent,
         setWallpaper,
+        setLockWallpaper,
+        setLockSameAsDesktop,
+        setLockBlur,
         setDensity,
         setReducedMotion,
         setFontScale,
