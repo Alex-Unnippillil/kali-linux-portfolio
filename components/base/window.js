@@ -255,39 +255,6 @@ export class Window extends Component {
         }
     }
 
-    snapWindow = (position) => {
-        this.setWinowsPosition();
-        const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
-        let transform = '';
-        if (position === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (position === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        } else if (position === 'top') {
-            newWidth = 100.2;
-            newHeight = 50;
-            transform = 'translate(-1pt,-2pt)';
-        }
-        const r = document.querySelector("#" + this.id);
-        if (r && transform) {
-            r.style.transform = transform;
-        }
-        this.setState({
-            snapPreview: null,
-            snapPosition: null,
-            snapped: position,
-            lastSize: { width, height },
-            width: newWidth,
-            height: newHeight
-        }, this.resizeBoundries);
-    }
-
     checkOverlap = () => {
         var r = document.querySelector("#" + this.id);
         var rect = r.getBoundingClientRect();
@@ -568,11 +535,9 @@ export class Window extends Component {
     handleSuperArrow = (e) => {
         const key = e.detail;
         if (key === 'ArrowLeft') {
-            if (this.state.snapped === 'left') this.unsnapWindow();
-            else this.snapWindow('left');
+            this.snapWindow('left');
         } else if (key === 'ArrowRight') {
-            if (this.state.snapped === 'right') this.unsnapWindow();
-            else this.snapWindow('right');
+            this.snapWindow('right');
         } else if (key === 'ArrowUp') {
             this.maximizeWindow();
         } else if (key === 'ArrowDown') {
@@ -586,26 +551,38 @@ export class Window extends Component {
 
     snapWindow = (pos) => {
         this.focusWindow();
-        const { width, height } = this.state;
+        this.setWinowsPosition();
+        const { width, height, snapped, lastSize } = this.state;
         let newWidth = width;
         let newHeight = height;
         let transform = '';
         if (pos === 'left') {
-            newWidth = 50;
+            const cycle = [50, 62];
+            const idx = snapped === 'left' ? cycle.indexOf(width) : -1;
+            newWidth = cycle[(idx + 1) % cycle.length];
             newHeight = 96.3;
             transform = 'translate(-1pt,-2pt)';
         } else if (pos === 'right') {
-            newWidth = 50;
+            const cycle = [50, 38];
+            const idx = snapped === 'right' ? cycle.indexOf(width) : -1;
+            newWidth = cycle[(idx + 1) % cycle.length];
             newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
+            const offset = window.innerWidth * ((100 - newWidth) / 100);
+            transform = `translate(${offset}px,-2pt)`;
+        } else if (pos === 'top') {
+            newWidth = 100.2;
+            newHeight = 50;
+            transform = 'translate(-1pt,-2pt)';
         }
         const node = document.getElementById(this.id);
         if (node && transform) {
             node.style.transform = transform;
         }
         this.setState({
+            snapPreview: null,
+            snapPosition: null,
             snapped: pos,
-            lastSize: { width, height },
+            lastSize: snapped ? lastSize : { width, height },
             width: newWidth,
             height: newHeight
         }, this.resizeBoundries);

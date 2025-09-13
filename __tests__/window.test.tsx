@@ -199,7 +199,7 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true, preventDefault() {}, stopPropagation() {} } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
@@ -252,6 +252,53 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBeNull();
     expect(ref.current!.state.width).toBe(60);
     expect(ref.current!.state.height).toBe(85);
+  });
+
+  it('cycles snap widths for left and right positions', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    act(() => {
+      ref.current!.handleKeyDown({ key: 'ArrowLeft', altKey: true, preventDefault() {}, stopPropagation() {} } as any);
+    });
+    expect(ref.current!.state.width).toBe(50);
+
+    act(() => {
+      ref.current!.handleKeyDown({ key: 'ArrowLeft', altKey: true, preventDefault() {}, stopPropagation() {} } as any);
+    });
+    expect(ref.current!.state.width).toBe(62);
+
+    act(() => {
+      ref.current!.handleKeyDown({ key: 'ArrowLeft', altKey: true, preventDefault() {}, stopPropagation() {} } as any);
+    });
+    expect(ref.current!.state.width).toBe(50);
+
+    act(() => {
+      ref.current!.handleKeyDown({ key: 'ArrowRight', altKey: true, preventDefault() {}, stopPropagation() {} } as any);
+    });
+    expect(ref.current!.state.width).toBe(50);
+
+    act(() => {
+      ref.current!.handleKeyDown({ key: 'ArrowRight', altKey: true, preventDefault() {}, stopPropagation() {} } as any);
+    });
+    expect(ref.current!.state.width).toBe(38);
+
+    act(() => {
+      ref.current!.handleKeyDown({ key: 'ArrowRight', altKey: true, preventDefault() {}, stopPropagation() {} } as any);
+    });
+    expect(ref.current!.state.width).toBe(50);
   });
 });
 
