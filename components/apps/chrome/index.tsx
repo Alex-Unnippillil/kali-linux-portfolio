@@ -10,6 +10,7 @@ import { Readability } from '@mozilla/readability';
 import DOMPurify from 'dompurify';
 import AddressBar from './AddressBar';
 import { getCachedFavicon, cacheFavicon } from './bookmarks';
+import trustedOrigins from '../../../security/trusted-origins.json';
 
 interface Tile {
   title: string;
@@ -30,11 +31,7 @@ const STORAGE_KEY = 'chrome-tabs';
 const HOME_URL = 'home://start';
 const SANDBOX_FLAGS = ['allow-scripts', 'allow-forms', 'allow-popups'] as const;
 const CSP = "default-src 'self'; script-src 'none'; connect-src 'none';";
-const DEMO_ORIGINS = [
-  'https://example.com',
-  'https://developer.mozilla.org',
-  'https://en.wikipedia.org',
-];
+const DEMO_ORIGINS = trustedOrigins.origins;
 
 const formatUrl = (value: string) => {
   let url = value.trim();
@@ -132,15 +129,24 @@ const Chrome: React.FC = () => {
       } catch {}
     })();
   }, [tiles]);
-  const isAllowed = useCallback((url: string) => {
-    if (url === HOME_URL) return true;
-    try {
-      const origin = new URL(url).origin;
-      return DEMO_ORIGINS.includes(origin);
-    } catch {
-      return false;
-    }
+  const matches = useCallback((origin: string, allowed: string) => {
+    return allowed.includes('*')
+      ? origin.endsWith(allowed.replace('*.', ''))
+      : origin === allowed;
   }, []);
+
+  const isAllowed = useCallback(
+    (url: string) => {
+      if (url === HOME_URL) return true;
+      try {
+        const origin = new URL(url).origin;
+        return DEMO_ORIGINS.some((allowed) => matches(origin, allowed));
+      } catch {
+        return false;
+      }
+    },
+    [matches],
+  );
 
   const setIframeMuted = useCallback((mute: boolean) => {
     try {
@@ -189,7 +195,7 @@ const Chrome: React.FC = () => {
   );
 
   useEffect(() => {
-    DEMO_ORIGINS.forEach((url) => updateFavicon(url));
+    DEMO_ORIGINS.filter((url) => !url.includes('*')).forEach((url) => updateFavicon(url));
   }, [updateFavicon]);
 
   useEffect(() => {
