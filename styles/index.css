@@ -11,6 +11,10 @@ body{
     color: var(--color-text);
 }
 
+body::before {
+    background-image: image-set(url(wallpaper@1x.jpg) 1x, url(wallpaper@2x.jpg) 2x);
+}
+
 button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .hit-area {
     min-width: var(--hit-area);
     min-height: var(--hit-area);
