@@ -17,3 +17,20 @@
   }
 }
 
+@layer components {
+  .sparkline-led {
+    @apply fill-none stroke-green-400;
+    stroke-width: 2;
+    stroke-dasharray: 2 2;
+  }
+  .sparkline-gradient {
+    fill: none;
+    stroke-width: 2;
+    stroke: url(#sparkline-gradient);
+  }
+  .sparkline-fire {
+    fill: none;
+    stroke-width: 2;
+    stroke: url(#sparkline-fire);
+  }
+}
