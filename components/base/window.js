@@ -6,6 +6,7 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import Tabs from '../Tabs';
 import styles from './window.module.css';
 
 export class Window extends Component {
@@ -659,6 +660,14 @@ export class Window extends Component {
                             allowMaximize={this.props.allowMaximize !== false}
                             pip={() => this.props.screen(this.props.addFolder, this.props.openApp)}
                         />
+                        {this.props.tabs && this.props.tabs.length > 0 && (
+                            <Tabs
+                                tabs={this.props.tabs}
+                                active={this.props.activeTab}
+                                onChange={this.props.onTabChange}
+                                className="w-full bg-ub-window-title text-white border-b border-black border-opacity-40 flex-shrink-0"
+                            />
+                        )}
                         {(this.id === "settings"
                             ? <Settings />
                             : <WindowMainScreen screen={this.props.screen} title={this.props.title}
