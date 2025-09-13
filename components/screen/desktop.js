@@ -30,6 +30,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.prefetchedProjectImages = false;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -91,11 +92,36 @@ export class Desktop extends Component {
         window.addEventListener('open-app', this.handleOpenAppEvent);
     }
 
+    componentDidUpdate(prevProps, prevState) {
+        if (!prevState.allAppsView && this.state.allAppsView && !this.prefetchedProjectImages) {
+            this.prefetchProjectImages();
+        }
+    }
+
     componentWillUnmount() {
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+    }
+
+    prefetchProjectImages = async () => {
+        try {
+            const res = await fetch('/projects.json');
+            const projects = await res.json();
+            projects.forEach((p) => {
+                if (!p.thumbnail) return;
+                if (document.querySelector(`link[rel="prefetch"][href="${p.thumbnail}"]`)) return;
+                const link = document.createElement('link');
+                link.rel = 'prefetch';
+                link.href = p.thumbnail;
+                link.as = 'image';
+                document.head.appendChild(link);
+            });
+            this.prefetchedProjectImages = true;
+        } catch (err) {
+            console.error('Failed to prefetch project thumbnails', err);
+        }
     }
 
     checkForNewFolders = () => {
