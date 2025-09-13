@@ -81,19 +81,21 @@ function MyApp(props) {
   }, []);
 
   useEffect(() => {
-    const liveRegion = document.getElementById('live-region');
-    if (!liveRegion) return;
+    const region = document.getElementById('status-region');
+    if (!region) return;
 
-    const update = (message) => {
-      liveRegion.textContent = '';
+    const announce = (message) => {
+      region.textContent = '';
       setTimeout(() => {
-        liveRegion.textContent = message;
+        region.textContent = message;
       }, 100);
     };
 
-    const handleCopy = () => update('Copied to clipboard');
-    const handleCut = () => update('Cut to clipboard');
-    const handlePaste = () => update('Pasted from clipboard');
+    window.__announce = announce;
+
+    const handleCopy = () => announce('Copied to clipboard');
+    const handleCut = () => announce('Cut to clipboard');
+    const handlePaste = () => announce('Pasted from clipboard');
 
     window.addEventListener('copy', handleCopy);
     window.addEventListener('cut', handleCut);
@@ -104,14 +106,14 @@ function MyApp(props) {
     const originalRead = clipboard?.readText?.bind(clipboard);
     if (originalWrite) {
       clipboard.writeText = async (text) => {
-        update('Copied to clipboard');
+        announce('Copied to clipboard');
         return originalWrite(text);
       };
     }
     if (originalRead) {
       clipboard.readText = async () => {
         const text = await originalRead();
-        update('Pasted from clipboard');
+        announce('Pasted from clipboard');
         return text;
       };
     }
@@ -119,7 +121,7 @@ function MyApp(props) {
     const OriginalNotification = window.Notification;
     if (OriginalNotification) {
       const WrappedNotification = function (title, options) {
-        update(`${title}${options?.body ? ' ' + options.body : ''}`);
+        announce(`${title}${options?.body ? ' ' + options.body : ''}`);
         return new OriginalNotification(title, options);
       };
       WrappedNotification.requestPermission = OriginalNotification.requestPermission.bind(
@@ -143,6 +145,7 @@ function MyApp(props) {
       if (OriginalNotification) {
         window.Notification = OriginalNotification;
       }
+      delete window.__announce;
     };
   }, []);
 
@@ -158,9 +161,14 @@ function MyApp(props) {
         </a>
         <SettingsProvider>
           <PipPortalProvider>
-            <div aria-live="polite" id="live-region" />
             <Component {...pageProps} />
             <ShortcutOverlay />
+            <div
+              id="status-region"
+              role="status"
+              aria-live="polite"
+              className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-3 py-1 rounded text-sm"
+            />
             <Analytics
               beforeSend={(e) => {
                 if (e.url.includes('/admin') || e.url.includes('/private')) return null;
