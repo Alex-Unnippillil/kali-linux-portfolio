@@ -1,0 +1,28 @@
+/* Responsive adjustments for Kali portfolio components */
+
+html, body {
+  overflow-x: hidden;
+}
+
+/* Collapse quick-launch bar to essential controls on small screens */
+@media (max-width: 640px) {
+  .main-navbar-vp > * {
+    display: none;
+  }
+  .main-navbar-vp > :nth-child(2),
+  .main-navbar-vp > :nth-child(3),
+  .main-navbar-vp > :nth-child(4) {
+    display: flex;
+  }
+}
+
+/* App drawer occupies full viewport and stacks cards in a single column */
+@media (max-width: 640px) {
+  .all-apps-anim {
+    width: 100vw;
+    height: 100vh;
+  }
+  .all-apps-grid {
+    grid-template-columns: 1fr;
+  }
+}
