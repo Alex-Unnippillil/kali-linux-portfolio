@@ -258,6 +258,7 @@ export class Window extends Component {
     snapWindow = (position) => {
         this.setWinowsPosition();
         const { width, height } = this.state;
+        const thirdWidth = 100 / 3;
         let newWidth = width;
         let newHeight = height;
         let transform = '';
@@ -265,10 +266,22 @@ export class Window extends Component {
             newWidth = 50;
             newHeight = 96.3;
             transform = 'translate(-1pt,-2pt)';
-        } else if (position === 'right') {
-            newWidth = 50;
+        } else if (position === 'center') {
+            newWidth = thirdWidth;
             newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
+            transform = `translate(${window.innerWidth / 3}px,-2pt)`;
+        } else if (position === 'right') {
+            const leftSnapped = document.querySelector('[data-snapped="left"]');
+            const centerSnapped = document.querySelector('[data-snapped="center"]');
+            if (leftSnapped && centerSnapped) {
+                newWidth = thirdWidth;
+                newHeight = 96.3;
+                transform = `translate(${(window.innerWidth / 3) * 2}px,-2pt)`;
+            } else {
+                newWidth = 50;
+                newHeight = 96.3;
+                transform = `translate(${window.innerWidth / 2}px,-2pt)`;
+            }
         } else if (position === 'top') {
             newWidth = 100.2;
             newHeight = 50;
@@ -324,7 +337,13 @@ export class Window extends Component {
             this.setState({ snapPreview: snap, snapPosition: 'left' });
         }
         else if (rect.right >= window.innerWidth - threshold) {
-            snap = { left: '50%', top: '0', width: '50%', height: '100%' };
+            const leftSnapped = document.querySelector('[data-snapped="left"]');
+            const centerSnapped = document.querySelector('[data-snapped="center"]');
+            if (leftSnapped && centerSnapped) {
+                snap = { left: '66.66%', top: '0', width: '33.33%', height: '100%' };
+            } else {
+                snap = { left: '50%', top: '0', width: '50%', height: '100%' };
+            }
             this.setState({ snapPreview: snap, snapPosition: 'right' });
         }
         else if (rect.top <= threshold) {
@@ -584,33 +603,6 @@ export class Window extends Component {
         }
     }
 
-    snapWindow = (pos) => {
-        this.focusWindow();
-        const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
-        let transform = '';
-        if (pos === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (pos === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        }
-        const node = document.getElementById(this.id);
-        if (node && transform) {
-            node.style.transform = transform;
-        }
-        this.setState({
-            snapped: pos,
-            lastSize: { width, height },
-            width: newWidth,
-            height: newHeight
-        }, this.resizeBoundries);
-    }
-
     render() {
         return (
             <>
@@ -637,6 +629,7 @@ export class Window extends Component {
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
                         className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                         id={this.id}
+                        data-snapped={this.state.snapped || undefined}
                         role="dialog"
                         aria-label={this.props.title}
                         tabIndex={0}
