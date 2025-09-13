@@ -244,14 +244,18 @@ export class Window extends Component {
                 r.style.transform = `translate(${x},${y})`;
             }
         }
+        const callback = () => {
+            this.resizeBoundries();
+            if (this.props.onSnap) this.props.onSnap(null);
+        };
         if (this.state.lastSize) {
             this.setState({
                 width: this.state.lastSize.width,
                 height: this.state.lastSize.height,
                 snapped: null
-            }, this.resizeBoundries);
+            }, callback);
         } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            this.setState({ snapped: null }, callback);
         }
     }
 
@@ -285,7 +289,10 @@ export class Window extends Component {
             lastSize: { width, height },
             width: newWidth,
             height: newHeight
-        }, this.resizeBoundries);
+        }, () => {
+            this.resizeBoundries();
+            if (this.props.onSnap) this.props.onSnap(position);
+        });
     }
 
     checkOverlap = () => {
@@ -608,7 +615,10 @@ export class Window extends Component {
             lastSize: { width, height },
             width: newWidth,
             height: newHeight
-        }, this.resizeBoundries);
+        }, () => {
+            this.resizeBoundries();
+            if (this.props.onSnap) this.props.onSnap(pos);
+        });
     }
 
     render() {

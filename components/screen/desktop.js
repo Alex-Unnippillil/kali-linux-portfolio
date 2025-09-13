@@ -30,6 +30,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.windowRefs = {};
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -40,6 +41,7 @@ export class Desktop extends Component {
             hideSideBar: false,
             minimized_windows: {},
             window_positions: {},
+            snap_positions: {},
             desktop_apps: [],
             context_menus: {
                 desktop: false,
@@ -483,11 +485,55 @@ export class Desktop extends Component {
                 }
 
                 windowsJsx.push(
-                    <Window key={app.id} {...props} />
+                    <Window
+                        key={app.id}
+                        {...props}
+                        ref={el => { if (el) this.windowRefs[app.id] = el; }}
+                        onSnap={(pos) => this.handleSnap(app.id, pos)}
+                    />
                 )
             }
         });
         return windowsJsx;
+    }
+
+    handleSnap = (id, pos) => {
+        this.setState(prev => ({
+            snap_positions: { ...prev.snap_positions, [id]: pos }
+        }), this.persistPairLayout);
+    }
+
+    persistPairLayout = () => {
+        const entries = Object.entries(this.state.snap_positions).filter(([, p]) => p === 'left' || p === 'right');
+        if (entries.length !== 2) return;
+        const [[id1, pos1], [id2, pos2]] = entries;
+        if (pos1 === pos2) return;
+        const pairKey = [id1, id2].sort().join('|');
+        let layouts = {};
+        try { layouts = JSON.parse(safeLocalStorage?.getItem('window-pair-layouts') || '{}'); } catch (e) { layouts = {}; }
+        layouts[pairKey] = { [id1]: pos1, [id2]: pos2 };
+        safeLocalStorage?.setItem('window-pair-layouts', JSON.stringify(layouts));
+    }
+
+    applyStoredLayout = (id) => {
+        let layouts = {};
+        try { layouts = JSON.parse(safeLocalStorage?.getItem('window-pair-layouts') || '{}'); } catch (e) { layouts = {}; }
+        const openIds = Object.keys(this.state.closed_windows).filter(i => this.state.closed_windows[i] === false && i !== id);
+        for (const other of openIds) {
+            const pairKey = [id, other].sort().join('|');
+            const layout = layouts[pairKey];
+            if (layout) {
+                const pos1 = layout[id];
+                const pos2 = layout[other];
+                if (pos1 && pos2) {
+                    this.windowRefs[id]?.snapWindow(pos1);
+                    this.windowRefs[other]?.snapWindow(pos2);
+                    this.setState(prev => ({
+                        snap_positions: { ...prev.snap_positions, [id]: pos1, [other]: pos2 }
+                    }));
+                }
+            }
+        }
     }
 
     updateWindowPosition = (id, x, y) => {
@@ -650,6 +696,7 @@ export class Desktop extends Component {
                 this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
                     this.focus(objId);
                     this.saveSession();
+                    this.applyStoredLayout(objId);
                 });
                 this.app_stack.push(objId);
             }, 200);
@@ -701,7 +748,9 @@ export class Desktop extends Component {
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
-        this.setState({ closed_windows, favourite_apps }, this.saveSession);
+        const snap_positions = { ...this.state.snap_positions };
+        delete snap_positions[objId];
+        this.setState({ closed_windows, favourite_apps, snap_positions }, this.saveSession);
     }
 
     pinApp = (id) => {
