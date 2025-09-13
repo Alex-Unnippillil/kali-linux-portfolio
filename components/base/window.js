@@ -255,38 +255,24 @@ export class Window extends Component {
         }
     }
 
-    snapWindow = (position) => {
-        this.setWinowsPosition();
-        const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
-        let transform = '';
-        if (position === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (position === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        } else if (position === 'top') {
-            newWidth = 100.2;
-            newHeight = 50;
-            transform = 'translate(-1pt,-2pt)';
-        }
-        const r = document.querySelector("#" + this.id);
-        if (r && transform) {
-            r.style.transform = transform;
-        }
-        this.setState({
-            snapPreview: null,
-            snapPosition: null,
-            snapped: position,
-            lastSize: { width, height },
-            width: newWidth,
-            height: newHeight
-        }, this.resizeBoundries);
+    getDockOffsets = () => {
+        const dock = document.querySelector('[aria-label="Dock"]');
+        let left = 0, right = 0, top = 0, bottom = 0;
+        const applyRect = (rect) => {
+            if (!rect) return;
+            if (rect.width > rect.height) {
+                if (rect.left <= 0) left += rect.width;
+                else right += rect.width;
+            } else {
+                if (rect.top <= 0) top += rect.height;
+                else bottom += rect.height;
+            }
+        };
+        if (dock) applyRect(dock.getBoundingClientRect());
+        return { left, right, top, bottom };
     }
+
+    // removed duplicate snapWindow definition
 
     checkOverlap = () => {
         var r = document.querySelector("#" + this.id);
@@ -318,17 +304,25 @@ export class Window extends Component {
         if (!r) return;
         var rect = r.getBoundingClientRect();
         const threshold = 30;
+        const { left, right, top, bottom } = this.getDockOffsets();
+        const innerW = window.innerWidth;
+        const innerH = window.innerHeight;
+        const availW = innerW - left - right;
+        const availH = innerH - top - bottom;
+        const leftEdge = left;
+        const rightEdge = left + availW;
+        const topEdge = top;
         let snap = null;
-        if (rect.left <= threshold) {
-            snap = { left: '0', top: '0', width: '50%', height: '100%' };
+        if (rect.left <= leftEdge + threshold) {
+            snap = { left: `${left}px`, top: `${top}px`, width: `${availW / 2}px`, height: `${availH}px` };
             this.setState({ snapPreview: snap, snapPosition: 'left' });
         }
-        else if (rect.right >= window.innerWidth - threshold) {
-            snap = { left: '50%', top: '0', width: '50%', height: '100%' };
+        else if (rect.right >= rightEdge - threshold) {
+            snap = { left: `${left + availW / 2}px`, top: `${top}px`, width: `${availW / 2}px`, height: `${availH}px` };
             this.setState({ snapPreview: snap, snapPosition: 'right' });
         }
-        else if (rect.top <= threshold) {
-            snap = { left: '0', top: '0', width: '100%', height: '50%' };
+        else if (rect.top <= topEdge + threshold) {
+            snap = { left: `${left}px`, top: `${top}px`, width: `${availW}px`, height: `${availH / 2}px` };
             this.setState({ snapPreview: snap, snapPosition: 'top' });
         }
         else {
@@ -587,23 +581,35 @@ export class Window extends Component {
     snapWindow = (pos) => {
         this.focusWindow();
         const { width, height } = this.state;
+        const { left, right, top, bottom } = this.getDockOffsets();
+        const innerW = window.innerWidth;
+        const innerH = window.innerHeight;
+        const availW = innerW - left - right;
+        const availH = innerH - top - bottom;
+        const widthPercent = (availW / innerW) * 100;
+        const heightPercent = (availH / innerH) * 100;
         let newWidth = width;
         let newHeight = height;
-        let transform = '';
+        let x = left;
+        let y = top;
         if (pos === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
+            newWidth = widthPercent / 2;
+            newHeight = heightPercent;
         } else if (pos === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
+            newWidth = widthPercent / 2;
+            newHeight = heightPercent;
+            x += availW / 2;
+        } else if (pos === 'top') {
+            newWidth = widthPercent;
+            newHeight = heightPercent / 2;
         }
         const node = document.getElementById(this.id);
-        if (node && transform) {
-            node.style.transform = transform;
+        if (node) {
+            node.style.transform = `translate(${x - 1}px,${y - 2}px)`;
         }
         this.setState({
+            snapPreview: null,
+            snapPosition: null,
             snapped: pos,
             lastSize: { width, height },
             width: newWidth,

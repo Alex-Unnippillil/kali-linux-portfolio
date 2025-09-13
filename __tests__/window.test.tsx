@@ -157,7 +157,10 @@ describe('Window snapping finalize and release', () => {
 
     expect(ref.current!.state.snapped).toBe('left');
     expect(ref.current!.state.width).toBe(50);
-    expect(ref.current!.state.height).toBe(96.3);
+    const dock = document.querySelector('[aria-label="Dock"]');
+    const bottom = dock ? dock.getBoundingClientRect().height : 0;
+    const expectedHeight = ((window.innerHeight - bottom) / window.innerHeight) * 100;
+    expect(ref.current!.state.height).toBeCloseTo(expectedHeight);
   });
 
   it('releases snap with Alt+ArrowDown restoring size', () => {
@@ -199,7 +202,12 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault: () => {},
+        stopPropagation: () => {},
+      } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
