@@ -275,7 +275,7 @@ export default function ProjectGalleryPage() {
                 key={i}
                 className="h-72 flex flex-col border rounded overflow-hidden animate-pulse"
               >
-                <div className="w-full h-40 bg-gray-300" />
+                <div className="w-full aspect-video bg-gray-300" />
                 <div className="p-2 space-y-2 flex-1">
                   <div className="h-4 bg-gray-300 rounded w-3/4" />
                   <div className="h-3 bg-gray-300 rounded w-1/2" />
