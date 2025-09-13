@@ -258,21 +258,28 @@ export class Window extends Component {
     snapWindow = (position) => {
         this.setWinowsPosition();
         const { width, height } = this.state;
+        const maxHeightPercent = 96.3;
+        const halfHeightPercent = maxHeightPercent / 2;
+        const halfHeightPx = (window.innerHeight * maxHeightPercent / 100) / 2;
         let newWidth = width;
         let newHeight = height;
         let transform = '';
         if (position === 'left') {
             newWidth = 50;
-            newHeight = 96.3;
+            newHeight = maxHeightPercent;
             transform = 'translate(-1pt,-2pt)';
         } else if (position === 'right') {
             newWidth = 50;
-            newHeight = 96.3;
+            newHeight = maxHeightPercent;
             transform = `translate(${window.innerWidth / 2}px,-2pt)`;
         } else if (position === 'top') {
             newWidth = 100.2;
-            newHeight = 50;
+            newHeight = halfHeightPercent;
             transform = 'translate(-1pt,-2pt)';
+        } else if (position === 'bottom') {
+            newWidth = 100.2;
+            newHeight = halfHeightPercent;
+            transform = `translate(-1pt,${halfHeightPx - 2}px)`;
         }
         const r = document.querySelector("#" + this.id);
         if (r && transform) {
@@ -318,6 +325,8 @@ export class Window extends Component {
         if (!r) return;
         var rect = r.getBoundingClientRect();
         const threshold = 30;
+        const maxHeightPercent = 96.3;
+        const halfHeightPx = (window.innerHeight * maxHeightPercent / 100) / 2;
         let snap = null;
         if (rect.left <= threshold) {
             snap = { left: '0', top: '0', width: '50%', height: '100%' };
@@ -328,8 +337,12 @@ export class Window extends Component {
             this.setState({ snapPreview: snap, snapPosition: 'right' });
         }
         else if (rect.top <= threshold) {
-            snap = { left: '0', top: '0', width: '100%', height: '50%' };
+            snap = { left: '0', top: '0', width: '100%', height: `${halfHeightPx}px` };
             this.setState({ snapPreview: snap, snapPosition: 'top' });
+        }
+        else if (rect.bottom >= window.innerHeight - threshold) {
+            snap = { left: '0', top: `${halfHeightPx}px`, width: '100%', height: `${halfHeightPx}px` };
+            this.setState({ snapPreview: snap, snapPosition: 'bottom' });
         }
         else {
             if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
@@ -582,33 +595,6 @@ export class Window extends Component {
                 this.unsnapWindow();
             }
         }
-    }
-
-    snapWindow = (pos) => {
-        this.focusWindow();
-        const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
-        let transform = '';
-        if (pos === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (pos === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        }
-        const node = document.getElementById(this.id);
-        if (node && transform) {
-            node.style.transform = transform;
-        }
-        this.setState({
-            snapped: pos,
-            lastSize: { width, height },
-            width: newWidth,
-            height: newHeight
-        }, this.resizeBoundries);
     }
 
     render() {
