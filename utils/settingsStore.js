@@ -2,9 +2,10 @@
 
 import { get, set, del } from 'idb-keyval';
 import { getTheme, setTheme } from './theme';
+import tokens from './tokens';
 
 const DEFAULT_SETTINGS = {
-  accent: '#1793d1',
+  accent: tokens.colors.ubOrange,
   wallpaper: 'wall-2',
   density: 'regular',
   reducedMotion: false,

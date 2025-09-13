@@ -1,4 +1,5 @@
 import Document, { Html, Head, Main, NextScript } from 'next/document';
+import tokens from '../utils/tokens';
 
 class MyDocument extends Document {
   /**
@@ -17,7 +18,7 @@ class MyDocument extends Document {
         <Head>
           <link rel="icon" href="/favicon.ico" />
           <link rel="manifest" href="/manifest.webmanifest" />
-          <meta name="theme-color" content="#0f1317" />
+          <meta name="theme-color" content={tokens.colors.bg} />
           <script nonce={nonce} src="/theme.js" />
         </Head>
         <body>
