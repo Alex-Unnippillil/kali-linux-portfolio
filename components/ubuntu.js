@@ -9,25 +9,29 @@ import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
 
 export default class Ubuntu extends Component {
-	constructor() {
-		super();
-		this.state = {
-			screen_locked: false,
-			bg_image_name: 'wall-2',
-			booting_screen: true,
-			shutDownScreen: false
-		};
-	}
+        constructor() {
+                super();
+                this.state = {
+                        screen_locked: false,
+                        bg_image_name: 'wall-2',
+                        booting_screen: true,
+                        shutDownScreen: false
+                };
+        }
 
 	componentDidMount() {
 		this.getLocalData();
 	}
 
-	setTimeOutBootScreen = () => {
-		setTimeout(() => {
-			this.setState({ booting_screen: false });
-		}, 2000);
-	};
+        setTimeOutBootScreen = () => {
+                setTimeout(() => {
+                        this.setState({ booting_screen: false });
+                }, 2000);
+        };
+
+        skipBootScreen = () => {
+                this.setState({ booting_screen: false });
+        };
 
 	getLocalData = () => {
 		// Get Previously selected Background Image
@@ -121,11 +125,12 @@ export default class Ubuntu extends Component {
 					bgImgName={this.state.bg_image_name}
 					unLockScreen={this.unLockScreen}
 				/>
-				<BootingScreen
-					visible={this.state.booting_screen}
-					isShutDown={this.state.shutDownScreen}
-					turnOn={this.turnOn}
-				/>
+                                <BootingScreen
+                                        visible={this.state.booting_screen}
+                                        isShutDown={this.state.shutDownScreen}
+                                        turnOn={this.turnOn}
+                                        onSkip={this.skipBootScreen}
+                                />
 				<Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
 				<Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
 			</div>
