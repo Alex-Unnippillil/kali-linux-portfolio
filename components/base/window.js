@@ -744,7 +744,7 @@ export function WindowEditButtons(props) {
                 >
                     <NextImage
                         src="/themes/Yaru/window/window-pin-symbolic.svg"
-                        alt="Kali window pin"
+                        alt="Window pin"
                         className="h-4 w-4 inline"
                         width={16}
                         height={16}
@@ -760,7 +760,7 @@ export function WindowEditButtons(props) {
             >
                 <NextImage
                     src="/themes/Yaru/window/window-minimize-symbolic.svg"
-                    alt="Kali window minimize"
+                    alt="Window minimize"
                     className="h-4 w-4 inline"
                     width={16}
                     height={16}
@@ -778,7 +778,7 @@ export function WindowEditButtons(props) {
                         >
                             <NextImage
                                 src="/themes/Yaru/window/window-restore-symbolic.svg"
-                                alt="Kali window restore"
+                                alt="Window restore"
                                 className="h-4 w-4 inline"
                                 width={16}
                                 height={16}
@@ -794,7 +794,7 @@ export function WindowEditButtons(props) {
                         >
                             <NextImage
                                 src="/themes/Yaru/window/window-maximize-symbolic.svg"
-                                alt="Kali window maximize"
+                                alt="Window maximize"
                                 className="h-4 w-4 inline"
                                 width={16}
                                 height={16}
@@ -812,7 +812,7 @@ export function WindowEditButtons(props) {
             >
                 <NextImage
                     src="/themes/Yaru/window/window-close-symbolic.svg"
-                    alt="Kali window close"
+                    alt="Window close"
                     className="h-4 w-4 inline"
                     width={16}
                     height={16}

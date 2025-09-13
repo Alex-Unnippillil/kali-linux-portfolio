@@ -7,7 +7,7 @@ import React, {
   forwardRef,
 } from 'react';
 
-const promptText = 'alex@kali:~$ ';
+const promptText = 'alex@portfolio:~$ ';
 
 const TerminalPaneInner = (
   { onSplit, onClose, onFocus }: { onSplit: () => void; onClose: () => void; onFocus: () => void },
