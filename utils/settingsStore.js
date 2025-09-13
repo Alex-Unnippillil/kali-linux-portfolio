@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  heroDemos: true,
 };
 
 export async function getAccent() {
@@ -102,6 +103,17 @@ export async function setHaptics(value) {
   window.localStorage.setItem('haptics', value ? 'true' : 'false');
 }
 
+export async function getHeroDemos() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.heroDemos;
+  const val = window.localStorage.getItem('hero-demos');
+  return val === null ? DEFAULT_SETTINGS.heroDemos : val === 'true';
+}
+
+export async function setHeroDemos(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('hero-demos', value ? 'true' : 'false');
+}
+
 export async function getPongSpin() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
   const val = window.localStorage.getItem('pong-spin');
@@ -137,6 +149,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('hero-demos');
 }
 
 export async function exportSettings() {
@@ -151,6 +164,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    heroDemos,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +176,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getHeroDemos(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +190,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    heroDemos,
     theme,
   });
 }
@@ -199,6 +215,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    heroDemos,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +228,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (heroDemos !== undefined) await setHeroDemos(heroDemos);
   if (theme !== undefined) setTheme(theme);
 }
 
