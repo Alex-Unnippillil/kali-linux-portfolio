@@ -14,6 +14,7 @@ import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
+import WallpaperManager from '../components/settings/WallpaperManager';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 
@@ -157,6 +158,7 @@ function MyApp(props) {
           Skip to app grid
         </a>
         <SettingsProvider>
+          <WallpaperManager />
           <PipPortalProvider>
             <div aria-live="polite" id="live-region" />
             <Component {...pageProps} />
