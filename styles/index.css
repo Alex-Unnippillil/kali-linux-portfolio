@@ -530,3 +530,31 @@ textarea:focus-visible {
     color: #000 !important;
 }
 
+/* Overshoot animation when resize constraints are exceeded */
+.resize-overshoot {
+    animation: resizeOvershoot 120ms ease-out;
+}
+
+@keyframes resizeOvershoot {
+    0% {
+        width: var(--overshoot-width);
+        height: var(--overshoot-height);
+    }
+
+    60% {
+        width: calc(var(--overshoot-width) + 2%);
+        height: calc(var(--overshoot-height) + 2%);
+    }
+
+    100% {
+        width: var(--overshoot-width);
+        height: var(--overshoot-height);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .resize-overshoot {
+        animation: none;
+    }
+}
+
