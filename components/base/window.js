@@ -221,12 +221,43 @@ export class Window extends Component {
         this.setState({ width: widthPercent }, this.resizeBoundries);
     }
 
+    getSafeAreaInsets = () => {
+        const style = getComputedStyle(document.documentElement);
+        return {
+            top: parseFloat(style.getPropertyValue('--safe-area-top')) || 0,
+            bottom: parseFloat(style.getPropertyValue('--safe-area-bottom')) || 0,
+            left: parseFloat(style.getPropertyValue('--safe-area-left')) || 0,
+            right: parseFloat(style.getPropertyValue('--safe-area-right')) || 0,
+        };
+    }
+
+    getAvailableRect = (includeDock = true) => {
+        const safe = this.getSafeAreaInsets();
+        const navbar = document.querySelector('.main-navbar-vp');
+        const taskbar = document.querySelector('[role="toolbar"]');
+        const dock = document.querySelector('nav[aria-label="Dock"]');
+        const area = document.getElementById('window-area');
+        const areaRect = area ? area.getBoundingClientRect() : { top: 0, left: 0 };
+        const dockHidden = dock && dock.classList.contains('-translate-x-full');
+        const dockWidth = (includeDock && dock && !dockHidden) ? dock.getBoundingClientRect().width : 0;
+        const topInset = safe.top + (navbar ? navbar.getBoundingClientRect().height : 0);
+        const bottomInset = safe.bottom + (taskbar ? taskbar.getBoundingClientRect().height : 0);
+        const leftInset = safe.left + dockWidth;
+        const width = window.innerWidth - leftInset - safe.right;
+        const height = window.innerHeight - topInset - bottomInset;
+        const left = leftInset - areaRect.left;
+        const top = topInset - areaRect.top;
+        return { left, top, width, height };
+    }
+
     setWinowsPosition = () => {
         var r = document.querySelector("#" + this.id);
         if (!r) return;
         var rect = r.getBoundingClientRect();
-        const x = this.snapToGrid(rect.x);
-        const y = this.snapToGrid(rect.y - 32);
+        const area = document.getElementById('window-area');
+        const areaRect = area ? area.getBoundingClientRect() : { top: 0, left: 0 };
+        const x = this.snapToGrid(rect.x - areaRect.left);
+        const y = this.snapToGrid(rect.y - areaRect.top);
         r.style.setProperty('--window-transform-x', x.toFixed(1).toString() + "px");
         r.style.setProperty('--window-transform-y', y.toFixed(1).toString() + "px");
         if (this.props.onPositionChange) {
@@ -459,10 +490,14 @@ export class Window extends Component {
             this.focusWindow();
             var r = document.querySelector("#" + this.id);
             this.setWinowsPosition();
-            // translate window to maximize position
-            r.style.transform = `translate(-1pt,-2pt)`;
-            this.setState({ maximized: true, height: 96.3, width: 100.2 });
             this.props.hideSideBar(this.id, true);
+            const { left, top, width, height } = this.getAvailableRect(false);
+            r.style.transform = `translate(${left}px,${top}px)`;
+            this.setState({
+                maximized: true,
+                height: (height / window.innerHeight) * 100,
+                width: (width / window.innerWidth) * 100
+            });
         }
     }
 
