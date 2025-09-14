@@ -102,6 +102,16 @@ See `.env.local.example` for the full list.
 
 ---
 
+## Customization
+
+- **Avatar** – replace files under `public/avatars/*`.
+- **Wordmark** – update `public/kali/kali-logo.svg`.
+- **Wallpapers** – swap images in `public/kali/wallpapers/*`.
+
+> Only use images and assets you have rights to.
+
+---
+
 ## Speed Insights
 
 - Enable Speed Insights in the Vercel project dashboard.
