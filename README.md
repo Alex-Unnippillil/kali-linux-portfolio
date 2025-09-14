@@ -100,6 +100,10 @@ See `.env.local.example` for the full list.
 - Run `yarn lint` and `yarn test` before committing changes.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
 
+## Pages Router
+
+Projects using the Next.js Pages Router can wire up `/pages/login.tsx`, `/pages/desktop.tsx`, and `/pages/api/session.ts`. See [`docs/pages-router-login-desktop.md`](./docs/pages-router-login-desktop.md) for sample implementations. The existing `middleware.ts` remains unchanged.
+
 ---
 
 ## Speed Insights
