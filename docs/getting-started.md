@@ -22,3 +22,11 @@ yarn dev
 See the [Architecture](./architecture.md) document for an overview of how the project is organized.
 
 For app contributions, see the [New App Checklist](./new-app-checklist.md).
+
+## Verification CLI
+
+```bash
+npx @kali/verify
+```
+
+> **Warning:** This command installs dependencies, lints, type-checks, builds, and briefly starts the project. Run it only in environments you trust.
