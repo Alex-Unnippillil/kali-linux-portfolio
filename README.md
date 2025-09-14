@@ -281,6 +281,12 @@ Workflow: `.github/workflows/gh-deploy.yml`:
   - `NEXT_PUBLIC_GHIDRA_WASM`
   - `NEXT_PUBLIC_UI_EXPERIMENTS`
 
+### Quick Vercel mock session
+1. Commit and push this repository to your own Git provider (e.g., GitHub).
+2. In the Vercel dashboard, choose **Add New Project** → **Import Git Repository** and select your fork.
+3. Accept the defaults; no environment variables are required for this mock deployment.
+4. After the build completes, visit `/login`, sign in, and ensure you are redirected to `/desktop`.
+
 ### Vercel deployment
 - Create a Vercel project and connect this repo.
 - Required env variables (Project Settings):
