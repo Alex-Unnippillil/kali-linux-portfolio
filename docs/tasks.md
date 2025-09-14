@@ -130,3 +130,9 @@ For each game below, build a canvas-based component with `requestAnimationFrame`
 - Keep `apps.config.js` organized with utilities and games grouped and exported consistently.
 - Monitor `fast-glob` updates and explore hash optimizations for the custom service worker.
 
+## Future Enhancements
+- Support custom icon packs for apps and dock.
+- Add user list for login/lock screens with profile switching.
+- Animate panel transitions for smoother desktop interactions.
+- Play audio cues for key desktop events.
+- Randomize wallpapers on login from available images.
