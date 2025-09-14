@@ -1,5 +1,6 @@
 import React from 'react';
 import WorkflowCard from '../components/WorkflowCard';
+import GuideFlow from '../components/GuideFlow';
 import { WindowMainScreen } from '../components/base/window';
 
 interface FrameProps {
@@ -54,6 +55,9 @@ const SecurityEducation = () => (
             link="https://www.cisa.gov/secure-our-world"
             description="CISA guidance on defending against cyber threats."
           />
+        </div>
+        <div className="p-4">
+          <GuideFlow />
         </div>
         <div className="p-4">
           <WorkflowCard />
