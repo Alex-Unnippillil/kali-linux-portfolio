@@ -50,5 +50,11 @@
       "short_name": "2048",
       "url": "/?open=2048&daily=true"
     }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+foo",
+      "url": "/protocol?url=%s"
+    }
   ]
 }
