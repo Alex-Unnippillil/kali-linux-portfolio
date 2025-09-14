@@ -1,0 +1,16 @@
+[
+  {
+    "name": "Default",
+    "baseImage": "kali-rolling",
+    "metapackages": ["core"],
+    "customKernel": false,
+    "persistence": false
+  },
+  {
+    "name": "Pen Testing",
+    "baseImage": "kali-rolling",
+    "metapackages": ["top10", "wireless"],
+    "customKernel": false,
+    "persistence": true
+  }
+]
