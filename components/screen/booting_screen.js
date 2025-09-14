@@ -1,7 +1,22 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import Image from 'next/image'
 
 function BootingScreen(props) {
+    useEffect(() => {
+        if (!props.visible || props.isShutDown) return;
+
+        const handleSkip = () => {
+            if (props.onSkip) props.onSkip();
+        };
+
+        window.addEventListener('keydown', handleSkip);
+        window.addEventListener('click', handleSkip);
+
+        return () => {
+            window.removeEventListener('keydown', handleSkip);
+            window.removeEventListener('click', handleSkip);
+        };
+    }, [props.visible, props.isShutDown, props.onSkip]);
 
     return (
         <div
