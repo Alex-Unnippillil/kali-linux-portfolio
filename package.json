@@ -27,6 +27,8 @@
     "node": "20.19.5"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.888.0",
+    "@aws-sdk/s3-request-presigner": "^3.888.0",
     "@ducanh2912/next-pwa": "^10.2.9",
     "@emailjs/browser": "^3.10.0",
     "@monaco-editor/react": "^4.7.0",
