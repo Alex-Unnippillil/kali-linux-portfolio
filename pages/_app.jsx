@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -16,6 +16,7 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import Titlebar from '../components/Titlebar';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -27,6 +28,8 @@ const ubuntu = Ubuntu({
 
 function MyApp(props) {
   const { Component, pageProps } = props;
+
+  const [showTitlebar, setShowTitlebar] = useState(false);
 
 
   useEffect(() => {
@@ -78,6 +81,16 @@ function MyApp(props) {
         console.error('Service worker setup failed', err);
       });
     }
+  }, []);
+
+  useEffect(() => {
+    const overlay = navigator?.windowControlsOverlay;
+    if (!overlay) return;
+
+    const handleChange = () => setShowTitlebar(overlay.visible);
+    handleChange();
+    overlay.addEventListener('geometrychange', handleChange);
+    return () => overlay.removeEventListener('geometrychange', handleChange);
   }, []);
 
   useEffect(() => {
@@ -156,6 +169,7 @@ function MyApp(props) {
         >
           Skip to app grid
         </a>
+        {showTitlebar && <Titlebar />}
         <SettingsProvider>
           <PipPortalProvider>
             <div aria-live="polite" id="live-region" />
