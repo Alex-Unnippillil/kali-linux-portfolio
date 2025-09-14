@@ -80,6 +80,8 @@ Copy `.env.local.example` to `.env.local` and fill in required API keys:
 - `FEATURE_TOOL_APIS` – toggle simulated tool APIs (`enabled` or `disabled`).
 - `RECAPTCHA_SECRET` and related `NEXT_PUBLIC_RECAPTCHA_*` keys for contact form spam protection.
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` – Supabase credentials. When unset, Supabase-backed APIs and features are disabled.
+- `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` – Web Push credentials. Generate them with `npx web-push generate-vapid-keys` and add them to Vercel (`vercel env add ...`).
+- `POSTGRES_PRISMA_URL` – connection string for the Prisma-managed PostgreSQL database.
 
 See `.env.local.example` for the full list.
 
@@ -219,6 +221,10 @@ Copy `.env.local.example` to `.env.local` and fill in required values.
 | `NEXT_PUBLIC_SHOW_BETA` | Set to `1` to display a small beta badge in the UI. |
 | `FEATURE_TOOL_APIS` | Enable server-side tool API routes like Hydra and John; set to `enabled` to allow. |
 | `FEATURE_HYDRA` | Allow the Hydra API (`/api/hydra`); requires `FEATURE_TOOL_APIS`. |
+| `VAPID_PUBLIC_KEY` | Web Push public key. Generate with `npx web-push generate-vapid-keys` and set on Vercel. |
+| `VAPID_PRIVATE_KEY` | Web Push private key from the same command. Keep secret in Vercel. |
+| `VAPID_SUBJECT` | Contact email or URL used as the Web Push subject. |
+| `POSTGRES_PRISMA_URL` | PostgreSQL connection string consumed by Prisma. |
 
 > In production (Vercel/GitHub Actions), set these as **environment variables or repo secrets**. See **CI/CD** below.
 
