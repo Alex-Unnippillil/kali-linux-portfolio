@@ -13,20 +13,25 @@ export const createDynamicApp = (id, title) =>
         return mod.default;
       } catch (err) {
         console.error(`Failed to load ${title}`, err);
-        return () => (
-          <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
-            {`Unable to load ${title}`}
-          </div>
-        );
+        function FallbackComponent() {
+          return (
+            <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+              {`Unable to load ${title}`}
+            </div>
+          );
+        }
+        return FallbackComponent;
       }
     },
     {
       ssr: false,
-      loading: () => (
-        <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
-          {`Loading ${title}...`}
-        </div>
-      ),
+      loading: function LoadingComponent() {
+        return (
+          <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+            {`Loading ${title}...`}
+          </div>
+        );
+      },
     }
   );
 

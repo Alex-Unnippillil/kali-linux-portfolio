@@ -50,10 +50,25 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
   );
 
   useEffect(() => {
-    const nav: any = navigator;
-    if (nav && nav.setAppBadge) {
-      if (totalCount > 0) nav.setAppBadge(totalCount).catch(() => {});
-      else nav.clearAppBadge?.().catch(() => {});
+    const nav: any = typeof navigator === 'undefined' ? null : navigator;
+    const hasSet = !!nav?.setAppBadge;
+    const hasClear = !!nav?.clearAppBadge;
+
+    const cleanTitle = () => {
+      if (typeof document !== 'undefined') {
+        document.title = document.title.replace(/^\(\d+\)\s*/, '');
+      }
+    };
+
+    if (hasSet || hasClear) {
+      if (totalCount > 0 && hasSet) nav.setAppBadge(totalCount).catch(() => {});
+      else if (hasClear) nav.clearAppBadge().catch(() => {});
+      cleanTitle();
+    } else if (typeof document !== 'undefined') {
+      cleanTitle();
+      if (totalCount > 0) {
+        document.title = `(${totalCount}) ${document.title}`;
+      }
     }
   }, [totalCount]);
 
