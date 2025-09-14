@@ -44,6 +44,9 @@ The service worker is automatically generated during `next build` via [`@ducanh2
 After the server starts, exercise an API route to confirm server-side functionality:
 ```bash
 curl -X POST http://localhost:3000/api/dummy
+curl -X POST http://localhost:3000/api/push/send \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Hello","body":"Local test"}'
 ```
 
 ### Static Export (for GitHub Pages / S3 Websites)
@@ -80,6 +83,8 @@ Copy `.env.local.example` to `.env.local` and fill in required API keys:
 - `FEATURE_TOOL_APIS` – toggle simulated tool APIs (`enabled` or `disabled`).
 - `RECAPTCHA_SECRET` and related `NEXT_PUBLIC_RECAPTCHA_*` keys for contact form spam protection.
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` – Supabase credentials. When unset, Supabase-backed APIs and features are disabled.
+- `DATABASE_URL` – Prisma database connection string (e.g., `file:./dev.db`).
+- `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_EMAIL` – Web Push VAPID keys for push notifications.
 
 See `.env.local.example` for the full list.
 
@@ -208,6 +213,10 @@ Copy `.env.local.example` to `.env.local` and fill in required values.
 | `NEXT_PUBLIC_GHIDRA_WASM` | Optional URL for a Ghidra WebAssembly build. |
 | `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | ReCAPTCHA site key used on the client. |
 | `RECAPTCHA_SECRET` | ReCAPTCHA secret key for server-side verification. |
+| `DATABASE_URL` | Connection string for Prisma (e.g., `file:./dev.db`). |
+| `VAPID_PUBLIC_KEY` | Public VAPID key for web-push. |
+| `VAPID_PRIVATE_KEY` | Private VAPID key for web-push. |
+| `VAPID_EMAIL` | Contact email used with VAPID keys. |
 | `SUPABASE_URL` | Supabase project URL for server-side access. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key for privileged operations. |
 | `SUPABASE_ANON_KEY` | Supabase anonymous key for server-side reads. |

@@ -31,6 +31,7 @@
     "@emailjs/browser": "^3.10.0",
     "@monaco-editor/react": "^4.7.0",
     "@mozilla/readability": "^0.6.0",
+    "@prisma/client": "^6.16.1",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.56.1",
     "@vercel/analytics": "^1.5.0",
@@ -101,6 +102,7 @@
     "tailwindcss": "^3.2.4",
     "three": "^0.179.1",
     "turndown": "^7.2.1",
+    "web-push": "^3.6.7",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -127,6 +129,7 @@
     "@types/seedrandom": "^3",
     "@types/three": "^0.179.0",
     "@types/web-bluetooth": "^0.0.21",
+    "@types/web-push": "^3",
     "@types/wicg-file-system-access": "^2023.10.6",
     "eslint": "^9.13.0",
     "eslint-config-next": "15.5.2",
@@ -138,6 +141,7 @@
     "node-mocks-http": "1.17.2",
     "pa11y": "^9.0.0",
     "playwright-core": "^1.55.0",
+    "prisma": "^6.16.1",
     "test-exclude": "7.0.1",
     "typescript": "5.8.2",
     "wait-on": "^8.0.4",
