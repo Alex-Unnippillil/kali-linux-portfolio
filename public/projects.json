@@ -26,5 +26,47 @@
     "demo": "https://example.com/beta-demo",
     "snippet": "console.log('Beta');",
     "language": "typescript"
+  },
+  {
+    "id": 3,
+    "title": "AWS Minimal Ubuntu",
+    "description": "Verified Ubuntu 22.04 minimal image with AWS cloud-init snippet.",
+    "stack": ["Cloud"],
+    "tags": ["aws", "cloud-init"],
+    "year": 2024,
+    "type": "cloud",
+    "thumbnail": "https://img.shields.io/badge/AWS-%23FF9900.svg?logo=amazon-aws&logoColor=white",
+    "repo": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html",
+    "demo": "https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img",
+    "snippet": "#cloud-config\npackages:\n  - awscli\nruncmd:\n  - echo 'AWS minimal instance ready' > /etc/motd\n",
+    "language": "yaml"
+  },
+  {
+    "id": 4,
+    "title": "Azure Minimal Ubuntu",
+    "description": "Verified Ubuntu 22.04 minimal image for Azure with cloud-init snippet.",
+    "stack": ["Cloud"],
+    "tags": ["azure", "cloud-init"],
+    "year": 2024,
+    "type": "cloud",
+    "thumbnail": "https://img.shields.io/badge/Azure-%230072C6.svg?logo=microsoftazure&logoColor=white",
+    "repo": "https://learn.microsoft.com/azure/virtual-machines/linux/using-cloud-init",
+    "demo": "https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64-azure.vhd.tar.gz",
+    "snippet": "#cloud-config\npackages:\n  - azure-cli\nruncmd:\n  - echo 'Azure minimal instance ready' > /etc/motd\n",
+    "language": "yaml"
+  },
+  {
+    "id": 5,
+    "title": "GCP Minimal Ubuntu",
+    "description": "Verified Ubuntu 22.04 minimal image for Google Cloud with cloud-init snippet.",
+    "stack": ["Cloud"],
+    "tags": ["gcp", "cloud-init"],
+    "year": 2024,
+    "type": "cloud",
+    "thumbnail": "https://img.shields.io/badge/GCP-%234285F4.svg?logo=google-cloud&logoColor=white",
+    "repo": "https://cloud.google.com/compute/docs/instances/startup-scripts",
+    "demo": "https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64-root.tar.xz",
+    "snippet": "#cloud-config\npackages:\n  - google-cloud-sdk\nruncmd:\n  - echo 'GCP minimal instance ready' > /etc/motd\n",
+    "language": "yaml"
   }
 ]
