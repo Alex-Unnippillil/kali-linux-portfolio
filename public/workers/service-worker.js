@@ -1,72 +1,113 @@
-const CACHE_NAME = 'periodic-cache-v1';
-const ASSETS = [
-  '/apps/weather.js',
-  '/feeds',
-  '/about',
-  '/projects',
-  '/projects.json',
-  '/apps',
-  '/apps/weather',
-  '/apps/terminal',
-  '/apps/checkers',
+// Custom service worker for Kali Linux Portfolio
+// Precaches core assets and handles offline scenarios.
+
+const CACHE_NAME = 'app-core-v1';
+const CORE_ASSETS = [
+  '/',
   '/offline.html',
+  '/offline.css',
+  '/offline.js',
   '/manifest.webmanifest',
 ];
 
-async function prefetchAssets() {
+async function cacheCoreAssets() {
   const cache = await caches.open(CACHE_NAME);
-  await Promise.all(
-    ASSETS.map(async (url) => {
-      try {
-        const response = await fetch(url, { cache: 'no-cache' });
-        if (response.ok) {
-          await cache.put(url, response.clone());
-        }
-      } catch (err) {
-        // Ignore individual failures
-      }
-    }),
-  );
+  await cache.addAll(CORE_ASSETS);
 }
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(prefetchAssets());
+  event.waitUntil(cacheCoreAssets());
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))),
+    ),
+  );
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', (event) => {
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      (async () => {
+        const cache = await caches.open(CACHE_NAME);
+        const cached = await cache.match(event.request);
+        const networkFetch = fetch(event.request)
+          .then((response) => {
+            cache.put(event.request, response.clone());
+            return response;
+          })
+          .catch(async () => cached || cache.match('/offline.html'));
+        return cached || networkFetch;
+      })(),
+    );
+  }
+});
+
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data?.json() || {};
+  } catch {
+    data = {};
+  }
+
+  const title = data.title || 'Notification';
+  const options = {
+    body: data.body,
+    icon: data.icon,
+    badge: data.badge,
+    data: { url: data.url },
+  };
+
+  event.waitUntil(
+    (async () => {
+      if ('setAppBadge' in self.registration && data.badgeCount) {
+        try {
+          await self.registration.setAppBadge(data.badgeCount);
+        } catch {
+          // Ignore badge errors
+        }
+      }
+
+      await self.registration.showNotification(title, options);
+    })(),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification?.data?.url;
+  if (!url) return;
+
+  event.waitUntil(
+    (async () => {
+      const allClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const client of allClients) {
+        if (client.url === url && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        await clients.openWindow(url);
+      }
+    })(),
+  );
 });
 
 self.addEventListener('periodicsync', (event) => {
-  if (event.tag === 'content-sync') {
-    event.waitUntil(prefetchAssets());
+  if (event.tag === 'sync-inbox') {
+    event.waitUntil(fetch('/api/inbox').catch(() => {}));
   }
 });
 
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'refresh') {
-    event.waitUntil(prefetchAssets());
+  const type = event.data && (event.data.type || event.data);
+  if (type === 'CLEAR_BADGE' && 'clearAppBadge' in self.registration) {
+    event.waitUntil(self.registration.clearAppBadge().catch(() => {}));
   }
 });
 
-self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
-
-  if (url.pathname.startsWith('/apps/')) {
-    event.respondWith(
-      caches.open(CACHE_NAME).then(async (cache) => {
-        try {
-          const response = await fetch(request);
-          if (response.ok) {
-            cache.put(request, response.clone());
-          }
-          return response;
-        } catch (err) {
-          return cache.match(request);
-        }
-      }),
-    );
-    return;
-  }
-
-  event.respondWith(
-    caches.match(request).then((cached) => cached || fetch(request)),
-  );
-});

@@ -64,24 +64,9 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 const withPWA = require('@ducanh2912/next-pwa').default({
   dest: 'public',
   sw: 'sw.js',
+  swSrc: 'public/workers/service-worker.js',
   disable: process.env.NODE_ENV === 'development',
   buildExcludes: [/dynamic-css-manifest\.json$/],
-  workboxOptions: {
-    navigateFallback: '/offline.html',
-    additionalManifestEntries: [
-      { url: '/', revision: null },
-      { url: '/feeds', revision: null },
-      { url: '/about', revision: null },
-      { url: '/projects', revision: null },
-      { url: '/projects.json', revision: null },
-      { url: '/apps', revision: null },
-      { url: '/apps/weather', revision: null },
-      { url: '/apps/terminal', revision: null },
-      { url: '/apps/checkers', revision: null },
-      { url: '/offline.html', revision: null },
-      { url: '/manifest.webmanifest', revision: null },
-    ],
-  },
 });
 
 const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
