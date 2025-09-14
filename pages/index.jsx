@@ -24,6 +24,17 @@ const InstallButton = dynamic(
     loading: () => <p>Loading install options...</p>,
   }
 );
+const FileHandlerListener = dynamic(
+  () =>
+    import('../components/file/FileHandlerListener').catch((err) => {
+      console.error('Failed to load FileHandlerListener component', err);
+      throw err;
+    }),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+);
 
 /**
  * @returns {JSX.Element}
@@ -37,6 +48,7 @@ const App = () => (
     <Ubuntu />
     <BetaBadge />
     <InstallButton />
+    <FileHandlerListener />
   </>
 );
 
