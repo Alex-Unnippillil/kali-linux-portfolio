@@ -27,6 +27,8 @@
     "node": "20.19.5"
   },
   "dependencies": {
+    "@aws-sdk/client-cloudwatch-logs": "^3.592.0",
+    "@aws-sdk/client-codebuild": "^3.592.0",
     "@ducanh2912/next-pwa": "^10.2.9",
     "@emailjs/browser": "^3.10.0",
     "@monaco-editor/react": "^4.7.0",
