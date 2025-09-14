@@ -4,6 +4,7 @@
   "start_url": "/",
   "offline_page": "/offline.html",
   "display": "standalone",
+  "display_override": ["window-controls-overlay"],
   "background_color": "#0f1317",
   "theme_color": "#0f1317",
   "icons": [
