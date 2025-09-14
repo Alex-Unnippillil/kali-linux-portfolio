@@ -28,7 +28,6 @@ export class SideBarApp extends Component {
         if (typeof navigator === 'undefined') return;
         const hasSet = 'setAppBadge' in navigator;
         const hasClear = 'clearAppBadge' in navigator;
-        if (!hasSet && !hasClear) return;
 
         const notifications = Array.isArray(this.props.notifications)
             ? this.props.notifications.length
@@ -38,10 +37,24 @@ export class SideBarApp extends Component {
             : (typeof this.props.tasks === 'number' ? this.props.tasks : 0);
         const count = notifications + tasks;
 
-        if (count > 0 && hasSet) {
-            navigator.setAppBadge(count).catch(() => {});
-        } else if (hasClear) {
-            navigator.clearAppBadge().catch(() => {});
+        const cleanTitle = () => {
+            if (typeof document !== 'undefined') {
+                document.title = document.title.replace(/^\(\d+\)\s*/, '');
+            }
+        };
+
+        if (hasSet || hasClear) {
+            if (count > 0 && hasSet) {
+                navigator.setAppBadge(count).catch(() => {});
+            } else if (hasClear) {
+                navigator.clearAppBadge().catch(() => {});
+            }
+            cleanTitle();
+        } else {
+            cleanTitle();
+            if (count > 0 && typeof document !== 'undefined') {
+                document.title = `(${count}) ${document.title}`;
+            }
         }
     };
 
