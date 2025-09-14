@@ -1,0 +1,47 @@
+import Link from 'next/link';
+
+# How the Mirror Network Works
+
+The mirror network replicates this site's content across community-hosted nodes. Below are simplified diagrams of the flow and sync process.
+
+## Distribution flow
+
+<svg width="360" height="120" role="img" aria-label="User requests content from a mirror which syncs from origin">
+  <title>Distribution flow diagram</title>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="currentColor" />
+    </marker>
+  </defs>
+  <rect x="10" y="40" width="80" height="40" rx="4" ry="4" fill="none" stroke="currentColor" />
+  <text x="30" y="65">User</text>
+  <rect x="140" y="40" width="80" height="40" rx="4" ry="4" fill="none" stroke="currentColor" />
+  <text x="158" y="65">Mirror</text>
+  <rect x="270" y="40" width="80" height="40" rx="4" ry="4" fill="none" stroke="currentColor" />
+  <text x="285" y="65">Origin</text>
+  <path d="M90 60 L140 60" stroke="currentColor" stroke-width="2" marker-end="url(#arrow)" />
+  <path d="M220 60 L270 60" stroke="currentColor" stroke-width="2" marker-end="url(#arrow)" />
+</svg>
+
+## Sync cycle
+
+<svg width="360" height="120" role="img" aria-label="Mirror periodically syncs with origin">
+  <title>Sync cycle diagram</title>
+  <defs>
+    <marker id="arrow2" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="currentColor" />
+    </marker>
+  </defs>
+  <rect x="60" y="40" width="80" height="40" rx="4" ry="4" fill="none" stroke="currentColor" />
+  <text x="78" y="65">Mirror</text>
+  <rect x="220" y="40" width="80" height="40" rx="4" ry="4" fill="none" stroke="currentColor" />
+  <text x="235" y="65">Origin</text>
+  <path d="M140 60 Q180 20 220 60" stroke="currentColor" stroke-width="2" fill="none" marker-end="url(#arrow2)" />
+  <path d="M220 60 Q180 100 140 60" stroke="currentColor" stroke-width="2" fill="none" marker-end="url(#arrow2)" />
+</svg>
+
+### Next steps
+
+- <Link href="../policies">Review the mirror policies</Link>
+- <Link href="../become-a-mirror">Become a mirror</Link>
+
