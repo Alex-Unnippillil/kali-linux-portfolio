@@ -113,6 +113,14 @@ const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
 const HtmlRewriteApp = createDynamicApp('html-rewriter', 'HTML Rewriter');
 const ContactApp = createDynamicApp('contact', 'Contact');
 
+const KaliDesktopApp = () => (
+  <iframe
+    src="/apps/kali-desktop"
+    title="Kali Desktop"
+    className="h-full w-full"
+  />
+);
+
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -176,6 +184,7 @@ const displayBleSensor = createDisplay(BleSensorApp);
 const displayBeef = createDisplay(BeefApp);
 const displayMetasploit = createDisplay(MetasploitApp);
 const displayDsniff = createDisplay(DsniffApp);
+const displayKaliDesktop = createDisplay(KaliDesktopApp);
 const displayGomoku = createDisplay(GomokuApp);
 const displayPinball = createDisplay(PinballApp);
 const displayVolatility = createDisplay(VolatilityApp);
@@ -1050,6 +1059,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displaySecurityTools,
+  },
+  {
+    id: 'kali-desktop',
+    title: 'Kali Desktop',
+    icon: '/themes/Yaru/status/icons8-kali-linux.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayKaliDesktop,
   },
   // Utilities are grouped separately
   ...utilities,
