@@ -1,6 +1,7 @@
-const plugin = require('tailwindcss/plugin');
+import type { Config } from 'tailwindcss';
+import plugin from 'tailwindcss/plugin';
 
-module.exports = {
+const config: Config = {
   darkMode: 'class',
   mode: 'jit',
   content: [
@@ -8,6 +9,7 @@ module.exports = {
     './components/**/*.{js,ts,jsx,tsx}',
     './apps/**/*.{js,ts,jsx,tsx}',
     './hooks/**/*.{js,ts,jsx,tsx}',
+    './src/app/**/*.{js,ts,jsx,tsx}',
   ],
   theme: {
     extend: {
@@ -36,6 +38,11 @@ module.exports = {
         'ubt-gedit-dark': 'var(--color-ubt-gedit-dark)',
         'ub-border-orange': 'var(--color-ub-border-orange)',
         'ub-dark-grey': 'var(--color-ub-dark-grey)',
+        // Kali palette
+        'kali-bg': '#0f1317',
+        'kali-surface': '#1a1f26',
+        'kali-blue': '#1793d1',
+        'kali-text': '#f5f5f5',
       },
       fontFamily: {
         ubuntu: ['Ubuntu', 'sans-serif'],
@@ -69,6 +76,12 @@ module.exports = {
         'tray-icon': '16px',
         'tray-icon-lg': '32px',
       },
+      boxShadow: {
+        glass: '0 4px 30px rgba(0, 0, 0, 0.1)',
+      },
+      backdropBlur: {
+        xs: '2px',
+      },
       keyframes: {
         glow: {
           '0%, 100%': { boxShadow: '0 0 0px theme("colors.amber.400")' },
@@ -87,17 +100,22 @@ module.exports = {
           },
           '100%': { transform: 'translate(0,0) scale(1)', backgroundColor: 'theme("colors.red.500")' },
         },
+        float: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-4px)' },
+        },
       },
       animation: {
         glow: 'glow 1s ease-in-out infinite',
         flourish: 'flourish 0.6s ease-out',
         mine: 'mine 0.4s ease-in-out',
+        float: 'float 4s ease-in-out infinite',
       },
     },
   },
   plugins: [
     plugin(function ({ addUtilities }) {
-      const cols = {};
+      const cols: Record<string, { flex: string; maxWidth: string; marginLeft?: string }> = {};
       for (let i = 1; i <= 12; i++) {
         const width = `${(i / 12) * 100}%`;
         cols[`.col-${i}`] = { flex: `0 0 ${width}`, maxWidth: width };
@@ -109,3 +127,5 @@ module.exports = {
     }),
   ],
 };
+
+export default config;
