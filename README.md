@@ -92,6 +92,8 @@ See `.env.local.example` for the full list.
 - `yarn test` – run the test suite.
 - `yarn lint` – check code for linting issues.
 - `yarn export` – generate a static export in the `out/` directory.
+- `npx @kali/verify` – run lint, type-checks, build, and a smoke test.
+  *Warning:* installs dependencies and starts a local server.
 
 ---
 
