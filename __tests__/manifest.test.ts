@@ -32,4 +32,13 @@ describe('web manifest', () => {
       expect(shortcut.url).toBeDefined();
     }
   });
+
+  test('uses accent for theme and background color', () => {
+    const cssPath = path.join(process.cwd(), 'styles', 'globals.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const match = css.match(/:root\s*{[^}]*--color-accent:\s*(#[0-9a-fA-F]{6})/);
+    const accent = match ? match[1] : undefined;
+    expect(manifest.theme_color).toBe(accent);
+    expect(manifest.background_color).toBe(accent);
+  });
 });

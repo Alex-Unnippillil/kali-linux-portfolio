@@ -23,6 +23,7 @@ import {
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import { updateManifestColor } from '../utils/manifest';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -149,6 +150,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
+    updateManifestColor(accent);
     saveAccent(accent);
   }, [accent]);
 
