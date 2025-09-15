@@ -61,6 +61,17 @@
   --focus-outline-width: 2px;
 }
 
+/* Explicit light and dark theme overrides */
+html[data-theme='light'] {
+  --color-bg: #ffffff;
+  --color-text: #1a1f26;
+}
+
+html[data-theme='dark'] {
+  --color-bg: #0f1317;
+  --color-text: #F5F5F5;
+}
+
 /* High contrast theme */
 .high-contrast {
   --color-bg: #000000;
