@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -16,6 +16,7 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import AnalyticsConsentBanner from '../components/common/AnalyticsConsentBanner';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -27,23 +28,25 @@ const ubuntu = Ubuntu({
 
 function MyApp(props) {
   const { Component, pageProps } = props;
+  const [analyticsAllowed, setAnalyticsAllowed] = useState(false);
 
+  useEffect(() => {
+    const enabled = process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true';
+    if (!enabled) return;
+    if (process.env.NEXT_PUBLIC_REQUIRE_ANALYTICS_CONSENT === 'true') {
+      const consent = window.localStorage.getItem('analytics_consent');
+      if (consent === 'granted') {
+        setAnalyticsAllowed(true);
+      }
+    } else {
+      setAnalyticsAllowed(true);
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof window.initA2HS === 'function') {
       window.initA2HS();
     }
-    const initAnalytics = async () => {
-      const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
-      if (trackingId) {
-        const { default: ReactGA } = await import('react-ga4');
-        ReactGA.initialize(trackingId);
-      }
-    };
-    initAnalytics().catch((err) => {
-      console.error('Analytics initialization failed', err);
-    });
-
     if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
       // Register PWA service worker generated via @ducanh2912/next-pwa
       const register = async () => {
@@ -79,6 +82,23 @@ function MyApp(props) {
       });
     }
   }, []);
+
+  useEffect(() => {
+    if (!analyticsAllowed) return;
+    const initAnalytics = async () => {
+      const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
+      if (trackingId) {
+        const { default: ReactGA } = await import('react-ga4');
+        ReactGA.initialize(trackingId);
+        if (typeof ReactGA.set === 'function') {
+          ReactGA.set({ anonymize_ip: true });
+        }
+      }
+    };
+    initAnalytics().catch((err) => {
+      console.error('Analytics initialization failed', err);
+    });
+  }, [analyticsAllowed]);
 
   useEffect(() => {
     const liveRegion = document.getElementById('live-region');
@@ -161,16 +181,33 @@ function MyApp(props) {
             <div aria-live="polite" id="live-region" />
             <Component {...pageProps} />
             <ShortcutOverlay />
-            <Analytics
-              beforeSend={(e) => {
-                if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-                const evt = e;
-                if (evt.metadata?.email) delete evt.metadata.email;
-                return e;
-              }}
-            />
+            {analyticsAllowed && (
+              <Analytics
+                beforeSend={(e) => {
+                  if (e.url.includes('/admin') || e.url.includes('/private')) return null;
+                  const evt = e;
+                  if (evt.ip) delete evt.ip;
+                  if (evt.metadata?.ip) delete evt.metadata.ip;
+                  if (evt.metadata?.email) delete evt.metadata.email;
+                  return evt;
+                }}
+              />
+            )}
 
-            {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+            {analyticsAllowed && process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && (
+              <SpeedInsights />
+            )}
+
+            {!analyticsAllowed &&
+              process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true' &&
+              process.env.NEXT_PUBLIC_REQUIRE_ANALYTICS_CONSENT === 'true' && (
+                <AnalyticsConsentBanner
+                  onAccept={() => {
+                    window.localStorage.setItem('analytics_consent', 'granted');
+                    setAnalyticsAllowed(true);
+                  }}
+                />
+              )}
           </PipPortalProvider>
         </SettingsProvider>
       </div>
