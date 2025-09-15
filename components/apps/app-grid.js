@@ -83,6 +83,7 @@ export default function AppGrid({ openApp }) {
           name={app.title}
           displayName={<>{app.nodes}</>}
           openApp={() => openApp && openApp(app.id)}
+          tabIndex={index === data.focusedIndex ? 0 : -1}
         />
       </div>
     );
@@ -91,7 +92,7 @@ export default function AppGrid({ openApp }) {
   return (
     <div className="flex flex-col items-center h-full">
       <input
-        className="mb-6 mt-4 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
+        className="mb-6 mt-4 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white"
         placeholder="Search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
@@ -113,7 +114,9 @@ export default function AppGrid({ openApp }) {
                 width={width}
                 className="scroll-smooth"
               >
-                {(props) => <Cell {...props} data={{ items: filtered, columnCount }} />}
+                {(props) => (
+                  <Cell {...props} data={{ items: filtered, columnCount, focusedIndex }} />
+                )}
               </Grid>
             );
           }}
