@@ -231,8 +231,11 @@ Defined in `next.config.js`. See [CSP External Domains](#csp-external-domains) f
 - **Content-Security-Policy (CSP)** (string built from `ContentSecurityPolicy[]`; see [CSP External Domains](#csp-external-domains))
 - `X-Content-Type-Options: nosniff`
 - `Referrer-Policy: strict-origin-when-cross-origin`
-- `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+- `Permissions-Policy: camera=(), microphone=(), geolocation=*`
 - `X-Frame-Options: SAMEORIGIN`
+- `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`
+- `Cross-Origin-Opener-Policy: same-origin`
+- `Cross-Origin-Embedder-Policy: require-corp`
 
 ### CSP External Domains
 
@@ -246,9 +249,7 @@ These external domains are whitelisted in the default CSP. Update this list when
 | `*.twitter.com` | Additional Twitter content |
 | `*.x.com` | X (Twitter) domain equivalents |
 | `*.google.com` | Google services and Chrome app favicons |
-| `example.com` | Chrome app demo origin |
-| `developer.mozilla.org` | Chrome app demo origin |
-| `en.wikipedia.org` | Chrome app demo origin |
+| `download.kali.org` | Kali download host |
 | `cdn.jsdelivr.net` | Math.js library |
 | `cdnjs.cloudflare.com` | PDF.js worker |
 | `stackblitz.com` | StackBlitz IDE embeds |

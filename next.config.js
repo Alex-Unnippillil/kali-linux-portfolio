@@ -4,6 +4,8 @@
 
 const { validateServerEnv: validateEnv } = require('./lib/validate.js');
 
+const downloadHost = 'https://download.kali.org';
+
 const ContentSecurityPolicy = [
   "default-src 'self'",
   // Prevent injection of external base URIs
@@ -23,9 +25,9 @@ const ContentSecurityPolicy = [
   // External scripts required for embedded timelines
   "script-src 'self' 'unsafe-inline' https://vercel.live https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
   // Allow outbound connections for embeds and the in-browser Chrome app
-  "connect-src 'self' https://example.com https://developer.mozilla.org https://en.wikipedia.org https://www.google.com https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.google.com https://stackblitz.com",
+  `connect-src 'self' ${downloadHost} https://www.google.com https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.google.com https://stackblitz.com`,
   // Allow iframes from specific providers so the Chrome and StackBlitz apps can load allowed content
-  "frame-src 'self' https://vercel.live https://stackblitz.com https://*.google.com https://platform.twitter.com https://syndication.twitter.com https://*.twitter.com https://*.x.com https://www.youtube-nocookie.com https://open.spotify.com https://example.com https://developer.mozilla.org https://en.wikipedia.org",
+  `frame-src 'self' https://vercel.live https://stackblitz.com https://*.google.com https://platform.twitter.com https://syndication.twitter.com https://*.twitter.com https://*.x.com https://www.youtube-nocookie.com https://open.spotify.com ${downloadHost}`,
 
   // Allow this site to embed its own resources (resume PDF)
   "frame-ancestors 'self'",
@@ -54,6 +56,18 @@ const securityHeaders = [
     // Allow same-origin framing so the PDF resume renders in an <object>
     key: 'X-Frame-Options',
     value: 'SAMEORIGIN',
+  },
+  {
+    key: 'Strict-Transport-Security',
+    value: 'max-age=63072000; includeSubDomains; preload',
+  },
+  {
+    key: 'Cross-Origin-Opener-Policy',
+    value: 'same-origin',
+  },
+  {
+    key: 'Cross-Origin-Embedder-Policy',
+    value: 'require-corp',
   },
 ];
 
@@ -139,9 +153,7 @@ module.exports = withBundleAnalyzer(
         'yt3.ggpht.com',
         'i.scdn.co',
         'www.google.com',
-        'example.com',
-        'developer.mozilla.org',
-        'en.wikipedia.org',
+        'download.kali.org',
       ],
       deviceSizes: [640, 750, 828, 1080, 1200, 1280, 1920, 2048, 3840],
       imageSizes: [16, 32, 48, 64, 96, 128, 256],
