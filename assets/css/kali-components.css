@@ -1,0 +1,5 @@
+/* Component-specific styles for Kali theme */
+section {
+  border-top: 1px solid color-mix(in oklch, var(--accent), transparent 70%);
+  border-block-start: 1px solid color-mix(in oklch, var(--accent), transparent 70%);
+}
