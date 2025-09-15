@@ -40,6 +40,9 @@ export default function Calculator() {
           const script = document.createElement('script');
           script.src =
             'https://cdn.jsdelivr.net/npm/mathjs@13.2.3/lib/browser/math.js';
+          script.integrity =
+            'sha384-P1Eisg1eZurPwW5GPPxxaNongEvntJm7UFQ0eHdveXaaaK3SRHUkF78Y1OvBYwAY';
+          script.crossOrigin = 'anonymous';
           script.onload = resolve as any;
           document.body.appendChild(script);
         });

@@ -66,6 +66,9 @@ export default function YouTubePlayer({ videoId }) {
         const tag = document.createElement('script');
         tag.src = 'https://www.youtube-nocookie.com/iframe_api';
         tag.async = true;
+        tag.integrity =
+          'sha384-cCFSdOamxT/HdRmUBiZCz/k/5kPKxyfgGS4BWMMHerqdQ6k6+c4cr2xju53R5ohP';
+        tag.crossOrigin = 'anonymous';
         window.onYouTubeIframeAPIReady = createPlayer;
         document.body.appendChild(tag);
       } else {

@@ -1,9 +1,6 @@
 import React from 'react'
 import Head from 'next/head';
-import { getCspNonce } from '../../utils/csp';
-
 export default function Meta() {
-    const nonce = getCspNonce();
     return (
         <Head>
             {/* Primary Meta Tags */}
@@ -52,7 +49,6 @@ export default function Meta() {
             <link rel="apple-touch-icon" href="images/logos/logo.png" />
             <script
                 type="application/ld+json"
-                nonce={nonce}
                 dangerouslySetInnerHTML={{
                     __html: JSON.stringify({
                         "@context": "https://schema.org",

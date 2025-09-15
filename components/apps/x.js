@@ -93,6 +93,9 @@ export default function XApp() {
         script = document.createElement('script');
         script.src = src;
         script.async = true;
+        script.integrity =
+          'sha384-2tybKFlI8VO9WeecxiJMRsCpfm6xp0mNzAuAFOxtqzenagQgy+bKmARu8EXVJhPu';
+        script.crossOrigin = 'anonymous';
         document.body.appendChild(script);
       }
       timeout = window.setTimeout(handleError, 10000);
