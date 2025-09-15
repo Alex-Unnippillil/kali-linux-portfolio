@@ -21,7 +21,8 @@
     "module-report": "node scripts/generate-module-report.mjs",
     "analyze": "ANALYZE=true yarn build",
     "preinstall": "corepack enable && corepack prepare yarn@4.9.2 --activate",
-    "verify:all": "node scripts/verify.mjs"
+    "verify:all": "node scripts/verify.mjs",
+    "build:tokens": "tsx scripts/build-tokens.ts"
   },
   "engines": {
     "node": "20.19.5"
@@ -138,7 +139,9 @@
     "node-mocks-http": "1.17.2",
     "pa11y": "^9.0.0",
     "playwright-core": "^1.55.0",
+    "style-dictionary": "^5.0.4",
     "test-exclude": "7.0.1",
+    "tsx": "^4.20.5",
     "typescript": "5.8.2",
     "wait-on": "^8.0.4",
     "webpack": "^5.92.0",
