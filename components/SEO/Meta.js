@@ -59,6 +59,11 @@ export default function Meta() {
                         "@type": "Person",
                         name: "Alex Unnippillil",
                         url: "https://unnippillil.com/",
+                        sameAs: [
+                            "https://github.com/unnippillil",
+                            "https://www.linkedin.com/in/alex-unnippillil",
+                        ],
+                        jobTitle: "Computer Engineering Student",
                     }),
                 }}
             />
