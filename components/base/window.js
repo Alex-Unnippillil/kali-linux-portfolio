@@ -649,6 +649,7 @@ export class Window extends Component {
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
+                            viewTransitionName={`icon-${this.props.id}`}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -674,7 +675,7 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, viewTransitionName }) {
     return (
         <div
             className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
@@ -683,6 +684,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
+            style={viewTransitionName ? { viewTransitionName } : undefined}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>

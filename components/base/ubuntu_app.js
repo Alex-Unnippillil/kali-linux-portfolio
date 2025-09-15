@@ -38,6 +38,7 @@ export class UbuntuApp extends Component {
                 aria-disabled={this.props.disabled}
                 data-context="app"
                 data-app-id={this.props.id}
+                style={{ viewTransitionName: `icon-${this.props.id}` }}
                 draggable
                 onDragStart={this.handleDragStart}
                 onDragEnd={this.handleDragEnd}
