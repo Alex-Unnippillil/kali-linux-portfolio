@@ -16,6 +16,7 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { notify } from '../app/ui/useNotify';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -91,7 +92,23 @@ function MyApp(props) {
       }, 100);
     };
 
-    const handleCopy = () => update('Copied to clipboard');
+    const shouldAnnounceManually = () =>
+      !('Notification' in window) || window.Notification.permission !== 'granted';
+
+    const announce = (title, fallbackMessage, body) => {
+      if (shouldAnnounceManually()) {
+        update(fallbackMessage);
+      }
+      notify(title, body ?? fallbackMessage).catch(() => {});
+    };
+
+    const announceCopy = () => {
+      announce('Clipboard updated', 'Copied to clipboard');
+    };
+
+    const handleCopy = () => {
+      announceCopy();
+    };
     const handleCut = () => update('Cut to clipboard');
     const handlePaste = () => update('Pasted from clipboard');
 
@@ -104,8 +121,9 @@ function MyApp(props) {
     const originalRead = clipboard?.readText?.bind(clipboard);
     if (originalWrite) {
       clipboard.writeText = async (text) => {
-        update('Copied to clipboard');
-        return originalWrite(text);
+        const result = await originalWrite(text);
+        announceCopy();
+        return result;
       };
     }
     if (originalRead) {
@@ -113,6 +131,73 @@ function MyApp(props) {
         const text = await originalRead();
         update('Pasted from clipboard');
         return text;
+      };
+    }
+
+    const getDownloadLabel = (anchor) => {
+      const direct = anchor.getAttribute('download') ?? anchor.download;
+      if (direct && direct.trim()) {
+        return direct.trim();
+      }
+      const ariaLabel = anchor.getAttribute('aria-label');
+      if (ariaLabel && ariaLabel.trim()) {
+        return ariaLabel.trim();
+      }
+      const text = anchor.textContent;
+      if (text) {
+        const trimmed = text.trim();
+        if (trimmed) {
+          return trimmed;
+        }
+      }
+      const href = anchor.getAttribute('href') ?? anchor.href;
+      if (!href) {
+        return '';
+      }
+      if (href.startsWith('data:')) {
+        return '';
+      }
+      try {
+        const url = new URL(href, window.location.href);
+        const parts = url.pathname.split('/').filter(Boolean);
+        if (parts.length) {
+          return decodeURIComponent(parts[parts.length - 1]);
+        }
+      } catch {
+        const segments = href.split('/');
+        if (segments.length) {
+          return segments[segments.length - 1];
+        }
+      }
+      return '';
+    };
+
+    const announceDownload = (anchor) => {
+      const label = getDownloadLabel(anchor);
+      const message = label ? `Download ready: ${label}` : 'Download ready';
+      announce('Download ready', message, label || undefined);
+    };
+
+    const handleDownloadClick = (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const anchor = target.closest('a[download]');
+      if (!anchor) return;
+      if (event.defaultPrevented) return;
+      announceDownload(anchor);
+    };
+
+    window.addEventListener('click', handleDownloadClick);
+
+    const anchorPrototype = window.HTMLAnchorElement?.prototype;
+    const originalAnchorClick = anchorPrototype?.click;
+    if (anchorPrototype && originalAnchorClick) {
+      anchorPrototype.click = function patchedClick(...args) {
+        const result = originalAnchorClick.apply(this, args);
+        if (!this.isConnected && (this.hasAttribute('download') || this.download)) {
+          announceDownload(this);
+        }
+        return result;
       };
     }
 
@@ -136,9 +221,13 @@ function MyApp(props) {
       window.removeEventListener('copy', handleCopy);
       window.removeEventListener('cut', handleCut);
       window.removeEventListener('paste', handlePaste);
+      window.removeEventListener('click', handleDownloadClick);
       if (clipboard) {
         if (originalWrite) clipboard.writeText = originalWrite;
         if (originalRead) clipboard.readText = originalRead;
+      }
+      if (anchorPrototype && originalAnchorClick) {
+        anchorPrototype.click = originalAnchorClick;
       }
       if (OriginalNotification) {
         window.Notification = OriginalNotification;
