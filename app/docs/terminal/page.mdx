@@ -1,0 +1,62 @@
+export const metadata = {
+  title: 'Terminal application manual',
+  description:
+    'Learn how to drive the Kali Linux Portfolio terminal simulation, from session tabs to built-in helper commands.',
+};
+
+# Terminal application
+
+The terminal is a browser-based simulation of a Kali Linux command line. This documentation is rendered server-side using MDX so
+it stays in sync with the code that powers the experience. Use it as a quick-reference when presenting the portfolio or when
+contributing new terminal features.
+
+## Launching and layout
+
+Open the **Terminal** from the desktop application grid or via the search launcher. The window uses the shared `TabbedWindow`
+component, so you can spawn parallel sessions with the **New tab** control. Each tab hosts an isolated terminal instance with its
+own history and worker context.
+
+The toolbar above the terminal surface exposes clipboard and theme tools:
+
+- **Copy** mirrors the service worker helper and sends the current buffer to the clipboard.
+- **Paste** reads text from the clipboard and feeds it directly into the active prompt.
+- **Settings** previews the ANSI colour palette and common file listings used by the terminal theme.
+
+## Built-in commands
+
+Type `help` after the welcome banner to print the registry of built-in commands. The simulation ships with helpers that mirror
+a small subset of common GNU/Linux utilities:
+
+- `history` prints the commands you have executed in the current tab.
+- `alias` lets you inspect or create temporary aliases for longer commands.
+- `man <command>` streams a markdown manual page for `alias`, `cat`, `grep`, `history`, `jq`, or `man` itself.
+- `ls` lists the demo files exposed to the terminal sandbox.
+- `cat`, `grep`, and `jq` delegate to a dedicated Web Worker so longer-running examples do not block the UI.
+- `open <app>` dispatches a request to the desktop manager so you can launch another application without leaving the terminal.
+- `clear` wipes the screen and removes the persisted `history.txt` file if offline storage is available.
+- `date` and `about` echo contextual information used in demos and walkthroughs.
+
+All commands execute locally inside the browser—no real system calls are made and no network requests leave the page.
+
+## Productivity shortcuts
+
+The terminal integrates a set of keyboard-driven workflows to keep demos fast:
+
+- `Ctrl` + `Shift` + `P` toggles the command palette. Start typing to filter the registry and press `Enter` to run the selection.
+- `Tab` autocompletes against known commands and prints matches when multiple options exist.
+- `Ctrl` + `F` opens an inline search across the current buffer using the xterm.js search add-on.
+- `Ctrl` + `R` performs a reverse search through the in-memory command history, mirroring common shell behaviour.
+
+A subtle gradient at the top and bottom of the viewport indicates when additional output is available for scrolling.
+
+## Persistence and storage
+
+When the browser exposes the Origin Private File System (OPFS), the terminal stores its running transcript in
+`history.txt`. Reloading or reopening a tab restores that content so long-form demos can pick up where they left off. Running
+`clear` removes both the visible output and the stored file.
+
+## Limitations
+
+This app intentionally avoids executing arbitrary binaries or shell scripts. Heavy lifting happens in Web Workers and static
+JSON assets so the experience remains deterministic and safe for workshops. Use these docs when you need to describe the
+simulation to viewers or to confirm behaviours before adding new commands.

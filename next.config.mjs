@@ -1,8 +1,16 @@
-// Security headers configuration for Next.js.
-// Allows external badges and same-origin PDF embedding.
-// Update README (section "CSP External Domains") when editing domains below.
+import { createRequire } from 'node:module';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
+import bundleAnalyzer from '@next/bundle-analyzer';
+import createMDX from '@next/mdx';
+import withPWAInit from '@ducanh2912/next-pwa';
+
+const require = createRequire(import.meta.url);
 const { validateServerEnv: validateEnv } = require('./lib/validate.js');
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const ContentSecurityPolicy = [
   "default-src 'self'",
@@ -57,11 +65,11 @@ const securityHeaders = [
   },
 ];
 
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
+const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
 });
 
-const withPWA = require('@ducanh2912/next-pwa').default({
+const withPWA = withPWAInit({
   dest: 'public',
   sw: 'sw.js',
   disable: process.env.NODE_ENV === 'development',
@@ -84,11 +92,14 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   },
 });
 
+const withMDX = createMDX({
+  extension: /\.mdx?$/,
+});
+
 const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 const isProd = process.env.NODE_ENV === 'production';
 
-// Merge experiment settings and production optimizations into a single function.
-function configureWebpack(config, { isServer }) {
+function configureWebpack(config) {
   // Enable WebAssembly loading and avoid JSON destructuring bug
   config.experiments = {
     ...(config.experiments || {}),
@@ -103,7 +114,7 @@ function configureWebpack(config, { isServer }) {
   };
   config.resolve.alias = {
     ...(config.resolve.alias || {}),
-    'react-dom$': require('path').resolve(__dirname, 'lib/react-dom-shim.js'),
+    'react-dom$': path.resolve(__dirname, 'lib/react-dom-shim.js'),
   };
   if (isProd) {
     config.optimization = {
@@ -120,63 +131,66 @@ try {
   console.warn('Missing env vars; running without validation');
 }
 
-module.exports = withBundleAnalyzer(
-  withPWA({
-    ...(isStaticExport && { output: 'export' }),
-    webpack: configureWebpack,
+const baseConfig = {
+  ...(isStaticExport && { output: 'export' }),
+  webpack: configureWebpack,
+  // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  images: {
+    unoptimized: true,
+    domains: [
+      'opengraph.githubassets.com',
+      'raw.githubusercontent.com',
+      'avatars.githubusercontent.com',
+      'i.ytimg.com',
+      'yt3.ggpht.com',
+      'i.scdn.co',
+      'www.google.com',
+      'example.com',
+      'developer.mozilla.org',
+      'en.wikipedia.org',
+    ],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1280, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256],
+  },
+  pageExtensions: ['js', 'jsx', 'ts', 'tsx', 'md', 'mdx'],
+  // Security headers are skipped outside production; remove !isProd check to restore them for development.
+  ...(isStaticExport || !isProd
+    ? {}
+    : {
+        async headers() {
+          return [
+            {
+              source: '/(.*)',
+              headers: securityHeaders,
+            },
+            {
+              source: '/fonts/(.*)',
+              headers: [
+                {
+                  key: 'Cache-Control',
+                  value: 'public, max-age=31536000, immutable',
+                },
+              ],
+            },
+            {
+              source: '/images/(.*)',
+              headers: [
+                {
+                  key: 'Cache-Control',
+                  value: 'public, max-age=86400',
+                },
+              ],
+            },
+          ];
+        },
+      }),
+};
 
-    // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
-    eslint: {
-      ignoreDuringBuilds: true,
-    },
-    images: {
-      unoptimized: true,
-      domains: [
-        'opengraph.githubassets.com',
-        'raw.githubusercontent.com',
-        'avatars.githubusercontent.com',
-        'i.ytimg.com',
-        'yt3.ggpht.com',
-        'i.scdn.co',
-        'www.google.com',
-        'example.com',
-        'developer.mozilla.org',
-        'en.wikipedia.org',
-      ],
-      deviceSizes: [640, 750, 828, 1080, 1200, 1280, 1920, 2048, 3840],
-      imageSizes: [16, 32, 48, 64, 96, 128, 256],
-    },
-    // Security headers are skipped outside production; remove !isProd check to restore them for development.
-    ...(isStaticExport || !isProd
-      ? {}
-      : {
-          async headers() {
-            return [
-              {
-                source: '/(.*)',
-                headers: securityHeaders,
-              },
-              {
-                source: '/fonts/(.*)',
-                headers: [
-                  {
-                    key: 'Cache-Control',
-                    value: 'public, max-age=31536000, immutable',
-                  },
-                ],
-              },
-              {
-                source: '/images/(.*)',
-                headers: [
-                  {
-                    key: 'Cache-Control',
-                    value: 'public, max-age=86400',
-                  },
-                ],
-              },
-            ];
-          },
-        }),
-  })
-);
+const plugins = [withPWA, withBundleAnalyzer, withMDX];
 
+const nextConfig = plugins.reduce((config, plugin) => plugin(config), baseConfig);
+
+export default nextConfig;
