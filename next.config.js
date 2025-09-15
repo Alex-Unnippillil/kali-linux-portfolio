@@ -59,6 +59,11 @@ const securityHeaders = [
 
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
+  openAnalyzer: false,
+  analyzerMode: 'static',
+  reportFilename: 'analyze/[name].html',
+  generateStatsFile: true,
+  statsFilename: 'analyze/[name]-stats.json',
 });
 
 const withPWA = require('@ducanh2912/next-pwa').default({
