@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { ModuleMetadata } from '../modules/metadata';
+import type { ModuleMetadata } from '../types/metasploit';
 
 interface ModuleCardProps {
   module: ModuleMetadata;
