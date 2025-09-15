@@ -22,7 +22,7 @@ import {
   setHaptics as saveHaptics,
   defaults,
 } from '../utils/settingsStore';
-import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import { getTheme as loadTheme, setTheme as saveTheme, type ThemeName } from '../utils/theme';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -62,7 +62,7 @@ interface SettingsContextValue {
   pongSpin: boolean;
   allowNetwork: boolean;
   haptics: boolean;
-  theme: string;
+  theme: ThemeName;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -73,7 +73,7 @@ interface SettingsContextValue {
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
-  setTheme: (value: string) => void;
+  setTheme: (value: ThemeName) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -87,7 +87,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
-  theme: 'default',
+  theme: 'dark',
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -112,7 +112,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
-  const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [theme, setThemeState] = useState<ThemeName>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -127,13 +127,19 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
-      setTheme(loadTheme());
+      setThemeState(loadTheme());
     })();
   }, []);
 
   useEffect(() => {
     saveTheme(theme);
   }, [theme]);
+
+  useEffect(() => {
+    if (theme === 'high-contrast' && !highContrast) {
+      setHighContrast(true);
+    }
+  }, [theme, highContrast, setHighContrast]);
 
   useEffect(() => {
     const border = shadeColor(accent, -0.2);
@@ -260,7 +266,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
-        setTheme,
+        setTheme: setThemeState,
       }}
     >
       {children}

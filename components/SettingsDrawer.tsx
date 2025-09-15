@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getUnlockedThemes } from '../utils/theme';
+import { getUnlockedThemes, type ThemeName } from '../utils/theme';
 import { useSettings, ACCENT_OPTIONS } from '../hooks/useSettings';
 
 interface Props {
@@ -8,7 +8,12 @@ interface Props {
 
 const SettingsDrawer = ({ highScore = 0 }: Props) => {
   const [open, setOpen] = useState(false);
-  const unlocked = getUnlockedThemes(highScore);
+  const unlocked = getUnlockedThemes();
+  const labels: Record<ThemeName, string> = {
+    light: 'Light',
+    dark: 'Dark',
+    'high-contrast': 'High Contrast',
+  };
   const { accent, setAccent, theme, setTheme } = useSettings();
 
   return (
@@ -23,11 +28,11 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
             <select
               aria-label="theme-select"
               value={theme}
-              onChange={(e) => setTheme(e.target.value)}
+              onChange={(e) => setTheme(e.target.value as ThemeName)}
             >
               {unlocked.map((t) => (
                 <option key={t} value={t}>
-                  {t}
+                  {labels[t] ?? t}
                 </option>
               ))}
             </select>

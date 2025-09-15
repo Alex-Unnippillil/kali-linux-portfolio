@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
+import type { ThemeName } from "../../utils/theme";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
   resetSettings,
@@ -100,7 +101,7 @@ export default function Settings() {
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
-    setTheme("default");
+    setTheme("dark");
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
@@ -125,13 +126,12 @@ export default function Settings() {
             <label className="mr-2 text-ubt-grey">Theme:</label>
             <select
               value={theme}
-              onChange={(e) => setTheme(e.target.value)}
+              onChange={(e) => setTheme(e.target.value as ThemeName)}
               className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
             >
-              <option value="default">Default</option>
+              <option value="light">Light</option>
               <option value="dark">Dark</option>
-              <option value="neon">Neon</option>
-              <option value="matrix">Matrix</option>
+              <option value="high-contrast">High Contrast</option>
             </select>
           </div>
           <div className="flex justify-center my-4">

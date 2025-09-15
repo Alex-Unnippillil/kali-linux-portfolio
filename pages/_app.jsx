@@ -11,6 +11,7 @@ import '../styles/print.css';
 import '@xterm/xterm/css/xterm.css';
 import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
+import BodyThemeClassSync from '../components/system/BodyThemeClassSync';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
@@ -157,6 +158,7 @@ function MyApp(props) {
           Skip to app grid
         </a>
         <SettingsProvider>
+          <BodyThemeClassSync />
           <PipPortalProvider>
             <div aria-live="polite" id="live-region" />
             <Component {...pageProps} />
