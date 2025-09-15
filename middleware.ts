@@ -1,4 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import createMiddleware from 'next-intl/middleware';
+import { locales, defaultLocale, localePrefix } from './i18n';
+import fs from 'fs';
+import path from 'path';
 
 function nonce() {
   const arr = new Uint8Array(16);
@@ -6,7 +10,13 @@ function nonce() {
   return Buffer.from(arr).toString('base64');
 }
 
-export function middleware(req: NextRequest) {
+const intlMiddleware = createMiddleware({
+  locales,
+  defaultLocale,
+  localePrefix,
+});
+
+function applyCsp(res: NextResponse) {
   const n = nonce();
   const csp = [
     "default-src 'self'",
@@ -22,8 +32,27 @@ export function middleware(req: NextRequest) {
     "form-action 'self'"
   ].join('; ');
 
-  const res = NextResponse.next();
   res.headers.set('x-csp-nonce', n);
   res.headers.set('Content-Security-Policy', csp);
   return res;
 }
+
+export function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  const locale = pathname.split('/')[1];
+  if (locale) {
+    if (!locales.includes(locale)) {
+      return applyCsp(NextResponse.rewrite(new URL('/404', req.url)));
+    }
+    const messagesPath = path.join(process.cwd(), 'messages', `${locale}.json`);
+    if (!fs.existsSync(messagesPath)) {
+      return applyCsp(NextResponse.rewrite(new URL('/404', req.url)));
+    }
+  }
+  const res = intlMiddleware(req);
+  return applyCsp(res);
+}
+
+export const config = {
+  matcher: ['/((?!api|_next|.*\\..*).*)'],
+};

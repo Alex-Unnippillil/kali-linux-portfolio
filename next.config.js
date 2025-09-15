@@ -61,6 +61,8 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 });
 
+const withNextIntl = require('next-intl/plugin')('./i18n.ts');
+
 const withPWA = require('@ducanh2912/next-pwa').default({
   dest: 'public',
   sw: 'sw.js',
@@ -120,8 +122,9 @@ try {
   console.warn('Missing env vars; running without validation');
 }
 
-module.exports = withBundleAnalyzer(
-  withPWA({
+module.exports = withNextIntl(
+  withBundleAnalyzer(
+    withPWA({
     ...(isStaticExport && { output: 'export' }),
     webpack: configureWebpack,
 
@@ -177,6 +180,7 @@ module.exports = withBundleAnalyzer(
             ];
           },
         }),
-  })
+    })
+  )
 );
 

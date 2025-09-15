@@ -1,9 +1,13 @@
-import React from 'react'
+import React from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
+import { locales } from '../../i18n';
 import { getCspNonce } from '../../utils/csp';
 
 export default function Meta() {
     const nonce = getCspNonce();
+    const { asPath } = useRouter();
+    const baseUrl = 'https://unnippillil.com';
     return (
         <Head>
             {/* Primary Meta Tags */}
@@ -47,7 +51,11 @@ export default function Meta() {
             <meta name="og:locale" content="en_CA" />
             <meta name="og:type" content="website" />
 
-            <link rel="canonical" href="https://unnippillil.com/" />
+            <link rel="canonical" href={baseUrl + asPath} />
+            {locales.map((locale) => (
+              <link key={locale} rel="alternate" hrefLang={locale} href={`${baseUrl}/${locale}${asPath}`} />
+            ))}
+            <link rel="alternate" hrefLang="x-default" href={`${baseUrl}${asPath}`} />
             <link rel="icon" href="images/logos/fevicon.svg" />
             <link rel="apple-touch-icon" href="images/logos/logo.png" />
             <script
