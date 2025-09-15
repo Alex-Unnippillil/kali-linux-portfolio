@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -16,6 +16,14 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import {
+  initializeAnalytics,
+  shouldPromptForAnalyticsConsent,
+  setAnalyticsConsent,
+  ANALYTICS_CONSENT,
+  isAnalyticsEnvEnabled,
+  getAnalyticsConsent,
+} from '../lib/analytics';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -25,24 +33,65 @@ const ubuntu = Ubuntu({
 });
 
 
+function AnalyticsConsentModal({ onAccept, onDecline }) {
+  return (
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="analytics-consent-title"
+        className="bg-ub-cool-grey text-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6 space-y-4"
+      >
+        <h2 id="analytics-consent-title" className="text-lg font-semibold">
+          Analytics consent
+        </h2>
+        <p className="text-sm leading-relaxed">
+          We use Google Analytics to understand which desktop features are helpful. Analytics is
+          optional and you can change this preference later from the Analytics Settings app.
+        </p>
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onDecline}
+            className="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 transition-colors"
+          >
+            Decline
+          </button>
+          <button
+            type="button"
+            onClick={onAccept}
+            className="px-4 py-2 rounded bg-ub-orange text-black font-semibold hover:bg-orange-500 transition-colors"
+          >
+            Allow
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 function MyApp(props) {
   const { Component, pageProps } = props;
+  const analyticsEnvEnabled = isAnalyticsEnvEnabled();
+  const [showAnalyticsConsent, setShowAnalyticsConsent] = useState(false);
+
+  const handleAnalyticsAccept = () => {
+    setAnalyticsConsent(ANALYTICS_CONSENT.GRANTED);
+    initializeAnalytics();
+    setShowAnalyticsConsent(false);
+  };
+
+  const handleAnalyticsDecline = () => {
+    setAnalyticsConsent(ANALYTICS_CONSENT.DENIED);
+    setShowAnalyticsConsent(false);
+  };
 
 
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof window.initA2HS === 'function') {
       window.initA2HS();
     }
-    const initAnalytics = async () => {
-      const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
-      if (trackingId) {
-        const { default: ReactGA } = await import('react-ga4');
-        ReactGA.initialize(trackingId);
-      }
-    };
-    initAnalytics().catch((err) => {
-      console.error('Analytics initialization failed', err);
-    });
 
     if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
       // Register PWA service worker generated via @ducanh2912/next-pwa
@@ -79,6 +128,22 @@ function MyApp(props) {
       });
     }
   }, []);
+
+  useEffect(() => {
+    if (!analyticsEnvEnabled) return;
+    const consent = getAnalyticsConsent();
+    if (consent === ANALYTICS_CONSENT.GRANTED) {
+      initializeAnalytics();
+      return;
+    }
+    if (consent === ANALYTICS_CONSENT.DENIED) {
+      setAnalyticsConsent(ANALYTICS_CONSENT.DENIED);
+      return;
+    }
+    if (shouldPromptForAnalyticsConsent()) {
+      setShowAnalyticsConsent(true);
+    }
+  }, [analyticsEnvEnabled]);
 
   useEffect(() => {
     const liveRegion = document.getElementById('live-region');
@@ -161,6 +226,12 @@ function MyApp(props) {
             <div aria-live="polite" id="live-region" />
             <Component {...pageProps} />
             <ShortcutOverlay />
+            {analyticsEnvEnabled && showAnalyticsConsent && (
+              <AnalyticsConsentModal
+                onAccept={handleAnalyticsAccept}
+                onDecline={handleAnalyticsDecline}
+              />
+            )}
             <Analytics
               beforeSend={(e) => {
                 if (e.url.includes('/admin') || e.url.includes('/private')) return null;

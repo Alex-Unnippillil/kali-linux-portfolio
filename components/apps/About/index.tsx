@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
 import Head from 'next/head';
-import ReactGA from 'react-ga4';
+import { trackEvent, trackPageview, GA_EVENTS } from '../../../lib/analytics';
 import GitHubStars from '../../GitHubStars';
 import Certs from '../certs';
 import data from '../alex/data.json';
@@ -43,7 +43,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
   changeScreen = (e: any) => {
     const screen = e.id || e.target.id;
     localStorage.setItem('about-section', screen);
-    ReactGA.send({ hitType: 'pageview', page: `/${screen}`, title: 'Custom Title' });
+    trackPageview(`/${screen}`, 'Custom Title');
     this.setState({ screen: this.screens[screen], active_screen: screen });
   };
 
@@ -492,7 +492,7 @@ function Projects({ projects }: { projects: any[] }) {
 
 function Resume() {
   const handleDownload = () => {
-    ReactGA.event({ category: 'resume', action: 'download' });
+    trackEvent(GA_EVENTS.RESUME.DOWNLOAD);
   };
 
   const shareContact = async () => {

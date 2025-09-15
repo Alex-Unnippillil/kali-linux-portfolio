@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
-import ReactGA from 'react-ga4';
+import { trackEvent, GA_EVENTS } from '../../lib/analytics';
 import emailjs from '@emailjs/browser';
 import ProgressBar from '../ui/ProgressBar';
 import { createDisplay } from '../../utils/createDynamicApp';
@@ -121,10 +121,7 @@ export class Gedit extends Component {
         try {
             await emailjs.send(serviceID, templateID, templateParams);
             this.setState({ name: '', subject: '', message: '' });
-            ReactGA.event({
-                category: "contact",
-                action: "submit_success",
-            });
+            trackEvent(GA_EVENTS.CONTACT.SUBMIT_SUCCESS);
         } catch {
             // ignore errors
         } finally {

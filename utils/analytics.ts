@@ -1,30 +1,19 @@
-import ReactGA from 'react-ga4';
-
-type EventInput = Parameters<typeof ReactGA.event>[0];
-
-const safeEvent = (...args: Parameters<typeof ReactGA.event>): void => {
-  try {
-    const eventFn = ReactGA.event;
-    if (typeof eventFn === 'function') {
-      eventFn(...args);
-    }
-  } catch {
-    // Ignore analytics errors
-  }
-};
-
-export const logEvent = (event: EventInput): void => {
-  safeEvent(event);
-};
-
-export const logGameStart = (game: string): void => {
-  logEvent({ category: game, action: 'start' });
-};
-
-export const logGameEnd = (game: string, label?: string): void => {
-  logEvent({ category: game, action: 'end', label });
-};
-
-export const logGameError = (game: string, message?: string): void => {
-  logEvent({ category: game, action: 'error', label: message });
-};
+export {
+  ANALYTICS_CONSENT,
+  type AnalyticsConsentValue,
+  GA_ACTION,
+  GA_CATEGORY,
+  GA_EVENT_NAMES,
+  GA_EVENTS,
+  getAnalyticsConsent,
+  initializeAnalytics,
+  isAnalyticsEnabled,
+  isAnalyticsEnvEnabled,
+  logEvent,
+  logGameEnd,
+  logGameError,
+  logGameStart,
+  setAnalyticsConsent,
+  trackEvent,
+  trackPageview,
+} from '../lib/analytics';

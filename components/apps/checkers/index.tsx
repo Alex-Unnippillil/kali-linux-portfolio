@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import ReactGA from 'react-ga4';
+import { trackEvent, GA_EVENTS } from '../../../lib/analytics';
 import { pointerHandlers } from '../../../utils/pointer';
 import {
   createBoard,
@@ -219,28 +219,20 @@ const Checkers = () => {
     const next = turn === 'red' ? 'black' : 'red';
     const newNo = capture || king ? 0 : noCapture + 1;
     setNoCapture(newNo);
-    ReactGA.event({
-      category: 'Checkers',
-      action: 'move',
-      label: turn === 'red' ? 'player' : 'ai',
-    });
+    trackEvent(GA_EVENTS.CHECKERS.MOVE(turn === 'red' ? 'player' : 'ai'));
     if (capture) {
-      ReactGA.event({
-        category: 'Checkers',
-        action: 'capture',
-        label: turn === 'red' ? 'player' : 'ai',
-      });
+      trackEvent(GA_EVENTS.CHECKERS.CAPTURE(turn === 'red' ? 'player' : 'ai'));
     }
     if (isDraw(newNo)) {
       setDraw(true);
-      ReactGA.event({ category: 'Checkers', action: 'game_over', label: 'draw' });
+      trackEvent(GA_EVENTS.CHECKERS.GAME_OVER('draw'));
       setLastMove(pathRef.current);
       pathRef.current = [];
       return;
     }
     if (!hasMoves(newBoard, next, rule === 'forced')) {
       setWinner(turn);
-      ReactGA.event({ category: 'Checkers', action: 'game_over', label: turn });
+      trackEvent(GA_EVENTS.CHECKERS.GAME_OVER(turn));
     } else {
       setTurn(next);
       if (next === 'black') {

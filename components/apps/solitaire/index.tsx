@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import ReactGA from 'react-ga4';
+import { trackEvent, GA_EVENTS } from '../../../lib/analytics';
 import usePrefersReducedMotion from '../../../hooks/usePrefersReducedMotion';
 import {
   initializeGame,
@@ -253,7 +253,7 @@ const Solitaire = () => {
   useEffect(() => {
     if (game.foundations.every((p) => p.length === 13)) {
       setWon(true);
-      ReactGA.event({ category: 'Solitaire', action: 'win' });
+      trackEvent(GA_EVENTS.SOLITAIRE.WIN);
     }
   }, [game]);
 
@@ -327,7 +327,7 @@ const Solitaire = () => {
     setGame((g) => {
       const n = drawFromStock(g);
       if (n !== g) {
-        ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
+        trackEvent(GA_EVENTS.SOLITAIRE.MOVE('manual'));
         setMoves((m) => m + 1);
       }
       return n;
@@ -519,7 +519,7 @@ const Solitaire = () => {
       setGame((g) => {
         const n = moveTableauToTableau(g, drag.pile, drag.index, pileIndex);
         if (n !== g) {
-          ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
+          trackEvent(GA_EVENTS.SOLITAIRE.MOVE('manual'));
           setMoves((m) => m + 1);
         }
         return n;
@@ -528,7 +528,7 @@ const Solitaire = () => {
       setGame((g) => {
         const n = moveWasteToTableau(g, pileIndex);
         if (n !== g) {
-          ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
+          trackEvent(GA_EVENTS.SOLITAIRE.MOVE('manual'));
           setMoves((m) => m + 1);
         }
         return n;
@@ -543,7 +543,7 @@ const Solitaire = () => {
       setGame((g) => {
         const n = moveToFoundation(g, 'tableau', drag.pile);
         if (n !== g) {
-          ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
+          trackEvent(GA_EVENTS.SOLITAIRE.MOVE('manual'));
           setMoves((m) => m + 1);
         }
         return n;
@@ -552,7 +552,7 @@ const Solitaire = () => {
       setGame((g) => {
         const n = moveToFoundation(g, 'waste', null);
         if (n !== g) {
-          ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
+          trackEvent(GA_EVENTS.SOLITAIRE.MOVE('manual'));
           setMoves((m) => m + 1);
         }
         return n;
@@ -569,7 +569,7 @@ const Solitaire = () => {
       source === 'tableau' ? pile : null,
     );
     if (next !== current) {
-      ReactGA.event({ category: 'Solitaire', action: 'move', label: 'auto' });
+      trackEvent(GA_EVENTS.SOLITAIRE.MOVE('auto'));
       setMoves((m) => m + 1);
       flyMove(
         current,
@@ -584,7 +584,7 @@ const Solitaire = () => {
     (g: GameState) => {
       let next = moveToFoundation(g, 'waste', null);
       if (next !== g) {
-        ReactGA.event({ category: 'Solitaire', action: 'move', label: 'auto' });
+        trackEvent(GA_EVENTS.SOLITAIRE.MOVE('auto'));
         setMoves((m) => m + 1);
         flyMove(g, next, 'waste', null, () => autoCompleteNext(next));
         return;
@@ -592,7 +592,7 @@ const Solitaire = () => {
       for (let i = 0; i < g.tableau.length; i += 1) {
         next = moveToFoundation(g, 'tableau', i);
         if (next !== g) {
-          ReactGA.event({ category: 'Solitaire', action: 'move', label: 'auto' });
+          trackEvent(GA_EVENTS.SOLITAIRE.MOVE('auto'));
           setMoves((m) => m + 1);
           flyMove(g, next, 'tableau', i, () => autoCompleteNext(next));
           return;
@@ -727,7 +727,7 @@ const Solitaire = () => {
           value={variant}
           onChange={(e) => {
             const v = e.target.value as Variant;
-            ReactGA.event({ category: 'Solitaire', action: 'variant_select', label: v });
+            trackEvent(GA_EVENTS.SOLITAIRE.VARIANT_SELECT(v));
             setVariant(v);
           }}
         >
@@ -757,11 +757,9 @@ const Solitaire = () => {
           className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
           onClick={() => {
             const mode = drawMode === 1 ? 3 : 1;
-            ReactGA.event({
-              category: 'Solitaire',
-              action: 'variant_select',
-              label: mode === 1 ? 'draw1' : 'draw3',
-            });
+            trackEvent(
+              GA_EVENTS.SOLITAIRE.VARIANT_SELECT(mode === 1 ? 'draw1' : 'draw3'),
+            );
             setDrawMode(mode);
           }}
         >
@@ -772,11 +770,11 @@ const Solitaire = () => {
           onClick={() => {
             const opts = [3, 1, Infinity];
             const next = opts[(opts.indexOf(passLimit) + 1) % opts.length];
-            ReactGA.event({
-              category: 'Solitaire',
-              action: 'variant_select',
-              label: `passes_${next === Infinity ? 'unlimited' : next}`,
-            });
+            trackEvent(
+              GA_EVENTS.SOLITAIRE.VARIANT_SELECT(
+                `passes_${next === Infinity ? 'unlimited' : next}`,
+              ),
+            );
             setPassLimit(next);
           }}
         >
