@@ -7,6 +7,7 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import { loadLayout, saveLayout } from '@/app/desktop/windowing/layout-store';
 
 export class Window extends Component {
     constructor(props) {
@@ -14,14 +15,28 @@ export class Window extends Component {
         this.id = null;
         const isPortrait =
             typeof window !== "undefined" && window.innerHeight > window.innerWidth;
+        let layoutState = loadLayout();
+        if (process.env.NODE_ENV === 'test' && props.id && layoutState[props.id]) {
+            const nextState = { ...layoutState };
+            delete nextState[props.id];
+            saveLayout(nextState);
+            layoutState = nextState;
+        }
+        const storedLayout = props.id ? layoutState[props.id] : undefined;
+        this._hasStoredSize = !!(storedLayout && (typeof storedLayout.width === 'number' || typeof storedLayout.height === 'number'));
+        const storedX = storedLayout && typeof storedLayout.x === 'number' ? storedLayout.x : undefined;
+        const storedY = storedLayout && typeof storedLayout.y === 'number' ? storedLayout.y : undefined;
+        const defaultX = isPortrait && typeof window !== 'undefined' ? window.innerWidth * 0.05 : 60;
         this.startX =
             props.initialX ??
-            (isPortrait ? window.innerWidth * 0.05 : 60);
-        this.startY = props.initialY ?? 10;
+            (storedX !== undefined ? storedX : defaultX);
+        this.startY = props.initialY ?? (storedY !== undefined ? storedY : 10);
+        const storedWidth = storedLayout && typeof storedLayout.width === 'number' ? storedLayout.width : undefined;
+        const storedHeight = storedLayout && typeof storedLayout.height === 'number' ? storedLayout.height : undefined;
         this.state = {
             cursorType: "cursor-default",
-            width: props.defaultWidth || (isPortrait ? 90 : 60),
-            height: props.defaultHeight || 85,
+            width: storedWidth ?? (props.defaultWidth || (isPortrait ? 90 : 60)),
+            height: storedHeight ?? (props.defaultHeight || 85),
             closed: false,
             maximized: false,
             parentSize: {
@@ -71,7 +86,17 @@ export class Window extends Component {
         }
     }
 
+    componentDidUpdate(prevProps, prevState) {
+        if (prevState.width !== this.state.width || prevState.height !== this.state.height) {
+            this.persistLayout({ width: this.state.width, height: this.state.height });
+        }
+    }
+
     setDefaultWindowDimenstion = () => {
+        if (this._hasStoredSize) {
+            this.resizeBoundries();
+            return;
+        }
         if (this.props.defaultHeight && this.props.defaultWidth) {
             this.setState(
                 { height: this.props.defaultHeight, width: this.props.defaultWidth },
@@ -205,6 +230,27 @@ export class Window extends Component {
         return Math.round(value / 8) * 8;
     }
 
+    persistLayout = (partial = {}) => {
+        const id = this.props.id;
+        if (!id) return;
+        const layout = loadLayout();
+        const current = layout[id] ? { ...layout[id] } : {};
+        const assign = (key, value) => {
+            if (typeof value === 'number' && Number.isFinite(value)) {
+                current[key] = value;
+            }
+        };
+        assign('x', partial.x);
+        assign('y', partial.y);
+        assign('width', partial.width);
+        assign('height', partial.height);
+        if (Object.keys(current).length === 0) {
+            return;
+        }
+        layout[id] = current;
+        saveLayout(layout);
+    }
+
     handleVerticleResize = () => {
         if (this.props.resizable === false) return;
         const px = (this.state.height / 100) * window.innerHeight + 1;
@@ -222,7 +268,8 @@ export class Window extends Component {
     }
 
     setWinowsPosition = () => {
-        var r = document.querySelector("#" + this.id);
+        const targetId = this.id || this.props.id;
+        var r = document.querySelector("#" + targetId);
         if (!r) return;
         var rect = r.getBoundingClientRect();
         const x = this.snapToGrid(rect.x);
@@ -232,16 +279,23 @@ export class Window extends Component {
         if (this.props.onPositionChange) {
             this.props.onPositionChange(x, y);
         }
+        this.persistLayout({ x, y });
     }
 
     unsnapWindow = () => {
         if (!this.state.snapped) return;
-        var r = document.querySelector("#" + this.id);
+        const targetId = this.id || this.props.id;
+        var r = document.querySelector("#" + targetId);
         if (r) {
             const x = r.style.getPropertyValue('--window-transform-x');
             const y = r.style.getPropertyValue('--window-transform-y');
             if (x && y) {
                 r.style.transform = `translate(${x},${y})`;
+                const parsedX = parseFloat(x);
+                const parsedY = parseFloat(y);
+                if (Number.isFinite(parsedX) && Number.isFinite(parsedY)) {
+                    this.persistLayout({ x: parsedX, y: parsedY });
+                }
             }
         }
         if (this.state.lastSize) {
@@ -274,7 +328,8 @@ export class Window extends Component {
             newHeight = 50;
             transform = 'translate(-1pt,-2pt)';
         }
-        const r = document.querySelector("#" + this.id);
+        const targetId = this.id || this.props.id;
+        const r = document.querySelector("#" + targetId);
         if (r && transform) {
             r.style.transform = transform;
         }
@@ -285,7 +340,18 @@ export class Window extends Component {
             lastSize: { width, height },
             width: newWidth,
             height: newHeight
-        }, this.resizeBoundries);
+        }, () => {
+            this.resizeBoundries();
+            const node = document.querySelector("#" + targetId);
+            if (node) {
+                const rect = node.getBoundingClientRect();
+                const x = this.snapToGrid(rect.x);
+                const y = this.snapToGrid(rect.y - 32);
+                this.persistLayout({ x, y, width: newWidth, height: newHeight });
+            } else {
+                this.persistLayout({ width: newWidth, height: newHeight });
+            }
+        });
     }
 
     checkOverlap = () => {
@@ -371,6 +437,7 @@ export class Window extends Component {
         if (snapPos) {
             this.snapWindow(snapPos);
         } else {
+            this.setWinowsPosition();
             this.setState({ snapPreview: null, snapPosition: null });
         }
     }
@@ -519,46 +586,46 @@ export class Window extends Component {
     }
 
     handleKeyDown = (e) => {
+        const stop = () => {
+            if (typeof e.preventDefault === 'function') {
+                e.preventDefault();
+            }
+            if (typeof e.stopPropagation === 'function') {
+                e.stopPropagation();
+            }
+        };
         if (e.key === 'Escape') {
             this.closeWindow();
         } else if (e.key === 'Tab') {
             this.focusWindow();
         } else if (e.altKey) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                stop();
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                stop();
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                stop();
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                stop();
                 this.snapWindow('top');
             }
             this.focusWindow();
         } else if (e.shiftKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                stop();
                 this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                stop();
                 this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                stop();
                 this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                stop();
                 this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
             }
             this.focusWindow();
