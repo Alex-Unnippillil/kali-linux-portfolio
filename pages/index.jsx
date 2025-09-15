@@ -1,6 +1,7 @@
 import dynamic from 'next/dynamic';
 import Meta from '../components/SEO/Meta';
 import BetaBadge from '../components/BetaBadge';
+import JsonLdPerson from '../app/components/JsonLdPerson';
 
 const Ubuntu = dynamic(
   () =>
@@ -34,6 +35,7 @@ const App = () => (
       Skip to content
     </a>
     <Meta />
+    <JsonLdPerson name="Alex Unnippillil" url="https://unnippillil.com/" />
     <Ubuntu />
     <BetaBadge />
     <InstallButton />
