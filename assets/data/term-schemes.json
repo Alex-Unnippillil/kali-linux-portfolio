@@ -1,0 +1,22 @@
+{
+  "Solarized": {
+    "--term-bg": "#002b36",
+    "--term-fg": "#839496",
+    "--term-accent": "#268bd2"
+  },
+  "Dracula": {
+    "--term-bg": "#282a36",
+    "--term-fg": "#f8f8f2",
+    "--term-accent": "#bd93f9"
+  },
+  "One Dark": {
+    "--term-bg": "#282c34",
+    "--term-fg": "#abb2bf",
+    "--term-accent": "#61afef"
+  },
+  "Kali": {
+    "--term-bg": "#0f1317",
+    "--term-fg": "#f5f5f5",
+    "--term-accent": "#1793d1"
+  }
+}
