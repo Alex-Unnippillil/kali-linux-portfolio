@@ -1,4 +1,5 @@
 import dynamic from 'next/dynamic';
+import Head from 'next/head';
 
 const QRApp = dynamic(() => import('../../apps/qr'), {
   ssr: false,
@@ -6,6 +7,13 @@ const QRApp = dynamic(() => import('../../apps/qr'), {
 });
 
 export default function QRPage() {
-  return <QRApp />;
+  return (
+    <>
+      <Head>
+        <link rel="canonical" href="https://unnippillil.com/qr" />
+      </Head>
+      <QRApp />
+    </>
+  );
 }
 
