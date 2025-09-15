@@ -7,6 +7,11 @@ This project is built with [Next.js](https://nextjs.org/).
 - Node.js 20
 - yarn or npm
 
+## OS Requirements
+
+- Ubuntu 22.04 LTS or
+- Kali Linux 2024.1
+
 ## Installation
 
 ```bash
