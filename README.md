@@ -121,7 +121,7 @@ See Vercel's [Speed Insights Quickstart](https://vercel.com/docs/speed-insights/
 - **Vercel Analytics** (`@vercel/analytics`)
 - **EmailJS** for the contact (“Gedit”) app
 - Simple in-memory rate limiter for the contact API (not distributed across instances)
-- Client-side only **simulations** of security tools (no real exploitation)
+- Client-side only **simulations** of security tools (no real exploitation) with guided tutorials persisted in `localStorage` (keys `tutorial:<appId>`) and a replay action in each app menu
 - A large set of games rendered in-browser (Canvas/DOM), with a shared `GameLayout`
 
 ### Gamepad Input & Remapping
