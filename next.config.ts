@@ -1,8 +1,13 @@
+import type { NextConfig } from 'next';
+import path from 'path';
+import bundleAnalyzer from '@next/bundle-analyzer';
+import nextPWA from '@ducanh2912/next-pwa';
+
+import { validateServerEnv as validateEnv } from './lib/validate';
+
 // Security headers configuration for Next.js.
 // Allows external badges and same-origin PDF embedding.
 // Update README (section "CSP External Domains") when editing domains below.
-
-const { validateServerEnv: validateEnv } = require('./lib/validate.js');
 
 const ContentSecurityPolicy = [
   "default-src 'self'",
@@ -57,11 +62,11 @@ const securityHeaders = [
   },
 ];
 
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
+const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
 });
 
-const withPWA = require('@ducanh2912/next-pwa').default({
+const withPWA = nextPWA({
   dest: 'public',
   sw: 'sw.js',
   disable: process.env.NODE_ENV === 'development',
@@ -87,8 +92,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
 const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 const isProd = process.env.NODE_ENV === 'production';
 
-// Merge experiment settings and production optimizations into a single function.
-function configureWebpack(config, { isServer }) {
+function configureWebpack(config: any, _context: { isServer: boolean }) {
   // Enable WebAssembly loading and avoid JSON destructuring bug
   config.experiments = {
     ...(config.experiments || {}),
@@ -103,7 +107,7 @@ function configureWebpack(config, { isServer }) {
   };
   config.resolve.alias = {
     ...(config.resolve.alias || {}),
-    'react-dom$': require('path').resolve(__dirname, 'lib/react-dom-shim.js'),
+    'react-dom$': path.resolve(process.cwd(), 'lib/react-dom-shim.js'),
   };
   if (isProd) {
     config.optimization = {
@@ -120,10 +124,13 @@ try {
   console.warn('Missing env vars; running without validation');
 }
 
-module.exports = withBundleAnalyzer(
+const nextConfig = withBundleAnalyzer(
   withPWA({
     ...(isStaticExport && { output: 'export' }),
     webpack: configureWebpack,
+    experimental: {
+      viewTransitions: true,
+    },
 
     // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
     eslint: {
@@ -177,6 +184,7 @@ module.exports = withBundleAnalyzer(
             ];
           },
         }),
-  })
-);
+  }),
+) as NextConfig;
 
+export default nextConfig;
