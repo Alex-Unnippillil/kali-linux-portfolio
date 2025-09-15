@@ -10010,6 +10010,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"minisearch@npm:^6.3.0":
+  version: 6.3.0
+  resolution: "minisearch@npm:6.3.0"
+  checksum: 10c0/82799e1ff7be856f3ba0c13b237f4e56f0bf4fabf973b7f163e6a4be2604fe577776ef9dd50dde2a8ee54c74a7525008246f728e9ce0412477a5f18040d4a036
+  languageName: node
+  linkType: hard
+
 "minizlib@npm:^3.0.1":
   version: 3.0.2
   resolution: "minizlib@npm:3.0.2"
@@ -13926,6 +13933,7 @@ __metadata:
     marked: "npm:^16.2.1"
     mathjs: "npm:^14.6.0"
     matter-js: "npm:0.20.0"
+    minisearch: "npm:^6.3.0"
     monaco-editor: "npm:^0.52.2"
     next: "npm:15.5.2"
     node-mocks-http: "npm:1.17.2"
