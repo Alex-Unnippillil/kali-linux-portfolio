@@ -77,6 +77,7 @@ To send text or links directly into the Sticky Notes app:
 Copy `.env.local.example` to `.env.local` and fill in required API keys:
 
 - `NEXT_PUBLIC_ENABLE_ANALYTICS` – enable client-side analytics when set to `true`.
+- `NEXT_PUBLIC_REQUIRE_ANALYTICS_CONSENT` – show a banner and wait for consent before enabling analytics.
 - `FEATURE_TOOL_APIS` – toggle simulated tool APIs (`enabled` or `disabled`).
 - `RECAPTCHA_SECRET` and related `NEXT_PUBLIC_RECAPTCHA_*` keys for contact form spam protection.
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` – Supabase credentials. When unset, Supabase-backed APIs and features are disabled.
@@ -105,7 +106,7 @@ See `.env.local.example` for the full list.
 ## Speed Insights
 
 - Enable Speed Insights in the Vercel project dashboard.
-- `<SpeedInsights />` is rendered in [`pages/_app.jsx`](./pages/_app.jsx) alongside `<Analytics />`.
+- `<SpeedInsights />` is rendered in [`pages/_app.jsx`](./pages/_app.jsx) when analytics are enabled.
 - Validate collection by requesting `/_vercel/speed-insights/script.js` from a deployed build.
 - No metrics are collected in development mode; ad blockers or network filters can block the script.
 
@@ -117,8 +118,8 @@ See Vercel's [Speed Insights Quickstart](https://vercel.com/docs/speed-insights/
 
 - **Next.js 15** (app uses `/pages` routing) + **TypeScript** in parts
 - **Tailwind CSS** with custom Ubuntu/Kali theme tokens (`styles/index.css`, `tailwind.config.js`)
-- **React GA4** via a thin wrapper in `utils/analytics.ts`
-- **Vercel Analytics** (`@vercel/analytics`)
+- **React GA4** via a thin wrapper in `utils/analytics.ts` (IP anonymized)
+- **Vercel Analytics** (`@vercel/analytics`) with `beforeSend` stripping IP and PII
 - **EmailJS** for the contact (“Gedit”) app
 - Simple in-memory rate limiter for the contact API (not distributed across instances)
 - Client-side only **simulations** of security tools (no real exploitation)
@@ -138,7 +139,7 @@ File System (OPFS) so players can store per-game profiles.
 
 ```
 pages/
-  _app.jsx               # global providers (Legal banner, GA init, Vercel Analytics)
+  _app.jsx               # global providers (Legal banner, analytics consent, Vercel Analytics)
   _document.jsx
   index.jsx              # mounts <Ubuntu />
   api/                   # (dev/server) stub routes for demo-only features
