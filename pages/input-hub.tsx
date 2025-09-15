@@ -78,6 +78,9 @@ const InputHub = () => {
       const script = document.createElement('script');
       script.src = `https://www.google.com/recaptcha/api.js?render=${siteKey}`;
       script.async = true;
+      script.integrity =
+        'sha384-eKWS4Fr8hF+rC4MFDXkGa45FE3B3lfuWKmkL0LOrXpcFo9mguB/9gF/moRTkofau';
+      script.crossOrigin = 'anonymous';
       document.head.appendChild(script);
     }
   }, []);

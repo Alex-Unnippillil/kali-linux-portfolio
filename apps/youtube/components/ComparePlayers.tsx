@@ -33,6 +33,9 @@ const ComparePlayers = () => {
     }
     const tag = document.createElement('script');
     tag.src = 'https://www.youtube.com/iframe_api';
+    tag.integrity =
+      'sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb';
+    tag.crossOrigin = 'anonymous';
     window.onYouTubeIframeAPIReady = () => setReady(true);
     document.body.appendChild(tag);
   }, []);

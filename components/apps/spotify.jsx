@@ -19,6 +19,9 @@ export default function SpotifyApp() {
     const script = document.createElement('script');
     script.src = 'https://sdk.scdn.co/spotify-player.js';
     script.async = true;
+    script.integrity =
+      'sha384-UAnb8ZvTHt/9kwl0/jfaQhoFQ6WFZNtHc+MTuUFtyzeQPS1j60dOf3CXd0yQxarm';
+    script.crossOrigin = 'anonymous';
     document.body.appendChild(script);
 
     window.onSpotifyWebPlaybackSDKReady = () => {

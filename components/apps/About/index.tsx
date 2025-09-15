@@ -6,7 +6,6 @@ import GitHubStars from '../../GitHubStars';
 import Certs from '../certs';
 import data from '../alex/data.json';
 import SafetyNote from './SafetyNote';
-import { getCspNonce } from '../../../utils/csp';
 import AboutSlides from './slides';
 import ScrollableTimeline from '../../ScrollableTimeline';
 
@@ -107,7 +106,6 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
       name: 'Alex Unnippillil',
       url: 'https://unnippillil.com',
     };
-    const nonce = getCspNonce();
 
     return (
       <main className="w-full h-full flex bg-ub-cool-grey text-white select-none relative">
@@ -115,7 +113,6 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
           <title>About</title>
           <script
             type="application/ld+json"
-            nonce={nonce}
             dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
           />
         </Head>
