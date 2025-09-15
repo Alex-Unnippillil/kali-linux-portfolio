@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Filter from 'bad-words';
 import offlineQuotesData from '../public/quotes/quotes.json';
+import useJson from './useJson';
 
 const SAFE_CATEGORIES = [
   'inspirational',
@@ -65,6 +66,13 @@ interface Quote {
 
 export default function useDailyQuote(tag?: string) {
   const [quote, setQuote] = useState<Quote | null>(null);
+  const url =
+    typeof window === 'undefined' ||
+    process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true'
+      ? null
+      : `/api/quote${tag ? `?tag=${encodeURIComponent(tag)}` : ''}`;
+
+  const { data } = useJson<Quote>(url);
 
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -81,6 +89,17 @@ export default function useDailyQuote(tag?: string) {
       // ignore storage errors
     }
 
+    if (data) {
+      const toStore: Quote = { ...data, date: today } as Quote;
+      try {
+        localStorage.setItem('dailyQuote', JSON.stringify(toStore));
+      } catch {
+        // ignore storage errors
+      }
+      setQuote(toStore);
+      return;
+    }
+
     const pool = tag
       ? offlineQuotes.filter((q) => q.tags.includes(tag))
       : offlineQuotes;
@@ -92,7 +111,7 @@ export default function useDailyQuote(tag?: string) {
       // ignore storage errors
     }
     setQuote(toStore);
-  }, [tag]);
+  }, [data, tag]);
 
   return quote;
 }
