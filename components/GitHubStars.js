@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import usePersistentState from '../hooks/usePersistentState';
+import useDelayedRender from '../hooks/useDelayedRender';
 
 const GitHubStars = ({ user, repo }) => {
   const ref = useRef(null);
   const [visible, setVisible] = useState(false);
   const [stars, setStars] = usePersistentState(`gh-stars-${user}/${repo}`, null);
   const [loading, setLoading] = useState(stars === null);
+  const showSkeleton = useDelayedRender(loading);
 
   const fetchStars = useCallback(async () => {
     try {
@@ -45,9 +47,9 @@ const GitHubStars = ({ user, repo }) => {
 
   return (
     <div ref={ref} className="inline-flex items-center text-xs text-gray-300">
-      {loading ? (
+      {showSkeleton ? (
         <div className="h-5 w-12 bg-gray-200 animate-pulse rounded" />
-      ) : (
+      ) : !loading ? (
         <>
           <span>⭐ {stars}</span>
           <button
@@ -58,7 +60,7 @@ const GitHubStars = ({ user, repo }) => {
             ↻
           </button>
         </>
-      )}
+      ) : null}
     </div>
   );
 };
