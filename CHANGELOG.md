@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- KV-backed waitlist with double opt-in and CSV export.
+
 ## [2.1.0] - 2025-09-03
 ### Added
 - Added safe copy script and integrated into build process.
