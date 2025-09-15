@@ -23,7 +23,7 @@ const AppsPage = () => {
   );
 
   return (
-    <div className="p-4">
+    <main id="main-content" className="p-4">
       <label htmlFor="app-search" className="sr-only">
         Search apps
       </label>
@@ -61,7 +61,7 @@ const AppsPage = () => {
           </Link>
         ))}
       </div>
-    </div>
+    </main>
   );
 };
 

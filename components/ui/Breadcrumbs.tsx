@@ -17,7 +17,7 @@ const Breadcrumbs: React.FC<Props> = ({ path, onNavigate }) => {
           <button
             type="button"
             onClick={() => onNavigate(idx)}
-            className="hover:underline focus:outline-none"
+            className="hover:underline"
           >
             {seg.name || '/'}
           </button>
