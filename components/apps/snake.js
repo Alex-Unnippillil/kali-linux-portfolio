@@ -5,7 +5,7 @@ import { useSaveSlots } from './Games/common';
 import useGameHaptics from '../../hooks/useGameHaptics';
 import usePersistentState from '../../hooks/usePersistentState';
 import useCanvasResize from '../../hooks/useCanvasResize';
-import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import useMotionPolicy from '../../hooks/motionPolicy';
 import {
   GRID_SIZE,
   randomFood,
@@ -46,7 +46,7 @@ const Snake = () => {
   const runningRef = useRef(true);
   const audioCtx = useRef(null);
   const haptics = useGameHaptics();
-  const prefersReducedMotion = usePrefersReducedMotion();
+  const prefersReducedMotion = useMotionPolicy();
 
   const [running, setRunning] = useState(true);
   const [wrap, setWrap] = usePersistentState(

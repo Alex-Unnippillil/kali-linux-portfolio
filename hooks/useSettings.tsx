@@ -22,6 +22,7 @@ import {
   setHaptics as saveHaptics,
   defaults,
 } from '../utils/settingsStore';
+import useMotionPolicy, { motionPolicyAtom } from './motionPolicy';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
 
@@ -114,6 +115,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
+  const motionPolicy = useMotionPolicy();
 
   useEffect(() => {
     (async () => {
@@ -183,7 +185,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [density]);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('reduced-motion', reducedMotion);
+    document.documentElement.classList.toggle('reduced-motion', motionPolicy);
+  }, [motionPolicy]);
+
+  useEffect(() => {
+    motionPolicyAtom.set(reducedMotion);
     saveReducedMotion(reducedMotion);
   }, [reducedMotion]);
 

@@ -37,6 +37,7 @@ export const createDisplay = (Component) => {
   const Display = (addFolder, openApp) => (
     <DynamicComponent addFolder={addFolder} openApp={openApp} />
   );
+  Display.displayName = 'DynamicDisplay';
 
   Display.prefetch = () => {
     if (typeof Component.preload === 'function') {
