@@ -21,7 +21,8 @@
     "module-report": "node scripts/generate-module-report.mjs",
     "analyze": "ANALYZE=true yarn build",
     "preinstall": "corepack enable && corepack prepare yarn@4.9.2 --activate",
-    "verify:all": "node scripts/verify.mjs"
+    "verify:all": "node scripts/verify.mjs",
+    "build:docs-index": "node scripts/build-docs-index.mjs"
   },
   "engines": {
     "node": "20.19.5"
@@ -69,6 +70,7 @@
     "marked": "^16.2.1",
     "mathjs": "^14.6.0",
     "matter-js": "0.20.0",
+    "minisearch": "^6.3.0",
     "monaco-editor": "^0.52.2",
     "next": "15.5.2",
     "pcap-parser": "^0.2.1",
