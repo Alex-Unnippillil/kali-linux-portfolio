@@ -1,3 +1,4 @@
+/* eslint-disable react/display-name */
 import React from 'react';
 import dynamic from 'next/dynamic';
 import { logEvent } from './analytics';
@@ -43,6 +44,8 @@ export const createDisplay = (Component) => {
       Component.preload();
     }
   };
+
+  Display.displayName = 'Display';
 
   return Display;
 };
