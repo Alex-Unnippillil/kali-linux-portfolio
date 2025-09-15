@@ -11,14 +11,14 @@ import { fireShots } from '../../apps/games/battleship/logic';
 import GameLayout from './battleship/GameLayout';
 import usePersistentState from '../../hooks/usePersistentState';
 import useGameControls from './useGameControls';
-import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import useMotionPolicy from '../../hooks/motionPolicy';
 
 const CELL = 32; // px
 
 const createBoard = () => Array(BOARD_SIZE * BOARD_SIZE).fill(null);
 
 const Splash = ({ color }) => {
-  const prefersReduced = usePrefersReducedMotion();
+  const prefersReduced = useMotionPolicy();
   if (prefersReduced) return null;
   return (
     <span

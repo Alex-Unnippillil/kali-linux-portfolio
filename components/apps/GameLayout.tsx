@@ -9,7 +9,7 @@ import React, {
 } from 'react';
 import HelpOverlay from './HelpOverlay';
 import PerfOverlay from './Games/common/perf';
-import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import useMotionPolicy from '../../hooks/motionPolicy';
 import {
   serialize as serializeRng,
   deserialize as deserializeRng,
@@ -59,7 +59,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
     ((input: any, index: number) => void) | undefined
   >(undefined);
   const [replaying, setReplaying] = useState(false);
-  const prefersReducedMotion = usePrefersReducedMotion();
+  const prefersReducedMotion = useMotionPolicy();
 
   const close = useCallback(() => setShowHelp(false), []);
   const toggle = useCallback(() => setShowHelp((h) => !h), []);

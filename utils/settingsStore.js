@@ -49,10 +49,7 @@ export async function setDensity(density) {
 export async function getReducedMotion() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.reducedMotion;
   const stored = window.localStorage.getItem('reduced-motion');
-  if (stored !== null) {
-    return stored === 'true';
-  }
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  return stored === 'true';
 }
 
 export async function setReducedMotion(value) {

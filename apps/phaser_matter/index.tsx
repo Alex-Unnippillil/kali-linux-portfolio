@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import Phaser from 'phaser';
 import { GameState } from './gameLogic';
 import usePersistedState from '../../hooks/usePersistedState';
-import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import useMotionPolicy from '../../hooks/motionPolicy';
 
 type Action = 'left' | 'right' | 'jump';
 
@@ -16,7 +16,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
   void getDailySeed;
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
-  const prefersReducedMotion = usePrefersReducedMotion();
+  const prefersReducedMotion = useMotionPolicy();
   const prefersRef = useRef(prefersReducedMotion);
   // Pause the game loop entirely when reduced motion is requested
   useEffect(() => {

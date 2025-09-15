@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ReactGA from 'react-ga4';
-import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import useMotionPolicy from '../../hooks/motionPolicy';
 import { getDailySeed } from '../../utils/dailySeed';
 
 const SIZE = 4;
@@ -111,7 +111,7 @@ const saveReplay = (replay: any) => {
 };
 
 const Page2048 = () => {
-  const prefersReducedMotion = usePrefersReducedMotion();
+  const prefersReducedMotion = useMotionPolicy();
   // Skip tile transition classes if the user prefers reduced motion
   const rngRef = useRef(mulberry32(0));
   const seedRef = useRef(0);

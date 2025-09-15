@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactGA from 'react-ga4';
-import usePrefersReducedMotion from '../../../hooks/usePrefersReducedMotion';
+import useMotionPolicy from '../../../hooks/motionPolicy';
 import {
   initializeGame,
   drawFromStock,
@@ -71,7 +71,7 @@ const Solitaire = () => {
     dailyStreak: 0,
     lastDaily: null,
   });
-  const prefersReducedMotion = usePrefersReducedMotion();
+  const prefersReducedMotion = useMotionPolicy();
   const [cascade, setCascade] = useState<AnimatedCard[]>([]);
   const [ariaMessage, setAriaMessage] = useState('');
   const timer = useRef<NodeJS.Timeout | null>(null);

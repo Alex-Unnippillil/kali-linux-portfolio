@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
-import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
+import useMotionPolicy from '../hooks/motionPolicy';
 import useOPFS from '../hooks/useOPFS';
 
 // Basic YouTube player with keyboard shortcuts, playback rate cycling,
@@ -19,7 +19,7 @@ export default function YouTubePlayer({ videoId }) {
   const [notes, setNotes] = useState('');
   const [search, setSearch] = useState('');
   const [results, setResults] = useState([]);
-  const prefersReducedMotion = usePrefersReducedMotion();
+  const prefersReducedMotion = useMotionPolicy();
   const { supported, getDir, readFile, writeFile, listFiles } = useOPFS();
 
   // Load the YouTube IFrame API lazily on user interaction
