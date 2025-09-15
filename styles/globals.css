@@ -73,7 +73,22 @@ html[data-theme='matrix'] {
   color: var(--color-inverse);
 }
 
-*:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
+*:focus {
+  outline: 3px solid var(--color-focus-ring);
   outline-offset: 2px;
+}
+
+*:focus:not(:focus-visible) {
+  outline-color: transparent;
+}
+
+*:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.high-contrast *:focus,
+.high-contrast *:focus-visible {
+  outline-color: var(--color-ub-orange);
+  box-shadow: 0 0 0 3px rgba(255, 255, 0, 0.45);
 }

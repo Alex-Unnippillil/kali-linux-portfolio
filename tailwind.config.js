@@ -96,7 +96,7 @@ module.exports = {
     },
   },
   plugins: [
-    plugin(function ({ addUtilities }) {
+    plugin(function ({ addUtilities, addVariant }) {
       const cols = {};
       for (let i = 1; i <= 12; i++) {
         const width = `${(i / 12) * 100}%`;
@@ -106,6 +106,7 @@ module.exports = {
         }
       }
       addUtilities(cols, ['responsive']);
+      addVariant('high-contrast', '.high-contrast &');
     }),
   ],
 };

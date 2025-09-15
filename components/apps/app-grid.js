@@ -49,34 +49,117 @@ export default function AppGrid({ openApp }) {
     return 3;
   };
 
+  const focusAppByIndex = useCallback(
+    (index) => {
+      if (filtered.length === 0) return;
+      const colCount = Math.max(columnCountRef.current, 1);
+      const clamped = Math.max(0, Math.min(index, filtered.length - 1));
+      setFocusedIndex(clamped);
+      const row = Math.floor(clamped / colCount);
+      const col = clamped % colCount;
+      const grid = gridRef.current;
+      if (grid && typeof grid.scrollToItem === 'function') {
+        grid.scrollToItem({ rowIndex: row, columnIndex: col, align: 'smart' });
+      } else if (grid && typeof grid.scrollToCell === 'function') {
+        grid.scrollToCell({
+          rowIndex: row,
+          columnIndex: col,
+          rowAlign: 'smart',
+          columnAlign: 'smart',
+        });
+      }
+      requestAnimationFrame(() => {
+        const app = filtered[clamped];
+        if (!app) return;
+        const el = document.getElementById(`app-${app.id}`);
+        el?.focus();
+      });
+    },
+    [filtered]
+  );
+
   const handleKeyDown = useCallback(
     (e) => {
-      if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+      if (
+        ![
+          'ArrowUp',
+          'ArrowDown',
+          'ArrowLeft',
+          'ArrowRight',
+          'Home',
+          'End',
+        ].includes(e.key)
+      ) {
+        return;
+      }
+      if (filtered.length === 0) return;
+      const target = e.target;
+      let currentIndex = focusedIndex;
+      if (target instanceof HTMLElement) {
+        const cell = target.closest('[data-app-index]');
+        if (cell) {
+          const parsed = Number(cell.getAttribute('data-app-index'));
+          if (!Number.isNaN(parsed)) {
+            currentIndex = parsed;
+          }
+        }
+      }
+      const colCount = Math.max(columnCountRef.current, 1);
+      let nextIndex = currentIndex;
+      switch (e.key) {
+        case 'ArrowRight':
+          nextIndex = Math.min(currentIndex + 1, filtered.length - 1);
+          break;
+        case 'ArrowLeft':
+          nextIndex = Math.max(currentIndex - 1, 0);
+          break;
+        case 'ArrowDown':
+          nextIndex = Math.min(currentIndex + colCount, filtered.length - 1);
+          break;
+        case 'ArrowUp':
+          nextIndex = Math.max(currentIndex - colCount, 0);
+          break;
+        case 'Home':
+          nextIndex = currentIndex - (currentIndex % colCount);
+          break;
+        case 'End':
+          nextIndex = Math.min(
+            currentIndex - (currentIndex % colCount) + (colCount - 1),
+            filtered.length - 1,
+          );
+          break;
+        default:
+          return;
+      }
       e.preventDefault();
-      const colCount = columnCountRef.current;
-      let idx = focusedIndex;
-      if (e.key === 'ArrowRight') idx = Math.min(idx + 1, filtered.length - 1);
-      if (e.key === 'ArrowLeft') idx = Math.max(idx - 1, 0);
-      if (e.key === 'ArrowDown') idx = Math.min(idx + colCount, filtered.length - 1);
-      if (e.key === 'ArrowUp') idx = Math.max(idx - colCount, 0);
-      setFocusedIndex(idx);
-      const row = Math.floor(idx / colCount);
-      const col = idx % colCount;
-      gridRef.current?.scrollToCell({ rowIndex: row, columnIndex: col, rowAlign: 'smart', columnAlign: 'smart' });
-      setTimeout(() => {
-        const el = document.getElementById('app-' + filtered[idx].id);
-        el?.focus();
-      }, 0);
+      focusAppByIndex(nextIndex);
     },
-    [filtered, focusedIndex]
+    [filtered, focusAppByIndex, focusedIndex]
   );
 
   const Cell = ({ columnIndex, rowIndex, style, data }) => {
-    const index = rowIndex * data.columnCount + columnIndex;
-    if (index >= data.items.length) return null;
-    const app = data.items[index];
+    const { items, columnCount, focusedIndex: activeIndex, setFocusedIndex: setActive } = data;
+    const index = rowIndex * columnCount + columnIndex;
+    if (index >= items.length) return null;
+    const app = items[index];
+    const updateActive = () => {
+      if (activeIndex !== index) {
+        setActive(index);
+      }
+    };
+    const isActive = activeIndex === index;
     return (
-      <div style={{ ...style, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 12 }}>
+      <div
+        role="gridcell"
+        aria-selected={isActive}
+        aria-colindex={columnIndex + 1}
+        aria-rowindex={rowIndex + 1}
+        data-app-index={index}
+        data-app-id={app.id}
+        style={{ ...style, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 12 }}
+        onFocusCapture={updateActive}
+        onMouseDown={updateActive}
+      >
         <UbuntuApp
           id={app.id}
           icon={app.icon}
@@ -91,12 +174,28 @@ export default function AppGrid({ openApp }) {
   return (
     <div className="flex flex-col items-center h-full">
       <input
-        className="mb-6 mt-4 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
+        type="search"
+        role="searchbox"
+        aria-label="Search apps"
+        className="mb-6 mt-4 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white"
         placeholder="Search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowDown' && filtered.length > 0) {
+            e.preventDefault();
+            focusAppByIndex(0);
+          }
+        }}
       />
-      <div className="w-full flex-1 h-[70vh] outline-none" onKeyDown={handleKeyDown}>
+      <div
+        className="w-full flex-1 h-[70vh]"
+        role="grid"
+        aria-label="Application grid"
+        aria-rowcount={filtered.length ? Math.ceil(filtered.length / Math.max(columnCountRef.current, 1)) : 0}
+        aria-colcount={Math.max(columnCountRef.current, 1)}
+        onKeyDown={handleKeyDown}
+      >
         <AutoSizer>
           {({ height, width }) => {
             const columnCount = getColumnCount(width);
@@ -104,7 +203,7 @@ export default function AppGrid({ openApp }) {
             const rowCount = Math.ceil(filtered.length / columnCount);
             return (
               <Grid
-                gridRef={gridRef}
+                ref={gridRef}
                 columnCount={columnCount}
                 columnWidth={width / columnCount}
                 height={height}
@@ -113,7 +212,17 @@ export default function AppGrid({ openApp }) {
                 width={width}
                 className="scroll-smooth"
               >
-                {(props) => <Cell {...props} data={{ items: filtered, columnCount }} />}
+                {(props) => (
+                  <Cell
+                    {...props}
+                    data={{
+                      items: filtered,
+                      columnCount,
+                      focusedIndex,
+                      setFocusedIndex,
+                    }}
+                  />
+                )}
               </Grid>
             );
           }}

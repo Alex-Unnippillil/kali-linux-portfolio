@@ -7,6 +7,11 @@ export function Settings() {
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
+    const highContrastHelpId = 'high-contrast-help';
+    const toggleHighContrastMode = useCallback(() => {
+        setHighContrast((value) => !value);
+    }, [setHighContrast]);
+    const highContrastStatus = highContrast ? 'On' : 'Off';
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
 
@@ -56,15 +61,15 @@ export function Settings() {
     }, [accent, accentText, contrastRatio]);
 
     return (
-        <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"}>
+        <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey high-contrast:bg-black high-contrast:text-yellow-200"}>
             <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4" style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Theme:</label>
+                <label className="mr-2 text-ubt-grey high-contrast:text-yellow-200">Theme:</label>
                 <select
                     value={theme}
                     onChange={(e) => setTheme(e.target.value)}
-                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey high-contrast:bg-black high-contrast:text-yellow-200 high-contrast:border-yellow-400"
                 >
                     <option value="default">Default</option>
                     <option value="dark">Dark</option>
@@ -73,7 +78,7 @@ export function Settings() {
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Accent:</label>
+                <label className="mr-2 text-ubt-grey high-contrast:text-yellow-200">Accent:</label>
                 <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
                     {ACCENT_OPTIONS.map((c) => (
                         <button
@@ -82,25 +87,25 @@ export function Settings() {
                             role="radio"
                             aria-checked={accent === c}
                             onClick={() => setAccent(c)}
-                            className={`w-8 h-8 rounded-full border-2 ${accent === c ? 'border-white' : 'border-transparent'}`}
+                            className={`w-8 h-8 rounded-full border-2 ${accent === c ? 'border-white high-contrast:border-yellow-200' : 'border-transparent high-contrast:border-yellow-500/60'}`}
                             style={{ backgroundColor: c }}
                         />
                     ))}
                 </div>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Density:</label>
+                <label className="mr-2 text-ubt-grey high-contrast:text-yellow-200">Density:</label>
                 <select
                     value={density}
                     onChange={(e) => setDensity(e.target.value)}
-                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey high-contrast:bg-black high-contrast:text-yellow-200 high-contrast:border-yellow-400"
                 >
                     <option value="regular">Regular</option>
                     <option value="compact">Compact</option>
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Font Size:</label>
+                <label className="mr-2 text-ubt-grey high-contrast:text-yellow-200">Font Size:</label>
                 <input
                     type="range"
                     min="0.75"
@@ -112,7 +117,7 @@ export function Settings() {
                 />
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center high-contrast:text-yellow-200">
                     <input
                         type="checkbox"
                         checked={reducedMotion}
@@ -123,7 +128,7 @@ export function Settings() {
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center high-contrast:text-yellow-200">
                     <input
                         type="checkbox"
                         checked={largeHitAreas}
@@ -133,19 +138,32 @@ export function Settings() {
                     Large Hit Areas
                 </label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={highContrast}
-                        onChange={(e) => setHighContrast(e.target.checked)}
-                        className="mr-2"
-                    />
-                    High Contrast
-                </label>
+            <div className="flex flex-col items-center my-4 space-y-2">
+                <button
+                    type="button"
+                    role="switch"
+                    aria-checked={highContrast}
+                    aria-describedby={highContrastHelpId}
+                    onClick={toggleHighContrastMode}
+                    className={`flex items-center gap-3 px-4 py-2 rounded-md border transition-colors duration-200 ${highContrast
+                        ? 'bg-ub-orange text-black border-ub-border-orange high-contrast:bg-yellow-300 high-contrast:text-black high-contrast:border-yellow-300'
+                        : 'bg-black bg-opacity-30 text-ubt-grey border-ubt-cool-grey high-contrast:bg-black high-contrast:border-yellow-400 high-contrast:text-yellow-200'
+                        }`}
+                >
+                    <span className="font-medium">High Contrast</span>
+                    <span className="text-sm" aria-hidden="true">
+                        {highContrastStatus}
+                    </span>
+                </button>
+                <p
+                    id={highContrastHelpId}
+                    className="text-xs text-ubt-grey text-center high-contrast:text-yellow-200"
+                >
+                    Increase color contrast for improved readability across the desktop.
+                </p>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center high-contrast:text-yellow-200">
                     <input
                         type="checkbox"
                         checked={allowNetwork}
@@ -156,7 +174,7 @@ export function Settings() {
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center high-contrast:text-yellow-200">
                     <input
                         type="checkbox"
                         checked={haptics}
@@ -167,7 +185,7 @@ export function Settings() {
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center high-contrast:text-yellow-200">
                     <input
                         type="checkbox"
                         checked={pongSpin}
@@ -179,17 +197,16 @@ export function Settings() {
             </div>
             <div className="flex justify-center my-4">
                 <div
-                    className="p-4 rounded transition-colors duration-300 motion-reduce:transition-none"
-                    style={{ backgroundColor: '#0f1317', color: '#ffffff' }}
+                    className="p-4 rounded border border-transparent transition-colors duration-300 motion-reduce:transition-none bg-[#0f1317] text-white shadow-sm high-contrast:bg-black high-contrast:text-yellow-200 high-contrast:border-yellow-400"
                 >
-                    <p className="mb-2 text-center">Preview</p>
+                    <p className="mb-2 text-center font-semibold">Preview</p>
                     <button
-                        className="px-2 py-1 rounded"
+                        className="px-2 py-1 rounded font-medium shadow-sm high-contrast:border-black high-contrast:ring-2 high-contrast:ring-yellow-300"
                         style={{ backgroundColor: accent, color: accentText() }}
                     >
                         Accent
                     </button>
-                    <p className={`mt-2 text-sm text-center ${contrast >= 4.5 ? 'text-green-400' : 'text-red-400'}`}>
+                    <p className={`mt-2 text-sm text-center ${contrast >= 4.5 ? 'text-green-400' : 'text-red-400'} high-contrast:text-yellow-200`}>
                         {`Contrast ${contrast.toFixed(2)}:1 ${contrast >= 4.5 ? 'Pass' : 'Fail'}`}
                     </p>
                     <span ref={liveRegion} role="status" aria-live="polite" className="sr-only"></span>
@@ -213,7 +230,7 @@ export function Settings() {
                                 }
                             }}
                             data-path={name}
-                            className={((name === wallpaper) ? " border-yellow-700 " : " border-transparent ") + " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"}
+                            className={((name === wallpaper) ? " border-yellow-700 high-contrast:border-yellow-300 " : " border-transparent high-contrast:border-yellow-500/60 ") + " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"}
                             style={{ backgroundImage: `url(/wallpapers/${name}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}
                         ></div>
                     ))
@@ -231,13 +248,13 @@ export function Settings() {
                         a.click();
                         URL.revokeObjectURL(url);
                     }}
-                    className="px-4 py-2 rounded bg-ub-orange text-white"
+                    className="px-4 py-2 rounded bg-ub-orange text-white transition-colors high-contrast:bg-yellow-300 high-contrast:text-black"
                 >
                     Export Settings
                 </button>
                 <button
                     onClick={() => fileInput.current && fileInput.current.click()}
-                    className="px-4 py-2 rounded bg-ub-orange text-white"
+                    className="px-4 py-2 rounded bg-ub-orange text-white transition-colors high-contrast:bg-yellow-300 high-contrast:text-black"
                 >
                     Import Settings
                 </button>
@@ -253,7 +270,7 @@ export function Settings() {
                         setHighContrast(defaults.highContrast);
                         setTheme('default');
                     }}
-                    className="px-4 py-2 rounded bg-ub-orange text-white"
+                    className="px-4 py-2 rounded bg-ub-orange text-white transition-colors high-contrast:bg-yellow-300 high-contrast:text-black"
                 >
                     Reset Desktop
                 </button>
