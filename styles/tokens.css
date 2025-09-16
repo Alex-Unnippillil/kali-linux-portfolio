@@ -47,6 +47,11 @@
   --radius-lg: 8px;
   --radius-round: 9999px;
 
+  /* Shadows */
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 8px 24px -6px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 18px 40px -12px rgba(0, 0, 0, 0.4);
+
   /* Motion durations */
   --motion-fast: 150ms;
   --motion-medium: 300ms;
