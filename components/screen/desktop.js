@@ -23,6 +23,8 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import WorkspaceHotkeys from '../../src/desktop/WorkspaceHotkeys';
+import wm, { DEFAULT_WORKSPACE } from '../../src/desktop/wm';
 
 export class Desktop extends Component {
     constructor() {
@@ -30,6 +32,8 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.workspaceUnsubscribe = null;
+        const { ws: initialWorkspace } = wm.getState();
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -52,6 +56,8 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            window_workspaces: {},
+            activeWorkspace: initialWorkspace || DEFAULT_WORKSPACE,
         }
     }
 
@@ -89,6 +95,9 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        this.workspaceUnsubscribe = wm.subscribe(({ ws }) => {
+            this.handleWorkspaceChange(ws);
+        });
     }
 
     componentWillUnmount() {
@@ -96,6 +105,50 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        if (this.workspaceUnsubscribe) {
+            this.workspaceUnsubscribe();
+        }
+    }
+
+    handleWorkspaceChange = (workspace) => {
+        if (this.state.activeWorkspace === workspace) {
+            this.syncWorkspaceFocus(workspace);
+            return;
+        }
+        this.setState({ activeWorkspace: workspace }, () => {
+            this.syncWorkspaceFocus(workspace);
+        });
+    }
+
+    syncWorkspaceFocus = (workspace) => {
+        const current = this.getFocusedWindowId(workspace);
+        if (current && !this.state.minimized_windows[current] && !this.state.closed_windows[current]) {
+            this.focus(current);
+            return;
+        }
+        for (const index in this.app_stack) {
+            const id = this.app_stack[index];
+            if (this.state.window_workspaces[id] !== workspace) continue;
+            if (!this.state.closed_windows[id] && !this.state.minimized_windows[id]) {
+                this.focus(id);
+                return;
+            }
+        }
+        this.clearFocus();
+    }
+
+    clearFocus = () => {
+        let focused_windows = { ...this.state.focused_windows };
+        let shouldUpdate = false;
+        for (const key in focused_windows) {
+            if (focused_windows[key]) {
+                focused_windows[key] = false;
+                shouldUpdate = true;
+            }
+        }
+        if (shouldUpdate) {
+            this.setState({ focused_windows });
+        }
     }
 
     checkForNewFolders = () => {
@@ -174,9 +227,13 @@ export class Desktop extends Component {
         }
     }
 
-    getFocusedWindowId = () => {
+    getFocusedWindowId = (workspace = this.state.activeWorkspace) => {
         for (const key in this.state.focused_windows) {
-            if (this.state.focused_windows[key]) {
+            if (
+                this.state.focused_windows[key] &&
+                this.state.window_workspaces[key] === workspace &&
+                this.state.closed_windows[key] === false
+            ) {
                 return key;
             }
         }
@@ -184,19 +241,23 @@ export class Desktop extends Component {
     }
 
     cycleApps = (direction) => {
-        if (!this.app_stack.length) return;
+        const stack = this.app_stack.filter(id =>
+            this.state.closed_windows[id] === false &&
+            this.state.window_workspaces[id] === this.state.activeWorkspace
+        );
+        if (!stack.length) return;
         const currentId = this.getFocusedWindowId();
-        let index = this.app_stack.indexOf(currentId);
+        let index = stack.indexOf(currentId);
         if (index === -1) index = 0;
-        let next = (index + direction + this.app_stack.length) % this.app_stack.length;
+        let next = (index + direction + stack.length) % stack.length;
         // Skip minimized windows
-        for (let i = 0; i < this.app_stack.length; i++) {
-            const id = this.app_stack[next];
+        for (let i = 0; i < stack.length; i++) {
+            const id = stack[next];
             if (!this.state.minimized_windows[id]) {
                 this.focus(id);
                 break;
             }
-            next = (next + direction + this.app_stack.length) % this.app_stack.length;
+            next = (next + direction + stack.length) % stack.length;
         }
     }
 
@@ -204,7 +265,11 @@ export class Desktop extends Component {
         const currentId = this.getFocusedWindowId();
         if (!currentId) return;
         const base = currentId.split('#')[0];
-        const windows = this.app_stack.filter(id => id.startsWith(base));
+        const windows = this.app_stack.filter(id =>
+            id.startsWith(base) &&
+            this.state.window_workspaces[id] === this.state.activeWorkspace &&
+            this.state.closed_windows[id] === false
+        );
         if (windows.length <= 1) return;
         let index = windows.indexOf(currentId);
         let next = (index + direction + windows.length) % windows.length;
@@ -213,7 +278,7 @@ export class Desktop extends Component {
 
     openWindowSwitcher = () => {
         const windows = this.app_stack
-            .filter(id => this.state.closed_windows[id] === false)
+            .filter(id => this.state.closed_windows[id] === false && this.state.window_workspaces[id] === this.state.activeWorkspace)
             .map(id => apps.find(a => a.id === id))
             .filter(Boolean);
         if (windows.length) {
@@ -351,7 +416,7 @@ export class Desktop extends Component {
             pinnedApps = apps.filter(app => app.favourite).map(app => app.id);
             safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps));
         }
-        let focused_windows = {}, closed_windows = {}, disabled_apps = {}, favourite_apps = {}, overlapped_windows = {}, minimized_windows = {};
+        let focused_windows = {}, closed_windows = {}, disabled_apps = {}, favourite_apps = {}, overlapped_windows = {}, minimized_windows = {}, window_workspaces = {};
         let desktop_apps = [];
         apps.forEach((app) => {
             focused_windows = {
@@ -378,6 +443,10 @@ export class Desktop extends Component {
                 ...minimized_windows,
                 [app.id]: false,
             }
+            window_workspaces = {
+                ...window_workspaces,
+                [app.id]: this.state.window_workspaces[app.id] || DEFAULT_WORKSPACE,
+            }
             if (app.desktop_shortcut) desktop_apps.push(app.id);
         });
         this.setState({
@@ -387,6 +456,7 @@ export class Desktop extends Component {
             favourite_apps,
             overlapped_windows,
             minimized_windows,
+            window_workspaces,
             desktop_apps
         }, () => {
             if (typeof callback === 'function') callback();
@@ -395,7 +465,7 @@ export class Desktop extends Component {
     }
 
     updateAppsData = () => {
-        let focused_windows = {}, closed_windows = {}, favourite_apps = {}, minimized_windows = {}, disabled_apps = {};
+        let focused_windows = {}, closed_windows = {}, favourite_apps = {}, minimized_windows = {}, disabled_apps = {}, window_workspaces = {};
         let desktop_apps = [];
         apps.forEach((app) => {
             focused_windows = {
@@ -418,6 +488,10 @@ export class Desktop extends Component {
                 ...favourite_apps,
                 [app.id]: app.favourite
             }
+            window_workspaces = {
+                ...window_workspaces,
+                [app.id]: this.state.window_workspaces[app.id] || DEFAULT_WORKSPACE,
+            }
             if (app.desktop_shortcut) desktop_apps.push(app.id);
         });
         this.setState({
@@ -426,6 +500,7 @@ export class Desktop extends Component {
             disabled_apps,
             minimized_windows,
             favourite_apps,
+            window_workspaces,
             desktop_apps
         });
         this.initFavourite = { ...favourite_apps };
@@ -457,7 +532,7 @@ export class Desktop extends Component {
     renderWindows = () => {
         let windowsJsx = [];
         apps.forEach((app, index) => {
-            if (this.state.closed_windows[app.id] === false) {
+            if (this.state.closed_windows[app.id] === false && this.state.window_workspaces[app.id] === this.state.activeWorkspace) {
 
                 const pos = this.state.window_positions[app.id];
                 const props = {
@@ -558,8 +633,10 @@ export class Desktop extends Component {
         // if there is atleast one app opened, give it focus
         if (!this.checkAllMinimised()) {
             for (const index in this.app_stack) {
-                if (!this.state.minimized_windows[this.app_stack[index]]) {
-                    this.focus(this.app_stack[index]);
+                const id = this.app_stack[index];
+                if (this.state.window_workspaces[id] !== this.state.activeWorkspace) continue;
+                if (!this.state.closed_windows[id] && !this.state.minimized_windows[id]) {
+                    this.focus(id);
                     break;
                 }
             }
@@ -569,7 +646,7 @@ export class Desktop extends Component {
     checkAllMinimised = () => {
         let result = true;
         for (const key in this.state.minimized_windows) {
-            if (!this.state.closed_windows[key]) { // if app is opened
+            if (!this.state.closed_windows[key] && this.state.window_workspaces[key] === this.state.activeWorkspace) { // if app is opened in current workspace
                 result = result & this.state.minimized_windows[key];
             }
         }
@@ -591,22 +668,33 @@ export class Desktop extends Component {
             action: `Opened ${objId} window`
         });
 
+        const workspace = this.state.activeWorkspace;
+        let window_workspaces = { ...this.state.window_workspaces };
+
         // if the app is disabled
         if (this.state.disabled_apps[objId]) return;
 
         // if app is already open, focus it instead of spawning a new window
         if (this.state.closed_windows[objId] === false) {
-            // if it's minimised, restore its last position
-            if (this.state.minimized_windows[objId]) {
-                this.focus(objId);
-                var r = document.querySelector("#" + objId);
-                r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
-                let minimized_windows = this.state.minimized_windows;
-                minimized_windows[objId] = false;
-                this.setState({ minimized_windows: minimized_windows }, this.saveSession);
+            const restoreExisting = () => {
+                if (this.state.minimized_windows[objId]) {
+                    this.focus(objId);
+                    var r = document.querySelector("#" + objId);
+                    r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
+                    let minimized_windows = this.state.minimized_windows;
+                    minimized_windows[objId] = false;
+                    this.setState({ minimized_windows: minimized_windows }, this.saveSession);
+                } else {
+                    this.focus(objId);
+                    this.saveSession();
+                }
+            };
+
+            if (window_workspaces[objId] !== workspace) {
+                window_workspaces[objId] = workspace;
+                this.setState({ window_workspaces }, restoreExisting);
             } else {
-                this.focus(objId);
-                this.saveSession();
+                restoreExisting();
             }
             return;
         } else {
@@ -618,7 +706,7 @@ export class Desktop extends Component {
             if (currentApp) {
                 frequentApps.forEach((app) => {
                     if (app.id === currentApp.id) {
-                        app.frequency += 1; // increase the frequency if app is found 
+                        app.frequency += 1; // increase the frequency if app is found
                     }
                 });
             } else {
@@ -647,7 +735,8 @@ export class Desktop extends Component {
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
-                this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
+                window_workspaces[objId] = workspace;
+                this.setState({ closed_windows, favourite_apps, allAppsView: false, window_workspaces }, () => {
                     this.focus(objId);
                     this.saveSession();
                 });
@@ -733,8 +822,9 @@ export class Desktop extends Component {
     }
 
     focus = (objId) => {
-        // removes focus from all window and 
+        // removes focus from all window and
         // gives focus to window with 'id = objId'
+        if (this.state.window_workspaces[objId] !== this.state.activeWorkspace) return;
         var focused_windows = this.state.focused_windows;
         focused_windows[objId] = true;
         for (let key in focused_windows) {
@@ -867,6 +957,8 @@ export class Desktop extends Component {
         return (
             <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
 
+                <WorkspaceHotkeys />
+
                 {/* Window Area */}
                 <div
                     id="window-area"
@@ -898,6 +990,8 @@ export class Desktop extends Component {
                     closed_windows={this.state.closed_windows}
                     minimized_windows={this.state.minimized_windows}
                     focused_windows={this.state.focused_windows}
+                    window_workspaces={this.state.window_workspaces}
+                    activeWorkspace={this.state.activeWorkspace}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
                 />
