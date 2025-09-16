@@ -79,6 +79,8 @@ const withPWA = require('@ducanh2912/next-pwa').default({
       { url: '/apps/terminal', revision: null },
       { url: '/apps/checkers', revision: null },
       { url: '/offline.html', revision: null },
+      { url: '/offline.css', revision: null },
+      { url: '/offline.js', revision: null },
       { url: '/manifest.webmanifest', revision: null },
     ],
   },

@@ -10,6 +10,8 @@ const ASSETS = [
   '/apps/terminal',
   '/apps/checkers',
   '/offline.html',
+  '/offline.css',
+  '/offline.js',
   '/manifest.webmanifest',
 ];
 
