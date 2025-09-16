@@ -16,7 +16,12 @@
   --color-border: #2a2e36; /* subtle borders */
   --color-terminal: #00ff00; /* terminal green */
   --color-dark: #0c0f12; /* card back */
+  /* Focus ring tokens */
   --color-focus-ring: var(--color-accent);
+  --focus-ring-color: var(--color-focus-ring);
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring-gap-color: color-mix(in srgb, var(--color-bg) 30%, transparent);
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
   accent-color: var(--color-control-accent);
@@ -29,6 +34,7 @@ html[data-theme='dark'] {
   --color-primary: #1e88e5;
   --color-secondary: #121212;
   --color-accent: #bb86fc;
+  --color-focus-ring: var(--color-accent);
   --color-muted: #1f1f1f;
   --color-surface: #121212;
   --color-inverse: #ffffff;
@@ -44,6 +50,7 @@ html[data-theme='neon'] {
   --color-primary: #39ff14;
   --color-secondary: #1a1a1a;
   --color-accent: #ff00ff;
+  --color-focus-ring: var(--color-accent);
   --color-muted: #222222;
   --color-surface: #111111;
   --color-inverse: #ffffff;
@@ -59,6 +66,7 @@ html[data-theme='matrix'] {
   --color-primary: #00ff00;
   --color-secondary: #001100;
   --color-accent: #00ff00;
+  --color-focus-ring: var(--color-accent);
   --color-muted: #003300;
   --color-surface: #001100;
   --color-inverse: #ffffff;
@@ -73,7 +81,26 @@ html[data-theme='matrix'] {
   color: var(--color-inverse);
 }
 
-*:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
+/* Global focus ring styling for interactive elements */
+:where(
+    a,
+    button,
+    [role='button'],
+    [tabindex]:not([tabindex='-1']),
+    input,
+    select,
+    textarea,
+    summary,
+    .focus-ring
+  ):focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 var(--focus-ring-offset, 2px)
+      var(--focus-ring-gap-color, transparent),
+    0 0 0
+      calc(var(--focus-ring-offset, 2px) + var(--focus-ring-width, 2px))
+      var(
+        --focus-ring-color,
+        var(--color-focus-ring, var(--color-accent))
+      ) !important;
 }
