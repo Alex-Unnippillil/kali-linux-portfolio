@@ -1,28 +1,83 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import ShortcutOverlay from '../components/common/ShortcutOverlay';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import HelpOverlay from '../components/system/HelpOverlay';
 
-describe('ShortcutOverlay', () => {
+const originalClipboard = navigator.clipboard;
+
+const mockClipboard = {
+  writeText: jest.fn().mockResolvedValue(undefined),
+};
+
+beforeAll(() => {
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: mockClipboard,
+  });
+});
+
+afterAll(() => {
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: originalClipboard,
+  });
+});
+
+describe('HelpOverlay', () => {
   beforeEach(() => {
     window.localStorage.removeItem('keymap');
+    mockClipboard.writeText.mockClear();
   });
 
-  it('lists shortcuts and highlights conflicts', () => {
+  it('respects custom toggle key and highlights conflicts', async () => {
     window.localStorage.setItem(
       'keymap',
       JSON.stringify({
-        'Show keyboard shortcuts': 'A',
-        'Open settings': 'A',
-      })
+        'Show keyboard shortcuts': 'Shift+Q',
+        'Open settings': 'Shift+Q',
+      }),
     );
-    render(<ShortcutOverlay />);
-    fireEvent.keyDown(window, { key: 'a' });
-    expect(
-      screen.getByText('Show keyboard shortcuts')
-    ).toBeInTheDocument();
-    expect(screen.getByText('Open settings')).toBeInTheDocument();
-    const items = screen.getAllByRole('listitem');
-    expect(items[0]).toHaveAttribute('data-conflict', 'true');
-    expect(items[1]).toHaveAttribute('data-conflict', 'true');
+    render(<HelpOverlay />);
+
+    fireEvent.keyDown(window, { key: 'q', shiftKey: true });
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+
+    const showItem = screen.getByText('Show keyboard shortcuts').closest('li');
+    const settingsItem = screen.getByText('Open settings').closest('li');
+
+    expect(showItem).toHaveAttribute('data-conflict', 'true');
+    expect(settingsItem).toHaveAttribute('data-conflict', 'true');
+  });
+
+  it('filters shortcuts and copies them to the clipboard', async () => {
+    window.localStorage.setItem(
+      'keymap',
+      JSON.stringify({
+        'Show keyboard shortcuts': '?',
+        'Open settings': 'Ctrl+,',
+      }),
+    );
+    render(<HelpOverlay />);
+
+    fireEvent.keyDown(window, { key: '?', shiftKey: true });
+
+    await screen.findByRole('dialog');
+
+    const search = screen.getByPlaceholderText('Search shortcuts');
+    fireEvent.change(search, { target: { value: 'clipboard' } });
+
+    expect(screen.getByText('Open clipboard manager')).toBeInTheDocument();
+    expect(screen.queryByText('Switch between apps')).not.toBeInTheDocument();
+
+    const copyButton = screen.getByRole('button', {
+      name: /copy ctrl\+shift\+v/i,
+    });
+    fireEvent.click(copyButton);
+
+    await waitFor(() =>
+      expect(mockClipboard.writeText).toHaveBeenCalledWith(
+        'Ctrl+Shift+V — Open clipboard manager',
+      ),
+    );
   });
 });

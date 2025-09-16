@@ -78,7 +78,12 @@ export default function KeymapOverlay({ open, onClose }: KeymapOverlayProps) {
                   : 'flex justify-between px-2 py-1'
               }
             >
-              <span className="flex-1">{s.description}</span>
+              <span className="flex-1 flex flex-col">
+                <span className="text-xs uppercase tracking-wide text-gray-300">
+                  {s.category}
+                </span>
+                <span>{s.description}</span>
+              </span>
               <span className="font-mono mr-2">{s.keys}</span>
               <button
                 type="button"
