@@ -4,20 +4,36 @@ import { useCallback, useEffect, useRef } from 'react';
 
 interface TapeProps {
   entries: { expr: string; result: string }[];
+  onClear: () => void;
 }
 
-export default function Tape({ entries }: TapeProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+export default function Tape({ entries, onClear }: TapeProps) {
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const el = containerRef.current;
+    const el = listRef.current;
     if (el) el.scrollTop = 0;
   }, [entries]);
 
-  const handleRecall = useCallback((result: string) => {
+  const focusDisplay = useCallback(() => {
     const display = document.getElementById('display') as HTMLInputElement | null;
-    if (display) display.value = result;
+    if (display) {
+      display.focus();
+      const length = display.value.length;
+      display.setSelectionRange(length, length);
+    }
   }, []);
+
+  const handleSelect = useCallback(
+    (result: string) => {
+      const display = document.getElementById('display') as HTMLInputElement | null;
+      if (display) {
+        display.value = result;
+        focusDisplay();
+      }
+    },
+    [focusDisplay],
+  );
 
   const handleCopy = useCallback(async (text: string) => {
     try {
@@ -27,32 +43,65 @@ export default function Tape({ entries }: TapeProps) {
     }
   }, []);
 
+  const handleClear = useCallback(() => {
+    if (entries.length === 0) return;
+    onClear();
+    focusDisplay();
+  }, [entries.length, focusDisplay, onClear]);
+
   return (
-    <div ref={containerRef} className="tape font-mono max-h-40 overflow-y-auto">
-      {entries.map(({ expr, result }, i) => (
-        <div
-          key={i}
-          className="p-1 odd:bg-black/20 even:bg-black/10 flex items-center gap-2"
+    <aside
+      id="history"
+      className="history hidden"
+      aria-label="Calculator tape history"
+    >
+      <div className="history-header">
+        <h2 className="history-title">Tape</h2>
+        <button
+          type="button"
+          className="history-clear"
+          onClick={handleClear}
+          disabled={entries.length === 0}
         >
-          <div className="flex-1">
-            {expr} = {result}
-          </div>
-          <button
-            className="text-xs px-1 py-0.5 bg-black/20 rounded"
-            onClick={() => handleRecall(result)}
-            aria-label="recall result"
-          >
-            Ans
-          </button>
-          <button
-            className="text-xs px-1 py-0.5 bg-black/20 rounded"
-            onClick={() => handleCopy(result)}
-            aria-label="copy result"
-          >
-            Copy
-          </button>
-        </div>
-      ))}
-    </div>
+          Clear
+        </button>
+      </div>
+      <div
+        ref={listRef}
+        className="history-list"
+        role="list"
+        aria-live="polite"
+      >
+        {entries.length === 0 ? (
+          <p className="history-empty">Calculations will appear here.</p>
+        ) : (
+          entries.map(({ expr, result }, index) => (
+            <div key={`${expr}-${result}-${index}`} className="history-entry" role="listitem">
+              <button
+                type="button"
+                className="history-entry-button"
+                onClick={() => handleSelect(result)}
+                aria-label={`Use result ${result} from ${expr}`}
+              >
+                <span className="history-entry-expr" aria-hidden="true">
+                  {expr}
+                </span>
+                <span className="history-entry-result" aria-hidden="true">
+                  = {result}
+                </span>
+              </button>
+              <button
+                type="button"
+                className="history-copy"
+                onClick={() => handleCopy(result)}
+                aria-label={`Copy result ${result} to clipboard`}
+              >
+                Copy
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+    </aside>
   );
 }
