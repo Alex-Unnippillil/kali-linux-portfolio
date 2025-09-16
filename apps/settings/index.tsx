@@ -12,6 +12,8 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import LanguageSettings from "./language";
+import { resolveLocale } from "../../i18n";
 
 export default function Settings() {
   const {
@@ -31,11 +33,13 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    setLocale,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
+    { id: "language", label: "Language" },
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
   ] as const;
@@ -79,6 +83,7 @@ export default function Settings() {
       if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
+      if (parsed.locale !== undefined) setLocale(resolveLocale(parsed.locale));
       if (parsed.theme !== undefined) setTheme(parsed.theme);
     } catch (err) {
       console.error("Invalid settings", err);
@@ -101,6 +106,7 @@ export default function Settings() {
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
     setTheme("default");
+    setLocale(resolveLocale(defaults.locale));
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
@@ -209,6 +215,7 @@ export default function Settings() {
           </div>
         </>
       )}
+      {activeTab === "language" && <LanguageSettings />}
       {activeTab === "accessibility" && (
         <>
           <div className="flex justify-center my-4">
