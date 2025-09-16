@@ -1,0 +1,27 @@
+/* Global styles for the desktop shell title bar */
+:root {
+  --app-titlebar-default-height: 3rem;
+  --app-titlebar-x: env(titlebar-area-x, 0px);
+  --app-titlebar-y: env(titlebar-area-y, 0px);
+  --app-titlebar-width: env(titlebar-area-width, 100vw);
+  --app-titlebar-height: env(titlebar-area-height, var(--app-titlebar-default-height));
+}
+
+.app-titlebar {
+  position: fixed;
+  inset-inline-start: max(var(--app-titlebar-x), 0px);
+  inset-block-start: max(var(--app-titlebar-y), 0px);
+  width: min(var(--app-titlebar-width), 100vw);
+  height: max(var(--app-titlebar-height), 2.5rem);
+  max-width: 100vw;
+  background-color: var(--color-ub-grey, #0f1317);
+  color: var(--color-ubt-grey, #f6f6f5);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-ubt-grey, #f6f6f5), transparent 85%);
+  box-shadow: 0 1px 12px color-mix(in srgb, var(--color-inverse, #000000), transparent 85%);
+  z-index: 60;
+}
+
+/* Keep the desktop workspace below the draggable title bar */
+#desktop {
+  padding-top: max(var(--app-titlebar-height), 2.5rem);
+}
