@@ -198,8 +198,10 @@ describe('Window snapping finalize and release', () => {
 
     expect(ref.current!.state.snapped).toBe('left');
 
+    const preventDefault = jest.fn();
+    const stopPropagation = jest.fn();
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true, preventDefault, stopPropagation } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
@@ -281,6 +283,72 @@ describe('Window keyboard dragging', () => {
 
     fireEvent.keyDown(handle, { key: ' ', code: 'Space' });
     expect(handle).toHaveAttribute('aria-grabbed', 'false');
+  });
+});
+
+describe('Window shade mode', () => {
+  it('toggles shade with Alt+double click while keeping content mounted', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const titleBar = screen.getByRole('button', { name: 'Test' });
+    fireEvent.doubleClick(titleBar, { altKey: true });
+
+    expect(ref.current?.state.shaded).toBe(true);
+    const content = document.getElementById('test-window-content')!;
+    expect(content).toHaveAttribute('hidden');
+    expect(screen.getByText('content', { hidden: true })).toBeInTheDocument();
+    expect(titleBar).toHaveAttribute('aria-expanded', 'false');
+    const live = screen.getByRole('status', { hidden: true });
+    expect(live).toHaveTextContent(/collapsed to title bar/i);
+
+    fireEvent.doubleClick(titleBar, { altKey: true });
+
+    expect(ref.current?.state.shaded).toBe(false);
+    expect(content).not.toHaveAttribute('hidden');
+    expect(titleBar).toHaveAttribute('aria-expanded', 'true');
+    expect(live).toHaveTextContent(/expanded to full height/i);
+  });
+
+  it('supports keyboard toggling with Alt+Enter', () => {
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+      />
+    );
+
+    const titleBar = screen.getByRole('button', { name: 'Test' });
+    const content = document.getElementById('test-window-content')!;
+
+    expect(titleBar).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.keyDown(titleBar, { key: 'Enter', altKey: true });
+
+    expect(titleBar).toHaveAttribute('aria-expanded', 'false');
+    expect(content).toHaveAttribute('hidden');
+
+    fireEvent.keyDown(titleBar, { key: 'Enter', altKey: true });
+
+    expect(titleBar).toHaveAttribute('aria-expanded', 'true');
+    expect(content).not.toHaveAttribute('hidden');
   });
 });
 
