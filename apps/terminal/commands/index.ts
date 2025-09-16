@@ -1,4 +1,5 @@
 import type { CommandHandler, CommandContext } from './types';
+import cmdUpload from './upload';
 
 async function man(args: string, ctx: CommandContext) {
   const name = args.trim();
@@ -41,6 +42,7 @@ const registry: Record<string, CommandHandler> = {
   man,
   history,
   alias,
+  upload: cmdUpload,
   cat: (args, ctx) => ctx.runWorker(`cat ${args}`),
   grep: (args, ctx) => ctx.runWorker(`grep ${args}`),
   jq: (args, ctx) => ctx.runWorker(`jq ${args}`),
