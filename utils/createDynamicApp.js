@@ -13,11 +13,14 @@ export const createDynamicApp = (id, title) =>
         return mod.default;
       } catch (err) {
         console.error(`Failed to load ${title}`, err);
-        return () => (
-          <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
-            {`Unable to load ${title}`}
-          </div>
-        );
+        function DynamicLoadError() {
+          return (
+            <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+              {`Unable to load ${title}`}
+            </div>
+          );
+        }
+        return DynamicLoadError;
       }
     },
     {
@@ -31,9 +34,11 @@ export const createDynamicApp = (id, title) =>
   );
 
 export const createDisplay = (Component) => {
-  const DynamicComponent = dynamic(() => Promise.resolve({ default: Component }), {
-    ssr: false,
-  });
+  const DynamicComponent = React.memo(
+    dynamic(() => Promise.resolve({ default: Component }), {
+      ssr: false,
+    })
+  );
   const Display = (addFolder, openApp) => (
     <DynamicComponent addFolder={addFolder} openApp={openApp} />
   );
