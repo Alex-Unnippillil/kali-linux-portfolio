@@ -124,6 +124,9 @@ module.exports = withBundleAnalyzer(
   withPWA({
     ...(isStaticExport && { output: 'export' }),
     webpack: configureWebpack,
+    experimental: {
+      instrumentationHook: true,
+    },
 
     // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
     eslint: {
