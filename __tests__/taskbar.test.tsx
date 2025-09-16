@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import Taskbar from '../components/screen/taskbar';
+import Taskbar from '../components/desktop/Taskbar';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 
@@ -24,6 +24,8 @@ describe('Taskbar', () => {
     fireEvent.click(button);
     expect(minimize).toHaveBeenCalledWith('app1');
     expect(button).toHaveAttribute('data-context', 'taskbar');
+    expect(button).toHaveAttribute('aria-label', 'App One — Active window');
+    expect(button).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('restores minimized window on click', () => {
@@ -42,5 +44,7 @@ describe('Taskbar', () => {
     const button = screen.getByRole('button', { name: /app one/i });
     fireEvent.click(button);
     expect(openApp).toHaveBeenCalledWith('app1');
+    expect(button).toHaveAttribute('aria-label', 'App One — Minimized window');
+    expect(button).toHaveAttribute('aria-pressed', 'false');
   });
 });
