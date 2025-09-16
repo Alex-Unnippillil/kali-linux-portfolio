@@ -885,6 +885,7 @@ export class Desktop extends Component {
                     hide={this.state.hideSideBar}
                     hideSideBar={this.hideSideBar}
                     favourite_apps={this.state.favourite_apps}
+                    pinnedApps={this.initFavourite}
                     showAllApps={this.showAllApps}
                     allAppsView={this.state.allAppsView}
                     closed_windows={this.state.closed_windows}

@@ -7,7 +7,18 @@ let renderApps = (props) => {
     props.apps.forEach((app, index) => {
         if (props.favourite_apps[app.id] === false) return;
         sideBarAppsJsx.push(
-            <SideBarApp key={app.id} id={app.id} title={app.title} icon={app.icon} isClose={props.closed_windows} isFocus={props.focused_windows} openApp={props.openAppByAppId} isMinimized={props.isMinimized} openFromMinimised={props.openFromMinimised} />
+            <SideBarApp
+                key={app.id}
+                id={app.id}
+                title={app.title}
+                icon={app.icon}
+                isClose={props.closed_windows}
+                isFocus={props.focused_windows}
+                openApp={props.openAppByAppId}
+                isMinimized={props.isMinimized}
+                openFromMinimised={props.openFromMinimised}
+                isPinned={props.pinnedApps ? props.pinnedApps[app.id] : false}
+            />
         );
     });
     return sideBarAppsJsx;
@@ -28,7 +39,9 @@ export default function SideBar(props) {
     return (
         <>
             <nav
+                role="toolbar"
                 aria-label="Dock"
+                aria-orientation="vertical"
                 className={(props.hide ? " -translate-x-full " : "") +
                     " absolute transform duration-300 select-none z-40 left-0 top-0 h-full min-h-screen w-16 flex flex-col justify-start items-center pt-7 border-black border-opacity-60 bg-black bg-opacity-50"}
             >
@@ -51,13 +64,21 @@ export function AllApps(props) {
     const [title, setTitle] = useState(false);
 
     return (
-        <div
-            className={`w-10 h-10 rounded m-1 hover:bg-white hover:bg-opacity-10 flex items-center justify-center transition-hover transition-active`}
+        <button
+            type="button"
+            aria-label="Show Applications"
+            className={`w-10 h-10 rounded m-1 hover:bg-white hover:bg-opacity-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white flex items-center justify-center transition-hover transition-active`}
             style={{ marginTop: 'auto' }}
             onMouseEnter={() => {
                 setTitle(true);
             }}
             onMouseLeave={() => {
+                setTitle(false);
+            }}
+            onFocus={() => {
+                setTitle(true);
+            }}
+            onBlur={() => {
                 setTitle(false);
             }}
             onClick={props.showApps}
@@ -80,6 +101,6 @@ export function AllApps(props) {
                     Show Applications
                 </div>
             </div>
-        </div>
+        </button>
     );
 }

@@ -85,22 +85,33 @@ export class SideBarApp extends Component {
         }
     };
 
+    handlePointerEnter = () => {
+        this.captureThumbnail();
+        this.setState({ showTitle: true });
+    };
+
+    handlePointerLeave = () => {
+        this.setState({ showTitle: false, thumbnail: null });
+    };
+
     render() {
+        const id = this.id || this.props.id;
+        const isOpen = this.props.isClose && this.props.isClose[id] === false;
+        const isPinned = Boolean(this.props.isPinned);
+        const isPressed = isPinned || isOpen;
         return (
             <button
                 type="button"
                 aria-label={this.props.title}
+                aria-pressed={isPressed}
                 data-context="app"
                 data-app-id={this.props.id}
                 onClick={this.openApp}
-                onMouseEnter={() => {
-                    this.captureThumbnail();
-                    this.setState({ showTitle: true });
-                }}
-                onMouseLeave={() => {
-                    this.setState({ showTitle: false, thumbnail: null });
-                }}
-                className={(this.props.isClose[this.id] === false && this.props.isFocus[this.id] ? "bg-white bg-opacity-10 " : "") +
+                onMouseEnter={this.handlePointerEnter}
+                onMouseLeave={this.handlePointerLeave}
+                onFocus={this.handlePointerEnter}
+                onBlur={this.handlePointerLeave}
+                className={(this.props.isClose[id] === false && this.props.isFocus[id] ? "bg-white bg-opacity-10 " : "") +
                     " w-auto p-2 outline-none relative hover:bg-white hover:bg-opacity-10 rounded m-1 transition-hover transition-active"}
                 id={"sidebar-" + this.props.id}
             >
@@ -122,7 +133,7 @@ export class SideBarApp extends Component {
                 />
                 {
                     (
-                        this.props.isClose[this.id] === false
+                        this.props.isClose[id] === false
                             ? <div className=" w-2 h-1 absolute bottom-0 left-1/2 transform -translate-x-1/2 bg-white rounded-md"></div>
                             : null
                     )
