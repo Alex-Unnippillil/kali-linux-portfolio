@@ -1,12 +1,14 @@
 import { Component } from 'react'
+import { safeLocalStorage } from '../../utils/safeStorage'
 
 export default class Clock extends Component {
     constructor() {
         super();
         this.month_list = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         this.day_list = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        const stored = safeLocalStorage?.getItem('clock-format-24h');
         this.state = {
-            hour_12: true,
+            hour_12: stored ? stored !== 'true' : true,
             current_time: null
         };
     }
@@ -14,6 +16,11 @@ export default class Clock extends Component {
     componentDidMount() {
         const update = () => this.setState({ current_time: new Date() });
         update();
+        const formatListener = (e) => {
+            this.setState({ hour_12: !e.detail });
+        };
+        window.addEventListener('clock-format', formatListener);
+        this.formatListener = formatListener;
         if (typeof window !== 'undefined' && typeof Worker === 'function') {
             this.worker = new Worker(new URL('../../workers/timer.worker.ts', import.meta.url));
             this.worker.onmessage = update;
@@ -29,6 +36,7 @@ export default class Clock extends Component {
             this.worker.terminate();
         }
         if (this.update_time) clearInterval(this.update_time);
+        if (this.formatListener) window.removeEventListener('clock-format', this.formatListener);
     }
 
     render() {

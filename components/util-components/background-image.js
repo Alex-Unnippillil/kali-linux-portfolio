@@ -2,10 +2,13 @@
 
 import React, { useEffect, useState } from 'react'
 import { useSettings } from '../../hooks/useSettings';
+import { safeLocalStorage } from '../../utils/safeStorage';
 
 export default function BackgroundImage() {
     const { wallpaper } = useSettings();
     const [needsOverlay, setNeedsOverlay] = useState(false);
+    const [enabled, setEnabled] = useState(true);
+    const [opacity, setOpacity] = useState(1);
 
     useEffect(() => {
         const img = new Image();
@@ -36,12 +39,29 @@ export default function BackgroundImage() {
         };
     }, [wallpaper]);
 
+    useEffect(() => {
+        setEnabled(safeLocalStorage?.getItem('background-enabled') !== 'false');
+        const op = parseFloat(safeLocalStorage?.getItem('wallpaper-opacity') || '1');
+        setOpacity(op);
+        const handleBg = (e) => setEnabled(e.detail);
+        const handleOp = (e) => setOpacity(e.detail);
+        window.addEventListener('background-enabled', handleBg);
+        window.addEventListener('wallpaper-opacity', handleOp);
+        return () => {
+            window.removeEventListener('background-enabled', handleBg);
+            window.removeEventListener('wallpaper-opacity', handleOp);
+        };
+    }, []);
+
+    if (!enabled) return null;
+
     return (
         <div className="bg-ubuntu-img absolute -z-10 top-0 right-0 overflow-hidden h-full w-full">
             <img
                 src={`/wallpapers/${wallpaper}.webp`}
                 alt=""
                 className="w-full h-full object-cover"
+                style={{ opacity }}
             />
             {needsOverlay && (
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 to-transparent" aria-hidden="true"></div>
