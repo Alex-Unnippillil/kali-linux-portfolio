@@ -379,6 +379,9 @@ Browse all apps, games, and security tool demos at `/apps`, which presents a sea
 
 > The VS Code app now embeds a StackBlitz IDE via iframe instead of the local Monaco editor.
 
+The YouTube app defaults to privacy-enhanced embeds (`youtube-nocookie.com`) and surfaces a toggle with context so visitors can
+switch to the standard player if they prefer the regular YouTube domain.
+
 The Spotify app lets you customize a mood-to-playlist mapping. Use the in-app form to
 add, reorder, or delete moods; selections persist in the browser's Origin Private File
 System so your choices restore on load. The last mood played is remembered, and

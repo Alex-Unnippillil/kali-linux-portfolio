@@ -13,6 +13,7 @@ interface Props {
 
 const VIDEO_CACHE_NAME = 'youtube-video-cache';
 const CACHED_LIST_KEY = 'youtube:cached-videos';
+const PRIVACY_MODE_KEY = 'youtube:privacy-enhanced';
 const MAX_CACHE_BYTES = 100 * 1024 * 1024;
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
@@ -260,9 +261,12 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const [current, setCurrent] = useState<Video | null>(null);
   const [queue, setQueue] = useState<Video[]>([]);
   const [watchLater, setWatchLater] = useWatchLater();
+  const [privacyEnhanced, setPrivacyEnhanced] = useState(true);
   const searchRef = useRef<HTMLInputElement>(null);
   const playerRef = useRef<any>(null);
   const playerDivRef = useRef<HTMLDivElement>(null);
+  const apiScriptRef = useRef<HTMLScriptElement | null>(null);
+  const playerHostRef = useRef<string | null>(null);
   const [playerReady, setPlayerReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [loopStart, setLoopStart] = useState<number | null>(null);
@@ -270,12 +274,37 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const [looping, setLooping] = useState(false);
   const [, setPlaybackRate] = useState(1);
   const [solidHeader, setSolidHeader] = useState(false);
+  const embedHost = privacyEnhanced
+    ? 'https://www.youtube-nocookie.com'
+    : 'https://www.youtube.com';
 
   useEffect(() => {
     const onScroll = () => setSolidHeader(window.scrollY > 0);
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const stored = window.localStorage.getItem(PRIVACY_MODE_KEY);
+      if (stored !== null) setPrivacyEnhanced(stored !== 'false');
+    } catch {
+      // ignore read errors
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(
+        PRIVACY_MODE_KEY,
+        privacyEnhanced ? 'true' : 'false',
+      );
+    } catch {
+      // ignore write errors
+    }
+  }, [privacyEnhanced]);
 
   const downloadCurrent = useCallback(async () => {
     if (!current) return;
@@ -314,33 +343,62 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
     if (!current) return;
 
     const initPlayer = () => {
+      if (!playerDivRef.current) return;
       if (playerRef.current) {
+        playerHostRef.current = embedHost;
         playerRef.current.loadVideoById(current.id);
-      } else {
-        playerRef.current = new window.YT.Player(playerDivRef.current!, {
-          videoId: current.id,
-          events: {
-            onReady: (e: any) => {
-              setPlayerReady(true);
-              setPlaybackRate(e.target.getPlaybackRate());
-            },
-            onStateChange: (e: any) => {
-              setIsPlaying(e.data === window.YT.PlayerState.PLAYING);
-            },
-          },
-        });
+        return;
       }
+      setPlayerReady(false);
+      playerRef.current = new window.YT.Player(playerDivRef.current, {
+        videoId: current.id,
+        host: embedHost,
+        playerVars: {
+          origin: window.location.origin,
+        },
+        events: {
+          onReady: (e: any) => {
+            setPlayerReady(true);
+            setPlaybackRate(e.target.getPlaybackRate());
+          },
+          onStateChange: (e: any) => {
+            setIsPlaying(e.data === window.YT.PlayerState.PLAYING);
+          },
+        },
+      });
+      playerHostRef.current = embedHost;
     };
+
+    if (playerRef.current && playerHostRef.current !== embedHost) {
+      playerRef.current.destroy?.();
+      playerRef.current = null;
+      playerHostRef.current = null;
+      setPlayerReady(false);
+    }
 
     if (window.YT && window.YT.Player) {
       initPlayer();
     } else {
-      const tag = document.createElement('script');
-      tag.src = 'https://www.youtube.com/iframe_api';
+      if (!apiScriptRef.current) {
+        const existing = document.querySelector<HTMLScriptElement>(
+          'script[data-youtube-iframe-api]',
+        );
+        if (existing) {
+          apiScriptRef.current = existing;
+        } else {
+          const tag = document.createElement('script');
+          tag.src = `${embedHost}/iframe_api`;
+          tag.async = true;
+          tag.dataset.youtubeIframeApi = 'true';
+          apiScriptRef.current = tag;
+          window.onYouTubeIframeAPIReady = initPlayer;
+          document.body.appendChild(tag);
+          return;
+        }
+      }
       window.onYouTubeIframeAPIReady = initPlayer;
-      document.body.appendChild(tag);
     }
-  }, [current]);
+  }, [current, embedHost]);
 
   useEffect(() => {
     void trimVideoCache();
@@ -547,17 +605,44 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
             placeholder="Search YouTube"
             className="w-full rounded bg-ub-cool-grey p-2 text-ubt-cool-grey"
           />
+          <label className="mt-2 flex items-start gap-2 text-xs leading-tight">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 accent-ubt-green"
+              checked={privacyEnhanced}
+              onChange={(e) => setPrivacyEnhanced(e.target.checked)}
+            />
+            <span className="text-left text-ubt-grey">
+              <span className="block font-semibold text-ubt-cool-grey">
+                Privacy-enhanced mode
+              </span>
+              <span className="block">
+                Load videos from youtube-nocookie.com to limit tracking cookies.
+              </span>
+            </span>
+          </label>
         </form>
         {current && (
           <div className="relative mx-4 mb-4 bg-black">
             {!playerReady && (
-              <iframe
-                title="YouTube video player"
-                src={`https://www.youtube-nocookie.com/embed/${current.id}`}
-                className="aspect-video w-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
+              <div className="relative aspect-video w-full">
+                <iframe
+                  title="YouTube video player"
+                  src={`${embedHost}/embed/${current.id}`}
+                  className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  tabIndex={-1}
+                />
+                <div
+                  className="absolute inset-0 flex items-center justify-center bg-black/70"
+                  role="status"
+                  aria-label="Loading video player"
+                >
+                  <div className="h-3/4 w-3/4 animate-pulse rounded bg-gradient-to-r from-ub-cool-grey via-ub-grey to-ub-cool-grey opacity-80" />
+                  <span className="sr-only">Loading video player</span>
+                </div>
+              </div>
             )}
             <div
               ref={playerDivRef}
