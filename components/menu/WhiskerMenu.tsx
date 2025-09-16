@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useId } from 'react';
 import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
@@ -27,6 +27,8 @@ const WhiskerMenu: React.FC = () => {
   const [highlight, setHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuId = useId();
+  const wasOpen = useRef(false);
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
@@ -87,9 +89,11 @@ const WhiskerMenu: React.FC = () => {
       if (e.key === 'Escape') {
         setOpen(false);
       } else if (e.key === 'ArrowDown') {
+        if (currentApps.length === 0) return;
         e.preventDefault();
         setHighlight(h => Math.min(h + 1, currentApps.length - 1));
       } else if (e.key === 'ArrowUp') {
+        if (currentApps.length === 0) return;
         e.preventDefault();
         setHighlight(h => Math.max(h - 1, 0));
       } else if (e.key === 'Enter') {
@@ -114,12 +118,22 @@ const WhiskerMenu: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [open]);
 
+  useEffect(() => {
+    if (wasOpen.current && !open) {
+      buttonRef.current?.focus({ preventScroll: true });
+    }
+    wasOpen.current = open;
+  }, [open]);
+
   return (
     <div className="relative">
       <button
         ref={buttonRef}
         type="button"
         onClick={() => setOpen(o => !o)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls={menuId}
         className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
       >
         <Image
@@ -133,6 +147,7 @@ const WhiskerMenu: React.FC = () => {
       </button>
       {open && (
         <div
+          id={menuId}
           ref={menuRef}
           className="absolute left-0 mt-1 z-50 flex bg-ub-grey text-white shadow-lg"
           tabIndex={-1}

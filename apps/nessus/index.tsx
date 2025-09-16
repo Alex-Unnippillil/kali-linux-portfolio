@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useId } from 'react';
 import { toPng } from 'html-to-image';
 import TrendChart from './components/TrendChart';
 import SummaryDashboard from './components/SummaryDashboard';
@@ -35,6 +35,8 @@ const Nessus: React.FC = () => {
   const [trend, setTrend] = useState<number[]>([]);
   const chartRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  const filtersButtonRef = useRef<HTMLButtonElement>(null);
+  const filtersDrawerId = `${useId()}-filters-drawer`;
   const PAGE_SIZE = 50;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
@@ -171,9 +173,13 @@ const Nessus: React.FC = () => {
       <section>
         <h2 className="text-xl mb-2">Plugin Feed</h2>
         <button
+          ref={filtersButtonRef}
           type="button"
           onClick={() => setDrawerOpen(true)}
           className="mb-4 px-3 py-1 bg-gray-700 rounded"
+          aria-haspopup="dialog"
+          aria-expanded={drawerOpen}
+          aria-controls={filtersDrawerId}
         >
           Filters
         </button>
@@ -230,6 +236,7 @@ const Nessus: React.FC = () => {
         <TrendChart />
       </section>
       <FiltersDrawer
+        id={filtersDrawerId}
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         severityFilters={severityFilters}
@@ -237,6 +244,7 @@ const Nessus: React.FC = () => {
         tags={tags}
         tagFilters={tagFilters}
         toggleTag={toggleTag}
+        returnFocusRef={filtersButtonRef}
       />
     </div>
   );
