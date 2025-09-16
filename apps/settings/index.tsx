@@ -1,17 +1,16 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
   resetSettings,
   defaults,
-  exportSettings as exportSettingsData,
-  importSettings as importSettingsData,
 } from "../../utils/settingsStore";
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import ExportSettings from "./export";
 
 export default function Settings() {
   const {
@@ -32,8 +31,6 @@ export default function Settings() {
     theme,
     setTheme,
   } = useSettings();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   const tabs = [
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
@@ -54,36 +51,6 @@ export default function Settings() {
   ];
 
   const changeBackground = (name: string) => setWallpaper(name);
-
-  const handleExport = async () => {
-    const data = await exportSettingsData();
-    const blob = new Blob([data], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "settings.json";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleImport = async (file: File) => {
-    const text = await file.text();
-    await importSettingsData(text);
-    try {
-      const parsed = JSON.parse(text);
-      if (parsed.accent !== undefined) setAccent(parsed.accent);
-      if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
-      if (parsed.density !== undefined) setDensity(parsed.density);
-      if (parsed.reducedMotion !== undefined)
-        setReducedMotion(parsed.reducedMotion);
-      if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
-      if (parsed.highContrast !== undefined)
-        setHighContrast(parsed.highContrast);
-      if (parsed.theme !== undefined) setTheme(parsed.theme);
-    } catch (err) {
-      console.error("Invalid settings", err);
-    }
-  };
 
   const handleReset = async () => {
     if (
@@ -270,36 +237,7 @@ export default function Settings() {
           </div>
         </>
       )}
-      {activeTab === "privacy" && (
-        <>
-          <div className="flex justify-center my-4 space-x-4">
-            <button
-              onClick={handleExport}
-              className="px-4 py-2 rounded bg-ub-orange text-white"
-            >
-              Export Settings
-            </button>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="px-4 py-2 rounded bg-ub-orange text-white"
-            >
-              Import Settings
-            </button>
-          </div>
-        </>
-      )}
-        <input
-          type="file"
-          accept="application/json"
-          ref={fileInputRef}
-          aria-label="Import settings file"
-          onChange={(e) => {
-            const file = e.target.files && e.target.files[0];
-            if (file) handleImport(file);
-            e.target.value = "";
-          }}
-          className="hidden"
-        />
+      {activeTab === "privacy" && <ExportSettings />}
       <KeymapOverlay open={showKeymap} onClose={() => setShowKeymap(false)} />
     </div>
   );
