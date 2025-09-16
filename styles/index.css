@@ -530,3 +530,26 @@ textarea:focus-visible {
     color: #000 !important;
 }
 
+/* RTL layout adjustments */
+[dir="rtl"] .main-navbar-vp {
+    flex-direction: row-reverse;
+}
+
+[dir="rtl"] .whisker-menu {
+    flex-direction: row-reverse;
+    right: 0;
+    left: auto;
+}
+
+[dir="rtl"] .whisker-menu button {
+    text-align: right;
+}
+
+[dir="rtl"] [role="menu"] {
+    text-align: right;
+}
+
+[dir="rtl"] .wswitch {
+    flex-direction: row-reverse;
+}
+
