@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { getUnlockedThemes } from '../utils/theme';
 import { useSettings, ACCENT_OPTIONS } from '../hooks/useSettings';
+import ToggleSwitch from './ToggleSwitch';
 
 interface Props {
   highScore?: number;
@@ -9,7 +10,7 @@ interface Props {
 const SettingsDrawer = ({ highScore = 0 }: Props) => {
   const [open, setOpen] = useState(false);
   const unlocked = getUnlockedThemes(highScore);
-  const { accent, setAccent, theme, setTheme } = useSettings();
+  const { accent, setAccent, theme, setTheme, heroDemos, setHeroDemos } = useSettings();
 
   return (
     <div>
@@ -51,6 +52,14 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
                 />
               ))}
             </div>
+          </label>
+          <label className="flex items-center justify-between mt-2">
+            <span>Hero demo windows</span>
+            <ToggleSwitch
+              ariaLabel="toggle-hero-demos"
+              checked={heroDemos}
+              onChange={setHeroDemos}
+            />
           </label>
         </div>
       )}
