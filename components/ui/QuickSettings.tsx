@@ -2,6 +2,7 @@
 
 import usePersistentState from '../../hooks/usePersistentState';
 import { useEffect } from 'react';
+import HighContrastToggle from '../../src/ui/HighContrastToggle';
 
 interface Props {
   open: boolean;
@@ -12,6 +13,8 @@ const QuickSettings = ({ open }: Props) => {
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
+  const borderColor = 'var(--panel-border, rgba(255, 255, 255, 0.2))';
+  const textColor = 'var(--text, var(--color-text))';
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -23,11 +26,15 @@ const QuickSettings = ({ open }: Props) => {
 
   return (
     <div
-      className={`absolute bg-ub-cool-grey rounded-md py-4 top-9 right-3 shadow border-black border border-opacity-20 ${
+      className={`absolute bg-ub-cool-grey rounded-md py-4 top-9 right-3 shadow border transition-colors ${
         open ? '' : 'hidden'
       }`}
+      style={{ borderColor, color: textColor }}
     >
-      <div className="px-4 pb-2">
+      <div className="px-4 pb-3 border-b" style={{ borderColor }}>
+        <HighContrastToggle />
+      </div>
+      <div className="px-4 pt-3 pb-2">
         <button
           className="w-full flex justify-between"
           onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
