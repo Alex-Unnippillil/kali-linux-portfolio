@@ -7,7 +7,7 @@ const BackgroundImage = dynamic(
     () => import('../util-components/background-image'),
     { ssr: false }
 );
-import SideBar from './side_bar';
+import Dock from '../desktop/Dock';
 import apps, { games } from '../../apps.config';
 import Window from '../base/window';
 import UbuntuApp from '../base/ubuntu_app';
@@ -881,7 +881,7 @@ export class Desktop extends Component {
                 <BackgroundImage />
 
                 {/* Ubuntu Side Menu Bar */}
-                <SideBar apps={apps}
+                <Dock apps={apps}
                     hide={this.state.hideSideBar}
                     hideSideBar={this.hideSideBar}
                     favourite_apps={this.state.favourite_apps}
@@ -890,7 +890,9 @@ export class Desktop extends Component {
                     closed_windows={this.state.closed_windows}
                     focused_windows={this.state.focused_windows}
                     isMinimized={this.state.minimized_windows}
-                    openAppByAppId={this.openApp} />
+                    openAppByAppId={this.openApp}
+                    pinnedApps={this.initFavourite}
+                />
 
                 {/* Taskbar */}
                 <Taskbar
