@@ -37,17 +37,25 @@ export type SimulatorParserResponse =
   | CancelledMessage;
 
 let cancelled = false;
+let cancelNotified = false;
+
+const notifyCancelled = () => {
+  if (cancelNotified) return;
+  cancelNotified = true;
+  self.postMessage({ type: 'cancelled' } as SimulatorParserResponse);
+};
 
 self.onmessage = ({ data }: MessageEvent<SimulatorParserRequest>) => {
   if (data.action === 'parse') {
     cancelled = false;
+    cancelNotified = false;
     const lines = data.text.split(/\r?\n/);
     const total = lines.length;
     const start = Date.now();
     const parsed: ParsedLine[] = [];
     for (let i = 0; i < lines.length; i++) {
       if (cancelled) {
-        self.postMessage({ type: 'cancelled' } as SimulatorParserResponse);
+        notifyCancelled();
         return;
       }
       const line = lines[i];
@@ -70,6 +78,7 @@ self.onmessage = ({ data }: MessageEvent<SimulatorParserRequest>) => {
     self.postMessage({ type: 'done', parsed } as SimulatorParserResponse);
   } else if (data.action === 'cancel') {
     cancelled = true;
+    notifyCancelled();
   }
 };
 

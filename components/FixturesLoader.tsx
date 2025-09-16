@@ -1,6 +1,10 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+import { parseFixtures } from '@/src/workers/parsing';
+import type { WorkerPoolTask } from '@/src/workers/workerPool';
+import { isTaskCancelledError } from '@/src/workers/workerPool';
 
 interface LoaderProps {
   onData: (rows: any[]) => void;
@@ -8,43 +12,82 @@ interface LoaderProps {
 
 export default function FixturesLoader({ onData }: LoaderProps) {
   const [progress, setProgress] = useState(0);
-  const [worker, setWorker] = useState<Worker | null>(null);
+  const taskRef = useRef<WorkerPoolTask<any[]> | null>(null);
+  const mountedRef = useRef(true);
 
-  useEffect(() => {
-    const w = new Worker(new URL('../workers/fixturesParser.ts', import.meta.url));
-    w.onmessage = (e) => {
-      const { type, payload } = e.data;
-      if (type === 'progress') setProgress(payload);
-      if (type === 'result') {
-        onData(payload);
-        try {
-          localStorage.setItem('fixtures-last', JSON.stringify(payload));
-        } catch {
-          /* ignore */
-        }
+  useEffect(() => () => {
+    mountedRef.current = false;
+    taskRef.current?.cancel();
+  }, []);
+
+  const handleResult = useCallback(
+    (rows: any[], handle: WorkerPoolTask<any[]>) => {
+      if (!mountedRef.current || taskRef.current !== handle) return;
+      onData(rows);
+      try {
+        localStorage.setItem('fixtures-last', JSON.stringify(rows));
+      } catch {
+        /* ignore */
       }
-    };
-    setWorker(w);
-    return () => w.terminate();
-  }, [onData]);
+    },
+    [onData],
+  );
 
-  const loadSample = async () => {
-    const res = await fetch('/fixtures/sample.json');
-    const text = await res.text();
-    worker?.postMessage({ type: 'parse', text });
-  };
+  const startParse = useCallback(
+    (text: string) => {
+      if (!text) return;
+      taskRef.current?.cancel();
+      setProgress(0);
+      const handle = parseFixtures(text, {
+        onProgress: (value) => {
+          if (!mountedRef.current) return;
+          setProgress(value);
+        },
+      });
+      taskRef.current = handle;
+      handle.promise
+        .then((rows) => handleResult(rows, handle))
+        .catch((err) => {
+          if (isTaskCancelledError(err)) return;
+          console.error(err);
+        })
+        .finally(() => {
+          if (taskRef.current === handle) {
+            taskRef.current = null;
+          }
+        });
+    },
+    [handleResult],
+  );
 
-  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      worker?.postMessage({ type: 'parse', text: reader.result });
-    };
-    reader.readAsText(file);
-  };
+  const loadSample = useCallback(async () => {
+    try {
+      const res = await fetch('/fixtures/sample.json');
+      const text = await res.text();
+      startParse(text);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [startParse]);
 
-  const cancel = () => worker?.postMessage({ type: 'cancel' });
+  const onFile = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const text = typeof reader.result === 'string' ? reader.result : '';
+        startParse(text);
+      };
+      reader.readAsText(file);
+    },
+    [startParse],
+  );
+
+  const cancel = useCallback(() => {
+    taskRef.current?.cancel();
+    setProgress(0);
+  }, []);
 
   return (
     <div className="text-xs" aria-label="fixtures loader">
