@@ -3,6 +3,7 @@
 import { ChangeEvent } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import { useSettings } from '../../../hooks/useSettings';
+import type { ThemeName } from '../../../utils/theme';
 
 /** Simple Adwaita-like toggle switch */
 function Toggle({
@@ -37,7 +38,7 @@ export default function ThemeSettings() {
   const [gridSize, setGridSize] = usePersistentState('app:grid-icons', 64);
 
   const handleChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    setTheme(e.target.value);
+    setTheme(e.target.value as ThemeName);
   };
 
   return (
@@ -59,10 +60,9 @@ export default function ThemeSettings() {
           onChange={handleChange}
           className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
         >
-          <option value="default">Default</option>
+          <option value="light">Light</option>
           <option value="dark">Dark</option>
-          <option value="neon">Neon</option>
-          <option value="matrix">Matrix</option>
+          <option value="high-contrast">High Contrast</option>
         </select>
 
         <div className="mt-6">

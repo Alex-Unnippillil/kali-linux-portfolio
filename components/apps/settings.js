@@ -1,9 +1,70 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
-import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
+import {
+    resetSettings,
+    defaults,
+    exportSettings as exportSettingsData,
+    importSettings as importSettingsData,
+} from '../../utils/settingsStore';
+
+const THEME_OPTIONS = [
+    {
+        value: 'light',
+        label: 'Light',
+        description: 'Bright surfaces and crisp text.',
+        swatch: {
+            background: '#f8fafc',
+            text: '#111827',
+            accent: '#2563eb',
+        },
+    },
+    {
+        value: 'dark',
+        label: 'Dark',
+        description: 'Kali-inspired midnight theme.',
+        swatch: {
+            background: '#0f1317',
+            text: '#f5f5f5',
+            accent: '#1793d1',
+        },
+    },
+    {
+        value: 'high-contrast',
+        label: 'High Contrast',
+        description: 'Maximum contrast for readability.',
+        swatch: {
+            background: '#000000',
+            text: '#ffffff',
+            accent: '#ffff00',
+        },
+    },
+];
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const {
+        accent,
+        setAccent,
+        wallpaper,
+        setWallpaper,
+        density,
+        setDensity,
+        reducedMotion,
+        setReducedMotion,
+        largeHitAreas,
+        setLargeHitAreas,
+        fontScale,
+        setFontScale,
+        highContrast,
+        setHighContrast,
+        pongSpin,
+        setPongSpin,
+        allowNetwork,
+        setAllowNetwork,
+        haptics,
+        setHaptics,
+        theme,
+        setTheme,
+    } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -55,22 +116,54 @@ export function Settings() {
         return () => cancelAnimationFrame(raf);
     }, [accent, accentText, contrastRatio]);
 
+    const handleThemeChange = useCallback((value) => {
+        setTheme(value);
+        if (value === 'high-contrast') {
+            setHighContrast(true);
+        } else if (highContrast) {
+            setHighContrast(false);
+        }
+    }, [setTheme, setHighContrast, highContrast]);
+
     return (
         <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"}>
             <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4" style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Theme:</label>
-                <select
-                    value={theme}
-                    onChange={(e) => setTheme(e.target.value)}
-                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+            <div className="flex flex-col items-center my-4">
+                <span className="mb-2 text-ubt-grey">Theme</span>
+                <div
+                    role="radiogroup"
+                    aria-label="Theme selection"
+                    className="flex flex-wrap justify-center gap-4"
                 >
-                    <option value="default">Default</option>
-                    <option value="dark">Dark</option>
-                    <option value="neon">Neon</option>
-                    <option value="matrix">Matrix</option>
-                </select>
+                    {THEME_OPTIONS.map((option) => {
+                        const isActive = theme === option.value;
+                        return (
+                            <button
+                                key={option.value}
+                                type="button"
+                                role="radio"
+                                aria-checked={isActive}
+                                onClick={() => handleThemeChange(option.value)}
+                                className={`w-32 p-3 rounded-lg border text-left transition-colors motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2`}
+                                style={{
+                                    backgroundColor: option.swatch.background,
+                                    color: option.swatch.text,
+                                    borderColor: isActive ? option.swatch.accent : 'transparent',
+                                    boxShadow: isActive ? `0 0 0 2px ${option.swatch.accent}33` : 'none',
+                                }}
+                            >
+                                <span className="block text-sm font-semibold">{option.label}</span>
+                                <span className="mt-1 block text-xs opacity-80">{option.description}</span>
+                                <span
+                                    aria-hidden="true"
+                                    className="mt-3 block h-2 rounded-full"
+                                    style={{ backgroundColor: option.swatch.accent }}
+                                ></span>
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Accent:</label>
@@ -179,8 +272,12 @@ export function Settings() {
             </div>
             <div className="flex justify-center my-4">
                 <div
-                    className="p-4 rounded transition-colors duration-300 motion-reduce:transition-none"
-                    style={{ backgroundColor: '#0f1317', color: '#ffffff' }}
+                    className="p-4 rounded border transition-colors duration-300 motion-reduce:transition-none"
+                    style={{
+                        backgroundColor: 'var(--color-surface)',
+                        color: 'var(--color-text)',
+                        borderColor: 'var(--color-border)',
+                    }}
                 >
                     <p className="mb-2 text-center">Preview</p>
                     <button
@@ -251,7 +348,7 @@ export function Settings() {
                         setLargeHitAreas(defaults.largeHitAreas);
                         setFontScale(defaults.fontScale);
                         setHighContrast(defaults.highContrast);
-                        setTheme('default');
+                        setTheme('dark');
                     }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
                 >
