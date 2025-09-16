@@ -10,22 +10,62 @@ import useWeatherState, {
 import Forecast from './components/Forecast';
 import CityDetail from './components/CityDetail';
 
+function SkeletonBlock({ className = '' }: { className?: string }) {
+  return (
+    <div
+      className={`animate-pulse rounded bg-white/10${className ? ` ${className}` : ''}`}
+      aria-hidden
+    />
+  );
+}
+
+function ForecastSkeleton() {
+  return (
+    <div className="flex gap-1.5" aria-hidden>
+      {Array.from({ length: 5 }).map((_, idx) => (
+        <div
+          key={idx}
+          className="flex h-16 w-12 flex-col items-center justify-end gap-1 rounded bg-white/5 p-1.5"
+        >
+          <div className="h-6 w-6 rounded-full bg-white/10" />
+          <div className="h-2.5 w-8 rounded bg-white/10" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 interface ReadingUpdate {
   temp: number;
   condition: number;
   time: number;
 }
 
-function CityTile({ city }: { city: City }) {
+function CityTile({ city, loading }: { city: City; loading: boolean }) {
+  const temp = city.lastReading?.temp;
+  const hasForecast = !!city.forecast && city.forecast.length > 0;
+
   return (
-    <div>
-      <div className="font-bold mb-1.5">{city.name}</div>
-      {city.lastReading ? (
-        <div className="mb-1.5">{Math.round(city.lastReading.temp)}°C</div>
-      ) : (
-        <div className="opacity-70 mb-1.5">No data</div>
-      )}
-      {city.forecast && <Forecast days={city.forecast.slice(0, 5)} />}
+    <div className="flex h-full flex-col gap-4">
+      <div>
+        <div className="text-lg font-semibold">{city.name}</div>
+        {loading ? (
+          <SkeletonBlock className="mt-2 h-7 w-16" />
+        ) : typeof temp === 'number' ? (
+          <div className="mt-2 text-4xl font-semibold">{Math.round(temp)}°C</div>
+        ) : (
+          <div className="mt-2 text-sm opacity-70">No data</div>
+        )}
+      </div>
+      <div className="mt-auto">
+        {loading ? (
+          <ForecastSkeleton />
+        ) : hasForecast ? (
+          <Forecast days={city.forecast.slice(0, 5)} />
+        ) : (
+          <div className="text-sm opacity-70">Forecast unavailable</div>
+        )}
+      </div>
     </div>
   );
 }
@@ -42,6 +82,7 @@ export default function WeatherApp() {
     typeof navigator !== 'undefined' ? !navigator.onLine : false,
   );
   const [selected, setSelected] = useState<City | null>(null);
+  const [loadingIds, setLoadingIds] = useState<Record<string, boolean>>({});
   const dragSrc = useRef<number | null>(null);
 
   useEffect(() => {
@@ -62,8 +103,29 @@ export default function WeatherApp() {
   }, []);
 
   useEffect(() => {
-    if (offline) return;
-    cities.forEach((city, i) => {
+    if (offline || cities.length === 0) {
+      setLoadingIds((prev) =>
+        Object.keys(prev).length ? {} : prev,
+      );
+      return;
+    }
+
+    let cancelled = false;
+    const pending = cities.filter((city) => !city.lastReading || !city.forecast);
+
+    if (pending.length === 0) {
+      return;
+    }
+
+    setLoadingIds((prev) => {
+      const next = { ...prev };
+      pending.forEach((city) => {
+        next[city.id] = true;
+      });
+      return next;
+    });
+
+    pending.forEach((city) => {
       fetch(
         `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current_weather=true&daily=weathercode,temperature_2m_max&forecast_days=5&timezone=auto`,
       )
@@ -83,16 +145,29 @@ export default function WeatherApp() {
           );
           setCities((prev) => {
             const next = [...prev];
-            if (!next[i]) return prev;
-            next[i] = { ...next[i], lastReading: reading, forecast };
+            const idx = next.findIndex((entry) => entry.id === city.id);
+            if (idx === -1) return prev;
+            next[idx] = { ...next[idx], lastReading: reading, forecast };
             return next;
           });
         })
         .catch(() => {
           // ignore fetch errors
+        })
+        .finally(() => {
+          if (cancelled) return;
+          setLoadingIds((prev) => {
+            const next = { ...prev };
+            next[city.id] = false;
+            return next;
+          });
         });
     });
-    }, [offline, cities, setCities]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [offline, cities, setCities]);
 
   const addCity = () => {
     const latNum = parseFloat(lat);
@@ -144,7 +219,7 @@ export default function WeatherApp() {
 
   return (
     <div className="p-4 text-white">
-      <div className="flex gap-2 mb-4">
+      <div className="mb-4 flex flex-wrap gap-2">
         <input
           className="text-black px-1"
           placeholder="Group"
@@ -166,7 +241,7 @@ export default function WeatherApp() {
           </button>
         ))}
       </div>
-      <div className="flex gap-2 mb-4">
+      <div className="mb-4 flex flex-wrap gap-2">
         <input
           className="text-black px-1"
           placeholder="Name"
@@ -189,20 +264,24 @@ export default function WeatherApp() {
           Add
         </button>
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        {cities.map((city, i) => (
-          <div
-            key={city.id}
-            draggable
-            onDragStart={() => onDragStart(i)}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={() => onDrop(i)}
-            onClick={() => setSelected(city)}
-            className="bg-white/10 p-4 rounded cursor-pointer"
-          >
-            <CityTile city={city} />
-          </div>
-        ))}
+      <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
+        {cities.map((city, i) => {
+          const loading = Boolean(loadingIds[city.id]);
+          return (
+            <div
+              key={city.id}
+              draggable
+              onDragStart={() => onDragStart(i)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => onDrop(i)}
+              onClick={() => setSelected(city)}
+              className="group flex min-h-[200px] cursor-pointer flex-col rounded-lg border border-white/5 bg-white/10 p-4 shadow-sm transition hover:bg-white/20"
+              aria-busy={loading}
+            >
+              <CityTile city={city} loading={loading} />
+            </div>
+          );
+        })}
       </div>
       {offline && (
         <div className="mt-4 text-sm">Offline - showing cached data</div>
