@@ -15,7 +15,10 @@ jobs:
       - run: yarn install --immutable
       - run: npx playwright install --with-deps
       - run: |
+          set -euxo pipefail
           yarn dev &
+          DEV_PID=$!
+          trap "kill $DEV_PID" EXIT
           npx wait-on http://localhost:3000
-      - run: npx pa11y-ci --config pa11yci.json
-      - run: npx playwright test playwright/a11y.spec.ts
+          yarn a11y
+          npx playwright test playwright/a11y.spec.ts
