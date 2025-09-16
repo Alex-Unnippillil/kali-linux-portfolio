@@ -1,4 +1,7 @@
+import { BC_EVENTS, publish } from '@/src/lib/bc';
+
 export const THEME_KEY = 'app:theme';
+export const THEME_EVENT = BC_EVENTS.theme;
 
 // Score required to unlock each theme
 export const THEME_UNLOCKS: Record<string, number> = {
@@ -27,12 +30,20 @@ export const getTheme = (): string => {
   }
 };
 
-export const setTheme = (theme: string): void => {
+interface SetThemeOptions {
+  broadcast?: boolean;
+}
+
+export const setTheme = (
+  theme: string,
+  { broadcast = true }: SetThemeOptions = {},
+): void => {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(THEME_KEY, theme);
     document.documentElement.dataset.theme = theme;
     document.documentElement.classList.toggle('dark', isDarkTheme(theme));
+    if (broadcast) publish<string>(THEME_EVENT, theme);
   } catch {
     /* ignore storage errors */
   }
