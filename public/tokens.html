@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Design Tokens</title>
+  <style>
+    body { font-family: sans-serif; padding: 1rem; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: left; }
+    th { background: #f0f0f0; }
+  </style>
+</head>
+<body>
+  <h1>Design Tokens</h1>
+  <table>
+    <thead>
+      <tr><th>Token</th><th>Value</th><th>Sample</th></tr>
+    </thead>
+    <tbody id="tokenTable"></tbody>
+  </table>
+  <script>
+    function createSample(token) {
+      const sample = document.createElement('div');
+      sample.style.border = '1px solid #ccc';
+      switch (token.type) {
+        case 'color':
+          sample.style.background = token.value;
+          sample.style.width = '40px';
+          sample.style.height = '20px';
+          break;
+        case 'space':
+          sample.style.background = '#eee';
+          sample.style.width = token.value;
+          sample.style.height = '20px';
+          break;
+        case 'radius':
+          sample.style.background = '#eee';
+          sample.style.width = '40px';
+          sample.style.height = '40px';
+          sample.style.borderRadius = token.value;
+          break;
+        case 'font':
+          sample.textContent = 'Aa';
+          sample.style.fontFamily = token.value;
+          sample.style.fontSize = '1.25rem';
+          sample.style.border = 'none';
+          break;
+        case 'motion':
+          sample.style.background = '#eee';
+          sample.style.width = '40px';
+          sample.style.height = '20px';
+          sample.style.transition = `transform ${token.value} ease-in-out`;
+          sample.addEventListener('mouseover', () => sample.style.transform = 'translateX(20px)');
+          sample.addEventListener('mouseout', () => sample.style.transform = 'translateX(0)');
+          break;
+        default:
+          sample.style.background = '#eee';
+          sample.style.width = token.value;
+          sample.style.height = token.value;
+      }
+      return sample;
+    }
+
+    fetch('tokens.json')
+      .then(res => res.json())
+      .then(tokens => {
+        const tbody = document.getElementById('tokenTable');
+        tokens.forEach(token => {
+          const tr = document.createElement('tr');
+          const nameTd = document.createElement('td');
+          nameTd.textContent = token.name;
+          const valueTd = document.createElement('td');
+          valueTd.textContent = token.value;
+          const sampleTd = document.createElement('td');
+          sampleTd.appendChild(createSample(token));
+          tr.appendChild(nameTd);
+          tr.appendChild(valueTd);
+          tr.appendChild(sampleTd);
+          tbody.appendChild(tr);
+        });
+      });
+  </script>
+</body>
+</html>
