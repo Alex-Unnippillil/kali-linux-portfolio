@@ -52,12 +52,21 @@ export class SideBarApp extends Component {
         this.setState({ scaleImage: true });
     }
 
+    showTooltip = () => {
+        this.captureThumbnail();
+        this.setState({ showTitle: true });
+    }
+
+    hideTooltip = () => {
+        this.setState({ showTitle: false, thumbnail: null });
+    }
+
     openApp = () => {
         if (!this.props.isMinimized[this.id] && this.props.isClose[this.id]) {
             this.scaleImage();
         }
         this.props.openApp(this.id);
-        this.setState({ showTitle: false, thumbnail: null });
+        this.hideTooltip();
     };
 
     captureThumbnail = async () => {
@@ -86,19 +95,24 @@ export class SideBarApp extends Component {
     };
 
     render() {
+        const tooltipId = `sidebar-tooltip-${this.props.id}`;
         return (
             <button
                 type="button"
                 aria-label={this.props.title}
+                aria-describedby={this.state.showTitle ? tooltipId : undefined}
                 data-context="app"
                 data-app-id={this.props.id}
                 onClick={this.openApp}
-                onMouseEnter={() => {
-                    this.captureThumbnail();
-                    this.setState({ showTitle: true });
-                }}
-                onMouseLeave={() => {
-                    this.setState({ showTitle: false, thumbnail: null });
+                onMouseEnter={this.showTooltip}
+                onMouseLeave={this.hideTooltip}
+                onFocus={this.showTooltip}
+                onBlur={this.hideTooltip}
+                onKeyDown={(event) => {
+                    if ((event.key === 'Escape' || event.key === 'Esc') && this.state.showTitle) {
+                        event.stopPropagation();
+                        this.hideTooltip();
+                    }
                 }}
                 className={(this.props.isClose[this.id] === false && this.props.isFocus[this.id] ? "bg-white bg-opacity-10 " : "") +
                     " w-auto p-2 outline-none relative hover:bg-white hover:bg-opacity-10 rounded m-1 transition-hover transition-active"}
@@ -134,6 +148,7 @@ export class SideBarApp extends Component {
                             " pointer-events-none absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2" +
                             " rounded border border-gray-400 border-opacity-40 shadow-lg overflow-hidden bg-black bg-opacity-50"
                         }
+                        aria-hidden={!this.state.showTitle}
                     >
                         <Image
                             width={128}
@@ -146,6 +161,9 @@ export class SideBarApp extends Component {
                     </div>
                 )}
                 <div
+                    id={tooltipId}
+                    role="tooltip"
+                    aria-hidden={!this.state.showTitle}
                     className={
                         (this.state.showTitle ? " visible " : " invisible ") +
                         " w-max py-0.5 px-1.5 absolute top-1.5 left-full ml-3 m-1 text-ubt-grey text-opacity-90 text-sm bg-ub-grey bg-opacity-70 border-gray-400 border border-opacity-40 rounded-md"
