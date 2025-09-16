@@ -61,6 +61,56 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 });
 
+const embedCacheOptions = {
+  cacheName: 'embeds-runtime',
+  expiration: {
+    maxEntries: 32,
+    maxAgeSeconds: 60 * 60 * 24,
+  },
+  cacheableResponse: {
+    statuses: [0, 200],
+  },
+};
+
+const createEmbedCacheOptions = () => ({
+  ...embedCacheOptions,
+  expiration: { ...embedCacheOptions.expiration },
+  cacheableResponse: { ...embedCacheOptions.cacheableResponse },
+});
+
+const runtimeCaching = [
+  {
+    urlPattern: /^https:\/\/(?:platform|syndication)\.twitter\.com\/.*$/i,
+    handler: 'StaleWhileRevalidate',
+    options: createEmbedCacheOptions(),
+  },
+  {
+    urlPattern: /^https:\/\/cdn\.syndication\.twimg\.com\/.*$/i,
+    handler: 'StaleWhileRevalidate',
+    options: createEmbedCacheOptions(),
+  },
+  {
+    urlPattern: /^https:\/\/i\.ytimg\.com\/.*$/i,
+    handler: 'StaleWhileRevalidate',
+    options: createEmbedCacheOptions(),
+  },
+  {
+    urlPattern: /^https:\/\/(?:www\.)?youtube(?:-nocookie)?\.com\/.*$/i,
+    handler: 'StaleWhileRevalidate',
+    options: createEmbedCacheOptions(),
+  },
+  {
+    urlPattern: /^https:\/\/open\.spotify\.com\/.*$/i,
+    handler: 'StaleWhileRevalidate',
+    options: createEmbedCacheOptions(),
+  },
+  {
+    urlPattern: /^https:\/\/(?:embed\.)?stackblitz\.com\/.*$/i,
+    handler: 'StaleWhileRevalidate',
+    options: createEmbedCacheOptions(),
+  },
+];
+
 const withPWA = require('@ducanh2912/next-pwa').default({
   dest: 'public',
   sw: 'sw.js',
@@ -69,18 +119,16 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   workboxOptions: {
     navigateFallback: '/offline.html',
     additionalManifestEntries: [
-      { url: '/', revision: null },
-      { url: '/feeds', revision: null },
-      { url: '/about', revision: null },
-      { url: '/projects', revision: null },
-      { url: '/projects.json', revision: null },
-      { url: '/apps', revision: null },
-      { url: '/apps/weather', revision: null },
-      { url: '/apps/terminal', revision: null },
-      { url: '/apps/checkers', revision: null },
       { url: '/offline.html', revision: null },
+      { url: '/offline.css', revision: null },
+      { url: '/offline.js', revision: null },
       { url: '/manifest.webmanifest', revision: null },
+      { url: '/favicon.ico', revision: null },
+      { url: '/favicon.svg', revision: null },
+      { url: '/images/logos/fevicon.png', revision: null },
+      { url: '/images/logos/logo_1024.png', revision: null },
     ],
+    runtimeCaching,
   },
 });
 

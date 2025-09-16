@@ -66,8 +66,9 @@ To send text or links directly into the Sticky Notes app:
 ### Service Worker (SW)
 
 - Generated via [`@ducanh2912/next-pwa`](https://github.com/DuCanhGH/next-pwa); output is `public/sw.js`.
-- Only assets under `public/` are precached.
-- Dynamic routes or API responses are not cached.
+- Precaches only the offline shell (`offline.html`, `offline.css`, `offline.js`), the web app manifest, and install icons/favicons referenced by the manifest.
+- Runtime caching covers embed providers (YouTube, X/Twitter, Spotify, StackBlitz) with a `StaleWhileRevalidate` strategy capped at 32 responses and 24 hours, preventing unbounded cache growth while keeping recent embeds available.
+- Dynamic routes or API responses remain network-only beyond those embed responses.
 - Future work may use `injectManifest` for finer control.
 
 ---
