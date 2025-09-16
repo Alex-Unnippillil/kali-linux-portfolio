@@ -1,4 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { transitionStyles } from '@/src/motion/presets';
+
+const TOAST_MOTION = transitionStyles({
+  properties: ['transform', 'opacity'],
+  preset: 'toggle',
+});
 
 interface ToastProps {
   message: string;
@@ -32,7 +38,8 @@ const Toast: React.FC<ToastProps> = ({
     <div
       role="status"
       aria-live="polite"
-      className={`fixed top-4 left-1/2 -translate-x-1/2 transform bg-gray-900 text-white border border-gray-700 px-4 py-3 rounded-md shadow-md flex items-center transition-transform duration-150 ease-in-out ${visible ? 'translate-y-0' : '-translate-y-full'}`}
+      className={`fixed top-4 left-1/2 -translate-x-1/2 transform bg-gray-900 text-white border border-gray-700 px-4 py-3 rounded-md shadow-md flex items-center ${visible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}`}
+      style={TOAST_MOTION}
     >
       <span>{message}</span>
       {onAction && actionLabel && (

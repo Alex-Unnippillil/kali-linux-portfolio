@@ -4,10 +4,26 @@
 
 @layer utilities {
   .transition-hover {
-    @apply transition ease-out duration-150;
+    @apply transition;
+    transition-duration: var(
+      --motion-duration-hover,
+      var(--motion-medium)
+    );
+    transition-timing-function: var(
+      --motion-ease-standard,
+      cubic-bezier(0.4, 0, 0.2, 1)
+    );
   }
   .transition-active {
-    @apply transition ease-out duration-100;
+    @apply transition;
+    transition-duration: var(
+      --motion-duration-tap,
+      var(--motion-fast)
+    );
+    transition-timing-function: var(
+      --motion-ease-emphasized,
+      cubic-bezier(0.2, 0, 0, 1)
+    );
   }
 }
 

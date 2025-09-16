@@ -1,4 +1,10 @@
 import React from 'react';
+import { transitionStyles } from '@/src/motion/presets';
+
+const PROGRESS_MOTION = transitionStyles({
+  properties: 'width',
+  preset: 'toggle',
+});
 
 interface ProgressBarProps {
   progress: number;
@@ -16,8 +22,8 @@ export default function ProgressBar({ progress, className = '' }: ProgressBarPro
       aria-valuemax={100}
     >
       <div
-        className="h-full bg-blue-500 transition-all duration-200"
-        style={{ width: `${clamped}%` }}
+        className="h-full bg-blue-500"
+        style={{ width: `${clamped}%`, ...PROGRESS_MOTION }}
       />
     </div>
   );
