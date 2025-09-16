@@ -23,6 +23,20 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import HotCornerHint from '../desktop/HotCornerHint';
+import {
+    HotCornerController,
+    HOT_CORNER_ACTION_DEFINITIONS,
+    HOT_CORNER_POSITIONS,
+    DEFAULT_HOT_CORNER_CONFIGURATION,
+} from '../../src/desktop/hotCorners';
+
+const HOT_CORNER_TARGET_CLASSES = {
+    'top-left': 'top-0 left-0',
+    'top-right': 'top-0 right-0',
+    'bottom-left': 'bottom-0 left-0',
+    'bottom-right': 'bottom-0 right-0',
+};
 
 export class Desktop extends Component {
     constructor() {
@@ -52,12 +66,26 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            hotCornerHover: null,
+            hotCornerLastTriggered: null,
+            hotCornerAnnouncement: '',
+            hotCornerAnnouncementCount: 0,
         }
+        this.hotCornerController = new HotCornerController(
+            DEFAULT_HOT_CORNER_CONFIGURATION,
+            {
+                'show-desktop': () => this.handleHotCornerShowDesktop(),
+                'app-switcher': () => this.handleHotCornerOpenSwitcher(),
+            }
+        );
+        this.hotCornerTriggerTimeout = null;
     }
 
     componentDidMount() {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+
+        this.loadHotCornerConfig();
 
         this.fetchAppsData(() => {
             const session = this.props.session || {};
@@ -96,6 +124,159 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        if (this.hotCornerTriggerTimeout) {
+            clearTimeout(this.hotCornerTriggerTimeout);
+            this.hotCornerTriggerTimeout = null;
+        }
+        this.hotCornerController?.dispose();
+    }
+
+    loadHotCornerConfig = () => {
+        const stored = safeLocalStorage?.getItem('hot-corner-config');
+        if (!stored) return;
+        try {
+            const config = JSON.parse(stored);
+            const nextConfig = {};
+            HOT_CORNER_POSITIONS.forEach(corner => {
+                const action = config?.[corner];
+                if (typeof action === 'string' && HOT_CORNER_ACTION_DEFINITIONS[action]) {
+                    nextConfig[corner] = action;
+                }
+            });
+            if (Object.keys(nextConfig).length) {
+                this.hotCornerController.updateConfiguration(nextConfig);
+            }
+        } catch (e) {
+            // ignore invalid persisted configuration
+        }
+    }
+
+    announceHotCornerAction = (message) => {
+        if (!message) return;
+        this.setState(prev => ({
+            hotCornerAnnouncement: message,
+            hotCornerAnnouncementCount: prev.hotCornerAnnouncementCount + 1,
+        }));
+    }
+
+    handleHotCornerShowDesktop = () => {
+        const openWindows = this.app_stack.filter(id => this.state.closed_windows[id] === false);
+        if (!openWindows.length) {
+            return { announcement: 'No open windows to minimise or restore.' };
+        }
+
+        const allMinimized = openWindows.every(id => this.state.minimized_windows[id]);
+        if (allMinimized) {
+            const minimized_windows = { ...this.state.minimized_windows };
+            openWindows.forEach(id => {
+                minimized_windows[id] = false;
+            });
+            this.setState({ minimized_windows }, () => {
+                this.giveFocusToLastApp();
+                this.saveSession();
+            });
+            return { announcement: 'Restored previously open windows.' };
+        }
+
+        const minimized_windows = { ...this.state.minimized_windows };
+        const focused_windows = { ...this.state.focused_windows };
+        openWindows.forEach(id => {
+            minimized_windows[id] = true;
+            focused_windows[id] = false;
+        });
+        this.setState({ minimized_windows, focused_windows }, () => {
+            this.hideSideBar(null, false);
+            this.saveSession();
+        });
+        return { announcement: 'Desktop revealed.' };
+    }
+
+    handleHotCornerOpenSwitcher = () => {
+        const windows = this.app_stack.filter(id => this.state.closed_windows[id] === false);
+        if (!windows.length) {
+            return { announcement: 'No open windows to switch between.' };
+        }
+        this.openWindowSwitcher();
+        return { announcement: 'App switcher opened.' };
+    }
+
+    handleHotCornerEnter = (corner) => {
+        const action = this.hotCornerController.getActionForCorner(corner);
+        if (action === 'none') {
+            this.setState({ hotCornerHover: null });
+            return;
+        }
+        this.setState({ hotCornerHover: corner });
+        this.hotCornerController.handlePointerEnter(corner, this.handleHotCornerTriggered);
+    }
+
+    handleHotCornerLeave = (corner) => {
+        if (this.state.hotCornerHover === corner) {
+            this.setState({ hotCornerHover: null });
+        }
+        this.hotCornerController.handlePointerLeave(corner);
+    }
+
+    handleHotCornerTriggered = (corner, action, metadata) => {
+        const definition = HOT_CORNER_ACTION_DEFINITIONS[action];
+        const announcement = metadata?.announcement || `${definition.label} activated.`;
+        if (this.hotCornerTriggerTimeout) {
+            clearTimeout(this.hotCornerTriggerTimeout);
+        }
+        this.setState({ hotCornerLastTriggered: corner }, () => {
+            this.hotCornerTriggerTimeout = setTimeout(() => {
+                this.setState(state => {
+                    if (state.hotCornerHover === corner) return null;
+                    return state.hotCornerLastTriggered === corner ? { hotCornerLastTriggered: null } : null;
+                });
+                this.hotCornerTriggerTimeout = null;
+            }, 1200);
+        });
+        this.announceHotCornerAction(announcement);
+    }
+
+    renderHotCorners = () => {
+        if (!this.hotCornerController) return null;
+
+        return (
+            <div className="pointer-events-none absolute inset-0 z-40">
+                {HOT_CORNER_POSITIONS.map(corner => {
+                    const actionId = this.hotCornerController.getActionForCorner(corner);
+                    const action = HOT_CORNER_ACTION_DEFINITIONS[actionId];
+                    const visible = this.state.hotCornerHover === corner;
+                    const triggered = this.state.hotCornerLastTriggered === corner;
+                    return (
+                        <HotCornerHint
+                            key={`hint-${corner}`}
+                            corner={corner}
+                            action={action}
+                            visible={visible}
+                            triggered={triggered}
+                        />
+                    );
+                })}
+                {HOT_CORNER_POSITIONS.map(corner => {
+                    const actionId = this.hotCornerController.getActionForCorner(corner);
+                    const isDisabled = actionId === 'none';
+                    const isActive = !isDisabled && (this.state.hotCornerHover === corner || this.state.hotCornerLastTriggered === corner);
+                    const label = isDisabled ? undefined : HOT_CORNER_ACTION_DEFINITIONS[actionId].label;
+                    return (
+                        <div
+                            key={`target-${corner}`}
+                            className={`pointer-events-auto absolute ${HOT_CORNER_TARGET_CLASSES[corner]} h-10 w-10 p-1`}
+                            aria-hidden="true"
+                            title={label}
+                            onPointerEnter={() => this.handleHotCornerEnter(corner)}
+                            onPointerLeave={() => this.handleHotCornerLeave(corner)}
+                        >
+                            <span
+                                className={`block h-full w-full rounded-lg border border-transparent transition duration-150 ${isActive ? 'border-blue-400/70 bg-blue-400/10' : ''} ${isDisabled ? '' : 'hover:border-blue-400/40'}`}
+                            />
+                        </div>
+                    );
+                })}
+            </div>
+        );
     }
 
     checkForNewFolders = () => {
@@ -940,6 +1121,12 @@ export class Desktop extends Component {
                     }}
                     onCloseMenu={this.hideAllContextMenu}
                 />
+
+                {this.renderHotCorners()}
+                <div aria-live="polite" aria-atomic="true" className="sr-only">
+                    {this.state.hotCornerAnnouncement}
+                    <span aria-hidden="true">{this.state.hotCornerAnnouncementCount}</span>
+                </div>
 
                 {/* Folder Input Name Bar */}
                 {
