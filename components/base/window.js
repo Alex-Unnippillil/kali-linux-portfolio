@@ -512,6 +512,39 @@ export class Window extends Component {
         }
     }
 
+    handleTitleBarDoubleClick = (event) => {
+        if (event && event.button !== 0) {
+            return;
+        }
+        if (this.props.allowMaximize === false) {
+            return;
+        }
+        event?.preventDefault();
+        event?.stopPropagation();
+        this.focusWindow();
+        this.maximizeWindow();
+    }
+
+    handleTitleBarMouseUp = (event) => {
+        if (event.button !== 1) {
+            return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        this.focusWindow();
+        if (typeof window === 'undefined') {
+            return;
+        }
+        const windowTitle =
+            typeof this.props.title === 'string' && this.props.title.trim().length > 0
+                ? this.props.title
+                : 'this window';
+        const shouldClose = window.confirm(`Close ${windowTitle}?`);
+        if (shouldClose) {
+            this.closeWindow();
+        }
+    }
+
     releaseGrab = () => {
         if (this.state.grabbed) {
             this.handleStop();
@@ -649,6 +682,10 @@ export class Window extends Component {
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
+                            onDoubleClick={this.handleTitleBarDoubleClick}
+                            onMouseUp={this.handleTitleBarMouseUp}
+                            allowMaximize={this.props.allowMaximize !== false}
+                            isMaximized={this.state.maximized}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -674,17 +711,44 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+export function WindowTopBar({
+    title: windowTitle,
+    onKeyDown,
+    onBlur,
+    grabbed,
+    onDoubleClick,
+    onMouseUp,
+    allowMaximize = true,
+    isMaximized,
+}) {
+    const actionHints = [];
+    if (allowMaximize) {
+        actionHints.push(isMaximized ? 'Double-click to restore' : 'Double-click to maximize');
+    }
+    actionHints.push('Middle-click to close (confirmation)');
+    const actionsLabel = actionHints.join('. ');
+    const hoverHint = `${actionsLabel}.`;
+    const titleText =
+        typeof windowTitle === 'string' && windowTitle.trim().length > 0
+            ? windowTitle.trim()
+            : '';
+    const baseLabel = titleText ? `Window title bar for ${titleText}` : 'Window title bar';
+    const accessibleLabel = `${[baseLabel, actionsLabel].filter(Boolean).join('. ')}.`;
+
     return (
         <div
-            className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
+            className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11 cursor-default transition-colors duration-150 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-60"}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
+            aria-label={accessibleLabel}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
+            onDoubleClick={onDoubleClick}
+            onMouseUp={onMouseUp}
+            title={hoverHint}
         >
-            <div className="flex justify-center w-full text-sm font-bold">{title}</div>
+            <div className="flex justify-center w-full text-sm font-bold">{windowTitle}</div>
         </div>
     )
 }
