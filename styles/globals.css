@@ -68,12 +68,30 @@ html[data-theme='matrix'] {
 
 }
 
+html.high-contrast {
+  --color-bg: #000000;
+  --color-text: #ffffff;
+  --color-primary: #0b6bff;
+  --color-secondary: #000000;
+  --color-accent: #a06a00;
+  --color-muted: #101010;
+  --color-surface: #000000;
+  --color-inverse: #000000;
+  --color-border: #757575;
+  --color-terminal: #00ff00;
+  --color-dark: #000000;
+  --color-focus-ring: #0b6bff;
+  --color-selection: #0b6bff;
+  --color-control-accent: #0b6bff;
+  accent-color: #0b6bff;
+}
+
 ::selection {
   background: var(--color-selection);
   color: var(--color-inverse);
 }
 
 *:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
+  outline: var(--focus-outline-width, 2px) solid var(--focus-outline-color, var(--color-focus-ring));
   outline-offset: 2px;
 }

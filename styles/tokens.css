@@ -67,16 +67,32 @@
   --color-bg: #000000;
   --color-text: #ffffff;
   --color-ub-grey: #000000;
+  --color-ub-warm-grey: #1f1f1f;
   --color-ub-cool-grey: #000000;
-  --color-ubt-grey: #ffffff;
-  --color-ubt-cool-grey: #ffffff;
-  --color-ub-orange: #ffff00;
-  --color-ub-lite-abrgn: #00ffff;
-  --color-ub-border-orange: #ffff00;
-  --game-color-secondary: #ffff00;
-  --game-color-success: #00ffff;
-  --game-color-warning: #ff00ff;
-  --game-color-danger: #ff0000;
+  --color-ub-lite-abrgn: #000a14;
+  --color-ub-med-abrgn: #000610;
+  --color-ub-drk-abrgn: #000000;
+  --color-ub-window-title: #000000;
+  --color-ub-gedit-dark: #000000;
+  --color-ub-gedit-light: #00324d;
+  --color-ub-gedit-darker: #00060f;
+  --color-ubt-grey: #f5f5f5;
+  --color-ubt-warm-grey: #e6e0d6;
+  --color-ubt-cool-grey: #757575;
+  --color-ubt-blue: #0b6bff;
+  --color-ubt-green: #00883a;
+  --color-ubt-gedit-orange: #c05600;
+  --color-ubt-gedit-blue: #0074e0;
+  --color-ubt-gedit-dark: #0b6bff;
+  --color-ub-orange: #a06a00;
+  --color-ub-border-orange: #a06a00;
+  --color-ub-dark-grey: #000000;
+  --focus-outline-color: #0b6bff;
+  --kali-bg: rgba(0, 0, 0, 0.9);
+  --game-color-secondary: #0b6bff;
+  --game-color-success: #00883a;
+  --game-color-warning: #c05600;
+  --game-color-danger: #c0504f;
 }
 
 /* Dyslexia-friendly fonts */
@@ -110,11 +126,31 @@
     --color-bg: #000000;
     --color-text: #ffffff;
     --color-ub-grey: #000000;
+    --color-ub-warm-grey: #1f1f1f;
     --color-ub-cool-grey: #000000;
-    --color-ubt-grey: #ffffff;
-    --color-ubt-cool-grey: #ffffff;
-    --color-ub-orange: #ffff00;
-    --color-ub-lite-abrgn: #00ffff;
-    --color-ub-border-orange: #ffff00;
+    --color-ub-lite-abrgn: #000a14;
+    --color-ub-med-abrgn: #000610;
+    --color-ub-drk-abrgn: #000000;
+    --color-ub-window-title: #000000;
+    --color-ub-gedit-dark: #000000;
+    --color-ub-gedit-light: #00324d;
+    --color-ub-gedit-darker: #00060f;
+    --color-ubt-grey: #f5f5f5;
+    --color-ubt-warm-grey: #e6e0d6;
+    --color-ubt-cool-grey: #757575;
+    --color-ubt-blue: #0b6bff;
+    --color-ubt-green: #00883a;
+    --color-ubt-gedit-orange: #c05600;
+    --color-ubt-gedit-blue: #0074e0;
+    --color-ubt-gedit-dark: #0b6bff;
+    --color-ub-orange: #a06a00;
+    --color-ub-border-orange: #a06a00;
+    --color-ub-dark-grey: #000000;
+    --focus-outline-color: #0b6bff;
+    --kali-bg: rgba(0, 0, 0, 0.9);
+    --game-color-secondary: #0b6bff;
+    --game-color-success: #00883a;
+    --game-color-warning: #c05600;
+    --game-color-danger: #c0504f;
   }
 }
