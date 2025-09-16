@@ -1,3 +1,5 @@
+import { setThemeColorMeta } from './metadata';
+
 export const THEME_KEY = 'app:theme';
 
 // Score required to unlock each theme
@@ -33,6 +35,7 @@ export const setTheme = (theme: string): void => {
     window.localStorage.setItem(THEME_KEY, theme);
     document.documentElement.dataset.theme = theme;
     document.documentElement.classList.toggle('dark', isDarkTheme(theme));
+    setThemeColorMeta();
   } catch {
     /* ignore storage errors */
   }
