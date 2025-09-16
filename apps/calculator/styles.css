@@ -101,38 +101,127 @@ body {
   position: fixed;
   top: 0;
   right: 0;
-  width: 200px;
+  width: min(260px, 80vw);
   height: 100%;
-  overflow-y: auto;
   background: var(--color-surface);
   border-left: 1px solid var(--color-border);
-  padding: 0.5rem;
-  font-size: 0.9rem;
   box-shadow: -2px 0 5px color-mix(in srgb, var(--color-inverse), transparent 90%);
+  padding: 0.75rem;
+  font-size: 0.9rem;
   display: flex;
   flex-direction: column;
+  gap: 0.75rem;
   z-index: 1000;
 }
 
 .history-header {
   display: flex;
-  justify-content: flex-end;
-  margin-bottom: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
 
-#history-list {
-  overflow-y: auto;
+.history-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.history-clear {
+  border: none;
+  border-radius: 4px;
+  padding: 0.25rem 0.75rem;
+  background: color-mix(in srgb, var(--color-muted), transparent 20%);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: background 150ms ease, opacity 150ms ease;
+}
+
+.history-clear:hover:not(:disabled),
+.history-clear:focus-visible:not(:disabled) {
+  background: color-mix(in srgb, var(--color-muted), var(--color-text) 15%);
+  outline: none;
+}
+
+.history-clear:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.history-list {
   flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-right: 0.25rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    'Liberation Mono', 'Courier New', monospace;
 }
 
 .history-entry {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.25rem;
+  gap: 0.5rem;
+  align-items: stretch;
 }
 
-.history-entry button {
-  margin-left: 0.5rem;
-  padding: 0.25rem 0.5rem;
+.history-entry-button {
+  flex: 1;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem;
+  background: color-mix(in srgb, var(--color-muted), transparent 10%);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  transition: background 150ms ease, transform 150ms ease;
+}
+
+.history-entry-button:hover,
+.history-entry-button:focus-visible {
+  background: color-mix(in srgb, var(--color-muted), var(--color-text) 15%);
+  outline: 2px solid color-mix(in srgb, var(--color-text), transparent 40%);
+  outline-offset: 2px;
+  transform: translateY(-1px);
+}
+
+.history-entry-expr {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.history-entry-result {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.history-copy {
+  border: none;
+  border-radius: 6px;
+  padding: 0.35rem 0.6rem;
+  background: color-mix(in srgb, var(--color-muted), transparent 20%);
+  color: inherit;
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+  align-self: center;
+  white-space: nowrap;
+  transition: background 150ms ease;
+}
+
+.history-copy:hover,
+.history-copy:focus-visible {
+  background: color-mix(in srgb, var(--color-muted), var(--color-text) 15%);
+  outline: none;
+}
+
+.history-empty {
+  margin: auto 0;
+  text-align: center;
+  color: color-mix(in srgb, var(--color-text), transparent 45%);
 }
