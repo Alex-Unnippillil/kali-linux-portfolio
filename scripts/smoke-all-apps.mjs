@@ -42,6 +42,7 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
     '/apps/sokoban',
     '/apps/solitaire',
     '/apps/spotify',
+    '/apps/media',
     '/apps/ssh',
     '/apps/sticky_notes',
     '/apps/timer_stopwatch',
