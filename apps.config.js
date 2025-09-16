@@ -71,6 +71,7 @@ const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
 const QuoteApp = createDynamicApp('quote', 'Quote');
 const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery');
 const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
+const CalendarApp = createDynamicApp('calendar', 'Calendar');
 const InputLabApp = createDynamicApp('input-lab', 'Input Lab');
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 
@@ -165,6 +166,7 @@ const displayStickyNotes = createDisplay(StickyNotesApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);
 const displayWeatherWidget = createDisplay(WeatherWidgetApp);
 const displayInputLab = createDisplay(InputLabApp);
+const displayCalendar = createDisplay(CalendarApp);
 
 const displayGhidra = createDisplay(GhidraApp);
 
@@ -754,6 +756,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayWireshark,
+  },
+  {
+    id: 'calendar',
+    title: 'Calendar',
+    icon: '/themes/Yaru/apps/calendar.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCalendar,
   },
   {
     id: 'todoist',
