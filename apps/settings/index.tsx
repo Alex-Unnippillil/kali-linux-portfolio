@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -14,7 +14,7 @@ import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
 
 export default function Settings() {
-  const {
+  const { 
     accent,
     setAccent,
     wallpaper,
@@ -104,6 +104,55 @@ export default function Settings() {
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
+  const locale =
+    typeof navigator !== "undefined"
+      ? navigator.languages?.[0] || navigator.language
+      : undefined;
+
+  const backgroundSyncPath = useMemo(() => {
+    const segments = [
+      "Settings",
+      "Privacy & security",
+      "Site Settings",
+      "Background sync",
+    ];
+    if (typeof Intl !== "undefined" && "ListFormat" in Intl) {
+      try {
+        const formatter = new Intl.ListFormat(locale ? [locale] : undefined, {
+          style: "short",
+          type: "conjunction",
+        });
+        return formatter.format(segments);
+      } catch {
+        // Fall back to a simple join below
+      }
+    }
+    return segments.join(" > ");
+  }, [locale]);
+
+  const chromiumSettingsLink = useMemo(() => {
+    if (typeof navigator === "undefined")
+      return "chrome://settings/content/backgroundSync";
+    const ua = navigator.userAgent;
+    if (/Edg/i.test(ua)) return "edge://settings/content/backgroundSync";
+    return "chrome://settings/content/backgroundSync";
+  }, []);
+
+  const chromiumBrowsers = useMemo(() => {
+    const browsers = ["Chrome", "Edge"];
+    if (typeof Intl !== "undefined" && "ListFormat" in Intl) {
+      try {
+        const formatter = new Intl.ListFormat(locale ? [locale] : undefined, {
+          style: "short",
+          type: "disjunction",
+        });
+        return formatter.format(browsers);
+      } catch {
+        // Fall back to default join
+      }
+    }
+    return browsers.join(" or ");
+  }, [locale]);
 
   return (
     <div className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey">
@@ -272,6 +321,27 @@ export default function Settings() {
       )}
       {activeTab === "privacy" && (
         <>
+          <div className="px-4 text-sm text-ubt-grey space-y-2">
+            <p>
+              Background sync keeps offline copies of built-in tools current by
+              refreshing cached content about once a day when the browser
+              allows it.
+            </p>
+            <p>
+              You can turn this off anytime from your browser&apos;s background
+              sync settings ({backgroundSyncPath}) or by visiting
+              {" "}
+              <a
+                href={chromiumSettingsLink}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="underline text-ubt-blue"
+              >
+                {chromiumSettingsLink}
+              </a>
+              {` (${chromiumBrowsers}) and blocking it for this site.`}
+            </p>
+          </div>
           <div className="flex justify-center my-4 space-x-4">
             <button
               onClick={handleExport}
