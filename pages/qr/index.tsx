@@ -351,7 +351,13 @@ const QRPage: React.FC = () => {
         )}
       </div>
       <div className="w-full max-w-md">
-        <video ref={videoRef} className="h-48 w-full rounded border" />
+        <video
+          ref={videoRef}
+          className="h-48 w-full rounded border"
+          width={640}
+          height={480}
+          playsInline
+        />
         {scanResult && (
           <p className="mt-2 text-center text-sm">Decoded: {scanResult}</p>
         )}

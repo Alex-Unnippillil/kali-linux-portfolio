@@ -19,7 +19,11 @@ export default function LockScreen(props) {
             <img
                 src={`/wallpapers/${wallpaper}.webp`}
                 alt=""
+                width={3840}
+                height={2160}
                 className={`absolute top-0 left-0 w-full h-full object-cover transform z-20 transition duration-500 ${props.isLocked ? 'blur-sm' : 'blur-none'}`}
+                loading="lazy"
+                decoding="async"
             />
             <div className="w-full h-full z-50 overflow-hidden relative flex flex-col justify-center items-center text-white">
                 <div className=" text-7xl">

@@ -116,7 +116,13 @@ const QRScanner: React.FC = () => {
   return (
     <div className="p-4 space-y-4 text-white bg-ub-cool-grey h-full flex flex-col items-center">
       <div className="relative w-full max-w-sm">
-        <video ref={videoRef} className="w-full rounded-md border-2 border-white bg-black" />
+        <video
+          ref={videoRef}
+          className="w-full rounded-md border-2 border-white bg-black"
+          width={640}
+          height={480}
+          playsInline
+        />
         <div className="absolute top-2 right-2 flex gap-2">
           <button
             type="button"
@@ -143,7 +149,11 @@ const QRScanner: React.FC = () => {
             <img
               src={preview}
               alt="QR preview"
-              className="w-32 h-32 rounded-md border"
+              className="w-32 h-32 rounded-md border object-contain"
+              width={128}
+              height={128}
+              loading="lazy"
+              decoding="async"
             />
           )}
           <div className="flex-1 min-w-0">

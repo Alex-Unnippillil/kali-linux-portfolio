@@ -7,12 +7,14 @@ interface VideoPlayerProps {
   src: string;
   poster?: string;
   className?: string;
+  aspectRatio?: string;
 }
 
 const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
   src,
   poster,
   className = "",
+  aspectRatio = "16 / 9",
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { open, close } = usePipPortal();
@@ -128,8 +130,11 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
   };
 
   return (
-    <div className={`relative ${className}`.trim()}>
-      <video ref={videoRef} src={src} poster={poster} controls className="w-full h-auto" />
+    <div
+      className={`relative ${className}`.trim()}
+      style={aspectRatio ? { aspectRatio } : undefined}
+    >
+      <video ref={videoRef} src={src} poster={poster} controls className="h-full w-full" />
       {pipSupported && (
         <button
           type="button"

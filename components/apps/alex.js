@@ -11,15 +11,6 @@ export class AboutAlex extends Component {
 
     constructor() {
         super();
-        this.screens = {};
-        this.state = {
-            screen: () => { },
-            active_screen: "about", // by default 'about' screen is active
-            navbar: false,
-        }
-    }
-
-    componentDidMount() {
         this.screens = {
             "about": <About />,
             "education": <Education />,
@@ -27,15 +18,28 @@ export class AboutAlex extends Component {
             "certs": <Certs />,
             "projects": <Projects projects={data.projects} />,
             "resume": <Resume data={resumeData} />,
+        };
+        this.state = {
+            screen: this.screens["about"],
+            active_screen: "about", // by default 'about' screen is active
+            navbar: false,
         }
+    }
 
+    componentDidMount() {
         let lastVisitedScreen = localStorage.getItem("about-section");
         if (lastVisitedScreen === null || lastVisitedScreen === undefined) {
             lastVisitedScreen = "about";
         }
 
-        // focus last visited screen
-        this.changeScreen(document.getElementById(lastVisitedScreen));
+        if (lastVisitedScreen !== "about") {
+            const target = document.getElementById(lastVisitedScreen);
+            if (target) {
+                this.changeScreen(target);
+            } else {
+                this.changeScreen({ id: lastVisitedScreen });
+            }
+        }
     }
 
     changeScreen = (e) => {
@@ -312,10 +316,14 @@ const SkillSection = ({ title, badges }) => {
         {filteredBadges.map(badge => (
           <img
             key={badge.alt}
-            className="m-1 cursor-pointer"
+            className="m-1 h-12 w-40 cursor-pointer object-contain"
             src={badge.src}
             alt={badge.alt}
             title={badge.description}
+            width={160}
+            height={48}
+            loading="lazy"
+            decoding="async"
             onClick={() => setSelected(badge)}
           />
         ))}
@@ -377,6 +385,10 @@ function Skills({ skills }) {
             src="https://ghchart.rshah.org/Alex-Unnippillil"
             alt="Alex Unnippillil's GitHub contribution graph"
             className="w-full rounded"
+            width={876}
+            height={128}
+            loading="lazy"
+            decoding="async"
           />
         </div>
       </div>

@@ -41,7 +41,11 @@ export default function BackgroundImage() {
             <img
                 src={`/wallpapers/${wallpaper}.webp`}
                 alt=""
+                width={3840}
+                height={2160}
                 className="w-full h-full object-cover"
+                loading="eager"
+                decoding="async"
             />
             {needsOverlay && (
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 to-transparent" aria-hidden="true"></div>
