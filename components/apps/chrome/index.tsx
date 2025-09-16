@@ -92,6 +92,8 @@ const Chrome: React.FC = () => {
   const tabSearchRef = useRef<HTMLInputElement | null>(null);
   const [tabQuery, setTabQuery] = useState('');
   const [overflowing, setOverflowing] = useState(false);
+  const tabButtonRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const pendingFocusId = useRef<number | null>(null);
   const draggingId = useRef<number | null>(null);
   const dragTabId = useRef<number | null>(null);
   const [tiles, setTiles] = useState<Tile[]>([]);
@@ -99,6 +101,21 @@ const Chrome: React.FC = () => {
   const [newTitle, setNewTitle] = useState('');
   const [newUrl, setNewUrl] = useState('');
   const tileFileInput = useRef<HTMLInputElement | null>(null);
+
+  const scrollTabIntoView = useCallback((id: number) => {
+    if (typeof window === 'undefined') return;
+    window.requestAnimationFrame(() => {
+      document
+        .getElementById(`tab-${id}`)
+        ?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+    });
+  }, []);
+
+  const checkOverflow = useCallback(() => {
+    const el = tabStripRef.current;
+    if (!el) return;
+    setOverflowing(el.scrollWidth > el.clientWidth);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -193,9 +210,17 @@ const Chrome: React.FC = () => {
   }, [updateFavicon]);
 
   useEffect(() => {
+    checkOverflow();
+  }, [tabs, tabQuery, activeId, checkOverflow]);
+
+  useEffect(() => {
+    if (typeof ResizeObserver === 'undefined') return;
     const el = tabStripRef.current;
-    if (el) setOverflowing(el.scrollWidth > el.clientWidth);
-  }, [tabs, tabQuery]);
+    if (!el) return;
+    const observer = new ResizeObserver(() => checkOverflow());
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [checkOverflow]);
 
   useEffect(() => {
     saveTabs(tabs, activeId);
@@ -210,6 +235,26 @@ const Chrome: React.FC = () => {
   );
 
   const activeTab = tabs.find((t) => t.id === activeId)!;
+
+  useEffect(() => {
+    if (pendingFocusId.current === null) return;
+    const id = pendingFocusId.current;
+    const node = tabButtonRefs.current.get(id);
+    if (node) {
+      node.focus();
+      pendingFocusId.current = null;
+      return;
+    }
+    if (typeof window === 'undefined') return;
+    const handle = window.requestAnimationFrame(() => {
+      const target = tabButtonRefs.current.get(id);
+      if (target) {
+        target.focus();
+      }
+      pendingFocusId.current = null;
+    });
+    return () => window.cancelAnimationFrame(handle);
+  }, [activeId, filteredTabs]);
 
   useEffect(() => {
     setTabs((prev) =>
@@ -274,6 +319,7 @@ const Chrome: React.FC = () => {
   const addTab = useCallback(
     (url: string = HOME_URL) => {
       const id = Date.now();
+      pendingFocusId.current = id;
       setTabs((prev) => [
         ...prev,
         {
@@ -290,8 +336,9 @@ const Chrome: React.FC = () => {
       setAddress(url);
       updateFavicon(url);
       fetchArticle(id, url);
+      scrollTabIntoView(id);
     },
-    [updateFavicon, fetchArticle],
+    [updateFavicon, fetchArticle, scrollTabIntoView],
   );
 
   const closeTab = useCallback(
@@ -306,10 +353,12 @@ const Chrome: React.FC = () => {
         const next = tabs[idx - 1] || tabs[idx + 1];
         setActiveId(next.id);
         setAddress(next.url);
+        pendingFocusId.current = next.id;
+        scrollTabIntoView(next.id);
       }
-  },
-  [activeId, tabs],
-);
+    },
+    [activeId, tabs, scrollTabIntoView],
+  );
 
   const handleDragStart = useCallback(
     (id: number) => () => {
@@ -597,28 +646,63 @@ const Chrome: React.FC = () => {
     (e: React.KeyboardEvent<HTMLDivElement>) => {
       if (tabs.length === 0) return;
       const idx = tabs.findIndex((t) => t.id === activeId);
-      if (e.key === 'ArrowRight') {
-        const next = tabs[(idx + 1) % tabs.length];
-        setActiveId(next.id);
-        setAddress(next.url);
-        document.getElementById(`tab-${next.id}`)?.scrollIntoView({
-          inline: 'nearest',
-        });
-      } else if (e.key === 'ArrowLeft') {
-        const prev = tabs[(idx - 1 + tabs.length) % tabs.length];
-        setActiveId(prev.id);
-        setAddress(prev.url);
-        document.getElementById(`tab-${prev.id}`)?.scrollIntoView({
-          inline: 'nearest',
-        });
-      } else if (e.key === 'Delete') {
+      if (idx === -1) return;
+      const accel = e.ctrlKey || e.metaKey;
+      if (accel && e.key.toLowerCase() === 'w') {
+        e.preventDefault();
         closeTab(activeId);
-      } else if (e.key === 'f' && (e.ctrlKey || e.metaKey)) {
+        return;
+      }
+      if (accel && e.key.toLowerCase() === 't') {
+        e.preventDefault();
+        addTab();
+        return;
+      }
+      if (accel && e.key === 'Tab') {
+        e.preventDefault();
+        const delta = e.shiftKey ? -1 : 1;
+        const next = tabs[(idx + delta + tabs.length) % tabs.length];
+        pendingFocusId.current = next.id;
+        setActiveId(next.id);
+        scrollTabIntoView(next.id);
+        return;
+      }
+      if (accel && (e.key === 'PageUp' || e.key === 'PageDown')) {
+        e.preventDefault();
+        const delta = e.key === 'PageUp' ? -1 : 1;
+        const next = tabs[(idx + delta + tabs.length) % tabs.length];
+        pendingFocusId.current = next.id;
+        setActiveId(next.id);
+        scrollTabIntoView(next.id);
+        return;
+      }
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        const next = tabs[(idx + 1) % tabs.length];
+        pendingFocusId.current = next.id;
+        setActiveId(next.id);
+        scrollTabIntoView(next.id);
+        return;
+      }
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        const prev = tabs[(idx - 1 + tabs.length) % tabs.length];
+        pendingFocusId.current = prev.id;
+        setActiveId(prev.id);
+        scrollTabIntoView(prev.id);
+        return;
+      }
+      if (e.key === 'Delete') {
+        e.preventDefault();
+        closeTab(activeId);
+        return;
+      }
+      if (e.key === 'f' && accel) {
         e.preventDefault();
         tabSearchRef.current?.focus();
       }
     },
-    [tabs, activeId, closeTab],
+    [tabs, activeId, closeTab, addTab, scrollTabIntoView],
   );
 
   const onDragStart = useCallback(
@@ -704,60 +788,119 @@ const Chrome: React.FC = () => {
           onOpenNewWindow={(url) => window.open(url, '_blank')}
           historyList={tabs.find((t) => t.id === activeId)?.history}
         />
-        <button onClick={() => addTab()} aria-label="New Tab" className="px-2">
+      </div>
+      <div className="flex items-stretch bg-gray-700 text-sm">
+        <div
+          className="flex flex-1 overflow-x-auto space-x-1 px-1"
+          ref={tabStripRef}
+          role="tablist"
+          aria-label="Browser tabs"
+          aria-orientation="horizontal"
+          onKeyDown={onTabStripKeyDown}
+        >
+          {filteredTabs.map((t, index) => (
+            <div
+              key={t.id}
+              id={`tab-${t.id}`}
+              role="tab"
+              aria-selected={t.id === activeId}
+              aria-controls="browser-panel"
+              aria-setsize={filteredTabs.length}
+              aria-posinset={index + 1}
+              tabIndex={t.id === activeId ? 0 : -1}
+              ref={(el) => {
+                if (el) {
+                  tabButtonRefs.current.set(t.id, el);
+                } else {
+                  tabButtonRefs.current.delete(t.id);
+                }
+              }}
+              className={`flex items-center px-2 py-1 cursor-pointer select-none flex-shrink-0 rounded-t focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-700 focus:ring-white ${
+                t.id === activeId ? 'bg-gray-600' : 'bg-gray-700 hover:bg-gray-650'
+              }`}
+              draggable
+              onDragStart={onDragStart(t.id)}
+              onDragOver={onDragOver}
+              onDrop={onDrop(t.id)}
+              onClick={() => {
+                if (t.id !== activeId) {
+                  pendingFocusId.current = t.id;
+                  setActiveId(t.id);
+                  scrollTabIntoView(t.id);
+                }
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  if (t.id !== activeId) {
+                    pendingFocusId.current = t.id;
+                    setActiveId(t.id);
+                    scrollTabIntoView(t.id);
+                  }
+                }
+              }}
+              onMouseDown={(event) => {
+                if (event.button === 1) {
+                  event.preventDefault();
+                }
+              }}
+              onAuxClick={(event) => {
+                if (event.button === 1) {
+                  event.preventDefault();
+                  closeTab(t.id);
+                }
+              }}
+            >
+              {(() => {
+                try {
+                  const origin = new URL(t.url).origin;
+                  const src = favicons[origin];
+                  return src ? (
+                    <img
+                      src={src}
+                      alt=""
+                      className="w-4 h-4 mr-1 flex-shrink-0"
+                    />
+                  ) : null;
+                } catch {
+                  return null;
+                }
+              })()}
+              <span className="mr-2 truncate" style={{ maxWidth: 100 }}>
+                {t.url.replace(/^https?:\/\/(www\.)?/, '')}
+              </span>
+              {t.muted && <span className="mr-1">🔇</span>}
+              {tabs.length > 1 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    closeTab(t.id);
+                  }}
+                  onAuxClick={(event) => {
+                    if (event.button === 1) {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      closeTab(t.id);
+                    }
+                  }}
+                  aria-label="Close Tab"
+                  className="ml-1"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => addTab()}
+          aria-label="New Tab"
+          className="px-3 py-1 text-lg flex items-center justify-center flex-shrink-0 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-700 focus:ring-white"
+        >
           +
         </button>
-      </div>
-      <div
-        className="flex space-x-1 bg-gray-700 text-sm overflow-x-auto"
-        ref={tabStripRef}
-        tabIndex={0}
-        onKeyDown={onTabStripKeyDown}
-      >
-        {filteredTabs.map((t) => (
-          <div
-            key={t.id}
-            id={`tab-${t.id}`}
-            className={`flex items-center px-2 py-1 cursor-pointer ${t.id === activeId ? 'bg-gray-600' : 'bg-gray-700'} `}
-            onClick={() => setActiveId(t.id)}
-            draggable
-            onDragStart={onDragStart(t.id)}
-            onDragOver={onDragOver}
-            onDrop={onDrop(t.id)}
-
-          >
-            {(() => {
-              try {
-                const origin = new URL(t.url).origin;
-                const src = favicons[origin];
-                return src ? (
-                  <img
-                    src={src}
-                    alt=""
-                    className="w-4 h-4 mr-1 flex-shrink-0"
-                  />
-                ) : null;
-              } catch {
-                return null;
-              }
-            })()}
-            <span className="mr-2 truncate" style={{ maxWidth: 100 }}>
-              {t.url.replace(/^https?:\/\/(www\.)?/, '')}
-            </span>
-            {t.muted && <span className="mr-1">🔇</span>}
-            {tabs.length > 1 && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  closeTab(t.id);
-                }}
-                aria-label="Close Tab"
-              >
-                ×
-              </button>
-            )}
-          </div>
-        ))}
       </div>
       {overflowing && (
         <div className="bg-gray-700 p-1">
@@ -770,7 +913,12 @@ const Chrome: React.FC = () => {
           />
         </div>
       )}
-        <div className="flex-grow bg-white relative overflow-auto">
+        <div
+          className="flex-grow bg-white relative overflow-auto"
+          role="tabpanel"
+          id="browser-panel"
+          aria-labelledby={`tab-${activeId}`}
+        >
           {activeTab.url === HOME_URL ? (
             homeGrid
           ) : articles[activeId] ? (
