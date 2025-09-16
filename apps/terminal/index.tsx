@@ -11,6 +11,7 @@ import React, {
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
+import FindOverlay from './FindOverlay';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -80,7 +81,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const containerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<any>(null);
   const fitRef = useRef<any>(null);
-  const searchRef = useRef<any>(null);
   const commandRef = useRef('');
   const contentRef = useRef('');
   const registryRef = useRef(commandRegistry);
@@ -296,10 +296,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   useEffect(() => {
     let disposed = false;
     (async () => {
-      const [{ Terminal: XTerm }, { FitAddon }, { SearchAddon }] = await Promise.all([
+      const [{ Terminal: XTerm }, { FitAddon }] = await Promise.all([
         import('@xterm/xterm'),
         import('@xterm/addon-fit'),
-        import('@xterm/addon-search'),
       ]);
       await import('@xterm/xterm/css/xterm.css');
       if (disposed) return;
@@ -316,12 +315,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         },
       });
       const fit = new FitAddon();
-      const search = new SearchAddon();
       termRef.current = term;
       fitRef.current = fit;
-      searchRef.current = search;
       term.loadAddon(fit);
-      term.loadAddon(search);
       term.open(containerRef.current!);
       fit.fit();
       term.focus();
@@ -348,10 +344,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         if (domEvent.key === 'Tab') {
           domEvent.preventDefault();
           autocomplete();
-        } else if (domEvent.ctrlKey && domEvent.key === 'f') {
-          domEvent.preventDefault();
-          const q = window.prompt('Search');
-          if (q) searchRef.current?.findNext(q);
         } else if (domEvent.ctrlKey && domEvent.key === 'r') {
           domEvent.preventDefault();
           const q = window.prompt('Search history');
@@ -412,6 +404,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
   return (
     <div className="relative h-full w-full">
+      <FindOverlay />
       {paletteOpen && (
         <div className="absolute inset-0 bg-black bg-opacity-75 flex items-start justify-center z-10">
           <div className="mt-10 w-80 bg-gray-800 p-4 rounded">
