@@ -1,0 +1,26 @@
+/* RTL support utilities */
+
+html[dir='rtl'] body {
+  direction: rtl;
+}
+
+html[dir='rtl'] body * {
+  direction: inherit;
+}
+
+html[dir='rtl'] .text-left {
+  text-align: right;
+}
+
+html[dir='rtl'] .text-right {
+  text-align: left;
+}
+
+html[dir='rtl'] .space-x-1 > :not([hidden]) ~ :not([hidden]),
+html[dir='rtl'] .space-x-2 > :not([hidden]) ~ :not([hidden]),
+html[dir='rtl'] .space-x-3 > :not([hidden]) ~ :not([hidden]),
+html[dir='rtl'] .space-x-4 > :not([hidden]) ~ :not([hidden]),
+html[dir='rtl'] .space-x-6 > :not([hidden]) ~ :not([hidden]),
+html[dir='rtl'] .space-x-8 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-x-reverse: 1;
+}
