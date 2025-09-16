@@ -1,3 +1,5 @@
+"use client";
+
 export default function BetaBadge() {
   if (process.env.NEXT_PUBLIC_SHOW_BETA !== '1') return null;
   return (
