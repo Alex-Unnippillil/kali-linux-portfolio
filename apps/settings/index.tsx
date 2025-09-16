@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import useHashState from "../../hooks/useHashState";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -40,7 +41,10 @@ export default function Settings() {
     { id: "privacy", label: "Privacy" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
-  const [activeTab, setActiveTab] = useState<TabId>("appearance");
+  const [activeTab, setActiveTab] = useHashState<TabId>(
+    "appearance",
+    tabs.map((t) => t.id) as TabId[]
+  );
 
   const wallpapers = [
     "wall-1",
