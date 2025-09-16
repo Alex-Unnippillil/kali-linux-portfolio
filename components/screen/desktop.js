@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import keybindingManager from '../../utils/keybindingManager';
 
 export class Desktop extends Component {
     constructor() {
@@ -30,6 +31,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.keybindingCleanup = [];
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -89,6 +91,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        this.registerKeybindings();
     }
 
     componentWillUnmount() {
@@ -96,6 +99,7 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        this.unregisterKeybindings();
     }
 
     checkForNewFolders = () => {
@@ -146,6 +150,44 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleContextKey);
     }
 
+    registerKeybindings = () => {
+        if (typeof window === 'undefined') return;
+        this.unregisterKeybindings();
+        const bindings = [
+            ['win+arrowleft', (event) => this.tileFocusedWindow(event, 'ArrowLeft')],
+            ['win+arrowright', (event) => this.tileFocusedWindow(event, 'ArrowRight')],
+            ['win+arrowup', (event) => this.tileFocusedWindow(event, 'ArrowUp')],
+            ['win+arrowdown', (event) => this.tileFocusedWindow(event, 'ArrowDown')],
+        ];
+        this.keybindingCleanup = bindings.map(([combo, handler]) =>
+            keybindingManager.register(combo, handler)
+        );
+    }
+
+    unregisterKeybindings = () => {
+        if (!this.keybindingCleanup) return;
+        this.keybindingCleanup.forEach((dispose) => {
+            if (typeof dispose === 'function') {
+                dispose();
+            }
+        });
+        this.keybindingCleanup = [];
+    }
+
+    tileFocusedWindow = (event, key) => {
+        if (!event) return;
+        const id = this.getFocusedWindowId();
+        if (!id) return;
+        event.preventDefault();
+        if (typeof event.stopPropagation === 'function') {
+            event.stopPropagation();
+        }
+        const node = document.getElementById(id);
+        if (!node) return;
+        const tileEvent = new CustomEvent('super-arrow', { detail: key });
+        node.dispatchEvent(tileEvent);
+    }
+
     handleGlobalShortcut = (e) => {
         if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
@@ -163,14 +205,6 @@ export class Desktop extends Component {
         else if (e.altKey && (e.key === '`' || e.key === '~')) {
             e.preventDefault();
             this.cycleAppWindows(e.shiftKey ? -1 : 1);
-        }
-        else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-            e.preventDefault();
-            const id = this.getFocusedWindowId();
-            if (id) {
-                const event = new CustomEvent('super-arrow', { detail: e.key });
-                document.getElementById(id)?.dispatchEvent(event);
-            }
         }
     }
 

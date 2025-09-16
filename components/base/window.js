@@ -222,70 +222,144 @@ export class Window extends Component {
     }
 
     setWinowsPosition = () => {
-        var r = document.querySelector("#" + this.id);
-        if (!r) return;
-        var rect = r.getBoundingClientRect();
+        const node = document.getElementById(this.id);
+        if (!node) return null;
+        const rect = node.getBoundingClientRect();
         const x = this.snapToGrid(rect.x);
         const y = this.snapToGrid(rect.y - 32);
-        r.style.setProperty('--window-transform-x', x.toFixed(1).toString() + "px");
-        r.style.setProperty('--window-transform-y', y.toFixed(1).toString() + "px");
+        const xPx = `${x.toFixed(1)}px`;
+        const yPx = `${y.toFixed(1)}px`;
+        node.style.setProperty('--window-transform-x', xPx);
+        node.style.setProperty('--window-transform-y', yPx);
         if (this.props.onPositionChange) {
             this.props.onPositionChange(x, y);
         }
+        return { x: xPx, y: yPx };
     }
 
     unsnapWindow = () => {
         if (!this.state.snapped) return;
-        var r = document.querySelector("#" + this.id);
-        if (r) {
-            const x = r.style.getPropertyValue('--window-transform-x');
-            const y = r.style.getPropertyValue('--window-transform-y');
+        const node = document.getElementById(this.id);
+        if (node) {
+            const x = node.style.getPropertyValue('--window-transform-x');
+            const y = node.style.getPropertyValue('--window-transform-y');
             if (x && y) {
-                r.style.transform = `translate(${x},${y})`;
+                node.style.transform = `translate(${x},${y})`;
             }
         }
-        if (this.state.lastSize) {
-            this.setState({
-                width: this.state.lastSize.width,
-                height: this.state.lastSize.height,
-                snapped: null
-            }, this.resizeBoundries);
-        } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+        const fallbackSize = this.state.lastSize || { width: this.state.width, height: this.state.height };
+        this.setState({
+            snapPreview: null,
+            snapPosition: null,
+            snapped: null,
+            width: fallbackSize.width,
+            height: fallbackSize.height,
+            lastSize: null,
+            maximized: false,
+        }, () => {
+            this.resizeBoundries();
+            this.checkOverlap();
+        });
+    }
+
+    getTaskbarHeight = () => {
+        const taskbar = document.querySelector('[data-taskbar="true"]');
+        if (!taskbar) return 0;
+        const rect = taskbar.getBoundingClientRect();
+        return rect.height || 0;
+    }
+
+    getSnapMetrics = (position) => {
+        if (typeof window === 'undefined') return null;
+        const viewportWidth = window.innerWidth || 0;
+        const viewportHeight = window.innerHeight || 0;
+        if (!viewportWidth || !viewportHeight) return null;
+        const taskbarHeight = this.getTaskbarHeight();
+        const availableHeight = Math.max(viewportHeight - taskbarHeight, 0);
+        const availableHeightPercent = viewportHeight === 0 ? 100 : (availableHeight / viewportHeight) * 100;
+        const halfAvailablePercent = availableHeightPercent / 2;
+
+        let widthPercent = 100;
+        let heightPercent = halfAvailablePercent;
+        let x = 0;
+        let y = 0;
+
+        switch (position) {
+            case 'left':
+                widthPercent = 50;
+                heightPercent = availableHeightPercent;
+                x = 0;
+                y = 0;
+                break;
+            case 'right':
+                widthPercent = 50;
+                heightPercent = availableHeightPercent;
+                x = viewportWidth - (viewportWidth * widthPercent) / 100;
+                y = 0;
+                break;
+            case 'top':
+                widthPercent = 100;
+                heightPercent = halfAvailablePercent;
+                x = 0;
+                y = 0;
+                break;
+            case 'bottom':
+                widthPercent = 100;
+                heightPercent = halfAvailablePercent;
+                x = 0;
+                {
+                    const heightPx = (viewportHeight * heightPercent) / 100;
+                    y = Math.max(availableHeight - heightPx, 0);
+                }
+                break;
+            default:
+                return null;
         }
+
+        widthPercent = Math.max(Math.min(widthPercent, 100), 10);
+        heightPercent = Math.max(Math.min(heightPercent, 100), 10);
+
+        return {
+            width: widthPercent,
+            height: heightPercent,
+            x: Math.round(x),
+            y: Math.round(y),
+        };
     }
 
     snapWindow = (position) => {
-        this.setWinowsPosition();
-        const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
-        let transform = '';
-        if (position === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (position === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        } else if (position === 'top') {
-            newWidth = 100.2;
-            newHeight = 50;
-            transform = 'translate(-1pt,-2pt)';
+        if (!position) return;
+        if (this.state.snapped === position) {
+            this.unsnapWindow();
+            return;
         }
-        const r = document.querySelector("#" + this.id);
-        if (r && transform) {
-            r.style.transform = transform;
+        this.focusWindow();
+        const wasSnapped = Boolean(this.state.snapped);
+        const wasMaximized = this.state.maximized;
+        if (!wasSnapped && !wasMaximized) {
+            this.setWinowsPosition();
+        }
+        const metrics = this.getSnapMetrics(position);
+        if (!metrics) return;
+        const node = document.getElementById(this.id);
+        if (!node) return;
+        node.style.transform = `translate(${metrics.x}px, ${metrics.y}px)`;
+        let lastSize = this.state.lastSize;
+        if (!lastSize || (!wasSnapped && !wasMaximized)) {
+            lastSize = { width: this.state.width, height: this.state.height };
         }
         this.setState({
             snapPreview: null,
             snapPosition: null,
             snapped: position,
-            lastSize: { width, height },
-            width: newWidth,
-            height: newHeight
-        }, this.resizeBoundries);
+            lastSize,
+            width: metrics.width,
+            height: metrics.height,
+            maximized: false,
+        }, () => {
+            this.resizeBoundries();
+            this.checkOverlap();
+        });
     }
 
     checkOverlap = () => {
@@ -314,25 +388,38 @@ export class Window extends Component {
     }
 
     checkSnapPreview = () => {
-        var r = document.querySelector("#" + this.id);
-        if (!r) return;
-        var rect = r.getBoundingClientRect();
+        const node = document.getElementById(this.id);
+        if (!node || typeof window === 'undefined') return;
+        const rect = node.getBoundingClientRect();
         const threshold = 30;
-        let snap = null;
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        let position = null;
         if (rect.left <= threshold) {
-            snap = { left: '0', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'left' });
+            position = 'left';
+        } else if (rect.right >= viewportWidth - threshold) {
+            position = 'right';
+        } else if (rect.top <= threshold) {
+            position = 'top';
+        } else if (rect.bottom >= viewportHeight - threshold) {
+            position = 'bottom';
         }
-        else if (rect.right >= window.innerWidth - threshold) {
-            snap = { left: '50%', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'right' });
-        }
-        else if (rect.top <= threshold) {
-            snap = { left: '0', top: '0', width: '100%', height: '50%' };
-            this.setState({ snapPreview: snap, snapPosition: 'top' });
-        }
-        else {
-            if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
+        if (position) {
+            const metrics = this.getSnapMetrics(position);
+            if (!metrics) return;
+            const widthPx = (viewportWidth * metrics.width) / 100;
+            const heightPx = (viewportHeight * metrics.height) / 100;
+            this.setState({
+                snapPreview: {
+                    left: `${metrics.x}px`,
+                    top: `${metrics.y}px`,
+                    width: `${widthPx}px`,
+                    height: `${heightPx}px`,
+                },
+                snapPosition: position,
+            });
+        } else if (this.state.snapPreview) {
+            this.setState({ snapPreview: null, snapPosition: null });
         }
     }
 
@@ -423,7 +510,7 @@ export class Window extends Component {
 
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
-            this.setState({ maximized: false });
+            this.setState({ maximized: false, lastSize: null });
             this.checkOverlap();
             return;
         }
@@ -431,7 +518,7 @@ export class Window extends Component {
         if (this._dockAnimation) {
             this._dockAnimation.onfinish = () => {
                 node.style.transform = endTransform;
-                this.setState({ maximized: false });
+                this.setState({ maximized: false, lastSize: null });
                 this.checkOverlap();
                 this._dockAnimation.onfinish = null;
             };
@@ -443,7 +530,7 @@ export class Window extends Component {
             );
             this._dockAnimation.onfinish = () => {
                 node.style.transform = endTransform;
-                this.setState({ maximized: false });
+                this.setState({ maximized: false, lastSize: null });
                 this.checkOverlap();
                 this._dockAnimation.onfinish = null;
             };
@@ -461,7 +548,8 @@ export class Window extends Component {
             this.setWinowsPosition();
             // translate window to maximize position
             r.style.transform = `translate(-1pt,-2pt)`;
-            this.setState({ maximized: true, height: 96.3, width: 100.2 });
+            const lastSize = this.state.lastSize || { width: this.state.width, height: this.state.height };
+            this.setState({ maximized: true, height: 96.3, width: 100.2, lastSize, snapped: null });
             this.props.hideSideBar(this.id, true);
         }
     }
@@ -524,24 +612,19 @@ export class Window extends Component {
         } else if (e.key === 'Tab') {
             this.focusWindow();
         } else if (e.altKey) {
-            if (e.key === 'ArrowDown') {
+            const directions = {
+                ArrowLeft: 'left',
+                ArrowRight: 'right',
+                ArrowUp: 'top',
+                ArrowDown: 'bottom',
+            };
+            const direction = directions[e.key];
+            if (direction) {
                 e.preventDefault();
                 e.stopPropagation();
-                this.unsnapWindow();
-            } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('left');
-            } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('right');
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('top');
+                this.snapWindow(direction);
+                this.focusWindow();
             }
-            this.focusWindow();
         } else if (e.shiftKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
@@ -567,48 +650,16 @@ export class Window extends Component {
 
     handleSuperArrow = (e) => {
         const key = e.detail;
-        if (key === 'ArrowLeft') {
-            if (this.state.snapped === 'left') this.unsnapWindow();
-            else this.snapWindow('left');
-        } else if (key === 'ArrowRight') {
-            if (this.state.snapped === 'right') this.unsnapWindow();
-            else this.snapWindow('right');
-        } else if (key === 'ArrowUp') {
-            this.maximizeWindow();
-        } else if (key === 'ArrowDown') {
-            if (this.state.maximized) {
-                this.restoreWindow();
-            } else if (this.state.snapped) {
-                this.unsnapWindow();
-            }
+        const directions = {
+            ArrowLeft: 'left',
+            ArrowRight: 'right',
+            ArrowUp: 'top',
+            ArrowDown: 'bottom',
+        };
+        const direction = directions[key];
+        if (direction) {
+            this.snapWindow(direction);
         }
-    }
-
-    snapWindow = (pos) => {
-        this.focusWindow();
-        const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
-        let transform = '';
-        if (pos === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (pos === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        }
-        const node = document.getElementById(this.id);
-        if (node && transform) {
-            node.style.transform = transform;
-        }
-        this.setState({
-            snapped: pos,
-            lastSize: { width, height },
-            width: newWidth,
-            height: newHeight
-        }, this.resizeBoundries);
     }
 
     render() {
