@@ -612,6 +612,13 @@ export class Window extends Component {
     }
 
     render() {
+        const windowId = this.props.id;
+        const titleId = windowId ? `${windowId}-title` : undefined;
+        const toolbarId = windowId ? `${windowId}-toolbar` : undefined;
+        const contentId = windowId ? `${windowId}-content` : undefined;
+        const regionLabel = this.props.title ? `App: ${this.props.title}` : 'App content';
+        const isSettingsWindow = windowId === "settings";
+
         return (
             <>
                 {this.state.snapPreview && (
@@ -636,9 +643,11 @@ export class Window extends Component {
                     <div
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
                         className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
-                        id={this.id}
+                        id={windowId}
                         role="dialog"
-                        aria-label={this.props.title}
+                        aria-roledescription="Application window"
+                        aria-labelledby={titleId}
+                        aria-describedby={contentId}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                     >
@@ -646,6 +655,8 @@ export class Window extends Component {
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
                         <WindowTopBar
                             title={this.props.title}
+                            titleId={titleId}
+                            contentId={contentId}
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
@@ -658,12 +669,18 @@ export class Window extends Component {
                             id={this.id}
                             allowMaximize={this.props.allowMaximize !== false}
                             pip={() => this.props.screen(this.props.addFolder, this.props.openApp)}
+                            title={this.props.title}
+                            toolbarId={toolbarId}
+                            contentId={contentId}
                         />
-                        {(this.id === "settings"
-                            ? <Settings />
-                            : <WindowMainScreen screen={this.props.screen} title={this.props.title}
-                                addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
-                                openApp={this.props.openApp} />)}
+                        <WindowMainScreen
+                            screen={isSettingsWindow ? () => <Settings /> : this.props.screen}
+                            title={this.props.title}
+                            addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
+                            openApp={this.props.openApp}
+                            contentId={contentId}
+                            regionLabel={regionLabel}
+                        />
                     </div>
                 </Draggable >
             </>
@@ -674,17 +691,27 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, titleId, contentId }) {
+    const label = title ? `${title} window title bar` : 'Window title bar';
     return (
         <div
             className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
+            aria-label={label}
+            aria-controls={contentId}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
         >
-            <div className="flex justify-center w-full text-sm font-bold">{title}</div>
+            <div
+                className="flex justify-center w-full text-sm font-bold"
+                id={titleId}
+                role="heading"
+                aria-level={2}
+            >
+                {title}
+            </div>
         </div>
     )
 }
@@ -733,8 +760,16 @@ export class WindowXBorder extends Component {
 export function WindowEditButtons(props) {
     const { togglePin } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
+    const label = props.title ? `${props.title} window controls` : 'Window controls';
     return (
-        <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center h-11 min-w-[8.25rem]">
+        <div
+            className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center h-11 min-w-[8.25rem]"
+            role="toolbar"
+            aria-label={label}
+            aria-controls={props.contentId}
+            aria-orientation="horizontal"
+            id={props.toolbarId}
+        >
             {pipSupported && props.pip && (
                 <button
                     type="button"
@@ -837,9 +872,21 @@ export class WindowMainScreen extends Component {
         }, 3000);
     }
     render() {
+        const { contentId, regionLabel, title, ariaLabelledBy } = this.props;
+        const computedLabel = regionLabel || (title ? `App: ${title}` : 'App content');
+        const ariaProps = ariaLabelledBy
+            ? { 'aria-labelledby': ariaLabelledBy }
+            : { 'aria-label': computedLabel };
         return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
-                {this.props.screen(this.props.addFolder, this.props.openApp)}
+            <div
+                className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}
+                role="region"
+                id={contentId}
+                {...ariaProps}
+            >
+                {this.props.children ?? (typeof this.props.screen === 'function'
+                    ? this.props.screen(this.props.addFolder, this.props.openApp)
+                    : null)}
             </div>
         )
     }

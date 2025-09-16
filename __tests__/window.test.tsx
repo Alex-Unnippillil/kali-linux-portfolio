@@ -42,6 +42,36 @@ describe('Window lifecycle', () => {
   });
 });
 
+describe('Window accessibility landmarks', () => {
+  it('annotates window sections with roles', () => {
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+      />
+    );
+
+    const dialog = screen.getByRole('dialog', { name: 'Test' });
+    expect(dialog).toHaveAttribute('aria-labelledby', 'test-window-title');
+    expect(dialog).toHaveAttribute('aria-describedby', 'test-window-content');
+
+    const heading = screen.getByRole('heading', { name: 'Test', level: 2 });
+    expect(heading).toHaveAttribute('id', 'test-window-title');
+
+    const toolbar = screen.getByRole('toolbar', { name: /Test window controls/i });
+    expect(toolbar).toHaveAttribute('aria-controls', 'test-window-content');
+
+    const region = screen.getByRole('region', { name: /App: Test/i });
+    expect(region).toHaveAttribute('id', 'test-window-content');
+  });
+});
+
 describe('Window snapping preview', () => {
   it('shows preview when dragged near left edge', () => {
     const ref = React.createRef<Window>();
@@ -198,8 +228,15 @@ describe('Window snapping finalize and release', () => {
 
     expect(ref.current!.state.snapped).toBe('left');
 
+    const keyEvent = {
+      key: 'ArrowDown',
+      altKey: true,
+      preventDefault: jest.fn(),
+      stopPropagation: jest.fn(),
+    } as any;
+
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown(keyEvent);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
