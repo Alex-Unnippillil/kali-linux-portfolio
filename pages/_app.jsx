@@ -11,6 +11,7 @@ import '../styles/print.css';
 import '@xterm/xterm/css/xterm.css';
 import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
+import useSectionAccent from '../hooks/useSectionAccent';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
@@ -28,6 +29,7 @@ const ubuntu = Ubuntu({
 function MyApp(props) {
   const { Component, pageProps } = props;
 
+  useSectionAccent();
 
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof window.initA2HS === 'function') {
