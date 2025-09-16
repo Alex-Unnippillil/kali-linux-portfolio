@@ -69,4 +69,14 @@ describe('theme persistence and unlocking', () => {
     window.matchMedia = jest.fn().mockReturnValue({ matches: false });
     expect(getTheme()).toBe('default');
   });
+
+  test('accent lock toggles persistently', () => {
+    const { result } = renderHook(() => useSettings(), {
+      wrapper: SettingsProvider,
+    });
+    expect(result.current.accentLocked).toBe(false);
+    act(() => result.current.setAccentLocked(true));
+    expect(result.current.accentLocked).toBe(true);
+    expect(window.localStorage.getItem('accent-locked')).toBe('true');
+  });
 });

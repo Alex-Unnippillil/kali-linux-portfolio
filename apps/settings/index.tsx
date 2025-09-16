@@ -31,6 +31,8 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    accentLocked,
+    setAccentLocked,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -80,6 +82,8 @@ export default function Settings() {
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
+      if (parsed.accentLocked !== undefined)
+        setAccentLocked(parsed.accentLocked);
     } catch (err) {
       console.error("Invalid settings", err);
     }
@@ -101,6 +105,7 @@ export default function Settings() {
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
     setTheme("default");
+    setAccentLocked(defaults.accentLocked);
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
@@ -149,6 +154,17 @@ export default function Settings() {
                 />
               ))}
             </div>
+          </div>
+          <div className="flex justify-center my-2 items-center space-x-2 text-ubt-grey">
+            <span>Auto accent</span>
+            <ToggleSwitch
+              checked={!accentLocked}
+              onChange={(checked) => setAccentLocked(!checked)}
+              ariaLabel="Toggle automatic accent from wallpaper"
+            />
+            <span className="text-xs uppercase tracking-wide">
+              {accentLocked ? 'Locked' : 'On'}
+            </span>
           </div>
           <div className="flex justify-center my-4">
             <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">Wallpaper:</label>

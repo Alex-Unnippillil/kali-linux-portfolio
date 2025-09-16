@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  accentLocked: false,
 };
 
 export async function getAccent() {
@@ -34,6 +35,17 @@ export async function getWallpaper() {
 export async function setWallpaper(wallpaper) {
   if (typeof window === 'undefined') return;
   await set('bg-image', wallpaper);
+}
+
+export async function getAccentLocked() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.accentLocked;
+  const stored = window.localStorage.getItem('accent-locked');
+  return stored === null ? DEFAULT_SETTINGS.accentLocked : stored === 'true';
+}
+
+export async function setAccentLocked(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('accent-locked', value ? 'true' : 'false');
 }
 
 export async function getDensity() {
@@ -137,6 +149,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('accent-locked');
 }
 
 export async function exportSettings() {
@@ -151,6 +164,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    accentLocked,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +176,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getAccentLocked(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -176,6 +191,7 @@ export async function exportSettings() {
     allowNetwork,
     haptics,
     theme,
+    accentLocked,
   });
 }
 
@@ -200,6 +216,7 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    accentLocked,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -212,6 +229,7 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (accentLocked !== undefined) await setAccentLocked(accentLocked);
 }
 
 export const defaults = DEFAULT_SETTINGS;

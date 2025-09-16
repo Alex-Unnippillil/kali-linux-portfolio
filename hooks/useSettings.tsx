@@ -4,6 +4,8 @@ import {
   setAccent as saveAccent,
   getWallpaper as loadWallpaper,
   setWallpaper as saveWallpaper,
+  getAccentLocked as loadAccentLocked,
+  setAccentLocked as saveAccentLocked,
   getDensity as loadDensity,
   setDensity as saveDensity,
   getReducedMotion as loadReducedMotion,
@@ -23,6 +25,7 @@ import {
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import { accentFromImage } from '../src/theming/accentFromImage';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -63,6 +66,7 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  accentLocked: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +78,7 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setAccentLocked: (value: boolean) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +93,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  accentLocked: defaults.accentLocked,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +105,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setAccentLocked: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -113,20 +120,47 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [accentLocked, setAccentLocked] = useState<boolean>(defaults.accentLocked);
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
     (async () => {
-      setAccent(await loadAccent());
-      setWallpaper(await loadWallpaper());
-      setDensity((await loadDensity()) as Density);
-      setReducedMotion(await loadReducedMotion());
-      setFontScale(await loadFontScale());
-      setHighContrast(await loadHighContrast());
-      setLargeHitAreas(await loadLargeHitAreas());
-      setPongSpin(await loadPongSpin());
-      setAllowNetwork(await loadAllowNetwork());
-      setHaptics(await loadHaptics());
+      const [
+        loadedAccent,
+        loadedWallpaper,
+        loadedDensity,
+        loadedReducedMotion,
+        loadedFontScale,
+        loadedHighContrast,
+        loadedLargeHitAreas,
+        loadedPongSpin,
+        loadedAllowNetwork,
+        loadedHaptics,
+        loadedAccentLocked,
+      ] = await Promise.all([
+        loadAccent(),
+        loadWallpaper(),
+        loadDensity(),
+        loadReducedMotion(),
+        loadFontScale(),
+        loadHighContrast(),
+        loadLargeHitAreas(),
+        loadPongSpin(),
+        loadAllowNetwork(),
+        loadHaptics(),
+        loadAccentLocked(),
+      ]);
+      setAccent(loadedAccent);
+      setWallpaper(loadedWallpaper);
+      setDensity(loadedDensity as Density);
+      setReducedMotion(loadedReducedMotion);
+      setFontScale(loadedFontScale);
+      setHighContrast(loadedHighContrast);
+      setLargeHitAreas(loadedLargeHitAreas);
+      setPongSpin(loadedPongSpin);
+      setAllowNetwork(loadedAllowNetwork);
+      setHaptics(loadedHaptics);
+      setAccentLocked(loadedAccentLocked);
       setTheme(loadTheme());
     })();
   }, []);
@@ -145,6 +179,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       '--color-focus-ring': accent,
       '--color-selection': accent,
       '--color-control-accent': accent,
+      '--accent': accent,
     };
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
@@ -154,7 +189,40 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     saveWallpaper(wallpaper);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('wallpaperchange', { detail: { wallpaper } }),
+      );
+    }
   }, [wallpaper]);
+
+  useEffect(() => {
+    saveAccentLocked(accentLocked);
+  }, [accentLocked]);
+
+  useEffect(() => {
+    if (accentLocked) return undefined;
+    if (!wallpaper) return undefined;
+    let cancelled = false;
+    const controller = new AbortController();
+
+    accentFromImage(`/wallpapers/${wallpaper}.webp`, {
+      signal: controller.signal,
+    })
+      .then((autoAccent) => {
+        if (!cancelled && autoAccent) {
+          setAccent((current) => (current === autoAccent ? current : autoAccent));
+        }
+      })
+      .catch(() => {
+        /* ignore */
+      });
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [wallpaper, accentLocked]);
 
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {
@@ -246,23 +314,25 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         fontScale,
         highContrast,
         largeHitAreas,
-        pongSpin,
-        allowNetwork,
-        haptics,
-        theme,
-        setAccent,
-        setWallpaper,
-        setDensity,
-        setReducedMotion,
-        setFontScale,
-        setHighContrast,
-        setLargeHitAreas,
-        setPongSpin,
-        setAllowNetwork,
-        setHaptics,
-        setTheme,
-      }}
-    >
+      pongSpin,
+      allowNetwork,
+      haptics,
+      theme,
+      accentLocked,
+      setAccent,
+      setWallpaper,
+      setDensity,
+      setReducedMotion,
+      setFontScale,
+      setHighContrast,
+      setLargeHitAreas,
+      setPongSpin,
+      setAllowNetwork,
+      setHaptics,
+      setTheme,
+      setAccentLocked,
+    }}
+  >
       {children}
     </SettingsContext.Provider>
   );
