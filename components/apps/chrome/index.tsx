@@ -93,6 +93,7 @@ const Chrome: React.FC = () => {
   const [tabQuery, setTabQuery] = useState('');
   const [overflowing, setOverflowing] = useState(false);
   const draggingId = useRef<number | null>(null);
+  const focusTabAfterUpdateRef = useRef<number | null>(null);
   const dragTabId = useRef<number | null>(null);
   const [tiles, setTiles] = useState<Tile[]>([]);
   const [editingTiles, setEditingTiles] = useState(false);
@@ -271,45 +272,74 @@ const Chrome: React.FC = () => {
     [activeId, fetchArticle, isAllowed, updateFavicon],
   );
 
+  const requestTabFocus = useCallback((id: number) => {
+    focusTabAfterUpdateRef.current = id;
+  }, []);
+
   const addTab = useCallback(
     (url: string = HOME_URL) => {
       const id = Date.now();
-      setTabs((prev) => [
-        ...prev,
-        {
-          id,
-          url,
-          history: [url],
-          historyIndex: 0,
-          scroll: 0,
-          blocked: false,
-          muted: false,
-        },
-      ]);
+      const newTab: TabData = {
+        id,
+        url,
+        history: [url],
+        historyIndex: 0,
+        scroll: 0,
+        blocked: false,
+        muted: false,
+      };
+      setTabs((prev) => {
+        const next = [...prev];
+        const activeIndex = prev.findIndex((t) => t.id === activeId);
+        if (activeIndex === -1) {
+          next.push(newTab);
+        } else {
+          next.splice(activeIndex + 1, 0, newTab);
+        }
+        return next;
+      });
       setActiveId(id);
       setAddress(url);
+      requestTabFocus(id);
       updateFavicon(url);
       fetchArticle(id, url);
     },
-    [updateFavicon, fetchArticle],
+    [activeId, updateFavicon, fetchArticle, requestTabFocus],
   );
 
   const closeTab = useCallback(
     (id: number) => {
-      setTabs((prev) => prev.filter((t) => t.id !== id));
-      setArticles((prev) => {
-        const { [id]: _omit, ...rest } = prev;
-        return rest;
+      let removed = false;
+      setTabs((prev) => {
+        if (prev.length <= 1) return prev;
+        const idx = prev.findIndex((t) => t.id === id);
+        if (idx === -1) {
+          const filtered = prev.filter((t) => t.id !== id);
+          removed = filtered.length !== prev.length;
+          return filtered;
+        }
+        const nextTabs = prev.filter((t) => t.id !== id);
+        removed = true;
+        if (id === activeId && nextTabs.length) {
+          const nextTab =
+            nextTabs[idx - 1] || nextTabs[idx] || nextTabs[nextTabs.length - 1];
+          if (nextTab) {
+            setActiveId(nextTab.id);
+            setAddress(nextTab.url);
+            requestTabFocus(nextTab.id);
+          }
+        }
+        return nextTabs;
       });
-      if (id === activeId && tabs.length > 1) {
-        const idx = tabs.findIndex((t) => t.id === id);
-        const next = tabs[idx - 1] || tabs[idx + 1];
-        setActiveId(next.id);
-        setAddress(next.url);
+      if (removed) {
+        setArticles((prev) => {
+          const { [id]: _omit, ...rest } = prev;
+          return rest;
+        });
       }
-  },
-  [activeId, tabs],
-);
+    },
+    [activeId, requestTabFocus],
+  );
 
   const handleDragStart = useCallback(
     (id: number) => () => {
@@ -601,16 +631,12 @@ const Chrome: React.FC = () => {
         const next = tabs[(idx + 1) % tabs.length];
         setActiveId(next.id);
         setAddress(next.url);
-        document.getElementById(`tab-${next.id}`)?.scrollIntoView({
-          inline: 'nearest',
-        });
+        requestTabFocus(next.id);
       } else if (e.key === 'ArrowLeft') {
         const prev = tabs[(idx - 1 + tabs.length) % tabs.length];
         setActiveId(prev.id);
         setAddress(prev.url);
-        document.getElementById(`tab-${prev.id}`)?.scrollIntoView({
-          inline: 'nearest',
-        });
+        requestTabFocus(prev.id);
       } else if (e.key === 'Delete') {
         closeTab(activeId);
       } else if (e.key === 'f' && (e.ctrlKey || e.metaKey)) {
@@ -618,8 +644,28 @@ const Chrome: React.FC = () => {
         tabSearchRef.current?.focus();
       }
     },
-    [tabs, activeId, closeTab],
+    [tabs, activeId, closeTab, requestTabFocus],
   );
+
+  useEffect(() => {
+    const targetId = focusTabAfterUpdateRef.current;
+    if (targetId === null) return;
+    if (targetId !== activeId) return;
+    const el = document.getElementById(`tab-${targetId}`);
+    if (el instanceof HTMLElement) {
+      el.focus();
+      el.scrollIntoView({ inline: 'nearest' });
+    }
+    focusTabAfterUpdateRef.current = null;
+  }, [activeId, filteredTabs]);
+
+  const onTabStripWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
+    if (!tabStripRef.current) return;
+    if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+      tabStripRef.current.scrollLeft += event.deltaY;
+      event.preventDefault();
+    }
+  }, []);
 
   const onDragStart = useCallback(
     (id: number) => (e: React.DragEvent<HTMLDivElement>) => {
@@ -711,15 +757,32 @@ const Chrome: React.FC = () => {
       <div
         className="flex space-x-1 bg-gray-700 text-sm overflow-x-auto"
         ref={tabStripRef}
+        role="tablist"
+        aria-label="Browser tabs"
+        aria-orientation="horizontal"
         tabIndex={0}
         onKeyDown={onTabStripKeyDown}
+        onWheel={onTabStripWheel}
       >
         {filteredTabs.map((t) => (
           <div
             key={t.id}
             id={`tab-${t.id}`}
+            role="tab"
+            aria-selected={t.id === activeId}
+            aria-controls="browser-tab-panel"
+            tabIndex={t.id === activeId ? 0 : -1}
             className={`flex items-center px-2 py-1 cursor-pointer ${t.id === activeId ? 'bg-gray-600' : 'bg-gray-700'} `}
-            onClick={() => setActiveId(t.id)}
+            onClick={() => {
+              setActiveId(t.id);
+              requestTabFocus(t.id);
+            }}
+            onAuxClick={(event) => {
+              if (event.button === 1) {
+                event.preventDefault();
+                closeTab(t.id);
+              }
+            }}
             draggable
             onDragStart={onDragStart(t.id)}
             onDragOver={onDragOver}
@@ -770,7 +833,12 @@ const Chrome: React.FC = () => {
           />
         </div>
       )}
-        <div className="flex-grow bg-white relative overflow-auto">
+        <div
+          id="browser-tab-panel"
+          role="tabpanel"
+          aria-labelledby={`tab-${activeId}`}
+          className="flex-grow bg-white relative overflow-auto"
+        >
           {activeTab.url === HOME_URL ? (
             homeGrid
           ) : articles[activeId] ? (
