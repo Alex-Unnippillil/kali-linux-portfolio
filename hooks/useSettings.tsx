@@ -51,6 +51,52 @@ const shadeColor = (color: string, percent: number): string => {
     .slice(1)}`;
 };
 
+// Relative luminance calculation (WCAG)
+const luminance = (hex: string): number => {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const r = (num >> 16) & 0xff;
+  const g = (num >> 8) & 0xff;
+  const b = num & 0xff;
+  const toLinear = (c: number) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  const [lr, lg, lb] = [r, g, b].map(toLinear);
+  return 0.2126 * lr + 0.7152 * lg + 0.0722 * lb;
+};
+
+// Compute contrast ratio per WCAG formula
+const contrastRatio = (c1: string, c2: string): number => {
+  const l1 = luminance(c1);
+  const l2 = luminance(c2);
+  const [light, dark] = l1 > l2 ? [l1, l2] : [l2, l1];
+  return (light + 0.05) / (dark + 0.05);
+};
+
+// Lighten or darken a color until it meets minimum contrast with bg
+const ensureContrast = (color: string, bg: string, ratio = 4.5): string => {
+  const adjust = (lighten: boolean) => {
+    let adjusted = color;
+    let current = contrastRatio(adjusted, bg);
+    let amount = 0;
+    while (current < ratio && amount < 1) {
+      amount += 0.05;
+      adjusted = shadeColor(color, lighten ? amount : -amount);
+      current = contrastRatio(adjusted, bg);
+    }
+    return { adjusted, current };
+  };
+  const light = adjust(true);
+  const dark = adjust(false);
+  return light.current > dark.current ? light.adjusted : dark.adjusted;
+};
+
+// Return black or white text with best contrast on given background
+const readableText = (bg: string): string =>
+  contrastRatio(bg, '#000000') > contrastRatio(bg, '#ffffff') ? '#000000' : '#ffffff';
+
+export { contrastRatio, ensureContrast };
+
 interface SettingsContextValue {
   accent: string;
   wallpaper: string;
@@ -137,14 +183,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const border = shadeColor(accent, -0.2);
+    const bg = getComputedStyle(document.documentElement)
+      .getPropertyValue('--color-bg')
+      .trim() || '#0f1317';
+    const focus = ensureContrast(accent, bg);
+    const contrastText = readableText(accent);
     const vars: Record<string, string> = {
       '--color-ub-orange': accent,
       '--color-ub-border-orange': border,
       '--color-primary': accent,
       '--color-accent': accent,
-      '--color-focus-ring': accent,
+      '--color-focus-ring': focus,
       '--color-selection': accent,
       '--color-control-accent': accent,
+      '--color-accent-contrast': contrastText,
     };
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
