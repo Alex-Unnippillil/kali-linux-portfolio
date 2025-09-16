@@ -4,6 +4,17 @@ import Clock from '../util-components/clock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
 import WhiskerMenu from '../menu/WhiskerMenu';
+import { transitionStyles } from '@/src/motion/presets';
+
+const NAV_ITEM_MOTION = transitionStyles({
+        properties: ['border-color', 'background-color', 'color'],
+        preset: 'hover',
+});
+
+const NAV_BUTTON_MOTION = transitionStyles(
+        { properties: ['border-color', 'background-color', 'color'], preset: 'hover' },
+        { properties: 'transform', preset: 'tap' },
+);
 
 export default class Navbar extends Component {
 	constructor() {
@@ -22,8 +33,9 @@ export default class Navbar extends Component {
                                 <WhiskerMenu />
                                 <div
                                         className={
-                                                'pl-2 pr-2 text-xs md:text-sm outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1'
+                                                'pl-2 pr-2 text-xs md:text-sm outline-none border-b-2 border-transparent py-1'
                                         }
+                                        style={NAV_ITEM_MOTION}
                                 >
                                         <Clock />
                                 </div>
@@ -35,8 +47,9 @@ export default class Navbar extends Component {
                                                 this.setState({ status_card: !this.state.status_card });
                                         }}
                                         className={
-                                                'relative pr-3 pl-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent focus:border-ubb-orange py-1 '
+                                                'relative pr-3 pl-3 outline-none border-b-2 border-transparent focus:border-ubb-orange py-1 '
                                         }
+                                        style={NAV_BUTTON_MOTION}
                                 >
                                         <Status />
                                         <QuickSettings open={this.state.status_card} />

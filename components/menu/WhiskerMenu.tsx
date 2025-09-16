@@ -3,6 +3,7 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { transitionStyles } from '@/src/motion/presets';
 
 type AppMeta = {
   id: string;
@@ -19,6 +20,16 @@ const CATEGORIES = [
   { id: 'utilities', label: 'Utilities' },
   { id: 'games', label: 'Games' }
 ];
+
+const MENU_BUTTON_MOTION = transitionStyles(
+  { properties: ['background-color', 'border-color', 'color'], preset: 'hover' },
+  { properties: 'transform', preset: 'tap' },
+);
+
+const CATEGORY_BUTTON_MOTION = transitionStyles({
+  properties: ['background-color', 'color'],
+  preset: 'hover',
+});
 
 const WhiskerMenu: React.FC = () => {
   const [open, setOpen] = useState(false);
@@ -120,7 +131,8 @@ const WhiskerMenu: React.FC = () => {
         ref={buttonRef}
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        className="pl-3 pr-3 outline-none border-b-2 border-transparent py-1"
+        style={MENU_BUTTON_MOTION}
       >
         <Image
           src="/themes/Yaru/status/decompiler-symbolic.svg"
@@ -148,6 +160,7 @@ const WhiskerMenu: React.FC = () => {
                 key={cat.id}
                 className={`text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
                 onClick={() => setCategory(cat.id)}
+                style={CATEGORY_BUTTON_MOTION}
               >
                 {cat.label}
               </button>
