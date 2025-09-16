@@ -9,6 +9,7 @@ import SafetyNote from './SafetyNote';
 import { getCspNonce } from '../../../utils/csp';
 import AboutSlides from './slides';
 import ScrollableTimeline from '../../ScrollableTimeline';
+import { generatePersonSchema, generateProjectItemList } from '@/utils/structuredData';
 
 class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_screen: string; navbar: boolean }> {
   screens: Record<string, React.ReactNode> = {};
@@ -101,12 +102,9 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
   };
 
   render() {
-    const structured = {
-      '@context': 'https://schema.org',
-      '@type': 'Person',
-      name: 'Alex Unnippillil',
-      url: 'https://unnippillil.com',
-    };
+    const projects = Array.isArray(data.projects) ? data.projects : [];
+    const personSchema = generatePersonSchema();
+    const projectListSchema = generateProjectItemList(projects);
     const nonce = getCspNonce();
 
     return (
@@ -116,7 +114,12 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
           <script
             type="application/ld+json"
             nonce={nonce}
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(personSchema) }}
+          />
+          <script
+            type="application/ld+json"
+            nonce={nonce}
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(projectListSchema) }}
           />
         </Head>
         <div

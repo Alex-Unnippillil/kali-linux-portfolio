@@ -1,9 +1,14 @@
 import React from 'react'
 import Head from 'next/head';
 import { getCspNonce } from '../../utils/csp';
+import { generatePersonSchema, generateProjectItemList } from '@/utils/structuredData';
+import portfolioData from '@/components/apps/alex/data.json';
 
 export default function Meta() {
     const nonce = getCspNonce();
+    const { projects = [] } = portfolioData;
+    const personSchema = generatePersonSchema();
+    const projectListSchema = generateProjectItemList(projects, { limit: 12 });
     return (
         <Head>
             {/* Primary Meta Tags */}
@@ -54,12 +59,14 @@ export default function Meta() {
                 type="application/ld+json"
                 nonce={nonce}
                 dangerouslySetInnerHTML={{
-                    __html: JSON.stringify({
-                        "@context": "https://schema.org",
-                        "@type": "Person",
-                        name: "Alex Unnippillil",
-                        url: "https://unnippillil.com/",
-                    }),
+                    __html: JSON.stringify(personSchema),
+                }}
+            />
+            <script
+                type="application/ld+json"
+                nonce={nonce}
+                dangerouslySetInnerHTML={{
+                    __html: JSON.stringify(projectListSchema),
                 }}
             />
         </Head>
