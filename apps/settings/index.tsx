@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useRouter } from "next/router";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -12,6 +13,17 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+
+const SETTINGS_TABS = [
+  { id: "appearance", label: "Appearance" },
+  { id: "accessibility", label: "Accessibility" },
+  { id: "privacy", label: "Privacy" },
+] as const;
+
+type TabId = (typeof SETTINGS_TABS)[number]["id"];
+
+const focusableSelector =
+  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 export default function Settings() {
   const {
@@ -34,12 +46,8 @@ export default function Settings() {
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const tabs = [
-    { id: "appearance", label: "Appearance" },
-    { id: "accessibility", label: "Accessibility" },
-    { id: "privacy", label: "Privacy" },
-  ] as const;
-  type TabId = (typeof tabs)[number]["id"];
+  const router = useRouter();
+  const focusHandledRef = useRef<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
 
   const wallpapers = [
@@ -54,6 +62,24 @@ export default function Settings() {
   ];
 
   const changeBackground = (name: string) => setWallpaper(name);
+
+  const focusSetting = useCallback((id: string) => {
+    if (typeof window === "undefined") return;
+    const container = document.querySelector<HTMLElement>(`[data-setting='${id}']`);
+    if (!container) return;
+    container.scrollIntoView({ block: "center", behavior: "smooth" });
+    const focusable = container.matches(focusableSelector)
+      ? container
+      : container.querySelector<HTMLElement>(focusableSelector);
+    if (focusable) {
+      focusable.focus();
+    } else {
+      if (!container.hasAttribute("tabindex")) {
+        container.setAttribute("tabindex", "-1");
+      }
+      container.focus({ preventScroll: true });
+    }
+  }, []);
 
   const handleExport = async () => {
     const data = await exportSettingsData();
@@ -105,10 +131,39 @@ export default function Settings() {
 
   const [showKeymap, setShowKeymap] = useState(false);
 
+  useEffect(() => {
+    if (!router.isReady) return;
+    const tabParam = router.query.tab;
+    if (
+      typeof tabParam === "string" &&
+      SETTINGS_TABS.some((tab) => tab.id === tabParam)
+    ) {
+      setActiveTab(tabParam as TabId);
+    }
+    const focusParam = router.query.focus;
+    if (
+      typeof focusParam === "string" &&
+      focusParam !== focusHandledRef.current
+    ) {
+      focusHandledRef.current = focusParam;
+      requestAnimationFrame(() => {
+        focusSetting(focusParam);
+        const { focus: _focus, ...rest } = router.query;
+        router
+          .replace(
+            { pathname: router.pathname, query: rest },
+            undefined,
+            { shallow: true }
+          )
+          .catch(() => {});
+      });
+    }
+  }, [router.isReady, router.query, focusSetting, setActiveTab]);
+
   return (
     <div className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey">
       <div className="flex justify-center border-b border-gray-900">
-        <Tabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
+        <Tabs tabs={SETTINGS_TABS} active={activeTab} onChange={setActiveTab} />
       </div>
       {activeTab === "appearance" && (
         <>
@@ -124,6 +179,7 @@ export default function Settings() {
           <div className="flex justify-center my-4">
             <label className="mr-2 text-ubt-grey">Theme:</label>
             <select
+              data-setting="theme"
               value={theme}
               onChange={(e) => setTheme(e.target.value)}
               className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
@@ -134,7 +190,7 @@ export default function Settings() {
               <option value="matrix">Matrix</option>
             </select>
           </div>
-          <div className="flex justify-center my-4">
+          <div className="flex justify-center my-4" data-setting="accent">
             <label className="mr-2 text-ubt-grey">Accent:</label>
             <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
               {ACCENT_OPTIONS.map((c) => (
@@ -154,6 +210,7 @@ export default function Settings() {
             <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">Wallpaper:</label>
             <input
               id="wallpaper-slider"
+              data-setting="wallpaper"
               type="range"
               min="0"
               max={wallpapers.length - 1}
@@ -201,6 +258,7 @@ export default function Settings() {
           </div>
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
             <button
+              data-setting="reset-desktop"
               onClick={handleReset}
               className="px-4 py-2 rounded bg-ub-orange text-white"
             >
@@ -211,7 +269,7 @@ export default function Settings() {
       )}
       {activeTab === "accessibility" && (
         <>
-          <div className="flex justify-center my-4">
+          <div className="flex justify-center my-4" data-setting="icon-size">
             <label htmlFor="font-scale" className="mr-2 text-ubt-grey">Icon Size:</label>
             <input
               id="font-scale"
@@ -225,7 +283,7 @@ export default function Settings() {
               aria-label="Icon size"
             />
           </div>
-          <div className="flex justify-center my-4">
+          <div className="flex justify-center my-4" data-setting="density">
             <label className="mr-2 text-ubt-grey">Density:</label>
             <select
               value={density}
@@ -236,7 +294,7 @@ export default function Settings() {
               <option value="compact">Compact</option>
             </select>
           </div>
-          <div className="flex justify-center my-4 items-center">
+          <div className="flex justify-center my-4 items-center" data-setting="reduced-motion">
             <span className="mr-2 text-ubt-grey">Reduced Motion:</span>
             <ToggleSwitch
               checked={reducedMotion}
@@ -244,7 +302,7 @@ export default function Settings() {
               ariaLabel="Reduced Motion"
             />
           </div>
-          <div className="flex justify-center my-4 items-center">
+          <div className="flex justify-center my-4 items-center" data-setting="high-contrast">
             <span className="mr-2 text-ubt-grey">High Contrast:</span>
             <ToggleSwitch
               checked={highContrast}
@@ -252,7 +310,7 @@ export default function Settings() {
               ariaLabel="High Contrast"
             />
           </div>
-          <div className="flex justify-center my-4 items-center">
+          <div className="flex justify-center my-4 items-center" data-setting="haptics">
             <span className="mr-2 text-ubt-grey">Haptics:</span>
             <ToggleSwitch
               checked={haptics}
@@ -262,6 +320,7 @@ export default function Settings() {
           </div>
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
             <button
+              data-setting="shortcuts"
               onClick={() => setShowKeymap(true)}
               className="px-4 py-2 rounded bg-ub-orange text-white"
             >
@@ -274,12 +333,14 @@ export default function Settings() {
         <>
           <div className="flex justify-center my-4 space-x-4">
             <button
+              data-setting="export-settings"
               onClick={handleExport}
               className="px-4 py-2 rounded bg-ub-orange text-white"
             >
               Export Settings
             </button>
             <button
+              data-setting="import-settings"
               onClick={() => fileInputRef.current?.click()}
               className="px-4 py-2 rounded bg-ub-orange text-white"
             >
