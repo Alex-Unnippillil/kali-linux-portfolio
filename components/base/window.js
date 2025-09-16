@@ -33,6 +33,8 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            gridMode: false,
+            gridPreview: null,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
@@ -185,7 +187,7 @@ export class Window extends Component {
         this._menuOpener = null;
     }
 
-    changeCursorToMove = () => {
+    changeCursorToMove = (e, data) => {
         this.focusWindow();
         if (this.state.maximized) {
             this.restoreWindow();
@@ -193,11 +195,130 @@ export class Window extends Component {
         if (this.state.snapped) {
             this.unsnapWindow();
         }
-        this.setState({ cursorType: "cursor-move", grabbed: true })
+        const shouldEnableGrid = !!e?.shiftKey;
+        this.setState({ cursorType: "cursor-move", grabbed: true, gridMode: shouldEnableGrid, gridPreview: null }, () => {
+            if (shouldEnableGrid) {
+                this.updateGridPreview(data?.node);
+            }
+        })
     }
 
     changeCursorToDefault = () => {
-        this.setState({ cursorType: "cursor-default", grabbed: false })
+        this.setState({ cursorType: "cursor-default", grabbed: false, gridMode: false, gridPreview: null })
+    }
+
+    getWindowNode = () => {
+        return document.querySelector("#" + this.id);
+    }
+
+    handleGridDrag = (event, node) => {
+        const shiftActive = !!event?.shiftKey;
+        if (!shiftActive) {
+            if (this.state.gridMode || this.state.gridPreview) {
+                this.setState({ gridMode: false, gridPreview: null });
+            }
+            return;
+        }
+        this.updateGridPreview(node);
+    }
+
+    updateGridPreview = (node) => {
+        const target = node || this.getWindowNode();
+        if (!target) return;
+        const rect = target.getBoundingClientRect();
+        const columns = 12;
+        const rows = 12;
+        const columnWidth = window.innerWidth / columns;
+        const rowHeight = window.innerHeight / rows;
+        if (!columnWidth || !rowHeight) return;
+
+        const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+        const columnSpan = Math.min(columns, Math.max(1, Math.round(rect.width / columnWidth)));
+        const rowSpan = Math.min(rows, Math.max(1, Math.round(rect.height / rowHeight)));
+
+        let startColumn = Math.round(rect.left / columnWidth);
+        let startRow = Math.round(rect.top / rowHeight);
+
+        startColumn = clamp(startColumn, 0, columns - columnSpan);
+        startRow = clamp(startRow, 0, rows - rowSpan);
+
+        const snappedLeft = startColumn * columnWidth;
+        const snappedTop = startRow * rowHeight;
+        const width = Math.min(window.innerWidth, columnSpan * columnWidth);
+        const height = Math.min(window.innerHeight, rowSpan * rowHeight);
+
+        const endColumn = Math.min(columns - 1, startColumn + columnSpan - 1);
+        const endRow = Math.min(rows - 1, startRow + rowSpan - 1);
+
+        const preview = {
+            left: snappedLeft,
+            top: snappedTop,
+            width,
+            height,
+            columns: { start: startColumn, end: endColumn },
+            rows: { start: startRow, end: endRow },
+        };
+
+        this.setState(prev => {
+            const prevPreview = prev.gridPreview;
+            const samePreview =
+                prevPreview &&
+                prevPreview.left === preview.left &&
+                prevPreview.top === preview.top &&
+                prevPreview.width === preview.width &&
+                prevPreview.height === preview.height &&
+                prevPreview.columns?.start === preview.columns.start &&
+                prevPreview.columns?.end === preview.columns.end &&
+                prevPreview.rows?.start === preview.rows.start &&
+                prevPreview.rows?.end === preview.rows.end;
+
+            if (samePreview) {
+                if (!prev.gridMode) {
+                    return { gridMode: true };
+                }
+                return null;
+            }
+
+            return {
+                gridMode: true,
+                gridPreview: preview,
+                snapPreview: null,
+                snapPosition: null,
+            };
+        });
+    }
+
+    applyGridSnap = (node, preview) => {
+        if (!preview) return;
+        const target = node || this.getWindowNode();
+        if (!target) return;
+
+        const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+        const maxLeft = Math.max(0, window.innerWidth - preview.width);
+        const maxTop = Math.max(0, window.innerHeight - preview.height);
+        const left = clamp(preview.left, 0, maxLeft);
+        const top = clamp(preview.top, 0, maxTop);
+
+        target.style.transform = `translate(${left}px, ${top}px)`;
+
+        const widthPercent = (preview.width / window.innerWidth) * 100;
+        const heightPercent = (preview.height / window.innerHeight) * 100;
+
+        this.setState({
+            width: widthPercent,
+            height: heightPercent,
+            snapped: null,
+            snapPreview: null,
+            snapPosition: null,
+            gridMode: false,
+            gridPreview: null,
+        }, () => {
+            this.resizeBoundries();
+            requestAnimationFrame(() => {
+                this.setWinowsPosition({ disableSnap: true });
+                this.checkOverlap();
+            });
+        });
     }
 
     snapToGrid = (value) => {
@@ -221,12 +342,14 @@ export class Window extends Component {
         this.setState({ width: widthPercent }, this.resizeBoundries);
     }
 
-    setWinowsPosition = () => {
-        var r = document.querySelector("#" + this.id);
+    setWinowsPosition = ({ disableSnap = false } = {}) => {
+        const r = this.getWindowNode();
         if (!r) return;
-        var rect = r.getBoundingClientRect();
-        const x = this.snapToGrid(rect.x);
-        const y = this.snapToGrid(rect.y - 32);
+        const rect = r.getBoundingClientRect();
+        const rawX = rect.x;
+        const rawY = rect.y - 32;
+        const x = disableSnap ? rawX : this.snapToGrid(rawX);
+        const y = disableSnap ? rawY : this.snapToGrid(rawY);
         r.style.setProperty('--window-transform-x', x.toFixed(1).toString() + "px");
         r.style.setProperty('--window-transform-y', y.toFixed(1).toString() + "px");
         if (this.props.onPositionChange) {
@@ -361,17 +484,31 @@ export class Window extends Component {
         if (data && data.node) {
             this.applyEdgeResistance(data.node, data);
         }
+        this.handleGridDrag(e, data?.node);
         this.checkOverlap();
-        this.checkSnapPreview();
+        if (e?.shiftKey) {
+            if (this.state.snapPreview || this.state.snapPosition) {
+                this.setState({ snapPreview: null, snapPosition: null });
+            }
+        } else {
+            this.checkSnapPreview();
+        }
     }
 
-    handleStop = () => {
+    handleStop = (e, data) => {
+        const shouldSnapToGrid = this.state.gridMode && this.state.gridPreview;
+        const preview = this.state.gridPreview;
         this.changeCursorToDefault();
+        if (shouldSnapToGrid) {
+            this.applyGridSnap(data?.node, preview);
+            return;
+        }
         const snapPos = this.state.snapPosition;
         if (snapPos) {
             this.snapWindow(snapPos);
         } else {
             this.setState({ snapPreview: null, snapPosition: null });
+            this.setWinowsPosition();
         }
     }
 
@@ -614,6 +751,57 @@ export class Window extends Component {
     render() {
         return (
             <>
+                {this.state.gridMode && (
+                    <div className="fixed inset-0 pointer-events-none z-50">
+                        <div className="absolute inset-0 grid h-full grid-rows-12">
+                            {Array.from({ length: 12 }).map((_, index) => {
+                                const isActiveRow =
+                                    this.state.gridPreview &&
+                                    index >= this.state.gridPreview.rows.start &&
+                                    index <= this.state.gridPreview.rows.end;
+                                return (
+                                    <div
+                                        key={`grid-row-${index}`}
+                                        className={`border-t border-white/5 ${index === 11 ? 'border-b border-white/5' : ''} transition-colors ${isActiveRow ? 'bg-blue-400/5' : 'bg-transparent'}`}
+                                    />
+                                );
+                            })}
+                        </div>
+                        <div className="absolute inset-0 grid h-full grid-cols-12">
+                            {Array.from({ length: 12 }).map((_, index) => {
+                                const isActive =
+                                    this.state.gridPreview &&
+                                    index >= this.state.gridPreview.columns.start &&
+                                    index <= this.state.gridPreview.columns.end;
+                                return (
+                                    <div
+                                        key={`grid-col-${index}`}
+                                        className={`relative h-full border-l border-white/10 ${index === 11 ? 'border-r border-white/10' : ''} transition-colors ${isActive ? 'bg-blue-400/10' : 'bg-transparent'}`}
+                                    >
+                                        <div
+                                            className="absolute inset-0 opacity-40"
+                                            style={{
+                                                backgroundImage:
+                                                    'repeating-linear-gradient(to bottom, rgba(255,255,255,0.12) 0, rgba(255,255,255,0.12) 1px, transparent 1px, transparent calc(100% / 12))',
+                                            }}
+                                        />
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        {this.state.gridPreview && (
+                            <div
+                                className="absolute pointer-events-none rounded border-2 border-blue-400/70 bg-blue-400/10 shadow-inner transition-all duration-75"
+                                style={{
+                                    left: `${this.state.gridPreview.left}px`,
+                                    top: `${this.state.gridPreview.top}px`,
+                                    width: `${this.state.gridPreview.width}px`,
+                                    height: `${this.state.gridPreview.height}px`,
+                                }}
+                            />
+                        )}
+                    </div>
+                )}
                 {this.state.snapPreview && (
                     <div
                         data-testid="snap-preview"
