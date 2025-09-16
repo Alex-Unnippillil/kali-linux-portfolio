@@ -1,0 +1,9 @@
+html[data-js-failed] {
+  background: #fff;
+  color: #000;
+}
+
+html[data-js-failed] body {
+  font-family: sans-serif;
+  margin: 1rem;
+}
