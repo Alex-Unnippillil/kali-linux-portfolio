@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import { recordFileOpen, RECENT_OPEN_EVENT } from '../../utils/recents';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -145,6 +146,74 @@ export default function FileExplorer() {
     if (unsavedDir) await opfsDelete(name, unsavedDir);
   };
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const handler = async (event) => {
+      const item = event.detail;
+      if (!item || item.kind !== 'file') return;
+      const meta = item.meta || {};
+      const source = meta.source;
+      const segments = Array.isArray(meta.directorySegments)
+        ? meta.directorySegments.filter((seg) => typeof seg === 'string' && seg.length)
+        : [];
+      const fileName =
+        (typeof meta.fileName === 'string' && meta.fileName) ||
+        (typeof item.name === 'string' && item.name) ||
+        null;
+      if (!fileName) return;
+
+      if (source !== 'opfs') {
+        console.warn('Recent item requires manual permission to reopen.');
+        return;
+      }
+      if (!opfsSupported || !root) {
+        console.warn('Origin private file system is not available.');
+        return;
+      }
+
+      try {
+        let dir = root;
+        const newPath = [{ name: root.name || '/', handle: root }];
+        for (const segment of segments) {
+          if (!segment) continue;
+          dir = await dir.getDirectoryHandle(segment);
+          newPath.push({ name: segment, handle: dir });
+        }
+        setDirHandle(dir);
+        setPath(newPath);
+        await readDir(dir);
+        const fileHandle = await dir.getFileHandle(fileName);
+        const entry = { name: fileName, handle: fileHandle };
+        setCurrentFile(entry);
+        let text = '';
+        if (opfsSupported) {
+          const unsaved = await loadBuffer(fileName);
+          if (unsaved !== null) text = unsaved;
+        }
+        if (!text) {
+          const fileData = await fileHandle.getFile();
+          text = await fileData.text();
+        }
+        setContent(text);
+        recordFileOpen({
+          fileName,
+          directorySegments: segments,
+          displayPath:
+            item.subtitle && typeof item.subtitle === 'string'
+              ? item.subtitle
+              : segments.length
+              ? `/${segments.join('/')}`
+              : '/',
+          source: 'opfs',
+        });
+      } catch (err) {
+        console.error('Failed to open recent file', err);
+      }
+    };
+    window.addEventListener(RECENT_OPEN_EVENT, handler);
+    return () => window.removeEventListener(RECENT_OPEN_EVENT, handler);
+  }, [opfsSupported, root, readDir, loadBuffer]);
+
   const openFallback = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -184,6 +253,31 @@ export default function FileExplorer() {
     if (!text) {
       const f = await file.handle.getFile();
       text = await f.text();
+    }
+    try {
+      const names = path
+        .map((segment) => (segment && segment.name ? segment.name : ''))
+        .filter((name) => name && name.length);
+      const rootName = names[0] || '/';
+      const relative = names.slice(1);
+      const isOpfsPath = opfsSupported && root && path[0] && path[0].handle === root;
+      const directorySegments = isOpfsPath
+        ? relative
+        : [rootName, ...relative].filter((name) => name && name !== '/');
+      const displayPath =
+        rootName === '/'
+          ? relative.length
+            ? `/${relative.join('/')}`
+            : '/'
+          : `/${[rootName, ...relative].join('/')}`;
+      recordFileOpen({
+        fileName: file.name,
+        directorySegments,
+        displayPath,
+        source: isOpfsPath ? 'opfs' : 'external',
+      });
+    } catch (err) {
+      console.warn('Unable to record recent file', err);
     }
     setContent(text);
   };
