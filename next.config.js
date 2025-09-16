@@ -23,7 +23,7 @@ const ContentSecurityPolicy = [
   // External scripts required for embedded timelines
   "script-src 'self' 'unsafe-inline' https://vercel.live https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
   // Allow outbound connections for embeds and the in-browser Chrome app
-  "connect-src 'self' https://example.com https://developer.mozilla.org https://en.wikipedia.org https://www.google.com https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.google.com https://stackblitz.com",
+  "connect-src 'self' https://example.com https://developer.mozilla.org https://en.wikipedia.org https://www.google.com https://duckduckgo.com https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.google.com https://stackblitz.com",
   // Allow iframes from specific providers so the Chrome and StackBlitz apps can load allowed content
   "frame-src 'self' https://vercel.live https://stackblitz.com https://*.google.com https://platform.twitter.com https://syndication.twitter.com https://*.twitter.com https://*.x.com https://www.youtube-nocookie.com https://open.spotify.com https://example.com https://developer.mozilla.org https://en.wikipedia.org",
 
@@ -139,6 +139,7 @@ module.exports = withBundleAnalyzer(
         'yt3.ggpht.com',
         'i.scdn.co',
         'www.google.com',
+        'duckduckgo.com',
         'example.com',
         'developer.mozilla.org',
         'en.wikipedia.org',

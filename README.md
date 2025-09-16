@@ -246,6 +246,7 @@ These external domains are whitelisted in the default CSP. Update this list when
 | `*.twitter.com` | Additional Twitter content |
 | `*.x.com` | X (Twitter) domain equivalents |
 | `*.google.com` | Google services and Chrome app favicons |
+| `duckduckgo.com` | Chrome app suggestion API |
 | `example.com` | Chrome app demo origin |
 | `developer.mozilla.org` | Chrome app demo origin |
 | `en.wikipedia.org` | Chrome app demo origin |
@@ -378,6 +379,17 @@ Browse all apps, games, and security tool demos at `/apps`, which presents a sea
 | Quote | /apps/quote | Utility / Media |
 
 > The VS Code app now embeds a StackBlitz IDE via iframe instead of the local Monaco editor.
+
+#### Chrome app limitations
+
+The in-window Chrome app is a sandboxed demo. It only loads curated origins (`example.com`,
+`developer.mozilla.org`, `en.wikipedia.org`) and opens other URLs externally. Tabs run inside an
+iframe with `sandbox="allow-scripts allow-forms allow-popups"` and the inline CSP
+`default-src 'self'; script-src 'none'; connect-src 'none';`, so network calls, service workers, and
+authentication flows frequently fail. A global Permissions Policy (`camera=(), microphone=()`) keeps
+camera and microphone requests blocked even though the iframe asks for them. Downloads and
+persistent storage are unreliable—use the ↗ toolbar button to continue in a real browser tab when you
+need full functionality.
 
 The Spotify app lets you customize a mood-to-playlist mapping. Use the in-app form to
 add, reorder, or delete moods; selections persist in the browser's Origin Private File
