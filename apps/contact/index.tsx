@@ -141,7 +141,7 @@ const ContactApp: React.FC = () => {
       </p>
       <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
         <div>
-          <label htmlFor="contact-name" className="mb-[6px] block text-sm">
+          <label htmlFor="contact-name" className="mb-[var(--space-1-5)] block text-sm">
             Name
           </label>
           <div className="relative">
@@ -169,7 +169,7 @@ const ContactApp: React.FC = () => {
           </div>
         </div>
         <div>
-          <label htmlFor="contact-email" className="mb-[6px] block text-sm">
+          <label htmlFor="contact-email" className="mb-[var(--space-1-5)] block text-sm">
             Email
           </label>
           <div className="relative">
@@ -205,7 +205,7 @@ const ContactApp: React.FC = () => {
           )}
         </div>
         <div>
-          <label htmlFor="contact-message" className="mb-[6px] block text-sm">
+          <label htmlFor="contact-message" className="mb-[var(--space-1-5)] block text-sm">
             Message
           </label>
           <div className="relative">

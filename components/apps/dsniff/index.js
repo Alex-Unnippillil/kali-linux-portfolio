@@ -123,8 +123,8 @@ const LogRow = ({ log, prefersReduced }) => {
           {log.protocol}
         </abbr>
       </td>
-      <td className="px-2 py-[6px] text-white">{log.host}</td>
-      <td className="px-2 py-[6px] text-green-400">{log.details}</td>
+      <td className="px-2 py-[var(--space-1-5)] text-white">{log.host}</td>
+      <td className="px-2 py-[var(--space-1-5)] text-green-400">{log.details}</td>
     </tr>
   );
 };

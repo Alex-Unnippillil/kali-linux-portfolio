@@ -174,7 +174,7 @@ const SudokuGame: React.FC = () => {
             ✏️
           </button>
         </div>
-        <div className="grid grid-cols-9 gap-[2px]" role="grid">
+        <div className="grid grid-cols-9 gap-[var(--space-0-5)]" role="grid">
           {board.map((row, r) =>
             row.map((cell, c) => {
               const original = puzzle[r][c] !== 0;

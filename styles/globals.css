@@ -74,6 +74,6 @@ html[data-theme='matrix'] {
 }
 
 *:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
+  outline: var(--focus-outline-width) solid var(--color-focus-ring);
+  outline-offset: var(--space-0-5);
 }

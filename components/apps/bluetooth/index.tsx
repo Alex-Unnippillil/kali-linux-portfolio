@@ -13,7 +13,7 @@ const SignalBars: React.FC<{ rssi: number }> = ({ rssi }) => {
     rssi >= -60 ? 4 : rssi >= -70 ? 3 : rssi >= -80 ? 2 : rssi >= -90 ? 1 : 0;
   const heights = ["h-[4px]", "h-[8px]", "h-[12px]", "h-[16px]"];
   return (
-    <div className="mt-[6px] flex h-4 items-end gap-[2px]">
+    <div className="mt-[var(--space-1-5)] flex h-4 items-end gap-[var(--space-0-5)]">
       {heights.map((h, i) => (
         <div
           key={i}
@@ -123,24 +123,24 @@ const BluetoothApp: React.FC = () => {
         {Object.entries(grouped).map(([type, list]) => (
           <div key={type}>
             <h3 className="mb-2 font-bold">{type}</h3>
-            <ul className="grid grid-cols-2 gap-[6px]">
+            <ul className="grid grid-cols-2 gap-[var(--space-1-5)]">
               {list.map((d) => (
                 <li
                   key={d.address}
-                  className="flex flex-col items-center rounded bg-gray-800 p-[6px]"
+                  className="flex flex-col items-center rounded bg-gray-800 p-[var(--space-1-5)]"
                 >
                   <img
                     src="/themes/Yaru/status/emblem-system-symbolic.svg"
                     alt=""
                     className="h-16 w-16"
                   />
-                  <p className="mt-[6px] text-center text-sm font-bold">
+                  <p className="mt-[var(--space-1-5)] text-center text-sm font-bold">
                     {d.name || d.address}
                   </p>
                   <SignalBars rssi={d.rssi} />
                   <button
                     onClick={() => setPairingDevice(d)}
-                    className="mt-[6px] w-full rounded bg-gray-700 px-2 py-1 text-sm"
+                    className="mt-[var(--space-1-5)] w-full rounded bg-gray-700 px-2 py-1 text-sm"
                   >
                     Pair
                   </button>
