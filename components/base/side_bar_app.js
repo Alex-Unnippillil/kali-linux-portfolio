@@ -93,6 +93,7 @@ export class SideBarApp extends Component {
                 data-context="app"
                 data-app-id={this.props.id}
                 onClick={this.openApp}
+                onKeyDown={this.props.onKeyDown}
                 onMouseEnter={() => {
                     this.captureThumbnail();
                     this.setState({ showTitle: true });

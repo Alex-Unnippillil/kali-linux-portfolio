@@ -7,7 +7,7 @@ const BackgroundImage = dynamic(
     () => import('../util-components/background-image'),
     { ssr: false }
 );
-import SideBar from './side_bar';
+import Dock from '../desktop/Dock';
 import apps, { games } from '../../apps.config';
 import Window from '../base/window';
 import UbuntuApp from '../base/ubuntu_app';
@@ -37,6 +37,7 @@ export class Desktop extends Component {
             overlapped_windows: {},
             disabled_apps: {},
             favourite_apps: {},
+            dock_order: [],
             hideSideBar: false,
             minimized_windows: {},
             window_positions: {},
@@ -67,7 +68,11 @@ export class Desktop extends Component {
                 session.dock.forEach(id => {
                     favourite_apps[id] = true;
                 });
-                this.setState({ favourite_apps });
+                this.setState({ favourite_apps }, () => {
+                    this.updateDockOrder(session.dock, false);
+                });
+            } else {
+                this.updateDockOrder(this.state.dock_order, false);
             }
 
             if (session.windows && session.windows.length) {
@@ -343,14 +348,39 @@ export class Desktop extends Component {
     }
 
     fetchAppsData = (callback) => {
-        let pinnedApps = safeLocalStorage?.getItem('pinnedApps');
-        if (pinnedApps) {
-            pinnedApps = JSON.parse(pinnedApps);
-            apps.forEach(app => { app.favourite = pinnedApps.includes(app.id); });
-        } else {
-            pinnedApps = apps.filter(app => app.favourite).map(app => app.id);
-            safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps));
+        let storedPinned = [];
+        try {
+            const rawPinned = safeLocalStorage?.getItem('pinnedApps');
+            if (rawPinned) {
+                const parsed = JSON.parse(rawPinned);
+                if (Array.isArray(parsed)) storedPinned = parsed;
+            }
+        } catch (e) {
+            storedPinned = [];
         }
+        if (storedPinned.length) {
+            apps.forEach(app => { app.favourite = storedPinned.includes(app.id); });
+        } else {
+            storedPinned = apps.filter(app => app.favourite).map(app => app.id);
+            safeLocalStorage?.setItem('pinnedApps', JSON.stringify(storedPinned));
+        }
+        const pinnedList = apps.filter(app => app.favourite).map(app => app.id);
+        let dock_order = [];
+        try {
+            const rawOrder = safeLocalStorage?.getItem('dock-order');
+            if (rawOrder) {
+                const parsedOrder = JSON.parse(rawOrder);
+                if (Array.isArray(parsedOrder)) {
+                    dock_order = parsedOrder.filter(id => pinnedList.includes(id));
+                }
+            }
+        } catch (e) {
+            dock_order = [];
+        }
+        pinnedList.forEach(id => {
+            if (!dock_order.includes(id)) dock_order.push(id);
+        });
+        safeLocalStorage?.setItem('dock-order', JSON.stringify(dock_order));
         let focused_windows = {}, closed_windows = {}, disabled_apps = {}, favourite_apps = {}, overlapped_windows = {}, minimized_windows = {};
         let desktop_apps = [];
         apps.forEach((app) => {
@@ -387,7 +417,8 @@ export class Desktop extends Component {
             favourite_apps,
             overlapped_windows,
             minimized_windows,
-            desktop_apps
+            desktop_apps,
+            dock_order
         }, () => {
             if (typeof callback === 'function') callback();
         });
@@ -420,15 +451,61 @@ export class Desktop extends Component {
             }
             if (app.desktop_shortcut) desktop_apps.push(app.id);
         });
+        const pinnedIds = apps.filter(app => app.favourite).map(app => app.id);
+        let dock_order = this.state.dock_order.filter(id => pinnedIds.includes(id));
+        pinnedIds.forEach(id => {
+            if (!dock_order.includes(id)) dock_order.push(id);
+        });
         this.setState({
             focused_windows,
             closed_windows,
             disabled_apps,
             minimized_windows,
             favourite_apps,
-            desktop_apps
+            desktop_apps,
+            dock_order
+        }, () => {
+            safeLocalStorage?.setItem('dock-order', JSON.stringify(this.state.dock_order));
+            safeLocalStorage?.setItem('pinnedApps', JSON.stringify(this.state.dock_order));
         });
         this.initFavourite = { ...favourite_apps };
+    }
+
+    getPinnedIds = () => Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
+
+    areOrdersEqual = (a = [], b = []) => {
+        if (a.length !== b.length) return false;
+        for (let i = 0; i < a.length; i++) {
+            if (a[i] !== b[i]) return false;
+        }
+        return true;
+    }
+
+    updateDockOrder = (nextOrder = [], persistSession = true) => {
+        const pinned = this.getPinnedIds();
+        const base = Array.isArray(nextOrder) ? [...nextOrder] : [];
+        const sanitized = base.filter(id => pinned.includes(id));
+        pinned.forEach(id => {
+            if (!sanitized.includes(id)) sanitized.push(id);
+        });
+
+        if (this.areOrdersEqual(sanitized, this.state.dock_order)) {
+            safeLocalStorage?.setItem('dock-order', JSON.stringify(sanitized));
+            safeLocalStorage?.setItem('pinnedApps', JSON.stringify(sanitized));
+            if (persistSession) this.saveSession();
+            return;
+        }
+
+        this.setState({ dock_order: sanitized }, () => {
+            safeLocalStorage?.setItem('dock-order', JSON.stringify(this.state.dock_order));
+            safeLocalStorage?.setItem('pinnedApps', JSON.stringify(this.state.dock_order));
+            if (persistSession) this.saveSession();
+        });
+    }
+
+    handleDockOrderChange = (nextOrder) => {
+        if (!Array.isArray(nextOrder)) return;
+        this.updateDockOrder(nextOrder);
     }
 
     renderDesktopApps = () => {
@@ -507,7 +584,10 @@ export class Desktop extends Component {
             x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
             y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10
         }));
-        const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
+        const pinned = this.getPinnedIds();
+        const dock = this.state.dock_order.length
+            ? this.state.dock_order.filter(id => pinned.includes(id))
+            : pinned;
         this.props.setSession({ ...this.props.session, windows, dock });
     }
 
@@ -705,31 +785,34 @@ export class Desktop extends Component {
     }
 
     pinApp = (id) => {
-        let favourite_apps = { ...this.state.favourite_apps }
-        favourite_apps[id] = true
-        this.initFavourite[id] = true
-        const app = apps.find(a => a.id === id)
-        if (app) app.favourite = true
-        let pinnedApps = [];
-        try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
-        if (!pinnedApps.includes(id)) pinnedApps.push(id)
-        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
-        this.setState({ favourite_apps }, () => { this.saveSession(); })
-        this.hideAllContextMenu()
+        this.initFavourite[id] = true;
+        const app = apps.find(a => a.id === id);
+        if (app) app.favourite = true;
+        this.setState(prevState => {
+            const favourite_apps = { ...prevState.favourite_apps, [id]: true };
+            const dock_order = prevState.dock_order.includes(id)
+                ? [...prevState.dock_order]
+                : [...prevState.dock_order, id];
+            return { favourite_apps, dock_order };
+        }, () => {
+            this.updateDockOrder(this.state.dock_order);
+        });
+        this.hideAllContextMenu();
     }
 
     unpinApp = (id) => {
-        let favourite_apps = { ...this.state.favourite_apps }
-        if (this.state.closed_windows[id]) favourite_apps[id] = false
-        this.initFavourite[id] = false
-        const app = apps.find(a => a.id === id)
-        if (app) app.favourite = false
-        let pinnedApps = [];
-        try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
-        pinnedApps = pinnedApps.filter(appId => appId !== id)
-        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
-        this.setState({ favourite_apps }, () => { this.saveSession(); })
-        this.hideAllContextMenu()
+        const app = apps.find(a => a.id === id);
+        if (app) app.favourite = false;
+        this.initFavourite[id] = false;
+        this.setState(prevState => {
+            const favourite_apps = { ...prevState.favourite_apps };
+            if (prevState.closed_windows[id]) favourite_apps[id] = false;
+            const dock_order = prevState.dock_order.filter(appId => appId !== id);
+            return { favourite_apps, dock_order };
+        }, () => {
+            this.updateDockOrder(this.state.dock_order);
+        });
+        this.hideAllContextMenu();
     }
 
     focus = (objId) => {
@@ -881,16 +964,17 @@ export class Desktop extends Component {
                 <BackgroundImage />
 
                 {/* Ubuntu Side Menu Bar */}
-                <SideBar apps={apps}
+                <Dock apps={apps}
+                    order={this.state.dock_order}
                     hide={this.state.hideSideBar}
                     hideSideBar={this.hideSideBar}
                     favourite_apps={this.state.favourite_apps}
                     showAllApps={this.showAllApps}
-                    allAppsView={this.state.allAppsView}
                     closed_windows={this.state.closed_windows}
                     focused_windows={this.state.focused_windows}
                     isMinimized={this.state.minimized_windows}
-                    openAppByAppId={this.openApp} />
+                    openAppByAppId={this.openApp}
+                    onOrderChange={this.handleDockOrderChange} />
 
                 {/* Taskbar */}
                 <Taskbar
