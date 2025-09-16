@@ -2,6 +2,7 @@
 // Allows external badges and same-origin PDF embedding.
 // Update README (section "CSP External Domains") when editing domains below.
 
+const path = require('path');
 const { validateServerEnv: validateEnv } = require('./lib/validate.js');
 
 const ContentSecurityPolicy = [
@@ -103,7 +104,11 @@ function configureWebpack(config, { isServer }) {
   };
   config.resolve.alias = {
     ...(config.resolve.alias || {}),
-    'react-dom$': require('path').resolve(__dirname, 'lib/react-dom-shim.js'),
+    'react-dom$': path.resolve(__dirname, 'lib/react-dom-shim.js'),
+    'private-next-instrumentation-client': path.resolve(
+      __dirname,
+      'app/instrumentation-client.ts',
+    ),
   };
   if (isProd) {
     config.optimization = {
