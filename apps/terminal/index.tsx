@@ -100,6 +100,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   });
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
+  const [paletteLinks, setPaletteLinks] = useState<string[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
@@ -144,6 +145,24 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   );
 
   contextRef.current.writeLine = writeLine;
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handle = 'requestIdleCallback' in window
+      ? (window as any).requestIdleCallback(() => {
+          setPaletteLinks(Object.keys(registryRef.current));
+        })
+      : window.setTimeout(() => {
+          setPaletteLinks(Object.keys(registryRef.current));
+        }, 0);
+    return () => {
+      if ('cancelIdleCallback' in window) {
+        (window as any).cancelIdleCallback(handle);
+      } else {
+        clearTimeout(handle);
+      }
+    };
+  }, []);
 
   const prompt = useCallback(() => {
     if (!termRef.current) return;
@@ -433,7 +452,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               }}
             />
             <ul className="max-h-40 overflow-y-auto">
-              {Object.keys(registryRef.current)
+              {paletteLinks
                 .filter((c) => c.startsWith(paletteInput))
                 .map((c) => (
                   <li key={c} className="text-white">
