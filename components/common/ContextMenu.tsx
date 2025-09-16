@@ -12,6 +12,8 @@ interface ContextMenuProps {
   targetRef: React.RefObject<HTMLElement>;
   /** Menu items to render */
   items: MenuItem[];
+  /** Callback fired whenever the menu opens or closes */
+  onOpenChange?: (open: boolean) => void;
 }
 
 /**
@@ -20,7 +22,7 @@ interface ContextMenuProps {
  * dispatches global events when opened/closed so backgrounds can
  * be made inert.
  */
-const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
+const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items, onOpenChange }) => {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
@@ -36,18 +38,23 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
     const node = targetRef.current;
     if (!node) return;
 
-    const handleContextMenu = (e: MouseEvent) => {
-      e.preventDefault();
-      setPos({ x: e.pageX, y: e.pageY });
+    const openAt = (x: number, y: number) => {
+      setPos({ x, y });
       setOpen(true);
     };
 
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openAt(e.pageX, e.pageY);
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.shiftKey && e.key === 'F10') {
+      if ((e.shiftKey && e.key === 'F10') || e.key === 'ContextMenu') {
         e.preventDefault();
+        e.stopPropagation();
         const rect = node.getBoundingClientRect();
-        setPos({ x: rect.left, y: rect.bottom });
-        setOpen(true);
+        openAt(rect.left + window.scrollX, rect.bottom + window.scrollY);
       }
     };
 
@@ -61,12 +68,28 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
   }, [targetRef]);
 
   useEffect(() => {
+    onOpenChange?.(open);
     if (open) {
       window.dispatchEvent(new CustomEvent('context-menu-open'));
+      const schedule = typeof window.requestAnimationFrame === 'function'
+        ? window.requestAnimationFrame.bind(window)
+        : ((cb: FrameRequestCallback) => window.setTimeout(cb, 0));
+      schedule(() => {
+        const firstItem = menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]');
+        firstItem?.focus();
+      });
     } else {
       window.dispatchEvent(new CustomEvent('context-menu-close'));
+      const node = targetRef.current as HTMLElement | null;
+      if (node && typeof node.focus === 'function') {
+        try {
+          node.focus({ preventScroll: true });
+        } catch (e) {
+          node.focus();
+        }
+      }
     }
-  }, [open]);
+  }, [open, onOpenChange, targetRef]);
 
   useEffect(() => {
     if (!open) return;
