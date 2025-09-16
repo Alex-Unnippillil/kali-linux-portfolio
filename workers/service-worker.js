@@ -1,22 +1,27 @@
-const CACHE_NAME = 'periodic-cache-v1';
-const ASSETS = [
-  '/apps/weather.js',
+const CACHE_NAME = 'refresh-feeds-cache-v1';
+const REFRESH_TAG = 'refresh-feeds';
+const FEED_ENDPOINTS = [
   '/feeds',
   '/about',
   '/projects',
   '/projects.json',
+  '/data/module-index.json',
+  '/data/module-version.json',
+  '/data/pacman-leaderboard.json',
+  '/data/milestones.json',
   '/apps',
   '/apps/weather',
   '/apps/terminal',
   '/apps/checkers',
+  '/apps/weather.js',
   '/offline.html',
   '/manifest.webmanifest',
 ];
 
-async function prefetchAssets() {
+async function refreshFeeds() {
   const cache = await caches.open(CACHE_NAME);
   await Promise.all(
-    ASSETS.map(async (url) => {
+    FEED_ENDPOINTS.map(async (url) => {
       try {
         const response = await fetch(url, { cache: 'no-cache' });
         if (response.ok) {
@@ -30,18 +35,18 @@ async function prefetchAssets() {
 }
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(prefetchAssets());
+  event.waitUntil(refreshFeeds());
 });
 
 self.addEventListener('periodicsync', (event) => {
-  if (event.tag === 'content-sync') {
-    event.waitUntil(prefetchAssets());
+  if (event.tag === REFRESH_TAG) {
+    event.waitUntil(refreshFeeds());
   }
 });
 
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'refresh') {
-    event.waitUntil(prefetchAssets());
+  if (event.data && (event.data.type === 'refresh' || event.data.type === REFRESH_TAG)) {
+    event.waitUntil(refreshFeeds());
   }
 });
 

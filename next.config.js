@@ -68,6 +68,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   buildExcludes: [/dynamic-css-manifest\.json$/],
   workboxOptions: {
     navigateFallback: '/offline.html',
+    importScripts: ['workers/service-worker.js'],
     additionalManifestEntries: [
       { url: '/', revision: null },
       { url: '/feeds', revision: null },

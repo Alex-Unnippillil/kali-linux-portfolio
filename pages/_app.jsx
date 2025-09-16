@@ -16,6 +16,7 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { registerRefreshFeedsPeriodicSync } from '../utils/registerPeriodicSync';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -50,24 +51,20 @@ function MyApp(props) {
         try {
           const registration = await navigator.serviceWorker.register('/sw.js');
 
-          window.manualRefresh = () => registration.update();
+          window.manualRefresh = () => {
+            registration.active?.postMessage({ type: 'refresh-feeds' });
+            return registration.update();
+          };
 
-          if ('periodicSync' in registration) {
-            try {
-              const status = await navigator.permissions.query({
-                name: 'periodic-background-sync',
-              });
-              if (status.state === 'granted') {
-                await registration.periodicSync.register('content-sync', {
-                  minInterval: 24 * 60 * 60 * 1000,
-                });
-              } else {
-                registration.update();
-              }
-            } catch {
-              registration.update();
-            }
-          } else {
+          const periodicRegistered = await registerRefreshFeedsPeriodicSync(registration);
+
+          navigator.serviceWorker.ready
+            .then((readyRegistration) => {
+              readyRegistration.active?.postMessage({ type: 'refresh-feeds' });
+            })
+            .catch(() => {});
+
+          if (!periodicRegistered) {
             registration.update();
           }
         } catch (err) {
