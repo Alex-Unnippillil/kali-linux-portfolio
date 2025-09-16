@@ -16,7 +16,14 @@ const isAllowed = (src) => {
  * Iframe wrapper for allowed external sources.
  * Optionally prefetches the iframe source.
  */
-export default function ExternalFrame({ src, title, prefetch = false, onLoad: onLoadProp, ...props }) {
+export default function ExternalFrame({
+  src,
+  title,
+  prefetch = false,
+  onLoad: onLoadProp,
+  minHeight = 360,
+  ...props
+}) {
   const [cookiesBlocked, setCookiesBlocked] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -51,7 +58,10 @@ export default function ExternalFrame({ src, title, prefetch = false, onLoad: on
             </button>
           </div>
         )}
-        <div className="relative flex-1">
+        <div
+          className="relative flex-1"
+          style={{ minHeight: typeof minHeight === 'number' ? `${minHeight}px` : minHeight }}
+        >
           <a
             href={src}
             target="_blank"
@@ -71,6 +81,8 @@ export default function ExternalFrame({ src, title, prefetch = false, onLoad: on
               onLoadProp?.(e);
             }}
             className={`w-full h-full ${loaded ? '' : 'invisible'}`}
+            width="100%"
+            height="100%"
             {...props}
           />
           {!loaded && (

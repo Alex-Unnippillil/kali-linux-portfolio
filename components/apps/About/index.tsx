@@ -11,33 +11,29 @@ import AboutSlides from './slides';
 import ScrollableTimeline from '../../ScrollableTimeline';
 
 class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_screen: string; navbar: boolean }> {
-  screens: Record<string, React.ReactNode> = {};
+  screens: Record<string, React.ReactNode> = {
+    about: <About />,
+    education: <Education />,
+    skills: <Skills skills={data.skills} />,
+    certs: <Certs />,
+    projects: <Projects projects={data.projects} />,
+    resume: <Resume />,
+  };
 
   constructor(props: unknown) {
     super(props);
     this.state = {
-      screen: <></>,
+      screen: <About />,
       active_screen: 'about',
       navbar: false,
     };
   }
 
   componentDidMount() {
-    this.screens = {
-      about: <About />,
-      education: <Education />,
-      skills: <Skills skills={data.skills} />,
-      certs: <Certs />,
-      projects: <Projects projects={data.projects} />,
-      resume: <Resume />,
-    };
-
-    let lastVisitedScreen = localStorage.getItem('about-section');
-    if (!lastVisitedScreen) {
-      lastVisitedScreen = 'about';
+    const lastVisitedScreen = localStorage.getItem('about-section') || 'about';
+    if (lastVisitedScreen !== 'about') {
+      this.changeScreen({ id: lastVisitedScreen } as unknown as EventTarget & { id: string });
     }
-
-    this.changeScreen({ id: lastVisitedScreen } as unknown as EventTarget & { id: string });
   }
 
   changeScreen = (e: any) => {
@@ -360,10 +356,14 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
         {filteredBadges.map((badge) => (
           <img
             key={badge.alt}
-            className="m-1 cursor-pointer"
+            className="m-1 h-12 w-40 cursor-pointer object-contain"
             src={badge.src}
             alt={badge.alt}
             title={badge.description}
+            width={160}
+            height={48}
+            loading="lazy"
+            decoding="async"
             onClick={() => setSelected(badge)}
           />
         ))}

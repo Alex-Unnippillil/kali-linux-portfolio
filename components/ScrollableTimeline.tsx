@@ -126,11 +126,20 @@ const ScrollableTimeline: React.FC = () => {
                       className="text-left w-full focus:outline-none"
                     >
                       <div className="text-ubt-blue font-bold text-lg mb-2">{year}</div>
-                      <img
-                        src={first.image}
-                        alt={first.title}
-                        className="w-full h-32 object-cover mb-2 rounded"
-                      />
+                      <div
+                        className="relative w-full mb-2 rounded overflow-hidden"
+                        style={{ aspectRatio: '4 / 3' }}
+                      >
+                        <img
+                          src={first.image}
+                          alt={first.title}
+                          width={800}
+                          height={600}
+                          className="absolute inset-0 h-full w-full object-cover"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      </div>
                       <p className="text-sm md:text-base mb-2">{first.title}</p>
                       {renderTags(first.tags)}
                     </button>
@@ -155,11 +164,20 @@ const ScrollableTimeline: React.FC = () => {
                     rel="noopener noreferrer"
                     className="block mb-2"
                   >
-                    <img
-                      src={m.image}
-                      alt={m.title}
-                      className="w-full h-32 object-cover mb-2 rounded"
-                    />
+                    <div
+                      className="relative w-full mb-2 rounded overflow-hidden"
+                      style={{ aspectRatio: '4 / 3' }}
+                    >
+                      <img
+                        src={m.image}
+                        alt={m.title}
+                        width={800}
+                        height={600}
+                        className="absolute inset-0 h-full w-full object-cover"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    </div>
                     <p className="text-sm md:text-base">{m.title}</p>
                   </a>
                   {renderTags(m.tags)}
