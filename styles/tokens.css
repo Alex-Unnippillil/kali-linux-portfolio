@@ -66,17 +66,26 @@
 .high-contrast {
   --color-bg: #000000;
   --color-text: #ffffff;
-  --color-ub-grey: #000000;
-  --color-ub-cool-grey: #000000;
-  --color-ubt-grey: #ffffff;
-  --color-ubt-cool-grey: #ffffff;
-  --color-ub-orange: #ffff00;
-  --color-ub-lite-abrgn: #00ffff;
-  --color-ub-border-orange: #ffff00;
-  --game-color-secondary: #ffff00;
-  --game-color-success: #00ffff;
-  --game-color-warning: #ff00ff;
-  --game-color-danger: #ff0000;
+  --color-ub-grey: #050505;
+  --color-ub-cool-grey: #111827;
+  --color-ub-dark-grey: #1f2937;
+  --color-ubt-grey: #f9fafb;
+  --color-ubt-warm-grey: #e5e7eb;
+  --color-ubt-cool-grey: #e5e7eb;
+  --color-ub-orange: #1a73e8;
+  --color-ub-lite-abrgn: #1f2937;
+  --color-ub-border-orange: #8ab4f8;
+  --color-ubt-blue: #1a73e8;
+  --color-ubt-green: #2ddc4b;
+  --color-ubt-gedit-orange: #ffb400;
+  --color-ubt-gedit-blue: #64d2ff;
+  --color-ubt-gedit-dark: #0b1727;
+  --game-color-secondary: #1a73e8;
+  --game-color-success: #2ddc4b;
+  --game-color-warning: #ffb400;
+  --game-color-danger: #ff375f;
+  --focus-outline-color: #ffd60a;
+  --focus-outline-width: 3px;
 }
 
 /* Dyslexia-friendly fonts */
@@ -109,12 +118,25 @@
   :root {
     --color-bg: #000000;
     --color-text: #ffffff;
-    --color-ub-grey: #000000;
-    --color-ub-cool-grey: #000000;
-    --color-ubt-grey: #ffffff;
-    --color-ubt-cool-grey: #ffffff;
-    --color-ub-orange: #ffff00;
-    --color-ub-lite-abrgn: #00ffff;
-    --color-ub-border-orange: #ffff00;
+    --color-ub-grey: #050505;
+    --color-ub-cool-grey: #111827;
+    --color-ub-dark-grey: #1f2937;
+    --color-ubt-grey: #f9fafb;
+    --color-ubt-warm-grey: #e5e7eb;
+    --color-ubt-cool-grey: #e5e7eb;
+    --color-ub-orange: #1a73e8;
+    --color-ub-lite-abrgn: #1f2937;
+    --color-ub-border-orange: #8ab4f8;
+    --color-ubt-blue: #1a73e8;
+    --color-ubt-green: #2ddc4b;
+    --color-ubt-gedit-orange: #ffb400;
+    --color-ubt-gedit-blue: #64d2ff;
+    --color-ubt-gedit-dark: #0b1727;
+    --game-color-secondary: #1a73e8;
+    --game-color-success: #2ddc4b;
+    --game-color-warning: #ffb400;
+    --game-color-danger: #ff375f;
+    --focus-outline-color: #ffd60a;
+    --focus-outline-width: 3px;
   }
 }
