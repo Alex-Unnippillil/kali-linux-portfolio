@@ -76,4 +76,31 @@ describe('Terminal component', () => {
     fireEvent.keyDown(root, { ctrlKey: true, key: 'w' });
     expect(container.querySelectorAll('.flex.items-center.cursor-pointer').length).toBe(1);
   });
+
+  it('confirms before copying large content', async () => {
+    const ref = createRef<any>();
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+    const { getByLabelText } = render(<Terminal ref={ref} openApp={openApp} />);
+    await act(async () => {});
+
+    for (let i = 0; i < 200; i++) {
+      // about command writes a short line each time
+      await act(async () => {
+        await ref.current.runCommand('about');
+      });
+    }
+
+    expect(ref.current.getContent().length).toBeGreaterThan(5000);
+    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(false);
+    const copyBtn = getByLabelText('Copy');
+
+    fireEvent.click(copyBtn);
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(writeText).not.toHaveBeenCalled();
+
+    confirmSpy.mockReturnValue(true);
+    fireEvent.click(copyBtn);
+    expect(writeText).toHaveBeenCalledWith(ref.current.getContent());
+  });
 });
