@@ -52,7 +52,9 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            liveAnnouncement: '',
         }
+        this._tileTimer = null;
     }
 
     componentDidMount() {
@@ -96,6 +98,10 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        if (this._tileTimer) {
+            clearTimeout(this._tileTimer);
+            this._tileTimer = null;
+        }
     }
 
     checkForNewFolders = () => {
@@ -172,6 +178,96 @@ export class Desktop extends Component {
                 document.getElementById(id)?.dispatchEvent(event);
             }
         }
+    }
+
+    announce = (message) => {
+        this.setState({ liveAnnouncement: '' }, () => {
+            this.setState({ liveAnnouncement: message });
+        });
+    }
+
+    dispatchWindowManagerCommand = (id, detail) => {
+        if (typeof document === 'undefined') return false;
+        const node = document.getElementById(id);
+        if (!node) return false;
+        const event = new CustomEvent('window-manager', { detail });
+        node.dispatchEvent(event);
+        return true;
+    }
+
+    tileWindow = (id, position) => {
+        if (!id) return;
+        const validPositions = ['left', 'right', 'top', 'bottom'];
+        if (!validPositions.includes(position)) return;
+        if (this.state.closed_windows[id]) return;
+        const apply = () => {
+            const success = this.dispatchWindowManagerCommand(id, { action: 'tile', position });
+            if (!success) return;
+            const appMeta = apps.find(app => app.id === id) || {};
+            const title = appMeta.title || id;
+            const friendly = {
+                left: 'left quadrant',
+                right: 'right quadrant',
+                top: 'top quadrant',
+                bottom: 'bottom quadrant',
+            }[position] || `${position} area`;
+            ReactGA.event({ category: 'Window Manager', action: `Tile ${position}`, label: id });
+            this.announce(`${title} tiled to the ${friendly}.`);
+        };
+
+        if (this.state.minimized_windows[id]) {
+            this.openApp(id);
+            if (this._tileTimer) {
+                clearTimeout(this._tileTimer);
+            }
+            this._tileTimer = setTimeout(() => {
+                apply();
+                this._tileTimer = null;
+            }, 320);
+        } else {
+            apply();
+        }
+    }
+
+    cascadeWindows = () => {
+        if (typeof window === 'undefined') return;
+        const openWindows = this.app_stack.filter(id => this.state.closed_windows[id] === false && !this.state.minimized_windows[id]);
+        if (!openWindows.length) return;
+
+        const updates = {};
+        const baseX = 80;
+        const baseY = 80;
+        const step = 32;
+        const maxX = Math.max(window.innerWidth - 360, baseX);
+        const maxY = Math.max(window.innerHeight - 320, baseY);
+        let lastFocused = null;
+
+        openWindows.forEach((windowId, index) => {
+            const offset = index * step;
+            const x = Math.min(baseX + offset, maxX);
+            const y = Math.min(baseY + offset, maxY);
+            const dispatched = this.dispatchWindowManagerCommand(windowId, {
+                action: 'cascade',
+                frame: { x, y, width: 60, height: 70 },
+            });
+            if (dispatched) {
+                updates[windowId] = { x, y };
+                lastFocused = windowId;
+            }
+        });
+
+        if (!Object.keys(updates).length) return;
+
+        this.setState(prev => ({
+            window_positions: { ...prev.window_positions, ...updates }
+        }), this.saveSession);
+
+        if (lastFocused) {
+            this.focus(lastFocused);
+        }
+
+        ReactGA.event({ category: 'Window Manager', action: 'Cascade All' });
+        this.announce('Windows cascaded across the desktop.');
     }
 
     getFocusedWindowId = () => {
@@ -938,6 +1034,12 @@ export class Desktop extends Component {
                         if (!id) return;
                         this.closeApp(id);
                     }}
+                    onTile={(position) => {
+                        const id = this.state.context_app;
+                        if (!id) return;
+                        this.tileWindow(id, position);
+                    }}
+                    onCascade={this.cascadeWindows}
                     onCloseMenu={this.hideAllContextMenu}
                 />
 
@@ -966,6 +1068,10 @@ export class Desktop extends Component {
                         windows={this.state.switcherWindows}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
+
+                <div className="sr-only" aria-live="polite" aria-atomic="true">
+                    {this.state.liveAnnouncement}
+                </div>
 
             </main>
         )
