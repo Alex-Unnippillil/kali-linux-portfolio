@@ -19,10 +19,14 @@ import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import Taskbar from './taskbar';
 import TaskbarMenu from '../context-menus/taskbar-menu';
+import CommandPalette from '../system/CommandPalette';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+
+const gameIdSet = new Set(games.map(game => game.id));
+const sanitizeCommandId = (value) => value.replace(/[^a-zA-Z0-9_-]/g, '-');
 
 export class Desktop extends Component {
     constructor() {
@@ -52,6 +56,7 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            showCommandPalette: false,
         }
     }
 
@@ -96,6 +101,87 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+    }
+
+    openCommandPalette = () => {
+        if (this.state.showCommandPalette) return;
+        this.hideAllContextMenu();
+        this.setState({ showCommandPalette: true });
+    }
+
+    closeCommandPalette = () => {
+        if (!this.state.showCommandPalette) return;
+        this.setState({ showCommandPalette: false });
+    }
+
+    getCommandPaletteCommands = () => {
+        const commands = [
+            {
+                id: 'toggle-all-apps',
+                label: this.state.allAppsView ? 'Hide all applications' : 'Show all applications',
+                description: this.state.allAppsView
+                    ? 'Close the application overview and return to the desktop.'
+                    : 'Open the application overview grid.',
+                keywords: ['launcher', 'overview', 'applications', 'apps', 'grid'],
+                group: 'Navigation',
+                action: () => this.showAllApps(),
+            },
+            {
+                id: 'toggle-sidebar',
+                label: this.state.hideSideBar ? 'Show dock' : 'Hide dock',
+                description: 'Toggle the dock that keeps your favourite applications accessible.',
+                keywords: ['dock', 'sidebar', 'favorites', 'favourites'],
+                group: 'Navigation',
+                action: () => this.hideSideBar(null, !this.state.hideSideBar),
+            },
+            {
+                id: 'window-switcher',
+                label: 'Open window switcher',
+                description: 'View running windows to quickly switch focus.',
+                keywords: ['switch', 'windows', 'alt tab'],
+                group: 'Navigation',
+                action: () => this.openWindowSwitcher(),
+            },
+        ];
+
+        const disabledApps = this.state.disabled_apps || {};
+        const favouriteApps = this.state.favourite_apps || {};
+
+        const sortedApps = apps
+            .filter((app) => !app.disabled && !disabledApps[app.id])
+            .sort((a, b) => {
+                const favA = favouriteApps[a.id] ? 0 : 1;
+                const favB = favouriteApps[b.id] ? 0 : 1;
+                if (favA !== favB) return favA - favB;
+                return a.title.localeCompare(b.title);
+            });
+
+        sortedApps.forEach((app, index) => {
+            const isGame = gameIdSet.has(app.id);
+            const keywords = [app.id];
+            if (isGame) {
+                keywords.push('game', 'play');
+            } else {
+                keywords.push('app');
+            }
+            if (app.desktop_shortcut) {
+                keywords.push('desktop', 'shortcut');
+            }
+            if (favouriteApps[app.id]) {
+                keywords.push('favorite', 'favourite', 'dock');
+            }
+
+            commands.push({
+                id: `open-${sanitizeCommandId(app.id)}-${index}`,
+                label: app.title,
+                description: isGame ? 'Launch game window.' : 'Open application window.',
+                keywords,
+                group: isGame ? 'Games' : 'Applications',
+                action: () => this.openApp(app.id),
+            });
+        });
+
+        return commands;
     }
 
     checkForNewFolders = () => {
@@ -147,11 +233,26 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcut = (e) => {
-        if (e.altKey && e.key === 'Tab') {
-            e.preventDefault();
-            if (!this.state.showWindowSwitcher) {
-                this.openWindowSwitcher();
+        const target = e.target;
+        const tagName = target && target.tagName ? target.tagName.toLowerCase() : '';
+        const isEditable = target && (target.isContentEditable || ['input', 'textarea', 'select'].includes(tagName));
+
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+            if (isEditable && !this.state.showCommandPalette) {
+                return;
             }
+            e.preventDefault();
+            this.openCommandPalette();
+            return;
+        }
+
+        if (this.state.showCommandPalette) {
+            return;
+        }
+
+        if (e.altKey && e.key === 'Tab' && !this.state.showWindowSwitcher) {
+            e.preventDefault();
+            this.openWindowSwitcher();
         } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
             e.preventDefault();
             this.openApp('clipboard-manager');
@@ -966,6 +1067,12 @@ export class Desktop extends Component {
                         windows={this.state.switcherWindows}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
+
+                <CommandPalette
+                    isOpen={this.state.showCommandPalette}
+                    onClose={this.closeCommandPalette}
+                    commands={this.getCommandPaletteCommands()}
+                />
 
             </main>
         )
