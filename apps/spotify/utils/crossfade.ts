@@ -27,11 +27,15 @@ export default class CrossfadePlayer {
     this.analyser = analyser;
   }
 
-  async play(url: string, fadeSec = 0, offset = 0) {
+  async play(
+    url: string,
+    fadeSec = 0,
+    offset = 0,
+  ): Promise<AudioContextState | null> {
     this.ensureContext();
     const ctx = this.ctx;
     const gains = this.gains;
-    if (!ctx || !gains) return;
+    if (!ctx || !gains) return null;
     try {
       const res = await fetch(url);
       const arr = await res.arrayBuffer();
@@ -56,19 +60,32 @@ export default class CrossfadePlayer {
       }
       this.sources[nextIndex] = src;
       this.current = nextIndex;
+      if (ctx.state === "suspended") {
+        await ctx.resume();
+      }
+      return ctx.state;
     } catch {
       /* ignore load errors */
+      return this.ctx?.state ?? null;
     }
   }
 
-  toggle() {
-    if (!this.ctx) return;
-    if (this.ctx.state === 'running') this.ctx.suspend();
-    else this.ctx.resume();
+  async toggle(): Promise<AudioContextState | null> {
+    if (!this.ctx) return null;
+    if (this.ctx.state === "running") {
+      await this.ctx.suspend();
+      return this.ctx.state;
+    }
+    await this.ctx.resume();
+    return this.ctx.state;
   }
 
   getAnalyser() {
     return this.analyser;
+  }
+
+  getState() {
+    return this.ctx?.state ?? null;
   }
 
   getCurrentTime() {
