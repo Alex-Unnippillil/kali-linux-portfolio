@@ -1,5 +1,6 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
+import { getAppSkeleton } from '../components/app-skeletons';
 import { logEvent } from './analytics';
 
 export const createDynamicApp = (id, title) =>
@@ -22,11 +23,7 @@ export const createDynamicApp = (id, title) =>
     },
     {
       ssr: false,
-      loading: () => (
-        <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
-          {`Loading ${title}...`}
-        </div>
-      ),
+      loading: () => getAppSkeleton(id, title),
     }
   );
 
