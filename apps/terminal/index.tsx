@@ -414,7 +414,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     <div className="relative h-full w-full">
       {paletteOpen && (
         <div className="absolute inset-0 bg-black bg-opacity-75 flex items-start justify-center z-10">
-          <div className="mt-10 w-80 bg-gray-800 p-4 rounded">
+          <div className="mt-10 w-80 bg-gray-800 p-4 rounded command-palette">
             <input
               autoFocus
               className="w-full mb-2 bg-black text-white p-2"
