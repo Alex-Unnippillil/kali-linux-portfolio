@@ -1,0 +1,24 @@
+html[dir='rtl'] body {
+  direction: rtl;
+}
+
+html[dir='rtl'] #monitor-screen {
+  direction: rtl;
+}
+
+html[dir='rtl'] .main-navbar-vp {
+  flex-direction: row-reverse;
+}
+
+html[dir='rtl'] .main-navbar-vp > * {
+  direction: rtl;
+}
+
+html[dir='rtl'] nav[aria-label='Dock'] {
+  direction: rtl;
+}
+
+html[dir='rtl'] .rtl-flip {
+  display: inline-block;
+  transform: scaleX(-1);
+}

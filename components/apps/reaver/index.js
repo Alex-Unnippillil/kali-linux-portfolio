@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import data from './data/handshakes.json';
-import SmallArrow from '../../util-components/small_arrow';
+import LogicalArrow from '../../shared/LogicalArrow';
 
 const ReaverStepper = () => {
   const { handshakes, risks, defenses } = data;
@@ -33,7 +33,9 @@ const ReaverStepper = () => {
               direction === 'right' ? 'arrow-right' : 'arrow-left'
             }`}
           >
-            <SmallArrow angle={direction} />
+            <LogicalArrow
+              direction={direction === 'right' ? 'end' : 'start'}
+            />
           </div>
           <span className="absolute left-0 -top-6 text-xs">
             {messages[current].from}

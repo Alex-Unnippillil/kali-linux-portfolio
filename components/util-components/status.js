@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Image from 'next/image';
-import SmallArrow from "./small_arrow";
+import LogicalArrow from "../shared/LogicalArrow";
 import { useSettings } from '../../hooks/useSettings';
 
 const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
@@ -77,7 +77,7 @@ export default function Status() {
         />
       </span>
       <span className="mx-1">
-        <SmallArrow angle="down" className=" status-symbol" />
+        <LogicalArrow direction="down" className="status-symbol" />
       </span>
     </div>
   );

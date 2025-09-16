@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import DirectionalIcon from '../shared/DirectionalIcon';
+import { useDirection } from '../shared/DirectionProvider';
 
 type AppMeta = {
   id: string;
@@ -27,6 +28,7 @@ const WhiskerMenu: React.FC = () => {
   const [highlight, setHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { isRTL } = useDirection();
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
@@ -122,19 +124,20 @@ const WhiskerMenu: React.FC = () => {
         onClick={() => setOpen(o => !o)}
         className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
       >
-        <Image
+        <DirectionalIcon
           src="/themes/Yaru/status/decompiler-symbolic.svg"
           alt="Menu"
           width={16}
           height={16}
-          className="inline mr-1"
+          className={`inline ${isRTL ? 'ml-1' : 'mr-1'}`}
+          sizes="16px"
         />
         Applications
       </button>
       {open && (
         <div
           ref={menuRef}
-          className="absolute left-0 mt-1 z-50 flex bg-ub-grey text-white shadow-lg"
+          className={`absolute ${isRTL ? 'right-0' : 'left-0'} mt-1 z-50 flex ${isRTL ? 'flex-row-reverse' : ''} bg-ub-grey text-white shadow-lg`}
           tabIndex={-1}
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
@@ -142,11 +145,11 @@ const WhiskerMenu: React.FC = () => {
             }
           }}
         >
-          <div className="flex flex-col bg-gray-800 p-2">
+          <div className={`flex flex-col bg-gray-800 p-2 ${isRTL ? 'items-end text-right' : ''}`}>
             {CATEGORIES.map(cat => (
               <button
                 key={cat.id}
-                className={`text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
+                className={`px-2 py-1 rounded mb-1 ${isRTL ? 'text-right' : 'text-left'} ${category === cat.id ? 'bg-gray-700' : ''}`}
                 onClick={() => setCategory(cat.id)}
               >
                 {cat.label}
@@ -155,7 +158,7 @@ const WhiskerMenu: React.FC = () => {
           </div>
           <div className="p-3">
             <input
-              className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
+              className={`mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none ${isRTL ? 'text-right' : ''}`}
               placeholder="Search"
               value={query}
               onChange={e => setQuery(e.target.value)}

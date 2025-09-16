@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from './small_arrow.module.css';
 
-export default function SmallArrow({ angle = 'up' }) {
+export default function SmallArrow({ angle = 'up', className = '' }) {
     const rotations = {
         up: '',
         down: 'rotate-180',
@@ -9,5 +9,10 @@ export default function SmallArrow({ angle = 'up' }) {
         right: 'rotate-90',
     };
 
-    return <div className={`${styles.arrow} ${rotations[angle] ?? ''}`}></div>;
+    const classes = [styles.arrow, rotations[angle] ?? '', className]
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+
+    return <div className={classes}></div>;
 }

@@ -1,4 +1,5 @@
 import Document, { Html, Head, Main, NextScript } from 'next/document';
+import { getDirectionFromLocale } from '../lib/direction';
 
 class MyDocument extends Document {
   /**
@@ -11,9 +12,11 @@ class MyDocument extends Document {
   }
 
   render() {
-    const { nonce } = this.props;
+    const { nonce, locale } = this.props;
+    const lang = locale || 'en';
+    const dir = getDirectionFromLocale(lang, 'ltr');
     return (
-      <Html lang="en" data-csp-nonce={nonce}>
+      <Html lang={lang} dir={dir} data-csp-nonce={nonce}>
         <Head>
           <link rel="icon" href="/favicon.ico" />
           <link rel="manifest" href="/manifest.webmanifest" />
