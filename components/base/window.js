@@ -8,6 +8,17 @@ import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
 
+const SNAP_PREVIEW_STYLES = {
+    left: { left: '0', top: '0', width: '50%', height: '100%' },
+    right: { left: '50%', top: '0', width: '50%', height: '100%' },
+    top: { left: '0', top: '0', width: '100%', height: '50%' },
+    bottom: { left: '0', top: '50%', width: '100%', height: '50%' },
+    'top-left': { left: '0', top: '0', width: '50%', height: '50%' },
+    'top-right': { left: '50%', top: '0', width: '50%', height: '50%' },
+    'bottom-left': { left: '0', top: '50%', width: '50%', height: '50%' },
+    'bottom-right': { left: '50%', top: '50%', width: '50%', height: '50%' }
+};
+
 export class Window extends Component {
     constructor(props) {
         super(props);
@@ -205,6 +216,52 @@ export class Window extends Component {
         return Math.round(value / 8) * 8;
     }
 
+    getSnapMetrics = (position) => {
+        if (typeof window === 'undefined') return null;
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const DOCK_OFFSET = 28;
+        const EDGE_OFFSET_X = -1;
+        const EDGE_OFFSET_Y = -2;
+
+        let widthPercent = 50;
+        let heightPercent = 50;
+
+        if (position === 'left' || position === 'right') {
+            heightPercent = 96.3;
+        } else if (position === 'top' || position === 'bottom') {
+            widthPercent = 100.2;
+        } else if (position === 'top-left' || position === 'top-right' || position === 'bottom-left' || position === 'bottom-right') {
+            // default square layout
+        } else {
+            return null;
+        }
+
+        const widthPx = viewportWidth * (widthPercent / 100);
+        const heightPx = viewportHeight * (heightPercent / 100);
+
+        let translateX = EDGE_OFFSET_X;
+        let translateY = EDGE_OFFSET_Y;
+
+        if (position.includes('right')) {
+            translateX = viewportWidth - widthPx + EDGE_OFFSET_X;
+        }
+
+        if (position.includes('bottom')) {
+            translateY = viewportHeight - heightPx - DOCK_OFFSET;
+        }
+
+        translateX = Math.max(translateX, EDGE_OFFSET_X);
+        translateY = Math.max(translateY, EDGE_OFFSET_Y);
+
+        return {
+            width: widthPercent,
+            height: heightPercent,
+            x: parseFloat(translateX.toFixed(1)),
+            y: parseFloat(translateY.toFixed(1))
+        };
+    }
+
     handleVerticleResize = () => {
         if (this.props.resizable === false) return;
         const px = (this.state.height / 100) * window.innerHeight + 1;
@@ -256,36 +313,29 @@ export class Window extends Component {
     }
 
     snapWindow = (position) => {
+        this.focusWindow();
         this.setWinowsPosition();
-        const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
-        let transform = '';
-        if (position === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (position === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        } else if (position === 'top') {
-            newWidth = 100.2;
-            newHeight = 50;
-            transform = 'translate(-1pt,-2pt)';
+        const metrics = this.getSnapMetrics(position);
+        if (!metrics) {
+            this.setState({ snapPreview: null, snapPosition: null });
+            return;
         }
-        const r = document.querySelector("#" + this.id);
-        if (r && transform) {
-            r.style.transform = transform;
+        const { width, height } = this.state;
+        const node = document.querySelector("#" + this.id);
+        if (node) {
+            node.style.transform = `translate(${metrics.x}px, ${metrics.y}px)`;
         }
         this.setState({
             snapPreview: null,
             snapPosition: null,
             snapped: position,
             lastSize: { width, height },
-            width: newWidth,
-            height: newHeight
-        }, this.resizeBoundries);
+            width: metrics.width,
+            height: metrics.height
+        }, () => {
+            this.resizeBoundries();
+            this.checkOverlap();
+        });
     }
 
     checkOverlap = () => {
@@ -314,25 +364,34 @@ export class Window extends Component {
     }
 
     checkSnapPreview = () => {
-        var r = document.querySelector("#" + this.id);
-        if (!r) return;
-        var rect = r.getBoundingClientRect();
+        const root = document.querySelector("#" + this.id);
+        if (!root || typeof window === 'undefined') return;
+        const rect = root.getBoundingClientRect();
         const threshold = 30;
-        let snap = null;
-        if (rect.left <= threshold) {
-            snap = { left: '0', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'left' });
-        }
-        else if (rect.right >= window.innerWidth - threshold) {
-            snap = { left: '50%', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'right' });
-        }
-        else if (rect.top <= threshold) {
-            snap = { left: '0', top: '0', width: '100%', height: '50%' };
-            this.setState({ snapPreview: snap, snapPosition: 'top' });
-        }
-        else {
-            if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
+        const nearLeft = rect.left <= threshold;
+        const nearRight = window.innerWidth - rect.right <= threshold;
+        const nearTop = rect.top <= threshold;
+        const nearBottom = window.innerHeight - rect.bottom <= threshold;
+
+        let position = null;
+        if (nearTop && nearLeft) position = 'top-left';
+        else if (nearTop && nearRight) position = 'top-right';
+        else if (nearBottom && nearLeft) position = 'bottom-left';
+        else if (nearBottom && nearRight) position = 'bottom-right';
+        else if (nearLeft) position = 'left';
+        else if (nearRight) position = 'right';
+        else if (nearTop) position = 'top';
+        else if (nearBottom) position = 'bottom';
+
+        if (position) {
+            if (this.state.snapPosition !== position) {
+                const preview = SNAP_PREVIEW_STYLES[position];
+                if (preview) {
+                    this.setState({ snapPreview: { ...preview }, snapPosition: position });
+                }
+            }
+        } else if (this.state.snapPreview) {
+            this.setState({ snapPreview: null, snapPosition: null });
         }
     }
 
@@ -582,33 +641,6 @@ export class Window extends Component {
                 this.unsnapWindow();
             }
         }
-    }
-
-    snapWindow = (pos) => {
-        this.focusWindow();
-        const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
-        let transform = '';
-        if (pos === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (pos === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        }
-        const node = document.getElementById(this.id);
-        if (node && transform) {
-            node.style.transform = transform;
-        }
-        this.setState({
-            snapped: pos,
-            lastSize: { width, height },
-            width: newWidth,
-            height: newHeight
-        }, this.resizeBoundries);
     }
 
     render() {
