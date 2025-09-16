@@ -4,7 +4,11 @@ import { useEffect, useState } from 'react';
 import { trackEvent } from '@/lib/analytics-client';
 import { showA2HS } from '@/src/pwa/a2hs';
 
-const InstallButton: React.FC = () => {
+interface Props {
+  className?: string;
+}
+
+const InstallButton: React.FC<Props> = ({ className = '' }) => {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -24,10 +28,7 @@ const InstallButton: React.FC = () => {
   if (!visible) return null;
 
   return (
-    <button
-      onClick={handleInstall}
-      className="fixed bottom-4 right-4 bg-ubt-blue text-white px-3 py-1 rounded"
-    >
+    <button onClick={handleInstall} className={className}>
       Install
     </button>
   );
