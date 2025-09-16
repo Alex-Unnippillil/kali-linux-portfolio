@@ -367,6 +367,7 @@ Browse all apps, games, and security tool demos at `/apps`, which presents a sea
 | Chrome | /apps/chrome | Utility / Media |
 | VS Code | /apps/vscode | StackBlitz IDE embed |
 | Spotify | /apps/spotify | Utility / Media |
+| Media Player | /apps/media | Utility / Media |
 | Youtube | /apps/youtube | Utility / Media |
 | Weather | /apps/weather | Utility / Media |
 | X / Twitter | /apps/x | Utility / Media |
