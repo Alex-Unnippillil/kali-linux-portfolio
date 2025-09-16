@@ -1,5 +1,6 @@
 "use client";
 
+import NextImage from 'next/image';
 import React, { useEffect, useState } from 'react'
 import { useSettings } from '../../hooks/useSettings';
 
@@ -38,14 +39,22 @@ export default function BackgroundImage() {
 
     return (
         <div className="bg-ubuntu-img absolute -z-10 top-0 right-0 overflow-hidden h-full w-full">
-            <img
-                src={`/wallpapers/${wallpaper}.webp`}
-                alt=""
-                className="w-full h-full object-cover"
-            />
-            {needsOverlay && (
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 to-transparent" aria-hidden="true"></div>
-            )}
+            <div className="relative h-full w-full">
+                <NextImage
+                    src={`/wallpapers/${wallpaper}.webp`}
+                    alt=""
+                    fill
+                    priority
+                    sizes="100vw"
+                    className="object-cover"
+                />
+                {needsOverlay && (
+                    <div
+                        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 to-transparent"
+                        aria-hidden="true"
+                    ></div>
+                )}
+            </div>
         </div>
     )
 }
