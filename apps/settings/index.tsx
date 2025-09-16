@@ -12,6 +12,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import AnalyticsSettings from "../../components/apps/analytics-settings";
 
 export default function Settings() {
   const {
@@ -272,6 +273,9 @@ export default function Settings() {
       )}
       {activeTab === "privacy" && (
         <>
+          <div className="px-4 mt-6">
+            <AnalyticsSettings />
+          </div>
           <div className="flex justify-center my-4 space-x-4">
             <button
               onClick={handleExport}

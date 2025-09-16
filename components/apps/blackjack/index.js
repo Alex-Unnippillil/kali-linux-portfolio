@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useReducer } from 'react';
-import ReactGA from 'react-ga4';
+import { trackEvent, GA_EVENTS } from '../../lib/analytics';
 import { BlackjackGame, handValue, cardValue, Shoe } from './engine';
 import { recommendAction } from '../../../games/blackjack/coach';
 
@@ -113,17 +113,17 @@ const gameReducer = (state, action) => {
         break;
       case 'stand':
         game.stand();
-        ReactGA.event({ category: 'Blackjack', action: 'stand' });
+        trackEvent(GA_EVENTS.BLACKJACK.STAND);
         break;
       case 'double':
         // implement double down logic
         game.double();
-        ReactGA.event({ category: 'Blackjack', action: 'double' });
+        trackEvent(GA_EVENTS.BLACKJACK.DOUBLE);
         break;
       case 'split':
         // implement split logic
         game.split();
-        ReactGA.event({ category: 'Blackjack', action: 'split' });
+        trackEvent(GA_EVENTS.BLACKJACK.SPLIT);
         break;
       case 'surrender':
         game.surrender();
@@ -201,7 +201,7 @@ const Blackjack = () => {
       setShuffling(true);
       setTimeout(() => setShuffling(false), 500);
       gameRef.current.startRound(bet, undefined, handCount);
-      ReactGA.event({ category: 'Blackjack', action: 'hand_start', value: bet * handCount });
+      trackEvent(GA_EVENTS.BLACKJACK.HAND_START(bet * handCount));
       setMessage('Hit, Stand, Double, Split or Surrender');
       setShowInsurance(gameRef.current.dealerHand[0].value === 'A');
       update();
@@ -217,14 +217,14 @@ const Blackjack = () => {
   const act = (type) => {
     const rec = recommended();
     if (rec && rec !== type) {
-      ReactGA.event({ category: 'Blackjack', action: 'deviation', label: `${rec}->${type}` });
+      trackEvent(GA_EVENTS.BLACKJACK.DEVIATION(`${rec}->${type}`));
     }
     dispatch({ type });
     update();
     if (gameRef.current.current >= gameRef.current.playerHands.length) {
       setMessage('Round complete');
       gameRef.current.playerHands.forEach((h) => {
-        if (h.result) ReactGA.event({ category: 'Blackjack', action: 'result', label: h.result });
+        if (h.result) trackEvent(GA_EVENTS.BLACKJACK.RESULT(h.result));
       });
     }
   };
@@ -251,7 +251,7 @@ const Blackjack = () => {
     setPracticeCard(practiceShoe.current.draw());
     setPractice(true);
     setPracticeFeedback('');
-    ReactGA.event({ category: 'Blackjack', action: 'count_practice_start' });
+    trackEvent(GA_EVENTS.BLACKJACK.COUNT_PRACTICE_START);
   };
 
   const submitPractice = () => {
@@ -265,7 +265,7 @@ const Blackjack = () => {
       });
       setPracticeFeedback(`Correct! Count is ${actual}`);
     } else {
-      ReactGA.event({ category: 'Blackjack', action: 'count_streak', value: streak });
+      trackEvent(GA_EVENTS.BLACKJACK.COUNT_STREAK(streak));
       setStreak(0);
       setPracticeFeedback(`Nope. Count is ${actual}`);
     }
@@ -275,7 +275,7 @@ const Blackjack = () => {
 
   const endPractice = () => {
     if (streak > 0) {
-      ReactGA.event({ category: 'Blackjack', action: 'count_streak', value: streak });
+      trackEvent(GA_EVENTS.BLACKJACK.COUNT_STREAK(streak));
     }
     setPractice(false);
   };

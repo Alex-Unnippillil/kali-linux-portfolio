@@ -19,7 +19,7 @@ import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import Taskbar from './taskbar';
 import TaskbarMenu from '../context-menus/taskbar-menu';
-import ReactGA from 'react-ga4';
+import { trackEvent, trackPageview, GA_EVENTS } from '../../lib/analytics';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
@@ -57,7 +57,7 @@ export class Desktop extends Component {
 
     componentDidMount() {
         // google analytics
-        ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+        trackPageview('/desktop', 'Custom Title');
 
         this.fetchAppsData(() => {
             const session = this.props.session || {};
@@ -239,31 +239,19 @@ export class Desktop extends Component {
         const appId = target ? target.dataset.appId : null;
         switch (context) {
             case "desktop-area":
-                ReactGA.event({
-                    category: `Context Menu`,
-                    action: `Opened Desktop Context Menu`
-                });
+                trackEvent(GA_EVENTS.CONTEXT_MENU.DESKTOP_OPEN);
                 this.showContextMenu(e, "desktop");
                 break;
             case "app":
-                ReactGA.event({
-                    category: `Context Menu`,
-                    action: `Opened App Context Menu`
-                });
+                trackEvent(GA_EVENTS.CONTEXT_MENU.APP_OPEN);
                 this.setState({ context_app: appId }, () => this.showContextMenu(e, "app"));
                 break;
             case "taskbar":
-                ReactGA.event({
-                    category: `Context Menu`,
-                    action: `Opened Taskbar Context Menu`
-                });
+                trackEvent(GA_EVENTS.CONTEXT_MENU.TASKBAR_OPEN);
                 this.setState({ context_app: appId }, () => this.showContextMenu(e, "taskbar"));
                 break;
             default:
-                ReactGA.event({
-                    category: `Context Menu`,
-                    action: `Opened Default Context Menu`
-                });
+                trackEvent(GA_EVENTS.CONTEXT_MENU.DEFAULT_OPEN);
                 this.showContextMenu(e, "default");
         }
     }
@@ -279,19 +267,19 @@ export class Desktop extends Component {
         const fakeEvent = { pageX: rect.left, pageY: rect.top + rect.height };
         switch (context) {
             case "desktop-area":
-                ReactGA.event({ category: `Context Menu`, action: `Opened Desktop Context Menu` });
+                trackEvent(GA_EVENTS.CONTEXT_MENU.DESKTOP_OPEN);
                 this.showContextMenu(fakeEvent, "desktop");
                 break;
             case "app":
-                ReactGA.event({ category: `Context Menu`, action: `Opened App Context Menu` });
+                trackEvent(GA_EVENTS.CONTEXT_MENU.APP_OPEN);
                 this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "app"));
                 break;
             case "taskbar":
-                ReactGA.event({ category: `Context Menu`, action: `Opened Taskbar Context Menu` });
+                trackEvent(GA_EVENTS.CONTEXT_MENU.TASKBAR_OPEN);
                 this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "taskbar"));
                 break;
             default:
-                ReactGA.event({ category: `Context Menu`, action: `Opened Default Context Menu` });
+                trackEvent(GA_EVENTS.CONTEXT_MENU.DEFAULT_OPEN);
                 this.showContextMenu(fakeEvent, "default");
         }
     }
@@ -586,10 +574,7 @@ export class Desktop extends Component {
     openApp = (objId) => {
 
         // google analytics
-        ReactGA.event({
-            category: `Open App`,
-            action: `Opened ${objId} window`
-        });
+        trackEvent(GA_EVENTS.OPEN_APP(objId));
 
         // if the app is disabled
         if (this.state.disabled_apps[objId]) return;

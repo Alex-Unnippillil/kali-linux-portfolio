@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import AnalyticsSettings from './analytics-settings';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 
@@ -194,6 +195,9 @@ export function Settings() {
                     </p>
                     <span ref={liveRegion} role="status" aria-live="polite" className="sr-only"></span>
                 </div>
+            </div>
+            <div className="flex justify-center my-4 px-4">
+                <AnalyticsSettings />
             </div>
             <div className="flex flex-wrap justify-center items-center border-t border-gray-900">
                 {

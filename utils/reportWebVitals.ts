@@ -1,4 +1,4 @@
-import ReactGA from 'react-ga4';
+import { trackEvent, GA_EVENTS } from '../lib/analytics';
 
 interface WebVitalMetric {
   id: string;
@@ -17,22 +17,11 @@ export const reportWebVitals = ({ id, name, value }: WebVitalMetric): void => {
 
   const rounded = Math.round(value);
 
-  ReactGA.event({
-    category: 'Web Vitals',
-    action: name,
-    label: id,
-    value: rounded,
-    nonInteraction: true,
-  });
+  trackEvent(GA_EVENTS.WEB_VITALS.METRIC(name, id, rounded));
 
   const threshold = thresholds[name];
   if (threshold !== undefined && value > threshold) {
-    ReactGA.event({
-      category: 'Performance Alert',
-      action: `${name} degraded`,
-      label: id,
-      value: rounded,
-    });
+    trackEvent(GA_EVENTS.WEB_VITALS.ALERT(name, id, rounded));
     if (typeof console !== 'undefined') {
       console.warn(`Web Vitals alert: ${name} ${rounded}`);
     }
