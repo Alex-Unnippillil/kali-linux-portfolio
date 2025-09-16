@@ -86,10 +86,11 @@ export class SideBarApp extends Component {
     };
 
     render() {
+        const displayTitle = this.props.shortcutHint ? `${this.props.title} (Alt+${this.props.shortcutHint})` : this.props.title;
         return (
             <button
                 type="button"
-                aria-label={this.props.title}
+                aria-label={displayTitle}
                 data-context="app"
                 data-app-id={this.props.id}
                 onClick={this.openApp}
@@ -100,10 +101,15 @@ export class SideBarApp extends Component {
                 onMouseLeave={() => {
                     this.setState({ showTitle: false, thumbnail: null });
                 }}
-                className={(this.props.isClose[this.id] === false && this.props.isFocus[this.id] ? "bg-white bg-opacity-10 " : "") +
-                    " w-auto p-2 outline-none relative hover:bg-white hover:bg-opacity-10 rounded m-1 transition-hover transition-active"}
+                    className={(this.props.isClose[this.id] === false && this.props.isFocus[this.id] ? "bg-white bg-opacity-10 " : "") +
+                        " w-auto p-2 outline-none relative hover:bg-white hover:bg-opacity-10 rounded m-1 transition-hover transition-active"}
                 id={"sidebar-" + this.props.id}
             >
+                {this.props.shortcutHint ? (
+                    <span className="pointer-events-none absolute -top-1 -right-1 rounded bg-ub-grey bg-opacity-80 px-1 text-[10px] font-semibold leading-4 text-ubt-grey">
+                        {this.props.shortcutHint}
+                    </span>
+                ) : null}
                 <Image
                     width={28}
                     height={28}
@@ -151,7 +157,7 @@ export class SideBarApp extends Component {
                         " w-max py-0.5 px-1.5 absolute top-1.5 left-full ml-3 m-1 text-ubt-grey text-opacity-90 text-sm bg-ub-grey bg-opacity-70 border-gray-400 border border-opacity-40 rounded-md"
                     }
                 >
-                    {this.props.title}
+                    {displayTitle}
                 </div>
             </button>
         );
