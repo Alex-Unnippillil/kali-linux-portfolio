@@ -37,6 +37,10 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._dragFrame = null;
+        this._pendingDrag = null;
+        this._lastSnapPosition = null;
+        this._lastSnapPreview = null;
     }
 
     componentDidMount() {
@@ -69,6 +73,10 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        this.cancelDragFrame();
+        this._pendingDrag = null;
+        this._lastSnapPosition = null;
+        this._lastSnapPreview = null;
     }
 
     setDefaultWindowDimenstion = () => {
@@ -256,6 +264,8 @@ export class Window extends Component {
     }
 
     snapWindow = (position) => {
+        this._lastSnapPosition = null;
+        this._lastSnapPreview = null;
         this.setWinowsPosition();
         const { width, height } = this.state;
         let newWidth = width;
@@ -288,8 +298,8 @@ export class Window extends Component {
         }, this.resizeBoundries);
     }
 
-    checkOverlap = () => {
-        var r = document.querySelector("#" + this.id);
+    checkOverlap = (node) => {
+        var r = node || document.querySelector("#" + this.id);
         var rect = r.getBoundingClientRect();
         if (rect.x.toFixed(1) < 50) { // if this window overlapps with SideBar
             this.props.hideSideBar(this.id, true);
@@ -313,26 +323,47 @@ export class Window extends Component {
         }
     }
 
-    checkSnapPreview = () => {
-        var r = document.querySelector("#" + this.id);
+    checkSnapPreview = (node) => {
+        var r = node || document.querySelector("#" + this.id);
         if (!r) return;
         var rect = r.getBoundingClientRect();
         const threshold = 30;
+        let snapPosition = null;
         let snap = null;
         if (rect.left <= threshold) {
+            snapPosition = 'left';
             snap = { left: '0', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'left' });
         }
         else if (rect.right >= window.innerWidth - threshold) {
+            snapPosition = 'right';
             snap = { left: '50%', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'right' });
         }
         else if (rect.top <= threshold) {
+            snapPosition = 'top';
             snap = { left: '0', top: '0', width: '100%', height: '50%' };
-            this.setState({ snapPreview: snap, snapPosition: 'top' });
+        }
+
+        if (snapPosition) {
+            this._lastSnapPosition = snapPosition;
+            this._lastSnapPreview = snap;
+            const prev = this.state.snapPreview;
+            if (
+                this.state.snapPosition !== snapPosition ||
+                !prev ||
+                prev.left !== snap.left ||
+                prev.top !== snap.top ||
+                prev.width !== snap.width ||
+                prev.height !== snap.height
+            ) {
+                this.setState({ snapPreview: snap, snapPosition });
+            }
         }
         else {
-            if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
+            this._lastSnapPosition = null;
+            this._lastSnapPreview = null;
+            if (this.state.snapPreview || this.state.snapPosition) {
+                this.setState({ snapPreview: null, snapPosition: null });
+            }
         }
     }
 
@@ -357,20 +388,60 @@ export class Window extends Component {
         node.style.transform = `translate(${x}px, ${y}px)`;
     }
 
-    handleDrag = (e, data) => {
-        if (data && data.node) {
-            this.applyEdgeResistance(data.node, data);
+    processDragUpdate = ({ node, data } = {}) => {
+        if (node && data) {
+            this.applyEdgeResistance(node, data);
+            this.checkOverlap(node);
+            this.checkSnapPreview(node);
+        } else {
+            this.checkOverlap();
+            this.checkSnapPreview();
         }
-        this.checkOverlap();
-        this.checkSnapPreview();
+    }
+
+    flushDragFrame = () => {
+        this._dragFrame = null;
+        if (!this._pendingDrag) return;
+        const pending = this._pendingDrag;
+        this._pendingDrag = null;
+        this.processDragUpdate(pending);
+    }
+
+    scheduleDragFrame = () => {
+        if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+            this.flushDragFrame();
+            return;
+        }
+        if (this._dragFrame !== null) return;
+        this._dragFrame = window.requestAnimationFrame(this.flushDragFrame);
+    }
+
+    cancelDragFrame = () => {
+        if (this._dragFrame !== null && typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+            window.cancelAnimationFrame(this._dragFrame);
+        }
+        this._dragFrame = null;
+    }
+
+    handleDrag = (e, data) => {
+        this._pendingDrag = { node: data && data.node ? data.node : null, data };
+        this.scheduleDragFrame();
     }
 
     handleStop = () => {
+        this.cancelDragFrame();
+        if (this._pendingDrag) {
+            const pending = this._pendingDrag;
+            this._pendingDrag = null;
+            this.processDragUpdate(pending);
+        }
         this.changeCursorToDefault();
-        const snapPos = this.state.snapPosition;
+        const snapPos = this._lastSnapPosition;
         if (snapPos) {
             this.snapWindow(snapPos);
-        } else {
+        } else if (this.state.snapPreview || this.state.snapPosition) {
+            this._lastSnapPosition = null;
+            this._lastSnapPreview = null;
             this.setState({ snapPreview: null, snapPosition: null });
         }
     }
@@ -424,7 +495,7 @@ export class Window extends Component {
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
             this.setState({ maximized: false });
-            this.checkOverlap();
+            this.checkOverlap(node);
             return;
         }
 
@@ -432,7 +503,7 @@ export class Window extends Component {
             this._dockAnimation.onfinish = () => {
                 node.style.transform = endTransform;
                 this.setState({ maximized: false });
-                this.checkOverlap();
+                this.checkOverlap(node);
                 this._dockAnimation.onfinish = null;
             };
             this._dockAnimation.reverse();
@@ -444,7 +515,7 @@ export class Window extends Component {
             this._dockAnimation.onfinish = () => {
                 node.style.transform = endTransform;
                 this.setState({ maximized: false });
-                this.checkOverlap();
+                this.checkOverlap(node);
                 this._dockAnimation.onfinish = null;
             };
         }
@@ -504,8 +575,8 @@ export class Window extends Component {
                     x += dx;
                     y += dy;
                     node.style.transform = `translate(${x}px, ${y}px)`;
-                    this.checkOverlap();
-                    this.checkSnapPreview();
+                    this.checkOverlap(node);
+                    this.checkSnapPreview(node);
                     this.setWinowsPosition();
                 }
             }
