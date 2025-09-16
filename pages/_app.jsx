@@ -14,6 +14,7 @@ import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
+import RegisterProtocolHandlersClient from '../components/RegisterProtocolHandlersClient';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 
@@ -159,6 +160,7 @@ function MyApp(props) {
         <SettingsProvider>
           <PipPortalProvider>
             <div aria-live="polite" id="live-region" />
+            <RegisterProtocolHandlersClient />
             <Component {...pageProps} />
             <ShortcutOverlay />
             <Analytics
