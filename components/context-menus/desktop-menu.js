@@ -1,18 +1,10 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import logger from '../../utils/logger'
+import { attach, register } from '../../app/desktop/keymap'
 
 function DesktopMenu(props) {
 
     const [isFullScreen, setIsFullScreen] = useState(false)
-
-    useEffect(() => {
-        document.addEventListener('fullscreenchange', checkFullScreen);
-        return () => {
-            document.removeEventListener('fullscreenchange', checkFullScreen);
-        };
-    }, [])
-
-
     const openTerminal = () => {
         props.openApp("terminal");
     }
@@ -21,15 +13,15 @@ function DesktopMenu(props) {
         props.openApp("settings");
     }
 
-    const checkFullScreen = () => {
+    const checkFullScreen = useCallback(() => {
         if (document.fullscreenElement) {
             setIsFullScreen(true)
         } else {
             setIsFullScreen(false)
         }
-    }
+    }, [])
 
-    const goFullScreen = () => {
+    const goFullScreen = useCallback(() => {
         // make website full screen
         try {
             if (document.fullscreenElement) {
@@ -41,7 +33,28 @@ function DesktopMenu(props) {
         catch (e) {
             logger.error(e)
         }
-    }
+    }, [])
+
+    useEffect(() => {
+        document.addEventListener('fullscreenchange', checkFullScreen);
+        checkFullScreen()
+        return () => {
+            document.removeEventListener('fullscreenchange', checkFullScreen);
+        };
+    }, [checkFullScreen])
+
+    useEffect(() => {
+        const detach = attach()
+        const unregisterAltEnter = register('Alt+Enter', (event) => {
+            event.preventDefault()
+            goFullScreen()
+        })
+
+        return () => {
+            unregisterAltEnter()
+            detach()
+        }
+    }, [goFullScreen])
 
     return (
         <div
