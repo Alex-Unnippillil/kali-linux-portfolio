@@ -19,10 +19,28 @@ import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import Taskbar from './taskbar';
 import TaskbarMenu from '../context-menus/taskbar-menu';
+import HotCornerHint from '../desktop/HotCornerHint';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+
+const HOT_CORNER_STORAGE_KEY = 'hot-corner-actions';
+const HOT_CORNER_ACTIONS = {
+    SHOW_APP_GRID: 'show-app-grid',
+    WINDOW_SWITCHER: 'window-switcher',
+    OPEN_SETTINGS: 'open-settings',
+    TOGGLE_SHORTCUT_SELECTOR: 'toggle-shortcut-selector',
+};
+
+const DEFAULT_HOT_CORNER_ASSIGNMENTS = {
+    'top-left': HOT_CORNER_ACTIONS.SHOW_APP_GRID,
+    'top-right': HOT_CORNER_ACTIONS.WINDOW_SWITCHER,
+    'bottom-left': HOT_CORNER_ACTIONS.OPEN_SETTINGS,
+    'bottom-right': HOT_CORNER_ACTIONS.TOGGLE_SHORTCUT_SELECTOR,
+};
+
+const HOT_CORNER_ORDER = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
 
 export class Desktop extends Component {
     constructor() {
@@ -52,7 +70,27 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            hotCornerAssignments: { ...DEFAULT_HOT_CORNER_ASSIGNMENTS },
         }
+
+        this.hotCornerDefinitions = {
+            [HOT_CORNER_ACTIONS.SHOW_APP_GRID]: {
+                label: 'Toggle application overview',
+                action: () => this.showAllApps(),
+            },
+            [HOT_CORNER_ACTIONS.WINDOW_SWITCHER]: {
+                label: 'Toggle window switcher',
+                action: () => this.toggleWindowSwitcher(),
+            },
+            [HOT_CORNER_ACTIONS.OPEN_SETTINGS]: {
+                label: 'Open settings',
+                action: () => this.openApp('settings'),
+            },
+            [HOT_CORNER_ACTIONS.TOGGLE_SHORTCUT_SELECTOR]: {
+                label: 'Desktop shortcuts',
+                action: () => this.toggleShortcutSelector(),
+            },
+        };
     }
 
     componentDidMount() {
@@ -85,6 +123,7 @@ export class Desktop extends Component {
         this.setEventListeners();
         this.checkForNewFolders();
         this.checkForAppShortcuts();
+        this.loadHotCornerPreferences();
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
@@ -223,6 +262,14 @@ export class Desktop extends Component {
 
     closeWindowSwitcher = () => {
         this.setState({ showWindowSwitcher: false, switcherWindows: [] });
+    }
+
+    toggleWindowSwitcher = () => {
+        if (this.state.showWindowSwitcher) {
+            this.closeWindowSwitcher();
+        } else {
+            this.openWindowSwitcher();
+        }
     }
 
     selectWindow = (id) => {
@@ -755,6 +802,10 @@ export class Desktop extends Component {
         this.setState({ showShortcutSelector: true });
     }
 
+    toggleShortcutSelector = () => {
+        this.setState((prev) => ({ showShortcutSelector: !prev.showShortcutSelector }));
+    }
+
     addShortcutToDesktop = (app_id) => {
         const appIndex = apps.findIndex(app => app.id === app_id);
         if (appIndex === -1) return;
@@ -785,6 +836,63 @@ export class Desktop extends Component {
             }
             this.updateAppsData();
         }
+    }
+
+    loadHotCornerPreferences = () => {
+        if (!safeLocalStorage) {
+            return;
+        }
+        try {
+            const stored = safeLocalStorage.getItem(HOT_CORNER_STORAGE_KEY);
+            if (!stored) {
+                safeLocalStorage.setItem(HOT_CORNER_STORAGE_KEY, JSON.stringify(this.state.hotCornerAssignments));
+                return;
+            }
+            const parsed = JSON.parse(stored);
+            const merged = { ...DEFAULT_HOT_CORNER_ASSIGNMENTS };
+            HOT_CORNER_ORDER.forEach((corner) => {
+                const value = parsed?.[corner];
+                if (typeof value === 'string' && this.hotCornerDefinitions[value]) {
+                    merged[corner] = value;
+                }
+            });
+            this.setState({ hotCornerAssignments: merged });
+            safeLocalStorage.setItem(HOT_CORNER_STORAGE_KEY, JSON.stringify(merged));
+        } catch (e) {
+            safeLocalStorage.setItem(HOT_CORNER_STORAGE_KEY, JSON.stringify(this.state.hotCornerAssignments));
+        }
+    }
+
+    setHotCornerPreference = (corner, actionId) => {
+        if (!HOT_CORNER_ORDER.includes(corner) || !this.hotCornerDefinitions[actionId]) {
+            return;
+        }
+        this.setState((prevState) => {
+            const next = { ...prevState.hotCornerAssignments, [corner]: actionId };
+            if (safeLocalStorage) {
+                safeLocalStorage.setItem(HOT_CORNER_STORAGE_KEY, JSON.stringify(next));
+            }
+            return { hotCornerAssignments: next };
+        });
+    }
+
+    renderHotCornerHints = () => {
+        const assignments = this.state.hotCornerAssignments || DEFAULT_HOT_CORNER_ASSIGNMENTS;
+        return HOT_CORNER_ORDER.map((corner) => {
+            const actionKey = assignments[corner] || DEFAULT_HOT_CORNER_ASSIGNMENTS[corner];
+            const definition = this.hotCornerDefinitions[actionKey];
+            if (!definition) {
+                return null;
+            }
+            return (
+                <HotCornerHint
+                    key={corner}
+                    corner={corner}
+                    label={definition.label}
+                    onActivate={definition.action}
+                />
+            );
+        });
     }
 
     updateTrashIcon = () => {
@@ -966,6 +1074,8 @@ export class Desktop extends Component {
                         windows={this.state.switcherWindows}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
+
+                { this.renderHotCornerHints() }
 
             </main>
         )
