@@ -1,4 +1,5 @@
 import usePersistentState from '../../hooks/usePersistentState';
+import { getMetaKeyLabel } from '../../utils/metaKey';
 
 export interface Shortcut {
   description: string;
@@ -7,7 +8,10 @@ export interface Shortcut {
 
 const DEFAULT_SHORTCUTS: Shortcut[] = [
   { description: 'Show keyboard shortcuts', keys: '?' },
-  { description: 'Open settings', keys: 'Ctrl+,' },
+  {
+    description: 'Open settings',
+    keys: `${getMetaKeyLabel()}+,`,
+  },
 ];
 
 const validator = (value: unknown): value is Record<string, string> => {
