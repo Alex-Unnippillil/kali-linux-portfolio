@@ -530,3 +530,13 @@ textarea:focus-visible {
     color: #000 !important;
 }
 
+@media (prefers-contrast: more), (forced-colors: active) {
+    :root {
+        --color-border: color-mix(in srgb, var(--color-border) 30%, var(--color-text) 70%);
+    }
+
+    body {
+        font-weight: 600;
+    }
+}
+
