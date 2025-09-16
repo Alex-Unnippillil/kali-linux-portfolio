@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { onIdle } from '../lib/idle';
 import modulesData from '../data/module-index.json';
 import versionInfo from '../data/module-version.json';
 
@@ -68,10 +69,21 @@ const PopularModules: React.FC = () => {
   };
 
   useEffect(() => {
-    fetch(`/api/modules/update?version=${version}`)
-      .then((res) => res.json())
-      .then((data) => setUpdateAvailable(data.needsUpdate))
-      .catch(() => setUpdateAvailable(false));
+    let cancelled = false;
+    const cancelIdle = onIdle(() => {
+      fetch(`/api/modules/update?version=${version}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (!cancelled) setUpdateAvailable(data.needsUpdate);
+        })
+        .catch(() => {
+          if (!cancelled) setUpdateAvailable(false);
+        });
+    });
+    return () => {
+      cancelled = true;
+      cancelIdle();
+    };
   }, [version]);
 
   const handleUpdate = async () => {

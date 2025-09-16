@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { onIdle } from '../../../lib/idle';
 import useWatchLater, {
   Video as WatchLaterVideo,
 } from '../../../apps/youtube/state/watchLater';
@@ -303,7 +304,9 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
       );
       list.push({ url: streamUrl, ts: Date.now() });
       localStorage.setItem(CACHED_LIST_KEY, JSON.stringify(list));
-      await trimVideoCache();
+      onIdle(() => {
+        void trimVideoCache().catch(() => {});
+      });
     } catch {
       // ignore errors
     }
@@ -343,7 +346,10 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   }, [current]);
 
   useEffect(() => {
-    void trimVideoCache();
+    const cancel = onIdle(() => {
+      void trimVideoCache().catch(() => {});
+    });
+    return cancel;
   }, []);
 
   useEffect(() => {
