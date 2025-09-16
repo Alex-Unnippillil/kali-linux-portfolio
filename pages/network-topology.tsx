@@ -7,7 +7,13 @@ const NetworkTopology: React.FC = () => {
   return (
     <>
       <Meta />
-      <main className="bg-ub-cool-grey text-white min-h-screen p-4 space-y-4">
+      <section
+        aria-labelledby="network-topology-heading"
+        className="bg-ub-cool-grey text-white min-h-screen p-4 space-y-4"
+      >
+        <h1 id="network-topology-heading" className="text-2xl font-semibold">
+          Network topology mitigation demo
+        </h1>
         <button
           onClick={() => setMitigated((m) => !m)}
           className="px-4 py-2 bg-blue-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
@@ -116,7 +122,7 @@ const NetworkTopology: React.FC = () => {
             </>
           )}
         </svg>
-      </main>
+      </section>
     </>
   );
 };

@@ -1,10 +1,15 @@
 import ScrollableTimeline from '../components/ScrollableTimeline';
 
 const ProfilePage = () => (
-  <main className="min-h-screen p-4 bg-gray-900 text-white">
-    <h1 className="mb-4 text-2xl">Timeline</h1>
+  <section
+    aria-labelledby="timeline-heading"
+    className="min-h-screen p-4 bg-gray-900 text-white"
+  >
+    <h1 id="timeline-heading" className="mb-4 text-2xl">
+      Timeline
+    </h1>
     <ScrollableTimeline />
-  </main>
+  </section>
 );
 
 export default ProfilePage;

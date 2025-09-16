@@ -16,7 +16,7 @@ export default function Taskbar(props) {
     };
 
     return (
-        <div className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center z-40" role="toolbar">
+        <footer className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center z-40" role="toolbar">
             {runningApps.map(app => (
                 <button
                     key={app.id}
@@ -42,6 +42,6 @@ export default function Taskbar(props) {
                     )}
                 </button>
             ))}
-        </div>
+        </footer>
     );
 }

@@ -75,7 +75,13 @@ const SekurlsaLogonpasswords = () => {
       <div style={{ backgroundColor: '#fcd34d', padding: '1rem', textAlign: 'center', fontWeight: 'bold' }}>
         Sanitized credential data for educational use only.
       </div>
-      <main className="grid gap-4 p-4 md:grid-cols-2">
+      <section
+        aria-labelledby="sekurlsa-heading"
+        className="grid gap-4 p-4 md:grid-cols-2"
+      >
+        <h1 id="sekurlsa-heading" className="md:col-span-2 text-2xl font-semibold">
+          Parsed sekurlsa::logonpasswords output
+        </h1>
         {sessions.map((s) => (
           <div key={s.authId} className="p-4 bg-ub-dark text-white rounded border border-ub-dark-grey">
             <h2 className="text-lg mb-2">Authentication Id: {s.authId}</h2>
@@ -86,7 +92,7 @@ const SekurlsaLogonpasswords = () => {
             <p><strong>SID:</strong> {s.sid}</p>
           </div>
         ))}
-      </main>
+      </section>
     </>
   );
 };

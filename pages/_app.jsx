@@ -10,6 +10,7 @@ import '../styles/resume-print.css';
 import '../styles/print.css';
 import '@xterm/xterm/css/xterm.css';
 import 'leaflet/dist/leaflet.css';
+import Link from 'next/link';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
@@ -23,6 +24,13 @@ const ubuntu = Ubuntu({
   subsets: ['latin'],
   weight: ['300', '400', '500', '700'],
 });
+
+const NAV_LINKS = [
+  { href: '/', label: 'Desktop' },
+  { href: '/apps', label: 'App catalog' },
+  { href: '/daily-quote', label: 'Daily quote' },
+  { href: '/profile', label: 'Timeline' },
+];
 
 
 function MyApp(props) {
@@ -151,15 +159,48 @@ function MyApp(props) {
       <Script src="/a2hs.js" strategy="beforeInteractive" />
       <div className={ubuntu.className}>
         <a
-          href="#app-grid"
+          href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"
         >
-          Skip to app grid
+          Skip to main content
         </a>
         <SettingsProvider>
           <PipPortalProvider>
             <div aria-live="polite" id="live-region" />
-            <Component {...pageProps} />
+            <div className="flex min-h-screen flex-col">
+              <header className="sr-only focus-within:not-sr-only focus-within:absolute focus-within:left-0 focus-within:top-0 focus-within:z-50 focus-within:bg-white focus-within:text-black focus-within:p-4 focus-within:shadow-lg">
+                <h1 className="text-lg font-semibold">
+                  <Link href="/" className="focus:outline-none focus-visible:ring">
+                    Kali Linux Portfolio
+                  </Link>
+                </h1>
+              </header>
+              <nav
+                aria-label="Primary"
+                className="sr-only focus-within:not-sr-only focus-within:absolute focus-within:left-0 focus-within:top-16 focus-within:z-50 focus-within:bg-white focus-within:text-black focus-within:p-4 focus-within:shadow-lg"
+              >
+                <ul className="flex flex-col gap-2">
+                  {NAV_LINKS.map((link) => (
+                    <li key={link.href}>
+                      <Link
+                        href={link.href}
+                        className="underline focus:outline-none focus-visible:ring focus-visible:ring-offset-2"
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+              <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
+                <Component {...pageProps} />
+              </main>
+              <footer className="sr-only focus-within:not-sr-only focus-within:absolute focus-within:bottom-0 focus-within:left-0 focus-within:z-50 focus-within:bg-white focus-within:text-black focus-within:p-4 focus-within:shadow-lg">
+                <p>
+                  © {new Date().getFullYear()} Alex Unnippillil. Educational simulations only.
+                </p>
+              </footer>
+            </div>
             <ShortcutOverlay />
             <Analytics
               beforeSend={(e) => {

@@ -44,8 +44,13 @@ const WpsAttack = () => {
   return (
     <>
       <Meta />
-      <main className="bg-ub-cool-grey text-white min-h-screen p-4">
-        <h1 className="text-2xl mb-4">WPS Attack Walkthrough</h1>
+      <section
+        aria-labelledby="wps-attack-heading"
+        className="bg-ub-cool-grey text-white min-h-screen p-4"
+      >
+        <h1 id="wps-attack-heading" className="text-2xl mb-4">
+          WPS Attack Walkthrough
+        </h1>
         <ol className="space-y-4">
           {steps.map((s, idx) => (
             <li
@@ -83,7 +88,7 @@ ${s.output}`}
         <p className="text-xs text-red-400 mt-6">
           Warning: This walkthrough is for educational purposes only. Unauthorized network access is illegal and unethical. Always obtain permission before testing security.
         </p>
-      </main>
+      </section>
     </>
   );
 };
