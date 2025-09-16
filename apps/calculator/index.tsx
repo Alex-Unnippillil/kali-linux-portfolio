@@ -1,5 +1,5 @@
 'use client';
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import ModeSwitcher from './components/ModeSwitcher';
 import MemorySlots from './components/MemorySlots';
@@ -55,8 +55,6 @@ export default function Calculator() {
 
       const display = document.getElementById('display') as HTMLInputElement;
       const buttons = document.querySelectorAll<HTMLButtonElement>('.btn');
-      const historyToggle = document.getElementById('toggle-history');
-      const historyEl = document.getElementById('history');
       const formulasToggle = document.getElementById('toggle-formulas');
       const formulasEl = document.getElementById('formulas');
       const baseSelect = document.getElementById('base-select') as HTMLSelectElement | null;
@@ -165,10 +163,6 @@ export default function Calculator() {
       };
       document.addEventListener('keydown', keyHandler);
 
-      historyToggle?.addEventListener('click', () => {
-        historyEl?.classList.toggle('hidden');
-      });
-
       formulasToggle?.addEventListener('click', () => {
         formulasEl?.classList.toggle('hidden');
       });
@@ -188,25 +182,80 @@ export default function Calculator() {
     load();
   }, [setHistory]);
 
-    return (
+  const handleTapeSelect = useCallback(({ result }: { expr: string; result: string }) => {
+    const display = document.getElementById('display') as HTMLInputElement | null;
+    if (!display) return;
+    const start = display.selectionStart ?? display.value.length;
+    const end = display.selectionEnd ?? display.value.length;
+    const before = display.value.slice(0, start);
+    const after = display.value.slice(end);
+    const insertion = result;
+    display.value = before + insertion + after;
+    const pos = start + insertion.length;
+    display.selectionStart = display.selectionEnd = pos;
+    display.focus();
+  }, []);
+
+  const handleClearHistory = useCallback(() => {
+    setHistory([]);
+  }, [setHistory]);
+
+  return (
     <div className="calculator !bg-[var(--kali-bg)]">
-      <ModeSwitcher />
-            <input id="display" className="display h-12" />
-      <button id="toggle-precise" className="toggle h-12" aria-pressed="false" aria-label="toggle precise mode">Precise Mode: Off</button>
-      <button id="toggle-scientific" className="toggle h-12" aria-pressed="false" aria-label="toggle scientific mode">Scientific</button>
-      <button id="toggle-programmer" className="toggle h-12" aria-pressed="false" aria-label="toggle programmer mode">Programmer</button>
-      <button id="toggle-history" className="toggle h-12" aria-pressed="false" aria-label="toggle history">History</button>
-      <button id="toggle-formulas" className="toggle h-12" aria-pressed="false" aria-label="toggle formulas">Formulas</button>
-      <div className="memory-grid grid grid-cols-3" aria-label="memory functions">
-        <button className={btnCls} data-action="mplus" aria-label="add to memory">M+</button>
-        <button className={btnCls} data-action="mminus" aria-label="subtract from memory">M&minus;</button>
-        <button className={btnCls} data-action="mr" aria-label="recall memory">MR</button>
-      </div>
-      <MemorySlots />
-      <div className="button-grid grid grid-cols-4 font-mono" aria-label="calculator keypad">
-        <button className={btnCls} data-value="7" data-key="7" aria-label="seven">7</button>
-        <button className={btnCls} data-value="8" data-key="8" aria-label="eight">8</button>
-        <button className={btnCls} data-value="9" data-key="9" aria-label="nine">9</button>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+        <div className="flex-1 space-y-3">
+          <ModeSwitcher />
+          <input id="display" className="display h-12" />
+          <div className="flex flex-col gap-2">
+            <button
+              id="toggle-precise"
+              className="toggle h-12"
+              aria-pressed="false"
+              aria-label="toggle precise mode"
+            >
+              Precise Mode: Off
+            </button>
+            <button
+              id="toggle-scientific"
+              className="toggle h-12"
+              aria-pressed="false"
+              aria-label="toggle scientific mode"
+            >
+              Scientific
+            </button>
+            <button
+              id="toggle-programmer"
+              className="toggle h-12"
+              aria-pressed="false"
+              aria-label="toggle programmer mode"
+            >
+              Programmer
+            </button>
+            <button
+              id="toggle-formulas"
+              className="toggle h-12"
+              aria-pressed="false"
+              aria-label="toggle formulas"
+            >
+              Formulas
+            </button>
+          </div>
+          <div className="memory-grid grid grid-cols-3" aria-label="memory functions">
+            <button className={btnCls} data-action="mplus" aria-label="add to memory">
+              M+
+            </button>
+            <button className={btnCls} data-action="mminus" aria-label="subtract from memory">
+              M&minus;
+            </button>
+            <button className={btnCls} data-action="mr" aria-label="recall memory">
+              MR
+            </button>
+          </div>
+          <MemorySlots />
+          <div className="button-grid grid grid-cols-4 font-mono" aria-label="calculator keypad">
+            <button className={btnCls} data-value="7" data-key="7" aria-label="seven">7</button>
+            <button className={btnCls} data-value="8" data-key="8" aria-label="eight">8</button>
+            <button className={btnCls} data-value="9" data-key="9" aria-label="nine">9</button>
         <button className={btnCls} data-value="/" data-key="/" aria-label="divide">
           <svg
             viewBox="0 0 24 24"
@@ -325,16 +374,15 @@ export default function Calculator() {
       <button className={btnCls} data-action="ans" aria-label="previous answer">Ans</button>
       <button id="print-tape" className={btnCls} data-action="print" aria-label="print tape">Print</button>
         <div id="paren-indicator" />
-      </div>
-      <FormulaEditor />
-      <div id="history" className="history hidden" aria-live="polite">
-        {history.map(({ expr, result }, i) => (
-          <div key={i} className="history-entry">
-            {expr} = {result}
           </div>
-        ))}
+          <FormulaEditor />
+        </div>
+        <Tape
+          entries={history}
+          onSelect={handleTapeSelect}
+          onClear={handleClearHistory}
+        />
       </div>
-      <Tape entries={history} />
     </div>
   );
 }
