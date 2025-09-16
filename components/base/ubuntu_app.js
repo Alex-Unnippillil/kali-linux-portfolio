@@ -1,5 +1,6 @@
 import React, { Component } from 'react'
 import Image from 'next/image'
+import { DEFAULT_BLUR_DATA_URL } from '@/utils/imagePlaceholder'
 
 export class UbuntuApp extends Component {
     constructor() {
@@ -57,6 +58,8 @@ export class UbuntuApp extends Component {
                     src={this.props.icon.replace('./', '/')}
                     alt={"Kali " + this.props.name}
                     sizes="40px"
+                    placeholder="blur"
+                    blurDataURL={DEFAULT_BLUR_DATA_URL}
                 />
                 {this.props.displayName || this.props.name}
 

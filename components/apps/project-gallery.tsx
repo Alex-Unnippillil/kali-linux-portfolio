@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
+import { DEFAULT_BLUR_DATA_URL } from '@/utils/imagePlaceholder';
 import projectsData from '../../data/projects.json';
 
 interface Project {
@@ -260,12 +262,17 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
             className="mb-4 break-inside-avoid bg-gray-800 rounded shadow overflow-hidden"
           >
             <div className="flex flex-col md:flex-row h-48">
-              <img
-                src={project.thumbnail}
-                alt={project.title}
-                className="w-full md:w-1/2 h-48 object-cover"
-                loading="lazy"
-              />
+              <div className="relative w-full md:w-1/2 h-48">
+                <Image
+                  src={project.thumbnail}
+                  alt={project.title}
+                  fill
+                  className="object-cover"
+                  sizes="(min-width: 768px) 50vw, 100vw"
+                  placeholder="blur"
+                  blurDataURL={DEFAULT_BLUR_DATA_URL}
+                />
+              </div>
               <div className="w-full md:w-1/2 h-48">
                 <Editor
                   height="100%"
