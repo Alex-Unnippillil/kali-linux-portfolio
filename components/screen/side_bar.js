@@ -52,7 +52,7 @@ export function AllApps(props) {
 
     return (
         <div
-            className={`w-10 h-10 rounded m-1 hover:bg-white hover:bg-opacity-10 flex items-center justify-center transition-hover transition-active`}
+            className={`w-10 h-10 rounded m-2 hover:bg-white hover:bg-opacity-10 flex items-center justify-center transition-hover transition-active`}
             style={{ marginTop: 'auto' }}
             onMouseEnter={() => {
                 setTitle(true);
@@ -64,12 +64,12 @@ export function AllApps(props) {
         >
             <div className="relative">
                 <Image
-                    width={28}
-                    height={28}
-                    className="w-7"
+                    width={24}
+                    height={24}
+                    className="h-6 w-6"
                     src="/themes/Yaru/system/view-app-grid-symbolic.svg"
                     alt="Ubuntu view app"
-                    sizes="28px"
+                    sizes="24px"
                 />
                 <div
                     className={
