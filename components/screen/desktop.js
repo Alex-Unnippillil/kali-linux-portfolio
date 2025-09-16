@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import FullscreenBar from '../desktop/FullscreenBar';
 
 export class Desktop extends Component {
     constructor() {
@@ -866,6 +867,8 @@ export class Desktop extends Component {
     render() {
         return (
             <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+
+                <FullscreenBar />
 
                 {/* Window Area */}
                 <div
