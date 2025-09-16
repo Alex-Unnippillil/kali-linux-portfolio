@@ -1,8 +1,8 @@
-
 'use client';
 
 import { useEffect } from 'react';
 import { reportClientError } from '../lib/client-error-reporter';
+import FadeInOnMount from '../components/common/FadeInOnMount';
 
 export default function Error({ error, reset }: { error: Error; reset: () => void }) {
   useEffect(() => {
@@ -10,7 +10,7 @@ export default function Error({ error, reset }: { error: Error; reset: () => voi
   }, [error]);
 
   return (
-    <div className="flex flex-col items-center justify-center gap-4 p-4">
+    <FadeInOnMount className="flex flex-col items-center justify-center gap-4 p-4">
       <h2 className="text-xl font-semibold">Something went wrong!</h2>
       <button
         type="button"
@@ -19,6 +19,6 @@ export default function Error({ error, reset }: { error: Error; reset: () => voi
       >
         Try again
       </button>
-    </div>
+    </FadeInOnMount>
   );
 }

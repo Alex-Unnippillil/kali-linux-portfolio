@@ -38,6 +38,26 @@ button:focus-visible {
     scroll-behavior: auto !important;
 }
 
+.app-shell {
+    opacity: 0;
+    transform: translateY(0.75rem);
+    transition: opacity 320ms ease-out, transform 320ms ease-out;
+    will-change: opacity, transform;
+}
+
+.app-shell--ready {
+    opacity: 1;
+    transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-shell {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+}
+
 /* Top NavBar styling */
 
 .top-arrow-up {
