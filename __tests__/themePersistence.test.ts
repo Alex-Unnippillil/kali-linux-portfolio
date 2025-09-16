@@ -1,6 +1,6 @@
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { SettingsProvider, useSettings } from '../hooks/useSettings';
-import { getTheme, getUnlockedThemes, setTheme } from '../utils/theme';
+import { getTheme, getThemePreferences, getUnlockedThemes, setTheme } from '../utils/theme';
 
 
 describe('theme persistence and unlocking', () => {
@@ -32,6 +32,45 @@ describe('theme persistence and unlocking', () => {
     expect(document.documentElement.classList.contains('dark')).toBe(true);
     setTheme('matrix');
     expect(document.documentElement.classList.contains('dark')).toBe(true);
+  });
+
+  test('persists accent and wallpaper per theme', async () => {
+    const { result } = renderHook(() => useSettings(), {
+      wrapper: SettingsProvider,
+    });
+
+    await waitFor(() =>
+      expect(getThemePreferences(result.current.theme)).not.toEqual({}),
+    );
+
+    act(() => {
+      result.current.setAccent('#e53e3e');
+      result.current.setWallpaper('wall-3');
+    });
+
+    expect(getThemePreferences('default')).toEqual(
+      expect.objectContaining({ accent: '#e53e3e', wallpaper: 'wall-3' }),
+    );
+
+    act(() => {
+      result.current.setTheme('dark');
+    });
+
+    act(() => {
+      result.current.setAccent('#38a169');
+      result.current.setWallpaper('wall-4');
+    });
+
+    expect(getThemePreferences('dark')).toEqual(
+      expect.objectContaining({ accent: '#38a169', wallpaper: 'wall-4' }),
+    );
+
+    act(() => {
+      result.current.setTheme('default');
+    });
+
+    expect(result.current.accent).toBe('#e53e3e');
+    expect(result.current.wallpaper).toBe('wall-3');
   });
 
   test('updates CSS variables without reload', () => {

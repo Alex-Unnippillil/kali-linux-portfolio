@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
-import BackgroundSlideshow from "./components/BackgroundSlideshow";
+import { useSettings } from "../../hooks/useSettings";
+import AppearanceTab from "./appearance";
 import {
   resetSettings,
   defaults,
@@ -42,19 +42,6 @@ export default function Settings() {
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
 
-  const wallpapers = [
-    "wall-1",
-    "wall-2",
-    "wall-3",
-    "wall-4",
-    "wall-5",
-    "wall-6",
-    "wall-7",
-    "wall-8",
-  ];
-
-  const changeBackground = (name: string) => setWallpaper(name);
-
   const handleExport = async () => {
     const data = await exportSettingsData();
     const blob = new Blob([data], { type: "application/json" });
@@ -71,6 +58,7 @@ export default function Settings() {
     await importSettingsData(text);
     try {
       const parsed = JSON.parse(text);
+      if (parsed.theme !== undefined) setTheme(parsed.theme);
       if (parsed.accent !== undefined) setAccent(parsed.accent);
       if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
       if (parsed.density !== undefined) setDensity(parsed.density);
@@ -79,7 +67,6 @@ export default function Settings() {
       if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
-      if (parsed.theme !== undefined) setTheme(parsed.theme);
     } catch (err) {
       console.error("Invalid settings", err);
     }
@@ -94,13 +81,13 @@ export default function Settings() {
       return;
     await resetSettings();
     window.localStorage.clear();
+    setTheme("default");
     setAccent(defaults.accent);
     setWallpaper(defaults.wallpaper);
     setDensity(defaults.density as any);
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
-    setTheme("default");
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
@@ -112,15 +99,6 @@ export default function Settings() {
       </div>
       {activeTab === "appearance" && (
         <>
-          <div
-            className="md:w-2/5 w-2/3 h-1/3 m-auto my-4"
-            style={{
-              backgroundImage: `url(/wallpapers/${wallpaper}.webp)`,
-              backgroundSize: "cover",
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "center center",
-            }}
-          ></div>
           <div className="flex justify-center my-4">
             <label className="mr-2 text-ubt-grey">Theme:</label>
             <select
@@ -134,71 +112,7 @@ export default function Settings() {
               <option value="matrix">Matrix</option>
             </select>
           </div>
-          <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey">Accent:</label>
-            <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
-              {ACCENT_OPTIONS.map((c) => (
-                <button
-                  key={c}
-                  aria-label={`select-accent-${c}`}
-                  role="radio"
-                  aria-checked={accent === c}
-                  onClick={() => setAccent(c)}
-                  className={`w-8 h-8 rounded-full border-2 ${accent === c ? 'border-white' : 'border-transparent'}`}
-                  style={{ backgroundColor: c }}
-                />
-              ))}
-            </div>
-          </div>
-          <div className="flex justify-center my-4">
-            <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">Wallpaper:</label>
-            <input
-              id="wallpaper-slider"
-              type="range"
-              min="0"
-              max={wallpapers.length - 1}
-              step="1"
-              value={wallpapers.indexOf(wallpaper)}
-              onChange={(e) =>
-                changeBackground(wallpapers[parseInt(e.target.value, 10)])
-              }
-              className="ubuntu-slider"
-              aria-label="Wallpaper"
-            />
-          </div>
-          <div className="flex justify-center my-4">
-            <BackgroundSlideshow />
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 justify-items-center border-t border-gray-900">
-            {wallpapers.map((name) => (
-              <div
-                key={name}
-                role="button"
-                aria-label={`Select ${name.replace("wall-", "wallpaper ")}`}
-                aria-pressed={name === wallpaper}
-                tabIndex={0}
-                onClick={() => changeBackground(name)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    changeBackground(name);
-                  }
-                }}
-                className={
-                  (name === wallpaper
-                    ? " border-yellow-700 "
-                    : " border-transparent ") +
-                  " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"
-                }
-                style={{
-                  backgroundImage: `url(/wallpapers/${name}.webp)`,
-                  backgroundSize: "cover",
-                  backgroundRepeat: "no-repeat",
-                  backgroundPosition: "center center",
-                }}
-              ></div>
-            ))}
-          </div>
+          <AppearanceTab />
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
             <button
               onClick={handleReset}

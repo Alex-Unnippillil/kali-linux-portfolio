@@ -22,7 +22,12 @@ import {
   setHaptics as saveHaptics,
   defaults,
 } from '../utils/settingsStore';
-import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import {
+  getTheme as loadTheme,
+  setTheme as saveTheme,
+  getThemePreferences,
+  setThemePreferences,
+} from '../utils/theme';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -112,28 +117,73 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
-  const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [theme, setThemeState] = useState<string>(() => loadTheme());
+  const [hydrated, setHydrated] = useState(false);
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
     (async () => {
-      setAccent(await loadAccent());
-      setWallpaper(await loadWallpaper());
-      setDensity((await loadDensity()) as Density);
-      setReducedMotion(await loadReducedMotion());
-      setFontScale(await loadFontScale());
-      setHighContrast(await loadHighContrast());
-      setLargeHitAreas(await loadLargeHitAreas());
-      setPongSpin(await loadPongSpin());
-      setAllowNetwork(await loadAllowNetwork());
-      setHaptics(await loadHaptics());
-      setTheme(loadTheme());
+      const [
+        accentValue,
+        wallpaperValue,
+        densityValue,
+        reducedMotionValue,
+        fontScaleValue,
+        highContrastValue,
+        largeHitAreasValue,
+        pongSpinValue,
+        allowNetworkValue,
+        hapticsValue,
+      ] = await Promise.all([
+        loadAccent(),
+        loadWallpaper(),
+        loadDensity(),
+        loadReducedMotion(),
+        loadFontScale(),
+        loadHighContrast(),
+        loadLargeHitAreas(),
+        loadPongSpin(),
+        loadAllowNetwork(),
+        loadHaptics(),
+      ]);
+      const currentTheme = loadTheme();
+      const preferences = getThemePreferences(currentTheme);
+      const resolvedAccent = preferences.accent ?? accentValue;
+      const resolvedWallpaper = preferences.wallpaper ?? wallpaperValue;
+      setAccent(resolvedAccent);
+      setWallpaper(resolvedWallpaper);
+      setDensity((densityValue as Density) ?? defaults.density);
+      setReducedMotion(reducedMotionValue);
+      setFontScale(fontScaleValue);
+      setHighContrast(highContrastValue);
+      setLargeHitAreas(largeHitAreasValue);
+      setPongSpin(pongSpinValue);
+      setAllowNetwork(allowNetworkValue);
+      setHaptics(hapticsValue);
+      setThemeState(currentTheme);
+      setThemePreferences(currentTheme, {
+        accent: resolvedAccent,
+        wallpaper: resolvedWallpaper,
+      });
+      setHydrated(true);
     })();
   }, []);
 
   useEffect(() => {
     saveTheme(theme);
   }, [theme]);
+
+  const updateTheme = (value: string) => {
+    setThemeState(value);
+    if (!hydrated) return;
+    const preferences = getThemePreferences(value);
+    if (preferences.accent !== undefined) {
+      setAccent(preferences.accent);
+    }
+    if (preferences.wallpaper !== undefined) {
+      setWallpaper(preferences.wallpaper);
+    }
+  };
 
   useEffect(() => {
     const border = shadeColor(accent, -0.2);
@@ -150,11 +200,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       document.documentElement.style.setProperty(key, value);
     });
     saveAccent(accent);
-  }, [accent]);
+    if (hydrated) {
+      setThemePreferences(theme, { accent });
+    }
+  }, [accent, hydrated, theme]);
 
   useEffect(() => {
     saveWallpaper(wallpaper);
-  }, [wallpaper]);
+    if (hydrated) {
+      setThemePreferences(theme, { wallpaper });
+    }
+  }, [wallpaper, hydrated, theme]);
 
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {
@@ -260,7 +316,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
-        setTheme,
+        setTheme: updateTheme,
       }}
     >
       {children}
