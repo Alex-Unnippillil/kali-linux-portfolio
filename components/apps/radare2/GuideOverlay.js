@@ -48,7 +48,7 @@ export default function GuideOverlay({ onClose }) {
       role="dialog"
       aria-modal="true"
     >
-      <div className="max-w-md p-4 bg-gray-800 rounded shadow-lg">
+      <div className="max-w-md p-4 bg-gray-800 rounded elevation-3">
         <h2 className="text-xl font-bold mb-2">Radare2 Tutorial</h2>
         <p className="mb-4">{STEPS[step]}</p>
         <div className="flex justify-between mb-4">

@@ -137,7 +137,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
           <div
             className={
               (this.state.navbar ? ' visible animateShow z-30 ' : ' invisible ') +
-              ' md:hidden text-xs absolute bg-ub-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 shadow border-black border border-opacity-20'
+              ' md:hidden text-xs absolute bg-ub-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 elevation-1 border-black border border-opacity-20'
             }
             role="tablist"
             aria-orientation="vertical"

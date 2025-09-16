@@ -20,7 +20,7 @@ export default function HookGraph({ hooks, steps }) {
             href={mod.link}
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-ub-gray-50 text-black p-3 rounded shadow transition-transform duration-300 transform hover:scale-105 fade-in"
+            className="bg-ub-gray-50 text-black p-3 rounded elevation-2 transition-transform duration-300 transform hover:scale-105 fade-in"
           >
             <h3 className="font-bold text-sm mb-1">{mod.name}</h3>
             <p className="text-xs mb-2">{mod.description}</p>

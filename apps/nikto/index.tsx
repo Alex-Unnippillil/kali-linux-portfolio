@@ -158,7 +158,7 @@ const NiktoPage: React.FC = () => {
         <h2 className="text-lg mb-2">Command Preview</h2>
         <pre className="bg-black text-green-400 p-2 rounded overflow-auto">{command}</pre>
       </div>
-      <div className="relative bg-gray-800 p-4 rounded shadow space-y-4">
+      <div className="relative bg-gray-800 p-4 rounded elevation-2 space-y-4">
         <div className="absolute top-2 right-2 bg-gray-700 text-xs px-2 py-1 rounded-full">
           Phase 3 • {findings.length} results
         </div>

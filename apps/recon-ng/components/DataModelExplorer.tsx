@@ -83,7 +83,7 @@ const DataModelExplorer: React.FC = () => {
       />
       {menu && (
         <div
-          className="fixed z-10 bg-gray-800 text-white text-xs rounded shadow"
+          className="fixed z-10 bg-gray-800 text-white text-xs rounded elevation-1"
           style={{ top: menu.y, left: menu.x }}
         >
           <button
@@ -104,7 +104,7 @@ const DataModelExplorer: React.FC = () => {
         </div>
       )}
       {selected && (
-        <div className="absolute top-0 right-0 m-2 max-w-xs rounded bg-gray-800 p-2 text-xs text-white shadow">
+        <div className="absolute top-0 right-0 m-2 max-w-xs rounded bg-gray-800 p-2 text-xs text-white elevation-1">
           <div className="mb-1 font-bold">{selected.label}</div>
           <pre className="whitespace-pre-wrap">
             {JSON.stringify(selected.data, null, 2)}

@@ -281,7 +281,7 @@ const NessusReport: React.FC = () => {
       {selected && (
         <div
           role="dialog"
-          className="fixed top-0 right-0 h-full w-80 bg-gray-800 p-4 overflow-auto shadow-lg"
+          className="fixed top-0 right-0 h-full w-80 bg-gray-800 p-4 overflow-auto elevation-3"
         >
           <button
             type="button"

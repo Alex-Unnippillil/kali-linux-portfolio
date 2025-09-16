@@ -94,7 +94,7 @@ export class AboutAlex extends Component {
                     <div className=" w-3.5 border-t border-white"></div>
                     <div className=" w-3.5 border-t border-white" style={{ marginTop: "2pt", marginBottom: "2pt" }}></div>
                     <div className=" w-3.5 border-t border-white"></div>
-                    <div className={(this.state.navbar ? " visible animateShow z-30 " : " invisible ") + " md:hidden text-xs absolute bg-ub-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 shadow border-black border border-opacity-20"}>
+                    <div className={(this.state.navbar ? " visible animateShow z-30 " : " invisible ") + " md:hidden text-xs absolute bg-ub-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 elevation-1 border-black border border-opacity-20"}>
                         {this.renderNavLinks()}
                     </div>
                 </div>
@@ -372,7 +372,7 @@ function Skills({ skills }) {
       </div>
       <div className="w-full md:w-10/12 flex flex-col items-center mt-8">
         <div className="font-bold text-sm md:text-base mb-2 text-center">GitHub Contributions</div>
-        <div className="bg-ub-gedit-light bg-opacity-20 p-1 md:p-2 rounded-md shadow-md">
+        <div className="bg-ub-gedit-light bg-opacity-20 p-1 md:p-2 rounded-md elevation-2">
           <img
             src="https://ghchart.rshah.org/Alex-Unnippillil"
             alt="Alex Unnippillil's GitHub contribution graph"

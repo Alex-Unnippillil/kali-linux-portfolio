@@ -47,6 +47,15 @@
   --radius-lg: 8px;
   --radius-round: 9999px;
 
+  /* Elevation shadows */
+  --shadow-elevation-1: 0 1px 2px color-mix(in srgb, var(--color-inverse), transparent 88%);
+  --shadow-elevation-2: 0 4px 6px color-mix(in srgb, var(--color-inverse), transparent 85%),
+    0 1px 3px color-mix(in srgb, var(--color-inverse), transparent 92%);
+  --shadow-elevation-3: 0 8px 16px color-mix(in srgb, var(--color-inverse), transparent 78%),
+    0 3px 6px color-mix(in srgb, var(--color-inverse), transparent 88%);
+  --shadow-elevation-4: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%),
+    0 6px 18px color-mix(in srgb, var(--color-inverse), transparent 85%);
+
   /* Motion durations */
   --motion-fast: 150ms;
   --motion-medium: 300ms;
@@ -77,6 +86,10 @@
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
   --game-color-danger: #ff0000;
+  --shadow-elevation-1: 0 0 0 1px var(--color-text);
+  --shadow-elevation-2: 0 0 0 2px var(--color-text);
+  --shadow-elevation-3: 0 0 0 2px var(--color-text);
+  --shadow-elevation-4: 0 0 0 3px var(--color-text);
 }
 
 /* Dyslexia-friendly fonts */
@@ -116,5 +129,9 @@
     --color-ub-orange: #ffff00;
     --color-ub-lite-abrgn: #00ffff;
     --color-ub-border-orange: #ffff00;
+    --shadow-elevation-1: 0 0 0 1px var(--color-text);
+    --shadow-elevation-2: 0 0 0 2px var(--color-text);
+    --shadow-elevation-3: 0 0 0 2px var(--color-text);
+    --shadow-elevation-4: 0 0 0 3px var(--color-text);
   }
 }

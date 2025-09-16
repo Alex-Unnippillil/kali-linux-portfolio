@@ -29,7 +29,7 @@ const LevelThumb: React.FC<{ level: string[] }> = ({ level }) => {
   const tileStyle = { width: LEVEL_THUMB_CELL, height: LEVEL_THUMB_CELL } as React.CSSProperties;
   return (
     <div
-      className="relative bg-gray-700 shadow-md"
+      className="relative bg-gray-700 elevation-2"
       style={{ width: width * LEVEL_THUMB_CELL, height: height * LEVEL_THUMB_CELL }}
     >
       {level.map((row, y) =>
@@ -484,7 +484,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
         {status && <div className="ml-4 text-red-500">{status}</div>}
       </div>
       <div
-        className="relative bg-gray-700 shadow-lg"
+        className="relative bg-gray-700 elevation-3"
         style={{ width: state.width * CELL, height: state.height * CELL }}
         onMouseLeave={() => setGhost(new Set())}
       >
@@ -535,7 +535,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
               key={b}
               className={`absolute transition-transform duration-100 ${
                 dead ? 'bg-red-500' : 'bg-orange-400'
-              } shadow-md`}
+              } elevation-2`}
               style={{
                 ...cellStyle,
                 transform: `translate(${x * CELL}px, ${y * CELL}px) scale(${b === lastPush ? 1.1 : 1})`,
@@ -562,21 +562,21 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
         <button
           type="button"
           onClick={handleUndo}
-          className="px-3 py-1 bg-gray-300 rounded shadow"
+          className="px-3 py-1 bg-gray-300 rounded elevation-1"
         >
           Undo
         </button>
         <button
           type="button"
           onClick={handleRedo}
-          className="px-3 py-1 bg-gray-300 rounded shadow"
+          className="px-3 py-1 bg-gray-300 rounded elevation-1"
         >
           Redo
         </button>
         <button
           type="button"
           onClick={handleReset}
-          className="px-3 py-1 bg-gray-300 rounded shadow"
+          className="px-3 py-1 bg-gray-300 rounded elevation-1"
         >
           Reset
         </button>

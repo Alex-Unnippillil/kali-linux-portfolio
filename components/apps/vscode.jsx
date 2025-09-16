@@ -64,7 +64,7 @@ export default function VsCodeWrapper({ openApp }) {
       <VsCode />
       {visible && (
         <div className="absolute inset-0 flex items-start justify-center pt-24 bg-black/50">
-          <div className="bg-gray-800 text-white w-11/12 max-w-md rounded shadow-lg p-2">
+          <div className="bg-gray-800 text-white w-11/12 max-w-md rounded elevation-3 p-2">
             <input
               autoFocus
               className="w-full p-2 mb-2 bg-gray-700 rounded outline-none"

@@ -11,7 +11,7 @@ body {
 .widget-container {
   background: var(--color-surface);
   border-radius: 8px;
-  box-shadow: 0 4px 10px color-mix(in srgb, var(--color-inverse), transparent 90%);
+  box-shadow: var(--shadow-elevation-3);
   padding: 20px;
   display: flex;
   flex-direction: column;

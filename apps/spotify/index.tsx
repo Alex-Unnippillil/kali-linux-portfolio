@@ -224,7 +224,7 @@ const SpotifyApp = () => {
       )}
       {currentTrack && (
         <div className="mt-2">
-          <div className="relative w-32 aspect-square mb-2 shadow-lg overflow-hidden">
+          <div className="relative w-32 aspect-square mb-2 elevation-3 overflow-hidden">
             {currentTrack.cover ? (
               <img
                 src={currentTrack.cover}

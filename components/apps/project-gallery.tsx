@@ -257,7 +257,7 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
         {filtered.map((project) => (
           <div
             key={project.id}
-            className="mb-4 break-inside-avoid bg-gray-800 rounded shadow overflow-hidden"
+            className="mb-4 break-inside-avoid bg-gray-800 rounded elevation-2 overflow-hidden"
           >
             <div className="flex flex-col md:flex-row h-48">
               <img

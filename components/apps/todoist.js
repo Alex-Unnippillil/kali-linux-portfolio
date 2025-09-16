@@ -587,7 +587,7 @@ export default function Todoist() {
           draggable
           onDragStart={handleDragStart(group, task)}
           onKeyDown={handleKeyDown(group, task)}
-          className="rounded shadow bg-white text-black flex items-center px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="rounded elevation-2 bg-white text-black flex items-center px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
           role="listitem"
         >
           <label className="mr-2 inline-flex items-center">

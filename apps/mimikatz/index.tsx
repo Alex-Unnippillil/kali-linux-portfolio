@@ -12,7 +12,7 @@ const MimikatzPage: React.FC = () => {
   if (!confirmed) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-80 text-white z-50">
-        <div className="max-w-md p-6 bg-ub-dark rounded shadow text-center space-y-4">
+        <div className="max-w-md p-6 bg-ub-dark rounded elevation-3 text-center space-y-4">
           <h2 className="text-xl font-bold">High-Risk Command Warning</h2>
           <p>
             Mimikatz can execute high-risk commands that may compromise system

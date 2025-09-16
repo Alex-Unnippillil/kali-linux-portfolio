@@ -51,7 +51,7 @@ export default function GuideOverlay({ onClose }) {
       tabIndex={-1}
       onKeyDown={onKeyDown}
     >
-      <div className="max-w-md p-4 bg-gray-800 rounded shadow-lg">
+      <div className="max-w-md p-4 bg-gray-800 rounded elevation-3">
         <div className="mb-2 text-center font-bold">
           Demo data, no live scanning
         </div>

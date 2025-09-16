@@ -90,7 +90,7 @@ const BadgeList = ({ badges, className = '' }) => {
         >
           <div
             ref={modalRef}
-            className="bg-white text-black p-4 rounded shadow max-w-sm"
+            className="bg-white text-black p-4 rounded elevation-3 max-w-sm"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="font-bold mb-2">{selected.label}</div>

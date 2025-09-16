@@ -28,8 +28,7 @@ body {
   padding: 10px;
   resize: both;
   overflow: auto;
-  box-shadow: 0 4px 6px color-mix(in srgb, var(--color-inverse), transparent 90%),
-    0 1px 3px color-mix(in srgb, var(--color-inverse), transparent 92%);
+  box-shadow: var(--shadow-elevation-2);
   border-radius: 4px;
 }
 

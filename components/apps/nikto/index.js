@@ -245,7 +245,7 @@ const NiktoApp = () => {
         </table>
       </div>
       {selected && (
-        <div className="fixed top-0 right-0 w-80 h-full bg-gray-800 p-4 overflow-auto shadow-lg">
+        <div className="fixed top-0 right-0 w-80 h-full bg-gray-800 p-4 overflow-auto elevation-3">
           <button
             type="button"
             onClick={() => setSelected(null)}

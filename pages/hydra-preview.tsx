@@ -36,7 +36,7 @@ const HydraPreview: React.FC = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100">
-      <div className="w-full max-w-md rounded bg-white p-6 shadow-md">
+      <div className="w-full max-w-md rounded bg-white p-6 elevation-2">
         {error && <FormError className="mb-4 mt-0">{error}</FormError>}
         {step === 0 && (
           <div>
