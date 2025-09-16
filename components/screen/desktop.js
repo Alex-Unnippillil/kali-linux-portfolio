@@ -232,18 +232,31 @@ export class Desktop extends Component {
     }
 
     checkContextMenu = (e) => {
+        const selection = window.getSelection();
+        const isTextInput = e.target.closest('input, textarea, [contenteditable="true"]');
+        if ((selection && selection.toString()) || isTextInput) {
+            this.hideAllContextMenu();
+            return;
+        }
+
         e.preventDefault();
         this.hideAllContextMenu();
+
+        if (this.state.allAppsView) {
+            this.setState({ allAppsView: false });
+            return;
+        }
+
         const target = e.target.closest('[data-context]');
         const context = target ? target.dataset.context : null;
         const appId = target ? target.dataset.appId : null;
         switch (context) {
             case "desktop-area":
                 ReactGA.event({
-                    category: `Context Menu`,
-                    action: `Opened Desktop Context Menu`
+                    category: `App Drawer`,
+                    action: `Toggled via Right Click`
                 });
-                this.showContextMenu(e, "desktop");
+                this.showAllApps();
                 break;
             case "app":
                 ReactGA.event({
