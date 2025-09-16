@@ -14,7 +14,7 @@ body {
   border-radius: 8px;
   box-shadow: 0 2px 10px color-mix(in srgb, var(--color-inverse), transparent 90%);
   width: 100%;
-  max-width: 240px;
+  max-width: 720px;
   container-type: inline-size;
 }
 
