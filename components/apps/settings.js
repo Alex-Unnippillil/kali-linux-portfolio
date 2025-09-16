@@ -3,7 +3,7 @@ import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme, taskbarAutoHide, setTaskbarAutoHide } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -148,6 +148,17 @@ export function Settings() {
                 <label className="mr-2 text-ubt-grey flex items-center">
                     <input
                         type="checkbox"
+                        checked={taskbarAutoHide}
+                        onChange={(e) => setTaskbarAutoHide(e.target.checked)}
+                        className="mr-2"
+                    />
+                    Taskbar Auto-hide
+                </label>
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey flex items-center">
+                    <input
+                        type="checkbox"
                         checked={allowNetwork}
                         onChange={(e) => setAllowNetwork(e.target.checked)}
                         className="mr-2"
@@ -252,6 +263,7 @@ export function Settings() {
                         setFontScale(defaults.fontScale);
                         setHighContrast(defaults.highContrast);
                         setTheme('default');
+                        setTaskbarAutoHide(defaults.taskbarAutoHide);
                     }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
                 >
@@ -276,6 +288,7 @@ export function Settings() {
                         if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);
                         if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
                         if (parsed.theme !== undefined) { setTheme(parsed.theme); }
+                        if (parsed.taskbarAutoHide !== undefined) setTaskbarAutoHide(parsed.taskbarAutoHide);
                     } catch (err) {
                         console.error('Invalid settings', err);
                     }

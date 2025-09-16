@@ -17,7 +17,7 @@ import WindowSwitcher from '../screen/window-switcher'
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
-import Taskbar from './taskbar';
+import Taskbar from '../desktop/Taskbar';
 import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';

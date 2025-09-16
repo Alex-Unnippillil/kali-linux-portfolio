@@ -31,6 +31,8 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    taskbarAutoHide,
+    setTaskbarAutoHide,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -80,6 +82,8 @@ export default function Settings() {
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
+      if (parsed.taskbarAutoHide !== undefined)
+        setTaskbarAutoHide(parsed.taskbarAutoHide);
     } catch (err) {
       console.error("Invalid settings", err);
     }
@@ -101,6 +105,7 @@ export default function Settings() {
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
     setTheme("default");
+    setTaskbarAutoHide(defaults.taskbarAutoHide);
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
@@ -250,6 +255,14 @@ export default function Settings() {
               checked={highContrast}
               onChange={setHighContrast}
               ariaLabel="High Contrast"
+            />
+          </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Taskbar Auto-hide:</span>
+            <ToggleSwitch
+              checked={taskbarAutoHide}
+              onChange={setTaskbarAutoHide}
+              ariaLabel="Taskbar Auto-hide"
             />
           </div>
           <div className="flex justify-center my-4 items-center">
