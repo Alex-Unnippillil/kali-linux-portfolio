@@ -2,6 +2,7 @@
 
 import usePersistentState from '../../hooks/usePersistentState';
 import { useEffect } from 'react';
+import { useDirection } from '../shared/DirectionProvider';
 
 interface Props {
   open: boolean;
@@ -12,6 +13,7 @@ const QuickSettings = ({ open }: Props) => {
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
+  const { isRTL } = useDirection();
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -23,7 +25,7 @@ const QuickSettings = ({ open }: Props) => {
 
   return (
     <div
-      className={`absolute bg-ub-cool-grey rounded-md py-4 top-9 right-3 shadow border-black border border-opacity-20 ${
+      className={`absolute bg-ub-cool-grey rounded-md py-4 top-9 ${isRTL ? 'left-3' : 'right-3'} shadow border-black border border-opacity-20 ${
         open ? '' : 'hidden'
       }`}
     >
