@@ -124,6 +124,13 @@ See Vercel's [Speed Insights Quickstart](https://vercel.com/docs/speed-insights/
 - Client-side only **simulations** of security tools (no real exploitation)
 - A large set of games rendered in-browser (Canvas/DOM), with a shared `GameLayout`
 
+## Theming & Design Tokens
+
+- Base tokens (background, surface, borders, text, primary/accent) live in [`styles/tokens.css`](./styles/tokens.css) under `--color-base-*` names. They centralize the Kali palette and any derived values such as `--color-bg`, `--color-text`, or `--color-border`.
+- State tokens (`--color-state-info`, `--color-state-success`, `--color-state-warning`, `--color-state-danger`, `--color-state-terminal`, `--color-state-focus`, `--color-state-selection`) capture semantic feedback colors so components can stay consistent with focus rings and status badges.
+- High contrast toggles and theme variants (`dark`, `neon`, `matrix`) only swap the base tokens in [`styles/globals.css`](./styles/globals.css), so UI code should always reference the base/state variables instead of hard-coded hex values.
+- The global `accent-color` property is driven by `--color-control-accent`, ensuring native form controls adopt the active accent automatically.
+
 ### Gamepad Input & Remapping
 
 Games can listen for normalized gamepad events via `utils/gamepad.ts`. The manager polls

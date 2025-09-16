@@ -23,15 +23,51 @@
   --color-ubt-gedit-dark: #003B70;
   --color-ub-border-orange: #1793d1;
   --color-ub-dark-grey: #2a2e36;
-  --color-bg: #0f1317;
-  --color-text: #F5F5F5;
+
+  /* Base color tokens */
+  --color-base-background: #0f1317;
+  --color-base-surface: #1a1f26;
+  --color-base-secondary: #1a1f26;
+  --color-base-muted: #2a2e36;
+  --color-base-border: #2a2e36;
+  --color-base-dark: #0c0f12;
+  --color-base-text: #f5f5f5;
+  --color-base-inverse: #000000;
+  --color-base-primary: #1793d1;
+  --color-base-accent: #1793d1;
+
+  /* State color tokens */
+  --color-state-info: var(--color-base-primary);
+  --color-state-success: #15803d;
+  --color-state-warning: #d97706;
+  --color-state-danger: #b91c1c;
+  --color-state-terminal: #00ff00;
+  --color-state-focus: var(--color-base-accent);
+  --color-state-selection: var(--color-base-accent);
+
+  /* Derived color variables */
+  --color-bg: var(--color-base-background);
+  --color-text: var(--color-base-text);
+  --color-primary: var(--color-base-primary);
+  --color-secondary: var(--color-base-secondary);
+  --color-accent: var(--color-base-accent);
+  --color-muted: var(--color-base-muted);
+  --color-surface: var(--color-base-surface);
+  --color-inverse: var(--color-base-inverse);
+  --color-border: var(--color-base-border);
+  --color-terminal: var(--color-state-terminal);
+  --color-dark: var(--color-base-dark);
+  --color-focus-ring: var(--color-state-focus);
+  --color-selection: var(--color-state-selection);
+  --color-control-accent: var(--color-base-accent);
+
   --kali-bg: rgba(15, 19, 23, 0.85);
 
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
-  --game-color-success: #15803d;
-  --game-color-warning: #d97706;
-  --game-color-danger: #b91c1c;
+  --game-color-success: var(--color-state-success);
+  --game-color-warning: var(--color-state-warning);
+  --game-color-danger: var(--color-state-danger);
 
   /* Spacing scale */
   --space-1: 0.25rem;
@@ -58,14 +94,31 @@
   /* Minimum interactive target size */
   --hit-area: 32px;
   /* Focus outline */
-  --focus-outline-color: var(--color-ubt-blue);
+  --focus-outline-color: var(--color-state-focus);
   --focus-outline-width: 2px;
 }
 
 /* High contrast theme */
 .high-contrast {
-  --color-bg: #000000;
-  --color-text: #ffffff;
+  --color-base-background: #000000;
+  --color-base-surface: #000000;
+  --color-base-secondary: #000000;
+  --color-base-muted: #000000;
+  --color-base-border: #ffff00;
+  --color-base-dark: #000000;
+  --color-base-text: #ffffff;
+  --color-base-inverse: #000000;
+  --color-base-primary: #ffff00;
+  --color-base-accent: #ffff00;
+
+  --color-state-info: var(--color-base-primary);
+  --color-state-success: #00ffff;
+  --color-state-warning: #ff00ff;
+  --color-state-danger: #ff0000;
+  --color-state-terminal: #39ff14;
+  --color-state-focus: var(--color-base-accent);
+  --color-state-selection: var(--color-base-accent);
+
   --color-ub-grey: #000000;
   --color-ub-cool-grey: #000000;
   --color-ubt-grey: #ffffff;
@@ -73,6 +126,7 @@
   --color-ub-orange: #ffff00;
   --color-ub-lite-abrgn: #00ffff;
   --color-ub-border-orange: #ffff00;
+
   --game-color-secondary: #ffff00;
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
@@ -107,8 +161,25 @@
 /* Optional high contrast via media query */
 @media (prefers-contrast: more) {
   :root {
-    --color-bg: #000000;
-    --color-text: #ffffff;
+    --color-base-background: #000000;
+    --color-base-surface: #000000;
+    --color-base-secondary: #000000;
+    --color-base-muted: #000000;
+    --color-base-border: #ffff00;
+    --color-base-dark: #000000;
+    --color-base-text: #ffffff;
+    --color-base-inverse: #000000;
+    --color-base-primary: #ffff00;
+    --color-base-accent: #ffff00;
+
+    --color-state-info: var(--color-base-primary);
+    --color-state-success: #00ffff;
+    --color-state-warning: #ff00ff;
+    --color-state-danger: #ff0000;
+    --color-state-terminal: #39ff14;
+    --color-state-focus: var(--color-base-accent);
+    --color-state-selection: var(--color-base-accent);
+
     --color-ub-grey: #000000;
     --color-ub-cool-grey: #000000;
     --color-ubt-grey: #ffffff;
@@ -116,5 +187,10 @@
     --color-ub-orange: #ffff00;
     --color-ub-lite-abrgn: #00ffff;
     --color-ub-border-orange: #ffff00;
+
+    --game-color-secondary: #ffff00;
+    --game-color-success: #00ffff;
+    --game-color-warning: #ff00ff;
+    --game-color-danger: #ff0000;
   }
 }
