@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
-import '../styles/globals.css';
+import '../app/globals.css';
 import '../styles/index.css';
 import '../styles/resume-print.css';
 import '../styles/print.css';
@@ -150,16 +150,15 @@ function MyApp(props) {
     <ErrorBoundary>
       <Script src="/a2hs.js" strategy="beforeInteractive" />
       <div className={ubuntu.className}>
-        <a
-          href="#app-grid"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"
-        >
-          Skip to app grid
+        <a href="#main" className="skip">
+          Skip to content
         </a>
         <SettingsProvider>
           <PipPortalProvider>
             <div aria-live="polite" id="live-region" />
-            <Component {...pageProps} />
+            <div id="main" tabIndex={-1}>
+              <Component {...pageProps} />
+            </div>
             <ShortcutOverlay />
             <Analytics
               beforeSend={(e) => {

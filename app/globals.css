@@ -1,0 +1,39 @@
+@import '../styles/globals.css';
+
+.skip {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 10000;
+  display: inline-block;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.75rem;
+  background: var(--color-text, #f5f5f5);
+  color: var(--color-bg, #0f1317);
+  font-weight: 600;
+  text-decoration: none;
+  line-height: 1.25;
+  white-space: nowrap;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
+  transform: translateY(-200%);
+  opacity: 0;
+  transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+}
+
+.skip:focus,
+.skip:focus-visible {
+  transform: translateY(0);
+  opacity: 1;
+  box-shadow: 0 0 0 3px var(--color-focus-ring, #1793d1), 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.skip:focus:not(:focus-visible) {
+  transform: translateY(-200%);
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skip {
+    transition: none;
+  }
+}
