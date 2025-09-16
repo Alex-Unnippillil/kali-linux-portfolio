@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Tabs from "../Tabs";
 import ToggleSwitch from "../ToggleSwitch";
 
@@ -17,48 +17,70 @@ export default function Preferences() {
   ];
 
   const [active, setActive] = useState<TabId>("display");
-
-  const [size, setSize] = useState(() => {
-    if (typeof window === "undefined") return 24;
-    const stored = localStorage.getItem(`${PANEL_PREFIX}size`);
-    return stored ? parseInt(stored, 10) : 24;
-  });
-  const [length, setLength] = useState(() => {
-    if (typeof window === "undefined") return 100;
-    const stored = localStorage.getItem(`${PANEL_PREFIX}length`);
-    return stored ? parseInt(stored, 10) : 100;
-  });
-  const [orientation, setOrientation] = useState<"horizontal" | "vertical">(() => {
-    if (typeof window === "undefined") return "horizontal";
-    return (localStorage.getItem(`${PANEL_PREFIX}orientation`) as
-      | "horizontal"
-      | "vertical"
-      | null) || "horizontal";
-  });
-  const [autohide, setAutohide] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem(`${PANEL_PREFIX}autohide`) === "true";
-  });
+  const [size, setSize] = useState(24);
+  const [length, setLength] = useState(100);
+  const [orientation, setOrientation] = useState<"horizontal" | "vertical">(
+    "horizontal",
+  );
+  const [autohide, setAutohide] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    localStorage.setItem(`${PANEL_PREFIX}size`, String(size));
-  }, [size]);
+    try {
+      const storedSize = window.localStorage.getItem(`${PANEL_PREFIX}size`);
+      if (storedSize) {
+        const parsed = Number.parseInt(storedSize, 10);
+        if (!Number.isNaN(parsed)) {
+          setSize((prev) => (prev === parsed ? prev : parsed));
+        }
+      }
+
+      const storedLength = window.localStorage.getItem(`${PANEL_PREFIX}length`);
+      if (storedLength) {
+        const parsed = Number.parseInt(storedLength, 10);
+        if (!Number.isNaN(parsed)) {
+          setLength((prev) => (prev === parsed ? prev : parsed));
+        }
+      }
+
+      const storedOrientation = window.localStorage.getItem(
+        `${PANEL_PREFIX}orientation`,
+      );
+      if (storedOrientation === "horizontal" || storedOrientation === "vertical") {
+        setOrientation((prev) =>
+          prev === storedOrientation ? prev : storedOrientation,
+        );
+      }
+
+      const storedAutohide = window.localStorage.getItem(
+        `${PANEL_PREFIX}autohide`,
+      );
+      if (storedAutohide !== null) {
+        const next = storedAutohide === "true";
+        setAutohide((prev) => (prev === next ? prev : next));
+      }
+    } catch {
+      // ignore read errors and fall back to defaults
+    }
+
+    setHydrated(true);
+  }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(`${PANEL_PREFIX}length`, String(length));
-  }, [length]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(`${PANEL_PREFIX}orientation`, orientation);
-  }, [orientation]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(`${PANEL_PREFIX}autohide`, autohide ? "true" : "false");
-  }, [autohide]);
+    if (!hydrated || typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(`${PANEL_PREFIX}size`, String(size));
+      window.localStorage.setItem(`${PANEL_PREFIX}length`, String(length));
+      window.localStorage.setItem(`${PANEL_PREFIX}orientation`, orientation);
+      window.localStorage.setItem(
+        `${PANEL_PREFIX}autohide`,
+        autohide ? "true" : "false",
+      );
+    } catch {
+      // ignore write errors
+    }
+  }, [autohide, hydrated, length, orientation, size]);
 
   return (
     <div>
