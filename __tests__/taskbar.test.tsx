@@ -1,6 +1,10 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import Taskbar from '../components/screen/taskbar';
+import Taskbar from '../components/desktop/Taskbar';
+
+jest.mock('../hooks/useSettings', () => ({
+  useSettings: () => ({ taskbarAutoHide: false }),
+}));
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 
