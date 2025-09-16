@@ -4,16 +4,26 @@
 
 @layer utilities {
   .transition-hover {
-    @apply transition ease-out duration-150;
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform;
+    transition-duration: var(--motion-duration-hover, 150ms);
+    transition-timing-function: var(--motion-ease-standard, cubic-bezier(0.16, 1, 0.3, 1));
   }
   .transition-active {
-    @apply transition ease-out duration-100;
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform;
+    transition-duration: var(--motion-duration-tap, 100ms);
+    transition-timing-function: var(--motion-ease-emphasized, cubic-bezier(0.33, 1, 0.68, 1));
   }
 }
 
 @layer base {
   button {
-    @apply transition-hover transition-active;
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform;
+    transition-duration: var(--motion-duration-hover, 150ms);
+    transition-timing-function: var(--motion-ease-standard, cubic-bezier(0.16, 1, 0.3, 1));
+  }
+  button:active {
+    transition-duration: var(--motion-duration-tap, 100ms);
+    transition-timing-function: var(--motion-ease-emphasized, cubic-bezier(0.33, 1, 0.68, 1));
   }
 }
 

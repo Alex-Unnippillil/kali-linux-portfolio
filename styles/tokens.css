@@ -51,6 +51,11 @@
   --motion-fast: 150ms;
   --motion-medium: 300ms;
   --motion-slow: 500ms;
+  --motion-duration-tap: 100ms;
+  --motion-duration-hover: 150ms;
+  --motion-duration-toggle: 200ms;
+  --motion-ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-ease-emphasized: cubic-bezier(0.33, 1, 0.68, 1);
 
   /* Fonts */
   --font-family-base: 'Ubuntu', sans-serif;
@@ -94,6 +99,9 @@
   --motion-fast: 0ms;
   --motion-medium: 0ms;
   --motion-slow: 0ms;
+  --motion-duration-tap: 0ms;
+  --motion-duration-hover: 0ms;
+  --motion-duration-toggle: 0ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -101,6 +109,9 @@
     --motion-fast: 0ms;
     --motion-medium: 0ms;
     --motion-slow: 0ms;
+    --motion-duration-tap: 0ms;
+    --motion-duration-hover: 0ms;
+    --motion-duration-toggle: 0ms;
   }
 }
 
