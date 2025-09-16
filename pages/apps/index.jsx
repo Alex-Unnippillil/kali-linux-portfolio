@@ -1,6 +1,9 @@
+import { getPageMetadata } from '@/lib/metadata';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+
+export const metadata = getPageMetadata('/apps');
 
 const AppsPage = () => {
   const [apps, setApps] = useState([]);

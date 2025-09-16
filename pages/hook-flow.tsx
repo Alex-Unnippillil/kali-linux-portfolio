@@ -1,7 +1,9 @@
 "use client";
 
+import { getPageMetadata } from '@/lib/metadata';
 import Image from 'next/image';
 import React, { useState } from 'react';
+export const metadata = getPageMetadata('/hook-flow');
 
 const HookFlow: React.FC = () => {
   const [consented, setConsented] = useState(false);

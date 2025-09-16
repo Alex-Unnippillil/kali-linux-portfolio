@@ -1,8 +1,10 @@
 "use client";
 
+import { getPageMetadata } from '@/lib/metadata';
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
+export const metadata = getPageMetadata('/qr/vcard');
 
 const VCardPage: React.FC = () => {
   const [name, setName] = useState('');

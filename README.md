@@ -149,8 +149,10 @@ components/
   base/                  # window system, app base component
   screen/                # booting_screen, desktop, lock_screen, navbar
   apps/                  # the catalog (games, utilities, “security” sims, media)
-  SEO/Meta.js            # meta tags and JSON-LD
   util-components/       # shared UI helpers
+
+lib/
+  metadata.ts            # central metadata registry used by every page
 
 public/
   images/                # wallpapers, icons
@@ -169,6 +171,8 @@ __tests__/
 .github/workflows/
   gh-deploy.yml           # GitHub Pages export pipeline
 ```
+
+Every Next.js route imports `getPageMetadata` from `lib/metadata.ts` and re-exports a `metadata` object so titles, descriptions, and social cards stay consistent. Add new routes to that registry instead of sprinkling `<Head>` tags throughout components.
 
 **Windowing model.** The desktop (`components/screen/desktop.js`) manages:
 - z-ordering and focus of windows

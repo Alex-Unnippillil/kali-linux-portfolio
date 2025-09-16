@@ -1,5 +1,7 @@
+import { getPageMetadata } from '@/lib/metadata';
 import dynamic from 'next/dynamic';
 import { getDailySeed } from '../../utils/dailySeed';
+export const metadata = getPageMetadata('/apps/phaser_matter');
 
 const PhaserMatter = dynamic(() => import('../../apps/phaser_matter'), {
   ssr: false,

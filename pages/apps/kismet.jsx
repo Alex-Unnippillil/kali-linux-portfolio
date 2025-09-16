@@ -1,4 +1,6 @@
+import { getPageMetadata } from '@/lib/metadata';
 import dynamic from 'next/dynamic';
+export const metadata = getPageMetadata('/apps/kismet');
 
 const Kismet = dynamic(() => import('../../apps/kismet'), {
   ssr: false,

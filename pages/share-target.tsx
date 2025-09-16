@@ -1,7 +1,9 @@
 "use client";
 
+import { getPageMetadata } from '@/lib/metadata';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
+export const metadata = getPageMetadata('/share-target');
 
 export default function ShareTarget() {
   const router = useRouter();

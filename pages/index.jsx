@@ -1,6 +1,7 @@
+import { getPageMetadata, getStructuredData } from '@/lib/metadata';
 import dynamic from 'next/dynamic';
-import Meta from '../components/SEO/Meta';
 import BetaBadge from '../components/BetaBadge';
+import { getCspNonce } from '../utils/csp';
 
 const Ubuntu = dynamic(
   () =>
@@ -25,19 +26,32 @@ const InstallButton = dynamic(
   }
 );
 
+export const metadata = getPageMetadata('/');
+
 /**
  * @returns {JSX.Element}
  */
-const App = () => (
-  <>
-    <a href="#window-area" className="sr-only focus:not-sr-only">
-      Skip to content
-    </a>
-    <Meta />
-    <Ubuntu />
-    <BetaBadge />
-    <InstallButton />
-  </>
-);
+const App = () => {
+  const structuredData = getStructuredData('/');
+  const nonce = getCspNonce();
+
+  return (
+    <>
+      <a href="#window-area" className="sr-only focus:not-sr-only">
+        Skip to content
+      </a>
+      {structuredData && (
+        <script
+          type="application/ld+json"
+          nonce={nonce}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
+      )}
+      <Ubuntu />
+      <BetaBadge />
+      <InstallButton />
+    </>
+  );
+};
 
 export default App;

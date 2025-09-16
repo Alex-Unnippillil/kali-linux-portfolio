@@ -1,5 +1,6 @@
 "use client";
 
+import { getPageMetadata } from '@/lib/metadata';
 import { useEffect, useState } from "react";
 import {
   saveCalibration,
@@ -8,6 +9,7 @@ import {
   CalibrationData,
   AxisRange,
 } from "../utils/gamepad";
+export const metadata = getPageMetadata('/gamepad-calibration');
 
 export default function GamepadCalibration() {
   const [pad, setPad] = useState<Gamepad | null>(null);

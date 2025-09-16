@@ -1,4 +1,6 @@
+import { getPageMetadata } from '@/lib/metadata';
 import dynamic from 'next/dynamic';
+export const metadata = getPageMetadata('/apps/minesweeper');
 
 const Minesweeper = dynamic(() => import('../../apps/minesweeper'), {
   ssr: false,

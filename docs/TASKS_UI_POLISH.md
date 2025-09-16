@@ -251,9 +251,9 @@ This document tracks UI polish tasks for the Kali/Ubuntu inspired desktop experi
 
 ## H) SEO, metadata, social
 
-59. **`<SEO/Meta>` audit**
-    - **Accept:** Titles, descriptions, canonical, Open Graph images for desktop and key apps; JSON‑LD for Person and Project list.
-    - **Where:** `components/SEO/Meta.js`.
+59. **Metadata registry audit**
+    - **Accept:** Titles, descriptions, canonical links, and Open Graph images for desktop and key apps; JSON‑LD for Person and project list entries.
+    - **Where:** `lib/metadata.ts`.
 
 60. **Image sizes for social previews**
     - **Accept:** 1200×630 Open Graph, 1080×1080 square fallback; served as static files and referenced in meta.

@@ -271,7 +271,8 @@ Use these step‑by‑step guides to avoid breaking conventions.
 
 * `.github/workflows/` — includes GitHub Pages export pipeline.
 * `pages/` — `_app.jsx`, `_document.jsx`, `index.jsx`, `apps/`, `api/` (stubs).
-* `components/` — `ubuntu.tsx` shell, `screen/*`, `base/*`, `apps/*`, `SEO/Meta.js`, `util-components/*`.
+* `components/` — `ubuntu.tsx` shell, `screen/*`, `base/*`, `apps/*`, `util-components/*`.
+* `lib/` — analytics clients, validators, and the shared `metadata.ts` registry.
 * `public/` — images, wallpapers, icons, and game assets.
 * `hooks/` — persistent state, asset loader, canvas resize, and more.
 * `__tests__/` — unit tests and smoke tests.

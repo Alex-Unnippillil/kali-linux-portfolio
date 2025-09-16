@@ -1,6 +1,8 @@
+import { getPageMetadata } from '@/lib/metadata';
 import React, { useState, useMemo, useCallback } from 'react';
 import usePersistentState from '../hooks/usePersistentState';
 import { setValue, getAll } from '../utils/moduleStore';
+export const metadata = getPageMetadata('/module-workspace');
 
 interface ModuleOption {
   name: string;

@@ -1,5 +1,7 @@
+import { getPageMetadata } from '@/lib/metadata';
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
+export const metadata = getPageMetadata('/video-gallery');
 
 interface Video {
   id: string;

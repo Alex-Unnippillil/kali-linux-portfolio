@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import Head from 'next/head';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 import useOPFS from '../hooks/useOPFS';
 
@@ -193,21 +192,38 @@ export default function YouTubePlayer({ videoId }) {
     };
   }, [search, supported, getDir, listFiles, readFile]);
 
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    const head = document.head;
+    const created = [];
+    const ensureLink = (href) => {
+      const selector = `link[rel="preconnect"][href="${href}"]`;
+      if (!head.querySelector(selector)) {
+        const link = document.createElement('link');
+        link.rel = 'preconnect';
+        link.href = href;
+        head.appendChild(link);
+        created.push(link);
+      }
+    };
+    ensureLink('https://www.youtube-nocookie.com');
+    ensureLink('https://i.ytimg.com');
+    return () => {
+      created.forEach((link) => {
+        if (link.parentNode === head) {
+          head.removeChild(link);
+        }
+      });
+    };
+  }, []);
+
   return (
-    <>
-      <Head>
-        <link
-          rel="preconnect"
-          href="https://www.youtube-nocookie.com"
-        />
-        <link rel="preconnect" href="https://i.ytimg.com" />
-      </Head>
-      <div
-        className="relative w-full"
-        style={{ aspectRatio: '16 / 9' }}
-        tabIndex={0}
-        onKeyDown={handleKey}
-      >
+    <div
+      className="relative w-full"
+      style={{ aspectRatio: '16 / 9' }}
+      tabIndex={0}
+      onKeyDown={handleKey}
+    >
         <div className="w-full h-full" ref={containerRef}>
           {!activated && (
             <button
@@ -330,7 +346,6 @@ export default function YouTubePlayer({ videoId }) {
             )}
           </div>
         )}
-      </div>
-    </>
+    </div>
   );
 }

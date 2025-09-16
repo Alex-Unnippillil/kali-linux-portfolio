@@ -1,5 +1,7 @@
+import { getPageMetadata } from '@/lib/metadata';
 import React, { useEffect, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+export const metadata = getPageMetadata('/recon/graph');
 
 interface CytoscapeNode {
   data: { id: string; label: string };
