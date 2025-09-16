@@ -8,10 +8,15 @@ import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
 
+const TITLEBAR_HEIGHT_PX = 44;
+const SHADE_BUFFER_PX = 12;
+const SHADE_TOTAL_PX = TITLEBAR_HEIGHT_PX + SHADE_BUFFER_PX;
+const MIN_SHADE_PERCENT = 6;
+
 export class Window extends Component {
     constructor(props) {
         super(props);
-        this.id = null;
+        this.id = props.id || null;
         const isPortrait =
             typeof window !== "undefined" && window.innerHeight > window.innerWidth;
         this.startX =
@@ -33,10 +38,13 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            shaded: false,
+            ariaMessage: '',
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._shadeSnapshot = null;
     }
 
     componentDidMount() {
@@ -131,6 +139,81 @@ export class Window extends Component {
                 this.optimizeWindow();
             }
         }, 200);
+    }
+
+    computeShadeHeightPercent = () => {
+        if (typeof window === 'undefined' || !window.innerHeight) {
+            return MIN_SHADE_PERCENT;
+        }
+        const percent = (SHADE_TOTAL_PX / window.innerHeight) * 100;
+        return Math.max(percent, MIN_SHADE_PERCENT);
+    }
+
+    setShadeState = (shaded, callback) => {
+        this.setState((prev) => {
+            if (prev.shaded === shaded) return null;
+            if (shaded) {
+                this._shadeSnapshot = {
+                    height: prev.height,
+                    width: prev.width,
+                    maximized: prev.maximized,
+                    snapped: prev.snapped,
+                    lastSize: prev.lastSize,
+                };
+                const message = `${this.props.title} window collapsed to title bar`;
+                return {
+                    shaded: true,
+                    height: this.computeShadeHeightPercent(),
+                    maximized: false,
+                    snapped: null,
+                    snapPreview: null,
+                    snapPosition: null,
+                    ariaMessage: message,
+                    cursorType: "cursor-default",
+                    grabbed: false,
+                };
+            }
+            const snapshot = this._shadeSnapshot;
+            const restoreHeight = snapshot && snapshot.height !== undefined ? snapshot.height : prev.height;
+            const restoreWidth = snapshot && snapshot.width !== undefined ? snapshot.width : prev.width;
+            const restoreMaximized = snapshot && snapshot.maximized !== undefined ? snapshot.maximized : prev.maximized;
+            const restoreSnapped = snapshot && snapshot.snapped !== undefined ? snapshot.snapped : prev.snapped;
+            const restoreLastSize = snapshot && snapshot.lastSize !== undefined ? snapshot.lastSize : prev.lastSize;
+            const message = `${this.props.title} window expanded to full height`;
+            return {
+                shaded: false,
+                height: restoreHeight,
+                width: restoreWidth,
+                maximized: restoreMaximized,
+                snapped: restoreSnapped,
+                lastSize: restoreLastSize,
+                snapPreview: null,
+                snapPosition: null,
+                ariaMessage: message,
+                cursorType: "cursor-default",
+                grabbed: false,
+            };
+        }, () => {
+            if (!this.state.shaded) {
+                this._shadeSnapshot = null;
+            }
+            this.resizeBoundries();
+            if (typeof callback === 'function') {
+                callback();
+            }
+        });
+    }
+
+    toggleShade = () => {
+        this.focusWindow();
+        this.setShadeState(!this.state.shaded);
+    }
+
+    handleTitleBarDoubleClick = (event) => {
+        if (!event.altKey) return;
+        event.preventDefault();
+        event.stopPropagation();
+        this.toggleShade();
     }
 
     optimizeWindow = () => {
@@ -235,6 +318,10 @@ export class Window extends Component {
     }
 
     unsnapWindow = () => {
+        if (this.state.shaded) {
+            this.setShadeState(false, () => this.unsnapWindow());
+            return;
+        }
         if (!this.state.snapped) return;
         var r = document.querySelector("#" + this.id);
         if (r) {
@@ -256,6 +343,10 @@ export class Window extends Component {
     }
 
     snapWindow = (position) => {
+        if (this.state.shaded) {
+            this.setShadeState(false, () => this.snapWindow(position));
+            return;
+        }
         this.setWinowsPosition();
         const { width, height } = this.state;
         let newWidth = width;
@@ -412,6 +503,10 @@ export class Window extends Component {
     }
 
     restoreWindow = () => {
+        if (this.state.shaded) {
+            this.setShadeState(false, () => this.restoreWindow());
+            return;
+        }
         const node = document.querySelector("#" + this.id);
         this.setDefaultWindowDimenstion();
         // get previous position
@@ -451,6 +546,10 @@ export class Window extends Component {
     }
 
     maximizeWindow = () => {
+        if (this.state.shaded) {
+            this.setShadeState(false, () => this.maximizeWindow());
+            return;
+        }
         if (this.props.allowMaximize === false) return;
         if (this.state.maximized) {
             this.restoreWindow();
@@ -478,6 +577,12 @@ export class Window extends Component {
     }
 
     handleTitleBarKeyDown = (e) => {
+        if (e.altKey && (e.key === 'Enter' || e.key === ' ' || e.key === 'Space')) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.toggleShade();
+            return;
+        }
         if (e.key === ' ' || e.key === 'Space' || e.key === 'Enter') {
             e.preventDefault();
             e.stopPropagation();
@@ -585,6 +690,10 @@ export class Window extends Component {
     }
 
     snapWindow = (pos) => {
+        if (this.state.shaded) {
+            this.setShadeState(false, () => this.snapWindow(pos));
+            return;
+        }
         this.focusWindow();
         const { width, height } = this.state;
         let newWidth = width;
@@ -612,6 +721,7 @@ export class Window extends Component {
     }
 
     render() {
+        const contentId = `${this.id}-content`;
         return (
             <>
                 {this.state.snapPreview && (
@@ -634,12 +744,17 @@ export class Window extends Component {
                     bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
                 >
                     <div
-                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        style={{
+                            width: `${this.state.width}%`,
+                            height: `${this.state.height}%`,
+                            minHeight: this.state.shaded ? `${SHADE_TOTAL_PX}px` : undefined
+                        }}
+                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.state.shaded ? " window-shaded" : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
                         tabIndex={0}
+                        data-shaded={this.state.shaded ? 'true' : 'false'}
                         onKeyDown={this.handleKeyDown}
                     >
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
@@ -647,8 +762,11 @@ export class Window extends Component {
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
+                            onDoubleClick={this.handleTitleBarDoubleClick}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
+                            expanded={!this.state.shaded}
+                            contentId={contentId}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -659,11 +777,26 @@ export class Window extends Component {
                             allowMaximize={this.props.allowMaximize !== false}
                             pip={() => this.props.screen(this.props.addFolder, this.props.openApp)}
                         />
+                        <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+                            {this.state.ariaMessage}
+                        </div>
                         {(this.id === "settings"
-                            ? <Settings />
-                            : <WindowMainScreen screen={this.props.screen} title={this.props.title}
+                            ? <div
+                                id={contentId}
+                                hidden={this.state.shaded}
+                                aria-hidden={this.state.shaded}
+                                className="flex flex-col flex-grow w-full"
+                            >
+                                <Settings />
+                            </div>
+                            : <WindowMainScreen
+                                screen={this.props.screen}
+                                title={this.props.title}
                                 addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
-                                openApp={this.props.openApp} />)}
+                                openApp={this.props.openApp}
+                                hidden={this.state.shaded}
+                                contentId={contentId}
+                            />)}
                     </div>
                 </Draggable >
             </>
@@ -674,15 +807,18 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, onDoubleClick, grabbed, expanded, contentId }) {
     return (
         <div
             className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
+            aria-expanded={expanded}
+            aria-controls={contentId}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
+            onDoubleClick={onDoubleClick}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>
@@ -837,8 +973,14 @@ export class WindowMainScreen extends Component {
         }, 3000);
     }
     render() {
+        const { hidden, contentId } = this.props;
         return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
+            <div
+                id={contentId}
+                hidden={hidden}
+                aria-hidden={hidden}
+                className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}
+            >
                 {this.props.screen(this.props.addFolder, this.props.openApp)}
             </div>
         )
