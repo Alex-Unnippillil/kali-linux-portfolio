@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { recordAppLaunch } from '../../utils/recents';
 
 export class Desktop extends Component {
     constructor() {
@@ -593,6 +594,13 @@ export class Desktop extends Component {
 
         // if the app is disabled
         if (this.state.disabled_apps[objId]) return;
+
+        const appMeta = apps.find(app => app.id === objId);
+        recordAppLaunch({
+            appId: objId,
+            title: appMeta && appMeta.title,
+            icon: appMeta && appMeta.icon,
+        });
 
         // if app is already open, focus it instead of spawning a new window
         if (this.state.closed_windows[objId] === false) {
