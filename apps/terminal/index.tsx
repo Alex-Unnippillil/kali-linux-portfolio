@@ -63,6 +63,154 @@ const SettingsIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+type TerminalThemeKey = 'kali' | 'matrix' | 'light';
+
+type TerminalThemeConfig = {
+  label: string;
+  theme: {
+    background: string;
+    foreground: string;
+    cursor: string;
+    selection?: string;
+    [key: string]: string;
+  };
+  ui: {
+    chrome: string;
+    chromeText: string;
+    border: string;
+  };
+  preview: string;
+};
+
+const terminalThemes: Record<TerminalThemeKey, TerminalThemeConfig> = {
+  kali: {
+    label: 'Kali Dark',
+    theme: {
+      background: '#0f1317',
+      foreground: '#f5f5f5',
+      cursor: '#1793d1',
+      selection: 'rgba(23, 147, 209, 0.35)',
+      black: '#000000',
+      red: '#ff5555',
+      green: '#55ff55',
+      yellow: '#f1fa8c',
+      blue: '#1793d1',
+      magenta: '#ff79c6',
+      cyan: '#8be9fd',
+      white: '#f8f8f2',
+      brightBlack: '#6272a4',
+      brightRed: '#ff6e6e',
+      brightGreen: '#69ff94',
+      brightYellow: '#ffffa5',
+      brightBlue: '#50b1f9',
+      brightMagenta: '#ff92df',
+      brightCyan: '#a4ffff',
+      brightWhite: '#ffffff',
+    },
+    ui: {
+      chrome: 'rgba(23, 27, 34, 0.9)',
+      chromeText: '#f5f5f5',
+      border: 'rgba(51, 65, 85, 0.85)',
+    },
+    preview: 'linear-gradient(135deg, #0f1317, #1f2833)',
+  },
+  matrix: {
+    label: 'Matrix',
+    theme: {
+      background: '#020805',
+      foreground: '#a7f3d0',
+      cursor: '#34d399',
+      selection: 'rgba(52, 211, 153, 0.35)',
+      black: '#000000',
+      red: '#f97316',
+      green: '#34d399',
+      yellow: '#a3e635',
+      blue: '#22d3ee',
+      magenta: '#f472b6',
+      cyan: '#2dd4bf',
+      white: '#d1fae5',
+      brightBlack: '#064e3b',
+      brightRed: '#fb923c',
+      brightGreen: '#6ee7b7',
+      brightYellow: '#bef264',
+      brightBlue: '#67e8f9',
+      brightMagenta: '#f9a8d4',
+      brightCyan: '#5eead4',
+      brightWhite: '#ecfdf5',
+    },
+    ui: {
+      chrome: 'rgba(3, 15, 10, 0.92)',
+      chromeText: '#a7f3d0',
+      border: 'rgba(16, 185, 129, 0.6)',
+    },
+    preview: 'linear-gradient(135deg, #022c22, #065f46)',
+  },
+  light: {
+    label: 'Solar Light',
+    theme: {
+      background: '#f8fafc',
+      foreground: '#1f2937',
+      cursor: '#0f766e',
+      selection: 'rgba(14, 116, 144, 0.25)',
+      black: '#1f2937',
+      red: '#dc2626',
+      green: '#16a34a',
+      yellow: '#ca8a04',
+      blue: '#2563eb',
+      magenta: '#7c3aed',
+      cyan: '#0ea5e9',
+      white: '#f9fafb',
+      brightBlack: '#475569',
+      brightRed: '#ef4444',
+      brightGreen: '#22c55e',
+      brightYellow: '#facc15',
+      brightBlue: '#3b82f6',
+      brightMagenta: '#8b5cf6',
+      brightCyan: '#38bdf8',
+      brightWhite: '#ffffff',
+    },
+    ui: {
+      chrome: 'rgba(226, 232, 240, 0.85)',
+      chromeText: '#0f172a',
+      border: 'rgba(148, 163, 184, 0.8)',
+    },
+    preview: 'linear-gradient(135deg, #e2e8f0, #f8fafc)',
+  },
+};
+
+type TerminalSettings = {
+  copyOnSelect: boolean;
+  fontSize: number;
+  theme: TerminalThemeKey;
+};
+
+const TERMINAL_SETTINGS_KEY = 'terminal-settings';
+
+const getDefaultSettings = (): TerminalSettings => {
+  if (typeof window === 'undefined') {
+    return { copyOnSelect: false, fontSize: 16, theme: 'kali' };
+  }
+  try {
+    const raw = window.localStorage.getItem(TERMINAL_SETTINGS_KEY);
+    if (!raw) {
+      return { copyOnSelect: false, fontSize: 16, theme: 'kali' };
+    }
+    const parsed = JSON.parse(raw) as Partial<TerminalSettings>;
+    const theme =
+      parsed.theme && Object.prototype.hasOwnProperty.call(terminalThemes, parsed.theme)
+        ? (parsed.theme as TerminalThemeKey)
+        : 'kali';
+    const fontSize =
+      typeof parsed.fontSize === 'number' && parsed.fontSize >= 10 && parsed.fontSize <= 28
+        ? parsed.fontSize
+        : 16;
+    const copyOnSelect = Boolean(parsed.copyOnSelect);
+    return { copyOnSelect, fontSize, theme };
+  } catch {
+    return { copyOnSelect: false, fontSize: 16, theme: 'kali' };
+  }
+};
+
 export interface TerminalProps {
   openApp?: (id: string) => void;
 }
@@ -101,28 +249,22 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settings, setSettings] = useState<TerminalSettings>(getDefaultSettings);
+  const settingsRef = useRef(settings);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
   const [overflow, setOverflow] = useState({ top: false, bottom: false });
-  const ansiColors = [
-    '#000000',
-    '#AA0000',
-    '#00AA00',
-    '#AA5500',
-    '#0000AA',
-    '#AA00AA',
-    '#00AAAA',
-    '#AAAAAA',
-    '#555555',
-    '#FF5555',
-    '#55FF55',
-    '#FFFF55',
-    '#5555FF',
-    '#FF55FF',
-    '#55FFFF',
-    '#FFFFFF',
-  ];
+  const currentTheme = terminalThemes[settings.theme] ?? terminalThemes.kali;
+
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(TERMINAL_SETTINGS_KEY, JSON.stringify(settings));
+  }, [settings]);
 
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
@@ -155,13 +297,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
   const handleCopy = () => {
     navigator.clipboard.writeText(contentRef.current).catch(() => {});
-  };
-
-  const handlePaste = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      handleInput(text);
-    } catch {}
   };
 
   const runWorker = useCallback(
@@ -288,6 +423,40 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       [runCommand, prompt],
     );
 
+  const confirmTextPaste = useCallback(
+    (text: string) => {
+      if (!text) return;
+      const lines = text.split('\n');
+      const previewLines = lines.slice(0, 5).map((line) => line.trimEnd());
+      const preview = previewLines.join('\n');
+      const truncated = lines.length > 5 ? '\n…' : '';
+      const message =
+        'You are about to paste the following text into the terminal. Commands will execute if they contain line breaks.\n\n' +
+        preview +
+        truncated;
+      const confirmed = window.confirm(message);
+      if (confirmed) {
+        handleInput(text);
+      }
+      termRef.current?.focus();
+    },
+    [handleInput],
+  );
+
+  const handlePaste = useCallback(async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text) {
+        termRef.current?.focus();
+        return;
+      }
+      confirmTextPaste(text);
+    } catch {
+      window.alert('Unable to read from the clipboard. Please allow clipboard access and try again.');
+      termRef.current?.focus();
+    }
+  }, [confirmTextPaste]);
+
   useImperativeHandle(ref, () => ({
     runCommand: (c: string) => runCommand(c),
     getContent: () => contentRef.current,
@@ -295,6 +464,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
   useEffect(() => {
     let disposed = false;
+    let selectionDisposable: { dispose: () => void } | undefined;
+    let textarea: HTMLTextAreaElement | undefined;
+    let pasteListener: ((event: ClipboardEvent) => void) | undefined;
     (async () => {
       const [{ Terminal: XTerm }, { FitAddon }, { SearchAddon }] = await Promise.all([
         import('@xterm/xterm'),
@@ -303,17 +475,17 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       ]);
       await import('@xterm/xterm/css/xterm.css');
       if (disposed) return;
+      const initialSettings = settingsRef.current;
+      const themeConfig = terminalThemes[initialSettings.theme] ?? terminalThemes.kali;
       const term = new XTerm({
         cursorBlink: true,
         scrollback: 1000,
         cols: 80,
         rows: 24,
         fontFamily: '"Fira Code", monospace',
-        theme: {
-          background: '#0f1317',
-          foreground: '#f5f5f5',
-          cursor: '#1793d1',
-        },
+        fontSize: initialSettings.fontSize,
+        lineHeight: 1.4,
+        theme: { ...themeConfig.theme },
       });
       const fit = new FitAddon();
       const search = new SearchAddon();
@@ -325,6 +497,26 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       term.open(containerRef.current!);
       fit.fit();
       term.focus();
+      if (typeof term.onSelectionChange === 'function') {
+        selectionDisposable = term.onSelectionChange(() => {
+          if (!settingsRef.current.copyOnSelect) return;
+          const selection = term.getSelection?.();
+          if (selection) {
+            navigator.clipboard.writeText(selection).catch(() => {});
+          }
+        });
+      }
+      pasteListener = (event: ClipboardEvent) => {
+        event.preventDefault();
+        const text = event.clipboardData?.getData('text') ?? '';
+        if (!text) {
+          term.focus();
+          return;
+        }
+        confirmTextPaste(text);
+      };
+      textarea = term.textarea ?? undefined;
+      textarea?.addEventListener('paste', pasteListener);
       if (opfsSupported) {
         dirRef.current = await getDir('terminal');
         const existing = await readFile('history.txt', dirRef.current || undefined);
@@ -376,9 +568,28 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     })();
     return () => {
       disposed = true;
+      if (textarea && pasteListener) {
+        textarea.removeEventListener('paste', pasteListener);
+      }
+      selectionDisposable?.dispose?.();
       termRef.current?.dispose();
+      termRef.current = null;
     };
-    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow]);
+    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow, confirmTextPaste]);
+
+  useEffect(() => {
+    const themeConfig = terminalThemes[settings.theme] ?? terminalThemes.kali;
+    if (termRef.current) {
+      termRef.current.options.theme = { ...themeConfig.theme };
+    }
+  }, [settings.theme]);
+
+  useEffect(() => {
+    if (termRef.current) {
+      termRef.current.options.fontSize = settings.fontSize;
+    }
+    fitRef.current?.fit();
+  }, [settings.fontSize]);
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();
@@ -446,68 +657,137 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       )}
       {settingsOpen && (
         <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-10">
-          <div className="bg-gray-900 p-4 rounded space-y-4">
-            <div className="grid grid-cols-8 gap-2">
-              {ansiColors.map((c, i) => (
-                <div key={i} className="h-4 w-4 rounded" style={{ backgroundColor: c }} />
-              ))}
-            </div>
-            <pre className="text-sm leading-snug">
-              <span className="text-blue-400">bin</span>{' '}
-              <span className="text-green-400">script.sh</span>{' '}
-              <span className="text-gray-300">README.md</span>
-            </pre>
-            <div className="flex justify-end gap-2">
-              <button
-                className="px-2 py-1 bg-gray-700 rounded"
-                onClick={() => {
-                  setSettingsOpen(false);
-                  termRef.current?.focus();
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-2 py-1 bg-blue-600 rounded"
-                onClick={() => {
-                  setSettingsOpen(false);
-                  termRef.current?.focus();
-                }}
-              >
-                Apply
-              </button>
+          <div className="w-full max-w-md rounded border border-slate-700 bg-gray-900 p-4 shadow-lg">
+            <h2 className="mb-4 text-lg font-semibold text-white">Terminal settings</h2>
+            <div className="space-y-6">
+              <label className="flex items-center justify-between text-sm text-gray-200">
+                <span>Copy on select</span>
+                <input
+                  type="checkbox"
+                  className="h-4 w-4"
+                  checked={settings.copyOnSelect}
+                  onChange={(event) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      copyOnSelect: event.target.checked,
+                    }))
+                  }
+                />
+              </label>
+              <div className="space-y-2 text-sm text-gray-200">
+                <div className="flex items-center justify-between">
+                  <span>Font size</span>
+                  <span>{settings.fontSize}px</span>
+                </div>
+                <input
+                  type="range"
+                  min={12}
+                  max={24}
+                  step={1}
+                  value={settings.fontSize}
+                  onChange={(event) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      fontSize: Number(event.target.value),
+                    }))
+                  }
+                  className="w-full"
+                />
+              </div>
+              <div className="space-y-2 text-sm text-gray-200">
+                <span>Theme</span>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  {Object.entries(terminalThemes).map(([key, config]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      className={`flex flex-col rounded border p-2 text-left text-xs transition focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                        settings.theme === key ? 'border-blue-500 shadow-md' : 'border-gray-700'
+                      }`}
+                      style={{
+                        background: config.theme.background,
+                        color: config.theme.foreground,
+                        borderColor: config.ui.border,
+                      }}
+                      onClick={() =>
+                        setSettings((prev) => ({
+                          ...prev,
+                          theme: key as TerminalThemeKey,
+                        }))
+                      }
+                    >
+                      <span
+                        className="mb-2 h-12 w-full rounded"
+                        style={{ background: config.preview }}
+                      />
+                      <span className="font-medium">{config.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <button
+                  className="rounded bg-blue-600 px-3 py-1 text-sm font-medium text-white"
+                  onClick={() => {
+                    setSettingsOpen(false);
+                    termRef.current?.focus();
+                  }}
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
-      <div className="flex flex-col h-full">
-        <div className="flex items-center gap-2 bg-gray-800 p-1">
-          <button onClick={handleCopy} aria-label="Copy">
+      <div className="flex h-full flex-col">
+        <div
+          className="flex items-center gap-2 border-b px-2 py-1"
+          style={{
+            background: currentTheme.ui.chrome,
+            color: currentTheme.ui.chromeText,
+            borderColor: currentTheme.ui.border,
+          }}
+        >
+          <button onClick={handleCopy} aria-label="Copy" className="p-1">
             <CopyIcon />
           </button>
-          <button onClick={handlePaste} aria-label="Paste">
+          <button onClick={handlePaste} aria-label="Paste" className="p-1">
             <PasteIcon />
           </button>
-          <button onClick={() => setSettingsOpen(true)} aria-label="Settings">
+          <button onClick={() => setSettingsOpen(true)} aria-label="Settings" className="p-1">
             <SettingsIcon />
           </button>
         </div>
-        <div className="relative">
+        <div className="relative flex-1">
           <TerminalContainer
             ref={containerRef}
-            className="resize overflow-hidden font-mono"
+            className="h-full w-full resize overflow-hidden font-mono"
             style={{
               width: '80ch',
               height: '24em',
-              fontSize: 'clamp(1rem, 0.6vw + 1rem, 1.1rem)',
+              fontSize: `${settings.fontSize}px`,
               lineHeight: 1.4,
+              background: currentTheme.theme.background,
+              color: currentTheme.theme.foreground,
+              borderColor: currentTheme.ui.border,
             }}
           />
           {overflow.top && (
-            <div className="pointer-events-none absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-black" />
+            <div
+              className="pointer-events-none absolute top-0 left-0 right-0 h-4"
+              style={{
+                background: `linear-gradient(to bottom, ${currentTheme.theme.background}, transparent)`,
+              }}
+            />
           )}
           {overflow.bottom && (
-            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-black" />
+            <div
+              className="pointer-events-none absolute bottom-0 left-0 right-0 h-4"
+              style={{
+                background: `linear-gradient(to top, ${currentTheme.theme.background}, transparent)`,
+              }}
+            />
           )}
         </div>
       </div>
