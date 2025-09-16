@@ -26,6 +26,7 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
     '/apps/http',
     '/apps',
     '/apps/input-lab',
+    '/apps/theme-editor',
     '/apps/john',
     '/apps/kismet',
     '/apps/metasploit-post',
