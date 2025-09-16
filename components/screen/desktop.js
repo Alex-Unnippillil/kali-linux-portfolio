@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { focusSkipTarget, notifySkipTargetsChanged, registerSkipTarget } from '../system/FocusManager';
 
 export class Desktop extends Component {
     constructor() {
@@ -30,6 +31,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.skipTargetCleanups = [];
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -89,6 +91,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        this.setupFocusTargets();
     }
 
     componentWillUnmount() {
@@ -96,6 +99,57 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        this.teardownFocusTargets();
+    }
+
+    setupFocusTargets = () => {
+        this.teardownFocusTargets();
+        this.skipTargetCleanups.push(registerSkipTarget({
+            id: 'desktop',
+            label: 'Desktop',
+            shortcut: 'Control+Shift+2',
+            priority: 20,
+            getNode: () => document.getElementById('desktop'),
+            getAnnouncement: () => 'Focus moved to the desktop. Use Tab to explore desktop items.',
+        }));
+        this.skipTargetCleanups.push(registerSkipTarget({
+            id: 'active-window',
+            label: 'Active window',
+            shortcut: 'Control+Shift+4',
+            priority: 40,
+            getNode: () => {
+                const focusedId = this.getFocusedWindowId();
+                return focusedId ? document.getElementById(focusedId) : null;
+            },
+            isAvailable: () => {
+                const focusedId = this.getFocusedWindowId();
+                if (!focusedId) return false;
+                if (this.state.closed_windows[focusedId]) return false;
+                if (this.state.minimized_windows[focusedId]) return false;
+                return true;
+            },
+            getAnnouncement: () => {
+                const focusedId = this.getFocusedWindowId();
+                if (!focusedId) {
+                    return 'No window is currently active.';
+                }
+                const appMeta = apps.find(app => app.id === focusedId);
+                const title = appMeta?.title || focusedId.replace(/-/g, ' ');
+                return `Focus moved to the ${title} window.`;
+            },
+        }));
+        notifySkipTargetsChanged();
+    }
+
+    teardownFocusTargets = () => {
+        if (Array.isArray(this.skipTargetCleanups)) {
+            this.skipTargetCleanups.forEach(cleanup => {
+                if (typeof cleanup === 'function') {
+                    cleanup();
+                }
+            });
+        }
+        this.skipTargetCleanups = [];
     }
 
     checkForNewFolders = () => {
@@ -147,24 +201,49 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcut = (e) => {
+        if (e.ctrlKey && e.shiftKey) {
+            const key = e.key.toLowerCase();
+            if (key === '1') {
+                e.preventDefault();
+                focusSkipTarget('dock', { fallbackAnnouncement: 'The dock is not available right now.' });
+                return;
+            }
+            if (key === '2') {
+                e.preventDefault();
+                focusSkipTarget('desktop', { fallbackAnnouncement: 'The desktop is not available right now.' });
+                return;
+            }
+            if (key === '3') {
+                e.preventDefault();
+                focusSkipTarget('taskbar', { fallbackAnnouncement: 'The taskbar is not available right now.' });
+                return;
+            }
+            if (key === '4') {
+                e.preventDefault();
+                focusSkipTarget('active-window', { fallbackAnnouncement: 'No window is currently active.' });
+                return;
+            }
+            if (key === 'v') {
+                e.preventDefault();
+                this.openApp('clipboard-manager');
+                return;
+            }
+        }
         if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
             if (!this.state.showWindowSwitcher) {
                 this.openWindowSwitcher();
+            } else {
+                this.cycleApps(e.shiftKey ? -1 : 1);
             }
-        } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
-            e.preventDefault();
-            this.openApp('clipboard-manager');
+            return;
         }
-        else if (e.altKey && e.key === 'Tab') {
-            e.preventDefault();
-            this.cycleApps(e.shiftKey ? -1 : 1);
-        }
-        else if (e.altKey && (e.key === '`' || e.key === '~')) {
+        if (e.altKey && (e.key === '`' || e.key === '~')) {
             e.preventDefault();
             this.cycleAppWindows(e.shiftKey ? -1 : 1);
+            return;
         }
-        else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+        if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
             e.preventDefault();
             const id = this.getFocusedWindowId();
             if (id) {
@@ -547,7 +626,9 @@ export class Desktop extends Component {
         // remove focus and minimise this window
         minimized_windows[objId] = true;
         focused_windows[objId] = false;
-        this.setState({ minimized_windows, focused_windows });
+        this.setState({ minimized_windows, focused_windows }, () => {
+            notifySkipTargetsChanged();
+        });
 
         this.hideSideBar(null, false);
 
@@ -560,10 +641,11 @@ export class Desktop extends Component {
             for (const index in this.app_stack) {
                 if (!this.state.minimized_windows[this.app_stack[index]]) {
                     this.focus(this.app_stack[index]);
-                    break;
+                    return;
                 }
             }
         }
+        notifySkipTargetsChanged();
     }
 
     checkAllMinimised = () => {
@@ -701,7 +783,10 @@ export class Desktop extends Component {
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
-        this.setState({ closed_windows, favourite_apps }, this.saveSession);
+        this.setState({ closed_windows, favourite_apps }, () => {
+            this.saveSession();
+            notifySkipTargetsChanged();
+        });
     }
 
     pinApp = (id) => {
@@ -744,7 +829,9 @@ export class Desktop extends Component {
                 }
             }
         }
-        this.setState({ focused_windows });
+        this.setState({ focused_windows }, () => {
+            notifySkipTargetsChanged();
+        });
     }
 
     addNewFolder = () => {
@@ -865,7 +952,13 @@ export class Desktop extends Component {
 
     render() {
         return (
-            <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+            <main
+                id="desktop"
+                role="main"
+                tabIndex={-1}
+                aria-label="Desktop workspace"
+                className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}
+            >
 
                 {/* Window Area */}
                 <div
