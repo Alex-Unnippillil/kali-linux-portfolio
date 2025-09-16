@@ -252,10 +252,19 @@ const ContactApp: React.FC = () => {
         <button
           type="submit"
           disabled={submitting}
+          aria-busy={submitting}
           className="flex h-12 w-full items-center justify-center rounded bg-blue-600 px-4 sm:w-auto disabled:opacity-50"
         >
           {submitting ? (
-            <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            <>
+              <div
+                className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"
+                aria-hidden="true"
+              />
+              <span className="sr-only" aria-live="polite">
+                Sending message…
+              </span>
+            </>
           ) : (
             "Send"
           )}
