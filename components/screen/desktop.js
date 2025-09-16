@@ -900,6 +900,7 @@ export class Desktop extends Component {
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    closeApp={this.closeApp}
                 />
 
                 {/* Desktop Apps */}
