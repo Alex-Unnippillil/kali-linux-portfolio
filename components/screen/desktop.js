@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { loadWindowGeometry, saveWindowGeometry } from '../../src/wm/persistence';
 
 export class Desktop extends Component {
     constructor() {
@@ -73,6 +74,7 @@ export class Desktop extends Component {
             if (session.windows && session.windows.length) {
                 session.windows.forEach(({ id, x, y }) => {
                     positions[id] = { x, y };
+                    saveWindowGeometry(id, { x, y });
                 });
                 this.setState({ window_positions: positions }, () => {
                     session.windows.forEach(({ id }) => this.openApp(id));
@@ -494,9 +496,13 @@ export class Desktop extends Component {
         const snap = this.props.snapEnabled
             ? (v) => Math.round(v / 8) * 8
             : (v) => v;
+        const geometry = { x: snap(x), y: snap(y) };
         this.setState(prev => ({
-            window_positions: { ...prev.window_positions, [id]: { x: snap(x), y: snap(y) } }
-        }), this.saveSession);
+            window_positions: { ...prev.window_positions, [id]: { ...geometry } }
+        }), () => {
+            saveWindowGeometry(id, geometry);
+            this.saveSession();
+        });
     }
 
     saveSession = () => {
@@ -610,8 +616,6 @@ export class Desktop extends Component {
             }
             return;
         } else {
-            let closed_windows = this.state.closed_windows;
-            let favourite_apps = this.state.favourite_apps;
             let frequentApps = [];
             try { frequentApps = JSON.parse(safeLocalStorage?.getItem('frequentApps') || '[]'); } catch (e) { frequentApps = []; }
             var currentApp = frequentApps.find(app => app.id === objId);
@@ -645,9 +649,25 @@ export class Desktop extends Component {
             safeLocalStorage?.setItem('recentApps', JSON.stringify(recentApps));
 
             setTimeout(() => {
-                favourite_apps[objId] = true; // adds opened app to sideBar
-                closed_windows[objId] = false; // openes app's window
-                this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
+                this.setState((prevState) => {
+                    const favourite_apps = { ...prevState.favourite_apps, [objId]: true };
+                    const closed_windows = { ...prevState.closed_windows, [objId]: false };
+                    const minimized_windows = { ...prevState.minimized_windows, [objId]: false };
+                    const window_positions = { ...prevState.window_positions };
+
+                    if (!window_positions[objId]) {
+                        const geometry = loadWindowGeometry(objId);
+                        window_positions[objId] = { x: geometry.x, y: geometry.y };
+                    }
+
+                    return {
+                        favourite_apps,
+                        closed_windows,
+                        minimized_windows,
+                        window_positions,
+                        allAppsView: false,
+                    };
+                }, () => {
                     this.focus(objId);
                     this.saveSession();
                 });
