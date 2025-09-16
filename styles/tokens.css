@@ -27,6 +27,25 @@
   --color-text: #F5F5F5;
   --kali-bg: rgba(15, 19, 23, 0.85);
 
+  /* Window surface treatments */
+  --surface-window-glass: color-mix(in srgb, var(--color-ub-drk-abrgn), transparent 35%);
+  --surface-window-muted-glass: color-mix(in srgb, var(--color-ub-cool-grey), transparent 45%);
+  --surface-window-solid: var(--color-ub-drk-abrgn);
+  --surface-window-muted-solid: var(--color-ub-cool-grey);
+  --shadow-window-glass: 0 24px 52px -28px color-mix(in srgb, var(--color-inverse), transparent 70%);
+  --shadow-window-solid: 0 26px 60px -24px color-mix(in srgb, var(--color-inverse), transparent 35%);
+  --border-window-glass: color-mix(in srgb, var(--color-inverse), transparent 65%);
+  --border-window-solid: color-mix(in srgb, var(--color-inverse), transparent 25%);
+  --window-backdrop-filter-glass: blur(18px);
+  --window-backdrop-filter-solid: none;
+
+  /* Active window tokens */
+  --surface-window: var(--surface-window-glass);
+  --surface-window-muted: var(--surface-window-muted-glass);
+  --shadow-window: var(--shadow-window-glass);
+  --border-window: var(--border-window-glass);
+  --window-backdrop-filter: var(--window-backdrop-filter-glass);
+
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
   --game-color-success: #15803d;
@@ -73,6 +92,11 @@
   --color-ub-orange: #ffff00;
   --color-ub-lite-abrgn: #00ffff;
   --color-ub-border-orange: #ffff00;
+  --surface-window: #000000;
+  --surface-window-muted: #000000;
+  --shadow-window: 0 0 0 2px #ffffff;
+  --border-window: #ffffff;
+  --window-backdrop-filter: none;
   --game-color-secondary: #ffff00;
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
@@ -96,6 +120,15 @@
   --motion-slow: 0ms;
 }
 
+/* Reduced transparency / solid surfaces */
+.solid-surfaces {
+  --surface-window: var(--surface-window-solid);
+  --surface-window-muted: var(--surface-window-muted-solid);
+  --shadow-window: var(--shadow-window-solid);
+  --border-window: var(--border-window-solid);
+  --window-backdrop-filter: var(--window-backdrop-filter-solid);
+}
+
 @media (prefers-reduced-motion: reduce) {
   :root {
     --motion-fast: 0ms;
@@ -116,5 +149,10 @@
     --color-ub-orange: #ffff00;
     --color-ub-lite-abrgn: #00ffff;
     --color-ub-border-orange: #ffff00;
+    --surface-window: #000000;
+    --surface-window-muted: #000000;
+    --shadow-window: 0 0 0 2px #ffffff;
+    --border-window: #ffffff;
+    --window-backdrop-filter: none;
   }
 }
