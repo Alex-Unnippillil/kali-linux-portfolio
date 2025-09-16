@@ -33,6 +33,7 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            isFocused: !!props.isFocused,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
@@ -55,6 +56,15 @@ export class Window extends Component {
         root?.addEventListener('super-arrow', this.handleSuperArrow);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
+        }
+    }
+
+    componentDidUpdate(prevProps) {
+        if (prevProps.isFocused !== this.props.isFocused) {
+            const nextFocusState = !!this.props.isFocused;
+            if (this.state.isFocused !== nextFocusState) {
+                this.setState({ isFocused: nextFocusState });
+            }
         }
     }
 
@@ -376,7 +386,20 @@ export class Window extends Component {
     }
 
     focusWindow = () => {
+        if (!this.state.isFocused) {
+            this.setState({ isFocused: true });
+        }
         this.props.focus(this.id);
+    }
+
+    handleWindowFocus = () => {
+        this.focusWindow();
+    }
+
+    handleWindowBlur = () => {
+        if (this.state.isFocused) {
+            this.setState({ isFocused: false });
+        }
     }
 
     minimizeWindow = () => {
@@ -612,6 +635,19 @@ export class Window extends Component {
     }
 
     render() {
+        const { cursorType, closed, maximized, grabbed, snapPreview, width, height, isFocused } = this.state;
+        const { minimized } = this.props;
+        const windowClasses = [
+            cursorType,
+            closed ? "closed-window" : "",
+            maximized ? "duration-300 rounded-none" : "rounded-lg rounded-b-none",
+            minimized ? "opacity-0 invisible duration-200" : "",
+            grabbed ? "opacity-70" : "",
+            snapPreview ? "ring-2 ring-blue-400" : "",
+            this.props.isFocused ? "z-30" : "z-20",
+            isFocused ? "window-focused" : "window-unfocused",
+            "opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"
+        ].filter(Boolean).join(" ");
         return (
             <>
                 {this.state.snapPreview && (
@@ -634,13 +670,15 @@ export class Window extends Component {
                     bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
                 >
                     <div
-                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        style={{ width: `${width}%`, height: `${height}%` }}
+                        className={windowClasses}
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
+                        onFocus={this.handleWindowFocus}
+                        onBlur={this.handleWindowBlur}
                     >
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
@@ -677,7 +715,7 @@ export default Window
 export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
     return (
         <div
-            className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
+            className={"window-titlebar relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
