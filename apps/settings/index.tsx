@@ -12,6 +12,8 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import useInstallPrompt from "@/hooks/useInstallPrompt";
+import { trackEvent } from "@/lib/analytics-client";
 
 export default function Settings() {
   const {
@@ -33,6 +35,7 @@ export default function Settings() {
     setTheme,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { available: canInstall, requestInstall } = useInstallPrompt();
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
@@ -104,6 +107,13 @@ export default function Settings() {
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
+
+  const handleInstall = async () => {
+    const shown = await requestInstall();
+    if (shown) {
+      trackEvent("cta_click", { location: "settings_install" });
+    }
+  };
 
   return (
     <div className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey">
@@ -272,6 +282,19 @@ export default function Settings() {
       )}
       {activeTab === "privacy" && (
         <>
+          {canInstall && (
+            <div className="flex flex-col items-center text-center my-4 space-y-2">
+              <p className="text-ubt-grey">
+                Install this desktop for quick launch support.
+              </p>
+              <button
+                onClick={handleInstall}
+                className="px-4 py-2 rounded bg-ubt-blue text-white"
+              >
+                Install App
+              </button>
+            </div>
+          )}
           <div className="flex justify-center my-4 space-x-4">
             <button
               onClick={handleExport}

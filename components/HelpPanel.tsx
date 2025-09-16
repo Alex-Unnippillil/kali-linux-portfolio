@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
+import useInstallPrompt from '@/hooks/useInstallPrompt';
+import { trackEvent } from '@/lib/analytics-client';
 
 interface HelpPanelProps {
   appId: string;
@@ -12,6 +14,7 @@ interface HelpPanelProps {
 export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
   const [open, setOpen] = useState(false);
   const [html, setHtml] = useState("<p>Loading...</p>");
+  const { available, requestInstall } = useInstallPrompt();
 
   useEffect(() => {
     if (!open) return;
@@ -48,6 +51,13 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
 
   const toggle = () => setOpen((o) => !o);
 
+  const handleInstall = async () => {
+    const shown = await requestInstall();
+    if (shown) {
+      trackEvent('cta_click', { location: 'help_panel_install' });
+    }
+  };
+
   return (
     <>
       <button
@@ -69,6 +79,20 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
             onClick={(e) => e.stopPropagation()}
           >
             <div dangerouslySetInnerHTML={{ __html: html }} />
+            {available && (
+              <div className="mt-4 border-t border-gray-200 pt-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  Install this desktop for quicker access.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleInstall}
+                  className="px-3 py-1 bg-ubt-blue text-white rounded focus:outline-none focus:ring"
+                >
+                  Install App
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
