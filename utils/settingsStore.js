@@ -24,6 +24,9 @@ export async function getAccent() {
 export async function setAccent(accent) {
   if (typeof window === 'undefined') return;
   await set('accent', accent);
+  try {
+    window.localStorage.setItem('accent', accent);
+  } catch {}
 }
 
 export async function getWallpaper() {
@@ -129,6 +132,9 @@ export async function resetSettings() {
     del('accent'),
     del('bg-image'),
   ]);
+  try {
+    window.localStorage.removeItem('accent');
+  } catch {}
   window.localStorage.removeItem('density');
   window.localStorage.removeItem('reduced-motion');
   window.localStorage.removeItem('font-scale');
