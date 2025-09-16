@@ -1,6 +1,6 @@
 import React from 'react';
 import WorkflowCard from '../components/WorkflowCard';
-import { WindowMainScreen } from '../components/base/window';
+import WindowMainScreen from '../components/base/WindowMainScreen.server';
 
 interface FrameProps {
   title: string;

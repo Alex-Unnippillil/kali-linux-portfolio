@@ -1,4 +1,4 @@
-import { loadJobDefinitions, saveJobDefinition, loadFalsePositives, recordFalsePositive } from '../components/apps/nessus/index';
+import { loadJobDefinitions, saveJobDefinition, loadFalsePositives, recordFalsePositive } from '../components/apps/nessus/storage';
 
 describe('nessus scheduling and feedback', () => {
   beforeEach(() => {
