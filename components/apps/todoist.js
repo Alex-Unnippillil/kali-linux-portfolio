@@ -609,7 +609,7 @@ export default function Todoist() {
             </div>
             <div className="flex flex-wrap gap-2 text-xs text-gray-500">
               {task.due && (
-                <span className={`inline-flex items-center gap-1 px-2 py-[2px] rounded-full ${chipColor}`}>
+                <span className={`inline-flex items-center gap-1 px-2 py-[var(--space-0-5)] rounded-full ${chipColor}`}>
                   <span aria-hidden>📅</span>
                   {task.due}
                 </span>

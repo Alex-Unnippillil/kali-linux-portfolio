@@ -334,12 +334,12 @@ export default function QuoteApp() {
           {current ? (
             <div key={keyOf(current)} className="animate-quote">
               <span
-                className="absolute -top-4 left-4 text-[64px] text-white/20 select-none"
+                className="absolute -top-4 left-4 text-[calc(var(--space-6)*2)] text-white/20 select-none"
                 aria-hidden="true"
               >
                 &ldquo;
               </span>
-              <p className="mb-4 text-[18px] leading-[24px] sm:text-[20px] sm:leading-[26px] tracking-[6px]">
+              <p className="mb-4 text-[calc(var(--space-4)+var(--space-0-5))] leading-[var(--space-5)] sm:text-[calc(var(--space-4) + var(--space-1))] sm:leading-[calc(var(--space-5)+var(--space-0-5))] tracking-[var(--space-1-5)]">
                 {current.content}
               </p>
               <p className="text-sm text-white/80">— {current.author}</p>

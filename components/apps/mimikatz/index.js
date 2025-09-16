@@ -33,7 +33,7 @@ const maskSensitive = (line, show) => {
   const [, label, value] = match;
   return (
     <>
-      {label}: <span className="p-[6px]">{show ? value : "********"}</span>
+      {label}: <span className="p-[var(--space-1-5)]">{show ? value : "********"}</span>
     </>
   );
 };

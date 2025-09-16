@@ -320,7 +320,7 @@ const AsciiArtApp = () => {
             </button>
           </div>
           <pre
-            className="p-[6px] whitespace-pre overflow-auto font-mono leading-none"
+            className="p-[var(--space-1-5)] whitespace-pre overflow-auto font-mono leading-none"
             style={{ imageRendering: 'pixelated', fontSize: `${fontSize}px`, color: fgColor, backgroundColor: bgColor }}
           >
             {output}
@@ -421,7 +421,7 @@ const AsciiArtApp = () => {
           </div>
           <canvas ref={canvasRef} className="hidden" />
           <pre
-            className="p-[6px] whitespace-pre overflow-auto font-mono leading-none"
+            className="p-[var(--space-1-5)] whitespace-pre overflow-auto font-mono leading-none"
             style={{ imageRendering: 'pixelated', fontSize: `${fontSize}px`, color: fgColor, backgroundColor: bgColor }}
           >
             {imgOutput}

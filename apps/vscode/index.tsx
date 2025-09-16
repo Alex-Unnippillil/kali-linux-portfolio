@@ -69,7 +69,7 @@ export default function VsCode() {
           className="flex items-center gap-2 px-2 py-1 border-t border-black/20"
           style={{ backgroundColor: kaliTheme.sidebar }}
         >
-          <span className="flex items-center gap-1 text-[12px] uppercase bg-black/30 px-[6px] py-[2px] rounded-full">
+          <span className="flex items-center gap-1 text-[12px] uppercase bg-black/30 px-[var(--space-1-5)] py-[var(--space-0-5)] rounded-full">
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -86,7 +86,7 @@ export default function VsCode() {
             </svg>
             MAIN
           </span>
-          <span className="flex items-center gap-1 text-[12px] uppercase bg-black/30 px-[6px] py-[2px] rounded-full">
+          <span className="flex items-center gap-1 text-[12px] uppercase bg-black/30 px-[var(--space-1-5)] py-[var(--space-0-5)] rounded-full">
             <svg
               viewBox="0 0 24 24"
               fill="none"

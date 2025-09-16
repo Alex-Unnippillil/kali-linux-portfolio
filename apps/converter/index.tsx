@@ -193,8 +193,8 @@ export default function Converter() {
         </label>
       </div>
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row items-center gap-[6px]">
-          <div className="flex flex-col sm:flex-row gap-[6px] flex-1">
+        <div className="flex flex-col sm:flex-row items-center gap-[var(--space-1-5)]">
+          <div className="flex flex-col sm:flex-row gap-[var(--space-1-5)] flex-1">
             <div className="flex flex-col flex-1">
               <input
                 type="number"
@@ -238,7 +238,7 @@ export default function Converter() {
           >
             ↔
           </button>
-          <div className="flex flex-col sm:flex-row gap-[6px] flex-1">
+          <div className="flex flex-col sm:flex-row gap-[var(--space-1-5)] flex-1">
             <div className="flex flex-col flex-1">
               <input
                 type="number"

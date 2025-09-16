@@ -233,7 +233,7 @@ const Sudoku = () => {
       <div className="mb-2">
         Time: {Math.floor(time / 60)}:{('0' + (time % 60)).slice(-2)}
       </div>
-      <div className="grid grid-cols-9" style={{ gap: '2px' }}>
+      <div className="grid grid-cols-9" style={{ gap: 'var(--space-0-5)' }}>
         {board.map((row, r) =>
           row.map((cell, c) => {
             const original = puzzle[r][c] !== 0;

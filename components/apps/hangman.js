@@ -540,7 +540,7 @@ const Hangman = () => {
       </div>
         <div
           className="grid grid-cols-9 gap-x-1 text-xs mb-2 w-max mx-auto justify-items-center"
-          style={{ rowGap: '6px' }}
+          style={{ rowGap: 'var(--space-1-5)' }}
         >
           {letters.map((l) => {
             const intensity =

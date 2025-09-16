@@ -3,6 +3,7 @@ import React, {
   useEffect,
   useRef,
   useMemo,
+  useCallback,
 } from 'react';
 import dynamic from 'next/dynamic';
 import usePersistentState from '../../../hooks/usePersistentState';
@@ -134,7 +135,25 @@ const createWorkspace = (index) => ({
 });
 
 const ReconNG = () => {
-  const { allowNetwork } = useSettings();
+  const { allowNetwork, density } = useSettings();
+
+  const getSpacingValue = useCallback(
+    (token, fallback) => {
+      if (typeof window === 'undefined') {
+        return fallback;
+      }
+      const value = getComputedStyle(document.documentElement)
+        .getPropertyValue(token)
+        .trim();
+      return value || fallback;
+    },
+    [density],
+  );
+
+  const clusterPadding = useMemo(
+    () => getSpacingValue('--space-2-5', '10px'),
+    [getSpacingValue],
+  );
   const [selectedModule, setSelectedModule] = useState(modules[0]);
   const [target, setTarget] = useState('');
   const [output, setOutput] = useState('');
@@ -263,7 +282,7 @@ const ReconNG = () => {
       {
         selector: '$node > node',
         style: {
-          padding: '10px',
+          padding: clusterPadding,
           'background-opacity': 0.1,
           'border-color': '#555',
         },
