@@ -8,6 +8,7 @@ import { displayGedit } from './components/apps/gedit';
 import { displayTodoist } from './components/apps/todoist';
 import { displayWeather } from './components/apps/weather';
 import { displayClipboardManager } from './components/apps/ClipboardManager';
+import { displayScreenshot } from './components/apps/screenshot';
 import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayScreenRecorder } from './components/apps/screen-recorder';
@@ -230,6 +231,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayClipboardManager,
+  },
+  {
+    id: 'screenshot',
+    title: 'Screenshot',
+    icon: '/themes/Yaru/apps/screen-recorder.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayScreenshot,
   },
   {
     id: 'figlet',
