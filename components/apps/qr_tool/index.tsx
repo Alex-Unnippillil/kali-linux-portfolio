@@ -1,6 +1,11 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
-import QRCode from 'qrcode';
+
+import { queueQrEncode, type QrEncodeResult } from '@/src/workers/image';
+import {
+  isTaskCancelledError,
+  type WorkerPoolTask,
+} from '@/src/workers/workerPool';
 
 interface BatchItem {
   name: string;
@@ -20,36 +25,19 @@ const QRTool: React.FC = () => {
   const [svg, setSvg] = useState('');
   const [csv, setCsv] = useState('');
   const [batch, setBatch] = useState<BatchItem[]>([]);
-  const workerRef = React.useRef<Worker | null>(null);
+  const previewTaskRef = React.useRef<WorkerPoolTask<QrEncodeResult> | null>(null);
+  const mountedRef = React.useRef(true);
 
-  const initWorker = React.useCallback(() => {
-    if (
-      !workerRef.current &&
-      typeof window !== 'undefined' &&
-      typeof Worker === 'function'
-    ) {
-      workerRef.current = new Worker(
-        new URL('../../../workers/qrEncode.worker.ts', import.meta.url),
-      );
-    }
-    return workerRef.current;
+  const encodeQr = React.useCallback((value: string) => {
+    previewTaskRef.current?.cancel();
+    const handle = queueQrEncode(value, optsRef.current);
+    previewTaskRef.current = handle;
+    return handle.promise.finally(() => {
+      if (previewTaskRef.current === handle) {
+        previewTaskRef.current = null;
+      }
+    });
   }, []);
-
-  const encodeQr = React.useCallback(
-    (text: string) =>
-      new Promise<{ png: string; svg: string }>((resolve) => {
-        const w = initWorker();
-        if (!w) {
-          resolve({ png: '', svg: '' });
-          return;
-        }
-        w.onmessage = (
-          e: MessageEvent<{ png: string; svg: string }>,
-        ) => resolve(e.data);
-        w.postMessage({ text, opts: optsRef.current });
-      }),
-    [initWorker],
-  );
 
   const opts = useMemo(
     () => ({
@@ -69,16 +57,30 @@ const QRTool: React.FC = () => {
   }, [opts]);
 
   useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      previewTaskRef.current?.cancel();
+    };
+  }, []);
+
+  useEffect(() => {
     const value = text || ' ';
+    let alive = true;
     encodeQr(value)
       .then(({ png: p, svg: s }) => {
+        if (!alive || !mountedRef.current) return;
         setPng(p);
         setSvg(s);
       })
-      .catch(() => {
+      .catch((err) => {
+        if (!alive || !mountedRef.current || isTaskCancelledError(err)) return;
         setPng('');
         setSvg('');
       });
+    return () => {
+      alive = false;
+    };
   }, [text, opts, encodeQr]);
 
   const downloadDataUrl = (dataUrl: string, filename: string) => {
@@ -111,17 +113,23 @@ const QRTool: React.FC = () => {
       .split(/\r?\n/)
       .map((l) => l.trim())
       .filter(Boolean);
-    const items = await Promise.all(
-      lines.map(async (line, i) => {
-        const [val, nameCol] = line.split(',');
-        const value = val.trim();
-        const name = nameCol ? nameCol.trim() : `code-${i + 1}`;
-        const pngData = await QRCode.toDataURL(value, opts);
-        const svgText = await QRCode.toString(value, { ...opts, type: 'svg' });
-        return { name, png: pngData, svg: svgText };
-      }),
-    );
-    setBatch(items);
+    const currentOpts = optsRef.current;
+    try {
+      const items = await Promise.all(
+        lines.map(async (line, i) => {
+          const [val, nameCol] = line.split(',');
+          const value = (val || '').trim() || ' ';
+          const name = nameCol ? nameCol.trim() : `code-${i + 1}`;
+          const result = await queueQrEncode(value, currentOpts).promise;
+          return { name, ...result };
+        }),
+      );
+      if (!mountedRef.current) return;
+      setBatch(items);
+    } catch (err) {
+      if (isTaskCancelledError(err)) return;
+      console.error(err);
+    }
   };
 
   return (
