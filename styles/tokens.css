@@ -41,6 +41,9 @@
   --space-5: 1.5rem;
   --space-6: 2rem;
 
+  /* Text measure */
+  --measure-text: 65ch;
+
   /* Radius */
   --radius-sm: 2px;
   --radius-md: 4px;
