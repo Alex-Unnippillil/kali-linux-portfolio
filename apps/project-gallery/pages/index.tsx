@@ -1,7 +1,9 @@
 'use client';
 
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 import { useEffect, useMemo, useState } from 'react';
+import { getCspNonce } from '../../../utils/csp';
 import usePersistentState from '../../../hooks/usePersistentState';
 import FilterChip from '../components/FilterChip';
 
@@ -106,6 +108,7 @@ interface Project {
   type: string;
   thumbnail: string;
   demo?: string;
+  repo?: string;
 }
 
 export default function ProjectGalleryPage() {
@@ -187,6 +190,21 @@ export default function ProjectGalleryPage() {
     [projects]
   );
 
+  const structured = useMemo(
+    () =>
+      projects.map((p) => ({
+        '@context': 'https://schema.org',
+        '@type': 'CreativeWork',
+        name: p.title,
+        description: p.description,
+        url: p.demo || p.repo,
+        thumbnailUrl: p.thumbnail,
+        author: { '@type': 'Person', name: 'Alex Unnippillil' },
+      })),
+    [projects]
+  );
+  const nonce = getCspNonce();
+
   const filtered = useMemo(
     () =>
       projects.filter(
@@ -204,114 +222,126 @@ export default function ProjectGalleryPage() {
   );
 
   return (
-    <div className="p-4 space-y-4 text-black">
-      <div className="flex flex-wrap gap-2 items-center">
-        <input
-          type="text"
-          placeholder="Search..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="px-2 py-1 border rounded"
-        />
-        <FilterChip
-          label="Playable"
-          active={demoOnly}
-          onClick={() => setDemoOnly(!demoOnly)}
-          icon={<PlayIcon />}
-        />
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {tagList.map((t) => (
-          <FilterChip
-            key={t}
-            label={t}
-            active={tags.includes(t)}
-            onClick={() =>
-              setTags(tags.includes(t) ? tags.filter((tag) => tag !== t) : [...tags, t])
-            }
-            icon={<TagIcon />}
+    <>
+      <Head>
+        {!loading && (
+          <script
+            type="application/ld+json"
+            nonce={nonce}
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
           />
-        ))}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {stacks.map((s) => (
-          <FilterChip
-            key={s}
-            label={s}
-            active={tech.includes(s)}
-            onClick={() =>
-              setTech(tech.includes(s) ? tech.filter((t) => t !== s) : [...tech, s])
-            }
-            icon={<StackIcon />}
+        )}
+      </Head>
+      <div className="p-4 space-y-4 text-black">
+        <div className="flex flex-wrap gap-2 items-center">
+          <input
+            aria-label="Search"
+            type="text"
+            placeholder="Search..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="px-2 py-1 border rounded"
           />
-        ))}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {years.map((y) => (
           <FilterChip
-            key={y}
-            label={String(y)}
-            active={year === String(y)}
-            onClick={() => setYear(year === String(y) ? '' : String(y))}
-            icon={<CalendarIcon />}
+            label="Playable"
+            active={demoOnly}
+            onClick={() => setDemoOnly(!demoOnly)}
+            icon={<PlayIcon />}
           />
-        ))}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {types.map((t) => (
-          <FilterChip
-            key={t}
-            label={t}
-            active={type === t}
-            onClick={() => setType(type === t ? '' : t)}
-            icon={<TypeIcon />}
-          />
-        ))}
-      </div>
-      <div className="grid gap-3 min-[320px]:grid-cols-2 md:grid-cols-3">
-        {loading
-          ? Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-72 flex flex-col border rounded overflow-hidden animate-pulse"
-              >
-                <div className="w-full h-40 bg-gray-300" />
-                <div className="p-2 space-y-2 flex-1">
-                  <div className="h-4 bg-gray-300 rounded w-3/4" />
-                  <div className="h-3 bg-gray-300 rounded w-1/2" />
-                </div>
-              </div>
-            ))
-          : filtered.map((p) => (
-              <div
-                key={p.id}
-                tabIndex={0}
-                className="group relative h-72 flex flex-col border rounded overflow-hidden transition-transform transition-opacity duration-300 hover:scale-105 hover:opacity-90 focus:scale-105 focus:opacity-90 focus:outline-none"
-                aria-label={`${p.title}: ${p.description}`}
-              >
-                <div className="w-full aspect-video overflow-hidden">
-                  <img src={p.thumbnail} alt={p.title} className="w-full h-full object-cover" />
-                </div>
-                <div className="p-2 flex-1">
-                  <h3 className="font-semibold text-base line-clamp-2">{p.title}</h3>
-                  <p className="text-sm">{p.description}</p>
-                </div>
-                <div className="absolute inset-0 opacity-0 pointer-events-none group-hover:opacity-100 group-focus-within:opacity-100 group-hover:pointer-events-auto group-focus-within:pointer-events-auto transition-opacity bg-black/60 text-white flex flex-col">
-                  <div className="p-2 flex flex-wrap gap-1">
-                    {p.tags.map((t) => (
-                      <span key={t} className="bg-white text-black rounded px-1 text-xs">
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="mt-auto p-2 text-right">
-                    <button className="bg-blue-600 text-white px-4 h-10 rounded">Launch</button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {tagList.map((t) => (
+            <FilterChip
+              key={t}
+              label={t}
+              active={tags.includes(t)}
+              onClick={() =>
+                setTags(tags.includes(t) ? tags.filter((tag) => tag !== t) : [...tags, t])
+              }
+              icon={<TagIcon />}
+            />
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {stacks.map((s) => (
+            <FilterChip
+              key={s}
+              label={s}
+              active={tech.includes(s)}
+              onClick={() =>
+                setTech(tech.includes(s) ? tech.filter((t) => t !== s) : [...tech, s])
+              }
+              icon={<StackIcon />}
+            />
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {years.map((y) => (
+            <FilterChip
+              key={y}
+              label={String(y)}
+              active={year === String(y)}
+              onClick={() => setYear(year === String(y) ? '' : String(y))}
+              icon={<CalendarIcon />}
+            />
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {types.map((t) => (
+            <FilterChip
+              key={t}
+              label={t}
+              active={type === t}
+              onClick={() => setType(type === t ? '' : t)}
+              icon={<TypeIcon />}
+            />
+          ))}
+        </div>
+        <div className="grid gap-3 min-[320px]:grid-cols-2 md:grid-cols-3">
+          {loading
+            ? Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-72 flex flex-col border rounded overflow-hidden animate-pulse"
+                >
+                  <div className="w-full h-40 bg-gray-300" />
+                  <div className="p-2 space-y-2 flex-1">
+                    <div className="h-4 bg-gray-300 rounded w-3/4" />
+                    <div className="h-3 bg-gray-300 rounded w-1/2" />
                   </div>
                 </div>
-              </div>
-            ))}
-      </div>
-    </div>
+              ))
+            : filtered.map((p) => (
+                <div
+                  key={p.id}
+                  tabIndex={0}
+                  className="group relative h-72 flex flex-col border rounded overflow-hidden transition-transform transition-opacity duration-300 hover:scale-105 hover:opacity-90 focus:scale-105 focus:opacity-90 focus:outline-none"
+                  aria-label={`${p.title}: ${p.description}`}
+                >
+                  <div className="w-full aspect-video overflow-hidden">
+                    <img src={p.thumbnail} alt={p.title} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="p-2 flex-1">
+                    <h3 className="font-semibold text-base line-clamp-2">{p.title}</h3>
+                    <p className="text-sm">{p.description}</p>
+                  </div>
+                  <div className="absolute inset-0 opacity-0 pointer-events-none group-hover:opacity-100 group-focus-within:opacity-100 group-hover:pointer-events-auto group-focus-within:pointer-events-auto transition-opacity bg-black/60 text-white flex flex-col">
+                    <div className="p-2 flex flex-wrap gap-1">
+                      {p.tags.map((t) => (
+                        <span key={t} className="bg-white text-black rounded px-1 text-xs">
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="mt-auto p-2 text-right">
+                      <button className="bg-blue-600 text-white px-4 h-10 rounded">Launch</button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
   );
 }
 
