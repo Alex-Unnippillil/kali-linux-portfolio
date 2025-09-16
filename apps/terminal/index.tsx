@@ -88,6 +88,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const filesRef = useRef<Record<string, string>>(files);
   const aliasesRef = useRef<Record<string, string>>({});
   const historyRef = useRef<string[]>([]);
+  const visualBellTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const contextRef = useRef<CommandContext>({
     writeLine: () => {},
     files: filesRef.current,
@@ -129,6 +132,23 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     if (!term || !term.buffer) return;
     const { viewportY, baseY } = term.buffer.active;
     setOverflow({ top: viewportY > 0, bottom: viewportY < baseY });
+  }, []);
+
+  const triggerVisualBell = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    if (visualBellTimeoutRef.current) {
+      clearTimeout(visualBellTimeoutRef.current);
+    }
+    container.classList.remove('visual-bell');
+    // Force a reflow so repeated bells restart the animation.
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions, no-unused-expressions, no-void
+    void container.offsetWidth;
+    container.classList.add('visual-bell');
+    visualBellTimeoutRef.current = window.setTimeout(() => {
+      container.classList.remove('visual-bell');
+      visualBellTimeoutRef.current = null;
+    }, 150);
   }, []);
 
   const writeLine = useCallback(
@@ -295,6 +315,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
   useEffect(() => {
     let disposed = false;
+    let bellListener: { dispose: () => void } | undefined;
+    let restoreWrite: (() => void) | undefined;
+    let restoreWriteln: (() => void) | undefined;
     (async () => {
       const [{ Terminal: XTerm }, { FitAddon }, { SearchAddon }] = await Promise.all([
         import('@xterm/xterm'),
@@ -325,6 +348,43 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       term.open(containerRef.current!);
       fit.fit();
       term.focus();
+      const containsBell = (value?: string | Uint8Array) => {
+        if (typeof value === 'string') {
+          return value.includes('\u0007');
+        }
+        if (value instanceof Uint8Array) {
+          return value.includes(7);
+        }
+        return false;
+      };
+      if (typeof term.onBell === 'function') {
+        bellListener = term.onBell(triggerVisualBell);
+      } else {
+        if (typeof term.write === 'function') {
+          const originalWrite = term.write;
+          term.write = ((data: string | Uint8Array, callback?: () => void) => {
+            if (containsBell(data)) {
+              triggerVisualBell();
+            }
+            return originalWrite.call(term, data, callback);
+          }) as typeof term.write;
+          restoreWrite = () => {
+            term.write = originalWrite;
+          };
+        }
+        if (typeof term.writeln === 'function') {
+          const originalWriteln = term.writeln;
+          term.writeln = ((data?: string | Uint8Array) => {
+            if (containsBell(data)) {
+              triggerVisualBell();
+            }
+            return originalWriteln.call(term, data);
+          }) as typeof term.writeln;
+          restoreWriteln = () => {
+            term.writeln = originalWriteln;
+          };
+        }
+      }
       if (opfsSupported) {
         dirRef.current = await getDir('terminal');
         const existing = await readFile('history.txt', dirRef.current || undefined);
@@ -376,9 +436,27 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     })();
     return () => {
       disposed = true;
+      if (visualBellTimeoutRef.current) {
+        clearTimeout(visualBellTimeoutRef.current);
+        visualBellTimeoutRef.current = null;
+      }
+      containerRef.current?.classList.remove('visual-bell');
+      bellListener?.dispose();
+      restoreWrite?.();
+      restoreWriteln?.();
       termRef.current?.dispose();
     };
-    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow]);
+  }, [
+    opfsSupported,
+    getDir,
+    readFile,
+    writeLine,
+    prompt,
+    handleInput,
+    autocomplete,
+    updateOverflow,
+    triggerVisualBell,
+  ]);
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();
