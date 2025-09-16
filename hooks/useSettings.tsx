@@ -23,11 +23,12 @@ import {
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import tokens from '../utils/tokens';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
-  '#1793d1', // kali blue (default)
+  tokens.colors.ubOrange, // kali blue (default)
   '#e53e3e', // red
   '#d97706', // orange
   '#38a169', // green
@@ -159,20 +160,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {
       regular: {
-        '--space-1': '0.25rem',
-        '--space-2': '0.5rem',
-        '--space-3': '0.75rem',
-        '--space-4': '1rem',
-        '--space-5': '1.5rem',
-        '--space-6': '2rem',
+        '--space-1': tokens.spacing['1'],
+        '--space-2': tokens.spacing['2'],
+        '--space-3': tokens.spacing['3'],
+        '--space-4': tokens.spacing['4'],
+        '--space-5': tokens.spacing['5'],
+        '--space-6': tokens.spacing['6'],
       },
       compact: {
-        '--space-1': '0.125rem',
-        '--space-2': '0.25rem',
-        '--space-3': '0.5rem',
-        '--space-4': '0.75rem',
-        '--space-5': '1rem',
-        '--space-6': '1.5rem',
+        '--space-1': `calc(${tokens.spacing['1']} / 2)`,
+        '--space-2': `calc(${tokens.spacing['2']} / 2)`,
+        '--space-3': `calc(${tokens.spacing['3']} / 2)`,
+        '--space-4': `calc(${tokens.spacing['4']} / 2)`,
+        '--space-5': `calc(${tokens.spacing['5']} / 2)`,
+        '--space-6': `calc(${tokens.spacing['6']} / 2)`,
       },
     };
     const vars = spacing[density];

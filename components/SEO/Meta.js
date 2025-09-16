@@ -1,6 +1,7 @@
 import React from 'react'
 import Head from 'next/head';
 import { getCspNonce } from '../../utils/csp';
+import tokens from '../../utils/tokens';
 
 export default function Meta() {
     const nonce = getCspNonce();
@@ -20,7 +21,7 @@ export default function Meta() {
             <meta name="language" content="English" />
             <meta name="category" content="16" />
             <meta name="viewport" content="width=device-width, initial-scale=1" />
-            <meta name="theme-color" content="#0f1317" />
+            <meta name="theme-color" content={tokens.colors.bg} />
 
             {/* Search Engine */}
             <meta name="image" content="images/logos/fevicon.png" />
