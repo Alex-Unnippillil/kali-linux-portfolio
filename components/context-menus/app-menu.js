@@ -21,6 +21,15 @@ function AppMenu(props) {
         }
     }
 
+    const handleHelp = () => {
+        if (props.onClose) {
+            props.onClose()
+        }
+        if (props.onHelp) {
+            props.onHelp()
+        }
+    }
+
     return (
         <div
             id="app-menu"
@@ -39,6 +48,17 @@ function AppMenu(props) {
             >
                 <span className="ml-5">{props.pinned ? 'Unpin from Favorites' : 'Pin to Favorites'}</span>
             </button>
+            {props.hasHelp ? (
+                <button
+                    type="button"
+                    role="menuitem"
+                    onClick={handleHelp}
+                    aria-label="Show keyboard shortcuts"
+                    className="w-full text-left cursor-default py-0.5 hover:bg-gray-700"
+                >
+                    <span className="ml-5">Keyboard Shortcuts</span>
+                </button>
+            ) : null}
         </div>
     )
 }
