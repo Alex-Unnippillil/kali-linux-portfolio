@@ -6,9 +6,14 @@ export interface Shortcut {
 }
 
 const DEFAULT_SHORTCUTS: Shortcut[] = [
-  { description: 'Show keyboard shortcuts', keys: '?' },
+  { description: 'Show keyboard shortcuts', keys: 'Shift+?' },
   { description: 'Open settings', keys: 'Ctrl+,' },
 ];
+
+const sanitizeKeys = (keys: string) => {
+  if (keys === '?') return 'Shift+?';
+  return keys;
+};
 
 const validator = (value: unknown): value is Record<string, string> => {
   return (
@@ -36,13 +41,21 @@ export function useKeymap() {
     validator
   );
 
+  const normalizedMap = Object.entries(map).reduce<Record<string, string>>(
+    (acc, [description, keys]) => {
+      acc[description] = sanitizeKeys(keys);
+      return acc;
+    },
+    {}
+  );
+
   const shortcuts = DEFAULT_SHORTCUTS.map(({ description, keys }) => ({
     description,
-    keys: map[description] || keys,
+    keys: normalizedMap[description] || sanitizeKeys(keys),
   }));
 
   const updateShortcut = (description: string, keys: string) =>
-    setMap({ ...map, [description]: keys });
+    setMap({ ...normalizedMap, [description]: keys });
 
   return { shortcuts, updateShortcut };
 }
