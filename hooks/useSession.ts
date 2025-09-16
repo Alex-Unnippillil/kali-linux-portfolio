@@ -5,6 +5,8 @@ export interface SessionWindow {
   id: string;
   x: number;
   y: number;
+  width?: number;
+  height?: number;
 }
 
 export interface DesktopSession {
@@ -22,11 +24,20 @@ const initialSession: DesktopSession = {
 function isSession(value: unknown): value is DesktopSession {
   if (!value || typeof value !== 'object') return false;
   const s = value as DesktopSession;
-  return (
-    Array.isArray(s.windows) &&
-    typeof s.wallpaper === 'string' &&
-    Array.isArray(s.dock)
-  );
+  if (!Array.isArray(s.windows) || typeof s.wallpaper !== 'string' || !Array.isArray(s.dock)) {
+    return false;
+  }
+  return s.windows.every((win) => {
+    if (!win || typeof win !== 'object') return false;
+    const candidate = win as SessionWindow;
+    return (
+      typeof candidate.id === 'string' &&
+      typeof candidate.x === 'number' &&
+      typeof candidate.y === 'number' &&
+      (candidate.width === undefined || typeof candidate.width === 'number') &&
+      (candidate.height === undefined || typeof candidate.height === 'number')
+    );
+  });
 }
 
 export default function useSession() {
