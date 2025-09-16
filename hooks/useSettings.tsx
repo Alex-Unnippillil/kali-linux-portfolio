@@ -1,7 +1,10 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import { accentFromImage } from '../src/theming/accentFromImage';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
+  getAccentLock as loadAccentLock,
+  setAccentLock as saveAccentLock,
   getWallpaper as loadWallpaper,
   setWallpaper as saveWallpaper,
   getDensity as loadDensity,
@@ -53,6 +56,7 @@ const shadeColor = (color: string, percent: number): string => {
 
 interface SettingsContextValue {
   accent: string;
+  accentLocked: boolean;
   wallpaper: string;
   density: Density;
   reducedMotion: boolean;
@@ -64,6 +68,7 @@ interface SettingsContextValue {
   haptics: boolean;
   theme: string;
   setAccent: (accent: string) => void;
+  setAccentLocked: (locked: boolean) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
   setReducedMotion: (value: boolean) => void;
@@ -78,6 +83,7 @@ interface SettingsContextValue {
 
 export const SettingsContext = createContext<SettingsContextValue>({
   accent: defaults.accent,
+  accentLocked: defaults.accentLocked,
   wallpaper: defaults.wallpaper,
   density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
@@ -89,6 +95,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   haptics: defaults.haptics,
   theme: 'default',
   setAccent: () => {},
+  setAccentLocked: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
   setReducedMotion: () => {},
@@ -103,6 +110,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [accent, setAccent] = useState<string>(defaults.accent);
+  const [accentLocked, setAccentLocked] = useState<boolean>(defaults.accentLocked);
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
@@ -118,6 +126,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     (async () => {
       setAccent(await loadAccent());
+      setAccentLocked(await loadAccentLock());
       setWallpaper(await loadWallpaper());
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
@@ -153,8 +162,36 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [accent]);
 
   useEffect(() => {
+    saveAccentLock(accentLocked);
+  }, [accentLocked]);
+
+  useEffect(() => {
     saveWallpaper(wallpaper);
   }, [wallpaper]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (accentLocked || !wallpaper) return;
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const color = await accentFromImage(`/wallpapers/${wallpaper}.webp`, {
+          fallback: defaults.accent,
+        });
+        if (!cancelled && color) {
+          setAccent((prev) => (prev === color ? prev : color));
+        }
+      } catch (error) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('Failed to derive accent from wallpaper', error);
+        }
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [wallpaper, accentLocked]);
 
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {
@@ -240,6 +277,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     <SettingsContext.Provider
       value={{
         accent,
+        accentLocked,
         wallpaper,
         density,
         reducedMotion,
@@ -251,6 +289,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         haptics,
         theme,
         setAccent,
+        setAccentLocked,
         setWallpaper,
         setDensity,
         setReducedMotion,

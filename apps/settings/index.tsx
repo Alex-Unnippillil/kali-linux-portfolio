@@ -17,6 +17,8 @@ export default function Settings() {
   const {
     accent,
     setAccent,
+    accentLocked,
+    setAccentLocked,
     wallpaper,
     setWallpaper,
     density,
@@ -72,6 +74,7 @@ export default function Settings() {
     try {
       const parsed = JSON.parse(text);
       if (parsed.accent !== undefined) setAccent(parsed.accent);
+      if (parsed.accentLocked !== undefined) setAccentLocked(parsed.accentLocked);
       if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
       if (parsed.density !== undefined) setDensity(parsed.density);
       if (parsed.reducedMotion !== undefined)
@@ -95,6 +98,7 @@ export default function Settings() {
     await resetSettings();
     window.localStorage.clear();
     setAccent(defaults.accent);
+    setAccentLocked(defaults.accentLocked);
     setWallpaper(defaults.wallpaper);
     setDensity(defaults.density as any);
     setReducedMotion(defaults.reducedMotion);
@@ -149,6 +153,21 @@ export default function Settings() {
                 />
               ))}
             </div>
+          </div>
+          <div className="flex flex-col items-center my-2 text-ubt-grey">
+            <div className="flex items-center gap-2">
+              <span>Lock accent color</span>
+              <ToggleSwitch
+                checked={accentLocked}
+                onChange={setAccentLocked}
+                ariaLabel="Lock accent color"
+              />
+            </div>
+            <p className="text-xs mt-2 text-center max-w-xs">
+              {accentLocked
+                ? 'Accent stays fixed even when wallpapers change.'
+                : 'Accent updates automatically to match the current wallpaper.'}
+            </p>
           </div>
           <div className="flex justify-center my-4">
             <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">Wallpaper:</label>
