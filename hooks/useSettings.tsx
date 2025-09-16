@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import { useRouter } from 'next/router';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -20,9 +21,20 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getLocale as loadLocale,
+  setLocale as saveLocale,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import { resolveLocale, applyLocaleToRouting, type LocaleCode } from '../i18n';
+
+const useOptionalRouter = () => {
+  try {
+    return useRouter();
+  } catch {
+    return null;
+  }
+};
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -63,6 +75,7 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  locale: LocaleCode;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +87,7 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setLocale: (value: LocaleCode) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +102,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  locale: resolveLocale(defaults.locale),
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,9 +114,11 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setLocale: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
+  const router = useOptionalRouter();
   const [accent, setAccent] = useState<string>(defaults.accent);
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
@@ -113,6 +130,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [locale, setLocaleState] = useState<LocaleCode>(resolveLocale(defaults.locale));
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -127,6 +145,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setLocaleState(resolveLocale(await loadLocale()));
       setTheme(loadTheme());
     })();
   }, []);
@@ -236,6 +255,21 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = locale;
+    }
+    void saveLocale(locale);
+  }, [locale]);
+
+  useEffect(() => {
+    applyLocaleToRouting(router, locale);
+  }, [router, locale]);
+
+  const changeLocale = (value: LocaleCode) => {
+    setLocaleState((current) => (current === value ? current : value));
+  };
+
   return (
     <SettingsContext.Provider
       value={{
@@ -250,6 +284,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        locale,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +296,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setLocale: changeLocale,
       }}
     >
       {children}

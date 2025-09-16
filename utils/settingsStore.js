@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  locale: 'en-US',
 };
 
 export async function getAccent() {
@@ -123,6 +124,27 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getLocale() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.locale;
+  try {
+    const stored = window.localStorage.getItem('locale');
+    if (stored) return stored;
+  } catch {
+    return DEFAULT_SETTINGS.locale;
+  }
+  const navigatorLocale = typeof navigator !== 'undefined' ? navigator.language : null;
+  return navigatorLocale || DEFAULT_SETTINGS.locale;
+}
+
+export async function setLocale(locale) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem('locale', locale);
+  } catch {
+    // ignore write failures in restricted environments
+  }
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +159,11 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  try {
+    window.localStorage.removeItem('locale');
+  } catch {
+    // ignore missing storage in non-browser environments
+  }
 }
 
 export async function exportSettings() {
@@ -151,6 +178,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    locale,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +190,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getLocale(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -176,6 +205,7 @@ export async function exportSettings() {
     allowNetwork,
     haptics,
     theme,
+    locale,
   });
 }
 
@@ -200,6 +230,7 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    locale,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -212,6 +243,7 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (locale !== undefined) await setLocale(locale);
 }
 
 export const defaults = DEFAULT_SETTINGS;
