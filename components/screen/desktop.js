@@ -898,8 +898,13 @@ export class Desktop extends Component {
                     closed_windows={this.state.closed_windows}
                     minimized_windows={this.state.minimized_windows}
                     focused_windows={this.state.focused_windows}
+                    favourite_apps={this.state.favourite_apps}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    closeApp={this.closeApp}
+                    pinApp={this.pinApp}
+                    unpinApp={this.unpinApp}
+                    moveToDesktop={this.addShortcutToDesktop}
                 />
 
                 {/* Desktop Apps */}
