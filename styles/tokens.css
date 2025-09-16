@@ -60,23 +60,62 @@
   /* Focus outline */
   --focus-outline-color: var(--color-ubt-blue);
   --focus-outline-width: 2px;
+
+  /* High contrast token references */
+  --color-hc-bg: #000000;
+  --color-hc-surface: #111111;
+  --color-hc-muted: #1a1a1a;
+  --color-hc-border: #f5f5f5;
+  --color-hc-text: #ffffff;
+  --color-hc-inverse: #000000;
+  --color-hc-accent-primary: #ffdd33;
+  --color-hc-accent-secondary: #00c4ff;
 }
 
 /* High contrast theme */
 .high-contrast {
-  --color-bg: #000000;
-  --color-text: #ffffff;
+  --color-bg: var(--color-hc-bg);
+  --color-surface: var(--color-hc-surface);
+  --color-muted: var(--color-hc-muted);
+  --color-border: var(--color-hc-border);
+  --color-text: var(--color-hc-text);
+  --color-inverse: var(--color-hc-inverse);
+  --color-primary: var(--color-hc-accent-primary);
+  --color-secondary: var(--color-hc-accent-secondary);
+  --color-accent: var(--color-hc-accent-primary);
+  --color-terminal: #00ff66;
+  --color-dark: #050505;
+  --color-focus-ring: var(--color-hc-accent-primary);
+  --color-selection: var(--color-hc-accent-primary);
+  --color-control-accent: var(--color-hc-accent-primary);
+
   --color-ub-grey: #000000;
-  --color-ub-cool-grey: #000000;
+  --color-ub-warm-grey: #f8f8f8;
+  --color-ub-cool-grey: #0c0c0c;
+  --color-ub-orange: var(--color-hc-accent-primary);
+  --color-ub-lite-abrgn: #111111;
+  --color-ub-med-abrgn: #161616;
+  --color-ub-drk-abrgn: #080808;
+  --color-ub-window-title: #000000;
+  --color-ub-gedit-dark: #002b59;
+  --color-ub-gedit-light: #004b8d;
+  --color-ub-gedit-darker: #001933;
   --color-ubt-grey: #ffffff;
-  --color-ubt-cool-grey: #ffffff;
-  --color-ub-orange: #ffff00;
-  --color-ub-lite-abrgn: #00ffff;
-  --color-ub-border-orange: #ffff00;
-  --game-color-secondary: #ffff00;
-  --game-color-success: #00ffff;
-  --game-color-warning: #ff00ff;
-  --game-color-danger: #ff0000;
+  --color-ubt-warm-grey: #f2f2f2;
+  --color-ubt-cool-grey: #e6e6e6;
+  --color-ubt-blue: var(--color-hc-accent-secondary);
+  --color-ubt-green: #00f0a8;
+  --color-ubt-gedit-orange: var(--color-hc-accent-primary);
+  --color-ubt-gedit-blue: var(--color-hc-accent-secondary);
+  --color-ubt-gedit-dark: #00223f;
+  --color-ub-border-orange: var(--color-hc-accent-primary);
+  --color-ub-dark-grey: #040404;
+  --kali-bg: rgba(0, 0, 0, 0.85);
+
+  --game-color-secondary: var(--color-hc-accent-primary);
+  --game-color-success: var(--color-hc-accent-secondary);
+  --game-color-warning: #ff33ff;
+  --game-color-danger: #ff3355;
 }
 
 /* Dyslexia-friendly fonts */
@@ -107,14 +146,47 @@
 /* Optional high contrast via media query */
 @media (prefers-contrast: more) {
   :root {
-    --color-bg: #000000;
-    --color-text: #ffffff;
+    --color-bg: var(--color-hc-bg);
+    --color-surface: var(--color-hc-surface);
+    --color-muted: var(--color-hc-muted);
+    --color-border: var(--color-hc-border);
+    --color-text: var(--color-hc-text);
+    --color-inverse: var(--color-hc-inverse);
+    --color-primary: var(--color-hc-accent-primary);
+    --color-secondary: var(--color-hc-accent-secondary);
+    --color-accent: var(--color-hc-accent-primary);
+    --color-terminal: #00ff66;
+    --color-dark: #050505;
+    --color-focus-ring: var(--color-hc-accent-primary);
+    --color-selection: var(--color-hc-accent-primary);
+    --color-control-accent: var(--color-hc-accent-primary);
+
     --color-ub-grey: #000000;
-    --color-ub-cool-grey: #000000;
+    --color-ub-warm-grey: #f8f8f8;
+    --color-ub-cool-grey: #0c0c0c;
+    --color-ub-orange: var(--color-hc-accent-primary);
+    --color-ub-lite-abrgn: #111111;
+    --color-ub-med-abrgn: #161616;
+    --color-ub-drk-abrgn: #080808;
+    --color-ub-window-title: #000000;
+    --color-ub-gedit-dark: #002b59;
+    --color-ub-gedit-light: #004b8d;
+    --color-ub-gedit-darker: #001933;
     --color-ubt-grey: #ffffff;
-    --color-ubt-cool-grey: #ffffff;
-    --color-ub-orange: #ffff00;
-    --color-ub-lite-abrgn: #00ffff;
-    --color-ub-border-orange: #ffff00;
+    --color-ubt-warm-grey: #f2f2f2;
+    --color-ubt-cool-grey: #e6e6e6;
+    --color-ubt-blue: var(--color-hc-accent-secondary);
+    --color-ubt-green: #00f0a8;
+    --color-ubt-gedit-orange: var(--color-hc-accent-primary);
+    --color-ubt-gedit-blue: var(--color-hc-accent-secondary);
+    --color-ubt-gedit-dark: #00223f;
+    --color-ub-border-orange: var(--color-hc-accent-primary);
+    --color-ub-dark-grey: #040404;
+    --kali-bg: rgba(0, 0, 0, 0.85);
+
+    --game-color-secondary: var(--color-hc-accent-primary);
+    --game-color-success: var(--color-hc-accent-secondary);
+    --game-color-warning: #ff33ff;
+    --game-color-danger: #ff3355;
   }
 }
