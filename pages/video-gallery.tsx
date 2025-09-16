@@ -50,8 +50,11 @@ const VideoGallery: React.FC = () => {
         <div className="mb-4 w-full max-w-2xl aspect-video">
           <iframe
             title="Selected video"
-            className="w-full h-full"
+            className="h-full w-full rounded"
             src={`https://www.youtube-nocookie.com/embed/${playing}`}
+            width="1280"
+            height="720"
+            loading="lazy"
             sandbox="allow-scripts allow-popups"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             referrerPolicy="no-referrer"
