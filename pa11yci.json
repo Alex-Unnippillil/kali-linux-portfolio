@@ -16,10 +16,63 @@
     "http://localhost:3000/apps"
   ],
   "scenarios": [
-    {},
+    {
+      "label": "default"
+    },
     {
       "label": "high-contrast",
-      "beforeScript": "scripts/a11y-high-contrast.js"
+      "beforeScript": "scripts/a11y-apply-settings.js",
+      "settings": {
+        "localStorage": {
+          "high-contrast": "true"
+        },
+        "classes": ["high-contrast"]
+      }
+    },
+    {
+      "label": "large-text",
+      "beforeScript": "scripts/a11y-apply-settings.js",
+      "settings": {
+        "localStorage": {
+          "font-scale": "1.3"
+        },
+        "style": {
+          "--font-multiplier": "1.3"
+        }
+      }
+    },
+    {
+      "label": "reduced-motion",
+      "beforeScript": "scripts/a11y-apply-settings.js",
+      "settings": {
+        "localStorage": {
+          "reduced-motion": "true"
+        },
+        "classes": ["reduced-motion"]
+      }
+    },
+    {
+      "label": "large-hit-areas",
+      "beforeScript": "scripts/a11y-apply-settings.js",
+      "settings": {
+        "localStorage": {
+          "large-hit-areas": "true"
+        },
+        "classes": ["large-hit-area"]
+      }
+    },
+    {
+      "label": "matrix-theme",
+      "beforeScript": "scripts/a11y-apply-settings.js",
+      "settings": {
+        "localStorage": {
+          "app:theme": "matrix"
+        },
+        "dataset": {
+          "theme": "matrix"
+        },
+        "classes": ["dark"]
+      }
     }
   ]
 }
