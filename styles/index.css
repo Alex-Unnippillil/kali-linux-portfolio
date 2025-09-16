@@ -527,6 +527,6 @@ textarea:focus-visible {
 
 /* High contrast overrides */
 .high-contrast .bg-ub-orange {
-    color: #000 !important;
+    color: #fff !important;
 }
 
