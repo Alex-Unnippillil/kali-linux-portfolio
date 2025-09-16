@@ -118,6 +118,58 @@ describe('Window snapping preview', () => {
   });
 });
 
+describe('Snap zone tooltips', () => {
+  it('shows tooltip on focus and hides after snapping', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 5,
+      top: 10,
+      right: 105,
+      bottom: 110,
+      width: 100,
+      height: 100,
+      x: 5,
+      y: 10,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+
+    const preview = screen.getByTestId('snap-preview');
+    expect(screen.queryByRole('tooltip')).toBeNull();
+
+    fireEvent.focus(preview);
+
+    const tooltip = screen.getByRole('tooltip');
+    expect(tooltip).toHaveTextContent('Snap Left');
+    expect(tooltip).toHaveTextContent('Alt + ArrowLeft');
+
+    act(() => {
+      ref.current!.handleStop();
+    });
+
+    expect(screen.queryByRole('tooltip')).toBeNull();
+    expect(screen.queryByTestId('snap-preview')).toBeNull();
+  });
+});
+
 describe('Window snapping finalize and release', () => {
   it('snaps window on drag stop near left edge', () => {
     const ref = React.createRef<Window>();
