@@ -1,28 +1,53 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import ShortcutOverlay from '../components/common/ShortcutOverlay';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import HelpOverlay from '../components/system/HelpOverlay';
 
-describe('ShortcutOverlay', () => {
+describe('System HelpOverlay', () => {
   beforeEach(() => {
-    window.localStorage.removeItem('keymap');
+    window.localStorage.clear();
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: jest.fn().mockResolvedValue(undefined),
+      },
+    });
   });
 
-  it('lists shortcuts and highlights conflicts', () => {
+  it('opens with stored shortcut and filters results', () => {
     window.localStorage.setItem(
       'keymap',
       JSON.stringify({
         'Show keyboard shortcuts': 'A',
-        'Open settings': 'A',
-      })
+      }),
     );
-    render(<ShortcutOverlay />);
+    render(<HelpOverlay />);
     fireEvent.keyDown(window, { key: 'a' });
+
+    const dialog = screen.getByRole('dialog', { name: /keyboard shortcuts/i });
+    expect(dialog).toBeInTheDocument();
+
+    const search = screen.getByPlaceholderText(/search shortcuts/i);
+    fireEvent.change(search, { target: { value: 'clipboard' } });
+
     expect(
-      screen.getByText('Show keyboard shortcuts')
+      screen.getByText('Open the clipboard manager'),
     ).toBeInTheDocument();
-    expect(screen.getByText('Open settings')).toBeInTheDocument();
-    const items = screen.getAllByRole('listitem');
-    expect(items[0]).toHaveAttribute('data-conflict', 'true');
-    expect(items[1]).toHaveAttribute('data-conflict', 'true');
+    expect(
+      screen.queryByText('Open the application menu (Super / Windows key)'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('copies shortcut to the clipboard', async () => {
+    render(<HelpOverlay />);
+    fireEvent.keyDown(window, { key: '?', shiftKey: true });
+
+    const copyButton = await screen.findByRole('button', {
+      name: /copy meta to the clipboard/i,
+    });
+
+    fireEvent.click(copyButton);
+
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('Meta');
+    });
   });
 });
