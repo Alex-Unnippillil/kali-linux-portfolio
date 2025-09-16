@@ -19,6 +19,7 @@ import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import Taskbar from './taskbar';
 import TaskbarMenu from '../context-menus/taskbar-menu';
+import { hasAppHelp, loadAppHelp } from '../apps/help/registry';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
@@ -52,6 +53,10 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            helpModal: {
+                appId: null,
+                component: null,
+            },
         }
     }
 
@@ -320,6 +325,21 @@ export class Desktop extends Component {
             menus[key] = false;
         });
         this.setState({ context_menus: menus, context_app: null });
+    }
+
+    openHelpForApp = async (appId) => {
+        if (!hasAppHelp(appId)) return;
+        this.hideAllContextMenu();
+        try {
+            const Component = await loadAppHelp(appId);
+            this.setState({ helpModal: { appId, component: Component } });
+        } catch (error) {
+            console.error('Failed to open help for app', appId, error);
+        }
+    }
+
+    closeHelpModal = () => {
+        this.setState({ helpModal: { appId: null, component: null } });
     }
 
     getMenuPosition = (e) => {
@@ -864,6 +884,7 @@ export class Desktop extends Component {
     }
 
     render() {
+        const HelpComponent = this.state.helpModal.component;
         return (
             <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
 
@@ -920,6 +941,8 @@ export class Desktop extends Component {
                     pinApp={() => this.pinApp(this.state.context_app)}
                     unpinApp={() => this.unpinApp(this.state.context_app)}
                     onClose={this.hideAllContextMenu}
+                    hasHelp={hasAppHelp(this.state.context_app)}
+                    onHelp={() => this.openHelpForApp(this.state.context_app)}
                 />
                 <TaskbarMenu
                     active={this.state.context_menus.taskbar}
@@ -966,6 +989,8 @@ export class Desktop extends Component {
                         windows={this.state.switcherWindows}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
+
+                {HelpComponent ? <HelpComponent onClose={this.closeHelpModal} /> : null}
 
             </main>
         )
