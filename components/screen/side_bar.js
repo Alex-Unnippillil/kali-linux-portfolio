@@ -1,13 +1,23 @@
 import React, { useState } from 'react'
 import Image from 'next/image'
-import SideBarApp from '../base/side_bar_app';
+import DockItem from '../desktop/DockItem';
 
 let renderApps = (props) => {
     let sideBarAppsJsx = [];
     props.apps.forEach((app, index) => {
         if (props.favourite_apps[app.id] === false) return;
         sideBarAppsJsx.push(
-            <SideBarApp key={app.id} id={app.id} title={app.title} icon={app.icon} isClose={props.closed_windows} isFocus={props.focused_windows} openApp={props.openAppByAppId} isMinimized={props.isMinimized} openFromMinimised={props.openFromMinimised} />
+            <DockItem
+                key={app.id}
+                id={app.id}
+                title={app.title}
+                icon={app.icon}
+                isClose={props.closed_windows}
+                isFocus={props.focused_windows}
+                openApp={props.openAppByAppId}
+                isMinimized={props.isMinimized}
+                openFromMinimised={props.openFromMinimised}
+            />
         );
     });
     return sideBarAppsJsx;
