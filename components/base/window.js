@@ -7,6 +7,7 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import { getResistedPosition } from '@/src/wm/dragHelpers';
 
 export class Window extends Component {
     constructor(props) {
@@ -336,30 +337,16 @@ export class Window extends Component {
         }
     }
 
-    applyEdgeResistance = (node, data) => {
-        if (!node || !data) return;
-        const threshold = 30;
-        const resistance = 0.35; // how much to slow near edges
-        let { x, y } = data;
-        const maxX = this.state.parentSize.width;
-        const maxY = this.state.parentSize.height;
-
-        const resist = (pos, min, max) => {
-            if (pos < min) return min;
-            if (pos < min + threshold) return min + (pos - min) * resistance;
-            if (pos > max) return max;
-            if (pos > max - threshold) return max - (max - pos) * resistance;
-            return pos;
-        }
-
-        x = resist(x, 0, maxX);
-        y = resist(y, 0, maxY);
-        node.style.transform = `translate(${x}px, ${y}px)`;
+    applyEdgeResistance = (event, data) => {
+        if (!data || !data.node) return;
+        const bounds = this.state.parentSize;
+        const { x, y } = getResistedPosition(data, bounds, event);
+        data.node.style.transform = `translate(${x}px, ${y}px)`;
     }
 
     handleDrag = (e, data) => {
         if (data && data.node) {
-            this.applyEdgeResistance(data.node, data);
+            this.applyEdgeResistance(e, data);
         }
         this.checkOverlap();
         this.checkSnapPreview();
