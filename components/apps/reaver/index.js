@@ -136,6 +136,18 @@ const ReaverStepper = () => {
             left: 0;
           }
         }
+        @media (prefers-reduced-motion: reduce) {
+          .arrow-right,
+          .arrow-left {
+            animation: none;
+          }
+          .arrow-right {
+            left: calc(100% - 1rem);
+          }
+          .arrow-left {
+            left: 0;
+          }
+        }
         @media print {
           #reaver-stepper {
             background: white;

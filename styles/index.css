@@ -530,3 +530,92 @@ textarea:focus-visible {
     color: #000 !important;
 }
 
+@media (prefers-reduced-motion: reduce) {
+    .animateShow {
+        animation: none !important;
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    .closed-window {
+        animation: none !important;
+        opacity: 0;
+        transform: translate(var(--window-transform-x), var(--window-transform-y)) scale(0.85);
+        visibility: hidden;
+    }
+
+    .scalable-app-icon.scale {
+        animation: none !important;
+        opacity: 0;
+        visibility: hidden;
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    .all-apps-anim {
+        animation: none !important;
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    .app-icon-launch {
+        animation: none !important;
+        transform: scale(1);
+    }
+
+    .animate-deal {
+        animation: none !important;
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    .peek,
+    .shuffle,
+    .shake,
+    .reveal {
+        animation: none !important;
+        transform: none;
+    }
+
+    .chip-pop,
+    .score-pop,
+    .key-press,
+    .tile-pop {
+        animation: none !important;
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    .merge-ripple {
+        animation: none !important;
+        transform: scale(1);
+        opacity: 0;
+    }
+
+    .hangman-part {
+        animation: none !important;
+        stroke-dashoffset: 0;
+    }
+
+    .word-found {
+        animation: none !important;
+        background-size: 100% 100%;
+    }
+
+    .animate-spin,
+    .animate-ping,
+    .animate-pulse,
+    .animate-bounce {
+        animation: none !important;
+    }
+
+    .animate-spin,
+    .animate-bounce {
+        transform: none !important;
+    }
+
+    .animate-pulse,
+    .animate-ping {
+        opacity: 1 !important;
+    }
+}
+

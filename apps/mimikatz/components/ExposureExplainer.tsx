@@ -19,31 +19,37 @@ const steps: Step[] = [
       </div>
     ),
   },
-  {
-    title: 'Memory Dump Attempt',
-    description:
-      'An attacker attempts to dump the LSASS process memory to extract credentials.',
-    visual: (
-      <div className="relative w-64 h-32 border-2 border-blue-400">
-        <div className="absolute inset-0 bg-red-500 opacity-40 animate-pulse" />
-        <span className="absolute inset-0 flex items-center justify-center text-red-200 font-bold">
-          Dumping...
-        </span>
-      </div>
-    ),
+      {
+        title: 'Memory Dump Attempt',
+        description:
+          'An attacker attempts to dump the LSASS process memory to extract credentials.',
+        visual: (
+          <div className="relative w-64 h-32 border-2 border-blue-400">
+            <div className="absolute inset-0 bg-red-500 opacity-40 animate-pulse motion-reduce:animate-none" />
+            <span className="absolute inset-0 flex items-center justify-center text-red-200 font-bold">
+              Dumping...
+            </span>
+          </div>
+        ),
   },
   {
     title: 'Credential Extraction',
-    description:
-      'Tools like Mimikatz parse the dump looking for passwords, hashes, or Kerberos tickets.',
-    visual: (
-      <div className="relative w-64 h-32 border-2 border-blue-400 flex flex-col justify-center p-2">
-        <div className="h-3 bg-green-500 mb-1 animate-bounce" />
-        <div className="h-3 bg-green-500 mb-1 animate-bounce" style={{ animationDelay: '0.1s' }} />
-        <div className="h-3 bg-green-500 animate-bounce" style={{ animationDelay: '0.2s' }} />
-      </div>
-    ),
-  },
+        description:
+          'Tools like Mimikatz parse the dump looking for passwords, hashes, or Kerberos tickets.',
+        visual: (
+          <div className="relative w-64 h-32 border-2 border-blue-400 flex flex-col justify-center p-2">
+            <div className="h-3 bg-green-500 mb-1 animate-bounce motion-reduce:animate-none motion-reduce:transform-none" />
+            <div
+              className="h-3 bg-green-500 mb-1 animate-bounce motion-reduce:animate-none motion-reduce:transform-none"
+              style={{ animationDelay: '0.1s' }}
+            />
+            <div
+              className="h-3 bg-green-500 animate-bounce motion-reduce:animate-none motion-reduce:transform-none"
+              style={{ animationDelay: '0.2s' }}
+            />
+          </div>
+        ),
+      },
   {
     title: 'Mitigation',
     description:

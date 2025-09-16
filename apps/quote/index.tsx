@@ -493,6 +493,13 @@ export default function QuoteApp() {
             transform: translateY(0);
           }
         }
+        @media (prefers-reduced-motion: reduce) {
+          .animate-quote {
+            animation: none;
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
       `}</style>
     </div>
   );
