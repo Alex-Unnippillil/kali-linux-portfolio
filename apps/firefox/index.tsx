@@ -52,9 +52,9 @@ function CopyIcon() {
   );
 }
 
-export default function ChromeApp() {
+export default function FirefoxApp() {
   const [history, setHistory] = usePersistentState<string[]>(
-    'chrome-history',
+    'firefox-history',
     () => [],
   );
   const [index, setIndex] = useState(() =>
@@ -62,6 +62,15 @@ export default function ChromeApp() {
   );
   const url = history[index] || '';
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (history.length === 0) {
+      const homepage = 'https://www.kali.org/';
+      setHistory([homepage]);
+      setIndex(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const navigate = (nextUrl: string) => {
     if (!nextUrl) return;
@@ -156,7 +165,7 @@ export default function ChromeApp() {
         <iframe
           src={url}
           className="flex-1 w-full"
-          title="chrome-content"
+          title="firefox-content"
           onLoad={() => setLoading(false)}
         />
       )}
