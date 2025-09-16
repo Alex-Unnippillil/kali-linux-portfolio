@@ -16,6 +16,7 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import Toaster, { announcePolite } from '../components/system/Toaster';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -81,19 +82,9 @@ function MyApp(props) {
   }, []);
 
   useEffect(() => {
-    const liveRegion = document.getElementById('live-region');
-    if (!liveRegion) return;
-
-    const update = (message) => {
-      liveRegion.textContent = '';
-      setTimeout(() => {
-        liveRegion.textContent = message;
-      }, 100);
-    };
-
-    const handleCopy = () => update('Copied to clipboard');
-    const handleCut = () => update('Cut to clipboard');
-    const handlePaste = () => update('Pasted from clipboard');
+    const handleCopy = () => announcePolite('Copied to clipboard');
+    const handleCut = () => announcePolite('Cut to clipboard');
+    const handlePaste = () => announcePolite('Pasted from clipboard');
 
     window.addEventListener('copy', handleCopy);
     window.addEventListener('cut', handleCut);
@@ -104,14 +95,14 @@ function MyApp(props) {
     const originalRead = clipboard?.readText?.bind(clipboard);
     if (originalWrite) {
       clipboard.writeText = async (text) => {
-        update('Copied to clipboard');
+        announcePolite('Copied to clipboard');
         return originalWrite(text);
       };
     }
     if (originalRead) {
       clipboard.readText = async () => {
         const text = await originalRead();
-        update('Pasted from clipboard');
+        announcePolite('Pasted from clipboard');
         return text;
       };
     }
@@ -119,7 +110,7 @@ function MyApp(props) {
     const OriginalNotification = window.Notification;
     if (OriginalNotification) {
       const WrappedNotification = function (title, options) {
-        update(`${title}${options?.body ? ' ' + options.body : ''}`);
+        announcePolite(`${title}${options?.body ? ' ' + options.body : ''}`);
         return new OriginalNotification(title, options);
       };
       WrappedNotification.requestPermission = OriginalNotification.requestPermission.bind(
@@ -158,7 +149,7 @@ function MyApp(props) {
         </a>
         <SettingsProvider>
           <PipPortalProvider>
-            <div aria-live="polite" id="live-region" />
+            <Toaster />
             <Component {...pageProps} />
             <ShortcutOverlay />
             <Analytics
