@@ -33,10 +33,13 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            titleCollapsed: false,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this.titleBarRef = React.createRef();
+        this._lastExpandedHeight = this.state.height;
     }
 
     componentDidMount() {
@@ -58,6 +61,12 @@ export class Window extends Component {
         }
     }
 
+    componentDidUpdate(_, prevState) {
+        if (prevState.height !== this.state.height && !this.state.titleCollapsed) {
+            this._lastExpandedHeight = this.state.height;
+        }
+    }
+
     componentWillUnmount() {
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
@@ -74,7 +83,7 @@ export class Window extends Component {
     setDefaultWindowDimenstion = () => {
         if (this.props.defaultHeight && this.props.defaultWidth) {
             this.setState(
-                { height: this.props.defaultHeight, width: this.props.defaultWidth },
+                { height: this.props.defaultHeight, width: this.props.defaultWidth, titleCollapsed: false },
                 this.resizeBoundries
             );
             return;
@@ -83,11 +92,11 @@ export class Window extends Component {
         const isPortrait = window.innerHeight > window.innerWidth;
         if (isPortrait) {
             this.startX = window.innerWidth * 0.05;
-            this.setState({ height: 85, width: 90 }, this.resizeBoundries);
+            this.setState({ height: 85, width: 90, titleCollapsed: false }, this.resizeBoundries);
         } else if (window.innerWidth < 640) {
-            this.setState({ height: 60, width: 85 }, this.resizeBoundries);
+            this.setState({ height: 60, width: 85, titleCollapsed: false }, this.resizeBoundries);
         } else {
-            this.setState({ height: 85, width: 60 }, this.resizeBoundries);
+            this.setState({ height: 85, width: 60, titleCollapsed: false }, this.resizeBoundries);
         }
     }
 
@@ -185,6 +194,47 @@ export class Window extends Component {
         this._menuOpener = null;
     }
 
+    getTitleBarHeightPercent = () => {
+        if (typeof window === 'undefined' || !window.innerHeight) {
+            return this.state.height;
+        }
+        const node = this.titleBarRef.current;
+        const measured = node ? node.getBoundingClientRect().height : null;
+        const fallback = 44;
+        const extra = 8;
+        const total = (measured ?? fallback) + extra;
+        const percent = (total / window.innerHeight) * 100;
+        return Math.min(Math.max(percent, 4), 100);
+    }
+
+    toggleTitleCollapse = () => {
+        this.setState((prevState) => {
+            if (prevState.titleCollapsed) {
+                const expandedHeight = typeof this._lastExpandedHeight === 'number'
+                    ? this._lastExpandedHeight
+                    : prevState.height;
+                return {
+                    height: expandedHeight,
+                    titleCollapsed: false,
+                };
+            }
+            this._lastExpandedHeight = prevState.height;
+            return {
+                height: this.getTitleBarHeightPercent(),
+                titleCollapsed: true,
+            };
+        }, this.resizeBoundries);
+    }
+
+    handleTitleBarDoubleClick = (event) => {
+        if (event.altKey) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.focusWindow();
+            this.toggleTitleCollapse();
+        }
+    }
+
     changeCursorToMove = () => {
         this.focusWindow();
         if (this.state.maximized) {
@@ -245,10 +295,15 @@ export class Window extends Component {
             }
         }
         if (this.state.lastSize) {
+            const { width, height, titleCollapsed, expandedHeight } = this.state.lastSize;
+            if (typeof expandedHeight === 'number') {
+                this._lastExpandedHeight = expandedHeight;
+            }
             this.setState({
-                width: this.state.lastSize.width,
-                height: this.state.lastSize.height,
-                snapped: null
+                width,
+                height,
+                snapped: null,
+                titleCollapsed: !!titleCollapsed,
             }, this.resizeBoundries);
         } else {
             this.setState({ snapped: null }, this.resizeBoundries);
@@ -282,9 +337,15 @@ export class Window extends Component {
             snapPreview: null,
             snapPosition: null,
             snapped: position,
-            lastSize: { width, height },
+            lastSize: {
+                width,
+                height,
+                titleCollapsed: this.state.titleCollapsed,
+                expandedHeight: this._lastExpandedHeight,
+            },
             width: newWidth,
-            height: newHeight
+            height: newHeight,
+            titleCollapsed: false,
         }, this.resizeBoundries);
     }
 
@@ -423,7 +484,7 @@ export class Window extends Component {
 
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
-            this.setState({ maximized: false });
+            this.setState({ maximized: false, titleCollapsed: false });
             this.checkOverlap();
             return;
         }
@@ -431,7 +492,7 @@ export class Window extends Component {
         if (this._dockAnimation) {
             this._dockAnimation.onfinish = () => {
                 node.style.transform = endTransform;
-                this.setState({ maximized: false });
+                this.setState({ maximized: false, titleCollapsed: false });
                 this.checkOverlap();
                 this._dockAnimation.onfinish = null;
             };
@@ -443,7 +504,7 @@ export class Window extends Component {
             );
             this._dockAnimation.onfinish = () => {
                 node.style.transform = endTransform;
-                this.setState({ maximized: false });
+                this.setState({ maximized: false, titleCollapsed: false });
                 this.checkOverlap();
                 this._dockAnimation.onfinish = null;
             };
@@ -461,7 +522,7 @@ export class Window extends Component {
             this.setWinowsPosition();
             // translate window to maximize position
             r.style.transform = `translate(-1pt,-2pt)`;
-            this.setState({ maximized: true, height: 96.3, width: 100.2 });
+            this.setState({ maximized: true, height: 96.3, width: 100.2, titleCollapsed: false });
             this.props.hideSideBar(this.id, true);
         }
     }
@@ -478,6 +539,19 @@ export class Window extends Component {
     }
 
     handleTitleBarKeyDown = (e) => {
+        if (e.altKey) {
+            const shouldToggle =
+                e.key === 'Enter' ||
+                (e.key === 'ArrowUp' && !this.state.titleCollapsed) ||
+                (e.key === 'ArrowDown' && this.state.titleCollapsed);
+            if (shouldToggle) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.focusWindow();
+                this.toggleTitleCollapse();
+                return;
+            }
+        }
         if (e.key === ' ' || e.key === 'Space' || e.key === 'Enter') {
             e.preventDefault();
             e.stopPropagation();
@@ -645,10 +719,13 @@ export class Window extends Component {
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
                         <WindowTopBar
+                            ref={this.titleBarRef}
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
+                            onDoubleClick={this.handleTitleBarDoubleClick}
+                            collapsed={this.state.titleCollapsed}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -674,20 +751,23 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+export const WindowTopBar = React.forwardRef(function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onDoubleClick, collapsed }, ref) {
     return (
         <div
+            ref={ref}
             className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
+            aria-expanded={!collapsed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
+            onDoubleClick={onDoubleClick}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>
     )
-}
+});
 
 // Window's Borders
 export class WindowYBorder extends Component {
