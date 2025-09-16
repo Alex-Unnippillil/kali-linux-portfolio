@@ -10,7 +10,11 @@ const Ubuntu = dynamic(
     }),
   {
     ssr: false,
-    loading: () => <p>Loading Ubuntu...</p>,
+    loading: () => (
+      <p>
+        <span data-i18n="loadingUbuntu">Loading Ubuntu...</span>
+      </p>
+    ),
   }
 );
 const InstallButton = dynamic(
@@ -21,7 +25,13 @@ const InstallButton = dynamic(
     }),
   {
     ssr: false,
-    loading: () => <p>Loading install options...</p>,
+    loading: () => (
+      <p>
+        <span data-i18n="loadingInstallOptions">
+          Loading install options...
+        </span>
+      </p>
+    ),
   }
 );
 
@@ -31,7 +41,7 @@ const InstallButton = dynamic(
 const App = () => (
   <>
     <a href="#window-area" className="sr-only focus:not-sr-only">
-      Skip to content
+      <span data-i18n="skipToContent">Skip to content</span>
     </a>
     <Meta />
     <Ubuntu />
