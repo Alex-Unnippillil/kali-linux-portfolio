@@ -22,6 +22,7 @@ import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { startPrefetchMonitor } from '@/src/perf/prefetch';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
 export class Desktop extends Component {
@@ -30,6 +31,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.stopPrefetchMonitor = null;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -89,6 +91,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        this.stopPrefetchMonitor = startPrefetchMonitor(() => apps);
     }
 
     componentWillUnmount() {
@@ -96,6 +99,10 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        if (typeof this.stopPrefetchMonitor === 'function') {
+            this.stopPrefetchMonitor();
+            this.stopPrefetchMonitor = null;
+        }
     }
 
     checkForNewFolders = () => {
