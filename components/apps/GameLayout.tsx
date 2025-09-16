@@ -6,14 +6,16 @@ import React, {
   useCallback,
   createContext,
   useContext,
+  useMemo,
 } from 'react';
-import HelpOverlay from './HelpOverlay';
+import HelpOverlay, { GAME_INSTRUCTIONS } from './HelpOverlay';
 import PerfOverlay from './Games/common/perf';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 import {
   serialize as serializeRng,
   deserialize as deserializeRng,
 } from '../../apps/games/rng';
+import useInputMapping from './Games/common/input-remap/useInputMapping';
 
 interface GameLayoutProps {
   gameId?: string;
@@ -23,7 +25,10 @@ interface GameLayoutProps {
   score?: number;
   highScore?: number;
   editor?: React.ReactNode;
+  onRestart?: () => void;
 }
+
+type OverlayView = 'help' | 'pause';
 
 interface RecordedInput {
   t: number;
@@ -51,8 +56,9 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   score,
   highScore,
   editor,
+  onRestart,
 }) => {
-  const [showHelp, setShowHelp] = useState(false);
+  const [overlayView, setOverlayView] = useState<OverlayView | null>(null);
   const [paused, setPaused] = useState(false);
   const [log, setLog] = useState<RecordedInput[]>([]);
   const [replayHandler, setReplayHandler] = useState<
@@ -60,9 +66,78 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   >(undefined);
   const [replaying, setReplaying] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
+  const instructions = GAME_INSTRUCTIONS[gameId];
+  const defaultActions = instructions?.actions ?? {};
+  const [mapping, setKey] = useInputMapping(gameId, defaultActions);
 
-  const close = useCallback(() => setShowHelp(false), []);
-  const toggle = useCallback(() => setShowHelp((h) => !h), []);
+  const formatKeyLabel = useCallback((key: string) => {
+    if (!key) return '';
+    if (key === ' ') return 'Space';
+    if (key === 'ArrowUp') return 'Arrow Up';
+    if (key === 'ArrowDown') return 'Arrow Down';
+    if (key === 'ArrowLeft') return 'Arrow Left';
+    if (key === 'ArrowRight') return 'Arrow Right';
+    return key.length === 1 ? key.toUpperCase() : key;
+  }, []);
+
+  const actionLegend = useMemo(() => {
+    if (!instructions?.actions) return null;
+    return Object.keys(instructions.actions).map((action) => ({
+      action,
+      key: formatKeyLabel(mapping?.[action] ?? instructions.actions[action]),
+    }));
+  }, [instructions, mapping, formatKeyLabel]);
+
+  const overlayLegend = useMemo(
+    () => [
+      {
+        label: 'Shift + / (?)',
+        description: 'Cycle help and pause overlay',
+      },
+      {
+        label: 'P',
+        description: 'Pause or resume game',
+      },
+      {
+        label: 'Esc',
+        description: 'Close overlay',
+      },
+    ],
+    [],
+  );
+
+  const cycleOverlay = useCallback(() => {
+    setOverlayView((view) => {
+      if (view === 'help') {
+        setPaused(true);
+        return 'pause';
+      }
+      if (view === 'pause') {
+        setPaused(false);
+        return null;
+      }
+      return 'help';
+    });
+  }, []);
+
+  const closeOverlay = useCallback(() => {
+    setOverlayView((view) => {
+      if (view === 'pause') {
+        setPaused(false);
+      }
+      return null;
+    });
+  }, []);
+
+  const switchOverlayView = useCallback((view: OverlayView) => {
+    setOverlayView((current) => {
+      if (current === view) return current;
+      if (view === 'pause') {
+        setPaused(true);
+      }
+      return view;
+    });
+  }, []);
 
   const fallbackCopy = useCallback((text: string) => {
     if (navigator.clipboard) {
@@ -145,7 +220,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
     step();
   }, [log, replayHandler]);
 
-  // Keyboard shortcut to toggle help overlay
+  // Keyboard shortcuts to control overlays and pause state
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -156,19 +231,36 @@ const GameLayout: React.FC<GameLayoutProps> = ({
       if (isInput) return;
       if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
         e.preventDefault();
-        setShowHelp((h) => !h);
+        cycleOverlay();
+      } else if (e.key === 'Escape') {
+        if (overlayView) {
+          e.preventDefault();
+          closeOverlay();
+        }
+      } else if (e.key === 'p' || e.key === 'P') {
+        e.preventDefault();
+        setPaused((prev) => {
+          const next = !prev;
+          setOverlayView((view) => {
+            if (next) {
+              return 'pause';
+            }
+            return view === 'pause' ? null : view;
+          });
+          return next;
+        });
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
+  }, [cycleOverlay, closeOverlay, overlayView]);
 
   // Show tutorial overlay on first visit
   useEffect(() => {
     try {
       const key = `seen_tutorial_${gameId}`;
       if (typeof window !== 'undefined' && !window.localStorage.getItem(key)) {
-        setShowHelp(true);
+        setOverlayView('help');
         window.localStorage.setItem(key, '1');
       }
     } catch {
@@ -176,27 +268,18 @@ const GameLayout: React.FC<GameLayoutProps> = ({
     }
   }, [gameId]);
 
-  // Allow closing overlay with Escape
-  useEffect(() => {
-    if (!showHelp) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        setShowHelp(false);
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [showHelp]);
-
   // Auto-pause when page becomes hidden or window loses focus
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
         setPaused(true);
+        setOverlayView('pause');
       }
     };
-    const handleBlur = () => setPaused(true);
+    const handleBlur = () => {
+      setPaused(true);
+      setOverlayView('pause');
+    };
     document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('blur', handleBlur);
     return () => {
@@ -205,38 +288,50 @@ const GameLayout: React.FC<GameLayoutProps> = ({
     };
   }, []);
 
-  const resume = useCallback(() => setPaused(false), []);
+  const resume = useCallback(() => {
+    setPaused(false);
+    setOverlayView((view) => (view === 'pause' ? null : view));
+  }, []);
 
   const contextValue = { record, registerReplay };
 
   return (
     <RecorderContext.Provider value={contextValue}>
       <div className="relative h-full w-full" data-reduced-motion={prefersReducedMotion}>
-        {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
-        {paused && (
-          <div
-            className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
-            role="dialog"
-          aria-modal="true"
-        >
+        {overlayView && (
+          <HelpOverlay
+            gameId={gameId}
+            view={overlayView}
+            onClose={closeOverlay}
+            onViewChange={switchOverlayView}
+            onResume={resume}
+            onRestart={onRestart}
+            paused={paused}
+            mapping={mapping}
+            setKey={setKey as (action: string, key: string) => string | null}
+            overlayLegend={overlayLegend}
+          />
+        )}
+        <div className="absolute top-2 right-2 z-40 flex flex-col items-end space-y-2">
+          <div className="flex space-x-2">
           <button
             type="button"
-            onClick={resume}
-            className="px-4 py-2 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-            autoFocus
+            onClick={() =>
+              setPaused((p) => {
+                const next = !p;
+                setOverlayView((view) => {
+                  if (next) {
+                    return 'pause';
+                  }
+                  return view === 'pause' ? null : view;
+                });
+                return next;
+              })
+            }
+            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
           >
-            Resume
+            {paused ? 'Resume' : 'Pause'}
           </button>
-        </div>
-      )}
-      <div className="absolute top-2 right-2 z-40 flex space-x-2">
-        <button
-          type="button"
-          onClick={() => setPaused((p) => !p)}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-        >
-          {paused ? 'Resume' : 'Pause'}
-        </button>
         <button
           type="button"
           onClick={snapshot}
@@ -251,33 +346,66 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         >
           Replay
         </button>
-        <button
-          type="button"
-          onClick={shareApp}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-        >
-          Share
-        </button>
-        {highScore !== undefined && (
           <button
             type="button"
-            onClick={shareScore}
+            onClick={shareApp}
             className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
           >
-            Share Score
+            Share
           </button>
-        )}
-        <button
-          type="button"
-          aria-label="Help"
-          aria-expanded={showHelp}
-          onClick={toggle}
-          className="bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
-        >
-          ?
-        </button>
-      </div>
-      {children}
+          {highScore !== undefined && (
+            <button
+              type="button"
+              onClick={shareScore}
+              className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+            >
+              Share Score
+            </button>
+          )}
+          <button
+            type="button"
+            aria-label="Help"
+            aria-expanded={overlayView !== null}
+            onClick={cycleOverlay}
+            className="bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
+          >
+            ?
+          </button>
+          </div>
+          {actionLegend && actionLegend.length > 0 && (
+            <div
+              className="bg-gray-900 bg-opacity-80 text-white text-xs rounded px-3 py-2 shadow-lg max-w-xs space-y-1"
+              role="region"
+              aria-label="Control legend"
+            >
+              <div className="font-semibold text-[0.7rem] uppercase tracking-wide text-gray-300">
+                Controls
+              </div>
+              <ul className="space-y-0.5">
+                {actionLegend.map(({ action, key }) => (
+                  <li key={action} className="flex items-center justify-between gap-2">
+                    <span className="capitalize text-gray-300">{action.replaceAll('-', ' ')}</span>
+                    <span className="font-mono text-gray-100">{key}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="font-semibold text-[0.7rem] uppercase tracking-wide text-gray-300 pt-1 border-t border-gray-700">
+                Overlay
+              </div>
+              <ul className="space-y-0.5">
+                {overlayLegend.map((item) => (
+                  <li key={item.label} className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-gray-100 whitespace-nowrap">
+                      {item.label}
+                    </span>
+                    <span className="text-gray-300 text-right">{item.description}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+        {children}
       <div className="absolute top-2 left-2 z-10 text-sm space-y-1">
         {stage !== undefined && <div>Stage: {stage}</div>}
         {lives !== undefined && <div>Lives: {lives}</div>}
