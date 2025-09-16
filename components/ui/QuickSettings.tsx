@@ -23,7 +23,7 @@ const QuickSettings = ({ open }: Props) => {
 
   return (
     <div
-      className={`absolute bg-ub-cool-grey rounded-md py-4 top-9 right-3 shadow border-black border border-opacity-20 ${
+      className={`absolute surface-popover rounded-md py-4 top-9 right-3 ${
         open ? '' : 'hidden'
       }`}
     >
