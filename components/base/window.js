@@ -32,6 +32,7 @@ export class Window extends Component {
             snapPosition: null,
             snapped: null,
             lastSize: null,
+            snapInset: null,
             grabbed: false,
         }
         this._usageTimeout = null;
@@ -53,6 +54,7 @@ export class Window extends Component {
         window.addEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.addEventListener('super-arrow', this.handleSuperArrow);
+        root?.addEventListener('window-tiling', this.handleWindowTiling);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -66,6 +68,7 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        root?.removeEventListener('window-tiling', this.handleWindowTiling);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
@@ -238,20 +241,23 @@ export class Window extends Component {
         if (!this.state.snapped) return;
         var r = document.querySelector("#" + this.id);
         if (r) {
+            r.style.removeProperty('inset');
             const x = r.style.getPropertyValue('--window-transform-x');
             const y = r.style.getPropertyValue('--window-transform-y');
             if (x && y) {
                 r.style.transform = `translate(${x},${y})`;
             }
+            delete r.dataset.snapState;
         }
         if (this.state.lastSize) {
             this.setState({
                 width: this.state.lastSize.width,
                 height: this.state.lastSize.height,
-                snapped: null
+                snapped: null,
+                snapInset: null
             }, this.resizeBoundries);
         } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            this.setState({ snapped: null, snapInset: null }, this.resizeBoundries);
         }
     }
 
@@ -276,7 +282,9 @@ export class Window extends Component {
         }
         const r = document.querySelector("#" + this.id);
         if (r && transform) {
+            r.style.removeProperty('inset');
             r.style.transform = transform;
+            r.dataset.snapState = position;
         }
         this.setState({
             snapPreview: null,
@@ -284,8 +292,38 @@ export class Window extends Component {
             snapped: position,
             lastSize: { width, height },
             width: newWidth,
-            height: newHeight
+            height: newHeight,
+            snapInset: null
         }, this.resizeBoundries);
+    }
+
+    handleWindowTiling = (event) => {
+        const detail = event?.detail || {};
+        const { inset, width, height, snapState } = detail;
+        if (typeof inset !== 'string' || typeof width !== 'number' || typeof height !== 'number' || typeof snapState !== 'string') {
+            return;
+        }
+        this.setWinowsPosition();
+        const previousSize = this.state.snapped && this.state.lastSize
+            ? this.state.lastSize
+            : { width: this.state.width, height: this.state.height };
+        this.setState({
+            snapPreview: null,
+            snapPosition: null,
+            snapped: snapState,
+            lastSize: previousSize,
+            width,
+            height,
+            snapInset: inset,
+        }, () => {
+            const node = document.getElementById(this.id);
+            if (node) {
+                node.style.inset = inset;
+                node.style.transform = 'translate(0px, 0px)';
+                node.dataset.snapState = snapState;
+            }
+            this.resizeBoundries();
+        });
     }
 
     checkOverlap = () => {
@@ -460,8 +498,10 @@ export class Window extends Component {
             var r = document.querySelector("#" + this.id);
             this.setWinowsPosition();
             // translate window to maximize position
+            r.style.removeProperty('inset');
+            delete r.dataset.snapState;
             r.style.transform = `translate(-1pt,-2pt)`;
-            this.setState({ maximized: true, height: 96.3, width: 100.2 });
+            this.setState({ maximized: true, height: 96.3, width: 100.2, snapInset: null });
             this.props.hideSideBar(this.id, true);
         }
     }
@@ -612,6 +652,13 @@ export class Window extends Component {
     }
 
     render() {
+        const inlineStyle = {
+            width: `${this.state.width}%`,
+            height: `${this.state.height}%`
+        };
+        if (this.state.snapInset) {
+            inlineStyle.inset = this.state.snapInset;
+        }
         return (
             <>
                 {this.state.snapPreview && (
@@ -634,7 +681,7 @@ export class Window extends Component {
                     bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
                 >
                     <div
-                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
+                        style={inlineStyle}
                         className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                         id={this.id}
                         role="dialog"
