@@ -2,7 +2,7 @@
 
 import React, { Component } from 'react';
 import NextImage from 'next/image';
-import Draggable from 'react-draggable';
+let Draggable = null;
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
@@ -37,6 +37,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this.loadDragDemo = this.loadDragDemo.bind(this);
     }
 
     componentDidMount() {
@@ -56,6 +57,7 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        window.addEventListener('pointerdown', this.loadDragDemo, { once: true });
     }
 
     componentWillUnmount() {
@@ -68,6 +70,15 @@ export class Window extends Component {
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+        window.removeEventListener('pointerdown', this.loadDragDemo);
+    }
+
+    async loadDragDemo() {
+        if (!Draggable) {
+            const mod = await import('react-draggable');
+            Draggable = mod.default;
+            this.forceUpdate();
         }
     }
 
@@ -525,40 +536,40 @@ export class Window extends Component {
             this.focusWindow();
         } else if (e.altKey) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.snapWindow('top');
             }
             this.focusWindow();
         } else if (e.shiftKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault?.();
+                e.stopPropagation?.();
                 this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
             }
             this.focusWindow();
@@ -612,27 +623,7 @@ export class Window extends Component {
     }
 
     render() {
-        return (
-            <>
-                {this.state.snapPreview && (
-                    <div
-                        data-testid="snap-preview"
-                        className="fixed border-2 border-dashed border-white bg-white bg-opacity-10 pointer-events-none z-40 transition-opacity"
-                        style={{ left: this.state.snapPreview.left, top: this.state.snapPreview.top, width: this.state.snapPreview.width, height: this.state.snapPreview.height }}
-                    />
-                )}
-                <Draggable
-                    axis="both"
-                    handle=".bg-ub-window-title"
-                    grid={this.props.snapEnabled ? [8, 8] : [1, 1]}
-                    scale={1}
-                    onStart={this.changeCursorToMove}
-                    onStop={this.handleStop}
-                    onDrag={this.handleDrag}
-                    allowAnyClick={false}
-                    defaultPosition={{ x: this.startX, y: this.startY }}
-                    bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
-                >
+        const content = (
                     <div
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
                         className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
@@ -665,7 +656,32 @@ export class Window extends Component {
                                 addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
                                 openApp={this.props.openApp} />)}
                     </div>
-                </Draggable >
+                );
+        return (
+            <>
+                {this.state.snapPreview && (
+                    <div
+                        data-testid="snap-preview"
+                        className="fixed border-2 border-dashed border-white bg-white bg-opacity-10 pointer-events-none z-40 transition-opacity"
+                        style={{ left: this.state.snapPreview.left, top: this.state.snapPreview.top, width: this.state.snapPreview.width, height: this.state.snapPreview.height }}
+                    />
+                )}
+                {Draggable ? (
+                    <Draggable
+                        axis="both"
+                        handle=".bg-ub-window-title"
+                        grid={this.props.snapEnabled ? [8, 8] : [1, 1]}
+                        scale={1}
+                        onStart={this.changeCursorToMove}
+                        onStop={this.handleStop}
+                        onDrag={this.handleDrag}
+                        allowAnyClick={false}
+                        defaultPosition={{ x: this.startX, y: this.startY }}
+                        bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
+                    >
+                        {content}
+                    </Draggable>
+                ) : content}
             </>
         )
     }
