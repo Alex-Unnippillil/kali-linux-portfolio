@@ -14,7 +14,8 @@ const Terminal = forwardRef<HTMLDivElement, TerminalContainerProps>(
         background: 'var(--kali-bg)',
         backdropFilter: 'blur(4px)',
         border: '1px solid var(--color-border)',
-        fontFamily: 'monospace',
+        fontFamily:
+          '"Hack", "DejaVu Sans Mono", "Liberation Mono", "Menlo", monospace',
         fontSize: 'clamp(1rem, 0.6vw + 1rem, 1.1rem)',
         lineHeight: 1.4,
         ...style,
