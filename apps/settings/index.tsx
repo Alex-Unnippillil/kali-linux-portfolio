@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
+import TaskbarPresets from "./taskbar";
 import {
   resetSettings,
   defaults,
@@ -37,6 +38,7 @@ export default function Settings() {
   const tabs = [
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
+    { id: "taskbar", label: "Taskbar" },
     { id: "privacy", label: "Privacy" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
@@ -209,6 +211,7 @@ export default function Settings() {
           </div>
         </>
       )}
+      {activeTab === "taskbar" && <TaskbarPresets />}
       {activeTab === "accessibility" && (
         <>
           <div className="flex justify-center my-4">
