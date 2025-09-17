@@ -81,6 +81,36 @@ function MyApp(props) {
   }, []);
 
   useEffect(() => {
+    if (process.env.NODE_ENV !== 'development') {
+      return undefined;
+    }
+
+    let cleanup;
+    let cancelled = false;
+
+    const setupDevRuntime = async () => {
+      try {
+        const { initDevRuntime } = await import('@/dev/runtime');
+        if (cancelled) return;
+        cleanup = await initDevRuntime({ logger: console });
+      } catch (error) {
+        console.warn('Failed to initialize dev helpers', error);
+      }
+    };
+
+    setupDevRuntime();
+
+    return () => {
+      cancelled = true;
+      if (typeof cleanup === 'function') {
+        Promise.resolve(cleanup()).catch((error) => {
+          console.error('Failed to clean up dev helpers', error);
+        });
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const liveRegion = document.getElementById('live-region');
     if (!liveRegion) return;
 
