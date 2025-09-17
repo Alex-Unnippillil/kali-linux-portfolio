@@ -101,6 +101,7 @@ This document tracks UI polish tasks for the Kali/Ubuntu inspired desktop experi
 23. **Ubuntu/Kali theme tokens audit**
     - **Accept:** One source of truth for colors, radii, shadows, spacing scale; tokens documented.
     - **Where:** `tailwind.config.js`, `styles/index.css`.
+    - **Notes:** Shell spacing tokens `--space-s`, `--space-m`, and `--space-l` map to 8/12/16 px for consistent dock and window padding.
 
 24. **Shadow elevation scale**
     - **Accept:** 4 levels: dock, window inactive, active, modal; consistent blurs and offsets.
