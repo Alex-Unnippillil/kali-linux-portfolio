@@ -27,8 +27,12 @@ describe('InstallButton', () => {
     // The install prompt shouldn't trigger automatically.
     expect(prompt).not.toHaveBeenCalled();
 
-    const button = await screen.findByText(/install/i);
-    await userEvent.click(button);
+    const dialog = await screen.findByRole('dialog', {
+      name: /install kali linux portfolio/i,
+    });
+    expect(dialog).toBeInTheDocument();
+    const installCta = await screen.findByRole('button', { name: /^install$/i });
+    await userEvent.click(installCta);
     expect(prompt).toHaveBeenCalledTimes(1);
 
     await act(async () => {
@@ -36,7 +40,8 @@ describe('InstallButton', () => {
       await userChoice;
     });
 
-    await waitFor(() => expect(screen.queryByText(/install/i)).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.queryByRole('button', { name: /install app/i })).toBeNull();
   });
 
   test('can be focused via keyboard', async () => {
@@ -49,8 +54,10 @@ describe('InstallButton', () => {
     await act(async () => {
       window.dispatchEvent(event);
     });
-    const button = await screen.findByRole('button', { name: /install/i });
+    const notNow = await screen.findByRole('button', { name: /not now/i });
+    await userEvent.click(notNow);
+    const opener = await screen.findByRole('button', { name: /install app/i });
     await userEvent.tab();
-    expect(button).toHaveFocus();
+    expect(opener).toHaveFocus();
   });
 });
