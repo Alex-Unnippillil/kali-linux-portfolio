@@ -23,11 +23,16 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { HelpOverlayContext } from '../system/HelpOverlay';
+import { getAppShortcutContext } from '../../data/appShortcuts';
 
 export class Desktop extends Component {
+    static contextType = HelpOverlayContext;
+
     constructor() {
         super();
         this.app_stack = [];
+        this.pendingHelpContext = Object.create(null);
         this.initFavourite = {};
         this.allWindowClosed = false;
         this.state = {
@@ -54,6 +59,46 @@ export class Desktop extends Component {
             switcherWindows: [],
         }
     }
+
+    getAppById = (id) => apps.find(app => app.id === id);
+
+    applyHelpContext = (appId, override) => {
+        const context = this.context;
+        if (!context || typeof context.setContext !== 'function') return;
+        if (!appId) {
+            context.setContext(null);
+            return;
+        }
+        const fallback = (this.getAppById(appId) || {}).title || appId;
+        let meta = null;
+        if (override && Array.isArray(override.shortcuts)) {
+            const shortcuts = override.shortcuts
+                .filter(item => item && typeof item.description === 'string' && typeof item.keys === 'string')
+                .map(item => ({ description: item.description, keys: item.keys }));
+            if (shortcuts.length > 0) {
+                meta = {
+                    appId,
+                    appName: override.appName || fallback,
+                    shortcuts,
+                };
+            }
+        }
+        if (!meta) {
+            meta = getAppShortcutContext(appId, fallback);
+        }
+        if (meta && meta.shortcuts.length > 0) {
+            context.setContext(meta);
+        } else {
+            context.setContext(null);
+        }
+    };
+
+    clearHelpContext = () => {
+        const context = this.context;
+        if (context && typeof context.setContext === 'function') {
+            context.setContext(null);
+        }
+    };
 
     componentDidMount() {
         // google analytics
@@ -547,11 +592,10 @@ export class Desktop extends Component {
         // remove focus and minimise this window
         minimized_windows[objId] = true;
         focused_windows[objId] = false;
-        this.setState({ minimized_windows, focused_windows });
-
-        this.hideSideBar(null, false);
-
-        this.giveFocusToLastApp();
+        this.setState({ minimized_windows, focused_windows }, () => {
+            this.hideSideBar(null, false);
+            this.giveFocusToLastApp();
+        });
     }
 
     giveFocusToLastApp = () => {
@@ -560,10 +604,11 @@ export class Desktop extends Component {
             for (const index in this.app_stack) {
                 if (!this.state.minimized_windows[this.app_stack[index]]) {
                     this.focus(this.app_stack[index]);
-                    break;
+                    return;
                 }
             }
         }
+        this.clearHelpContext();
     }
 
     checkAllMinimised = () => {
@@ -577,13 +622,16 @@ export class Desktop extends Component {
     }
 
     handleOpenAppEvent = (e) => {
-        const id = e.detail;
-        if (id) {
-            this.openApp(id);
+        const detail = e.detail;
+        if (!detail) return;
+        if (typeof detail === 'string') {
+            this.openApp(detail);
+        } else if (typeof detail === 'object' && detail.id) {
+            this.openApp(detail.id, detail.context);
         }
     }
 
-    openApp = (objId) => {
+    openApp = (objId, contextMeta) => {
 
         // google analytics
         ReactGA.event({
@@ -592,7 +640,16 @@ export class Desktop extends Component {
         });
 
         // if the app is disabled
-        if (this.state.disabled_apps[objId]) return;
+        if (this.state.disabled_apps[objId]) {
+            if (contextMeta !== undefined) delete this.pendingHelpContext[objId];
+            return;
+        }
+
+        if (contextMeta !== undefined) {
+            this.pendingHelpContext[objId] = contextMeta;
+        } else {
+            delete this.pendingHelpContext[objId];
+        }
 
         // if app is already open, focus it instead of spawning a new window
         if (this.state.closed_windows[objId] === false) {
@@ -688,6 +745,7 @@ export class Desktop extends Component {
         this.updateTrashIcon();
 
         // remove app from the app stack
+        delete this.pendingHelpContext[objId];
         this.app_stack.splice(this.app_stack.indexOf(objId), 1);
 
         this.giveFocusToLastApp();
@@ -733,7 +791,7 @@ export class Desktop extends Component {
     }
 
     focus = (objId) => {
-        // removes focus from all window and 
+        // removes focus from all window and
         // gives focus to window with 'id = objId'
         var focused_windows = this.state.focused_windows;
         focused_windows[objId] = true;
@@ -744,7 +802,18 @@ export class Desktop extends Component {
                 }
             }
         }
-        this.setState({ focused_windows });
+        this.setState({ focused_windows }, () => {
+            if (!objId) {
+                this.clearHelpContext();
+                return;
+            }
+            const hasPending = Object.prototype.hasOwnProperty.call(this.pendingHelpContext, objId);
+            const override = hasPending ? this.pendingHelpContext[objId] : undefined;
+            if (hasPending) {
+                delete this.pendingHelpContext[objId];
+            }
+            this.applyHelpContext(objId, override);
+        });
     }
 
     addNewFolder = () => {

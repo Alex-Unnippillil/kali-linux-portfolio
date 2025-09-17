@@ -3,6 +3,7 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { getAppShortcutContext } from '../../data/appShortcuts';
 
 type AppMeta = {
   id: string;
@@ -71,8 +72,13 @@ const WhiskerMenu: React.FC = () => {
     setHighlight(0);
   }, [open, category, query]);
 
-  const openSelectedApp = (id: string) => {
-    window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
+  const openSelectedApp = (app: AppMeta) => {
+    const context = getAppShortcutContext(app.id, app.title);
+    window.dispatchEvent(
+      new CustomEvent('open-app', {
+        detail: context ? { id: app.id, context } : { id: app.id },
+      })
+    );
     setOpen(false);
   };
 
@@ -95,7 +101,7 @@ const WhiskerMenu: React.FC = () => {
       } else if (e.key === 'Enter') {
         e.preventDefault();
         const app = currentApps[highlight];
-        if (app) openSelectedApp(app.id);
+        if (app) openSelectedApp(app);
       }
     };
     window.addEventListener('keydown', handleKey);
@@ -168,7 +174,7 @@ const WhiskerMenu: React.FC = () => {
                     id={app.id}
                     icon={app.icon}
                     name={app.title}
-                    openApp={() => openSelectedApp(app.id)}
+                    openApp={() => openSelectedApp(app)}
                     disabled={app.disabled}
                   />
                 </div>

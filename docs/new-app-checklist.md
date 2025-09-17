@@ -19,6 +19,12 @@ const MyApp = dynamic(() => import('./components/apps/my-app'), {
 export const displayMyApp = () => <MyApp />;
 ```
 
+## Keyboard shortcuts metadata
+
+- If the app registers keyboard shortcuts, document them in `data/appShortcuts.ts`.
+- Use the app id as the key and provide a list of `{ description, keys }` entries.
+- Apps without metadata fall back to the global shortcuts exposed by the system help overlay.
+
 ## Content Security Policy
 
 - Apps that fetch data or embed external sites must whitelist their domains in `next.config.js`.
