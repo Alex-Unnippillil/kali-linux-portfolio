@@ -12,6 +12,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import NotificationsPanel from "./notifications";
 
 export default function Settings() {
   const {
@@ -36,6 +37,7 @@ export default function Settings() {
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
+    { id: "notifications", label: "Notifications" },
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
   ] as const;
@@ -209,6 +211,7 @@ export default function Settings() {
           </div>
         </>
       )}
+      {activeTab === "notifications" && <NotificationsPanel />}
       {activeTab === "accessibility" && (
         <>
           <div className="flex justify-center my-4">
