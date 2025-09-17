@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from "react";
-import Image from 'next/image';
 import SmallArrow from "./small_arrow";
 import { useSettings } from '../../hooks/useSettings';
-
-const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
+import { BatteryIcon, VolumeIcon, WifiIcon, WifiOffIcon } from '../icons';
 
 export default function Status() {
   const { allowNetwork } = useSettings();
@@ -38,43 +36,30 @@ export default function Status() {
     };
   }, []);
 
+  const NetworkGlyph = online ? WifiIcon : WifiOffIcon;
+  const networkTitle = online
+    ? allowNetwork
+      ? 'Online'
+      : 'Online (requests blocked)'
+    : 'Offline';
+
   return (
     <div className="flex justify-center items-center">
-      <span
-        className="mx-1.5 relative"
-        title={online ? (allowNetwork ? 'Online' : 'Online (requests blocked)') : 'Offline'}
-      >
-        <Image
-          width={16}
-          height={16}
-          src={online ? "/themes/Yaru/status/network-wireless-signal-good-symbolic.svg" : "/themes/Yaru/status/network-wireless-signal-none-symbolic.svg"}
-          alt={online ? "online" : "offline"}
+      <span className="mx-1.5 relative" title={networkTitle}>
+        <NetworkGlyph
+          size={16}
           className="inline status-symbol w-4 h-4"
-          sizes="16px"
+          title={networkTitle}
         />
         {!allowNetwork && (
           <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
         )}
       </span>
       <span className="mx-1.5">
-        <Image
-          width={16}
-          height={16}
-          src={VOLUME_ICON}
-          alt="volume"
-          className="inline status-symbol w-4 h-4"
-          sizes="16px"
-        />
+        <VolumeIcon size={16} className="inline status-symbol w-4 h-4" title="Volume" />
       </span>
       <span className="mx-1.5">
-        <Image
-          width={16}
-          height={16}
-          src="/themes/Yaru/status/battery-good-symbolic.svg"
-          alt="ubuntu battry"
-          className="inline status-symbol w-4 h-4"
-          sizes="16px"
-        />
+        <BatteryIcon size={16} className="inline status-symbol w-4 h-4" title="Battery" />
       </span>
       <span className="mx-1">
         <SmallArrow angle="down" className=" status-symbol" />

@@ -1,56 +1,28 @@
-import Image from 'next/image';
+import { forwardRef } from 'react';
+import type { ForwardRefExoticComponent, RefAttributes } from 'react';
+import type { IconProps, IconSize } from './icons';
+import {
+  CloseIcon as CloseGlyph,
+  MaximizeIcon as MaximizeGlyph,
+  MinimizeIcon as MinimizeGlyph,
+  PinIcon as PinGlyph,
+  RestoreIcon as RestoreGlyph,
+} from './icons';
 
-export function CloseIcon() {
-  return (
-    <Image
-      src="/themes/Yaru/window/window-close-symbolic.svg"
-      alt="Close"
-      width={16}
-      height={16}
-    />
-  );
-}
+const DEFAULT_SIZE: IconSize = 16;
 
-export function MinimizeIcon() {
-  return (
-    <Image
-      src="/themes/Yaru/window/window-minimize-symbolic.svg"
-      alt="Minimize"
-      width={16}
-      height={16}
-    />
-  );
-}
+type GlyphComponent = ForwardRefExoticComponent<IconProps & RefAttributes<SVGSVGElement>>;
 
-export function MaximizeIcon() {
-  return (
-    <Image
-      src="/themes/Yaru/window/window-maximize-symbolic.svg"
-      alt="Maximize"
-      width={16}
-      height={16}
-    />
-  );
-}
+const withDefaultSize = (Component: GlyphComponent, displayName: string) => {
+  const Wrapped = forwardRef<SVGSVGElement, IconProps>(({ size, ...rest }, ref) => (
+    <Component ref={ref} size={size ?? DEFAULT_SIZE} {...rest} />
+  ));
+  Wrapped.displayName = displayName;
+  return Wrapped;
+};
 
-export function RestoreIcon() {
-  return (
-    <Image
-      src="/themes/Yaru/window/window-restore-symbolic.svg"
-      alt="Restore"
-      width={16}
-      height={16}
-    />
-  );
-}
-
-export function PinIcon() {
-  return (
-    <Image
-      src="/themes/Yaru/window/window-pin-symbolic.svg"
-      alt="Pin"
-      width={16}
-      height={16}
-    />
-  );
-}
+export const CloseIcon = withDefaultSize(CloseGlyph, 'CloseIcon');
+export const MinimizeIcon = withDefaultSize(MinimizeGlyph, 'MinimizeIcon');
+export const MaximizeIcon = withDefaultSize(MaximizeGlyph, 'MaximizeIcon');
+export const RestoreIcon = withDefaultSize(RestoreGlyph, 'RestoreIcon');
+export const PinIcon = withDefaultSize(PinGlyph, 'PinIcon');
