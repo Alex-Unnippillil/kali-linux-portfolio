@@ -74,6 +74,7 @@ const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
 const InputLabApp = createDynamicApp('input-lab', 'Input Lab');
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 
+const NotesApp = createDynamicApp('notes', 'Notes');
 const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
 const TrashApp = createDynamicApp('trash', 'Trash');
 const SerialTerminalApp = createDynamicApp('serial-terminal', 'Serial Terminal');
@@ -161,6 +162,7 @@ const displayAsciiArt = createDisplay(AsciiArtApp);
 const displayQuote = createDisplay(QuoteApp);
 const displayProjectGallery = createDisplay(ProjectGalleryApp);
 const displayTrash = createDisplay(TrashApp);
+const displayNotes = createDisplay(NotesApp);
 const displayStickyNotes = createDisplay(StickyNotesApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);
 const displayWeatherWidget = createDisplay(WeatherWidgetApp);
@@ -763,6 +765,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayTodoist,
+  },
+  {
+    id: 'notes',
+    title: 'Notes',
+    icon: '/themes/Yaru/apps/notes.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayNotes,
   },
   {
     id: 'sticky_notes',
