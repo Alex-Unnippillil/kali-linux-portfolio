@@ -21,3 +21,10 @@
 1. After resizing or snapping, press **Tab** to move focus inside the window.
 2. Continue pressing **Tab** to confirm focus can leave the window and is not trapped.
 3. Shift+Tab moves focus backward as expected.
+
+## RTL locales
+1. With the site language set to a right-to-left locale, confirm the help overlay mirrors its layout.
+2. Verify the overlay's guidance reflects RTL behavior:
+   - **ArrowRight (→)** should be documented as moving focus or pieces visually to the left, with **ArrowLeft (←)** moving to the right.
+   - **Ctrl+ArrowRight** must be described as jumping to the previous word and **Ctrl+ArrowLeft** as moving to the next word.
+3. Ensure the mirrored instructions appear for apps that mention arrow keys even when custom key bindings are available.

@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import HelpOverlay from '../components/apps/HelpOverlay';
+import HelpOverlay from '../components/system/HelpOverlay';
 
 describe('HelpOverlay', () => {
   it('returns null when no instructions exist for the game', () => {

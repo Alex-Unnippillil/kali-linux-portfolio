@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from "react";
-import InputRemap from "./Games/common/input-remap/InputRemap";
-import useInputMapping from "./Games/common/input-remap/useInputMapping";
+import React, { useEffect, useRef, useState } from "react";
+import InputRemap from "../apps/Games/common/input-remap/InputRemap";
+import useInputMapping from "../apps/Games/common/input-remap/useInputMapping";
 
 interface HelpOverlayProps {
   gameId: string;
@@ -166,12 +166,114 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
 };
 
+const RTL_LANGS = new Set([
+  "ar",
+  "arc",
+  "dv",
+  "fa",
+  "ha",
+  "he",
+  "khw",
+  "ks",
+  "ku",
+  "ps",
+  "ur",
+  "yi",
+]);
+
+const detectRTL = (): boolean => {
+  if (typeof document === "undefined") {
+    return false;
+  }
+  const root = document.documentElement;
+  const body = document.body;
+  const dirAttr =
+    root?.getAttribute("dir") || body?.getAttribute("dir") || "";
+  if (dirAttr) {
+    return dirAttr.toLowerCase() === "rtl";
+  }
+  if (typeof window !== "undefined" && root) {
+    try {
+      const computed = window.getComputedStyle(root).direction;
+      if (computed) {
+        return computed === "rtl";
+      }
+    } catch {
+      // Ignore failures when styles are not accessible.
+    }
+  }
+  const langSource =
+    root?.lang ||
+    body?.lang ||
+    (typeof navigator !== "undefined" ? navigator.language : "");
+  const primary = langSource.toLowerCase().split("-")[0];
+  return RTL_LANGS.has(primary);
+};
+
 const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
   const info = GAME_INSTRUCTIONS[gameId];
   const [mapping, setKey] = useInputMapping(gameId, info?.actions || {});
   const overlayRef = useRef<HTMLDivElement>(null);
   const prevFocus = useRef<HTMLElement | null>(null);
-  const noop = () => null;
+  const [isRTL, setIsRTL] = useState(false);
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+    const evaluate = () => setIsRTL(detectRTL());
+    evaluate();
+    let observer: MutationObserver | undefined;
+    if (typeof MutationObserver !== "undefined") {
+      observer = new MutationObserver(evaluate);
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["dir", "lang"],
+      });
+    }
+    if (typeof window !== "undefined") {
+      window.addEventListener("languagechange", evaluate);
+    }
+    return () => {
+      observer?.disconnect();
+      if (typeof window !== "undefined") {
+        window.removeEventListener("languagechange", evaluate);
+      }
+    };
+  }, []);
+
+  const hasDirectionalActions = Boolean(
+    info?.actions && ("left" in info.actions || "right" in info.actions)
+  );
+  const mentionsArrowKeys = Boolean(
+    typeof info?.controls === "string" && /arrow/i.test(info.controls)
+  );
+  const showDirectionalNote = hasDirectionalActions || mentionsArrowKeys;
+  const containerClasses = `max-w-md p-4 bg-gray-800 rounded shadow-lg${
+    isRTL ? " text-right" : ""
+  }`;
+  const arrowGuidance = isRTL
+    ? "Use \u2192 (ArrowRight) to move left and \u2190 (ArrowLeft) to move right."
+    : "Use \u2190 (ArrowLeft) to move left and \u2192 (ArrowRight) to move right.";
+  const wordJumpGuidance = isRTL
+    ? "Ctrl+\u2192 jumps to the previous word and Ctrl+\u2190 moves to the next."
+    : "Ctrl+\u2190 jumps to the previous word and Ctrl+\u2192 moves to the next.";
+  const directionalNote = showDirectionalNote ? (
+    <div
+      className="mt-3 space-y-1 rounded bg-gray-700/60 p-3 text-sm"
+      role="note"
+    >
+      <p className="font-semibold">
+        {isRTL ? "RTL keyboard tips" : "Keyboard tips"}
+      </p>
+      <p>
+        <strong>Arrow keys:</strong> {arrowGuidance}
+      </p>
+      <p>
+        <strong>Word jumps:</strong> {wordJumpGuidance}
+      </p>
+    </div>
+  ) : null;
 
   useEffect(() => {
     if (!overlayRef.current) return;
@@ -215,8 +317,9 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
       className="absolute inset-0 bg-black bg-opacity-75 text-white flex items-center justify-center z-50"
       role="dialog"
       aria-modal="true"
+      dir={isRTL ? "rtl" : "ltr"}
     >
-      <div className="max-w-md p-4 bg-gray-800 rounded shadow-lg">
+      <div className={containerClasses}>
         <h2 className="text-xl font-bold mb-2">{gameId} Help</h2>
         <p className="mb-2">
           <strong>Objective:</strong> {info.objective}
@@ -236,11 +339,15 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
                 actions={info.actions}
               />
             </div>
+            {directionalNote}
           </>
         ) : (
-          <p>
-            <strong>Controls:</strong> {info.controls}
-          </p>
+          <>
+            <p>
+              <strong>Controls:</strong> {info.controls}
+            </p>
+            {directionalNote}
+          </>
         )}
         <button
           onClick={onClose}

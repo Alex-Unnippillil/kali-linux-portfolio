@@ -7,7 +7,7 @@ import React, {
   createContext,
   useContext,
 } from 'react';
-import HelpOverlay from './HelpOverlay';
+import HelpOverlay from '../system/HelpOverlay';
 import PerfOverlay from './Games/common/perf';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 import {
