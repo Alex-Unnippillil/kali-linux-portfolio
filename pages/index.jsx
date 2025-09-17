@@ -24,6 +24,22 @@ const InstallButton = dynamic(
     loading: () => <p>Loading install options...</p>,
   }
 );
+const ServiceWorkerProvider = dynamic(
+  () => import('../app/components/ServiceWorkerProvider'),
+  { ssr: false }
+);
+const BadgeControls = dynamic(
+  () => import('../app/components/badge/BadgeControls'),
+  { ssr: false }
+);
+const PushSubscribeButton = dynamic(
+  () => import('../app/components/push/PushSubscribeButton'),
+  { ssr: false }
+);
+const FileHandlerListener = dynamic(
+  () => import('../app/components/file/FileHandlerListener'),
+  { ssr: false }
+);
 
 /**
  * @returns {JSX.Element}
@@ -37,6 +53,11 @@ const App = () => (
     <Ubuntu />
     <BetaBadge />
     <InstallButton />
+    <ServiceWorkerProvider>
+      <BadgeControls />
+      <PushSubscribeButton />
+      <FileHandlerListener />
+    </ServiceWorkerProvider>
   </>
 );
 
