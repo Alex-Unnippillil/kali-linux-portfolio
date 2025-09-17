@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
-import { safeLocalStorage } from '../../utils/safeStorage';
+import useRecents from '../../hooks/useRecents';
 
 type AppMeta = {
   id: string;
@@ -11,6 +11,8 @@ type AppMeta = {
   disabled?: boolean;
   favourite?: boolean;
 };
+
+const APP_FALLBACK_ICON = '/themes/Yaru/system/user-desktop.png';
 
 const CATEGORIES = [
   { id: 'all', label: 'All' },
@@ -25,19 +27,27 @@ const WhiskerMenu: React.FC = () => {
   const [category, setCategory] = useState('all');
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
+  const { items: recentItems } = useRecents();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
   const recentApps = useMemo(() => {
-    try {
-      const ids: string[] = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]');
-      return ids.map(id => allApps.find(a => a.id === id)).filter(Boolean) as AppMeta[];
-    } catch {
-      return [];
-    }
-  }, [allApps, open]);
+    return recentItems
+      .filter(item => item.type === 'app')
+      .map(item => {
+        const meta = allApps.find(a => a.id === item.target);
+        if (meta) return meta;
+        return {
+          id: item.target,
+          title: item.title,
+          icon: item.icon || APP_FALLBACK_ICON,
+          disabled: false,
+          favourite: false,
+        } as AppMeta;
+      });
+  }, [recentItems, allApps]);
   const utilityApps: AppMeta[] = utilities as any;
   const gameApps: AppMeta[] = games as any;
 

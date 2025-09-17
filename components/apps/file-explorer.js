@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
+import { recordRecentDocument } from '../../utils/recentsStore';
 import Breadcrumbs from '../ui/Breadcrumbs';
 
 export async function openFileDialog(options = {}) {
@@ -186,6 +187,24 @@ export default function FileExplorer() {
       text = await f.text();
     }
     setContent(text);
+    try {
+      const pathSegments = path.map((segment) => segment.name || '').filter(Boolean);
+      const docPath = [...pathSegments, file.name].filter(Boolean);
+      const identifier = docPath.join('/') || file.name;
+      recordRecentDocument({
+        id: identifier,
+        title: file.name,
+        description: docPath.length ? `/${docPath.join('/')}` : undefined,
+        icon: '/themes/Yaru/system/folder.png',
+        appId: 'files',
+        data: {
+          path: pathSegments,
+          name: file.name,
+        },
+      });
+    } catch (err) {
+      console.error('Failed to record recent document', err);
+    }
   };
 
   const readDir = async (handle) => {
