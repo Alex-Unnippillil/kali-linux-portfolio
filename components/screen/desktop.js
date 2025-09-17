@@ -89,6 +89,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        window.addEventListener('pinnedAppsChange', this.syncPinnedAppsFromStorage);
     }
 
     componentWillUnmount() {
@@ -96,6 +97,7 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        window.removeEventListener('pinnedAppsChange', this.syncPinnedAppsFromStorage);
     }
 
     checkForNewFolders = () => {
@@ -144,6 +146,44 @@ export class Desktop extends Component {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
         document.removeEventListener('keydown', this.handleContextKey);
+    }
+
+    syncPinnedAppsFromStorage = () => {
+        let pinnedApps = [];
+        if (safeLocalStorage) {
+            try {
+                const stored = safeLocalStorage.getItem('pinnedApps');
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    if (Array.isArray(parsed)) pinnedApps = parsed;
+                }
+            } catch (e) {
+                pinnedApps = [];
+            }
+        }
+        if (!pinnedApps.length) {
+            pinnedApps = apps.filter(app => app.favourite).map(app => app.id);
+        }
+        const pinnedSet = new Set(pinnedApps);
+        const favourite_apps = { ...this.state.favourite_apps };
+        let changed = false;
+        apps.forEach(app => {
+            const isPinned = pinnedSet.has(app.id);
+            if (app.favourite !== isPinned) {
+                app.favourite = isPinned;
+            }
+            if (favourite_apps[app.id] !== isPinned) {
+                favourite_apps[app.id] = isPinned;
+                changed = true;
+            } else if (!favourite_apps.hasOwnProperty(app.id)) {
+                favourite_apps[app.id] = isPinned;
+                changed = true;
+            }
+            this.initFavourite[app.id] = isPinned;
+        });
+        if (changed) {
+            this.setState({ favourite_apps }, this.saveSession);
+        }
     }
 
     handleGlobalShortcut = (e) => {
@@ -714,7 +754,12 @@ export class Desktop extends Component {
         try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
         if (!pinnedApps.includes(id)) pinnedApps.push(id)
         safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
-        this.setState({ favourite_apps }, () => { this.saveSession(); })
+        this.setState({ favourite_apps }, () => {
+            this.saveSession();
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('pinnedAppsChange', { detail: pinnedApps }));
+            }
+        })
         this.hideAllContextMenu()
     }
 
@@ -728,7 +773,12 @@ export class Desktop extends Component {
         try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
         pinnedApps = pinnedApps.filter(appId => appId !== id)
         safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
-        this.setState({ favourite_apps }, () => { this.saveSession(); })
+        this.setState({ favourite_apps }, () => {
+            this.saveSession();
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('pinnedAppsChange', { detail: pinnedApps }));
+            }
+        })
         this.hideAllContextMenu()
     }
 

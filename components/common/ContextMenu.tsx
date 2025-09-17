@@ -43,7 +43,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.shiftKey && e.key === 'F10') {
+      const isContextKey = e.key === 'ContextMenu' || e.key === 'Apps';
+      if ((e.shiftKey && e.key === 'F10') || isContextKey) {
         e.preventDefault();
         const rect = node.getBoundingClientRect();
         setPos({ x: rect.left, y: rect.bottom });
