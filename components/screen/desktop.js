@@ -10,7 +10,7 @@ const BackgroundImage = dynamic(
 import SideBar from './side_bar';
 import apps, { games } from '../../apps.config';
 import Window from '../base/window';
-import UbuntuApp from '../base/ubuntu_app';
+import IconsLayer from '../desktop/IconsLayer';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
 import WindowSwitcher from '../screen/window-switcher'
@@ -27,6 +27,7 @@ import { useSnapSetting } from '../../hooks/usePersistentState';
 export class Desktop extends Component {
     constructor() {
         super();
+        this.desktopRef = React.createRef();
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
@@ -432,26 +433,27 @@ export class Desktop extends Component {
     }
 
     renderDesktopApps = () => {
-        if (Object.keys(this.state.closed_windows).length === 0) return;
-        let appsJsx = [];
-        apps.forEach((app, index) => {
-            if (this.state.desktop_apps.includes(app.id)) {
+        if (Object.keys(this.state.closed_windows).length === 0) return null;
 
-                const props = {
-                    name: app.title,
-                    id: app.id,
-                    icon: app.icon,
-                    openApp: this.openApp,
-                    disabled: this.state.disabled_apps[app.id],
-                    prefetch: app.screen?.prefetch,
-                }
+        const desktopIcons = apps
+            .filter((app) => this.state.desktop_apps.includes(app.id))
+            .map((app) => ({
+                id: app.id,
+                title: app.title,
+                icon: app.icon,
+                disabled: this.state.disabled_apps[app.id],
+                prefetch: app.screen?.prefetch,
+            }));
 
-                appsJsx.push(
-                    <UbuntuApp key={app.id} {...props} />
-                );
-            }
-        });
-        return appsJsx;
+        if (!desktopIcons.length) return null;
+
+        return (
+            <IconsLayer
+                containerRef={this.desktopRef}
+                icons={desktopIcons}
+                onOpen={this.openApp}
+            />
+        );
     }
 
     renderWindows = () => {
@@ -865,7 +867,7 @@ export class Desktop extends Component {
 
     render() {
         return (
-            <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+            <main id="desktop" role="main" ref={this.desktopRef} className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
 
                 {/* Window Area */}
                 <div
