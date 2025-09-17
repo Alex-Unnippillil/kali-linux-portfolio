@@ -16,6 +16,7 @@ import {
   suits,
 } from './engine';
 import { solve } from './solver';
+import { onWindowResize } from '@/system/resize';
 
 type Variant = 'klondike' | 'spider' | 'freecell';
 type Stats = {
@@ -126,9 +127,8 @@ const Solitaire = () => {
       const minScale = 24 / 64;
       setScale(Math.max(s, minScale));
     };
-    updateScale();
-    window.addEventListener('resize', updateScale);
-    return () => window.removeEventListener('resize', updateScale);
+    const removeListener = onWindowResize(updateScale);
+    return () => removeListener();
   }, []);
 
   useEffect(() => {

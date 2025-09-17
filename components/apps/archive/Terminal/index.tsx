@@ -6,6 +6,7 @@ import React, {
   useState,
   forwardRef,
 } from 'react';
+import { onWindowResize } from '@/system/resize';
 
 const promptText = 'alex@kali:~$ ';
 
@@ -490,7 +491,7 @@ const TerminalPaneInner = (
       }
 
       const handleResize = () => fitAddon.fit();
-      window.addEventListener('resize', handleResize);
+      const removeResize = onWindowResize(handleResize);
       let resizeObserver: ResizeObserver | null = null;
       if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
         resizeObserver = new ResizeObserver(handleResize);
@@ -498,7 +499,7 @@ const TerminalPaneInner = (
       }
 
       return () => {
-        window.removeEventListener('resize', handleResize);
+        removeResize();
         resizeObserver?.disconnect();
         workerRef.current?.terminate();
         if (rafRef.current) window.cancelAnimationFrame(rafRef.current);

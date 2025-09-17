@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import data from './data.json';
 import ArpLab from './components/ArpLab';
 import vendors from '../kismet/oui.json';
+import { onWindowResize } from '@/system/resize';
 
 const { arpTable, flows } = data;
 const attackerMac = 'aa:aa:aa:aa:aa:aa';
@@ -441,10 +442,10 @@ const EttercapApp = () => {
       animationRef.current = requestAnimationFrame(step);
     };
     animationRef.current = requestAnimationFrame(step);
-    window.addEventListener('resize', computeLines);
+    const removeResize = onWindowResize(computeLines, { immediate: false });
     return () => {
       cancelAnimationFrame(animationRef.current);
-      window.removeEventListener('resize', computeLines);
+      removeResize();
     };
   }, [running, target1, target2]);
 

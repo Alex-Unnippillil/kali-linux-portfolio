@@ -7,6 +7,7 @@ import React, {
   forwardRef,
 } from 'react';
 import { hasOffscreenCanvas } from '../../../../../utils/feature';
+import { onWindowResize } from '@/system/resize';
 
 export interface CanvasHandle {
   getInputCoords: (
@@ -56,10 +57,10 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(
         );
 
         resize();
-        window.addEventListener('resize', resize);
+        const removeResize = onWindowResize(resize, { immediate: false });
         return () => {
           worker.terminate();
-          window.removeEventListener('resize', resize);
+          removeResize();
         };
       }
 
@@ -77,8 +78,8 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(
       };
 
       resize();
-      window.addEventListener('resize', resize);
-      return () => window.removeEventListener('resize', resize);
+      const removeResize = onWindowResize(resize, { immediate: false });
+      return () => removeResize();
     }, [width, height]);
 
     useImperativeHandle(ref, () => ({

@@ -16,6 +16,7 @@ import GameLayout from './GameLayout';
 import { vibrate } from './Games/common/haptics';
 import { getMapping } from './Games/common/input-remap/useInputMapping';
 import useOPFS from '../../hooks/useOPFS';
+import { onWindowResize } from '@/system/resize';
 
 // Arcade-style tuning constants
 const THRUST = 0.1;
@@ -155,7 +156,7 @@ const Asteroids = () => {
     }
 
     resize();
-    window.addEventListener('resize', resize);
+    const removeResize = onWindowResize(resize, { immediate: false });
     let showDebug = false;
     const handleDebugToggle = (e) => {
       if (e.key === 'c' || e.key === 'C') showDebug = !showDebug;
@@ -793,7 +794,7 @@ const Asteroids = () => {
 
     function cleanup() {
       cancelAnimationFrame(requestRef.current);
-      window.removeEventListener('resize', resize);
+      removeResize();
       window.removeEventListener('keydown', handleDebugToggle);
       window.removeEventListener('keydown', handleInventoryUse);
     }

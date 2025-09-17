@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import useAssetLoader from '../../hooks/useAssetLoader';
 import SpeedControls from '../../games/pacman/components/SpeedControls';
+import { onWindowResize } from '@/system/resize';
 
 /**
  * Small Pacman implementation used inside the portfolio. The goal of this
@@ -146,9 +147,8 @@ const Pacman = () => {
       const s = Math.floor(window.innerWidth / WIDTH);
       setScale(s > 1 ? s : 1);
     };
-    updateScale();
-    window.addEventListener('resize', updateScale);
-    return () => window.removeEventListener('resize', updateScale);
+    const removeResize = onWindowResize(updateScale);
+    return () => removeResize();
   }, []);
 
   const tileAt = (tx, ty) => (mazeRef.current[ty] ? mazeRef.current[ty][tx] : 1);

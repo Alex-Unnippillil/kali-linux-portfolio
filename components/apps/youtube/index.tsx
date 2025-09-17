@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import useWatchLater, {
   Video as WatchLaterVideo,
 } from '../../../apps/youtube/state/watchLater';
+import { onWindowResize } from '@/system/resize';
 
 type Video = WatchLaterVideo;
 
@@ -192,12 +193,11 @@ function VirtualGrid({
       setCols(newCols);
       setRange([startRow * newCols, (startRow + visibleRows) * newCols]);
     };
-    update();
     el.addEventListener('scroll', update);
-    window.addEventListener('resize', update);
+    const removeResize = onWindowResize(update);
     return () => {
       el.removeEventListener('scroll', update);
-      window.removeEventListener('resize', update);
+      removeResize();
     };
   }, [items.length]);
 

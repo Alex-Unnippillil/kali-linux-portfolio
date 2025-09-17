@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react';
+import { onWindowResize } from '@/system/resize';
 
 export default function useCanvasResize(baseWidth: number, baseHeight: number) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -32,9 +33,9 @@ export default function useCanvasResize(baseWidth: number, baseHeight: number) {
     const ro = new ResizeObserver(resize);
     const parent = canvas.parentElement;
     if (parent) ro.observe(parent);
-    window.addEventListener('resize', resize);
+    const removeResizeListener = onWindowResize(resize, { immediate: false });
     return () => {
-      window.removeEventListener('resize', resize);
+      removeResizeListener();
       ro.disconnect();
     };
   }, [baseWidth, baseHeight]);
