@@ -6,6 +6,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
 import '../styles/globals.css';
 import '../styles/index.css';
+import '../styles/content.css';
 import '../styles/resume-print.css';
 import '../styles/print.css';
 import '@xterm/xterm/css/xterm.css';

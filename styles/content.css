@@ -1,0 +1,124 @@
+/* Link styling for MDX and Markdown-rendered surfaces */
+:root {
+  --content-link-color: #4db8ff;
+  --content-link-hover-color: #86d6ff;
+  --content-link-active-color: #c2e9ff;
+  --content-link-visited-color: #b889ff;
+  --content-link-underline-color: color-mix(in srgb, var(--content-link-color) 70%, transparent);
+  --content-link-focus-shadow: color-mix(in srgb, var(--focus-outline-color) 35%, transparent);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --content-link-color: #0062b8;
+    --content-link-hover-color: #3389e5;
+    --content-link-active-color: #0a7cd6;
+    --content-link-visited-color: #5b2aa7;
+    --content-link-underline-color: color-mix(in srgb, var(--content-link-color) 60%, transparent);
+  }
+}
+
+html[data-theme='light'] {
+  --content-link-color: #0062b8;
+  --content-link-hover-color: #3389e5;
+  --content-link-active-color: #0a7cd6;
+  --content-link-visited-color: #5b2aa7;
+  --content-link-underline-color: color-mix(in srgb, var(--content-link-color) 60%, transparent);
+}
+
+html[data-theme='dark'] {
+  --content-link-color: #82cfff;
+  --content-link-hover-color: #a8daff;
+  --content-link-active-color: #cbe6ff;
+  --content-link-visited-color: #d0b3ff;
+  --content-link-underline-color: color-mix(in srgb, var(--content-link-color) 65%, transparent);
+}
+
+html[data-theme='neon'] {
+  --content-link-color: #ff66ff;
+  --content-link-hover-color: #ff85ff;
+  --content-link-active-color: #ff99ff;
+  --content-link-visited-color: #d9a6ff;
+  --content-link-underline-color: color-mix(in srgb, var(--content-link-color) 65%, transparent);
+}
+
+html[data-theme='matrix'] {
+  --content-link-color: #66ffbf;
+  --content-link-hover-color: #7cffd4;
+  --content-link-active-color: #a5ffe8;
+  --content-link-visited-color: #99ff8f;
+  --content-link-underline-color: color-mix(in srgb, var(--content-link-color) 65%, transparent);
+}
+
+.high-contrast {
+  --content-link-color: #ffff00;
+  --content-link-hover-color: #ffef5c;
+  --content-link-active-color: #ffd400;
+  --content-link-visited-color: #ffbf33;
+  --content-link-underline-color: color-mix(in srgb, var(--content-link-color) 70%, transparent);
+}
+
+:where(.mdx-content, .prose, .docs-content, #docs-root) a {
+  color: var(--content-link-color);
+  text-decoration-color: var(--content-link-underline-color);
+  text-decoration-thickness: 0.1em;
+  text-underline-offset: 0.2em;
+  transition:
+    color var(--motion-fast, 150ms) ease,
+    text-decoration-color var(--motion-fast, 150ms) ease,
+    outline-color var(--motion-fast, 150ms) ease,
+    box-shadow var(--motion-fast, 150ms) ease;
+}
+
+:where(.mdx-content, .prose, .docs-content, #docs-root) a:hover {
+  color: var(--content-link-hover-color);
+  text-decoration-color: color-mix(in srgb, var(--content-link-hover-color) 70%, transparent);
+}
+
+:where(.mdx-content, .prose, .docs-content, #docs-root) a:visited {
+  color: var(--content-link-visited-color);
+  text-decoration-color: color-mix(in srgb, var(--content-link-visited-color) 70%, transparent);
+}
+
+:where(.mdx-content, .prose, .docs-content, #docs-root) a:active {
+  color: var(--content-link-active-color);
+  text-decoration-color: color-mix(in srgb, var(--content-link-active-color) 70%, transparent);
+}
+
+:where(.mdx-content, .prose, .docs-content, #docs-root) a:focus-visible {
+  color: var(--content-link-hover-color);
+  text-decoration-color: color-mix(in srgb, var(--content-link-hover-color) 70%, transparent);
+  outline: var(--focus-outline-width, 3px) solid var(--focus-outline-color);
+  outline-offset: 3px;
+  border-radius: 2px;
+  box-shadow: 0 0 0 3px var(--content-link-focus-shadow);
+}
+
+:where(.mdx-content, .prose, .docs-content, #docs-root) a:focus-visible:visited {
+  color: var(--content-link-visited-color);
+  text-decoration-color: color-mix(in srgb, var(--content-link-visited-color) 70%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.mdx-content, .prose, .docs-content, #docs-root) a {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  :where(.mdx-content, .prose, .docs-content, #docs-root) a {
+    color: LinkText;
+    text-decoration-color: LinkText;
+  }
+
+  :where(.mdx-content, .prose, .docs-content, #docs-root) a:visited {
+    color: VisitedText;
+    text-decoration-color: VisitedText;
+  }
+
+  :where(.mdx-content, .prose, .docs-content, #docs-root) a:focus-visible {
+    box-shadow: none;
+    outline: 2px solid Highlight;
+    outline-offset: 3px;
+  }
+}
