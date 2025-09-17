@@ -1,20 +1,77 @@
 @media print {
   @page {
-    margin: 1in;
+    margin: 12mm;
+    size: auto;
   }
+
+  :root {
+    --resume-print-width: calc(210mm - 24mm);
+  }
+
   body {
     background: var(--color-surface);
     color: var(--color-inverse);
     -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
+
+  html,
+  body {
+    width: 100%;
+    min-height: auto;
+  }
+
   .no-print {
     display: none !important;
   }
+
   .windowMainScreen {
     background: var(--color-surface) !important;
   }
+
   #resume-content {
-    max-height: 520mm;
-    overflow: hidden;
+    box-sizing: border-box;
+    max-width: var(--resume-print-width);
+    margin: 0 auto;
+    max-height: none;
+    overflow: visible;
+    page-break-inside: avoid;
+  }
+
+  #resume-content > * {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  #resume-content .timeline-item,
+  #resume-content .exp-item,
+  #resume-content li,
+  #resume-content .react-activity-calendar,
+  #resume-content .flex,
+  #resume-content .grid {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  #resume-content .exp-item {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  #resume-content .flex.flex-wrap.my-2 {
+    display: none !important;
+  }
+
+  #resume-content button,
+  #resume-content [role='button'],
+  #resume-content input,
+  #resume-content select {
+    display: none !important;
+  }
+}
+
+@media print and (size: 8.5in 11in) {
+  :root {
+    --resume-print-width: calc(8.5in - 24mm);
   }
 }

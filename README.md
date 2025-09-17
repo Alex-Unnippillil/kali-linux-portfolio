@@ -102,6 +102,24 @@ See `.env.local.example` for the full list.
 
 ---
 
+## Resume Printing
+
+The About Alex app exposes the interactive resume. To print a snapshot:
+
+1. Open **About Alex → Resume** and load the resume content.
+2. Choose **Download PDF** (which triggers `window.print()`) or use the browser print shortcut.
+3. In the print dialog pick either **A4** or **Letter** and keep margins at **12&nbsp;mm** (the layout already sets this value).
+4. Enable background graphics so the Kali theme colors and charts are preserved.
+5. Confirm the page range before printing—long resumes will span multiple sheets.
+
+**Known limitations / tips**
+
+- The resume honors the last active experience filter. Because the print view hides the filter buttons, switch back to **All** before opening the print dialog.
+- Some older browsers ignore `break-inside` on flex containers, which can allow a column to split across pages. Reflowing the content (resize the window once) usually fixes the breakpoints before printing.
+- Browser previews may override the 12&nbsp;mm margin when "Fit to page" or similar scaling is enabled. Set scaling to 100&nbsp;% for predictable spacing.
+
+---
+
 ## Speed Insights
 
 - Enable Speed Insights in the Vercel project dashboard.
