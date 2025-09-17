@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   saveCalibration,
   loadCalibration,
@@ -8,6 +8,7 @@ import {
   CalibrationData,
   AxisRange,
 } from "../utils/gamepad";
+import EmptyState from "../components/system/EmptyState";
 
 export default function GamepadCalibration() {
   const [pad, setPad] = useState<Gamepad | null>(null);
@@ -15,23 +16,31 @@ export default function GamepadCalibration() {
   const [ranges, setRanges] = useState<AxisRange[]>([]);
   const [vendor, setVendor] = useState<string>("");
 
+  const rescanGamepads = useCallback(() => {
+    if (typeof navigator === "undefined" || typeof navigator.getGamepads !== "function") {
+      return;
+    }
+    const pads = navigator.getGamepads();
+    const nextPad = (pads ? Array.from(pads).find((p): p is Gamepad => Boolean(p)) : null) ?? null;
+    setPad(nextPad);
+    if (!nextPad) {
+      setAxes([]);
+      setRanges([]);
+      setVendor("");
+    }
+  }, []);
+
   useEffect(() => {
-    const connect = (e: GamepadEvent) => setPad(e.gamepad);
-    const disconnect = () => setPad(null);
+    const connect = () => rescanGamepads();
+    const disconnect = () => rescanGamepads();
     window.addEventListener("gamepadconnected", connect);
     window.addEventListener("gamepaddisconnected", disconnect);
-    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-    for (const p of pads) {
-      if (p) {
-        setPad(p);
-        break;
-      }
-    }
+    rescanGamepads();
     return () => {
       window.removeEventListener("gamepadconnected", connect);
       window.removeEventListener("gamepaddisconnected", disconnect);
     };
-  }, []);
+  }, [rescanGamepads]);
 
   useEffect(() => {
     if (!pad) return;
@@ -77,7 +86,40 @@ export default function GamepadCalibration() {
   return (
     <div className="p-4">
       <h1 className="text-xl mb-4">Gamepad Calibration</h1>
-      {!pad && <p>No controller connected.</p>}
+      {!pad && (
+        <EmptyState
+          className="mx-auto"
+          title="Connect a controller"
+          helperText="Plug in or pair a gamepad to visualize live axes and capture calibration ranges."
+          icon={
+            <svg
+              viewBox="0 0 24 24"
+              className="h-8 w-8"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M5.5 9h13a2 2 0 0 1 1.93 2.52l-1.06 3.7A3 3 0 0 1 16.5 17h-9a3 3 0 0 1-2.87-1.78l-1.06-3.7A2 2 0 0 1 5.5 9z" />
+              <path d="M9 13H7" />
+              <path d="M8 12v2" />
+              <circle cx="16.5" cy="12.5" r="0.9" />
+              <circle cx="18" cy="14.5" r="0.9" />
+            </svg>
+          }
+          iconLabel="Game controller"
+          action={
+            <button
+              type="button"
+              onClick={rescanGamepads}
+              className="rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-[var(--color-inverse)] transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)]"
+            >
+              Rescan devices
+            </button>
+          }
+        />
+      )}
       {pad && (
         <>
           <div className="mb-2">Controller: {pad.id}</div>
