@@ -99,6 +99,18 @@ See `.env.local.example` for the full list.
 
 - Run `yarn lint` and `yarn test` before committing changes.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
+- Large raster assets (`.png`, `.jpg`, `.jpeg`, `.webp`, `.avif`) must be ≤ 2000px wide unless the filename includes `-large`.
+
+### Image Asset Policy
+
+- Use the `-large` suffix (for example, `hero-wallpaper-large.png`) for intentional high-resolution exports that exceed 2000 pixels
+  in width.
+- The pre-commit hook runs `node scripts/check-images.mjs --staged` to block commits containing oversize images without the
+  suffix.
+- Run `node scripts/check-images.mjs --all` locally if you need to audit the full repository (useful before adding new art
+  packs or when updating wallpapers).
+- Resize or recompress images where possible to avoid unnecessary bundle weight; the suffix is intended for rare cases such as
+  hero backgrounds or marketing captures that require higher fidelity.
 
 ---
 
