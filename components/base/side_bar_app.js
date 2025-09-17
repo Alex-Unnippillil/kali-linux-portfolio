@@ -11,11 +11,19 @@ export class SideBarApp extends Component {
             scaleImage: false,
             thumbnail: null,
         };
+        this._scaleTimeout = null;
     }
 
     componentDidMount() {
         this.id = this.props.id;
         this.updateBadge();
+    }
+
+    componentWillUnmount() {
+        if (this._scaleTimeout) {
+            clearTimeout(this._scaleTimeout);
+            this._scaleTimeout = null;
+        }
     }
 
     componentDidUpdate(prevProps) {
@@ -46,8 +54,12 @@ export class SideBarApp extends Component {
     };
 
     scaleImage = () => {
-        setTimeout(() => {
+        if (this._scaleTimeout) {
+            clearTimeout(this._scaleTimeout);
+        }
+        this._scaleTimeout = setTimeout(() => {
             this.setState({ scaleImage: false });
+            this._scaleTimeout = null;
         }, 1000);
         this.setState({ scaleImage: true });
     }

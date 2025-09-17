@@ -9,25 +9,42 @@ import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
 
 export default class Ubuntu extends Component {
-	constructor() {
-		super();
-		this.state = {
-			screen_locked: false,
-			bg_image_name: 'wall-2',
-			booting_screen: true,
-			shutDownScreen: false
-		};
-	}
+        constructor() {
+                super();
+                this.state = {
+                        screen_locked: false,
+                        bg_image_name: 'wall-2',
+                        booting_screen: true,
+                        shutDownScreen: false
+                };
+                this._bootTimeout = null;
+                this._lockTimeout = null;
+        }
 
-	componentDidMount() {
-		this.getLocalData();
-	}
+        componentDidMount() {
+                this.getLocalData();
+        }
 
-	setTimeOutBootScreen = () => {
-		setTimeout(() => {
-			this.setState({ booting_screen: false });
-		}, 2000);
-	};
+        componentWillUnmount() {
+                if (this._bootTimeout) {
+                        clearTimeout(this._bootTimeout);
+                        this._bootTimeout = null;
+                }
+                if (this._lockTimeout) {
+                        clearTimeout(this._lockTimeout);
+                        this._lockTimeout = null;
+                }
+        }
+
+        setTimeOutBootScreen = () => {
+                if (this._bootTimeout) {
+                        clearTimeout(this._bootTimeout);
+                }
+                this._bootTimeout = setTimeout(() => {
+                        this.setState({ booting_screen: false });
+                        this._bootTimeout = null;
+                }, 2000);
+        };
 
 	getLocalData = () => {
 		// Get Previously selected Background Image
@@ -69,11 +86,15 @@ export default class Ubuntu extends Component {
                 const statusBar = document.getElementById('status-bar');
                 // Consider using a React ref if the status bar element lives within this component tree
                 statusBar?.blur();
-		setTimeout(() => {
-			this.setState({ screen_locked: true });
-		}, 100); // waiting for all windows to close (transition-duration)
+                if (this._lockTimeout) {
+                        clearTimeout(this._lockTimeout);
+                }
+                this._lockTimeout = setTimeout(() => {
+                        this.setState({ screen_locked: true });
+                        this._lockTimeout = null;
+                }, 100); // waiting for all windows to close (transition-duration)
                 safeLocalStorage?.setItem('screen-locked', true);
-	};
+        };
 
 	unLockScreen = () => {
 		ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });

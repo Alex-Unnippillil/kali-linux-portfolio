@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import usePersistentState from "../../hooks/usePersistentState";
 
 /**
@@ -110,13 +110,30 @@ export default function GameSettingsPanel({
 
   // --- Input Latency Tester ---------------------------------------------
   const [latency, setLatency] = useState(null);
+  const latencyHandlerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (latencyHandlerRef.current) {
+        window.removeEventListener("keydown", latencyHandlerRef.current);
+        latencyHandlerRef.current = null;
+      }
+    };
+  }, []);
+
   const startLatencyTest = () => {
     const start = performance.now();
+    if (latencyHandlerRef.current) {
+      window.removeEventListener("keydown", latencyHandlerRef.current);
+      latencyHandlerRef.current = null;
+    }
     const handler = () => {
       setLatency(performance.now() - start);
       window.removeEventListener("keydown", handler);
+      latencyHandlerRef.current = null;
     };
     window.addEventListener("keydown", handler);
+    latencyHandlerRef.current = handler;
   };
 
   return (

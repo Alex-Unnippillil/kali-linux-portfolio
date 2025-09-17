@@ -5,6 +5,7 @@ export class UbuntuApp extends Component {
     constructor() {
         super();
         this.state = { launching: false, dragging: false, prefetched: false };
+        this._launchTimeout = null;
     }
 
     handleDragStart = () => {
@@ -18,9 +19,22 @@ export class UbuntuApp extends Component {
     openApp = () => {
         if (this.props.disabled) return;
         this.setState({ launching: true }, () => {
-            setTimeout(() => this.setState({ launching: false }), 300);
+            if (this._launchTimeout) {
+                clearTimeout(this._launchTimeout);
+            }
+            this._launchTimeout = setTimeout(() => {
+                this.setState({ launching: false });
+                this._launchTimeout = null;
+            }, 300);
         });
         this.props.openApp(this.props.id);
+    }
+
+    componentWillUnmount() {
+        if (this._launchTimeout) {
+            clearTimeout(this._launchTimeout);
+            this._launchTimeout = null;
+        }
     }
 
     handlePrefetch = () => {

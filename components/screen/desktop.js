@@ -53,6 +53,7 @@ export class Desktop extends Component {
             showWindowSwitcher: false,
             switcherWindows: [],
         }
+        this._openAppTimers = new Set();
     }
 
     componentDidMount() {
@@ -96,6 +97,8 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        this._openAppTimers.forEach(timer => clearTimeout(timer));
+        this._openAppTimers.clear();
     }
 
     checkForNewFolders = () => {
@@ -644,7 +647,7 @@ export class Desktop extends Component {
             recentApps = recentApps.slice(0, 10);
             safeLocalStorage?.setItem('recentApps', JSON.stringify(recentApps));
 
-            setTimeout(() => {
+            const timer = setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
                 this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
@@ -652,7 +655,9 @@ export class Desktop extends Component {
                     this.saveSession();
                 });
                 this.app_stack.push(objId);
+                this._openAppTimers.delete(timer);
             }, 200);
+            this._openAppTimers.add(timer);
         }
     }
 

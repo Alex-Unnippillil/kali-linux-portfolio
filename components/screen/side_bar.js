@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import SideBarApp from '../base/side_bar_app';
 
@@ -15,13 +15,32 @@ let renderApps = (props) => {
 
 export default function SideBar(props) {
 
+    const hideTimer = useRef(null);
+
+    useEffect(() => {
+        return () => {
+            if (hideTimer.current) {
+                clearTimeout(hideTimer.current);
+                hideTimer.current = null;
+            }
+        };
+    }, []);
+
     function showSideBar() {
         props.hideSideBar(null, false);
+        if (hideTimer.current) {
+            clearTimeout(hideTimer.current);
+            hideTimer.current = null;
+        }
     }
 
     function hideSideBar() {
-        setTimeout(() => {
+        if (hideTimer.current) {
+            clearTimeout(hideTimer.current);
+        }
+        hideTimer.current = setTimeout(() => {
             props.hideSideBar(null, true);
+            hideTimer.current = null;
         }, 2000);
     }
 
