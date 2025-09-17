@@ -16,7 +16,8 @@
   --color-border: #2a2e36; /* subtle borders */
   --color-terminal: #00ff00; /* terminal green */
   --color-dark: #0c0f12; /* card back */
-  --color-focus-ring: var(--color-accent);
+  --color-focus-ring: #4db8ff;
+  --focus-outline-color: var(--color-focus-ring);
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
   accent-color: var(--color-control-accent);
@@ -35,6 +36,13 @@ html[data-theme='dark'] {
   --color-border: #333333;
   --color-terminal: #00ff00;
   --color-dark: #0a0a0a;
+  --color-focus-ring: #82cfff;
+  --focus-outline-color: var(--color-focus-ring);
+}
+
+html[data-theme='light'] {
+  --color-focus-ring: #0a7cd6;
+  --focus-outline-color: var(--color-focus-ring);
 }
 
 /* Neon theme */
@@ -50,6 +58,8 @@ html[data-theme='neon'] {
   --color-border: #333333;
   --color-terminal: #39ff14;
   --color-dark: #000000;
+  --color-focus-ring: #ff66ff;
+  --focus-outline-color: var(--color-focus-ring);
 }
 
 /* Matrix theme */
@@ -65,7 +75,20 @@ html[data-theme='matrix'] {
   --color-border: #003300;
   --color-terminal: #00ff00;
   --color-dark: #000000;
+  --color-focus-ring: #66ffbf;
+  --focus-outline-color: var(--color-focus-ring);
+}
 
+@media (prefers-color-scheme: light) {
+  :root {
+    --color-focus-ring: #0a7cd6;
+    --focus-outline-color: var(--color-focus-ring);
+  }
+}
+
+.high-contrast {
+  --color-focus-ring: #ffff00;
+  --focus-outline-color: var(--color-focus-ring);
 }
 
 ::selection {
@@ -74,6 +97,6 @@ html[data-theme='matrix'] {
 }
 
 *:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
+  outline: var(--focus-outline-width, 3px) solid var(--color-focus-ring);
+  outline-offset: 3px;
 }
