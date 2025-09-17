@@ -1,0 +1,15 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gamesGradient" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0B1F32" />
+      <stop offset="1" stop-color="#0EA5E9" />
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#gamesGradient)" />
+  <path d="M20 32H28" stroke="#F8FAFC" stroke-width="3.5" stroke-linecap="round" />
+  <path d="M24 28V36" stroke="#F8FAFC" stroke-width="3.5" stroke-linecap="round" />
+  <path d="M40.5 30.5H40.51" stroke="#F8FAFC" stroke-width="3.5" stroke-linecap="round" />
+  <path d="M45 34H45.01" stroke="#F8FAFC" stroke-width="3.5" stroke-linecap="round" />
+  <path d="M36 38C37.5 35 41.5 35 43 38" stroke="#F8FAFC" stroke-width="3.5" stroke-linecap="round" />
+  <path d="M20 24C24 20 40 20 44 24C46 26 48 30 48 34C48 40 44 44 38 44H26C20 44 16 40 16 34C16 30 18 26 20 24Z" stroke="#F8FAFC" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+</svg>
