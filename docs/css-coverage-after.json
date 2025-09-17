@@ -1,0 +1,26 @@
+{
+  "url": "http://localhost:3000",
+  "generatedAt": "2025-09-16T21:57:36.769Z",
+  "totalBytes": 2890,
+  "usedBytes": 2890,
+  "unusedBytes": 0,
+  "unusedPercent": 0,
+  "overall": {
+    "totalBytes": 6530,
+    "usedBytes": 6530,
+    "unusedBytes": 0,
+    "unusedPercent": 0
+  },
+  "customSelectors": 66,
+  "customKeyframes": 14,
+  "stylesheets": [
+    {
+      "styleSheetId": "style-sheet-12185-219",
+      "sourceURL": "http://localhost:3000/_next/static/css/d0c8f5c7eb8a0490.css",
+      "totalBytes": 99992,
+      "usedBytes": 6530,
+      "unusedBytes": 93462,
+      "unusedPercent": 93.47
+    }
+  ]
+}
