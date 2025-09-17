@@ -4,6 +4,7 @@ import React, { Component } from 'react';
 import NextImage from 'next/image';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
+import WindowTitlebar from '../desktop/WindowTitlebar';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
@@ -676,16 +677,12 @@ export default Window
 // Window's title bar
 export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
     return (
-        <div
-            className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
-            tabIndex={0}
-            role="button"
-            aria-grabbed={grabbed}
+        <WindowTitlebar
+            title={title}
+            grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
-        >
-            <div className="flex justify-center w-full text-sm font-bold">{title}</div>
-        </div>
+        />
     )
 }
 
