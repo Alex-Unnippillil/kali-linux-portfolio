@@ -1,0 +1,43 @@
+name: Lighthouse
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - name: Install dependencies
+        run: yarn install --immutable --immutable-cache
+      - name: Build production bundle
+        run: yarn build
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Resolve Chromium executable path
+        id: chromium
+        run: |
+          echo "executable=$(node -e \"const { chromium } = require('playwright'); console.log(chromium.executablePath());\")" >> "$GITHUB_OUTPUT"
+      - name: Run Lighthouse CI
+        id: lhci
+        env:
+          CHROME_PATH: ${{ steps.chromium.outputs.executable }}
+        run: yarn lighthouse
+        continue-on-error: true
+      - name: Summarize Lighthouse results
+        if: always()
+        env:
+          LHCI_STEP_OUTCOME: ${{ steps.lhci.outcome }}
+        run: node scripts/print-lighthouse-summary.mjs $LHCI_STEP_OUTCOME
+      - name: Upload Lighthouse reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: .lighthouseci/reports
+          if-no-files-found: ignore
