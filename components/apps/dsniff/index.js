@@ -354,7 +354,7 @@ const Dsniff = () => {
         <h1 className="text-lg">dsniff</h1>
         <button
           onClick={exportSummary}
-          className="px-2 py-1 bg-ub-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400"
+          className="px-2 py-1 bg-ub-grey rounded text-xs focus-ring"
         >
           Export summary
         </button>
@@ -435,7 +435,7 @@ const Dsniff = () => {
             <span className="font-bold text-sm">Sample command</span>
             <button
               onClick={copySampleCommand}
-              className="px-2 py-1 bg-ub-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              className="px-2 py-1 bg-ub-grey rounded text-xs focus-ring"
             >
               Copy sample command
             </button>
@@ -490,7 +490,7 @@ const Dsniff = () => {
         <button
           onClick={copySelectedPacket}
           disabled={selectedPacket === null}
-          className="mb-2 px-2 py-1 bg-ub-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:opacity-50"
+          className="mb-2 px-2 py-1 bg-ub-grey rounded text-xs focus-ring disabled:opacity-50"
         >
           Copy selected row
         </button>

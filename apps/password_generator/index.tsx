@@ -92,12 +92,12 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
           type="text"
           readOnly
           value={password}
-          className="flex-1 text-black px-2 py-1 font-mono leading-[1.2] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
+          className="flex-1 text-black px-2 py-1 font-mono leading-[1.2] focus-ring"
         />
         <button
           type="button"
           onClick={copyToClipboard}
-          className="px-3 py-1 bg-blue-600 rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
+          className="px-3 py-1 bg-blue-600 rounded focus-ring"
         >
           Copy
         </button>
@@ -115,7 +115,7 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
         <button
           type="button"
           onClick={generatePassword}
-          className="w-full px-4 py-2 bg-green-600 rounded"
+          className="w-full px-4 py-2 bg-green-600 rounded focus-ring"
         >
           Generate
         </button>

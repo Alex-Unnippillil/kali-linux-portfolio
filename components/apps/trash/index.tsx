@@ -106,28 +106,28 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
           <button
             onClick={restore}
             disabled={selected === null}
-            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
+            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus-ring disabled:opacity-50"
           >
             Restore
           </button>
           <button
             onClick={restoreAll}
             disabled={items.length === 0}
-            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
+            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus-ring disabled:opacity-50"
           >
             Restore All
           </button>
           <button
             onClick={remove}
             disabled={selected === null}
-            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
+            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus-ring disabled:opacity-50"
           >
             Delete
           </button>
           <button
             onClick={empty}
             disabled={items.length === 0}
-            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
+            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus-ring disabled:opacity-50"
           >
             Empty
           </button>

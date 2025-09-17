@@ -11,7 +11,7 @@ export default function FilterChip({ label, active, onClick, icon }: FilterChipP
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1 px-3 py-1 rounded-full border focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400 ${
+      className={`flex items-center gap-1 px-3 py-1 rounded-full border focus-ring ${
         active ? 'bg-blue-600 text-white' : 'bg-gray-200 text-black'
       }`}
     >

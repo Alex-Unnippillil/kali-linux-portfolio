@@ -44,7 +44,7 @@ const AppsPage = () => {
           <Link
             key={app.id}
             href={`/apps/${app.id}`}
-            className="flex flex-col items-center rounded border p-4 text-center focus:outline-none focus:ring"
+            className="flex flex-col items-center rounded border p-4 text-center focus-ring"
             aria-label={app.title}
           >
             {app.icon && (

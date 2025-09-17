@@ -601,31 +601,31 @@ const CarRacer = () => {
       </div>
       <div className="absolute bottom-2 left-2 space-x-2 z-10 text-sm">
         <button
-          className="bg-gray-700 px-2 focus:outline-none focus:ring-2 focus:ring-white"
+          className="bg-gray-700 px-2 focus-ring"
           onClick={openCustomization}
         >
           Reset
         </button>
         <button
-          className="bg-gray-700 px-2 focus:outline-none focus:ring-2 focus:ring-white"
+          className="bg-gray-700 px-2 focus-ring"
           onClick={togglePause}
         >
           {paused ? 'Resume' : 'Pause'}
         </button>
         <button
-          className="bg-gray-700 px-2 focus:outline-none focus:ring-2 focus:ring-white"
+          className="bg-gray-700 px-2 focus-ring"
           onClick={toggleSound}
         >
           {sound ? 'Sound: on' : 'Sound: off'}
         </button>
         <button
-          className="bg-gray-700 px-2 focus:outline-none focus:ring-2 focus:ring-white"
+          className="bg-gray-700 px-2 focus-ring"
           onClick={toggleLaneAssist}
         >
           {laneAssist ? 'Lane Assist: on' : 'Lane Assist: off'}
         </button>
         <button
-          className="bg-gray-700 px-2 focus:outline-none focus:ring-2 focus:ring-white"
+          className="bg-gray-700 px-2 focus-ring"
           onClick={triggerBoost}
         >
           Boost

@@ -217,44 +217,44 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           <div
             className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
             role="dialog"
-          aria-modal="true"
-        >
-          <button
-            type="button"
-            onClick={resume}
-            className="px-4 py-2 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-            autoFocus
+            aria-modal="true"
           >
-            Resume
-          </button>
-        </div>
-      )}
+            <button
+              type="button"
+              onClick={resume}
+              className="px-4 py-2 bg-gray-700 text-white rounded focus-ring"
+              autoFocus
+            >
+              Resume
+            </button>
+          </div>
+        )}
       <div className="absolute top-2 right-2 z-40 flex space-x-2">
         <button
           type="button"
           onClick={() => setPaused((p) => !p)}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          className="px-2 py-1 bg-gray-700 text-white rounded focus-ring"
         >
           {paused ? 'Resume' : 'Pause'}
         </button>
         <button
           type="button"
           onClick={snapshot}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          className="px-2 py-1 bg-gray-700 text-white rounded focus-ring"
         >
           Snapshot
         </button>
         <button
           type="button"
           onClick={replay}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          className="px-2 py-1 bg-gray-700 text-white rounded focus-ring"
         >
           Replay
         </button>
         <button
           type="button"
           onClick={shareApp}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          className="px-2 py-1 bg-gray-700 text-white rounded focus-ring"
         >
           Share
         </button>
@@ -262,7 +262,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           <button
             type="button"
             onClick={shareScore}
-            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+            className="px-2 py-1 bg-gray-700 text-white rounded focus-ring"
           >
             Share Score
           </button>
@@ -272,7 +272,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           aria-label="Help"
           aria-expanded={showHelp}
           onClick={toggle}
-          className="bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
+          className="bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus-ring"
         >
           ?
         </button>

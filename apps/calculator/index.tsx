@@ -23,7 +23,7 @@ export default function Calculator() {
   );
 
   const btnCls =
-    'btn min-h-12 w-12 transition-transform duration-150 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-white';
+    'btn min-h-12 w-12 transition-transform duration-150 hover:-translate-y-0.5 focus-ring';
 
   useEffect(() => {
     let evaluate: any;

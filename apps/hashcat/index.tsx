@@ -206,7 +206,7 @@ const Hashcat: React.FC = () => {
                 key={t}
                 type="button"
                 onClick={() => appendMask(t)}
-                className="px-2 py-1 bg-blue-600 rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
+                className="px-2 py-1 bg-blue-600 rounded focus-ring"
               >
                 {t}
               </button>
@@ -310,7 +310,7 @@ const Hashcat: React.FC = () => {
         <button
           type="button"
           onClick={running ? stop : start}
-          className="px-4 py-2 bg-green-600 rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-green-500"
+          className="px-4 py-2 bg-green-600 rounded focus-ring"
         >
           {running ? 'Stop' : 'Start'}
         </button>

@@ -55,7 +55,7 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
         aria-label="Help"
         aria-expanded={open}
         onClick={toggle}
-        className="fixed top-2 right-2 z-40 bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
+        className="fixed top-2 right-2 z-40 bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus-ring"
       >
         ?
       </button>

@@ -349,7 +349,7 @@ const OpenVASApp = () => {
               key={h.host}
               type="button"
               onClick={() => setActiveHost(h)}
-              className="p-4 bg-gray-800 rounded text-left focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="p-4 bg-gray-800 rounded text-left focus-ring"
             >
               <div className="font-bold mb-1">{h.host}</div>
               <div className="mb-1">
@@ -452,7 +452,7 @@ const OpenVASApp = () => {
                       type="button"
                       onClick={() => handleCellClick(likelihood, impact)}
                       disabled={count === 0}
-                      className={`p-2 ${color(i, j)} text-white focus:outline-none w-full ${
+                      className={`p-2 ${color(i, j)} text-white focus-ring w-full ${
                         reduceMotion.current ? '' : 'transition-transform hover:scale-105'
                       } ${
                         filter &&
@@ -480,7 +480,7 @@ const OpenVASApp = () => {
                 key={level}
                 onClick={() => handleSeverityChange(level)}
                 aria-pressed={severity === level}
-                className={`px-3 py-1 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                className={`px-3 py-1 rounded-full text-sm focus-ring ${
                   severity === level
                     ? 'bg-white text-black'
                     : 'bg-gray-800 text-white'
@@ -515,7 +515,7 @@ const OpenVASApp = () => {
               <button
                 type="button"
                 onClick={() => setSelected(f)}
-                className="w-full text-left focus:outline-none"
+                className="w-full text-left focus-ring"
               >
                 <div className="flex items-center justify-between">
                   <span

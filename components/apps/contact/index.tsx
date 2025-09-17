@@ -302,7 +302,7 @@ const ContactApp: React.FC = () => {
         <div className="relative">
           <input
             id="contact-name"
-            className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+            className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus-ring"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -319,7 +319,7 @@ const ContactApp: React.FC = () => {
           <input
             id="contact-email"
             type="email"
-            className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+            className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus-ring"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -342,7 +342,7 @@ const ContactApp: React.FC = () => {
         <div className="relative">
           <textarea
             id="contact-message"
-            className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+            className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus-ring"
             rows={4}
             value={message}
             onChange={(e) => setMessage(e.target.value)}

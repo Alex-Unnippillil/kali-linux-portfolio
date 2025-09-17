@@ -57,9 +57,15 @@
   --font-multiplier: 1;
   /* Minimum interactive target size */
   --hit-area: 32px;
-  /* Focus outline */
-  --focus-outline-color: var(--color-ubt-blue);
-  --focus-outline-width: 2px;
+  /* Focus ring */
+  --focus-ring-color: #0a84ff;
+  --focus-ring-offset-color: rgba(255, 255, 255, 0.35);
+  --focus-ring-width: 3px;
+  --focus-ring-offset: 3px;
+  --focus-ring-transition: outline-color var(--motion-fast) ease-out,
+    box-shadow var(--motion-fast) ease-out;
+  --focus-outline-color: var(--focus-ring-color);
+  --focus-outline-width: var(--focus-ring-width);
 }
 
 /* High contrast theme */
@@ -77,6 +83,12 @@
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
   --game-color-danger: #ff0000;
+  --focus-ring-color: #ff4f64;
+  --focus-ring-offset-color: #ffffff;
+  --focus-ring-width: 4px;
+  --focus-ring-offset: 4px;
+  --focus-outline-color: var(--focus-ring-color);
+  --focus-outline-width: var(--focus-ring-width);
 }
 
 /* Dyslexia-friendly fonts */
@@ -116,5 +128,11 @@
     --color-ub-orange: #ffff00;
     --color-ub-lite-abrgn: #00ffff;
     --color-ub-border-orange: #ffff00;
+    --focus-ring-color: #ff4f64;
+    --focus-ring-offset-color: #ffffff;
+    --focus-ring-width: 4px;
+    --focus-ring-offset: 4px;
+    --focus-outline-color: var(--focus-ring-color);
+    --focus-outline-width: var(--focus-ring-width);
   }
 }
