@@ -253,6 +253,92 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.width).toBe(60);
     expect(ref.current!.state.height).toBe(85);
   });
+
+  it('applies third layout when receiving snap-region event', async () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 0,
+      top: 0,
+      right: 200,
+      bottom: 200,
+      width: 200,
+      height: 200,
+      x: 0,
+      y: 0,
+      toJSON: () => {}
+    });
+
+    await act(async () => {
+      (ref.current as any).handleSnapRegion({
+        detail: { region: 'third-middle', windowId: 'test-window' }
+      });
+    });
+
+    expect(ref.current!.state.snapped).toBe('third-middle');
+    expect(ref.current!.state.width).toBeCloseTo(33.33, 2);
+    expect(ref.current!.state.height).toBeCloseTo(96.3, 1);
+    const expectedX = window.innerWidth / 3 + -1;
+    const expectedY = -2;
+    expect(winEl.style.transform).toBe(`translate(${expectedX}px, ${expectedY}px)`);
+  });
+
+  it('applies quadrant layout when receiving snap-region event', async () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 0,
+      top: 0,
+      right: 200,
+      bottom: 200,
+      width: 200,
+      height: 200,
+      x: 0,
+      y: 0,
+      toJSON: () => {}
+    });
+
+    await act(async () => {
+      (ref.current as any).handleSnapRegion({
+        detail: { region: 'grid-bottom-right', windowId: 'test-window' }
+      });
+    });
+
+    expect(ref.current!.state.snapped).toBe('grid-bottom-right');
+    expect(ref.current!.state.width).toBe(50);
+    expect(ref.current!.state.height).toBeCloseTo(48.15, 2);
+    const expectedX = window.innerWidth / 2 + -1;
+    const expectedY = window.innerHeight / 2 + -2;
+    expect(winEl.style.transform).toBe(`translate(${expectedX}px, ${expectedY}px)`);
+  });
 });
 
 describe('Window keyboard dragging', () => {
