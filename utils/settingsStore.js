@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  stickyModifiers: false,
 };
 
 export async function getAccent() {
@@ -102,6 +103,17 @@ export async function setHaptics(value) {
   window.localStorage.setItem('haptics', value ? 'true' : 'false');
 }
 
+export async function getStickyModifiers() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.stickyModifiers;
+  const val = window.localStorage.getItem('sticky-modifiers');
+  return val === null ? DEFAULT_SETTINGS.stickyModifiers : val === 'true';
+}
+
+export async function setStickyModifiers(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('sticky-modifiers', value ? 'true' : 'false');
+}
+
 export async function getPongSpin() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
   const val = window.localStorage.getItem('pong-spin');
@@ -137,6 +149,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('sticky-modifiers');
 }
 
 export async function exportSettings() {
@@ -151,6 +164,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    stickyModifiers,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +176,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getStickyModifiers(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +190,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    stickyModifiers,
     theme,
   });
 }
@@ -199,6 +215,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    stickyModifiers,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +228,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (stickyModifiers !== undefined) await setStickyModifiers(stickyModifiers);
   if (theme !== undefined) setTheme(theme);
 }
 

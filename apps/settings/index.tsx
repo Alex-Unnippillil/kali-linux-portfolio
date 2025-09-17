@@ -12,6 +12,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import StickyModifiersToggle from "./accessibility/StickyModifiersToggle";
 
 export default function Settings() {
   const {
@@ -29,6 +30,7 @@ export default function Settings() {
     setHighContrast,
     haptics,
     setHaptics,
+    setStickyModifiers,
     theme,
     setTheme,
   } = useSettings();
@@ -79,6 +81,8 @@ export default function Settings() {
       if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
+      if (parsed.stickyModifiers !== undefined)
+        setStickyModifiers(parsed.stickyModifiers);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
     } catch (err) {
       console.error("Invalid settings", err);
@@ -100,6 +104,7 @@ export default function Settings() {
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
+    setStickyModifiers(defaults.stickyModifiers);
     setTheme("default");
   };
 
@@ -252,6 +257,7 @@ export default function Settings() {
               ariaLabel="High Contrast"
             />
           </div>
+          <StickyModifiersToggle />
           <div className="flex justify-center my-4 items-center">
             <span className="mr-2 text-ubt-grey">Haptics:</span>
             <ToggleSwitch
