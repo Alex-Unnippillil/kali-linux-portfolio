@@ -24,6 +24,11 @@
 /build
 dist
 
+# lighthouse
+/.lighthouseci/reports/
+/.lighthouseci/*.html
+/.lighthouseci/*.json
+
 # misc
 .DS_Store
 *.pem
