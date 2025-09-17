@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import InputRemap from "./Games/common/input-remap/InputRemap";
 import useInputMapping from "./Games/common/input-remap/useInputMapping";
 
@@ -171,21 +171,28 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
   const [mapping, setKey] = useInputMapping(gameId, info?.actions || {});
   const overlayRef = useRef<HTMLDivElement>(null);
   const prevFocus = useRef<HTMLElement | null>(null);
-  const noop = () => null;
+  const [query, setQuery] = useState("");
+  const filterInputId = useId();
+  const filterStatusId = useId();
 
   useEffect(() => {
     if (!overlayRef.current) return;
     prevFocus.current = document.activeElement as HTMLElement | null;
     const selectors =
       'a[href], button, textarea, input, select, [tabindex]:not([tabindex="-1"])';
-    const focusables = Array.from(
-      overlayRef.current.querySelectorAll<HTMLElement>(selectors),
-    );
+    const node = overlayRef.current;
+    const getFocusables = () =>
+      Array.from(node.querySelectorAll<HTMLElement>(selectors)).filter(
+        (el) => !el.hasAttribute("disabled") && el.getAttribute("aria-hidden") !== "true",
+      );
+    const focusables = getFocusables();
     focusables[0]?.focus();
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Tab" && focusables.length > 0) {
-        const first = focusables[0];
-        const last = focusables[focusables.length - 1];
+      if (e.key === "Tab") {
+        const currentFocusables = getFocusables();
+        if (currentFocusables.length === 0) return;
+        const first = currentFocusables[0];
+        const last = currentFocusables[currentFocusables.length - 1];
         if (e.shiftKey) {
           if (document.activeElement === first) {
             e.preventDefault();
@@ -200,13 +207,61 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
         onClose();
       }
     };
-    const node = overlayRef.current;
     node.addEventListener("keydown", handleKey);
     return () => {
       node.removeEventListener("keydown", handleKey);
       prevFocus.current?.focus();
     };
   }, [onClose]);
+
+  const filteredActionKeys = useMemo(() => {
+    if (!info?.actions) return [] as string[];
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return Object.keys(info.actions);
+    return Object.keys(info.actions).filter((action) => {
+      const keyLabel = (mapping[action] ?? info.actions?.[action] ?? "").toLowerCase();
+      return (
+        action.toLowerCase().includes(normalized) || keyLabel.includes(normalized)
+      );
+    });
+  }, [info, mapping, query]);
+
+  const filteredActions = useMemo(() => {
+    if (!info?.actions) return {} as Record<string, string>;
+    return filteredActionKeys.reduce<Record<string, string>>((acc, action) => {
+      acc[action] = info.actions![action];
+      return acc;
+    }, {});
+  }, [filteredActionKeys, info]);
+
+  const highlightMatches = React.useCallback(
+    (text: string): React.ReactNode => {
+      const trimmed = query.trim();
+      if (!trimmed) return text;
+      const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(`(${escaped})`, "ig");
+      const parts = text.split(regex);
+      if (parts.length === 1) return text;
+      return parts.map((part, index) =>
+        index % 2 === 1 ? (
+          <mark
+            key={`${part}-${index}`}
+            className="rounded-sm bg-yellow-300 px-0.5 text-black"
+          >
+            {part}
+          </mark>
+        ) : (
+          <React.Fragment key={`${part}-${index}`}>{part}</React.Fragment>
+        ),
+      );
+    },
+    [query],
+  );
+
+  const totalShortcuts = info?.actions ? Object.keys(info.actions).length : 0;
+  const shortcutsStatus = info?.actions
+    ? `${filteredActionKeys.length} of ${totalShortcuts} shortcuts shown`
+    : null;
 
   if (!info) return null;
   return (
@@ -223,17 +278,59 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
         </p>
         {info.actions ? (
           <>
-            <p>
-              <strong>Controls:</strong>{" "}
-              {Object.entries(mapping)
-                .map(([a, k]) => `${a}: ${k}`)
-                .join(", ")}
-            </p>
+            <div className="mb-4" role="search">
+              <label
+                htmlFor={filterInputId}
+                className="block text-sm font-medium text-gray-200"
+              >
+                Filter shortcuts
+              </label>
+              <input
+                id={filterInputId}
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search by action or key"
+                className="mt-1 w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-white focus:outline-none focus:ring focus:ring-blue-400"
+                aria-describedby={shortcutsStatus ? filterStatusId : undefined}
+              />
+              {shortcutsStatus && (
+                <p
+                  id={filterStatusId}
+                  role="status"
+                  aria-live="polite"
+                  className="mt-2 text-xs text-gray-300"
+                >
+                  {shortcutsStatus}
+                </p>
+              )}
+            </div>
+            <div>
+              <p className="font-semibold">Controls:</p>
+              {filteredActionKeys.length > 0 ? (
+                <ul className="mt-1 space-y-1 text-sm" role="list">
+                  {filteredActionKeys.map((action) => {
+                    const keyBinding = mapping[action] ?? info.actions[action] ?? "";
+                    return (
+                      <li key={action} className="flex items-start justify-between gap-3">
+                        <span className="capitalize">{highlightMatches(action)}</span>
+                        <span className="font-mono">{highlightMatches(keyBinding)}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="mt-1 text-sm text-gray-300" role="alert">
+                  No shortcuts match “{query}”.
+                </p>
+              )}
+            </div>
             <div className="mt-2">
               <InputRemap
                 mapping={mapping}
                 setKey={setKey as (action: string, key: string) => string | null}
-                actions={info.actions}
+                actions={filteredActions}
+                highlightQuery={query}
               />
             </div>
           </>
