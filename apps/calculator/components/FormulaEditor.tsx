@@ -31,6 +31,7 @@ export default function FormulaEditor() {
       const pos = start + f.expr.length;
       display.selectionStart = display.selectionEnd = pos;
       display.focus();
+      display.dispatchEvent(new Event('input', { bubbles: true }));
     }
   };
 

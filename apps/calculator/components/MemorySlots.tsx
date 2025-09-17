@@ -23,6 +23,7 @@ export default function MemorySlots() {
     const pos = start + text.length;
     display.selectionStart = display.selectionEnd = pos;
     display.focus();
+    display.dispatchEvent(new Event('input', { bubbles: true }));
   };
 
   const handleStore = (n: string) => {

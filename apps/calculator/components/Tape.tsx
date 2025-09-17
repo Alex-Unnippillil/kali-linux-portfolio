@@ -16,7 +16,10 @@ export default function Tape({ entries }: TapeProps) {
 
   const handleRecall = useCallback((result: string) => {
     const display = document.getElementById('display') as HTMLInputElement | null;
-    if (display) display.value = result;
+    if (display) {
+      display.value = result;
+      display.dispatchEvent(new Event('input', { bubbles: true }));
+    }
   }, []);
 
   const handleCopy = useCallback(async (text: string) => {
