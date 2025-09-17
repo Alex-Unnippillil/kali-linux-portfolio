@@ -370,6 +370,29 @@ dialog {
     background-color: color-mix(in srgb, var(--color-bg), transparent 15%); /* Fallback for unsupported browsers */
 }
 
+#window-area .opened-window {
+    transition: opacity 150ms ease, filter 150ms ease;
+}
+
+#window-area.desktop-peeking {
+    pointer-events: none;
+}
+
+#window-area.desktop-peeking .opened-window {
+    opacity: 0.12;
+    filter: saturate(0) brightness(1.4);
+}
+
+#window-area.desktop-peeking .opened-window::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 2px solid rgba(255, 255, 255, 0.45);
+    pointer-events: none;
+    mix-blend-mode: screen;
+}
+
 @supports ((-webkit-backdrop-filter: blur(0)) or (backdrop-filter: blur(0))) {
     .context-menu-bg,
     .windowMainScreen {

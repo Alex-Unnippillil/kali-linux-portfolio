@@ -2,7 +2,7 @@
 
 import React, { Component } from 'react';
 import BootingScreen from './screen/booting_screen';
-import Desktop from './screen/desktop';
+import Desktop from './desktop/Desktop';
 import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import ReactGA from 'react-ga4';
