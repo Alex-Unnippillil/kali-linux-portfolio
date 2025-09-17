@@ -21,3 +21,9 @@
 1. After resizing or snapping, press **Tab** to move focus inside the window.
 2. Continue pressing **Tab** to confirm focus can leave the window and is not trapped.
 3. Shift+Tab moves focus backward as expected.
+
+## Window Switcher (Alt+Tab)
+1. With at least two windows open, hold **Alt** and press **Tab** to open the switcher overlay.
+2. Use **Tab**, **ArrowUp**, or **ArrowDown** to cycle between entries and confirm the highlight moves.
+3. Verify a screen reader announces the focused window, its position (e.g., “window 1 of 3”), whether it is selected, and the next window in the queue.
+4. Repeat the test after changing the browser language; announcements should use the localized labels and number formatting for the active locale.
