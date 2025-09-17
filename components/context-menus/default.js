@@ -4,8 +4,9 @@ import useRovingTabIndex from '../../hooks/useRovingTabIndex'
 
 function DefaultMenu(props) {
     const menuRef = useRef(null)
-    useFocusTrap(menuRef, props.active)
-    useRovingTabIndex(menuRef, props.active, 'vertical')
+    const isActive = props.active && !props.disabled
+    useFocusTrap(menuRef, isActive)
+    useRovingTabIndex(menuRef, isActive, 'vertical')
 
     const handleKeyDown = (e) => {
         if (e.key === 'Escape') {
@@ -13,14 +14,27 @@ function DefaultMenu(props) {
         }
     }
 
+    const handleFollow = (event) => {
+        if (props.disabled) {
+            event.preventDefault()
+        }
+    }
+
+    const handleReset = () => {
+        if (props.disabled) return
+        localStorage.clear()
+        window.location.reload()
+    }
+
     return (
         <div
             id="default-menu"
             role="menu"
-            aria-hidden={!props.active}
+            aria-hidden={!isActive}
+            aria-disabled={props.disabled ? true : undefined}
             ref={menuRef}
             onKeyDown={handleKeyDown}
-            className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
+            className={(isActive ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm" + (props.disabled ? " opacity-60 pointer-events-none" : "")}
         >
 
             <Devider />
@@ -30,6 +44,8 @@ function DefaultMenu(props) {
                 target="_blank"
                 role="menuitem"
                 aria-label="Follow on Linkedin"
+                aria-disabled={props.disabled ? true : undefined}
+                onClick={handleFollow}
                 className="w-full block cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
                 <span className="ml-5">🙋‍♂️</span> <span className="ml-2">Follow on <strong>Linkedin</strong></span>
@@ -40,6 +56,8 @@ function DefaultMenu(props) {
                 target="_blank"
                 role="menuitem"
                 aria-label="Follow on Github"
+                aria-disabled={props.disabled ? true : undefined}
+                onClick={handleFollow}
                 className="w-full block cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
                 <span className="ml-5">🤝</span> <span className="ml-2">Follow on <strong>Github</strong></span>
@@ -50,6 +68,8 @@ function DefaultMenu(props) {
                 target="_blank"
                 role="menuitem"
                 aria-label="Contact Me"
+                aria-disabled={props.disabled ? true : undefined}
+                onClick={handleFollow}
                 className="w-full block cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
                 <span className="ml-5">📥</span> <span className="ml-2">Contact Me</span>
@@ -57,10 +77,11 @@ function DefaultMenu(props) {
             <Devider />
             <button
                 type="button"
-                onClick={() => { localStorage.clear(); window.location.reload() }}
+                onClick={handleReset}
                 role="menuitem"
                 aria-label="Reset Kali Linux"
-                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                disabled={props.disabled}
+                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5 disabled:opacity-70 disabled:cursor-not-allowed"
             >
                 <span className="ml-5">🧹</span> <span className="ml-2">Reset Kali Linux</span>
             </button>

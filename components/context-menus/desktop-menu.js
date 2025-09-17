@@ -4,6 +4,7 @@ import logger from '../../utils/logger'
 function DesktopMenu(props) {
 
     const [isFullScreen, setIsFullScreen] = useState(false)
+    const isActive = props.active && !props.disabled
 
     useEffect(() => {
         document.addEventListener('fullscreenchange', checkFullScreen);
@@ -14,11 +15,28 @@ function DesktopMenu(props) {
 
 
     const openTerminal = () => {
+        if (props.disabled) return
         props.openApp("terminal");
     }
 
     const openSettings = () => {
+        if (props.disabled) return
         props.openApp("settings");
+    }
+
+    const handleAddNewFolder = () => {
+        if (props.disabled) return
+        props.addNewFolder && props.addNewFolder()
+    }
+
+    const handleShortcutSelector = () => {
+        if (props.disabled) return
+        props.openShortcutSelector && props.openShortcutSelector()
+    }
+
+    const handleClearSession = () => {
+        if (props.disabled) return
+        props.clearSession && props.clearSession()
     }
 
     const checkFullScreen = () => {
@@ -30,6 +48,7 @@ function DesktopMenu(props) {
     }
 
     const goFullScreen = () => {
+        if (props.disabled) return
         // make website full screen
         try {
             if (document.fullscreenElement) {
@@ -48,23 +67,29 @@ function DesktopMenu(props) {
             id="desktop-menu"
             role="menu"
             aria-label="Desktop context menu"
-            className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
+            aria-hidden={!isActive}
+            aria-disabled={props.disabled ? true : undefined}
+            className={(isActive ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm" + (props.disabled ? " opacity-60 pointer-events-none" : "")}
         >
             <button
-                onClick={props.addNewFolder}
+                onClick={handleAddNewFolder}
                 type="button"
                 role="menuitem"
                 aria-label="New Folder"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                onMouseDown={props.disabled ? (e) => e.preventDefault() : undefined}
+                disabled={props.disabled}
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 disabled:opacity-70 disabled:cursor-not-allowed"
             >
                 <span className="ml-5">New Folder</span>
             </button>
             <button
-                onClick={props.openShortcutSelector}
+                onClick={handleShortcutSelector}
                 type="button"
                 role="menuitem"
                 aria-label="Create Shortcut"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                onMouseDown={props.disabled ? (e) => e.preventDefault() : undefined}
+                disabled={props.disabled}
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 disabled:opacity-70 disabled:cursor-not-allowed"
             >
                 <span className="ml-5">Create Shortcut...</span>
             </button>
@@ -81,7 +106,8 @@ function DesktopMenu(props) {
                 type="button"
                 role="menuitem"
                 aria-label="Open in Terminal"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                disabled={props.disabled}
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 disabled:opacity-70 disabled:cursor-not-allowed"
             >
                 <span className="ml-5">Open in Terminal</span>
             </button>
@@ -91,7 +117,8 @@ function DesktopMenu(props) {
                 type="button"
                 role="menuitem"
                 aria-label="Change Background"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                disabled={props.disabled}
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 disabled:opacity-70 disabled:cursor-not-allowed"
             >
                 <span className="ml-5">Change Background...</span>
             </button>
@@ -104,7 +131,8 @@ function DesktopMenu(props) {
                 type="button"
                 role="menuitem"
                 aria-label="Settings"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                disabled={props.disabled}
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 disabled:opacity-70 disabled:cursor-not-allowed"
             >
                 <span className="ml-5">Settings</span>
             </button>
@@ -114,17 +142,19 @@ function DesktopMenu(props) {
                 type="button"
                 role="menuitem"
                 aria-label={isFullScreen ? "Exit Full Screen" : "Enter Full Screen"}
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                disabled={props.disabled}
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 disabled:opacity-70 disabled:cursor-not-allowed"
             >
                 <span className="ml-5">{isFullScreen ? "Exit" : "Enter"} Full Screen</span>
             </button>
             <Devider />
             <button
-                onClick={props.clearSession}
+                onClick={handleClearSession}
                 type="button"
                 role="menuitem"
                 aria-label="Clear Session"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                disabled={props.disabled}
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 disabled:opacity-70 disabled:cursor-not-allowed"
             >
                 <span className="ml-5">Clear Session</span>
             </button>

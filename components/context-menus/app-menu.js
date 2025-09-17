@@ -4,8 +4,9 @@ import useRovingTabIndex from '../../hooks/useRovingTabIndex'
 
 function AppMenu(props) {
     const menuRef = useRef(null)
-    useFocusTrap(menuRef, props.active)
-    useRovingTabIndex(menuRef, props.active, 'vertical')
+    const isActive = props.active && !props.disabled
+    useFocusTrap(menuRef, isActive)
+    useRovingTabIndex(menuRef, isActive, 'vertical')
 
     const handleKeyDown = (e) => {
         if (e.key === 'Escape') {
@@ -14,6 +15,7 @@ function AppMenu(props) {
     }
 
     const handlePin = () => {
+        if (props.disabled) return
         if (props.pinned) {
             props.unpinApp && props.unpinApp()
         } else {
@@ -25,17 +27,19 @@ function AppMenu(props) {
         <div
             id="app-menu"
             role="menu"
-            aria-hidden={!props.active}
+            aria-hidden={!isActive}
+            aria-disabled={props.disabled ? true : undefined}
             ref={menuRef}
             onKeyDown={handleKeyDown}
-            className={(props.active ? ' block ' : ' hidden ') + ' cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm'}
+            className={(isActive ? ' block ' : ' hidden ') + ' cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm' + (props.disabled ? ' opacity-60 pointer-events-none' : '')}
         >
             <button
                 type="button"
                 onClick={handlePin}
                 role="menuitem"
                 aria-label={props.pinned ? 'Unpin from Favorites' : 'Pin to Favorites'}
-                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                disabled={props.disabled}
+                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5 disabled:opacity-70 disabled:cursor-not-allowed"
             >
                 <span className="ml-5">{props.pinned ? 'Unpin from Favorites' : 'Pin to Favorites'}</span>
             </button>

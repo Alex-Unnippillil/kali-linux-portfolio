@@ -52,12 +52,20 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            kioskMode: false,
+            showExitPrompt: false,
+            exitPassword: '',
+            exitError: '',
         }
+        this.kioskPassword = (process.env.NEXT_PUBLIC_KIOSK_PASSWORD || '').trim();
+        this.kioskModeValue = false;
     }
 
     componentDidMount() {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+
+        this.initializeKioskMode();
 
         this.fetchAppsData(() => {
             const session = this.props.session || {};
@@ -70,15 +78,15 @@ export class Desktop extends Component {
                 this.setState({ favourite_apps });
             }
 
-            if (session.windows && session.windows.length) {
+            if (!this.kioskModeValue && session.windows && session.windows.length) {
                 session.windows.forEach(({ id, x, y }) => {
                     positions[id] = { x, y };
                 });
                 this.setState({ window_positions: positions }, () => {
-                    session.windows.forEach(({ id }) => this.openApp(id));
+                    session.windows.forEach(({ id }) => this.openApp(id, true));
                 });
-            } else {
-                this.openApp('about-alex');
+            } else if (!this.kioskModeValue) {
+                this.openApp('about-alex', true);
             }
         });
         this.setContextListeners();
@@ -96,6 +104,82 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+    }
+
+    initializeKioskMode = () => {
+        let kioskMode = false;
+        try {
+            kioskMode = safeLocalStorage?.getItem('kiosk-mode') === 'true';
+        } catch (e) {
+            kioskMode = false;
+        }
+        if (typeof window !== 'undefined') {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                if (params.has('kiosk')) {
+                    const value = (params.get('kiosk') || '').toString().toLowerCase();
+                    if (["1", "true", "yes", "on"].includes(value)) {
+                        kioskMode = true;
+                    } else if (["0", "false", "no", "off"].includes(value)) {
+                        kioskMode = false;
+                    }
+                }
+            } catch (e) {
+                // ignore malformed query params
+            }
+        }
+        this.applyKioskMode(kioskMode);
+    }
+
+    applyKioskMode = (enabled) => {
+        this.kioskModeValue = enabled;
+        this.setState(() => {
+            const nextState = {
+                kioskMode: enabled,
+                showExitPrompt: false,
+                exitPassword: '',
+                exitError: '',
+            };
+            if (enabled) {
+                nextState.allAppsView = false;
+                nextState.showShortcutSelector = false;
+                nextState.showNameBar = false;
+                nextState.context_menus = { desktop: false, default: false, app: false, taskbar: false };
+                nextState.context_app = null;
+                nextState.showWindowSwitcher = false;
+                nextState.switcherWindows = [];
+            }
+            return nextState;
+        }, () => {
+            safeLocalStorage?.setItem('kiosk-mode', enabled ? 'true' : 'false');
+        });
+    }
+
+    openExitPrompt = () => {
+        this.setState({ showExitPrompt: true, exitPassword: '', exitError: '' });
+    }
+
+    closeExitPrompt = () => {
+        this.setState({ showExitPrompt: false, exitPassword: '', exitError: '' });
+    }
+
+    handleExitPasswordChange = (e) => {
+        this.setState({ exitPassword: e.target.value, exitError: '' });
+    }
+
+    confirmExitKiosk = (e) => {
+        if (e && typeof e.preventDefault === 'function') {
+            e.preventDefault();
+        }
+        if (this.kioskPassword) {
+            if (this.state.exitPassword === this.kioskPassword) {
+                this.applyKioskMode(false);
+            } else {
+                this.setState({ exitError: 'Incorrect password' });
+            }
+        } else {
+            this.applyKioskMode(false);
+        }
     }
 
     checkForNewFolders = () => {
@@ -234,6 +318,7 @@ export class Desktop extends Component {
     checkContextMenu = (e) => {
         e.preventDefault();
         this.hideAllContextMenu();
+        if (this.kioskModeValue) return;
         const target = e.target.closest('[data-context]');
         const context = target ? target.dataset.context : null;
         const appId = target ? target.dataset.appId : null;
@@ -272,6 +357,7 @@ export class Desktop extends Component {
         if (!(e.shiftKey && e.key === 'F10')) return;
         e.preventDefault();
         this.hideAllContextMenu();
+        if (this.kioskModeValue) return;
         const target = e.target.closest('[data-context]');
         const context = target ? target.dataset.context : null;
         const appId = target ? target.dataset.appId : null;
@@ -297,8 +383,10 @@ export class Desktop extends Component {
     }
 
     showContextMenu = (e, menuName /* context menu name */) => {
+        if (this.kioskModeValue) return;
         let { posx, posy } = this.getMenuPosition(e);
         let contextMenu = document.getElementById(`${menuName}-menu`);
+        if (!contextMenu) return;
 
         const menuWidth = contextMenu.offsetWidth;
         const menuHeight = contextMenu.offsetHeight;
@@ -583,7 +671,15 @@ export class Desktop extends Component {
         }
     }
 
-    openApp = (objId) => {
+    openApp = (objId, bypassRestrictions = false) => {
+
+        // if the app is disabled
+        if (this.state.disabled_apps[objId]) return;
+
+        const isOpen = this.state.closed_windows[objId] === false;
+        if (!isOpen && this.kioskModeValue && !bypassRestrictions) {
+            return;
+        }
 
         // google analytics
         ReactGA.event({
@@ -591,11 +687,8 @@ export class Desktop extends Component {
             action: `Opened ${objId} window`
         });
 
-        // if the app is disabled
-        if (this.state.disabled_apps[objId]) return;
-
         // if app is already open, focus it instead of spawning a new window
-        if (this.state.closed_windows[objId] === false) {
+        if (isOpen) {
             // if it's minimised, restore its last position
             if (this.state.minimized_windows[objId]) {
                 this.focus(objId);
@@ -705,6 +798,7 @@ export class Desktop extends Component {
     }
 
     pinApp = (id) => {
+        if (this.kioskModeValue) return;
         let favourite_apps = { ...this.state.favourite_apps }
         favourite_apps[id] = true
         this.initFavourite[id] = true
@@ -719,6 +813,7 @@ export class Desktop extends Component {
     }
 
     unpinApp = (id) => {
+        if (this.kioskModeValue) return;
         let favourite_apps = { ...this.state.favourite_apps }
         if (this.state.closed_windows[id]) favourite_apps[id] = false
         this.initFavourite[id] = false
@@ -748,14 +843,17 @@ export class Desktop extends Component {
     }
 
     addNewFolder = () => {
+        if (this.kioskModeValue) return;
         this.setState({ showNameBar: true });
     }
 
     openShortcutSelector = () => {
+        if (this.kioskModeValue) return;
         this.setState({ showShortcutSelector: true });
     }
 
     addShortcutToDesktop = (app_id) => {
+        if (this.kioskModeValue) return;
         const appIndex = apps.findIndex(app => app.id === app_id);
         if (appIndex === -1) return;
         apps[appIndex].desktop_shortcut = true;
@@ -803,6 +901,7 @@ export class Desktop extends Component {
     }
 
     addToDesktop = (folder_name) => {
+        if (this.kioskModeValue) return;
         folder_name = folder_name.trim();
         let folder_id = folder_name.replace(/\s+/g, '-').toLowerCase();
         apps.push({
@@ -823,7 +922,10 @@ export class Desktop extends Component {
         this.setState({ showNameBar: false }, this.updateAppsData);
     }
 
-    showAllApps = () => { this.setState({ allAppsView: !this.state.allAppsView }) }
+    showAllApps = () => {
+        if (this.kioskModeValue) return;
+        this.setState({ allAppsView: !this.state.allAppsView });
+    }
 
     renderNameBar = () => {
         let addFolder = () => {
@@ -881,16 +983,18 @@ export class Desktop extends Component {
                 <BackgroundImage />
 
                 {/* Ubuntu Side Menu Bar */}
-                <SideBar apps={apps}
-                    hide={this.state.hideSideBar}
-                    hideSideBar={this.hideSideBar}
-                    favourite_apps={this.state.favourite_apps}
-                    showAllApps={this.showAllApps}
-                    allAppsView={this.state.allAppsView}
-                    closed_windows={this.state.closed_windows}
-                    focused_windows={this.state.focused_windows}
-                    isMinimized={this.state.minimized_windows}
-                    openAppByAppId={this.openApp} />
+                {!this.state.kioskMode && (
+                    <SideBar apps={apps}
+                        hide={this.state.hideSideBar}
+                        hideSideBar={this.hideSideBar}
+                        favourite_apps={this.state.favourite_apps}
+                        showAllApps={this.showAllApps}
+                        allAppsView={this.state.allAppsView}
+                        closed_windows={this.state.closed_windows}
+                        focused_windows={this.state.focused_windows}
+                        isMinimized={this.state.minimized_windows}
+                        openAppByAppId={this.openApp} />
+                )}
 
                 {/* Taskbar */}
                 <Taskbar
@@ -908,14 +1012,16 @@ export class Desktop extends Component {
                 {/* Context Menus */}
                 <DesktopMenu
                     active={this.state.context_menus.desktop}
+                    disabled={this.state.kioskMode}
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
-                <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
+                <DefaultMenu active={this.state.context_menus.default} disabled={this.state.kioskMode} onClose={this.hideAllContextMenu} />
                 <AppMenu
                     active={this.state.context_menus.app}
+                    disabled={this.state.kioskMode}
                     pinned={this.initFavourite[this.state.context_app]}
                     pinApp={() => this.pinApp(this.state.context_app)}
                     unpinApp={() => this.unpinApp(this.state.context_app)}
@@ -923,6 +1029,7 @@ export class Desktop extends Component {
                 />
                 <TaskbarMenu
                     active={this.state.context_menus.taskbar}
+                    disabled={this.state.kioskMode}
                     minimized={this.state.context_app ? this.state.minimized_windows[this.state.context_app] : false}
                     onMinimize={() => {
                         const id = this.state.context_app;
@@ -949,13 +1056,13 @@ export class Desktop extends Component {
                     )
                 }
 
-                { this.state.allAppsView ?
+                { (!this.state.kioskMode && this.state.allAppsView) ?
                     <AllApplications apps={apps}
                         games={games}
                         recentApps={this.app_stack}
                         openApp={this.openApp} /> : null}
 
-                { this.state.showShortcutSelector ?
+                { (!this.state.kioskMode && this.state.showShortcutSelector) ?
                     <ShortcutSelector apps={apps}
                         games={games}
                         onSelect={this.addShortcutToDesktop}
@@ -966,6 +1073,95 @@ export class Desktop extends Component {
                         windows={this.state.switcherWindows}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
+
+                {this.state.kioskMode && (
+                    <div className="absolute top-4 right-4 z-[60] flex flex-col items-end space-y-2">
+                        <button
+                            type="button"
+                            onClick={this.openExitPrompt}
+                            aria-haspopup="dialog"
+                            aria-expanded={this.state.showExitPrompt}
+                            className="px-3 py-1 rounded bg-ub-warm-grey bg-opacity-80 text-white hover:bg-opacity-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        >
+                            Exit kiosk
+                        </button>
+                    </div>
+                )}
+
+                {this.state.kioskMode && this.state.showExitPrompt && (
+                    <div className="absolute inset-0 z-[70] flex items-center justify-center bg-black bg-opacity-60 px-4">
+                        <div
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="exit-kiosk-title"
+                            onKeyDown={(event) => {
+                                if (event.key === 'Escape') {
+                                    event.stopPropagation();
+                                    this.closeExitPrompt();
+                                }
+                            }}
+                            className="w-full max-w-sm rounded-md bg-ub-cool-grey text-white shadow-xl p-6 space-y-4"
+                        >
+                            <h2 id="exit-kiosk-title" className="text-lg font-semibold">Exit kiosk mode</h2>
+                            {this.kioskPassword ? (
+                                <form onSubmit={this.confirmExitKiosk} className="space-y-4">
+                                    <div className="flex flex-col space-y-2">
+                                        <label htmlFor="kiosk-exit-password" className="text-sm text-gray-200">
+                                            Enter password to exit kiosk mode
+                                        </label>
+                                        <input
+                                            id="kiosk-exit-password"
+                                            type="password"
+                                            value={this.state.exitPassword}
+                                            onChange={this.handleExitPasswordChange}
+                                            autoComplete="off"
+                                            className="px-3 py-2 rounded bg-gray-900 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            autoFocus
+                                        />
+                                        {this.state.exitError ? (
+                                            <span className="text-sm text-red-400" role="alert">{this.state.exitError}</span>
+                                        ) : null}
+                                    </div>
+                                    <div className="flex justify-end space-x-3">
+                                        <button
+                                            type="button"
+                                            onClick={this.closeExitPrompt}
+                                            className="px-3 py-2 rounded border border-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="px-3 py-2 rounded bg-blue-600 hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                        >
+                                            Unlock
+                                        </button>
+                                    </div>
+                                </form>
+                            ) : (
+                                <div className="space-y-4">
+                                    <p className="text-sm text-gray-200">Exit kiosk mode to restore full desktop controls?</p>
+                                    <div className="flex justify-end space-x-3">
+                                        <button
+                                            type="button"
+                                            onClick={this.closeExitPrompt}
+                                            className="px-3 py-2 rounded border border-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={this.confirmExitKiosk}
+                                            className="px-3 py-2 rounded bg-blue-600 hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                        >
+                                            Exit kiosk
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
 
             </main>
         )
