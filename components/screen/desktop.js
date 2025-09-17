@@ -22,6 +22,7 @@ import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { loadPinnedApps, savePinnedApps, PINNED_APPS_UPDATED_EVENT } from '../../src/wm/persistence';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
 export class Desktop extends Component {
@@ -89,6 +90,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        window.addEventListener(PINNED_APPS_UPDATED_EVENT, this.handlePinnedAppsUpdated);
     }
 
     componentWillUnmount() {
@@ -96,6 +98,7 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        window.removeEventListener(PINNED_APPS_UPDATED_EVENT, this.handlePinnedAppsUpdated);
     }
 
     checkForNewFolders = () => {
@@ -704,16 +707,30 @@ export class Desktop extends Component {
         this.setState({ closed_windows, favourite_apps }, this.saveSession);
     }
 
+    handlePinnedAppsUpdated = () => {
+        const pinnedIds = loadPinnedApps();
+        const favourite_apps = { ...this.state.favourite_apps };
+        Object.keys(favourite_apps).forEach(id => {
+            favourite_apps[id] = pinnedIds.includes(id);
+        });
+        apps.forEach(app => {
+            if (app && typeof app === 'object') {
+                app.favourite = pinnedIds.includes(app.id);
+            }
+        });
+        this.initFavourite = { ...favourite_apps };
+        this.setState({ favourite_apps });
+    }
+
     pinApp = (id) => {
         let favourite_apps = { ...this.state.favourite_apps }
         favourite_apps[id] = true
         this.initFavourite[id] = true
         const app = apps.find(a => a.id === id)
         if (app) app.favourite = true
-        let pinnedApps = [];
-        try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
-        if (!pinnedApps.includes(id)) pinnedApps.push(id)
-        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
+        const pinnedApps = loadPinnedApps();
+        const nextPins = pinnedApps.includes(id) ? pinnedApps : [...pinnedApps, id];
+        savePinnedApps(nextPins)
         this.setState({ favourite_apps }, () => { this.saveSession(); })
         this.hideAllContextMenu()
     }
@@ -724,10 +741,9 @@ export class Desktop extends Component {
         this.initFavourite[id] = false
         const app = apps.find(a => a.id === id)
         if (app) app.favourite = false
-        let pinnedApps = [];
-        try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
-        pinnedApps = pinnedApps.filter(appId => appId !== id)
-        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
+        const pinnedApps = loadPinnedApps();
+        const nextPins = pinnedApps.filter(appId => appId !== id)
+        savePinnedApps(nextPins)
         this.setState({ favourite_apps }, () => { this.saveSession(); })
         this.hideAllContextMenu()
     }
