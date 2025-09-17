@@ -89,13 +89,15 @@ export function Settings() {
                 </div>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Density:</label>
+                <label htmlFor="settings-density" className="mr-2 text-ubt-grey">Density:</label>
                 <select
+                    id="settings-density"
                     value={density}
                     onChange={(e) => setDensity(e.target.value)}
                     className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
                 >
-                    <option value="regular">Regular</option>
+                    <option value="comfortable">Comfortable</option>
+                    <option value="cozy">Cozy</option>
                     <option value="compact">Compact</option>
                 </select>
             </div>

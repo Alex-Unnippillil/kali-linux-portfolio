@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
+import type { Density } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
   resetSettings,
@@ -226,13 +227,17 @@ export default function Settings() {
             />
           </div>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey">Density:</label>
+            <label htmlFor="desktop-density" className="mr-2 text-ubt-grey">
+              Density:
+            </label>
             <select
+              id="desktop-density"
               value={density}
-              onChange={(e) => setDensity(e.target.value as any)}
+              onChange={(e) => setDensity(e.target.value as Density)}
               className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
             >
-              <option value="regular">Regular</option>
+              <option value="comfortable">Comfortable</option>
+              <option value="cozy">Cozy</option>
               <option value="compact">Compact</option>
             </select>
           </div>
