@@ -8,6 +8,12 @@ export interface Shortcut {
 const DEFAULT_SHORTCUTS: Shortcut[] = [
   { description: 'Show keyboard shortcuts', keys: '?' },
   { description: 'Open settings', keys: 'Ctrl+,' },
+  { description: 'Switch windows', keys: 'Alt+Tab' },
+  { description: 'Reverse window switcher', keys: 'Alt+Shift+Tab' },
+  { description: 'Open clipboard manager', keys: 'Ctrl+Shift+V' },
+  { description: 'Cycle windows in focused app', keys: 'Alt+`' },
+  { description: 'Open application menu', keys: 'Meta' },
+  { description: 'Snap focused window', keys: 'Meta+Arrow Keys' },
 ];
 
 const validator = (value: unknown): value is Record<string, string> => {
