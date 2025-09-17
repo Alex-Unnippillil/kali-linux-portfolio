@@ -76,6 +76,28 @@ const files: Record<string, string> = {
   'README.md': 'Welcome to the web terminal.\nThis is a fake file used for demos.',
 };
 
+const kaliDragonBanner = [
+  '\\x1b[38;5;39m..............\'\\x1b[0m',
+  '\\x1b[38;5;39m.........\'   \'\\x1b[0m',
+  '\\x1b[38;5;39m......\'.........\\x1b[0m',
+  '\\x1b[38;5;39m.....\'..\'........\\x1b[0m',
+  '\\x1b[38;5;39m....\'..\'..........\\x1b[0m',
+  '\\x1b[38;5;39m...\'..\'............\\x1b[0m',
+  '\\x1b[38;5;39m..\'..\'..............\\x1b[0m',
+  '\\x1b[38;5;39m.\'..\'.......;;;....\\x1b[0m',
+  '\\x1b[38;5;39m\'..\'.......;::::;..\\x1b[0m',
+  '\\x1b[38;5;39m.\'........;::::;;..\\x1b[0m',
+  '\\x1b[38;5;39m.\'......,;::::;,,..\\x1b[0m',
+  '\\x1b[38;5;39m......,:::::::;,,..\\x1b[0m',
+  '\\x1b[38;5;39m....,:::::::::;,..\\x1b[0m',
+  '\\x1b[38;5;39m...:::::::::::;.\\x1b[0m',
+];
+
+const kaliGuidance = [
+  '\\x1b[1;37mKali Linux (web) — simulated terminal session.\\x1b[0m',
+  '\\x1b[90mType "help" to explore commands or Ctrl+Shift+P for the palette.\\x1b[0m',
+];
+
 const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<any>(null);
@@ -308,7 +330,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         scrollback: 1000,
         cols: 80,
         rows: 24,
-        fontFamily: '"Fira Code", monospace',
+        fontFamily:
+          '"Hack", "DejaVu Sans Mono", "Liberation Mono", "Menlo", monospace',
         theme: {
           background: '#0f1317',
           foreground: '#f5f5f5',
@@ -340,8 +363,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
             : `${existing}\n`;
         }
       }
-      writeLine('Welcome to the web terminal!');
-      writeLine('Type "help" to see available commands.');
+      [...kaliDragonBanner, '', ...kaliGuidance].forEach((line) => {
+        writeLine(line);
+      });
       prompt();
       term.onData((d: string) => handleInput(d));
       term.onKey(({ domEvent }: any) => {
