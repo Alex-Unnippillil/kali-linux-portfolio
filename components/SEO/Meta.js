@@ -1,9 +1,88 @@
 import React from 'react'
 import Head from 'next/head';
+import projectsData from '../../data/projects.json';
 import { getCspNonce } from '../../utils/csp';
+
+const SITE_URL = 'https://unnippillil.com';
+const DEFAULT_PROJECT_IMAGE = `${SITE_URL}/images/logos/logo_1200.png`;
+
+const ensureAbsoluteUrl = (value) => {
+    if (!value || typeof value !== 'string') {
+        return undefined;
+    }
+    if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('data:')) {
+        return value;
+    }
+    if (value.startsWith('//')) {
+        return `https:${value}`;
+    }
+    if (value.startsWith('/')) {
+        return `${SITE_URL}${value}`;
+    }
+    return `${SITE_URL}/${value}`;
+};
+
+const formatPublishedDate = (value, fallbackYear) => {
+    if (value) {
+        const parsed = new Date(value);
+        if (!Number.isNaN(parsed.getTime())) {
+            return parsed.toISOString().split('T')[0];
+        }
+    }
+    if (fallbackYear) {
+        const parsed = new Date(`${fallbackYear}-01-01`);
+        if (!Number.isNaN(parsed.getTime())) {
+            return parsed.toISOString().split('T')[0];
+        }
+    }
+    return undefined;
+};
 
 export default function Meta() {
     const nonce = getCspNonce();
+    const projectItemListElements = (Array.isArray(projectsData) ? projectsData : [])
+        .map((project, index) => {
+            if (!project || !project.title) {
+                return null;
+            }
+
+            const url =
+                ensureAbsoluteUrl(project.demo) ||
+                ensureAbsoluteUrl(project.repo) ||
+                SITE_URL;
+
+            const image =
+                ensureAbsoluteUrl(project.thumbnail) ||
+                ensureAbsoluteUrl(project.image) ||
+                DEFAULT_PROJECT_IMAGE;
+
+            const datePublished = formatPublishedDate(project.datePublished, project.year);
+
+            if (!datePublished) {
+                return null;
+            }
+
+            return {
+                '@type': 'ListItem',
+                position: index + 1,
+                item: {
+                    '@type': 'CreativeWork',
+                    name: project.title,
+                    url,
+                    image,
+                    datePublished,
+                },
+            };
+        })
+        .filter(Boolean);
+
+    const projectItemListSchema = projectItemListElements.length
+        ? {
+              '@context': 'https://schema.org',
+              '@type': 'ItemList',
+              itemListElement: projectItemListElements,
+          }
+        : null;
     return (
         <Head>
             {/* Primary Meta Tags */}
@@ -62,6 +141,15 @@ export default function Meta() {
                     }),
                 }}
             />
+            {projectItemListSchema && (
+                <script
+                    type="application/ld+json"
+                    nonce={nonce}
+                    dangerouslySetInnerHTML={{
+                        __html: JSON.stringify(projectItemListSchema),
+                    }}
+                />
+            )}
         </Head>
     )
 }
