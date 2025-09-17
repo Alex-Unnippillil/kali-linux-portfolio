@@ -1,0 +1,98 @@
+/* Component-scoped design tokens and utilities */
+
+:root {
+  --context-menu-min-width: 13rem;
+  --context-menu-max-width: min(20rem, calc(100vw - 24px));
+  --context-menu-padding-block: var(--space-3);
+  --context-menu-padding-inline: var(--space-3);
+  --context-menu-gap: var(--space-1);
+  --context-menu-radius: var(--radius-md);
+  --context-menu-item-radius: var(--radius-sm);
+  --context-menu-item-gap: var(--space-2);
+  --context-menu-item-padding-block: var(--space-2);
+  --context-menu-item-padding-inline: var(--space-4);
+  --context-menu-font-size: 0.875rem;
+  --context-menu-elevation: 0 18px 36px -18px color-mix(in srgb, var(--color-inverse), transparent 75%);
+  --context-menu-surface: color-mix(in srgb, var(--color-bg), transparent 15%);
+  --context-menu-surface-elevated: color-mix(in srgb, var(--color-bg), transparent 60%);
+  --context-menu-border: color-mix(in srgb, var(--color-inverse), transparent 80%);
+  --context-menu-foreground: var(--color-text);
+  --context-menu-item-hover-bg: color-mix(in srgb, var(--color-text), transparent 85%);
+  --context-menu-item-active-bg: color-mix(in srgb, var(--color-text), transparent 75%);
+  --context-menu-item-disabled-opacity: 0.5;
+  --context-menu-z-index: 60;
+  --context-menu-backdrop-blur: 12px;
+}
+
+.context-menu,
+.context-menu-bg {
+  background-color: var(--context-menu-surface);
+  border: 1px solid var(--context-menu-border);
+  border-radius: var(--context-menu-radius);
+  box-shadow: var(--context-menu-elevation);
+  color: var(--context-menu-foreground);
+}
+
+.context-menu {
+  position: absolute;
+  min-width: var(--context-menu-min-width);
+  max-width: var(--context-menu-max-width);
+  padding-block: var(--context-menu-padding-block);
+  padding-inline: var(--context-menu-padding-inline);
+  display: none;
+  flex-direction: column;
+  gap: var(--context-menu-gap);
+  font-size: var(--context-menu-font-size);
+  z-index: var(--context-menu-z-index);
+  isolation: isolate;
+  cursor: default;
+}
+
+.context-menu[aria-hidden='false'] {
+  display: flex;
+}
+
+.context-menu[data-open='false'] {
+  pointer-events: none;
+}
+
+.context-menu__item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--context-menu-item-gap);
+  padding-block: var(--context-menu-item-padding-block);
+  padding-inline: var(--context-menu-item-padding-inline);
+  border-radius: var(--context-menu-item-radius);
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: default;
+  outline: none;
+}
+
+.context-menu__item:hover,
+.context-menu__item:focus-visible {
+  background-color: var(--context-menu-item-hover-bg);
+}
+
+.context-menu__item:active {
+  background-color: var(--context-menu-item-active-bg);
+}
+
+.context-menu__item[aria-disabled='true'],
+.context-menu__item:disabled {
+  opacity: var(--context-menu-item-disabled-opacity);
+  cursor: not-allowed;
+}
+
+@supports ((-webkit-backdrop-filter: blur(0)) or (backdrop-filter: blur(0))) {
+  .context-menu,
+  .context-menu-bg {
+    -webkit-backdrop-filter: blur(var(--context-menu-backdrop-blur));
+    backdrop-filter: blur(var(--context-menu-backdrop-blur));
+    background-color: var(--context-menu-surface-elevated);
+  }
+}

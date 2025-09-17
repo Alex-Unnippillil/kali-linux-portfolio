@@ -364,14 +364,12 @@ dialog {
     100% { transform: translateX(0); }
 }
 
-/* Context Menu & Panels */
-.context-menu-bg,
+/* Panels */
 .windowMainScreen {
     background-color: color-mix(in srgb, var(--color-bg), transparent 15%); /* Fallback for unsupported browsers */
 }
 
 @supports ((-webkit-backdrop-filter: blur(0)) or (backdrop-filter: blur(0))) {
-    .context-menu-bg,
     .windowMainScreen {
         -webkit-backdrop-filter: blur(10px);
         backdrop-filter: blur(10px);
