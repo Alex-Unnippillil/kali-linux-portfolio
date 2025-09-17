@@ -1,0 +1,85 @@
+{
+  "origins": {
+    "demoExample": "https://example.com",
+    "demoMdn": "https://developer.mozilla.org",
+    "demoWikipedia": "https://en.wikipedia.org",
+    "google": "https://www.google.com",
+    "googleWildcard": "https://*.google.com",
+    "gstatic": "https://www.gstatic.com",
+    "vercelLive": "https://vercel.live",
+    "stackblitz": "https://stackblitz.com",
+    "twitterPlatform": "https://platform.twitter.com",
+    "twitterSyndication": "https://syndication.twitter.com",
+    "twitterCdn": "https://cdn.syndication.twimg.com",
+    "twitterWildcard": "https://*.twitter.com",
+    "xWildcard": "https://*.x.com",
+    "cdnJsdelivr": "https://cdn.jsdelivr.net",
+    "cdnCloudflare": "https://cdnjs.cloudflare.com",
+    "youtube": "https://www.youtube.com",
+    "youtubeNoCookie": "https://www.youtube-nocookie.com",
+    "spotify": "https://open.spotify.com",
+    "ghbtns": "https://ghbtns.com",
+    "todoist": "https://todoist.com",
+    "fontStyles": "https://fonts.googleapis.com",
+    "fontFiles": "https://fonts.gstatic.com"
+  },
+  "csp": {
+    "scriptSrc": [
+      "vercelLive",
+      "twitterPlatform",
+      "twitterSyndication",
+      "twitterCdn",
+      "twitterWildcard",
+      "xWildcard",
+      "youtube",
+      "google",
+      "gstatic",
+      "cdnJsdelivr",
+      "cdnCloudflare"
+    ],
+    "connectSrc": [
+      "demoExample",
+      "demoMdn",
+      "demoWikipedia",
+      "google",
+      "twitterPlatform",
+      "twitterSyndication",
+      "twitterCdn",
+      "twitterWildcard",
+      "xWildcard",
+      "googleWildcard",
+      "stackblitz"
+    ],
+    "frameSrc": [
+      "vercelLive",
+      "stackblitz",
+      "googleWildcard",
+      "twitterPlatform",
+      "twitterSyndication",
+      "twitterWildcard",
+      "xWildcard",
+      "youtubeNoCookie",
+      "spotify",
+      "demoExample",
+      "demoMdn",
+      "demoWikipedia"
+    ],
+    "styleSrc": [],
+    "fontSrc": []
+  },
+  "middleware": {
+    "scriptSrc": [],
+    "connectSrc": [],
+    "frameSrc": [
+      "ghbtns",
+      "todoist",
+      "youtube"
+    ],
+    "styleSrc": [
+      "fontStyles"
+    ],
+    "fontSrc": [
+      "fontFiles"
+    ]
+  }
+}

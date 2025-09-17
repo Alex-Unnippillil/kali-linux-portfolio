@@ -21,7 +21,7 @@ export const displayMyApp = () => <MyApp />;
 
 ## Content Security Policy
 
-- Apps that fetch data or embed external sites must whitelist their domains in `next.config.js`.
+- Apps that fetch data or embed external sites must whitelist their domains in `lib/security/trusted-origins.json` so the shared CSP picks them up.
 - Update the appropriate directives (`connect-src`, `frame-src`, `img-src`) and `images.domains` when needed.
 
 ## Playwright smoke test

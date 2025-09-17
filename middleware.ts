@@ -1,5 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
+import {
+  MIDDLEWARE_CSP_EXTENSIONS,
+  TRUSTED_CSP_DIRECTIVES,
+  mergeCspSources,
+} from '@/lib/security/origins';
+
 function nonce() {
   const arr = new Uint8Array(16);
   crypto.getRandomValues(arr);
@@ -8,18 +14,44 @@ function nonce() {
 
 export function middleware(req: NextRequest) {
   const n = nonce();
+  const scriptSources = mergeCspSources(
+    ["'self'", "'unsafe-inline'", `'nonce-${n}'`],
+    TRUSTED_CSP_DIRECTIVES.scriptSrc,
+    MIDDLEWARE_CSP_EXTENSIONS.scriptSrc,
+  );
+  const connectSources = mergeCspSources(
+    ["'self'"],
+    TRUSTED_CSP_DIRECTIVES.connectSrc,
+    MIDDLEWARE_CSP_EXTENSIONS.connectSrc,
+  );
+  const frameSources = mergeCspSources(
+    ["'self'"],
+    TRUSTED_CSP_DIRECTIVES.frameSrc,
+    MIDDLEWARE_CSP_EXTENSIONS.frameSrc,
+  );
+  const styleSources = mergeCspSources(
+    ["'self'", "'unsafe-inline'"],
+    TRUSTED_CSP_DIRECTIVES.styleSrc,
+    MIDDLEWARE_CSP_EXTENSIONS.styleSrc,
+  );
+  const fontSources = mergeCspSources(
+    ["'self'"],
+    TRUSTED_CSP_DIRECTIVES.fontSrc,
+    MIDDLEWARE_CSP_EXTENSIONS.fontSrc,
+  );
+
   const csp = [
     "default-src 'self'",
     "img-src 'self' https: data:",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
-    `script-src 'self' 'unsafe-inline' 'nonce-${n}' https://vercel.live https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com`,
-    "connect-src 'self' https://cdn.syndication.twimg.com https://*.twitter.com https://stackblitz.com",
-    "frame-src 'self' https://vercel.live https://stackblitz.com https://ghbtns.com https://platform.twitter.com https://open.spotify.com https://todoist.com https://www.youtube.com https://www.youtube-nocookie.com",
+    `style-src ${styleSources.join(' ')}`,
+    `font-src ${fontSources.join(' ')}`,
+    `script-src ${scriptSources.join(' ')}`,
+    `connect-src ${connectSources.join(' ')}`,
+    `frame-src ${frameSources.join(' ')}`,
     "frame-ancestors 'self'",
     "object-src 'none'",
     "base-uri 'self'",
-    "form-action 'self'"
+    "form-action 'self'",
   ].join('; ');
 
   const res = NextResponse.next();

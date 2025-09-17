@@ -1,8 +1,21 @@
 // Security headers configuration for Next.js.
 // Allows external badges and same-origin PDF embedding.
-// Update README (section "CSP External Domains") when editing domains below.
+// Update README (section "CSP External Domains") when editing the allowlist in `lib/security/trusted-origins.json`.
 
 const { validateServerEnv: validateEnv } = require('./lib/validate.js');
+const { TRUSTED_CSP_DIRECTIVES } = require('./lib/security/origins');
+
+const unique = (values) => Array.from(new Set(values));
+
+const scriptSrcValues = unique([
+  "'self'",
+  "'unsafe-inline'",
+  ...TRUSTED_CSP_DIRECTIVES.scriptSrc,
+]);
+
+const connectSrcValues = unique(["'self'", ...TRUSTED_CSP_DIRECTIVES.connectSrc]);
+
+const frameSrcValues = unique(["'self'", ...TRUSTED_CSP_DIRECTIVES.frameSrc]);
 
 const ContentSecurityPolicy = [
   "default-src 'self'",
@@ -21,11 +34,11 @@ const ContentSecurityPolicy = [
   // Restrict fonts to same origin
   "font-src 'self'",
   // External scripts required for embedded timelines
-  "script-src 'self' 'unsafe-inline' https://vercel.live https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
+  `script-src ${scriptSrcValues.join(' ')}`,
   // Allow outbound connections for embeds and the in-browser Chrome app
-  "connect-src 'self' https://example.com https://developer.mozilla.org https://en.wikipedia.org https://www.google.com https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.google.com https://stackblitz.com",
+  `connect-src ${connectSrcValues.join(' ')}`,
   // Allow iframes from specific providers so the Chrome and StackBlitz apps can load allowed content
-  "frame-src 'self' https://vercel.live https://stackblitz.com https://*.google.com https://platform.twitter.com https://syndication.twitter.com https://*.twitter.com https://*.x.com https://www.youtube-nocookie.com https://open.spotify.com https://example.com https://developer.mozilla.org https://en.wikipedia.org",
+  `frame-src ${frameSrcValues.join(' ')}`,
 
   // Allow this site to embed its own resources (resume PDF)
   "frame-ancestors 'self'",

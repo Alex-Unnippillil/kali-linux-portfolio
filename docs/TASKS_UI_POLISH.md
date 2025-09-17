@@ -217,7 +217,7 @@ This document tracks UI polish tasks for the Kali/Ubuntu inspired desktop experi
 
 51. **Chrome app permissions UI**
     - **Accept:** Explicit message about sandboxed iframes and limited capabilities; tighten CSP and image domains for embeds.
-    - **Where:** Chrome app; `next.config.js` CSP list.
+    - **Where:** Chrome app; update `lib/security/trusted-origins.json` for CSP allowlist.
 
 52. **Project Gallery lazy loading**
     - **Accept:** Cards lazy-load images with aspect boxes to avoid CLS; blur placeholders.
