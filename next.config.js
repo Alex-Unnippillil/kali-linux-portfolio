@@ -2,6 +2,7 @@
 // Allows external badges and same-origin PDF embedding.
 // Update README (section "CSP External Domains") when editing domains below.
 
+const path = require('path');
 const { validateServerEnv: validateEnv } = require('./lib/validate.js');
 
 const ContentSecurityPolicy = [
@@ -88,7 +89,7 @@ const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 const isProd = process.env.NODE_ENV === 'production';
 
 // Merge experiment settings and production optimizations into a single function.
-function configureWebpack(config, { isServer }) {
+function configureWebpack(config, { isServer, dev }) {
   // Enable WebAssembly loading and avoid JSON destructuring bug
   config.experiments = {
     ...(config.experiments || {}),
@@ -103,7 +104,11 @@ function configureWebpack(config, { isServer }) {
   };
   config.resolve.alias = {
     ...(config.resolve.alias || {}),
-    'react-dom$': require('path').resolve(__dirname, 'lib/react-dom-shim.js'),
+    'react-dom$': path.resolve(__dirname, 'lib/react-dom-shim.js'),
+    '@/dev/runtime': path.resolve(
+      __dirname,
+      dev ? 'src/dev/runtime.ts' : 'src/dev/runtime.noop.ts'
+    ),
   };
   if (isProd) {
     config.optimization = {
