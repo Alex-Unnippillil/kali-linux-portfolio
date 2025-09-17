@@ -13,7 +13,7 @@ import Window from '../base/window';
 import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
-import WindowSwitcher from '../screen/window-switcher'
+import WindowSwitcher from '../system/Switcher'
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
