@@ -1,9 +1,70 @@
+.windowResizeHandle {
+  position: absolute;
+  pointer-events: auto;
+  touch-action: none;
+  --window-resize-highlight: rgba(56, 189, 248, 0.85);
+}
+
+.windowResizeHandle::before,
+.windowResizeHandle::after {
+  content: '';
+  position: absolute;
+  background-color: transparent;
+  transition: background-color 120ms ease-in-out;
+}
+
+.windowResizeHandle:hover::before,
+.windowResizeHandle:hover::after,
+.windowResizeHandle:focus-visible::before,
+.windowResizeHandle:focus-visible::after {
+  background-color: var(--window-resize-highlight);
+}
+
 .windowYBorder {
-  height: calc(100% - 10px);
-  width: calc(100% + 10px);
+  height: calc(100% - 24px);
+  width: calc(100% + 24px);
+  cursor: ew-resize;
+}
+
+.windowYBorder::before,
+.windowYBorder::after {
+  width: 1px;
+  top: -12px;
+  bottom: -12px;
+}
+
+.windowYBorder::before {
+  left: 12px;
+}
+
+.windowYBorder::after {
+  right: 12px;
 }
 
 .windowXBorder {
-  height: calc(100% + 10px);
-  width: calc(100% - 10px);
+  height: calc(100% + 24px);
+  width: calc(100% - 24px);
+  cursor: ns-resize;
+}
+
+.windowXBorder::before,
+.windowXBorder::after {
+  height: 1px;
+  left: -12px;
+  right: -12px;
+}
+
+.windowXBorder::before {
+  top: 12px;
+}
+
+.windowXBorder::after {
+  bottom: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .windowResizeHandle::before,
+  .windowResizeHandle::after {
+    transition: none;
+  }
 }
