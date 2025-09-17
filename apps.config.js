@@ -24,6 +24,7 @@ const TerminalApp = createDynamicApp('terminal', 'Terminal');
 // VSCode app uses a Stack iframe, so no editor dependencies are required
 const VsCodeApp = createDynamicApp('vscode', 'VsCode');
 const YouTubeApp = createDynamicApp('youtube', 'YouTube');
+const MediaApp = createDynamicApp('media', 'Media Manager');
 const CalculatorApp = createDynamicApp('calculator', 'Calculator');
 const ConverterApp = createDynamicApp('converter', 'Converter');
 const TicTacToeApp = createDynamicApp('tictactoe', 'Tic Tac Toe');
@@ -118,6 +119,7 @@ const ContactApp = createDynamicApp('contact', 'Contact');
 const displayTerminal = createDisplay(TerminalApp);
 const displayVsCode = createDisplay(VsCodeApp);
 const displayYouTube = createDisplay(YouTubeApp);
+const displayMedia = createDisplay(MediaApp);
 const displayCalculator = createDisplay(CalculatorApp);
 const displayConverter = createDisplay(ConverterApp);
 const displayTicTacToe = createDisplay(TicTacToeApp);
@@ -664,6 +666,15 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displayYouTube,
+  },
+  {
+    id: 'media',
+    title: 'Media Manager',
+    icon: '/themes/Yaru/apps/media.svg',
+    disabled: false,
+    favourite: true,
+    desktop_shortcut: false,
+    screen: displayMedia,
   },
   {
     id: 'beef',
