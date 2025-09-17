@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -16,6 +16,12 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import Toast from '../components/ui/Toast';
+import initIdleReset, {
+  shouldEnableIdleReset,
+  SYSTEM_TOAST_DISMISS_EVENT,
+  SYSTEM_TOAST_EVENT,
+} from '../src/system/idleReset';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -27,6 +33,66 @@ const ubuntu = Ubuntu({
 
 function MyApp(props) {
   const { Component, pageProps } = props;
+
+  const [systemToast, setSystemToast] = useState(null);
+
+  const handleToastClose = useCallback(() => {
+    setSystemToast((current) => {
+      if (!current) return null;
+      current.onClose?.();
+      return null;
+    });
+  }, []);
+
+  const handleToastAction = useCallback(() => {
+    setSystemToast((current) => {
+      if (!current) return null;
+      current.onAction?.();
+      current.onClose?.();
+      return null;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const handleShow = (event) => {
+      const detail = event.detail;
+      if (!detail) return;
+      setSystemToast((current) => {
+        if (current?.onClose) current.onClose();
+        return { ...detail };
+      });
+    };
+
+    const handleDismiss = (event) => {
+      const { id } = event.detail || {};
+      setSystemToast((current) => {
+        if (!current) return current;
+        if (!id || current.id === id) {
+          current.onClose?.();
+          return null;
+        }
+        return current;
+      });
+    };
+
+    window.addEventListener(SYSTEM_TOAST_EVENT, handleShow);
+    window.addEventListener(SYSTEM_TOAST_DISMISS_EVENT, handleDismiss);
+
+    return () => {
+      window.removeEventListener(SYSTEM_TOAST_EVENT, handleShow);
+      window.removeEventListener(SYSTEM_TOAST_DISMISS_EVENT, handleDismiss);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!shouldEnableIdleReset()) return undefined;
+    const controller = initIdleReset();
+    return () => {
+      controller.stop();
+    };
+  }, []);
 
 
   useEffect(() => {
@@ -160,6 +226,18 @@ function MyApp(props) {
           <PipPortalProvider>
             <div aria-live="polite" id="live-region" />
             <Component {...pageProps} />
+            {systemToast && (
+              <Toast
+                key={systemToast.id ?? systemToast.message}
+                message={systemToast.message}
+                actionLabel={systemToast.actionLabel}
+                onAction={
+                  systemToast.onAction ? handleToastAction : undefined
+                }
+                onClose={handleToastClose}
+                duration={systemToast.duration}
+              />
+            )}
             <ShortcutOverlay />
             <Analytics
               beforeSend={(e) => {
