@@ -2,7 +2,7 @@ const CACHE_NAME = 'periodic-cache-v1';
 const ASSETS = [
   '/apps/weather.js',
   '/feeds',
-  '/about',
+  '/about-alex',
   '/projects',
   '/projects.json',
   '/apps',

@@ -675,7 +675,7 @@ const apps = [
     screen: displayBeef,
   },
   {
-    id: 'about',
+    id: 'about-alex',
     title: 'About Alex',
     icon: '/themes/Yaru/system/user-home.png',
     disabled: false,

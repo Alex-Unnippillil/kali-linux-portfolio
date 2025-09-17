@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import Head from 'next/head';
 import ReactGA from 'react-ga4';
 import GitHubStars from '../../GitHubStars';
@@ -112,7 +113,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
     return (
       <main className="w-full h-full flex bg-ub-cool-grey text-white select-none relative">
         <Head>
-          <title>About</title>
+          <title>About Alex</title>
           <script
             type="application/ld+json"
             nonce={nonce}
@@ -147,6 +148,25 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
           </div>
         </div>
         <div className="flex flex-col w-3/4 md:w-4/5 justify-start items-center flex-grow bg-ub-grey overflow-y-auto windowMainScreen">
+          <nav
+            aria-label="Breadcrumb"
+            className="w-full max-w-3xl px-4 pt-4 mb-4 text-xs text-gray-300 md:px-8"
+          >
+            <ol className="flex flex-wrap items-center gap-1">
+              <li>
+                <Link
+                  href="/"
+                  className="hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ubt-blue rounded"
+                >
+                  Home
+                </Link>
+              </li>
+              <li aria-hidden="true">/</li>
+              <li aria-current="page" className="font-semibold text-white">
+                About Alex
+              </li>
+            </ol>
+          </nav>
           {this.state.screen}
         </div>
       </main>

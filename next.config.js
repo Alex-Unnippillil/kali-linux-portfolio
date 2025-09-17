@@ -71,7 +71,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
     additionalManifestEntries: [
       { url: '/', revision: null },
       { url: '/feeds', revision: null },
-      { url: '/about', revision: null },
+      { url: '/about-alex', revision: null },
       { url: '/projects', revision: null },
       { url: '/projects.json', revision: null },
       { url: '/apps', revision: null },
@@ -128,6 +128,15 @@ module.exports = withBundleAnalyzer(
     // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
     eslint: {
       ignoreDuringBuilds: true,
+    },
+    async redirects() {
+      return [
+        {
+          source: '/about',
+          destination: '/about-alex',
+          statusCode: 308,
+        },
+      ];
     },
     images: {
       unoptimized: true,
