@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import useSession from '../../hooks/useSession';
 
 export class Desktop extends Component {
     constructor() {
@@ -40,6 +41,8 @@ export class Desktop extends Component {
             hideSideBar: false,
             minimized_windows: {},
             window_positions: {},
+            window_sizes: {},
+            window_groups: {},
             desktop_apps: [],
             context_menus: {
                 desktop: false,
@@ -62,6 +65,8 @@ export class Desktop extends Component {
         this.fetchAppsData(() => {
             const session = this.props.session || {};
             const positions = {};
+            const sizes = {};
+            const groups = {};
             if (session.dock && session.dock.length) {
                 let favourite_apps = { ...this.state.favourite_apps };
                 session.dock.forEach(id => {
@@ -71,10 +76,16 @@ export class Desktop extends Component {
             }
 
             if (session.windows && session.windows.length) {
-                session.windows.forEach(({ id, x, y }) => {
+                session.windows.forEach(({ id, x, y, width, height, groupId }) => {
                     positions[id] = { x, y };
+                    if (typeof width === 'number' && typeof height === 'number') {
+                        sizes[id] = { width, height };
+                    }
+                    if (typeof groupId === 'string') {
+                        groups[id] = groupId;
+                    }
                 });
-                this.setState({ window_positions: positions }, () => {
+                this.setState({ window_positions: positions, window_sizes: sizes, window_groups: groups }, () => {
                     session.windows.forEach(({ id }) => this.openApp(id));
                 });
             } else {
@@ -89,6 +100,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        window.addEventListener('wm:apply-layout', this.handleApplyLayout);
     }
 
     componentWillUnmount() {
@@ -96,6 +108,7 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        window.removeEventListener('wm:apply-layout', this.handleApplyLayout);
     }
 
     checkForNewFolders = () => {
@@ -460,6 +473,7 @@ export class Desktop extends Component {
             if (this.state.closed_windows[app.id] === false) {
 
                 const pos = this.state.window_positions[app.id];
+                const size = this.state.window_sizes[app.id];
                 const props = {
                     title: app.title,
                     id: app.id,
@@ -474,11 +488,12 @@ export class Desktop extends Component {
                     minimized: this.state.minimized_windows[app.id],
                     resizable: app.resizable,
                     allowMaximize: app.allowMaximize,
-                    defaultWidth: app.defaultWidth,
-                    defaultHeight: app.defaultHeight,
+                    defaultWidth: size && typeof size.width === 'number' ? size.width : app.defaultWidth,
+                    defaultHeight: size && typeof size.height === 'number' ? size.height : app.defaultHeight,
                     initialX: pos ? pos.x : undefined,
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
+                    onSizeChange: (width, height) => this.updateWindowSize(app.id, width, height),
                     snapEnabled: this.props.snapEnabled,
                 }
 
@@ -499,14 +514,106 @@ export class Desktop extends Component {
         }), this.saveSession);
     }
 
+    updateWindowSize = (id, width, height) => {
+        if (typeof width !== 'number' && typeof height !== 'number') return;
+        this.setState(prev => {
+            const current = prev.window_sizes[id] || {};
+            const nextWidth = typeof width === 'number' ? width : current.width;
+            const nextHeight = typeof height === 'number' ? height : current.height;
+            const nextSizes = { ...prev.window_sizes };
+            if (nextWidth === undefined && nextHeight === undefined) {
+                delete nextSizes[id];
+            } else {
+                nextSizes[id] = { width: nextWidth, height: nextHeight };
+            }
+            return { window_sizes: nextSizes };
+        }, this.saveSession);
+    }
+
+    applyWindowLayout = (win, attempts = 12) => {
+        if (!win || !win.id) return;
+        const node = document.getElementById(win.id);
+        if (!node) {
+            if (attempts <= 0) return;
+            requestAnimationFrame(() => this.applyWindowLayout(win, attempts - 1));
+            return;
+        }
+        const wrapper = node.parentElement;
+        if (typeof win.x === 'number' && typeof win.y === 'number') {
+            const x = win.x;
+            const y = win.y;
+            if (wrapper && wrapper.style) {
+                wrapper.style.transform = `translate(${x}px, ${y}px)`;
+            }
+            node.style.setProperty('--window-transform-x', `${x}px`);
+            node.style.setProperty('--window-transform-y', `${y}px`);
+        }
+        if (typeof win.width === 'number') {
+            node.style.width = `${win.width}%`;
+        }
+        if (typeof win.height === 'number') {
+            node.style.height = `${win.height}%`;
+        }
+        if (typeof win.zIndex === 'number') {
+            const target = wrapper && wrapper.style ? wrapper : node;
+            target.style.zIndex = `${win.zIndex}`;
+        }
+    }
+
+    handleApplyLayout = (event) => {
+        const detail = event?.detail || {};
+        let windows = Array.isArray(detail.windows) ? detail.windows : [];
+        if (!windows.length && Array.isArray(detail.groups)) {
+            detail.groups.forEach(group => {
+                if (group && Array.isArray(group.windows)) {
+                    windows = windows.concat(group.windows);
+                }
+            });
+        }
+        if (!windows.length) return;
+        const positions = { ...this.state.window_positions };
+        const sizes = { ...this.state.window_sizes };
+        const groups = { ...this.state.window_groups };
+        windows.forEach(win => {
+            if (!win || !win.id) return;
+            if (typeof win.x === 'number' && typeof win.y === 'number') {
+                positions[win.id] = { x: win.x, y: win.y };
+            }
+            if (typeof win.width === 'number' && typeof win.height === 'number') {
+                sizes[win.id] = { width: win.width, height: win.height };
+            }
+            if (typeof win.groupId === 'string') {
+                groups[win.id] = win.groupId;
+            }
+        });
+        this.setState({ window_positions: positions, window_sizes: sizes, window_groups: groups }, () => {
+            windows.forEach((win) => {
+                this.openApp(win.id);
+                this.applyWindowLayout(win);
+            });
+            this.saveSession();
+        });
+    }
+
     saveSession = () => {
         if (!this.props.setSession) return;
         const openWindows = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
-        const windows = openWindows.map(id => ({
-            id,
-            x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
-            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10
-        }));
+        const windows = openWindows.map(id => {
+            const pos = this.state.window_positions[id];
+            const size = this.state.window_sizes[id];
+            const entry = {
+                id,
+                x: pos ? pos.x : 60,
+                y: pos ? pos.y : 10,
+            };
+            if (size) {
+                if (typeof size.width === 'number') entry.width = size.width;
+                if (typeof size.height === 'number') entry.height = size.height;
+            }
+            const group = this.state.window_groups[id];
+            if (group) entry.groupId = group;
+            return entry;
+        });
         const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
         this.props.setSession({ ...this.props.session, windows, dock });
     }
@@ -974,5 +1081,6 @@ export class Desktop extends Component {
 
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
-    return <Desktop {...props} snapEnabled={snapEnabled} />;
+    const { session, setSession } = useSession();
+    return <Desktop {...props} snapEnabled={snapEnabled} session={session} setSession={setSession} />;
 }

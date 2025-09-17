@@ -12,6 +12,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import { DesktopLayoutSection } from "./layout";
 
 export default function Settings() {
   const {
@@ -38,6 +39,7 @@ export default function Settings() {
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
+    { id: "layout", label: "Layout" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
@@ -209,6 +211,7 @@ export default function Settings() {
           </div>
         </>
       )}
+      {activeTab === "layout" && <DesktopLayoutSection />}
       {activeTab === "accessibility" && (
         <>
           <div className="flex justify-center my-4">
