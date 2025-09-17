@@ -190,6 +190,17 @@ Dynamic app modules include a `webpackPrefetch` hint and expose a `prefetch()` h
 keyboard focus so bundles are warmed before launch. When adding a new app, export a default component and register it with
 `createDynamicApp` to opt into this behaviour.
 
+### Desktop tour persistence
+
+The onboarding tour that introduces the desktop chrome lives in
+`components/system/Tour.tsx`. It stores a `system-tour-complete`
+flag in `localStorage` and guards every read/write so repeated calls are
+idempotent and safe even when storage APIs throw. The paired
+`components/system/HelpOverlay.tsx` surfaces a **Reset tour** button that
+clears the stored flag and automatically disables itself when storage is
+unavailable (e.g., strict privacy modes). Additional UI can reuse the
+`createTourPersistence()` helper to inspect or reset the persisted state.
+
 ---
 
 ## Environment Variables
