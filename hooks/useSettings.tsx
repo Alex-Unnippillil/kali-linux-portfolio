@@ -20,9 +20,12 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getStickyModifiers as loadStickyModifiers,
+  setStickyModifiers as saveStickyModifiers,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import { setStickyModifiersEnabled } from '@/src/system/keyboard';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -62,6 +65,7 @@ interface SettingsContextValue {
   pongSpin: boolean;
   allowNetwork: boolean;
   haptics: boolean;
+  stickyModifiers: boolean;
   theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
@@ -73,6 +77,7 @@ interface SettingsContextValue {
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
+  setStickyModifiers: (value: boolean) => void;
   setTheme: (value: string) => void;
 }
 
@@ -87,6 +92,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
+  stickyModifiers: defaults.stickyModifiers,
   theme: 'default',
   setAccent: () => {},
   setWallpaper: () => {},
@@ -98,6 +104,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setPongSpin: () => {},
   setAllowNetwork: () => {},
   setHaptics: () => {},
+  setStickyModifiers: () => {},
   setTheme: () => {},
 });
 
@@ -112,6 +119,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
+  const [stickyModifiers, setStickyModifiers] = useState<boolean>(defaults.stickyModifiers);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
@@ -127,6 +135,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setStickyModifiers(await loadStickyModifiers());
       setTheme(loadTheme());
     })();
   }, []);
@@ -236,6 +245,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveStickyModifiers(stickyModifiers);
+    setStickyModifiersEnabled(stickyModifiers);
+  }, [stickyModifiers]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -249,6 +263,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         pongSpin,
         allowNetwork,
         haptics,
+        stickyModifiers,
         theme,
         setAccent,
         setWallpaper,
@@ -260,6 +275,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
+        setStickyModifiers,
         setTheme,
       }}
     >
