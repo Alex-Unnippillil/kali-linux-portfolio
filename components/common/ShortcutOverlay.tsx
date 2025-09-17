@@ -1,47 +1,41 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import useKeymap from '../../apps/settings/keymapRegistry';
-
-const formatEvent = (e: KeyboardEvent) => {
-  const parts = [
-    e.ctrlKey ? 'Ctrl' : '',
-    e.altKey ? 'Alt' : '',
-    e.shiftKey ? 'Shift' : '',
-    e.metaKey ? 'Meta' : '',
-    e.key.length === 1 ? e.key.toUpperCase() : e.key,
-  ];
-  return parts.filter(Boolean).join('+');
-};
+import { registerShortcut } from '@/src/system/shortcuts';
 
 const ShortcutOverlay: React.FC = () => {
   const [open, setOpen] = useState(false);
   const { shortcuts } = useKeymap();
 
+  const showShortcut = useMemo(
+    () =>
+      shortcuts.find((s) => s.description === 'Show keyboard shortcuts')?.keys ||
+      '?',
+    [shortcuts],
+  );
+
   const toggle = useCallback(() => setOpen((o) => !o), []);
 
   useEffect(() => {
+    if (!showShortcut) return;
+    return registerShortcut(showShortcut, () => {
+      toggle();
+      return true;
+    });
+  }, [showShortcut, toggle]);
+
+  useEffect(() => {
+    if (!open) return;
     const handler = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      const isInput =
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        (target as HTMLElement).isContentEditable;
-      if (isInput) return;
-      const show =
-        shortcuts.find((s) => s.description === 'Show keyboard shortcuts')?.keys ||
-        '?';
-      if (formatEvent(e) === show) {
-        e.preventDefault();
-        toggle();
-      } else if (e.key === 'Escape' && open) {
+      if (e.key === 'Escape') {
         e.preventDefault();
         setOpen(false);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [open, toggle, shortcuts]);
+  }, [open]);
 
   const handleExport = () => {
     const data = JSON.stringify(shortcuts, null, 2);

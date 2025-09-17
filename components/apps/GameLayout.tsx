@@ -6,6 +6,8 @@ import React, {
   useCallback,
   createContext,
   useContext,
+  useRef,
+  useMemo,
 } from 'react';
 import HelpOverlay from './HelpOverlay';
 import PerfOverlay from './Games/common/perf';
@@ -14,6 +16,8 @@ import {
   serialize as serializeRng,
   deserialize as deserializeRng,
 } from '../../apps/games/rng';
+import useKeymap from '../../apps/settings/keymapRegistry';
+import { getWindowScope, registerScopedShortcut } from '@/src/system/shortcuts';
 
 interface GameLayoutProps {
   gameId?: string;
@@ -60,6 +64,8 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   >(undefined);
   const [replaying, setReplaying] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const { shortcuts } = useKeymap();
 
   const close = useCallback(() => setShowHelp(false), []);
   const toggle = useCallback(() => setShowHelp((h) => !h), []);
@@ -111,6 +117,13 @@ const GameLayout: React.FC<GameLayoutProps> = ({
     [],
   );
 
+  const showShortcut = useMemo(
+    () =>
+      shortcuts.find((s) => s.description === 'Show keyboard shortcuts')?.keys ||
+      '?',
+    [shortcuts],
+  );
+
   const snapshot = useCallback(() => {
     const data = JSON.stringify(log, null, 2);
     try {
@@ -145,23 +158,16 @@ const GameLayout: React.FC<GameLayoutProps> = ({
     step();
   }, [log, replayHandler]);
 
-  // Keyboard shortcut to toggle help overlay
+  // Keyboard shortcut to toggle help overlay scoped to the active game window
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      const isInput =
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable;
-      if (isInput) return;
-      if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
-        e.preventDefault();
-        setShowHelp((h) => !h);
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, []);
+    if (!rootRef.current) return;
+    const scope = getWindowScope(rootRef.current);
+    if (!scope) return;
+    return registerScopedShortcut(scope, showShortcut, () => {
+      toggle();
+      return true;
+    });
+  }, [showShortcut, toggle]);
 
   // Show tutorial overlay on first visit
   useEffect(() => {
@@ -211,7 +217,11 @@ const GameLayout: React.FC<GameLayoutProps> = ({
 
   return (
     <RecorderContext.Provider value={contextValue}>
-      <div className="relative h-full w-full" data-reduced-motion={prefersReducedMotion}>
+      <div
+        ref={rootRef}
+        className="relative h-full w-full"
+        data-reduced-motion={prefersReducedMotion}
+      >
         {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
         {paused && (
           <div
