@@ -1,0 +1,78 @@
+/* Motion-specific animations refactored for compositor-friendly transforms */
+
+.word-found {
+    position: relative;
+    display: inline-block;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.word-found::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: var(--color-accent);
+    background: color-mix(in srgb, var(--color-accent), transparent 60%);
+    opacity: 0;
+    transform: scaleX(0);
+    transform-origin: left center;
+    will-change: transform, opacity;
+    animation: word-found-highlight 0.6s ease-out forwards;
+    pointer-events: none;
+}
+
+@keyframes word-found-highlight {
+    from {
+        transform: scaleX(0);
+        opacity: 0;
+    }
+
+    60% {
+        opacity: 0.6;
+    }
+
+    to {
+        transform: scaleX(1);
+        opacity: 0.6;
+    }
+}
+
+.hangman-part {
+    transform-box: fill-box;
+    transform-origin: center bottom;
+    transform: scaleY(0.65) translateY(20%);
+    opacity: 0;
+    will-change: transform, opacity;
+    animation: hangman-draw 0.5s ease-out forwards;
+}
+
+@keyframes hangman-draw {
+    from {
+        transform: scaleY(0.65) translateY(20%);
+        opacity: 0;
+    }
+
+    to {
+        transform: scaleY(1) translateY(0);
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .word-found::after,
+    .hangman-part {
+        animation: none;
+    }
+
+    .word-found::after {
+        transform: none;
+        opacity: 0.6;
+    }
+
+    .hangman-part {
+        transform: none;
+        opacity: 1;
+    }
+}
