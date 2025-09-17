@@ -165,6 +165,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         '--space-4': '1rem',
         '--space-5': '1.5rem',
         '--space-6': '2rem',
+        '--space-s': '8px',
+        '--space-m': '12px',
+        '--space-l': '16px',
       },
       compact: {
         '--space-1': '0.125rem',
@@ -173,6 +176,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         '--space-4': '0.75rem',
         '--space-5': '1rem',
         '--space-6': '1.5rem',
+        '--space-s': '8px',
+        '--space-m': '12px',
+        '--space-l': '16px',
       },
     };
     const vars = spacing[density];

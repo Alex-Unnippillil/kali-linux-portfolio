@@ -41,6 +41,11 @@
   --space-5: 1.5rem;
   --space-6: 2rem;
 
+  /* Shell spacing tokens */
+  --space-s: 8px;
+  --space-m: 12px;
+  --space-l: 16px;
+
   /* Radius */
   --radius-sm: 2px;
   --radius-md: 4px;

@@ -101,7 +101,7 @@ export class SideBarApp extends Component {
                     this.setState({ showTitle: false, thumbnail: null });
                 }}
                 className={(this.props.isClose[this.id] === false && this.props.isFocus[this.id] ? "bg-white bg-opacity-10 " : "") +
-                    " w-auto p-2 outline-none relative hover:bg-white hover:bg-opacity-10 rounded m-1 transition-hover transition-active"}
+                    " w-auto p-[var(--space-s)] outline-none relative hover:bg-white hover:bg-opacity-10 rounded m-1 transition-hover transition-active"}
                 id={"sidebar-" + this.props.id}
             >
                 <Image
@@ -131,7 +131,7 @@ export class SideBarApp extends Component {
                     <div
                         className={
                             (this.state.showTitle ? " visible " : " invisible ") +
-                            " pointer-events-none absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2" +
+                            " pointer-events-none absolute bottom-full mb-[var(--space-s)] left-1/2 transform -translate-x-1/2" +
                             " rounded border border-gray-400 border-opacity-40 shadow-lg overflow-hidden bg-black bg-opacity-50"
                         }
                     >
@@ -148,7 +148,7 @@ export class SideBarApp extends Component {
                 <div
                     className={
                         (this.state.showTitle ? " visible " : " invisible ") +
-                        " w-max py-0.5 px-1.5 absolute top-1.5 left-full ml-3 m-1 text-ubt-grey text-opacity-90 text-sm bg-ub-grey bg-opacity-70 border-gray-400 border border-opacity-40 rounded-md"
+                        " w-max py-0.5 px-1.5 absolute top-1.5 left-full ml-[var(--space-m)] m-1 text-ubt-grey text-opacity-90 text-sm bg-ub-grey bg-opacity-70 border-gray-400 border border-opacity-40 rounded-md"
                     }
                 >
                     {this.props.title}
