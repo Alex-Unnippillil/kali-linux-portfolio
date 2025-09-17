@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import EmbedPlaceholder from '../../embeds/EmbedPlaceholder';
 import useWatchLater, {
   Video as WatchLaterVideo,
 } from '../../../apps/youtube/state/watchLater';
@@ -264,6 +265,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const playerRef = useRef<any>(null);
   const playerDivRef = useRef<HTMLDivElement>(null);
   const [playerReady, setPlayerReady] = useState(false);
+  const [consentGranted, setConsentGranted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [loopStart, setLoopStart] = useState<number | null>(null);
   const [loopEnd, setLoopEnd] = useState<number | null>(null);
@@ -311,10 +313,11 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
 
 
   useEffect(() => {
-    if (!current) return;
+    if (!current || !consentGranted) return;
 
     const initPlayer = () => {
       if (playerRef.current) {
+        setPlayerReady(false);
         playerRef.current.loadVideoById(current.id);
       } else {
         playerRef.current = new window.YT.Player(playerDivRef.current!, {
@@ -340,7 +343,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
       window.onYouTubeIframeAPIReady = initPlayer;
       document.body.appendChild(tag);
     }
-  }, [current]);
+  }, [current, consentGranted]);
 
   useEffect(() => {
     void trimVideoCache();
@@ -550,22 +553,33 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
         </form>
         {current && (
           <div className="relative mx-4 mb-4 bg-black">
-            {!playerReady && (
-              <iframe
-                title="YouTube video player"
-                src={`https://www.youtube-nocookie.com/embed/${current.id}`}
-                className="aspect-video w-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            )}
-            <div
-              ref={playerDivRef}
-              className={`${playerReady ? '' : 'hidden'} aspect-video w-full`}
-            />
-            <div
-              className={`sticky top-0 z-10 flex items-center gap-[6px] p-[6px] transition-colors ${solidHeader ? 'bg-ub-cool-grey' : 'bg-transparent'}`}
-            >
+            <div className="relative aspect-video w-full">
+              {!consentGranted ? (
+                <EmbedPlaceholder
+                  className="absolute inset-0"
+                  service="YouTube"
+                  description="Playing videos loads content from YouTube, which may set cookies or track viewing data."
+                  allowLabel="Allow YouTube"
+                  onAllow={() => setConsentGranted(true)}
+                />
+              ) : (
+                <>
+                  <div
+                    ref={playerDivRef}
+                    className="absolute inset-0 h-full w-full"
+                  />
+                  {!playerReady && (
+                    <div className="absolute inset-0 flex items-center justify-center text-sm text-ubt-grey">
+                      Loading player…
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            {consentGranted && (
+              <div
+                className={`sticky top-0 z-10 flex items-center gap-[6px] p-[6px] transition-colors ${solidHeader ? 'bg-ub-cool-grey' : 'bg-transparent'}`}
+              >
               <button
                 onClick={togglePlay}
                 aria-label={isPlaying ? 'Pause' : 'Play'}
@@ -652,7 +666,8 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
                   />
                 </svg>
               </button>
-            </div>
+              </div>
+            )}
           </div>
         )}
         <VirtualGrid

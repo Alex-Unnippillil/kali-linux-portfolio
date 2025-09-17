@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
+import YouTubeEmbed from '../components/embeds/YouTubeEmbed';
 
 interface Video {
   id: string;
@@ -47,16 +48,8 @@ const VideoGallery: React.FC = () => {
         className="mb-4 w-full max-w-md px-4 py-2 border rounded"
       />
       {playing && (
-        <div className="mb-4 w-full max-w-2xl aspect-video">
-          <iframe
-            title="Selected video"
-            className="w-full h-full"
-            src={`https://www.youtube-nocookie.com/embed/${playing}`}
-            sandbox="allow-scripts allow-popups"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            referrerPolicy="no-referrer"
-            allowFullScreen
-          />
+        <div className="mb-4 w-full max-w-2xl">
+          <YouTubeEmbed videoId={playing} title="Selected video" />
         </div>
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">

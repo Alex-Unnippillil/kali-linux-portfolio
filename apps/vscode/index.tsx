@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import ExternalFrame from '../../components/ExternalFrame';
+import ExternalFrame from '../../components/embeds/ExternalFrame';
 import { CloseIcon, MaximizeIcon, MinimizeIcon } from '../../components/ToolbarIcons';
 import { kaliTheme } from '../../styles/themes/kali';
 import { SIDEBAR_WIDTH, ICON_SIZE } from './utils';

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import SpotifyEmbed from "../../../components/embeds/SpotifyEmbed";
 import usePersistentState from "../../../hooks/usePersistentState";
 
 interface Playlists {
@@ -10,6 +11,7 @@ const MoodTuner = () => {
   const [mood, setMood] = usePersistentState<string>("spotify-mood", "");
   const [isPlaying, setIsPlaying] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [consentGranted, setConsentGranted] = useState(false);
 
   // Load playlists from public JSON
   useEffect(() => {
@@ -35,23 +37,32 @@ const MoodTuner = () => {
   }, [playlists, mood, setMood]);
 
   const post = useCallback((cmd: string) => {
-    iframeRef.current?.contentWindow?.postMessage({ command: cmd }, "*");
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    iframe.contentWindow?.postMessage({ command: cmd }, "*");
   }, []);
 
   const togglePlay = useCallback(() => {
+    if (!consentGranted) return;
     setIsPlaying((playing) => {
       post(playing ? "pause" : "play");
       return !playing;
     });
-  }, [post]);
+  }, [post, consentGranted]);
 
-  const next = useCallback(() => post("next"), [post]);
-  const previous = useCallback(() => post("previous"), [post]);
+  const next = useCallback(() => {
+    if (!consentGranted) return;
+    post("next");
+  }, [post, consentGranted]);
+  const previous = useCallback(() => {
+    if (!consentGranted) return;
+    post("previous");
+  }, [post, consentGranted]);
 
   // Update play state from Spotify messages
   useEffect(() => {
     const handleMessage = (e: MessageEvent) => {
-      if (!e.origin.includes("spotify")) return;
+      if (!e.origin.includes("spotify") || !consentGranted) return;
       const data = e.data;
       if (Array.isArray(data) && data[0] === "playback_update") {
         setIsPlaying(!data[1]?.is_paused);
@@ -59,11 +70,12 @@ const MoodTuner = () => {
     };
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, []);
+  }, [consentGranted]);
 
   // Hotkeys
   useEffect(() => {
     const handleKeys = (e: KeyboardEvent) => {
+      if (!consentGranted) return;
       if (e.key === " ") {
         e.preventDefault();
         togglePlay();
@@ -75,7 +87,7 @@ const MoodTuner = () => {
     };
     window.addEventListener("keydown", handleKeys);
     return () => window.removeEventListener("keydown", handleKeys);
-  }, [togglePlay, next, previous]);
+  }, [togglePlay, next, previous, consentGranted]);
 
   const moods = Object.keys(playlists);
   const index = moods.indexOf(mood);
@@ -95,28 +107,26 @@ const MoodTuner = () => {
       </div>
       {mood && playlists[mood] && (
         <>
-          <iframe
+          <SpotifyEmbed
             ref={iframeRef}
-            src={`https://open.spotify.com/embed/playlist/${playlists[mood]}?utm_source=generator&theme=0`}
+            playlistId={playlists[mood]}
             title={mood}
-            width="100%"
-            height="152"
-            frameBorder="0"
-            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-            loading="lazy"
+            onAllow={() => setConsentGranted(true)}
           />
           <div className="flex justify-center space-x-4 p-2 bg-black bg-opacity-30">
             <button
               onClick={previous}
               title="Prev (P)"
-              className="w-8 h-8 flex items-center justify-center"
+              className="w-8 h-8 flex items-center justify-center disabled:opacity-50"
+              disabled={!consentGranted}
             >
               ⏮<span className="sr-only">(P)</span>
             </button>
             <button
               onClick={togglePlay}
               title="Play/Pause (Space)"
-              className="w-8 h-8 flex items-center justify-center"
+              className="w-8 h-8 flex items-center justify-center disabled:opacity-50"
+              disabled={!consentGranted}
             >
               {isPlaying ? "⏸" : "▶"}
               <span className="sr-only">(Space)</span>
@@ -124,11 +134,17 @@ const MoodTuner = () => {
             <button
               onClick={next}
               title="Next (N)"
-              className="w-8 h-8 flex items-center justify-center"
+              className="w-8 h-8 flex items-center justify-center disabled:opacity-50"
+              disabled={!consentGranted}
             >
               ⏭<span className="sr-only">(N)</span>
             </button>
           </div>
+          {!consentGranted && (
+            <p className="px-4 pb-2 text-center text-xs opacity-80">
+              Enable the Spotify embed above to use playback controls.
+            </p>
+          )}
         </>
       )}
     </div>
