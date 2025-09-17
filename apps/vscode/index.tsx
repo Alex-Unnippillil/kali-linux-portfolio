@@ -1,12 +1,31 @@
 'use client';
 
 import Image from 'next/image';
+import { useCallback, useEffect, useRef, type SyntheticEvent } from 'react';
 import ExternalFrame from '../../components/ExternalFrame';
 import { CloseIcon, MaximizeIcon, MinimizeIcon } from '../../components/ToolbarIcons';
 import { kaliTheme } from '../../styles/themes/kali';
+import attachThemeBridge, { type ThemeBridgeCleanup } from './themeBridge';
 import { SIDEBAR_WIDTH, ICON_SIZE } from './utils';
 
 export default function VsCode() {
+  const cleanupRef = useRef<ThemeBridgeCleanup | null>(null);
+
+  useEffect(() => {
+    return () => {
+      cleanupRef.current?.();
+      cleanupRef.current = null;
+    };
+  }, []);
+
+  const handleFrameLoad = useCallback(
+    (event: SyntheticEvent<HTMLIFrameElement>) => {
+      cleanupRef.current?.();
+      cleanupRef.current = attachThemeBridge(event.currentTarget);
+    },
+    [],
+  );
+
   return (
     <div
       className="flex flex-col min-[1366px]:flex-row h-full w-full max-w-full"
@@ -53,7 +72,7 @@ export default function VsCode() {
             src="https://stackblitz.com/github/Alex-Unnippillil/kali-linux-portfolio?embed=1&file=README.md"
             title="VsCode"
             className="w-full h-full"
-            onLoad={() => {}}
+            onLoad={handleFrameLoad}
           />
           <div className="absolute top-4 left-4 flex items-center gap-4 bg-black/50 p-4 rounded">
             <Image
