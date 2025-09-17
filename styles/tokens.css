@@ -23,9 +23,11 @@
   --color-ubt-gedit-dark: #003B70;
   --color-ub-border-orange: #1793d1;
   --color-ub-dark-grey: #2a2e36;
-  --color-bg: #0f1317;
+  --color-bg-gradient-start: #0d1b2a;
+  --color-bg-gradient-end: #1b263b;
+  --color-bg: var(--color-bg-gradient-start);
   --color-text: #F5F5F5;
-  --kali-bg: rgba(15, 19, 23, 0.85);
+  --kali-bg: rgba(13, 27, 42, 0.85);
 
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
@@ -64,6 +66,8 @@
 
 /* High contrast theme */
 .high-contrast {
+  --color-bg-gradient-start: #000000;
+  --color-bg-gradient-end: #000000;
   --color-bg: #000000;
   --color-text: #ffffff;
   --color-ub-grey: #000000;
@@ -107,6 +111,8 @@
 /* Optional high contrast via media query */
 @media (prefers-contrast: more) {
   :root {
+    --color-bg-gradient-start: #000000;
+    --color-bg-gradient-end: #000000;
     --color-bg: #000000;
     --color-text: #ffffff;
     --color-ub-grey: #000000;
