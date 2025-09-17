@@ -21,3 +21,11 @@
 1. After resizing or snapping, press **Tab** to move focus inside the window.
 2. Continue pressing **Tab** to confirm focus can leave the window and is not trapped.
 3. Shift+Tab moves focus backward as expected.
+
+## Context menus
+1. Focus any element that exposes a context menu (desktop background, dock icon, etc.).
+2. Open the menu with either a right click or **Shift + F10**.
+3. The first item should receive focus automatically.
+4. Press **ArrowUp** on the first item to wrap focus to the final item.
+5. Press **ArrowDown** on the last item to wrap focus back to the first item.
+6. Press **Escape** to close the menu and confirm focus returns to the element that opened it.
