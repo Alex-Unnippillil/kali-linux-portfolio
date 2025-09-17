@@ -22,6 +22,16 @@ export default function ModeSwitcher({ onChange }: Props) {
     document.dispatchEvent(new CustomEvent('mode-change', { detail: mode }));
   }, [mode, onChange]);
 
+  useEffect(() => {
+    const handleExternalMode = (event: Event) => {
+      const nextMode = (event as CustomEvent<Mode>).detail;
+      if (!nextMode || nextMode === mode || !MODES.includes(nextMode)) return;
+      setMode(nextMode);
+    };
+    document.addEventListener('mode-change', handleExternalMode);
+    return () => document.removeEventListener('mode-change', handleExternalMode);
+  }, [mode, setMode]);
+
   return (
     <div className="mode-switcher">
       {MODES.map((m) => (
