@@ -81,7 +81,13 @@ const MoodTuner = () => {
   const index = moods.indexOf(mood);
 
   return (
-    <div className="h-full w-full bg-[var(--color-bg)] text-[var(--color-text)] flex flex-col">
+    <div
+      className="h-full w-full text-[var(--color-text)] flex flex-col"
+      style={{
+        backgroundColor: "var(--color-bg-base)",
+        backgroundImage: "var(--color-bg)",
+      }}
+    >
       <div className="p-2 flex items-center gap-2 bg-black bg-opacity-30">
         <input
           type="range"

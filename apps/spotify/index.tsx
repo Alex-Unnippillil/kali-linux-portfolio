@@ -147,9 +147,13 @@ const SpotifyApp = () => {
 
   return (
     <div
-      className={`h-full w-full bg-[var(--color-bg)] text-[var(--color-text)] flex flex-col ${
+      className={`h-full w-full text-[var(--color-text)] flex flex-col ${
         mini ? "p-2" : "p-4"
       }`}
+      style={{
+        backgroundColor: "var(--color-bg-base)",
+        backgroundImage: "var(--color-bg)",
+      }}
       tabIndex={0}
       onKeyDown={handleKey}
     >

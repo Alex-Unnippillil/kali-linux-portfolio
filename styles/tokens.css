@@ -2,30 +2,36 @@
 
 :root {
   /* Theme colors */
-  --color-ub-grey: #0f1317;
-  --color-ub-warm-grey: #7d7f83;
-  --color-ub-cool-grey: #1a1f26;
-  --color-ub-orange: #1793d1;
-  --color-ub-lite-abrgn: #22262c;
-  --color-ub-med-abrgn: #1b1f24;
-  --color-ub-drk-abrgn: #13171b;
-  --color-ub-window-title: #0c0f12;
-  --color-ub-gedit-dark: #021B33;
-  --color-ub-gedit-light: #003B70;
-  --color-ub-gedit-darker: #010D1A;
-  --color-ubt-grey: #F6F6F5;
-  --color-ubt-warm-grey: #AEA79F;
-  --color-ubt-cool-grey: #333333;
-  --color-ubt-blue: #62A0EA;
-  --color-ubt-green: #73D216;
-  --color-ubt-gedit-orange: #F39A21;
-  --color-ubt-gedit-blue: #50B6C6;
-  --color-ubt-gedit-dark: #003B70;
-  --color-ub-border-orange: #1793d1;
-  --color-ub-dark-grey: #2a2e36;
-  --color-bg: #0f1317;
-  --color-text: #F5F5F5;
-  --kali-bg: rgba(15, 19, 23, 0.85);
+  --color-kali-midnight: #030712;
+  --color-kali-dawn: #09172d;
+  --color-kali-abyss: #0b1220;
+  --color-kali-surface: #101b2a;
+  --color-kali-surface-alt: #16263a;
+  --color-kali-panel: #1b2436;
+  --color-kali-panel-dark: #101726;
+  --color-kali-window-title: #0c131f;
+  --color-kali-depth: #021b33;
+  --color-kali-navy: #003b70;
+  --color-kali-shadow: #010d1a;
+  --color-kali-ice: #f5f7fa;
+  --color-kali-ash: #aeb6c0;
+  --color-kali-graphite: #333a45;
+  --color-kali-electric: #1793d1;
+  --color-kali-electric-border: #1173a8;
+  --color-kali-sky: #62a0ea;
+  --color-kali-neon: #73d216;
+  --color-kali-amber: #f39a21;
+  --color-kali-cyan: #50b6c6;
+  --color-kali-slate: #2a2e36;
+  --color-kali-border-strong: #1f2a3a;
+  --color-kali-highlight: #8bd3ff;
+  --color-kali-yellow: #f7dd46;
+  --color-kali-green: #3ddc97;
+  --color-kali-red: #ef4444;
+  --color-bg: linear-gradient(140deg, var(--color-kali-midnight) 0%, var(--color-kali-dawn) 52%, var(--color-kali-abyss) 100%);
+  --color-bg-base: var(--color-kali-abyss);
+  --color-text: var(--color-kali-ice);
+  --kali-bg: color-mix(in srgb, var(--color-kali-abyss), transparent 15%);
 
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
@@ -53,26 +59,41 @@
   --motion-slow: 500ms;
 
   /* Fonts */
-  --font-family-base: 'Ubuntu', sans-serif;
+  --font-family-base: 'Hack', 'DejaVu Sans Mono', monospace;
   --font-multiplier: 1;
   /* Minimum interactive target size */
   --hit-area: 32px;
   /* Focus outline */
-  --focus-outline-color: var(--color-ubt-blue);
+  --focus-outline-color: var(--color-kali-sky);
   --focus-outline-width: 2px;
 }
 
 /* High contrast theme */
 .high-contrast {
-  --color-bg: #000000;
+  --color-bg: linear-gradient(0deg, #000000, #000000);
+  --color-bg-base: #000000;
   --color-text: #ffffff;
-  --color-ub-grey: #000000;
-  --color-ub-cool-grey: #000000;
-  --color-ubt-grey: #ffffff;
-  --color-ubt-cool-grey: #ffffff;
-  --color-ub-orange: #ffff00;
-  --color-ub-lite-abrgn: #00ffff;
-  --color-ub-border-orange: #ffff00;
+  --color-kali-midnight: #000000;
+  --color-kali-abyss: #000000;
+  --color-kali-surface: #000000;
+  --color-kali-surface-alt: #000000;
+  --color-kali-panel: #000000;
+  --color-kali-panel-dark: #000000;
+  --color-kali-window-title: #000000;
+  --color-kali-ice: #ffffff;
+  --color-kali-ash: #ffffff;
+  --color-kali-graphite: #ffffff;
+  --color-kali-electric: #ffff00;
+  --color-kali-sky: #ffff00;
+  --color-kali-electric-border: #ffff00;
+  --color-kali-neon: #00ffff;
+  --color-kali-amber: #ff00ff;
+  --color-kali-cyan: #00ffff;
+  --color-kali-slate: #ffffff;
+  --color-kali-border-strong: #ffff00;
+  --color-kali-highlight: #ffff00;
+  --focus-outline-color: #ffff00;
+  --kali-bg: rgba(0, 0, 0, 0.85);
   --game-color-secondary: #ffff00;
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
@@ -107,14 +128,29 @@
 /* Optional high contrast via media query */
 @media (prefers-contrast: more) {
   :root {
-    --color-bg: #000000;
+    --color-bg: linear-gradient(0deg, #000000, #000000);
+    --color-bg-base: #000000;
     --color-text: #ffffff;
-    --color-ub-grey: #000000;
-    --color-ub-cool-grey: #000000;
-    --color-ubt-grey: #ffffff;
-    --color-ubt-cool-grey: #ffffff;
-    --color-ub-orange: #ffff00;
-    --color-ub-lite-abrgn: #00ffff;
-    --color-ub-border-orange: #ffff00;
+    --color-kali-midnight: #000000;
+    --color-kali-abyss: #000000;
+    --color-kali-surface: #000000;
+    --color-kali-surface-alt: #000000;
+    --color-kali-panel: #000000;
+    --color-kali-panel-dark: #000000;
+    --color-kali-window-title: #000000;
+    --color-kali-ice: #ffffff;
+    --color-kali-ash: #ffffff;
+    --color-kali-graphite: #ffffff;
+    --color-kali-electric: #ffff00;
+    --color-kali-sky: #ffff00;
+    --color-kali-electric-border: #ffff00;
+    --color-kali-neon: #00ffff;
+    --color-kali-amber: #ff00ff;
+    --color-kali-cyan: #00ffff;
+    --color-kali-slate: #ffffff;
+    --color-kali-border-strong: #ffff00;
+    --color-kali-highlight: #ffff00;
+    --focus-outline-color: #ffff00;
+    --kali-bg: rgba(0, 0, 0, 0.85);
   }
 }

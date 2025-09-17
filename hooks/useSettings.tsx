@@ -138,8 +138,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const border = shadeColor(accent, -0.2);
     const vars: Record<string, string> = {
-      '--color-ub-orange': accent,
-      '--color-ub-border-orange': border,
+      '--color-kali-electric': accent,
+      '--color-kali-electric-border': border,
       '--color-primary': accent,
       '--color-accent': accent,
       '--color-focus-ring': accent,
