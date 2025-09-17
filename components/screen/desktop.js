@@ -733,18 +733,26 @@ export class Desktop extends Component {
     }
 
     focus = (objId) => {
-        // removes focus from all window and 
-        // gives focus to window with 'id = objId'
-        var focused_windows = this.state.focused_windows;
-        focused_windows[objId] = true;
-        for (let key in focused_windows) {
-            if (focused_windows.hasOwnProperty(key)) {
-                if (key !== objId) {
-                    focused_windows[key] = false;
+        this.setState(prevState => {
+            const focused_windows = { ...prevState.focused_windows };
+            Object.keys(focused_windows).forEach(key => {
+                focused_windows[key] = key === objId;
+            });
+            if (!(objId in focused_windows)) {
+                focused_windows[objId] = true;
+            }
+            return { focused_windows };
+        }, () => {
+            if (typeof document === 'undefined') return;
+            const node = document.getElementById(objId);
+            if (node && typeof node.focus === 'function') {
+                try {
+                    node.focus({ preventScroll: true });
+                } catch (e) {
+                    node.focus();
                 }
             }
-        }
-        this.setState({ focused_windows });
+        });
     }
 
     addNewFolder = () => {
@@ -867,16 +875,6 @@ export class Desktop extends Component {
         return (
             <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
 
-                {/* Window Area */}
-                <div
-                    id="window-area"
-                    role="main"
-                    className="absolute h-full w-full bg-transparent"
-                    data-context="desktop-area"
-                >
-                    {this.renderWindows()}
-                </div>
-
                 {/* Background Image */}
                 <BackgroundImage />
 
@@ -904,6 +902,16 @@ export class Desktop extends Component {
 
                 {/* Desktop Apps */}
                 {this.renderDesktopApps()}
+
+                {/* Window Area */}
+                <div
+                    id="window-area"
+                    role="presentation"
+                    className="absolute h-full w-full bg-transparent"
+                    data-context="desktop-area"
+                >
+                    {this.renderWindows()}
+                </div>
 
                 {/* Context Menus */}
                 <DesktopMenu

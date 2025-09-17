@@ -639,7 +639,8 @@ export class Window extends Component {
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
-                        tabIndex={0}
+                        tabIndex={this.props.isFocused && !this.props.minimized ? 0 : -1}
+                        onFocus={this.focusWindow}
                         onKeyDown={this.handleKeyDown}
                     >
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
