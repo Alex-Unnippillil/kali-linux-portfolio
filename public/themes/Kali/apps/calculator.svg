@@ -1,0 +1,15 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="calculatorGradient" x1="10" y1="6" x2="50" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#04101C" />
+      <stop offset="1" stop-color="#0EA5E9" />
+    </linearGradient>
+  </defs>
+  <rect x="16" y="8" width="32" height="48" rx="8" fill="url(#calculatorGradient)" />
+  <rect x="20" y="14" width="24" height="10" rx="3" fill="#F8FAFC" fill-opacity="0.2" />
+  <rect x="20" y="28" width="8" height="8" rx="2" fill="#F8FAFC" />
+  <rect x="32" y="28" width="12" height="4" rx="2" fill="#F8FAFC" />
+  <rect x="32" y="34" width="12" height="4" rx="2" fill="#F8FAFC" />
+  <rect x="20" y="40" width="8" height="8" rx="2" fill="#F8FAFC" fill-opacity="0.6" />
+  <rect x="32" y="40" width="12" height="8" rx="2" fill="#F8FAFC" fill-opacity="0.6" />
+</svg>
