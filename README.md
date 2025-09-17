@@ -40,6 +40,12 @@ Serverful deployments run the built Next.js server so all API routes are availab
 ```bash
 yarn build && yarn start
 ```
+The build pipeline now generates route-specific critical CSS once `next build` finishes. The
+`scripts/build-critical-css.mjs` postbuild step snapshots the desktop shell and home route class
+usage, renders a trimmed Tailwind bundle, and writes `.next/cache/critical-css/{home,desktop}.css`.
+`pages/_document.jsx` inlines those styles during SSR and converts the remaining global stylesheets
+into async `rel="preload"` + `media="print"` pairs to avoid flashes of unstyled content during
+hydration.
 The service worker is automatically generated during `next build` via [`@ducanh2912/next-pwa`](https://github.com/DuCanhGH/next-pwa).
 After the server starts, exercise an API route to confirm server-side functionality:
 ```bash
