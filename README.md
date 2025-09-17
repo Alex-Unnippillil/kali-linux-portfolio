@@ -257,6 +257,18 @@ These external domains are whitelisted in the default CSP. Update this list when
 | `open.spotify.com` | Spotify embeds |
 | `vercel.live` | Vercel toolbar |
 
+### Route-specific CSP tightening
+
+Sensitive surfaces that collect user input or expose admin tooling opt into a stricter policy. The following routes override
+`connect-src` and `frame-src` to eliminate third-party embeds and outbound calls:
+
+| Route | Policy change |
+| --- | --- |
+| `/admin/*` | `connect-src 'self'; frame-src 'none'` |
+| `/dummy-form` | `connect-src 'self'; frame-src 'none'` |
+
+All other directives stay aligned with the default headers, so the rest of the site can continue to embed vetted providers.
+
 **Notes for prod hardening**
 - Review `connect-src` and `frame-src` to ensure only required domains are present for your deployment.
 - Consider removing `'unsafe-inline'` from `style-src` once all inline styles are eliminated.
