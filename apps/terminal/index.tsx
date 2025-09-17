@@ -7,10 +7,12 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useCallback,
+  useMemo,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
+import CommandPalette from '../../components/system/CommandPalette';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -99,7 +101,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     runWorker: async () => {},
   });
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const [paletteInput, setPaletteInput] = useState('');
+  const [paletteQuery, setPaletteQuery] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
@@ -123,6 +125,16 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     '#55FFFF',
     '#FFFFFF',
   ];
+
+  const registry = registryRef.current;
+  const paletteItems = useMemo(
+    () =>
+      Object.keys(registry).map((name) => ({
+        id: name,
+        label: name,
+      })),
+    [registry],
+  );
 
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
@@ -412,38 +424,23 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
   return (
     <div className="relative h-full w-full">
-      {paletteOpen && (
-        <div className="absolute inset-0 bg-black bg-opacity-75 flex items-start justify-center z-10">
-          <div className="mt-10 w-80 bg-gray-800 p-4 rounded">
-            <input
-              autoFocus
-              className="w-full mb-2 bg-black text-white p-2"
-              value={paletteInput}
-              onChange={(e) => setPaletteInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  runCommand(paletteInput);
-                  setPaletteInput('');
-                  setPaletteOpen(false);
-                  termRef.current?.focus();
-                } else if (e.key === 'Escape') {
-                  setPaletteOpen(false);
-                  termRef.current?.focus();
-                }
-              }}
-            />
-            <ul className="max-h-40 overflow-y-auto">
-              {Object.keys(registryRef.current)
-                .filter((c) => c.startsWith(paletteInput))
-                .map((c) => (
-                  <li key={c} className="text-white">
-                    {c}
-                  </li>
-                ))}
-            </ul>
-          </div>
-        </div>
-      )}
+      <CommandPalette
+        isOpen={paletteOpen}
+        items={paletteItems}
+        initialQuery={paletteQuery}
+        onQueryChange={setPaletteQuery}
+        placeholder="Run a command"
+        label="Terminal command palette"
+        emptyState="No commands found"
+        onSubmit={({ query }) => {
+          runCommand(query);
+          setPaletteQuery('');
+        }}
+        onClose={() => {
+          setPaletteOpen(false);
+          termRef.current?.focus();
+        }}
+      />
       {settingsOpen && (
         <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-10">
           <div className="bg-gray-900 p-4 rounded space-y-4">
