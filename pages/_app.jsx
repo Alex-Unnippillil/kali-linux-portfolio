@@ -5,6 +5,7 @@ import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
 import '../styles/globals.css';
+import '../styles/components.css';
 import '../styles/index.css';
 import '../styles/resume-print.css';
 import '../styles/print.css';
