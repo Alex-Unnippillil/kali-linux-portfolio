@@ -7,7 +7,9 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useCallback,
+  useMemo,
 } from 'react';
+import type { ISearchOptions } from '@xterm/addon-search';
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
@@ -101,10 +103,23 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchCaseSensitive, setSearchCaseSensitive] = useState(false);
+  const [searchWrap, setSearchWrap] = useState(true);
+  const [searchResults, setSearchResults] = useState({ index: -1, count: 0 });
+  const [searchMessage, setSearchMessage] = useState<string | null>(null);
+  const [searchReady, setSearchReady] = useState(false);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
   const [overflow, setOverflow] = useState({ top: false, bottom: false });
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const searchOptionsRef = useRef<ISearchOptions>({ caseSensitive: false });
+  const searchMetaRef = useRef({ index: -1, count: 0 });
+  const searchQueryRef = useRef('');
+  const suppressWrapRef = useRef(false);
+  const lastSearchDirectionRef = useRef<'next' | 'prev' | null>(null);
   const ansiColors = [
     '#000000',
     '#AA0000',
@@ -123,6 +138,28 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     '#55FFFF',
     '#FFFFFF',
   ];
+  const searchOptions = useMemo<ISearchOptions>(
+    () => ({
+      caseSensitive: searchCaseSensitive,
+      decorations: {
+        matchBackground: '#2563EB',
+        matchBorder: '#1E3A8A',
+        matchOverviewRuler: '#60A5FA',
+        activeMatchBackground: '#1D4ED8',
+        activeMatchBorder: '#BFDBFE',
+        activeMatchColorOverviewRuler: '#2563EB',
+      },
+    }),
+    [searchCaseSensitive],
+  );
+
+  useEffect(() => {
+    searchOptionsRef.current = searchOptions;
+  }, [searchOptions]);
+
+  useEffect(() => {
+    searchQueryRef.current = searchQuery;
+  }, [searchQuery]);
 
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
@@ -293,6 +330,80 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     getContent: () => contentRef.current,
   }));
 
+  const runSearch = useCallback(
+    (direction: 'next' | 'prev' | 'initial' = 'next') => {
+      const addon = searchRef.current;
+      const term = termRef.current;
+      if (!addon || !term) return;
+
+      if (!searchQuery) {
+        addon.clearDecorations();
+        term.clearSelection?.();
+        const emptyMeta = { index: -1, count: 0 };
+        searchMetaRef.current = emptyMeta;
+        setSearchResults(emptyMeta);
+        setSearchMessage(null);
+        return;
+      }
+
+      if (direction === 'initial') {
+        suppressWrapRef.current = true;
+        lastSearchDirectionRef.current = null;
+        const emptyMeta = { index: -1, count: 0 };
+        searchMetaRef.current = emptyMeta;
+        setSearchResults(emptyMeta);
+        setSearchMessage(null);
+      } else {
+        lastSearchDirectionRef.current = direction;
+      }
+
+      const options =
+        direction === 'initial'
+          ? { ...searchOptionsRef.current, incremental: true }
+          : searchOptionsRef.current;
+
+      const found =
+        direction === 'prev'
+          ? addon.findPrevious(searchQuery, options)
+          : addon.findNext(searchQuery, options);
+
+      if (!found) {
+        const emptyMeta = { index: -1, count: 0 };
+        searchMetaRef.current = emptyMeta;
+        setSearchResults(emptyMeta);
+        setSearchMessage('No matches');
+        addon.clearDecorations();
+        term.clearSelection?.();
+      }
+    },
+    [searchQuery],
+  );
+
+  const handleSearchNavigation = useCallback(
+    (direction: 'next' | 'prev') => {
+      runSearch(direction);
+      requestAnimationFrame(() => {
+        searchInputRef.current?.focus();
+      });
+    },
+    [runSearch],
+  );
+
+  const closeSearch = useCallback(() => {
+    setSearchOpen(false);
+    setSearchMessage(null);
+    const emptyMeta = { index: -1, count: 0 };
+    searchMetaRef.current = emptyMeta;
+    setSearchResults(emptyMeta);
+    lastSearchDirectionRef.current = null;
+    suppressWrapRef.current = false;
+    searchRef.current?.clearDecorations();
+    termRef.current?.clearSelection?.();
+    if (!paletteOpen && !settingsOpen) {
+      termRef.current?.focus();
+    }
+  }, [paletteOpen, settingsOpen]);
+
   useEffect(() => {
     let disposed = false;
     (async () => {
@@ -322,6 +433,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       searchRef.current = search;
       term.loadAddon(fit);
       term.loadAddon(search);
+      setSearchReady(true);
       term.open(containerRef.current!);
       fit.fit();
       term.focus();
@@ -348,10 +460,17 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         if (domEvent.key === 'Tab') {
           domEvent.preventDefault();
           autocomplete();
-        } else if (domEvent.ctrlKey && domEvent.key === 'f') {
+        } else if (
+          (domEvent.ctrlKey || domEvent.metaKey) &&
+          domEvent.key.toLowerCase() === 'f'
+        ) {
           domEvent.preventDefault();
-          const q = window.prompt('Search');
-          if (q) searchRef.current?.findNext(q);
+          const selection = termRef.current?.getSelection?.() ?? '';
+          setSearchMessage(null);
+          setSearchOpen(true);
+          if (selection) {
+            setSearchQuery(selection);
+          }
         } else if (domEvent.ctrlKey && domEvent.key === 'r') {
           domEvent.preventDefault();
           const q = window.prompt('Search history');
@@ -377,8 +496,102 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     return () => {
       disposed = true;
       termRef.current?.dispose();
+      setSearchReady(false);
     };
     }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow]);
+
+  useEffect(() => {
+    const addon = searchRef.current;
+    if (
+      !searchReady ||
+      !addon ||
+      typeof addon.onDidChangeResults !== 'function'
+    ) {
+      return;
+    }
+    const disposable = addon.onDidChangeResults(
+      ({ resultIndex, resultCount }) => {
+        if (suppressWrapRef.current) {
+          suppressWrapRef.current = false;
+        } else if (
+          !searchWrap &&
+          searchQueryRef.current &&
+          resultCount > 0 &&
+          searchMetaRef.current.index !== -1
+        ) {
+          const previousIndex = searchMetaRef.current.index;
+          const direction = lastSearchDirectionRef.current;
+          if (
+            direction === 'next' &&
+            resultIndex !== -1 &&
+            previousIndex !== -1 &&
+            resultIndex < previousIndex
+          ) {
+            setSearchMessage('Reached end of results');
+            suppressWrapRef.current = true;
+            searchRef.current?.findPrevious(
+              searchQueryRef.current,
+              searchOptionsRef.current,
+            );
+            return;
+          }
+          if (
+            direction === 'prev' &&
+            resultIndex !== -1 &&
+            previousIndex !== -1 &&
+            resultIndex > previousIndex
+          ) {
+            setSearchMessage('Reached start of results');
+            suppressWrapRef.current = true;
+            searchRef.current?.findNext(
+              searchQueryRef.current,
+              searchOptionsRef.current,
+            );
+            return;
+          }
+        }
+
+        if (!suppressWrapRef.current && resultCount > 0 && resultIndex !== -1) {
+          setSearchMessage((msg) =>
+            msg && msg.startsWith('Reached') ? null : msg,
+          );
+        }
+
+        const meta = { index: resultIndex, count: resultCount };
+        searchMetaRef.current = meta;
+        setSearchResults(meta);
+      },
+    );
+    return () => disposable?.dispose?.();
+  }, [searchReady, searchWrap]);
+
+  useEffect(() => {
+    if (searchOpen) {
+      runSearch('initial');
+    }
+  }, [searchOpen, searchCaseSensitive, searchQuery, runSearch]);
+
+  useEffect(() => {
+    if (searchOpen) {
+      termRef.current?.blur();
+      const handle = requestAnimationFrame(() => {
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+      });
+      return () => cancelAnimationFrame(handle);
+    }
+    if (!paletteOpen && !settingsOpen) {
+      termRef.current?.focus();
+    }
+  }, [searchOpen, paletteOpen, settingsOpen]);
+
+  useEffect(() => {
+    if (searchWrap) {
+      setSearchMessage((msg) =>
+        msg && msg.startsWith('Reached') ? null : msg,
+      );
+    }
+  }, [searchWrap]);
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();
@@ -493,6 +706,85 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           </button>
         </div>
         <div className="relative">
+          {searchOpen && (
+            <div className="absolute top-2 right-2 z-20 w-72 rounded-lg border border-gray-700 bg-gray-900/95 p-3 shadow-lg">
+              <div className="flex items-center gap-2">
+                <input
+                  ref={searchInputRef}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (e.shiftKey) handleSearchNavigation('prev');
+                      else handleSearchNavigation('next');
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      closeSearch();
+                    }
+                  }}
+                  placeholder="Search terminal..."
+                  className="flex-1 rounded bg-gray-800 px-2 py-1 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  className="rounded bg-gray-800 px-2 py-1 text-xs text-gray-100 hover:bg-gray-700 disabled:opacity-50"
+                  onClick={() => handleSearchNavigation('prev')}
+                  disabled={!searchQuery || searchResults.count === 0}
+                >
+                  Prev
+                </button>
+                <button
+                  type="button"
+                  className="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-500 disabled:opacity-50"
+                  onClick={() => handleSearchNavigation('next')}
+                  disabled={!searchQuery || searchResults.count === 0}
+                >
+                  Next
+                </button>
+              </div>
+              <div className="mt-2 flex items-center justify-between text-xs text-gray-300">
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={searchCaseSensitive}
+                      onChange={(e) => setSearchCaseSensitive(e.target.checked)}
+                      className="h-3 w-3 accent-blue-500"
+                    />
+                    <span>Case</span>
+                  </label>
+                  <label className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={searchWrap}
+                      onChange={(e) => setSearchWrap(e.target.checked)}
+                      className="h-3 w-3 accent-blue-500"
+                    />
+                    <span>Wrap</span>
+                  </label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span>
+                    {searchResults.count > 0
+                      ? `${searchResults.index >= 0 ? searchResults.index + 1 : '–'}/${searchResults.count}`
+                      : '0/0'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={closeSearch}
+                    className="rounded p-1 text-gray-400 hover:text-white"
+                    aria-label="Close search"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+              {searchMessage && (
+                <div className="mt-2 text-xs text-amber-300">{searchMessage}</div>
+              )}
+            </div>
+          )}
           <TerminalContainer
             ref={containerRef}
             className="resize overflow-hidden font-mono"
