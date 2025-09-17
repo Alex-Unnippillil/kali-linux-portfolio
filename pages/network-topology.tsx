@@ -10,7 +10,7 @@ const NetworkTopology: React.FC = () => {
       <main className="bg-ub-cool-grey text-white min-h-screen p-4 space-y-4">
         <button
           onClick={() => setMitigated((m) => !m)}
-          className="px-4 py-2 bg-blue-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="px-4 py-2 bg-blue-600 rounded focus-ring"
         >
           {mitigated ? 'Disable Mitigation' : 'Enable Mitigation'}
         </button>

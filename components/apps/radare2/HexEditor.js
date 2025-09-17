@@ -181,7 +181,7 @@ const HexEditor = ({ hex, theme }) => {
                       onMouseDown={() => handleMouseDown(idx)}
                       onMouseEnter={() => handleMouseEnter(idx)}
                       onDoubleClick={() => handleEdit(idx, b)}
-                      className="w-6 h-6 flex items-center justify-center rounded focus:outline-none focus-visible:ring-2"
+                      className="w-6 h-6 flex items-center justify-center rounded focus-ring"
                       style={{
                         backgroundColor: selected
                           ? 'var(--r2-accent)'

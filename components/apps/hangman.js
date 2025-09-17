@@ -553,7 +553,7 @@ const Hangman = () => {
                 type="button"
                 onClick={() => handleGuess(l)}
                 style={{ backgroundColor: color }}
-                className={`w-6 h-6 flex items-center justify-center rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-ub-orange ${guessedAlready ? 'opacity-50' : ''}`}
+                className={`w-6 h-6 flex items-center justify-center rounded focus-ring ${guessedAlready ? 'opacity-50' : ''}`}
                 aria-pressed={guessedAlready}
                 disabled={guessedAlready || wrong >= maxWrong || won || paused}
               >

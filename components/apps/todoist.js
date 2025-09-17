@@ -587,7 +587,7 @@ export default function Todoist() {
           draggable
           onDragStart={handleDragStart(group, task)}
           onKeyDown={handleKeyDown(group, task)}
-          className="rounded shadow bg-white text-black flex items-center px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="rounded shadow bg-white text-black flex items-center px-2 py-1.5 focus-ring"
           role="listitem"
         >
           <label className="mr-2 inline-flex items-center">
@@ -596,7 +596,7 @@ export default function Todoist() {
               aria-label="Toggle completion"
               checked={!!task.completed}
               onChange={() => toggleCompleted(group, task.id)}
-              className="w-6 h-6 focus:ring-2 focus:ring-blue-500"
+              className="w-6 h-6 focus-ring"
             />
           </label>
           <div className="flex-1">
@@ -831,7 +831,7 @@ export default function Todoist() {
           />
           <button
             type="submit"
-            className="px-2 py-1 bg-blue-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-2 py-1 bg-blue-600 text-white rounded focus-ring"
           >
             Add
           </button>
@@ -886,7 +886,7 @@ export default function Todoist() {
           </select>
           <button
             type="submit"
-            className="px-2 py-1 bg-blue-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-2 py-1 bg-blue-600 text-white rounded focus-ring"
           >
             Add
           </button>

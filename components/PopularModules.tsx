@@ -188,7 +188,7 @@ const PopularModules: React.FC = () => {
       <div className="flex items-center gap-2">
         <button
           onClick={handleUpdate}
-          className="px-2 py-1 text-sm rounded bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="px-2 py-1 text-sm rounded bg-gray-700 focus-ring"
         >
           Update Modules
         </button>
@@ -208,7 +208,7 @@ const PopularModules: React.FC = () => {
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setFilter('')}
-          className={`px-2 py-1 text-sm rounded focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+          className={`px-2 py-1 text-sm rounded focus-ring ${
             filter === '' ? 'bg-blue-600' : 'bg-gray-700'
           }`}
         >
@@ -218,7 +218,7 @@ const PopularModules: React.FC = () => {
           <button
             key={t}
             onClick={() => setFilter(t)}
-            className={`px-2 py-1 text-sm rounded focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+            className={`px-2 py-1 text-sm rounded focus-ring ${
               filter === t ? 'bg-blue-600' : 'bg-gray-700'
             }`}
           >
@@ -231,7 +231,7 @@ const PopularModules: React.FC = () => {
           <button
             key={m.id}
             onClick={() => handleSelect(m)}
-            className="p-3 text-left bg-ub-grey rounded border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className="p-3 text-left bg-ub-grey rounded border border-gray-700 focus-ring"
           >
             <h3 className="font-semibold">{m.name}</h3>
             <p className="text-sm text-gray-300">{m.description}</p>
@@ -276,7 +276,7 @@ const PopularModules: React.FC = () => {
             <button
               type="button"
               onClick={copyCommand}
-              className="px-2 py-1 text-sm rounded bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="px-2 py-1 text-sm rounded bg-gray-700 focus-ring"
             >
               Copy
             </button>
@@ -295,7 +295,7 @@ const PopularModules: React.FC = () => {
             <button
               type="button"
               onClick={copyLogs}
-              className="px-2 py-1 text-sm rounded bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="px-2 py-1 text-sm rounded bg-gray-700 focus-ring"
             >
               Copy Logs
             </button>

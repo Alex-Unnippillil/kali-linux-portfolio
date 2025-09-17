@@ -458,7 +458,7 @@ const Checkers = () => {
                 {...pointerHandlers(() =>
                   selected ? tryMove(r, c) : selectPiece(r, c)
                 )}
-                className={`w-12 h-12 md:w-14 md:h-14 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-white ${
+                className={`w-12 h-12 md:w-14 md:h-14 flex items-center justify-center focus-ring ${
                   isDark ? 'bg-gray-700' : 'bg-gray-400'
                 } ${
                   showMove

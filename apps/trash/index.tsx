@@ -145,21 +145,21 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
             <button
               onClick={restore}
               disabled={selected === null}
-              className="px-3 py-1 my-1 rounded bg-blue-600 text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
+              className="px-3 py-1 my-1 rounded bg-blue-600 text-white hover:bg-blue-500 focus-ring disabled:opacity-50"
             >
               Restore
             </button>
             <button
               onClick={remove}
               disabled={selected === null}
-              className="px-3 py-1 my-1 ml-3 rounded bg-red-600 text-white hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50"
+              className="px-3 py-1 my-1 ml-3 rounded bg-red-600 text-white hover:bg-red-500 focus-ring disabled:opacity-50"
             >
               Delete
             </button>
             <button
               onClick={purge}
               disabled={selected === null}
-              className="px-3 py-1 my-1 ml-3 rounded bg-yellow-600 text-white hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:opacity-50"
+              className="px-3 py-1 my-1 ml-3 rounded bg-yellow-600 text-white hover:bg-yellow-500 focus-ring disabled:opacity-50"
             >
               Purge
             </button>
@@ -167,14 +167,14 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
           <button
             onClick={restoreAll}
             disabled={items.length === 0}
-            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
+            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus-ring disabled:opacity-50"
           >
             Restore All
           </button>
           <button
             onClick={empty}
             disabled={items.length === 0 || emptyCountdown !== null}
-            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
+            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus-ring disabled:opacity-50"
           >
             {emptyCountdown !== null ? `Emptying in ${emptyCountdown}` : 'Empty'}
           </button>

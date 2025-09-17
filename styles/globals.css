@@ -16,10 +16,12 @@
   --color-border: #2a2e36; /* subtle borders */
   --color-terminal: #00ff00; /* terminal green */
   --color-dark: #0c0f12; /* card back */
-  --color-focus-ring: var(--color-accent);
+  --color-focus-ring: var(--focus-ring-color);
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
   accent-color: var(--color-control-accent);
+  --tw-ring-color: var(--focus-ring-color);
+  --tw-ring-offset-color: var(--focus-ring-offset-color);
 }
 
 /* Dark theme */
@@ -74,6 +76,14 @@ html[data-theme='matrix'] {
 }
 
 *:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color) !important;
+  outline-offset: var(--focus-ring-offset);
+  transition: var(--focus-ring-transition);
+}
+
+.focus-ring:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 var(--focus-ring-offset) var(--focus-ring-offset-color),
+    0 0 0 calc(var(--focus-ring-offset) + var(--focus-ring-width)) var(--focus-ring-color);
+  border-radius: inherit;
 }
