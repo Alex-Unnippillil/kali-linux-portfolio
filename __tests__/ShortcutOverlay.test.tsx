@@ -1,10 +1,15 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
+import { __resetShortcutRegistryForTests } from '../src/system/shortcuts';
 
 describe('ShortcutOverlay', () => {
   beforeEach(() => {
     window.localStorage.removeItem('keymap');
+  });
+
+  afterEach(() => {
+    __resetShortcutRegistryForTests();
   });
 
   it('lists shortcuts and highlights conflicts', () => {
