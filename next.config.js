@@ -61,6 +61,24 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 });
 
+const legacyProjectRedirects = {
+  'pip-portal': 'pip-portal',
+  'internal-layouts': 'internal-layouts',
+  'deauth-mitigation': 'deauth-mitigation',
+  'nmap-nse-walkthrough': 'nmap-nse-walkthrough',
+  reconng: 'reconng',
+  'phaser-listeners': 'phaser-listeners',
+  'bare-fs-dependency': 'bare-fs-dependency',
+  'template-glossary': 'template-glossary',
+  'tasks-ui-polish': 'tasks-ui-polish',
+  'tasks_ui_polish': 'tasks-ui-polish',
+  'keyboard-only-test-plan': 'keyboard-only-test-plan',
+  tasks: 'tasks',
+  'new-app-checklist': 'new-app-checklist',
+  'getting-started': 'getting-started',
+  architecture: 'architecture',
+};
+
 const withPWA = require('@ducanh2912/next-pwa').default({
   dest: 'public',
   sw: 'sw.js',
@@ -124,6 +142,13 @@ module.exports = withBundleAnalyzer(
   withPWA({
     ...(isStaticExport && { output: 'export' }),
     webpack: configureWebpack,
+    async redirects() {
+      return Object.entries(legacyProjectRedirects).map(([legacySlug, newSlug]) => ({
+        source: `/projects/${legacySlug}`,
+        destination: `/docs/${newSlug}`,
+        statusCode: 301,
+      }));
+    },
 
     // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
     eslint: {

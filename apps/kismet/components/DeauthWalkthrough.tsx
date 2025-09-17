@@ -54,7 +54,7 @@ const DeauthWalkthrough: React.FC = () => {
       <p className="mt-2">
         For defensive guidance, review the{' '}
         <a
-          href="/docs/deauth-mitigation.md"
+          href="/docs/deauth-mitigation"
           className="text-blue-400 underline"
         >
           mitigation notes
