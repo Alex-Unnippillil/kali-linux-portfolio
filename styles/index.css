@@ -1,4 +1,5 @@
 @import './globals.css';
+@import './components.css';
 
 html {
     font-size: clamp(12px, calc(16px * var(--font-multiplier)), 24px);
@@ -12,8 +13,8 @@ body{
 }
 
 button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .hit-area {
-    min-width: var(--hit-area);
-    min-height: var(--hit-area);
+    min-width: var(--hit-area, 44px);
+    min-height: var(--hit-area, 44px);
 }
 
 a:focus-visible,

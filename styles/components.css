@@ -1,0 +1,11 @@
+/* Global component-level styles */
+
+button,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+.hit-area {
+  min-width: var(--hit-area, 44px);
+  min-height: var(--hit-area, 44px);
+}
