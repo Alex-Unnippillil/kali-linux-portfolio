@@ -12,6 +12,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import FocusFollowsMouseToggle from "./accessibility/FocusFollowsMouseToggle";
 
 export default function Settings() {
   const {
@@ -31,6 +32,7 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    setFocusFollowsMouse,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -80,6 +82,8 @@ export default function Settings() {
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
+      if (parsed.focusFollowsMouse !== undefined)
+        setFocusFollowsMouse(Boolean(parsed.focusFollowsMouse));
     } catch (err) {
       console.error("Invalid settings", err);
     }
@@ -101,6 +105,7 @@ export default function Settings() {
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
     setTheme("default");
+    setFocusFollowsMouse(defaults.focusFollowsMouse);
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
@@ -252,6 +257,7 @@ export default function Settings() {
               ariaLabel="High Contrast"
             />
           </div>
+          <FocusFollowsMouseToggle />
           <div className="flex justify-center my-4 items-center">
             <span className="mr-2 text-ubt-grey">Haptics:</span>
             <ToggleSwitch
