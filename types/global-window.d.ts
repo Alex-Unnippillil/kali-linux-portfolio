@@ -13,6 +13,7 @@ declare global {
     documentPictureInPicture?: {
       requestWindow: (options?: PictureInPictureWindowOptions) => Promise<Window>;
     };
+    idleResetController?: import('../src/system/idleReset').IdleResetController;
   }
 }
 
