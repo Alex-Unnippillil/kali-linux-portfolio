@@ -1,6 +1,5 @@
-import Image from 'next/image';
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import AppTile from '../../components/apps/AppTile';
 
 const AppsPage = () => {
   const [apps, setApps] = useState([]);
@@ -41,24 +40,14 @@ const AppsPage = () => {
         className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
       >
         {filteredApps.map((app) => (
-          <Link
+          <AppTile
             key={app.id}
+            id={app.id}
+            title={app.title}
+            icon={app.icon}
             href={`/apps/${app.id}`}
-            className="flex flex-col items-center rounded border p-4 text-center focus:outline-none focus:ring"
-            aria-label={app.title}
-          >
-            {app.icon && (
-              <Image
-                src={app.icon}
-                alt=""
-                width={64}
-                height={64}
-                sizes="64px"
-                className="h-16 w-16"
-              />
-            )}
-            <span className="mt-2">{app.title}</span>
-          </Link>
+            offlineCapable={Boolean(app.offlineCapable)}
+          />
         ))}
       </div>
     </div>

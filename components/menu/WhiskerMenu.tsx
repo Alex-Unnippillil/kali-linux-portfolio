@@ -10,6 +10,7 @@ type AppMeta = {
   icon: string;
   disabled?: boolean;
   favourite?: boolean;
+  offlineCapable?: boolean;
 };
 
 const CATEGORIES = [

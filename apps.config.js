@@ -200,6 +200,27 @@ const displayContact = createDisplay(ContactApp);
 
 const displayHashcat = createDisplay(HashcatApp);
 
+const offlineAppIds = new Set([
+  'calculator',
+  'terminal',
+  'converter',
+  'sticky_notes',
+  'trash',
+  'serial-terminal',
+  'mimikatz/offline',
+  'ssh',
+  'http',
+  'html-rewriter',
+]);
+
+const applyOfflineFlag = (defaultOffline = false) => (app) => ({
+  ...app,
+  offlineCapable:
+    typeof app.offlineCapable === 'boolean'
+      ? app.offlineCapable
+      : defaultOffline || offlineAppIds.has(app.id),
+});
+
 const displayKismet = createDisplay(KismetApp);
 
 // Utilities list used for the "Utilities" folder on the desktop
@@ -267,7 +288,7 @@ const utilityList = [
     desktop_shortcut: false,
     screen: displayInputLab,
   },
-];
+].map(applyOfflineFlag(true));
 
 export const utilities = utilityList;
 
@@ -590,7 +611,7 @@ const gameList = [
     desktop_shortcut: false,
     screen: displayPinball,
   },
-];
+].map(applyOfflineFlag(true));
 
 export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
 
@@ -1055,6 +1076,6 @@ const apps = [
   ...utilities,
   // Games are included so they appear alongside apps
   ...games,
-];
+].map(applyOfflineFlag());
 
 export default apps;
