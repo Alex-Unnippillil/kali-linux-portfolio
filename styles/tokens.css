@@ -52,6 +52,12 @@
   --motion-medium: 300ms;
   --motion-slow: 500ms;
 
+  /* Window states */
+  --window-opacity-active: 1;
+  --window-opacity-inactive: 0.92;
+  --window-blur-active: 18px;
+  --window-blur-inactive: 10px;
+
   /* Fonts */
   --font-family-base: 'Ubuntu', sans-serif;
   --font-multiplier: 1;

@@ -612,6 +612,20 @@ export class Window extends Component {
     }
 
     render() {
+        const isInactive = !this.props.isFocused && !this.props.minimized && !this.state.grabbed;
+        const blurToken = isInactive ? '--window-blur-inactive' : '--window-blur-active';
+        const windowStyle = {
+            width: `${this.state.width}%`,
+            height: `${this.state.height}%`,
+            backdropFilter: `blur(var(${blurToken}))`,
+            WebkitBackdropFilter: `blur(var(${blurToken}))`,
+            ...(isInactive
+                ? { opacity: 'var(--window-opacity-inactive)' }
+                : !this.state.grabbed && !this.props.minimized
+                    ? { opacity: 'var(--window-opacity-active)' }
+                    : {}),
+        };
+
         return (
             <>
                 {this.state.snapPreview && (
@@ -634,7 +648,7 @@ export class Window extends Component {
                     bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
                 >
                     <div
-                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
+                        style={windowStyle}
                         className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                         id={this.id}
                         role="dialog"
