@@ -38,15 +38,6 @@ button:focus-visible {
     scroll-behavior: auto !important;
 }
 
-/* Top NavBar styling */
-
-.top-arrow-up {
-    border-inline-start: 5px solid transparent;
-    border-inline-end: 5px solid transparent;
-    border-block-end: 5px solid var(--color-muted);
-}
-
-
 .animateShow {
     animation: transformDownShow 200ms 1 forwards;
 }
@@ -403,35 +394,6 @@ dialog {
     list-style: "⇀";
 }
 
-@keyframes shake {
-    10%, 90% { transform: translateX(-1px); }
-    20%, 80% { transform: translateX(2px); }
-    30%, 50%, 70% { transform: translateX(-4px); }
-    40%, 60% { transform: translateX(4px); }
-}
-
-.shake {
-    animation: shake 0.5s;
-}
-
-@keyframes keypress {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(0.95); }
-}
-
-.key-press {
-    animation: keypress 0.1s;
-}
-
-@keyframes reveal {
-    from { opacity: 0; transform: scale(0.8); }
-    to { opacity: 1; transform: scale(1); }
-}
-
-.reveal {
-    animation: reveal 0.3s ease-out;
-}
-
 @keyframes tile-pop {
     from { transform: scale(0); }
     to { transform: scale(1); }
@@ -465,18 +427,6 @@ dialog {
 .score-pop {
     display: inline-block;
     animation: score-pop 0.3s ease-out;
-}
-
-@keyframes hangman-draw {
-    from { stroke-dashoffset: 100; }
-    to { stroke-dashoffset: 0; }
-}
-
-.hangman-part {
-    stroke-dasharray: 100;
-    stroke-dashoffset: 100;
-    animation: hangman-draw 0.5s ease-out forwards;
-
 }
 
 @keyframes word-found-highlight {
@@ -514,15 +464,6 @@ button:focus-visible,
 textarea:focus-visible {
     outline: var(--focus-outline-width) solid var(--focus-outline-color);
     outline-offset: 2px;
-}
-
-/* Enable scroll snapping for gallery containers */
-.gallery-container {
-    scroll-snap-type: x mandatory;
-}
-
-.gallery-container > * {
-    scroll-snap-align: start;
 }
 
 /* High contrast overrides */

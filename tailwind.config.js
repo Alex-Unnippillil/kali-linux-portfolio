@@ -2,11 +2,12 @@ const plugin = require('tailwindcss/plugin');
 
 module.exports = {
   darkMode: 'class',
-  mode: 'jit',
   content: [
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
     './pages/**/*.{js,ts,jsx,tsx}',
     './components/**/*.{js,ts,jsx,tsx}',
     './apps/**/*.{js,ts,jsx,tsx}',
+    './games/**/*.{js,ts,jsx,tsx}',
     './hooks/**/*.{js,ts,jsx,tsx}',
   ],
   theme: {
@@ -95,17 +96,5 @@ module.exports = {
       },
     },
   },
-  plugins: [
-    plugin(function ({ addUtilities }) {
-      const cols = {};
-      for (let i = 1; i <= 12; i++) {
-        const width = `${(i / 12) * 100}%`;
-        cols[`.col-${i}`] = { flex: `0 0 ${width}`, maxWidth: width };
-        if (i < 12) {
-          cols[`.offset-${i}`] = { marginLeft: width };
-        }
-      }
-      addUtilities(cols, ['responsive']);
-    }),
-  ],
+  plugins: [],
 };
