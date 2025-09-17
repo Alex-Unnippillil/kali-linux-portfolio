@@ -219,6 +219,9 @@ Copy `.env.local.example` to `.env.local` and fill in required values.
 | `NEXT_PUBLIC_SHOW_BETA` | Set to `1` to display a small beta badge in the UI. |
 | `FEATURE_TOOL_APIS` | Enable server-side tool API routes like Hydra and John; set to `enabled` to allow. |
 | `FEATURE_HYDRA` | Allow the Hydra API (`/api/hydra`); requires `FEATURE_TOOL_APIS`. |
+| `ENABLE_CSP_REPORTING` | Toggle CSP violation reporting headers. Defaults to enabled during `next dev`; set to `true` in production if you want to collect reports or `false` to disable entirely. |
+| `CSP_REPORT_ENDPOINT` | Absolute URL used by the `Report-To` header. Defaults to `/api/reporting/csp` (same-origin). |
+| `CSP_REPORT_URI` | Optional override for the CSP `report-uri` directive path. |
 
 > In production (Vercel/GitHub Actions), set these as **environment variables or repo secrets**. See **CI/CD** below.
 
@@ -233,6 +236,13 @@ Defined in `next.config.js`. See [CSP External Domains](#csp-external-domains) f
 - `Referrer-Policy: strict-origin-when-cross-origin`
 - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
 - `X-Frame-Options: SAMEORIGIN`
+- `Report-To` (points at `/api/reporting/csp` when reporting is enabled)
+
+### CSP reporting dashboard
+
+- When `ENABLE_CSP_REPORTING` is active, the CSP includes `report-uri` and `report-to` directives that target the stub API at `/api/reporting/csp`.
+- The API stores the latest reports in memory for inspection during development. Visit `/dev/security` to review counts, filter by directive/source, and clear the buffer.
+- For staging/production, provide an absolute URL through `CSP_REPORT_ENDPOINT` if you want browsers to post reports to a remote collector. Set `ENABLE_CSP_REPORTING=false` to omit the headers entirely.
 
 ### CSP External Domains
 
