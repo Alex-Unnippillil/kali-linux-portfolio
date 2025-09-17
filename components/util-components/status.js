@@ -1,13 +1,26 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Image from 'next/image';
 import SmallArrow from "./small_arrow";
 import { useSettings } from '../../hooks/useSettings';
+import useNotifications from '../../hooks/useNotifications';
 
 const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
 
 export default function Status() {
   const { allowNetwork } = useSettings();
+  const { doNotDisturb, indicator, notifications } = useNotifications();
   const [online, setOnline] = useState(true);
+
+  const pendingNotifications = useMemo(
+    () =>
+      Object.values(notifications).reduce(
+        (sum, list) => sum + (Array.isArray(list) ? list.length : 0),
+        0,
+      ),
+    [notifications],
+  );
+
+  const hasActiveNotifications = pendingNotifications > 0;
 
   useEffect(() => {
     const pingServer = async () => {
@@ -40,6 +53,32 @@ export default function Status() {
 
   return (
     <div className="flex justify-center items-center">
+      {doNotDisturb && (
+        <span
+          className="mx-1.5 relative"
+          title={
+            indicator === 'muted' && hasActiveNotifications
+              ? `Do Not Disturb on — ${pendingNotifications} notification${
+                  pendingNotifications === 1 ? '' : 's'
+                } silenced`
+              : 'Do Not Disturb on'
+          }
+        >
+          <Image
+            width={16}
+            height={16}
+            src="/themes/Yaru/status/changes-prevent-symbolic.svg"
+            alt="Do Not Disturb"
+            className="inline status-symbol w-4 h-4"
+            sizes="16px"
+          />
+          {indicator === 'muted' && hasActiveNotifications && (
+            <span className="absolute -top-1 -right-1 min-w-[1rem] h-4 px-1 bg-ub-orange text-black text-[10px] font-semibold rounded-full flex items-center justify-center">
+              {pendingNotifications > 9 ? '9+' : pendingNotifications}
+            </span>
+          )}
+        </span>
+      )}
       <span
         className="mx-1.5 relative"
         title={online ? (allowNetwork ? 'Online' : 'Online (requests blocked)') : 'Offline'}
@@ -52,6 +91,9 @@ export default function Status() {
           className="inline status-symbol w-4 h-4"
           sizes="16px"
         />
+        {indicator === 'active' && hasActiveNotifications && (
+          <span className="absolute -bottom-1 -right-1 w-2 h-2 bg-ub-orange rounded-full" />
+        )}
         {!allowNetwork && (
           <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
         )}
