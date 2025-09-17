@@ -4,6 +4,14 @@
 
 const { validateServerEnv: validateEnv } = require('./lib/validate.js');
 
+const REPORTING_GROUP = 'csp-endpoint';
+const DEFAULT_REPORTING_PATH = '/api/reporting/csp';
+const reportUri = process.env.CSP_REPORT_URI || DEFAULT_REPORTING_PATH;
+const reportToEndpoint = process.env.CSP_REPORT_ENDPOINT || reportUri;
+const enableSecurityReporting =
+  process.env.ENABLE_CSP_REPORTING === 'true' ||
+  (process.env.NODE_ENV !== 'production' && process.env.ENABLE_CSP_REPORTING !== 'false');
+
 const ContentSecurityPolicy = [
   "default-src 'self'",
   // Prevent injection of external base URIs
@@ -31,6 +39,9 @@ const ContentSecurityPolicy = [
   "frame-ancestors 'self'",
   // Enforce HTTPS for all requests
   'upgrade-insecure-requests',
+  ...(enableSecurityReporting
+    ? [`report-to ${REPORTING_GROUP}`, `report-uri ${reportUri}`]
+    : []),
 ].join('; ');
 
 const securityHeaders = [
@@ -55,6 +66,22 @@ const securityHeaders = [
     key: 'X-Frame-Options',
     value: 'SAMEORIGIN',
   },
+  ...(enableSecurityReporting
+    ? [
+        {
+          key: 'Report-To',
+          value: JSON.stringify({
+            group: REPORTING_GROUP,
+            max_age: 10886400,
+            endpoints: [{ url: reportToEndpoint }],
+          }),
+        },
+        {
+          key: 'Reporting-Endpoints',
+          value: `${REPORTING_GROUP}="${reportToEndpoint}"`,
+        },
+      ]
+    : []),
 ];
 
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
