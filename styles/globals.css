@@ -3,19 +3,18 @@
 /* Accessible theme color palette meeting WCAG AA contrast ratios */
 :root {
   /* Base colors */
-  --color-bg: #0f1317; /* kali background */
-  --color-text: #f5f5f5; /* text on dark backgrounds */
+  --color-text: var(--color-kali-ice); /* text on dark backgrounds */
   /* Brand accents */
-  --color-primary: #1793d1; /* kali blue accent */
-  --color-secondary: #1a1f26; /* complementary dark */
-  --color-accent: #1793d1; /* accent matches primary */
+  --color-primary: var(--color-kali-electric); /* kali blue accent */
+  --color-secondary: var(--color-kali-surface); /* complementary dark */
+  --color-accent: var(--color-kali-electric); /* accent matches primary */
   /* Utility colors */
-  --color-muted: #2a2e36; /* muted surfaces */
-  --color-surface: #1a1f26; /* panel surfaces */
-  --color-inverse: #000000; /* inverse of text */
-  --color-border: #2a2e36; /* subtle borders */
+  --color-muted: var(--color-kali-slate); /* muted surfaces */
+  --color-surface: var(--color-kali-surface); /* panel surfaces */
+  --color-inverse: var(--color-bg-base); /* inverse of text */
+  --color-border: var(--color-kali-border-strong); /* subtle borders */
   --color-terminal: #00ff00; /* terminal green */
-  --color-dark: #0c0f12; /* card back */
+  --color-dark: var(--color-kali-window-title); /* card back */
   --color-focus-ring: var(--color-accent);
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
@@ -25,6 +24,7 @@
 /* Dark theme */
 html[data-theme='dark'] {
   --color-bg: #000000;
+  --color-bg-base: #000000;
   --color-text: #e5e5e5;
   --color-primary: #1e88e5;
   --color-secondary: #121212;
@@ -40,6 +40,7 @@ html[data-theme='dark'] {
 /* Neon theme */
 html[data-theme='neon'] {
   --color-bg: #000000;
+  --color-bg-base: #000000;
   --color-text: #ffffff;
   --color-primary: #39ff14;
   --color-secondary: #1a1a1a;
@@ -55,6 +56,7 @@ html[data-theme='neon'] {
 /* Matrix theme */
 html[data-theme='matrix'] {
   --color-bg: #000000;
+  --color-bg-base: #000000;
   --color-text: #00ff00;
   --color-primary: #00ff00;
   --color-secondary: #001100;
