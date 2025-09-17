@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Image from 'next/image';
-import UbuntuApp from '../base/ubuntu_app';
+import DrawerAppTile from '../screen/navbar/drawer/DrawerAppTile';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 
@@ -163,15 +163,15 @@ const WhiskerMenu: React.FC = () => {
             />
             <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
               {currentApps.map((app, idx) => (
-                <div key={app.id} className={idx === highlight ? 'ring-2 ring-ubb-orange' : ''}>
-                  <UbuntuApp
-                    id={app.id}
-                    icon={app.icon}
-                    name={app.title}
-                    openApp={() => openSelectedApp(app.id)}
-                    disabled={app.disabled}
-                  />
-                </div>
+                <DrawerAppTile
+                  key={app.id}
+                  id={app.id}
+                  title={app.title}
+                  icon={app.icon}
+                  disabled={app.disabled}
+                  onOpen={openSelectedApp}
+                  className={idx === highlight ? 'ring-2 ring-ubb-orange' : ''}
+                />
               ))}
             </div>
           </div>
