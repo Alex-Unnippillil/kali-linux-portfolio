@@ -21,9 +21,10 @@ import {
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
   defaults,
+  normalizeDensityValue,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
-type Density = 'regular' | 'compact';
+export type Density = 'comfortable' | 'cozy' | 'compact';
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -76,10 +77,12 @@ interface SettingsContextValue {
   setTheme: (value: string) => void;
 }
 
+const normalizedDefaultDensity = normalizeDensityValue(defaults.density) as Density;
+
 export const SettingsContext = createContext<SettingsContextValue>({
   accent: defaults.accent,
   wallpaper: defaults.wallpaper,
-  density: defaults.density as Density,
+  density: normalizedDefaultDensity,
   reducedMotion: defaults.reducedMotion,
   fontScale: defaults.fontScale,
   highContrast: defaults.highContrast,
@@ -104,7 +107,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [accent, setAccent] = useState<string>(defaults.accent);
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
-  const [density, setDensity] = useState<Density>(defaults.density as Density);
+  const [density, setDensity] = useState<Density>(normalizedDefaultDensity);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
   const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
@@ -119,7 +122,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     (async () => {
       setAccent(await loadAccent());
       setWallpaper(await loadWallpaper());
-      setDensity((await loadDensity()) as Density);
+      setDensity(normalizeDensityValue(await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
       setFontScale(await loadFontScale());
       setHighContrast(await loadHighContrast());
@@ -157,8 +160,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [wallpaper]);
 
   useEffect(() => {
+    document.documentElement.dataset.density = density;
     const spacing: Record<Density, Record<string, string>> = {
-      regular: {
+      comfortable: {
+        '--space-1': '0.375rem',
+        '--space-2': '0.75rem',
+        '--space-3': '1rem',
+        '--space-4': '1.5rem',
+        '--space-5': '2rem',
+        '--space-6': '2.5rem',
+      },
+      cozy: {
         '--space-1': '0.25rem',
         '--space-2': '0.5rem',
         '--space-3': '0.75rem',

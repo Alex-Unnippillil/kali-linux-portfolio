@@ -60,6 +60,55 @@
   /* Focus outline */
   --focus-outline-color: var(--color-ubt-blue);
   --focus-outline-width: 2px;
+
+  /* App grid density tokens */
+  --app-grid-gap: 1.25rem;
+  --app-grid-item-min-width: 11rem;
+  --app-grid-item-height: 7.25rem;
+  --app-grid-item-padding: 0.625rem;
+
+  --density-comfortable-grid-gap: 1.5rem;
+  --density-comfortable-grid-min-width: 13rem;
+  --density-comfortable-grid-height: 8rem;
+  --density-comfortable-grid-padding: 0.75rem;
+
+  --density-cozy-grid-gap: 1.25rem;
+  --density-cozy-grid-min-width: 11rem;
+  --density-cozy-grid-height: 7.25rem;
+  --density-cozy-grid-padding: 0.625rem;
+
+  --density-compact-grid-gap: 1rem;
+  --density-compact-grid-min-width: 9.5rem;
+  --density-compact-grid-height: 6.5rem;
+  --density-compact-grid-padding: 0.5rem;
+
+  --app-grid-row-height: calc(var(--app-grid-item-height) + var(--app-grid-gap));
+}
+
+:root[data-density='comfortable'] {
+  --app-grid-gap: var(--density-comfortable-grid-gap);
+  --app-grid-item-min-width: var(--density-comfortable-grid-min-width);
+  --app-grid-item-height: var(--density-comfortable-grid-height);
+  --app-grid-item-padding: var(--density-comfortable-grid-padding);
+}
+
+:root[data-density='compact'] {
+  --app-grid-gap: var(--density-compact-grid-gap);
+  --app-grid-item-min-width: var(--density-compact-grid-min-width);
+  --app-grid-item-height: var(--density-compact-grid-height);
+  --app-grid-item-padding: var(--density-compact-grid-padding);
+}
+
+:root[data-density='cozy'],
+:root[data-density='regular'] {
+  --app-grid-gap: var(--density-cozy-grid-gap);
+  --app-grid-item-min-width: var(--density-cozy-grid-min-width);
+  --app-grid-item-height: var(--density-cozy-grid-height);
+  --app-grid-item-padding: var(--density-cozy-grid-padding);
+}
+
+:root[data-density] {
+  --app-grid-row-height: calc(var(--app-grid-item-height) + var(--app-grid-gap));
 }
 
 /* High contrast theme */

@@ -6,7 +6,7 @@ import { getTheme, setTheme } from './theme';
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
   wallpaper: 'wall-2',
-  density: 'regular',
+  density: 'cozy',
   reducedMotion: false,
   fontScale: 1,
   highContrast: false,
@@ -15,6 +15,16 @@ const DEFAULT_SETTINGS = {
   allowNetwork: false,
   haptics: true,
 };
+
+const DENSITY_VALUES = new Set(['comfortable', 'cozy', 'compact']);
+
+export function normalizeDensityValue(density) {
+  if (density === 'regular') return 'cozy';
+  if (typeof density === 'string' && DENSITY_VALUES.has(density)) {
+    return density;
+  }
+  return DEFAULT_SETTINGS.density;
+}
 
 export async function getAccent() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.accent;
@@ -38,12 +48,13 @@ export async function setWallpaper(wallpaper) {
 
 export async function getDensity() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.density;
-  return window.localStorage.getItem('density') || DEFAULT_SETTINGS.density;
+  const stored = window.localStorage.getItem('density');
+  return normalizeDensityValue(stored || DEFAULT_SETTINGS.density);
 }
 
 export async function setDensity(density) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('density', density);
+  window.localStorage.setItem('density', normalizeDensityValue(density));
 }
 
 export async function getReducedMotion() {
