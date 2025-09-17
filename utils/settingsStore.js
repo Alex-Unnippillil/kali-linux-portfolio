@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  focusFollowsMouse: false,
 };
 
 export async function getAccent() {
@@ -91,6 +92,17 @@ export async function setLargeHitAreas(value) {
   window.localStorage.setItem('large-hit-areas', value ? 'true' : 'false');
 }
 
+export async function getFocusFollowsMouse() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.focusFollowsMouse;
+  const value = window.localStorage.getItem('focus-follows-mouse');
+  return value === null ? DEFAULT_SETTINGS.focusFollowsMouse : value === 'true';
+}
+
+export async function setFocusFollowsMouse(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('focus-follows-mouse', value ? 'true' : 'false');
+}
+
 export async function getHaptics() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.haptics;
   const val = window.localStorage.getItem('haptics');
@@ -137,6 +149,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('focus-follows-mouse');
 }
 
 export async function exportSettings() {
@@ -151,6 +164,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    focusFollowsMouse,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +176,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getFocusFollowsMouse(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +190,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    focusFollowsMouse,
     theme,
   });
 }
@@ -199,6 +215,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    focusFollowsMouse,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +228,8 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (focusFollowsMouse !== undefined)
+    await setFocusFollowsMouse(focusFollowsMouse);
   if (theme !== undefined) setTheme(theme);
 }
 

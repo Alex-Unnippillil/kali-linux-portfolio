@@ -7,6 +7,7 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import { attachFocusOnHover } from '../../src/wm/focus';
 
 export class Window extends Component {
     constructor(props) {
@@ -37,6 +38,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._hoverCleanup = null;
     }
 
     componentDidMount() {
@@ -53,6 +55,7 @@ export class Window extends Component {
         window.addEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.addEventListener('super-arrow', this.handleSuperArrow);
+        this.setupFocusFollow(root);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -66,9 +69,21 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        if (this._hoverCleanup) {
+            this._hoverCleanup();
+            this._hoverCleanup = null;
+        }
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+    }
+
+    setupFocusFollow = (node) => {
+        if (!node) return;
+        if (this._hoverCleanup) {
+            this._hoverCleanup();
+        }
+        this._hoverCleanup = attachFocusOnHover(node, () => this.focusWindow());
     }
 
     setDefaultWindowDimenstion = () => {
