@@ -22,11 +22,16 @@ const PipPortalProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const pipWindowRef = useRef<Window | null>(null);
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const [content, setContent] = useState<React.ReactNode>(null);
+  const pageHideCleanupRef = useRef<(() => void) | null>(null);
 
   const close = useCallback(() => {
     const win = pipWindowRef.current;
     if (win && !win.closed) {
       win.close();
+    }
+    if (pageHideCleanupRef.current) {
+      pageHideCleanupRef.current();
+      pageHideCleanupRef.current = null;
     }
     pipWindowRef.current = null;
     setContainer(null);
@@ -47,8 +52,16 @@ const PipPortalProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         setContainer(win.document.body);
 
         const handlePageHide = () => close();
+        if (pageHideCleanupRef.current) {
+          pageHideCleanupRef.current();
+        }
         window.addEventListener('pagehide', handlePageHide, { once: true });
         win.addEventListener('pagehide', handlePageHide, { once: true });
+        pageHideCleanupRef.current = () => {
+          window.removeEventListener('pagehide', handlePageHide);
+          win?.removeEventListener('pagehide', handlePageHide);
+          pageHideCleanupRef.current = null;
+        };
       }
       setContent(node);
     },
@@ -56,10 +69,21 @@ const PipPortalProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   );
 
   useEffect(() => {
+    return () => {
+      if (pageHideCleanupRef.current) {
+        pageHideCleanupRef.current();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const win = pipWindowRef.current;
     if (!win) return;
 
     const handleUnload = () => {
+      if (pageHideCleanupRef.current) {
+        pageHideCleanupRef.current();
+      }
       pipWindowRef.current = null;
       setContainer(null);
       setContent(null);

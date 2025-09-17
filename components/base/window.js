@@ -37,6 +37,8 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._shrinkTimeout = null;
+        this._closeTimeout = null;
     }
 
     componentDidMount() {
@@ -68,6 +70,15 @@ export class Window extends Component {
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+            this._usageTimeout = null;
+        }
+        if (this._shrinkTimeout) {
+            clearTimeout(this._shrinkTimeout);
+            this._shrinkTimeout = null;
+        }
+        if (this._closeTimeout) {
+            clearTimeout(this._closeTimeout);
+            this._closeTimeout = null;
         }
     }
 
@@ -141,6 +152,11 @@ export class Window extends Component {
 
         container.style.padding = '0px';
 
+        if (this._shrinkTimeout) {
+            clearTimeout(this._shrinkTimeout);
+            this._shrinkTimeout = null;
+        }
+
         const shrink = () => {
             const usage = this.computeContentUsage();
             if (usage >= 80) return;
@@ -149,7 +165,13 @@ export class Window extends Component {
                 height: Math.max(prev.height - 1, 20)
             }), () => {
                 if (this.computeContentUsage() < 80) {
-                    setTimeout(shrink, 50);
+                    if (this._shrinkTimeout) {
+                        clearTimeout(this._shrinkTimeout);
+                    }
+                    this._shrinkTimeout = setTimeout(() => {
+                        this._shrinkTimeout = null;
+                        shrink();
+                    }, 50);
                 }
             });
         };
@@ -471,8 +493,12 @@ export class Window extends Component {
         this.setState({ closed: true }, () => {
             this.deactivateOverlay();
             this.props.hideSideBar(this.id, false);
-            setTimeout(() => {
+            if (this._closeTimeout) {
+                clearTimeout(this._closeTimeout);
+            }
+            this._closeTimeout = setTimeout(() => {
                 this.props.closed(this.id)
+                this._closeTimeout = null;
             }, 300) // after 300ms this window will be unmounted from parent (Desktop)
         });
     }
@@ -519,46 +545,46 @@ export class Window extends Component {
     }
 
     handleKeyDown = (e) => {
+        const prevent = () => {
+            if (typeof e.preventDefault === 'function') {
+                e.preventDefault();
+            }
+            if (typeof e.stopPropagation === 'function') {
+                e.stopPropagation();
+            }
+        };
         if (e.key === 'Escape') {
             this.closeWindow();
         } else if (e.key === 'Tab') {
             this.focusWindow();
         } else if (e.altKey) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                prevent();
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                prevent();
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                prevent();
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                prevent();
                 this.snapWindow('top');
             }
             this.focusWindow();
         } else if (e.shiftKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                prevent();
                 this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                prevent();
                 this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                prevent();
                 this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                prevent();
                 this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
             }
             this.focusWindow();
@@ -830,11 +856,19 @@ export class WindowMainScreen extends Component {
         this.state = {
             setDarkBg: false,
         }
+        this._darkBgTimeout = null;
     }
     componentDidMount() {
-        setTimeout(() => {
+        this._darkBgTimeout = setTimeout(() => {
             this.setState({ setDarkBg: true });
+            this._darkBgTimeout = null;
         }, 3000);
+    }
+    componentWillUnmount() {
+        if (this._darkBgTimeout) {
+            clearTimeout(this._darkBgTimeout);
+            this._darkBgTimeout = null;
+        }
     }
     render() {
         return (
