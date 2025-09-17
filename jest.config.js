@@ -13,7 +13,7 @@ const customJestConfig = {
   testPathIgnorePatterns: [
     '<rootDir>/playwright/',
     '<rootDir>/__tests__/playwright/',
-    '<rootDir>/tests/',
+    '<rootDir>/tests/(?!theming/)',
   ],
 };
 
