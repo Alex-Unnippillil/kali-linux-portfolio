@@ -1,16 +1,10 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Image from 'next/image';
-import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
-
-type AppMeta = {
-  id: string;
-  title: string;
-  icon: string;
-  disabled?: boolean;
-  favourite?: boolean;
-};
+import DrawerAppItem from '../screen/navbar/drawer/DrawerAppItem';
+import QuickLaunchSection from '../screen/navbar/drawer/QuickLaunchSection';
+import type { DrawerAppMeta } from '../screen/navbar/drawer/types';
 
 const CATEGORIES = [
   { id: 'all', label: 'All' },
@@ -20,29 +14,68 @@ const CATEGORIES = [
   { id: 'games', label: 'Games' }
 ];
 
+const PINNED_STORAGE_KEY = 'pinnedApps';
+const QUICK_LAUNCH_STORAGE_KEY = 'quickLaunchApps';
+
+const arraysEqual = (a: string[], b: string[]) =>
+  a.length === b.length && a.every((value, index) => value === b[index]);
+
 const WhiskerMenu: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState('all');
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
+  const [pinnedIds, setPinnedIds] = useState<string[]>(() => {
+    const all = apps as DrawerAppMeta[];
+    return all.filter(app => app.favourite).map(app => app.id);
+  });
+  const [quickLaunchIds, setQuickLaunchIds] = useState<string[]>(() => {
+    if (!safeLocalStorage) return [];
+    try {
+      const stored = safeLocalStorage.getItem(QUICK_LAUNCH_STORAGE_KEY);
+      if (!stored) return [];
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((id: unknown): id is string => typeof id === 'string');
+      }
+    } catch {
+      // ignore malformed storage
+    }
+    return [];
+  });
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const allApps: AppMeta[] = apps as any;
-  const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
+  const allApps: DrawerAppMeta[] = apps as any;
+  const defaultPinnedIds = useMemo(
+    () => allApps.filter(app => app.favourite).map(app => app.id),
+    [allApps]
+  );
+
+  const pinnedSet = useMemo(() => new Set(pinnedIds), [pinnedIds]);
+  const quickLaunchSet = useMemo(() => new Set(quickLaunchIds), [quickLaunchIds]);
+
+  const favoriteApps = useMemo(
+    () => allApps.filter(app => pinnedSet.has(app.id)),
+    [allApps, pinnedSet]
+  );
+
   const recentApps = useMemo(() => {
     try {
       const ids: string[] = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]');
-      return ids.map(id => allApps.find(a => a.id === id)).filter(Boolean) as AppMeta[];
+      return ids
+        .map(id => allApps.find(a => a.id === id))
+        .filter(Boolean) as DrawerAppMeta[];
     } catch {
       return [];
     }
   }, [allApps, open]);
-  const utilityApps: AppMeta[] = utilities as any;
-  const gameApps: AppMeta[] = games as any;
+
+  const utilityApps: DrawerAppMeta[] = utilities as any;
+  const gameApps: DrawerAppMeta[] = games as any;
 
   const currentApps = useMemo(() => {
-    let list: AppMeta[];
+    let list: DrawerAppMeta[];
     switch (category) {
       case 'favorites':
         list = favoriteApps;
@@ -66,13 +99,68 @@ const WhiskerMenu: React.FC = () => {
     return list;
   }, [category, query, allApps, favoriteApps, recentApps, utilityApps, gameApps]);
 
+  const quickLaunchApps = useMemo(() => {
+    return quickLaunchIds
+      .map(id => allApps.find(app => app.id === id))
+      .filter(Boolean) as DrawerAppMeta[];
+  }, [quickLaunchIds, allApps]);
+
+  const syncPinnedFromStorage = useCallback(() => {
+    if (!safeLocalStorage) {
+      setPinnedIds(prev => (arraysEqual(prev, defaultPinnedIds) ? prev : defaultPinnedIds));
+      return;
+    }
+    try {
+      const stored = safeLocalStorage.getItem(PINNED_STORAGE_KEY);
+      if (!stored) {
+        setPinnedIds(prev => (arraysEqual(prev, defaultPinnedIds) ? prev : defaultPinnedIds));
+        return;
+      }
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        const sanitized = parsed.filter((id: unknown): id is string => typeof id === 'string');
+        const combined = Array.from(new Set([...defaultPinnedIds, ...sanitized]));
+        setPinnedIds(prev => (arraysEqual(prev, combined) ? prev : combined));
+        return;
+      }
+    } catch {
+      // ignore parse errors and fall back to defaults
+    }
+    setPinnedIds(prev => (arraysEqual(prev, defaultPinnedIds) ? prev : defaultPinnedIds));
+  }, [defaultPinnedIds]);
+
+  const syncQuickLaunchFromStorage = useCallback(() => {
+    if (!safeLocalStorage) {
+      setQuickLaunchIds([]);
+      return;
+    }
+    try {
+      const stored = safeLocalStorage.getItem(QUICK_LAUNCH_STORAGE_KEY);
+      if (!stored) {
+        setQuickLaunchIds([]);
+        return;
+      }
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        const sanitized = parsed.filter((id: unknown): id is string => typeof id === 'string');
+        setQuickLaunchIds(prev => (arraysEqual(prev, sanitized) ? prev : sanitized));
+        return;
+      }
+    } catch {
+      // ignore malformed storage
+    }
+    setQuickLaunchIds([]);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     setHighlight(0);
   }, [open, category, query]);
 
   const openSelectedApp = (id: string) => {
-    window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
+    }
     setOpen(false);
   };
 
@@ -114,6 +202,71 @@ const WhiskerMenu: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [open]);
 
+  useEffect(() => {
+    syncPinnedFromStorage();
+    syncQuickLaunchFromStorage();
+  }, [open, syncPinnedFromStorage, syncQuickLaunchFromStorage]);
+
+  useEffect(() => {
+    const handlePinnedChange = () => syncPinnedFromStorage();
+    const handleQuickLaunchChange = () => syncQuickLaunchFromStorage();
+
+    window.addEventListener('pinnedAppsChange', handlePinnedChange);
+    window.addEventListener('quickLaunchChange', handleQuickLaunchChange);
+
+    return () => {
+      window.removeEventListener('pinnedAppsChange', handlePinnedChange);
+      window.removeEventListener('quickLaunchChange', handleQuickLaunchChange);
+    };
+  }, [syncPinnedFromStorage, syncQuickLaunchFromStorage]);
+
+  const updatePinned = useCallback((updater: (current: string[]) => string[]) => {
+    setPinnedIds(prev => {
+      const next = updater(prev);
+      if (arraysEqual(prev, next)) return prev;
+      if (safeLocalStorage) {
+        safeLocalStorage.setItem(PINNED_STORAGE_KEY, JSON.stringify(next));
+      }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('pinnedAppsChange', { detail: next }));
+      }
+      return next;
+    });
+  }, []);
+
+  const handlePin = useCallback((id: string) => {
+    updatePinned(prev => (prev.includes(id) ? prev : [...prev, id]));
+  }, [updatePinned]);
+
+  const handleUnpin = useCallback((id: string) => {
+    updatePinned(prev => prev.filter(appId => appId !== id));
+  }, [updatePinned]);
+
+  const updateQuickLaunch = useCallback((updater: (current: string[]) => string[]) => {
+    setQuickLaunchIds(prev => {
+      const next = updater(prev);
+      if (arraysEqual(prev, next)) return prev;
+      if (safeLocalStorage) {
+        safeLocalStorage.setItem(QUICK_LAUNCH_STORAGE_KEY, JSON.stringify(next));
+      }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('quickLaunchChange', { detail: next }));
+      }
+      return next;
+    });
+  }, []);
+
+  const handleAddQuickLaunch = useCallback((id: string) => {
+    updateQuickLaunch(prev => (prev.includes(id) ? prev : [...prev, id]));
+  }, [updateQuickLaunch]);
+
+  const handleRemoveQuickLaunch = useCallback((id: string) => {
+    updateQuickLaunch(prev => prev.filter(appId => appId !== id));
+  }, [updateQuickLaunch]);
+
+  const showQuickLaunch =
+    category === 'all' && !query && quickLaunchApps.length > 0;
+
   return (
     <div className="relative">
       <button
@@ -142,7 +295,7 @@ const WhiskerMenu: React.FC = () => {
             }
           }}
         >
-          <div className="flex flex-col bg-gray-800 p-2">
+          <div className="flex flex-col bg-gray-800 p-2" role="menu">
             {CATEGORIES.map(cat => (
               <button
                 key={cat.id}
@@ -161,17 +314,32 @@ const WhiskerMenu: React.FC = () => {
               onChange={e => setQuery(e.target.value)}
               autoFocus
             />
+            {showQuickLaunch && (
+              <QuickLaunchSection
+                apps={quickLaunchApps}
+                onOpen={openSelectedApp}
+                onPin={handlePin}
+                onUnpin={handleUnpin}
+                onAddQuickLaunch={handleAddQuickLaunch}
+                onRemoveQuickLaunch={handleRemoveQuickLaunch}
+                pinnedSet={pinnedSet}
+                quickLaunchSet={quickLaunchSet}
+              />
+            )}
             <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
               {currentApps.map((app, idx) => (
-                <div key={app.id} className={idx === highlight ? 'ring-2 ring-ubb-orange' : ''}>
-                  <UbuntuApp
-                    id={app.id}
-                    icon={app.icon}
-                    name={app.title}
-                    openApp={() => openSelectedApp(app.id)}
-                    disabled={app.disabled}
-                  />
-                </div>
+                <DrawerAppItem
+                  key={app.id}
+                  app={app}
+                  className={idx === highlight ? 'ring-2 ring-ubb-orange rounded' : ''}
+                  onOpen={openSelectedApp}
+                  onPin={handlePin}
+                  onUnpin={handleUnpin}
+                  onAddQuickLaunch={handleAddQuickLaunch}
+                  onRemoveQuickLaunch={handleRemoveQuickLaunch}
+                  isPinned={pinnedSet.has(app.id)}
+                  isQuickLaunch={quickLaunchSet.has(app.id)}
+                />
               ))}
             </div>
           </div>
