@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import usePersistentState from "../../hooks/usePersistentState";
 import CrossfadePlayer from "./utils/crossfade";
 import Visualizer from "./Visualizer";
 import Lyrics from "./Lyrics";
+import MediaIndicator from "./MediaIndicator";
 
 interface Track {
   title: string;
@@ -31,6 +33,11 @@ const serialize = (tracks: Track[]) => JSON.stringify(tracks, null, 2);
 
 const isTrackArray = (v: unknown): v is Track[] =>
   Array.isArray(v) && v.every((t) => t && typeof t.url === "string");
+
+type IndicatorState = {
+  id: number;
+  message: string;
+};
 
 const SpotifyApp = () => {
   const [playlistText, setPlaylistText] = usePersistentState(
@@ -71,6 +78,46 @@ const SpotifyApp = () => {
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const isPlayingRef = useRef(false);
+  const indicatorTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const indicatorId = useRef(0);
+  const [indicator, setIndicator] = useState<IndicatorState | null>(null);
+  const queueRef = useRef(queue);
+
+  useEffect(() => {
+    queueRef.current = queue;
+  }, [queue]);
+
+  const showIndicator = useCallback((message: string) => {
+    indicatorId.current += 1;
+    setIndicator({ id: indicatorId.current, message });
+    if (indicatorTimeout.current) {
+      clearTimeout(indicatorTimeout.current);
+    }
+    indicatorTimeout.current = setTimeout(() => {
+      setIndicator(null);
+      indicatorTimeout.current = null;
+    }, 1200);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (indicatorTimeout.current) {
+        clearTimeout(indicatorTimeout.current);
+        indicatorTimeout.current = null;
+      }
+    },
+    [],
+  );
+
+  const setPlayingState = useCallback(
+    (value: boolean) => {
+      isPlayingRef.current = value;
+      setIsPlaying(value);
+    },
+    [],
+  );
 
   const loadPlaylist = () => {
     try {
@@ -118,30 +165,88 @@ const SpotifyApp = () => {
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  const next = () => {
-    if (!queue.length) return;
-    setCurrent((i) => (i + 1) % queue.length);
-  };
+  const advance = useCallback(
+    (direction: 1 | -1) => {
+      const q = queueRef.current;
+      const length = q.length;
+      if (!length) return;
+      setCurrent((i) => (i + (direction === 1 ? 1 : -1) + length) % length);
+      showIndicator(direction === 1 ? "Next track" : "Previous track");
+    },
+    [setCurrent, showIndicator],
+  );
 
-  const previous = () => {
-    if (!queue.length) return;
-    setCurrent((i) => (i - 1 + queue.length) % queue.length);
-  };
+  const next = useCallback(() => advance(1), [advance]);
 
-  const togglePlay = () => playerRef.current?.toggle();
+  const previous = useCallback(() => advance(-1), [advance]);
 
-  const handleKey = (e: React.KeyboardEvent) => {
-    if (e.code === "MediaTrackNext") {
-      e.preventDefault();
-      next();
-    } else if (e.code === "MediaTrackPrevious") {
-      e.preventDefault();
-      previous();
-    } else if (e.code === "MediaPlayPause") {
-      e.preventDefault();
-      togglePlay();
+  const togglePlay = useCallback(() => {
+    const wasPlaying = isPlayingRef.current;
+    playerRef.current?.toggle();
+    const playing = !wasPlaying;
+    setPlayingState(playing);
+    showIndicator(playing ? "Playing" : "Paused");
+  }, [setPlayingState, showIndicator]);
+
+  const handleMediaKey = useCallback(
+    (code: string) => {
+      if (code === "MediaTrackNext") {
+        next();
+      } else if (code === "MediaTrackPrevious") {
+        previous();
+      } else if (code === "MediaPlayPause") {
+        togglePlay();
+      }
+    },
+    [next, previous, togglePlay],
+  );
+
+  const handleKey = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (
+      e.code !== "MediaTrackNext" &&
+      e.code !== "MediaTrackPrevious" &&
+      e.code !== "MediaPlayPause"
+    ) {
+      return;
     }
+    e.preventDefault();
+    e.stopPropagation();
+    handleMediaKey(e.code);
   };
+
+  useEffect(() => {
+    const handle = (event: KeyboardEvent) => {
+      if (
+        event.code !== "MediaTrackNext" &&
+        event.code !== "MediaTrackPrevious" &&
+        event.code !== "MediaPlayPause"
+      ) {
+        return;
+      }
+
+      const root = document.getElementById("spotify");
+      let isFocused = false;
+      if (root) {
+        if (!root.classList.contains("notFocused")) {
+          const active = document.activeElement;
+          isFocused = !!active && (root === active || root.contains(active));
+        }
+      } else if (typeof document.hasFocus === "function") {
+        isFocused = document.hasFocus();
+      } else {
+        isFocused = true;
+      }
+
+      if (!isFocused) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      handleMediaKey(event.code);
+    };
+
+    window.addEventListener("keydown", handle);
+    return () => window.removeEventListener("keydown", handle);
+  }, [handleMediaKey]);
 
   const currentTrack = queue[current];
 
@@ -158,6 +263,7 @@ const SpotifyApp = () => {
           <button
             onClick={previous}
             title="Previous"
+            aria-label="Previous"
             disabled={!queue.length}
             className="w-9 h-9 flex items-center justify-center"
           >
@@ -166,7 +272,9 @@ const SpotifyApp = () => {
           <button
             onClick={togglePlay}
             title="Play/Pause"
+            aria-label="Play/Pause"
             disabled={!queue.length}
+            aria-pressed={isPlaying}
             className="w-9 h-9 flex items-center justify-center"
           >
             ⏯
@@ -174,6 +282,7 @@ const SpotifyApp = () => {
           <button
             onClick={next}
             title="Next"
+            aria-label="Next"
             disabled={!queue.length}
             className="w-9 h-9 flex items-center justify-center"
           >
@@ -189,6 +298,7 @@ const SpotifyApp = () => {
               max={12}
               value={crossfade}
               onChange={(e) => setCrossfade(Number(e.target.value))}
+              aria-label="Crossfade duration"
             />
           </label>
           <label className="flex items-center space-x-1">
@@ -196,6 +306,7 @@ const SpotifyApp = () => {
               type="checkbox"
               checked={gapless}
               onChange={(e) => setGapless(e.target.checked)}
+              aria-label="Enable gapless playback"
             />
             <span>Gapless</span>
           </label>
@@ -220,6 +331,7 @@ const SpotifyApp = () => {
           }}
           className="w-full h-1 mb-2"
           disabled={!queue.length}
+          aria-label="Playback position"
         />
       )}
       {currentTrack && (
@@ -249,6 +361,7 @@ const SpotifyApp = () => {
               className="w-full h-40 text-black p-1"
               value={playlistText}
               onChange={(e) => setPlaylistText(e.target.value)}
+              aria-label="Playlist JSON"
             />
             <button
               onClick={loadPlaylist}
@@ -285,6 +398,7 @@ const SpotifyApp = () => {
           </div>
         </div>
       )}
+      <MediaIndicator action={indicator?.message ?? null} />
     </div>
   );
 };
