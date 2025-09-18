@@ -11,6 +11,157 @@ interface Props {
   initialResults?: Video[];
 }
 
+type PlayerLike = {
+  getPlaybackQuality?: () => string;
+  getVideoStats?: () => Record<string, any> | null | undefined;
+  getPlaybackRate?: () => number;
+  getVideoLoadedFraction?: () => number;
+};
+
+interface StatsSnapshot {
+  quality: string;
+  resolution: string;
+  droppedFrames: number | null;
+  totalFrames: number | null;
+  playbackRate: number;
+  buffered: number | null;
+}
+
+const QUALITY_TO_RESOLUTION: Record<string, string> = {
+  tiny: '256×144',
+  small: '426×240',
+  medium: '640×360',
+  large: '854×480',
+  hd720: '1280×720',
+  hd1080: '1920×1080',
+  hd1440: '2560×1440',
+  hd2160: '3840×2160',
+  highres: '≥4320p',
+  highres60: '≥4320p60',
+};
+
+function getResolutionLabel(quality: string) {
+  if (!quality) return 'Unknown';
+  const mapped = QUALITY_TO_RESOLUTION[quality];
+  return mapped ? `${mapped} (${quality})` : quality;
+}
+
+function StatsOverlay({
+  player,
+  video,
+}: {
+  player: PlayerLike | null;
+  video: Video | null;
+}) {
+  const [stats, setStats] = useState<StatsSnapshot | null>(null);
+
+  useEffect(() => {
+    if (!player || !video) {
+      setStats(null);
+      return;
+    }
+
+    let mounted = true;
+
+    const read = () => {
+      if (!mounted) return;
+      const quality = player.getPlaybackQuality?.() ?? '';
+      const rawStats =
+        typeof player.getVideoStats === 'function'
+          ? player.getVideoStats() || null
+          : null;
+      const droppedRaw =
+        rawStats?.droppedFrames ?? rawStats?.droppedframes ?? rawStats?.dropped;
+      const totalRaw =
+        rawStats?.totalFrames ?? rawStats?.totalframes ?? rawStats?.total;
+      const playbackRateRaw = player.getPlaybackRate?.();
+      const bufferedFraction = player.getVideoLoadedFraction?.();
+
+      const snapshot: StatsSnapshot = {
+        quality: quality || 'unknown',
+        resolution: getResolutionLabel(quality || ''),
+        droppedFrames:
+          typeof droppedRaw === 'number' && Number.isFinite(droppedRaw)
+            ? droppedRaw
+            : null,
+        totalFrames:
+          typeof totalRaw === 'number' && Number.isFinite(totalRaw)
+            ? totalRaw
+            : null,
+        playbackRate:
+          typeof playbackRateRaw === 'number' && Number.isFinite(playbackRateRaw)
+            ? playbackRateRaw
+            : 1,
+        buffered:
+          typeof bufferedFraction === 'number' && Number.isFinite(bufferedFraction)
+            ? Math.round(
+                Math.max(0, Math.min(1, bufferedFraction)) * 100,
+              )
+            : null,
+      };
+
+      setStats((prev) => {
+        if (
+          prev &&
+          prev.quality === snapshot.quality &&
+          prev.resolution === snapshot.resolution &&
+          prev.droppedFrames === snapshot.droppedFrames &&
+          prev.totalFrames === snapshot.totalFrames &&
+          prev.playbackRate === snapshot.playbackRate &&
+          prev.buffered === snapshot.buffered
+        ) {
+          return prev;
+        }
+        return snapshot;
+      });
+    };
+
+    read();
+    const id = window.setInterval(read, 1000);
+    return () => {
+      mounted = false;
+      window.clearInterval(id);
+    };
+  }, [player, video?.id]);
+
+  if (!player || !video || !stats) return null;
+
+  return (
+    <div
+      data-testid="youtube-stats-overlay"
+      className="pointer-events-auto absolute right-2 top-2 w-56 rounded bg-black/80 p-3 text-xs text-ubt-cool-grey shadow-lg backdrop-blur"
+    >
+      <div className="mb-2 font-semibold text-white">Playback stats</div>
+      <dl className="space-y-1">
+        <div>
+          <dt className="font-semibold text-ubt-grey">Resolution</dt>
+          <dd>{stats.resolution}</dd>
+        </div>
+        <div>
+          <dt className="font-semibold text-ubt-grey">Dropped frames</dt>
+          <dd>
+            {stats.droppedFrames !== null
+              ? stats.totalFrames !== null
+                ? `${stats.droppedFrames} / ${stats.totalFrames}`
+                : stats.droppedFrames
+              : '—'}
+          </dd>
+        </div>
+        <div>
+          <dt className="font-semibold text-ubt-grey">Playback rate</dt>
+          <dd>{stats.playbackRate.toFixed(2)}×</dd>
+        </div>
+        {stats.buffered !== null && (
+          <div>
+            <dt className="font-semibold text-ubt-grey">Buffered</dt>
+            <dd>{stats.buffered}%</dd>
+          </div>
+        )}
+      </dl>
+    </div>
+  );
+}
+
 const VIDEO_CACHE_NAME = 'youtube-video-cache';
 const CACHED_LIST_KEY = 'youtube:cached-videos';
 const MAX_CACHE_BYTES = 100 * 1024 * 1024;
@@ -93,11 +244,13 @@ function Sidebar({
   watchLater,
   onPlay,
   onReorder,
+  className = '',
 }: {
   queue: Video[];
   watchLater: Video[];
   onPlay: (v: Video) => void;
   onReorder: (from: number, to: number) => void;
+  className?: string;
 }) {
   const handleKey = (index: number, e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'ArrowUp' && index > 0) {
@@ -115,8 +268,12 @@ function Sidebar({
     if (!Number.isNaN(from)) onReorder(from, index);
   };
 
+  const asideClass = `overflow-y-auto bg-ub-cool-grey p-2 text-sm${
+    className ? ` ${className}` : ''
+  }`;
+
   return (
-    <aside className="w-64 overflow-y-auto border-l border-ub-cool-grey bg-ub-cool-grey p-2 text-sm" role="complementary">
+    <aside className={asideClass} role="complementary">
       <h2 className="mb-[6px] text-lg font-semibold">Queue</h2>
       <div data-testid="queue-list">
         {queue.map((v) => (
@@ -270,6 +427,8 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const [looping, setLooping] = useState(false);
   const [, setPlaybackRate] = useState(1);
   const [solidHeader, setSolidHeader] = useState(false);
+  const [isTheaterMode, setIsTheaterMode] = useState(false);
+  const [showStats, setShowStats] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setSolidHeader(window.scrollY > 0);
@@ -388,6 +547,16 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const toggleLoop = useCallback(() => {
     if (loopStart !== null && loopEnd !== null) setLooping((l) => !l);
   }, [loopStart, loopEnd]);
+
+  const toggleStatsOverlay = useCallback(
+    () => setShowStats((value) => !value),
+    [],
+  );
+
+  const toggleTheaterMode = useCallback(
+    () => setIsTheaterMode((value) => !value),
+    [],
+  );
 
   const search = useCallback(async () => {
     if (!query) return;
@@ -536,9 +705,22 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
     toggleLoop,
   ]);
 
+  const layoutClass = isTheaterMode ? 'flex-col xl:flex-row' : 'flex-col lg:flex-row';
+  const playerContainerClass = [
+    'relative mb-4 w-full bg-black transition-all duration-300',
+    isTheaterMode
+      ? 'mx-auto max-w-6xl rounded-none sm:rounded-lg xl:max-w-7xl'
+      : 'mx-4 rounded-lg',
+  ].join(' ');
+  const sidebarClass = isTheaterMode
+    ? 'flex-shrink-0 w-full border-t border-ub-cool-grey xl:w-72 xl:max-w-sm xl:border-l xl:border-t-0'
+    : 'flex-shrink-0 w-full border-t border-ub-cool-grey lg:w-64 lg:max-w-sm lg:border-l lg:border-t-0';
+
   return (
-    <div className="flex h-full flex-1 bg-ub-dark-grey font-sans text-ubt-cool-grey">
-      <div className="flex flex-1 flex-col">
+    <div
+      className={`flex h-full flex-1 bg-ub-dark-grey font-sans text-ubt-cool-grey ${layoutClass}`}
+    >
+      <div className="flex flex-1 min-w-0 flex-col">
         <form onSubmit={handleSearch} className="p-4">
           <input
             ref={searchRef}
@@ -549,7 +731,17 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
           />
         </form>
         {current && (
-          <div className="relative mx-4 mb-4 bg-black">
+          <div
+            className={playerContainerClass}
+            data-state={isTheaterMode ? 'theater' : 'default'}
+            data-testid="player-container"
+          >
+            {showStats && (
+              <StatsOverlay
+                player={playerReady ? playerRef.current : null}
+                video={current}
+              />
+            )}
             {!playerReady && (
               <iframe
                 title="YouTube video player"
@@ -640,9 +832,29 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
                 <span className="flex h-6 w-6 items-center justify-center">Save</span>
               </button>
               <button
+                onClick={toggleStatsOverlay}
+                aria-label={`${showStats ? 'Hide' : 'Show'} stats overlay`}
+                title="Toggle stats overlay"
+                aria-pressed={showStats}
+                className="ml-auto text-ubt-cool-grey hover:text-ubt-green"
+              >
+                <span className="flex h-6 w-6 items-center justify-center">Stats</span>
+              </button>
+              <button
+                onClick={toggleTheaterMode}
+                aria-label={
+                  isTheaterMode ? 'Exit theater mode' : 'Enter theater mode'
+                }
+                title="Toggle theater mode"
+                aria-pressed={isTheaterMode}
+                className="text-ubt-cool-grey hover:text-ubt-green"
+              >
+                <span className="flex h-6 w-6 items-center justify-center">Theater</span>
+              </button>
+              <button
                 onClick={downloadCurrent}
                 aria-label="Download video"
-                className="ml-auto text-ubt-cool-grey hover:text-ubt-green"
+                className="text-ubt-cool-grey hover:text-ubt-green"
               >
                 <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
                   <path
@@ -667,6 +879,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
         watchLater={watchLater}
         onPlay={playVideo}
         onReorder={moveWatchLater}
+        className={sidebarClass}
       />
     </div>
   );
