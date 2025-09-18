@@ -373,11 +373,16 @@ Browse all apps, games, and security tool demos at `/apps`, which presents a sea
 | Todoist | /apps/todoist | Utility / Media |
 | Gedit | /apps/gedit | Utility / Media |
 | Settings | /apps/settings | Utility / Media |
+| Snapshot Manager | /apps/snapshot-manager | Utility / Media |
 | Trash | /apps/trash | Utility / Media |
 | Project Gallery | /apps/project-gallery | Utility / Media |
 | Quote | /apps/quote | Utility / Media |
 
 > The VS Code app now embeds a StackBlitz IDE via iframe instead of the local Monaco editor.
+
+Snapshot Manager captures mocked system snapshots before risky updates, surfaces open
+files that would be closed during a rollback, and simulates a countdown that never
+exceeds the two-minute completion target.
 
 The Spotify app lets you customize a mood-to-playlist mapping. Use the in-app form to
 add, reorder, or delete moods; selections persist in the browser's Origin Private File
