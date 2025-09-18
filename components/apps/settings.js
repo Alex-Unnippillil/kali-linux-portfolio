@@ -1,14 +1,50 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
+import apps from '../../apps.config';
+import { INPUT_SOURCES, DEFAULT_INPUT_SOURCE } from '../../hooks/useSession';
 
-export function Settings() {
+export function Settings({
+    session,
+    availableInputSources = INPUT_SOURCES,
+    getWindowInputSource,
+    setWindowInputSource,
+    clearWindowInputSource,
+}) {
     const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
+
+    const windowOptions = useMemo(() => {
+        if (!session || !Array.isArray(session.windows)) return [];
+        const seen = new Set();
+        const titleLookup = new Map(apps.map((app) => [app.id, app.title]));
+        return session.windows
+            .filter((win) => win && typeof win.id === 'string')
+            .map((win) => win.id)
+            .filter((id) => {
+                if (seen.has(id)) return false;
+                seen.add(id);
+                return true;
+            })
+            .map((id) => ({
+                id,
+                title: titleLookup.get(id) || id,
+            }));
+    }, [session]);
+
+    const handleInputSourceChange = useCallback((windowId, value) => {
+        if (!setWindowInputSource) return;
+        setWindowInputSource(windowId, value);
+    }, [setWindowInputSource]);
+
+    const handleInputSourceReset = useCallback((windowId) => {
+        if (!clearWindowInputSource) return;
+        clearWindowInputSource(windowId);
+    }, [clearWindowInputSource]);
 
     const changeBackgroundImage = (e) => {
         const name = e.currentTarget.dataset.path;
@@ -177,6 +213,53 @@ export function Settings() {
                     Pong Spin
                 </label>
             </div>
+            <div className="px-6 w-full">
+                <h2 className="text-lg font-semibold text-ubt-grey mb-2">Input Sources</h2>
+                <p className="text-sm text-ubt-grey mb-3">Assign a preferred keyboard layout to each open window.</p>
+                {windowOptions.length === 0 ? (
+                    <p className="text-sm text-ubt-grey italic">Open an app window to configure its input source.</p>
+                ) : (
+                    <ul className="space-y-3">
+                        {windowOptions.map(({ id, title }) => {
+                            const currentValue = getWindowInputSource
+                                ? getWindowInputSource(id)
+                                : (session?.inputSources?.[id] || availableInputSources[0]?.id || DEFAULT_INPUT_SOURCE);
+                            const hasCustom = Boolean(session?.inputSources?.[id]);
+                            return (
+                                <li key={id} className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between bg-black bg-opacity-30 rounded px-3 py-2">
+                                    <div>
+                                        <div className="font-semibold text-white">{title}</div>
+                                        <div className="text-xs text-ubt-grey">Window ID: {id}</div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <label htmlFor={`input-source-${id}`} className="sr-only">Input source for {title}</label>
+                                        <select
+                                            id={`input-source-${id}`}
+                                            value={currentValue}
+                                            onChange={(e) => handleInputSourceChange(id, e.target.value)}
+                                            className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                                        >
+                                            {availableInputSources.map((source) => (
+                                                <option key={source.id} value={source.id}>
+                                                    {source.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleInputSourceReset(id)}
+                                            disabled={!hasCustom}
+                                            className={`px-2 py-1 text-xs rounded border ${hasCustom ? 'text-white border-ubt-grey hover:bg-white hover:bg-opacity-10' : 'text-ubt-grey border-transparent opacity-60 cursor-not-allowed'}`}
+                                        >
+                                            Reset
+                                        </button>
+                                    </div>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                )}
+            </div>
             <div className="flex justify-center my-4">
                 <div
                     className="p-4 rounded transition-colors duration-300 motion-reduce:transition-none"
@@ -290,6 +373,6 @@ export function Settings() {
 export default Settings
 
 
-export const displaySettings = () => {
-    return <Settings> </Settings>;
+export const displaySettings = (props = {}) => {
+    return <Settings {...props}> </Settings>;
 }

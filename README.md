@@ -175,6 +175,13 @@ __tests__/
 - global context menus (`components/context-menus/`)
 - favorites vs “All Applications” grid
 - analytics events for user actions
+- per-window input source preferences persisted via `hooks/useSession`
+
+An on-screen indicator (`components/common/InputIndicator.tsx`) mirrors the
+active keyboard layout in the lower-right corner of the desktop and surfaces
+the Super+Space / Shift+Super+Space shortcuts. Customize the layout assigned to
+each open window from the Settings app; selections are stored in local session
+state so they survive refreshes.
 
 **App registry.** `apps.config.js` registers apps using dynamic imports to keep the initial bundle lean:
 ```ts
