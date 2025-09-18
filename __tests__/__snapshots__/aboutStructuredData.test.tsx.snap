@@ -1,0 +1,509 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`AboutApp structured data renders JSON-LD describing the person and projects 1`] = `
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@id": "https://unnippillil.com/#person",
+      "@type": "Person",
+      "jobTitle": "Cybersecurity Specialist",
+      "knowsAbout": [
+        "Amazon Web Services",
+        "Microsoft Azure",
+        "Windows Server Administration",
+        "Container Platform",
+        "Container Orchestration",
+        "Anonymity Network",
+        "Cisco Certified Network Associate",
+        "Cisco Certified Network Professional",
+        "SSH Client",
+        "Network Analyzer",
+        "Open Web Application Security Project",
+        "Network Scanner",
+        "Penetration Testing Framework",
+        "Web Vulnerability Scanner",
+        "Security Information and Event Management",
+        "VPN Solution",
+        "Vulnerability Scanner",
+        "Intrusion Detection System",
+        "Automation Shell",
+        "Virtualization Platform",
+        "Windows OS",
+        "Penetration Testing Distribution",
+        "Fedora Linux",
+        "Apple Operating System",
+        "Python IDE",
+        "Game Engine",
+        "Apple IDE",
+        "Android IDE",
+        "Ubuntu Linux",
+        "Debian Linux",
+        "Microsoft IDE",
+        "Code Editor",
+        "Version Control",
+        "CentOS Linux",
+        "Arch Linux Distribution",
+        "Design Tool",
+        "Scripting Language",
+        "Systems Programming Language",
+        "General Purpose Language",
+        "Dart Language",
+        "Markup Language",
+        "Stylesheet Language",
+        "Relational Database",
+        "Java Programming Language",
+        "Typed JavaScript",
+        "Go Programming Language",
+        "Rust Programming Language",
+        "Unix Shell",
+        "Server-side Scripting Language",
+        "Dynamic Programming Language",
+        "Apple Programming Language",
+        "Kotlin Programming Language",
+        "React Framework",
+        "UI Library",
+        "UI Toolkit",
+        "Utility-first CSS",
+        "JavaScript Runtime",
+        "JavaScript Library",
+        "Shopify Framework",
+        "Cybersecurity Framework",
+      ],
+      "name": "Alex Unnippillil",
+      "subjectOf": [
+        {
+          "@id": "https://github.com/Alex-Unnippillil/Text-Encryption-Decryption-AES-PKCS7#creativework",
+        },
+        {
+          "@id": "https://github.com/Alex-Unnippillil/PasswordGenerator.py#creativework",
+        },
+        {
+          "@id": "https://github.com/Alex-Unnippillil/encryption-mode-time-comparison#creativework",
+        },
+        {
+          "@id": "https://github.com/Alex-Unnippillil/CyberSecuirtyDictionary#creativework",
+        },
+        {
+          "@id": "https://github.com/Alex-Unnippillil/Cryptography-Transposition-Substitution-RSA-Product-Caesar-Playfair#creativework",
+        },
+        {
+          "@id": "https://github.com/Alex-Unnippillil/text-translator#creativework",
+        },
+        {
+          "@id": "https://github.com/Alex-Unnippillil/Calc.py#creativework",
+        },
+        {
+          "@id": "https://github.com/Alex-Unnippillil/AES-Encrypt-Decrypt#creativework",
+        },
+        {
+          "@id": "https://github.com/Alex-Unnippillil/imagedownloader#creativework",
+        },
+        {
+          "@id": "https://github.com/Alex-Unnippillil/BinarySearch#creativework",
+        },
+        {
+          "@id": "https://github.com/Alex-Unnippillil/AES-Python#creativework",
+        },
+        {
+          "@id": "https://github.com/Alex-Unnippillil/GenerateRandomPassword#creativework",
+        },
+        {
+          "@id": "https://github.com/Alex-Unnippillil/caesar-cipher#creativework",
+        },
+        {
+          "@id": "https://github.com/Alex-Unnippillil/ArtGenerator#creativework",
+        },
+        {
+          "@id": "https://github.com/Alex-Unnippillil/WebGameSelectionn#creativework",
+        },
+        {
+          "@id": "https://github.com/Alex-Unnippillil/space-invader#creativework",
+        },
+        {
+          "@id": "https://github.com/Alex-Unnippillil/SnakeGame.py#creativework",
+        },
+        {
+          "@id": "https://github.com/Alex-Unnippillil/guess-the-number#creativework",
+        },
+        {
+          "@id": "https://github.com/Alex-Unnippillil/ColourMatchingGame.py#creativework",
+        },
+        {
+          "@id": "https://github.com/Alex-Unnippillil/function.py#creativework",
+        },
+        {
+          "@id": "https://github.com/Alex-Unnippillil/reaction-test-game#creativework",
+        },
+        {
+          "@id": "https://github.com/Alex-Unnippillil/hangman.py#creativework",
+        },
+        {
+          "@id": "https://github.com/Alex-Unnippillil/tictactoe#creativework",
+        },
+        {
+          "@id": "https://github.com/Alex-Unnippillil/test-blockchain#creativework",
+        },
+        {
+          "@id": "https://github.com/Alex-Unnippillil/Population-of-Canadian-Provinces#creativework",
+        },
+      ],
+      "url": "https://unnippillil.com",
+    },
+    {
+      "@id": "https://github.com/Alex-Unnippillil/Text-Encryption-Decryption-AES-PKCS7#creativework",
+      "@type": "CreativeWork",
+      "creator": {
+        "@id": "https://unnippillil.com/#person",
+      },
+      "datePublished": "2023-09-01",
+      "description": "Text File Encryption/Decryption using AES with PKCS7 Padding in Python",
+      "keywords": [
+        "python",
+      ],
+      "name": "Text-Encryption-Decryption-AES-PKCS7",
+      "url": "https://github.com/Alex-Unnippillil/Text-Encryption-Decryption-AES-PKCS7",
+    },
+    {
+      "@id": "https://github.com/Alex-Unnippillil/PasswordGenerator.py#creativework",
+      "@type": "CreativeWork",
+      "creator": {
+        "@id": "https://unnippillil.com/#person",
+      },
+      "datePublished": "2023-06-01",
+      "description": "Password Generator password tick menu of numbers, lowecase, uppercase and/or special characters strength of password metre",
+      "keywords": [
+        "python",
+      ],
+      "name": "Password Generator",
+      "url": "https://github.com/Alex-Unnippillil/PasswordGenerator.py",
+    },
+    {
+      "@id": "https://github.com/Alex-Unnippillil/encryption-mode-time-comparison#creativework",
+      "@type": "CreativeWork",
+      "creator": {
+        "@id": "https://unnippillil.com/#person",
+      },
+      "datePublished": "2023-06-01",
+      "description": "Time the encryption of the same large file using ECB, CBC, CFB, OFB, CTR, and XTS-AES. Compare and rationalize the outcome.",
+      "name": "Encryption-Mode-Time-Comparison",
+      "url": "https://github.com/Alex-Unnippillil/encryption-mode-time-comparison",
+    },
+    {
+      "@id": "https://github.com/Alex-Unnippillil/CyberSecuirtyDictionary#creativework",
+      "@type": "CreativeWork",
+      "creator": {
+        "@id": "https://unnippillil.com/#person",
+      },
+      "datePublished": "2023-09-01",
+      "description": "a dictionary of cyber security terms and their definitions",
+      "keywords": [
+        "javascript",
+      ],
+      "name": "Cyber Secuirty Dictionary",
+      "url": "https://github.com/Alex-Unnippillil/CyberSecuirtyDictionary",
+    },
+    {
+      "@id": "https://github.com/Alex-Unnippillil/Cryptography-Transposition-Substitution-RSA-Product-Caesar-Playfair#creativework",
+      "@type": "CreativeWork",
+      "creator": {
+        "@id": "https://unnippillil.com/#person",
+      },
+      "datePublished": "2021-04-01",
+      "description": "An encryption algorithm designed that was difficult to decipher by our classmates. The algorithm uses Transposition and Substitution ,RSA and Product, Caesar and Playfair",
+      "keywords": [
+        "python",
+      ],
+      "name": "Cryptography-Transposition-Substitution-RSA-Product-Caesar-Playfair Cryptography Final Project",
+      "url": "https://github.com/Alex-Unnippillil/Cryptography-Transposition-Substitution-RSA-Product-Caesar-Playfair",
+    },
+    {
+      "@id": "https://github.com/Alex-Unnippillil/text-translator#creativework",
+      "@type": "CreativeWork",
+      "creator": {
+        "@id": "https://unnippillil.com/#person",
+      },
+      "datePublished": "2023-06-01",
+      "description": "text-translator utialitzes the googletrans library to translate text from one language to another",
+      "keywords": [
+        "python",
+      ],
+      "name": "Text Translator",
+      "url": "https://github.com/Alex-Unnippillil/text-translator",
+    },
+    {
+      "@id": "https://github.com/Alex-Unnippillil/Calc.py#creativework",
+      "@type": "CreativeWork",
+      "creator": {
+        "@id": "https://unnippillil.com/#person",
+      },
+      "datePublished": "2023-06-01",
+      "description": "Calc.py is a simple calculator that utilizes matplotlib and numpy to provide visualization",
+      "keywords": [
+        "python",
+      ],
+      "name": "Calc.py",
+      "url": "https://github.com/Alex-Unnippillil/Calc.py",
+    },
+    {
+      "@id": "https://github.com/Alex-Unnippillil/AES-Encrypt-Decrypt#creativework",
+      "@type": "CreativeWork",
+      "creator": {
+        "@id": "https://unnippillil.com/#person",
+      },
+      "datePublished": "2023-09-01",
+      "description": "AES encryption algortihm utilizes the cryptopp library",
+      "keywords": [
+        "c++",
+      ],
+      "name": "AES-Encrypt-Decrypt",
+      "url": "https://github.com/Alex-Unnippillil/AES-Encrypt-Decrypt",
+    },
+    {
+      "@id": "https://github.com/Alex-Unnippillil/imagedownloader#creativework",
+      "@type": "CreativeWork",
+      "creator": {
+        "@id": "https://unnippillil.com/#person",
+      },
+      "datePublished": "2023-04-01",
+      "description": "download the images from a website",
+      "keywords": [
+        "python",
+      ],
+      "name": "image scrapper/downloader",
+      "url": "https://github.com/Alex-Unnippillil/imagedownloader",
+    },
+    {
+      "@id": "https://github.com/Alex-Unnippillil/BinarySearch#creativework",
+      "@type": "CreativeWork",
+      "creator": {
+        "@id": "https://unnippillil.com/#person",
+      },
+      "datePublished": "2023-04-01",
+      "description": "Binary Search w/ check sort, find min/max",
+      "keywords": [
+        "c++",
+      ],
+      "name": "Binary Search",
+      "url": "https://github.com/Alex-Unnippillil/BinarySearch",
+    },
+    {
+      "@id": "https://github.com/Alex-Unnippillil/AES-Python#creativework",
+      "@type": "CreativeWork",
+      "creator": {
+        "@id": "https://unnippillil.com/#person",
+      },
+      "datePublished": "2023-04-01",
+      "description": "AES encryption / decryption utilizing cryptography.fernet in python",
+      "keywords": [
+        "python",
+      ],
+      "name": "AES-Python",
+      "url": "https://github.com/Alex-Unnippillil/AES-Python",
+    },
+    {
+      "@id": "https://github.com/Alex-Unnippillil/GenerateRandomPassword#creativework",
+      "@type": "CreativeWork",
+      "creator": {
+        "@id": "https://unnippillil.com/#person",
+      },
+      "datePublished": "2023-04-01",
+      "description": "Generate a random password at a desired character length.",
+      "keywords": [
+        "c++",
+      ],
+      "name": "Generate-Random-Password.cpp",
+      "url": "https://github.com/Alex-Unnippillil/GenerateRandomPassword",
+    },
+    {
+      "@id": "https://github.com/Alex-Unnippillil/caesar-cipher#creativework",
+      "@type": "CreativeWork",
+      "creator": {
+        "@id": "https://unnippillil.com/#person",
+      },
+      "datePublished": "2023-04-01",
+      "description": "a simple python script that allows you to encrypt, decrypt and brute force strings",
+      "keywords": [
+        "python",
+      ],
+      "name": "caesar-cipher",
+      "url": "https://github.com/Alex-Unnippillil/caesar-cipher",
+    },
+    {
+      "@id": "https://github.com/Alex-Unnippillil/ArtGenerator#creativework",
+      "@type": "CreativeWork",
+      "creator": {
+        "@id": "https://unnippillil.com/#person",
+      },
+      "datePublished": "2023-04-01",
+      "description": "a art generator created in python and javascript",
+      "keywords": [
+        "python",
+        "javascript",
+      ],
+      "name": "Art-Generator",
+      "url": "https://github.com/Alex-Unnippillil/ArtGenerator",
+    },
+    {
+      "@id": "https://github.com/Alex-Unnippillil/WebGameSelectionn#creativework",
+      "@type": "CreativeWork",
+      "creator": {
+        "@id": "https://unnippillil.com/#person",
+      },
+      "datePublished": "2023-03-01",
+      "description": "Guess Number, Even/Odd, Higher/Lower, Color Guess, Rock Paper Scissors, Tic Tac Toe, Dice Roll, Coin Toss, NumberMemory, Word Jumble,Anagram",
+      "keywords": [
+        "javascript",
+        "html5",
+        "css",
+      ],
+      "name": "10 Web Game Selection",
+      "url": "https://github.com/Alex-Unnippillil/WebGameSelectionn",
+    },
+    {
+      "@id": "https://github.com/Alex-Unnippillil/space-invader#creativework",
+      "@type": "CreativeWork",
+      "creator": {
+        "@id": "https://unnippillil.com/#person",
+      },
+      "datePublished": "2023-03-01",
+      "description": "js space invader",
+      "keywords": [
+        "javascript",
+        "html5",
+        "css",
+      ],
+      "name": "space invader",
+      "url": "https://github.com/Alex-Unnippillil/space-invader",
+    },
+    {
+      "@id": "https://github.com/Alex-Unnippillil/SnakeGame.py#creativework",
+      "@type": "CreativeWork",
+      "creator": {
+        "@id": "https://unnippillil.com/#person",
+      },
+      "datePublished": "2023-03-01",
+      "description": "snake using the turtle, time, random pkgs",
+      "keywords": [
+        "python",
+      ],
+      "name": "Snake-Game.py",
+      "url": "https://github.com/Alex-Unnippillil/SnakeGame.py",
+    },
+    {
+      "@id": "https://github.com/Alex-Unnippillil/guess-the-number#creativework",
+      "@type": "CreativeWork",
+      "creator": {
+        "@id": "https://unnippillil.com/#person",
+      },
+      "datePublished": "2023-03-01",
+      "description": "Guess the number between 1 and 100",
+      "keywords": [
+        "html5",
+      ],
+      "name": "guess the number",
+      "url": "https://github.com/Alex-Unnippillil/guess-the-number",
+    },
+    {
+      "@id": "https://github.com/Alex-Unnippillil/ColourMatchingGame.py#creativework",
+      "@type": "CreativeWork",
+      "creator": {
+        "@id": "https://unnippillil.com/#person",
+      },
+      "datePublished": "2023-03-01",
+      "description": "selecting the colours and unlock a new highscore!",
+      "keywords": [
+        "python",
+      ],
+      "name": "Colour-Matching-Game.py",
+      "url": "https://github.com/Alex-Unnippillil/ColourMatchingGame.py",
+    },
+    {
+      "@id": "https://github.com/Alex-Unnippillil/function.py#creativework",
+      "@type": "CreativeWork",
+      "creator": {
+        "@id": "https://unnippillil.com/#person",
+      },
+      "datePublished": "2023-06-01",
+      "description": "59 Functions in Python",
+      "keywords": [
+        "python",
+      ],
+      "name": "function.py",
+      "url": "https://github.com/Alex-Unnippillil/function.py",
+    },
+    {
+      "@id": "https://github.com/Alex-Unnippillil/reaction-test-game#creativework",
+      "@type": "CreativeWork",
+      "creator": {
+        "@id": "https://unnippillil.com/#person",
+      },
+      "datePublished": "2021-03-01",
+      "description": "Reaction Test Game",
+      "keywords": [
+        "javascript",
+        "css",
+        "html5",
+      ],
+      "name": "Reaction Test Game",
+      "url": "https://github.com/Alex-Unnippillil/reaction-test-game",
+    },
+    {
+      "@id": "https://github.com/Alex-Unnippillil/hangman.py#creativework",
+      "@type": "CreativeWork",
+      "creator": {
+        "@id": "https://unnippillil.com/#person",
+      },
+      "datePublished": "2023-08-01",
+      "description": "A simple hangman game in python",
+      "keywords": [
+        "python",
+      ],
+      "name": "Hangman.py",
+      "url": "https://github.com/Alex-Unnippillil/hangman.py",
+    },
+    {
+      "@id": "https://github.com/Alex-Unnippillil/tictactoe#creativework",
+      "@type": "CreativeWork",
+      "creator": {
+        "@id": "https://unnippillil.com/#person",
+      },
+      "datePublished": "2023-06-01",
+      "description": "Tic Tac Toe Game in 100% HTML",
+      "keywords": [
+        "html5",
+      ],
+      "name": "tictactoe",
+      "url": "https://github.com/Alex-Unnippillil/tictactoe",
+    },
+    {
+      "@id": "https://github.com/Alex-Unnippillil/test-blockchain#creativework",
+      "@type": "CreativeWork",
+      "creator": {
+        "@id": "https://unnippillil.com/#person",
+      },
+      "datePublished": "2023-04-01",
+      "description": "simple blockchain iteration",
+      "keywords": [
+        "python",
+      ],
+      "name": "test-blockchain",
+      "url": "https://github.com/Alex-Unnippillil/test-blockchain",
+    },
+    {
+      "@id": "https://github.com/Alex-Unnippillil/Population-of-Canadian-Provinces#creativework",
+      "@type": "CreativeWork",
+      "creator": {
+        "@id": "https://unnippillil.com/#person",
+      },
+      "datePublished": "2024-02-01",
+      "description": "using statcan population data from 1950s-2024 to get the population of canadian provinces and present it in a race bar graph website",
+      "keywords": [
+        "html5",
+      ],
+      "name": "Population-of-Canadian-Provinces",
+      "url": "https://github.com/Alex-Unnippillil/Population-of-Canadian-Provinces",
+    },
+  ],
+}
+`;

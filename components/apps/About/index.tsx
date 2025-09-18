@@ -10,6 +10,107 @@ import { getCspNonce } from '../../../utils/csp';
 import AboutSlides from './slides';
 import ScrollableTimeline from '../../ScrollableTimeline';
 
+type ProjectEntry = {
+  name: string;
+  date?: string;
+  link: string;
+  description?: string[];
+  domains?: string[];
+};
+
+type SkillEntry = {
+  description?: string;
+};
+
+const PERSON_ID = 'https://unnippillil.com/#person';
+
+function normaliseProjectDate(value?: string) {
+  if (!value) {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  const direct = Date.parse(trimmed);
+
+  if (!Number.isNaN(direct)) {
+    return new Date(direct).toISOString().split('T')[0];
+  }
+
+  const withFallbackDay = Date.parse(`${trimmed} 01`);
+
+  if (!Number.isNaN(withFallbackDay)) {
+    return new Date(withFallbackDay).toISOString().split('T')[0];
+  }
+
+  return undefined;
+}
+
+function buildCreativeWorks() {
+  return ((data.projects ?? []) as ProjectEntry[]).map((project) => {
+    const description = Array.isArray(project.description)
+      ? project.description.filter(Boolean).join(' ')
+      : undefined;
+
+    const keywords = Array.isArray(project.domains)
+      ? project.domains.filter(Boolean)
+      : undefined;
+
+    const datePublished = normaliseProjectDate(project.date);
+
+    return {
+      '@type': 'CreativeWork',
+      '@id': `${project.link}#creativework`,
+      name: project.name,
+      url: project.link,
+      creator: { '@id': PERSON_ID },
+      ...(description ? { description } : {}),
+      ...(keywords && keywords.length ? { keywords } : {}),
+      ...(datePublished ? { datePublished } : {}),
+    } as const;
+  });
+}
+
+function buildSkillDescriptions() {
+  const skillGroups = Object.values(
+    (data.skills ?? {}) as Record<string, SkillEntry[]>
+  );
+
+  const descriptions = skillGroups.flatMap((group) =>
+    group
+      .map((skill) => skill.description)
+      .filter((detail): detail is string => Boolean(detail))
+  );
+
+  return Array.from(new Set(descriptions));
+}
+
+function buildStructuredData() {
+  const creativeWorks = buildCreativeWorks();
+  const knowsAbout = buildSkillDescriptions();
+
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Person',
+        '@id': PERSON_ID,
+        name: 'Alex Unnippillil',
+        url: 'https://unnippillil.com',
+        jobTitle: 'Cybersecurity Specialist',
+        ...(knowsAbout.length ? { knowsAbout } : {}),
+        ...(creativeWorks.length
+          ? {
+              subjectOf: creativeWorks.map((work) => ({
+                '@id': work['@id'],
+              })),
+            }
+          : {}),
+      },
+      ...creativeWorks,
+    ],
+  } as const;
+}
+
 class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_screen: string; navbar: boolean }> {
   screens: Record<string, React.ReactNode> = {};
 
@@ -101,12 +202,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
   };
 
   render() {
-    const structured = {
-      '@context': 'https://schema.org',
-      '@type': 'Person',
-      name: 'Alex Unnippillil',
-      url: 'https://unnippillil.com',
-    };
+    const structured = buildStructuredData();
     const nonce = getCspNonce();
 
     return (
