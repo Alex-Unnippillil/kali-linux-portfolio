@@ -1,84 +1,143 @@
-import React, { useEffect, useState, useRef } from 'react';
+"use client";
 
-export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
-  const [query, setQuery] = useState('');
-  const [selected, setSelected] = useState(0);
-  const inputRef = useRef(null);
+import React, { useEffect, useRef } from 'react';
 
-  const filtered = windows.filter((w) =>
-    w.title.toLowerCase().includes(query.toLowerCase())
-  );
+const keyIsForward = (key) => key === 'ArrowRight' || key === 'ArrowDown';
+const keyIsBackward = (key) => key === 'ArrowLeft' || key === 'ArrowUp';
+
+export default function WindowSwitcher({
+  windows = [],
+  selectedIndex = 0,
+  previews = {},
+  onSelect,
+  onClose,
+  onNavigate,
+  onHighlight,
+}) {
+  const containerRef = useRef(null);
 
   useEffect(() => {
-    inputRef.current?.focus();
+    const node = containerRef.current;
+    node?.focus();
   }, []);
 
   useEffect(() => {
-    const handleKeyUp = (e) => {
-      if (e.key === 'Alt') {
-        const win = filtered[selected];
-        if (win && typeof onSelect === 'function') {
-          onSelect(win.id);
-        } else if (typeof onClose === 'function') {
-          onClose();
+    const handleKeyDown = (event) => {
+      if (event.defaultPrevented) return;
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        onNavigate?.(event.shiftKey ? -1 : 1);
+      } else if (keyIsForward(event.key)) {
+        event.preventDefault();
+        onNavigate?.(1);
+      } else if (keyIsBackward(event.key)) {
+        event.preventDefault();
+        onNavigate?.(-1);
+      } else if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        const target = windows[selectedIndex];
+        if (target) {
+          onSelect?.(target.id);
         }
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose?.();
       }
     };
-    window.addEventListener('keyup', handleKeyUp);
-    return () => window.removeEventListener('keyup', handleKeyUp);
-  }, [filtered, selected, onSelect, onClose]);
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const len = filtered.length;
-      if (!len) return;
-      const dir = e.shiftKey ? -1 : 1;
-      setSelected((selected + dir + len) % len);
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      const len = filtered.length;
-      if (!len) return;
-      setSelected((selected + 1) % len);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      const len = filtered.length;
-      if (!len) return;
-      setSelected((selected - 1 + len) % len);
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      if (typeof onClose === 'function') onClose();
-    }
-  };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [windows, selectedIndex, onNavigate, onSelect, onClose]);
 
-  const handleChange = (e) => {
-    setQuery(e.target.value);
-    setSelected(0);
-  };
+  if (!windows.length) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 text-white">
-      <div className="bg-ub-grey p-4 rounded w-3/4 md:w-1/3">
-        <input
-          ref={inputRef}
-          value={query}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          className="w-full mb-4 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
-          placeholder="Search windows"
-        />
-        <ul>
-          {filtered.map((w, i) => (
-            <li
-              key={w.id}
-              className={`px-2 py-1 rounded ${i === selected ? 'bg-ub-orange text-black' : ''}`}
-            >
-              {w.title}
-            </li>
-          ))}
-        </ul>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 text-white"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Window switcher"
+    >
+      <div className="w-full max-w-5xl px-4 sm:px-8">
+        <div
+          ref={containerRef}
+          tabIndex={-1}
+          className="outline-none"
+        >
+          <div
+            className="flex flex-wrap items-stretch justify-center gap-4 overflow-x-auto py-6"
+            role="listbox"
+            aria-label="Open windows"
+          >
+            {windows.map((win, index) => {
+              const selected = index === selectedIndex;
+              const label = win.title || win.id;
+              const preview = previews?.[win.id];
+              const icon = win.icon;
+              const fallbackLetter = (label || '?').charAt(0).toUpperCase();
+
+              return (
+                <button
+                  key={win.id}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  onClick={() => onSelect?.(win.id)}
+                  onMouseEnter={() => onHighlight?.(index)}
+                  onFocus={() => onHighlight?.(index)}
+                  className={`group flex w-44 flex-col rounded-lg border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ub-orange ${
+                    selected
+                      ? 'border-ub-orange bg-white text-black shadow-lg'
+                      : 'border-transparent bg-ub-grey bg-opacity-80 text-white shadow'
+                  }`}
+                  title={label}
+                >
+                  <div className={`relative m-3 mb-2 flex h-28 items-center justify-center overflow-hidden rounded-md border ${
+                    selected ? 'border-black/30' : 'border-white/10'
+                  } bg-black/60`}
+                  >
+                    {preview ? (
+                      <img
+                        src={preview}
+                        alt=""
+                        aria-hidden="true"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : icon ? (
+                      <img
+                        src={icon}
+                        alt=""
+                        aria-hidden="true"
+                        className="h-12 w-12"
+                      />
+                    ) : (
+                      <span className="flex h-12 w-12 items-center justify-center rounded bg-white/10 text-lg font-semibold">
+                        {fallbackLetter}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-center gap-2 px-3 pb-4 text-sm font-medium">
+                    {icon ? (
+                      <img
+                        src={icon}
+                        alt=""
+                        aria-hidden="true"
+                        className="h-5 w-5"
+                      />
+                    ) : null}
+                    <span className="truncate" aria-live={selected ? 'polite' : 'off'}>
+                      {label}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-center text-xs text-gray-200">
+            Hold Alt and press Tab, arrow keys, or click to switch windows. Press Escape to cancel.
+          </p>
+        </div>
       </div>
     </div>
   );
 }
-
