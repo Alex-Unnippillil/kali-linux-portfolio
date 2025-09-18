@@ -185,10 +185,40 @@ function About() {
                     I also have interests in deep learning, software development, and animation.
                 </li>
             </ul>
+            <ContactCTA />
             <Timeline />
         </>
     )
 }
+
+export const ContactCTA = () => {
+    const contactEnabled = Boolean(process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY);
+
+    const handleLaunch = React.useCallback(() => {
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('open-app', { detail: 'contact' }));
+            ReactGA.event({ category: 'contact', action: 'open_contact_app' });
+        }
+    }, []);
+
+    return (
+        <div className="no-print mt-6 flex flex-col items-center">
+            {contactEnabled ? (
+                <button
+                    type="button"
+                    onClick={handleLaunch}
+                    className="px-4 py-2 rounded bg-ubt-blue text-white text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ubt-blue"
+                >
+                    Open contact window
+                </button>
+            ) : (
+                <p className="text-xs md:text-sm text-center text-yellow-300" role="status">
+                    Contact window disabled. Set NEXT_PUBLIC_RECAPTCHA_SITE_KEY to enable contact.
+                </p>
+            )}
+        </div>
+    );
+};
 
 function Timeline() {
     const events = [
