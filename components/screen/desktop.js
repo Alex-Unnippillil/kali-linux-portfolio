@@ -22,6 +22,7 @@ import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { logDesktopRestoreTime } from '../../utils/analytics';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
 export class Desktop extends Component {
@@ -30,6 +31,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.restoreStartTime = null;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -75,7 +77,7 @@ export class Desktop extends Component {
                     positions[id] = { x, y };
                 });
                 this.setState({ window_positions: positions }, () => {
-                    session.windows.forEach(({ id }) => this.openApp(id));
+                    this.restoreSessionWindows(session.windows);
                 });
             } else {
                 this.openApp('about-alex');
@@ -576,6 +578,116 @@ export class Desktop extends Component {
         return result;
     }
 
+    restoreSessionWindows = (windows = []) => {
+        if (!Array.isArray(windows) || windows.length === 0) return;
+
+        const queue = windows
+            .map((win) => (typeof win === 'string' ? { id: win } : win))
+            .filter((win) => win && typeof win.id === 'string');
+
+        if (queue.length === 0) return;
+
+        const raf =
+            (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function')
+                ? window.requestAnimationFrame.bind(window)
+                : (cb) => setTimeout(cb, 16);
+
+        const startMark = 'desktop-restore-start';
+        const endMark = 'desktop-restore-end';
+        const measureName = 'desktop-restore-duration';
+
+        if (typeof performance !== 'undefined' && typeof performance.mark === 'function') {
+            try {
+                performance.mark(startMark);
+            } catch (e) {
+                // ignore mark errors
+            }
+        }
+
+        this.restoreStartTime =
+            typeof performance !== 'undefined' && typeof performance.now === 'function'
+                ? performance.now()
+                : Date.now();
+
+        const BATCH_SIZE = 3;
+        let pending = queue.length;
+        let finalized = false;
+        let fallbackTimer;
+
+        const finalize = () => {
+            if (finalized) return;
+            finalized = true;
+            if (fallbackTimer) {
+                clearTimeout(fallbackTimer);
+            }
+
+            let duration = null;
+            if (
+                typeof performance !== 'undefined' &&
+                typeof performance.mark === 'function' &&
+                typeof performance.measure === 'function'
+            ) {
+                try {
+                    performance.mark(endMark);
+                    performance.measure(measureName, startMark, endMark);
+                    const entries = performance.getEntriesByName(measureName);
+                    const latest = entries[entries.length - 1];
+                    if (latest) {
+                        duration = latest.duration;
+                    }
+                } catch (e) {
+                    duration = null;
+                } finally {
+                    try {
+                        performance.clearMarks(startMark);
+                        performance.clearMarks(endMark);
+                        performance.clearMeasures(measureName);
+                    } catch (err) {
+                        // ignore clear errors
+                    }
+                }
+            }
+
+            if (duration === null && typeof this.restoreStartTime === 'number') {
+                const now =
+                    typeof performance !== 'undefined' && typeof performance.now === 'function'
+                        ? performance.now()
+                        : Date.now();
+                duration = now - this.restoreStartTime;
+            }
+
+            this.restoreStartTime = null;
+
+            if (typeof duration === 'number' && Number.isFinite(duration)) {
+                logDesktopRestoreTime(duration);
+            }
+        };
+
+        const handleWindowOpened = () => {
+            if (pending <= 0) return;
+            pending -= 1;
+            if (pending <= 0) {
+                raf(finalize);
+            }
+        };
+
+        const processBatch = () => {
+            const batch = queue.splice(0, BATCH_SIZE);
+            batch.forEach(({ id }) => {
+                this.openApp(id, { onOpened: handleWindowOpened });
+            });
+            if (queue.length > 0) {
+                raf(processBatch);
+            }
+        };
+
+        raf(processBatch);
+
+        fallbackTimer = setTimeout(() => {
+            raf(finalize);
+        }, 3000);
+    }
+
     handleOpenAppEvent = (e) => {
         const id = e.detail;
         if (id) {
@@ -583,7 +695,9 @@ export class Desktop extends Component {
         }
     }
 
-    openApp = (objId) => {
+    openApp = (objId, options = {}) => {
+
+        const { onOpened } = options;
 
         // google analytics
         ReactGA.event({
@@ -592,7 +706,10 @@ export class Desktop extends Component {
         });
 
         // if the app is disabled
-        if (this.state.disabled_apps[objId]) return;
+        if (this.state.disabled_apps[objId]) {
+            if (typeof onOpened === 'function') onOpened();
+            return;
+        }
 
         // if app is already open, focus it instead of spawning a new window
         if (this.state.closed_windows[objId] === false) {
@@ -603,10 +720,14 @@ export class Desktop extends Component {
                 r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
                 let minimized_windows = this.state.minimized_windows;
                 minimized_windows[objId] = false;
-                this.setState({ minimized_windows: minimized_windows }, this.saveSession);
+                this.setState({ minimized_windows: minimized_windows }, () => {
+                    this.saveSession();
+                    if (typeof onOpened === 'function') onOpened();
+                });
             } else {
                 this.focus(objId);
                 this.saveSession();
+                if (typeof onOpened === 'function') onOpened();
             }
             return;
         } else {
@@ -618,7 +739,7 @@ export class Desktop extends Component {
             if (currentApp) {
                 frequentApps.forEach((app) => {
                     if (app.id === currentApp.id) {
-                        app.frequency += 1; // increase the frequency if app is found 
+                        app.frequency += 1; // increase the frequency if app is found
                     }
                 });
             } else {
@@ -650,6 +771,7 @@ export class Desktop extends Component {
                 this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
                     this.focus(objId);
                     this.saveSession();
+                    if (typeof onOpened === 'function') onOpened();
                 });
                 this.app_stack.push(objId);
             }, 200);

@@ -1,6 +1,7 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import usePersistentState from '../hooks/usePersistentState';
 import { setValue, getAll } from '../utils/moduleStore';
+import appsConfig from '../apps.config';
 
 interface ModuleOption {
   name: string;
@@ -46,6 +47,18 @@ const modules: Module[] = [
   },
 ];
 
+type ScreenDescriptor = {
+  (...args: unknown[]): React.ReactNode;
+  prefetch?: () => void;
+};
+
+interface DesktopAppMeta {
+  id: string;
+  screen?: ScreenDescriptor;
+}
+
+const PREFETCH_LIMIT = 4;
+
 const ModuleWorkspace: React.FC = () => {
   const [workspaces, setWorkspaces] = usePersistentState<string[]>(
     'workspaces',
@@ -69,15 +82,77 @@ const ModuleWorkspace: React.FC = () => {
     [filter],
   );
 
+  const appPrefetchers = useMemo(() => {
+    const map = new Map<string, ScreenDescriptor>();
+    (appsConfig as DesktopAppMeta[]).forEach((app) => {
+      if (app && typeof app.id === 'string' && typeof app.screen === 'function') {
+        map.set(app.id, app.screen as ScreenDescriptor);
+      }
+    });
+    return map;
+  }, []);
+
+  const prefetchedRef = useRef<Set<string>>(new Set());
+
+  const prefetchFrequentApps = useCallback(() => {
+    if (typeof window === 'undefined' || appPrefetchers.size === 0) return;
+
+    let stored: string | null = null;
+    try {
+      stored = window.localStorage.getItem('frequentApps');
+    } catch {
+      stored = null;
+    }
+
+    if (!stored) return;
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(stored);
+    } catch {
+      return;
+    }
+
+    if (!Array.isArray(parsed)) return;
+
+    let prefetchedCount = 0;
+    for (const raw of parsed) {
+      if (prefetchedCount >= PREFETCH_LIMIT) break;
+      if (!raw || typeof raw !== 'object') continue;
+      const id = (raw as { id?: unknown }).id;
+      if (typeof id !== 'string' || prefetchedRef.current.has(id)) continue;
+      const screen = appPrefetchers.get(id);
+      if (screen && typeof screen.prefetch === 'function') {
+        try {
+          screen.prefetch();
+          prefetchedRef.current.add(id);
+          prefetchedCount += 1;
+        } catch {
+          // ignore prefetch errors
+        }
+      }
+    }
+  }, [appPrefetchers]);
+
+  const selectWorkspaceByName = useCallback(
+    (name: string) => {
+      const trimmed = name.trim();
+      if (!trimmed) return;
+      prefetchFrequentApps();
+      setCurrentWorkspace(trimmed);
+    },
+    [prefetchFrequentApps],
+  );
+
   const addWorkspace = useCallback(() => {
     const name = newWorkspace.trim();
     if (!name) return;
     if (!workspaces.includes(name)) {
       setWorkspaces([...workspaces, name]);
     }
-    setCurrentWorkspace(name);
+    selectWorkspaceByName(name);
     setNewWorkspace('');
-  }, [newWorkspace, workspaces, setWorkspaces]);
+  }, [newWorkspace, workspaces, setWorkspaces, selectWorkspaceByName]);
 
   const selectModule = useCallback((mod: Module) => {
     setSelected(mod);
@@ -123,7 +198,7 @@ const ModuleWorkspace: React.FC = () => {
           {workspaces.map((ws) => (
             <button
               key={ws}
-              onClick={() => setCurrentWorkspace(ws)}
+              onClick={() => selectWorkspaceByName(ws)}
               className={`px-2 py-1 rounded ${
                 currentWorkspace === ws ? 'bg-blue-600' : 'bg-gray-700'
               }`}

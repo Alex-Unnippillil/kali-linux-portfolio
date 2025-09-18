@@ -17,6 +17,20 @@ export const logEvent = (event: EventInput): void => {
   safeEvent(event);
 };
 
+export const logDesktopRestoreTime = (durationMs: number): void => {
+  if (!Number.isFinite(durationMs)) return;
+
+  const rounded = Math.round(durationMs);
+  const payload: EventInput = {
+    category: 'Desktop',
+    action: 'restore-duration',
+    label: `${rounded}ms`,
+    value: rounded,
+  };
+
+  logEvent(payload);
+};
+
 export const logGameStart = (game: string): void => {
   logEvent({ category: game, action: 'start' });
 };
