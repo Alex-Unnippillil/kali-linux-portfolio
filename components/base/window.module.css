@@ -7,3 +7,94 @@
   height: calc(100% + 10px);
   width: calc(100% - 10px);
 }
+
+.windowControls {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 2.75rem;
+  padding: 0.25rem 0.4rem;
+  pointer-events: auto;
+  min-width: 8.25rem;
+}
+
+.controlButton {
+  appearance: none;
+  border: 1px solid rgba(103, 140, 178, 0.32);
+  background-color: rgba(27, 36, 49, 0.92);
+  color: #e7f1ff;
+  border-radius: 9999px;
+  min-width: 2.2rem;
+  height: 1.55rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.7rem;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+
+.controlButtonNeutral {
+  background-color: rgba(33, 47, 63, 0.9);
+  border-color: rgba(103, 140, 178, 0.35);
+}
+
+.controlButtonNeutral:hover {
+  background-color: #3d566e;
+  border-color: rgba(126, 169, 212, 0.6);
+}
+
+.controlButtonNeutral:active {
+  background-color: #31465d;
+}
+
+.controlButtonSecondary {
+  background-color: rgba(38, 53, 70, 0.85);
+  border-color: rgba(120, 160, 200, 0.3);
+}
+
+.controlButtonSecondary:hover,
+.controlButtonSecondary[aria-pressed="true"] {
+  background-color: #3c5976;
+  border-color: rgba(140, 184, 230, 0.6);
+}
+
+.controlButtonSecondary:active {
+  background-color: #324a61;
+}
+
+.controlButtonClose {
+  background-color: rgba(72, 22, 29, 0.85);
+  border-color: rgba(214, 87, 98, 0.45);
+  color: #ffe6ea;
+}
+
+.controlButtonClose:hover {
+  background-color: #d74c53;
+  border-color: rgba(255, 133, 141, 0.8);
+  color: #fff5f6;
+}
+
+.controlButtonClose:active {
+  background-color: #b63f45;
+}
+
+.controlButton:focus-visible {
+  outline: 2px solid #4da7ff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px rgba(23, 93, 140, 0.35);
+}
+
+.controlButtonIcon {
+  width: 0.85rem;
+  height: 0.85rem;
+  pointer-events: none;
+}
+
+.controlButtonIcon path,
+.controlButtonIcon rect {
+  vector-effect: non-scaling-stroke;
+}

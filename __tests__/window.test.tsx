@@ -28,7 +28,7 @@ describe('Window lifecycle', () => {
       />
     );
 
-    const closeButton = screen.getByRole('button', { name: /window close/i });
+    const closeButton = screen.getByRole('button', { name: /close window/i });
     fireEvent.click(closeButton);
 
     expect(hideSideBar).toHaveBeenCalledWith('test-window', false);
@@ -199,7 +199,12 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+      } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
