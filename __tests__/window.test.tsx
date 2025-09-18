@@ -42,6 +42,37 @@ describe('Window lifecycle', () => {
   });
 });
 
+describe('Window focus affordance', () => {
+  it('annotates focus state for styling hooks', () => {
+    const baseProps = {
+      id: 'focus-window',
+      title: 'Focus Test',
+      screen: () => <div>content</div>,
+      focus: () => {},
+      hasMinimised: () => {},
+      closed: () => {},
+      hideSideBar: () => {},
+      openApp: () => {},
+    };
+
+    const { asFragment, rerender, unmount } = render(
+      <Window {...baseProps} isFocused />
+    );
+
+    expect(asFragment()).toMatchSnapshot();
+
+    rerender(
+      <Window {...baseProps} isFocused={false} />
+    );
+
+    expect(
+      screen.getByRole('dialog', { name: /focus test/i })
+    ).toHaveAttribute('data-focused', 'false');
+
+    unmount();
+  });
+});
+
 describe('Window snapping preview', () => {
   it('shows preview when dragged near left edge', () => {
     const ref = React.createRef<Window>();
@@ -199,7 +230,12 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+      } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
