@@ -39,6 +39,7 @@ export class Desktop extends Component {
             favourite_apps: {},
             hideSideBar: false,
             minimized_windows: {},
+            window_visibility: {},
             window_positions: {},
             desktop_apps: [],
             context_menus: {
@@ -351,7 +352,7 @@ export class Desktop extends Component {
             pinnedApps = apps.filter(app => app.favourite).map(app => app.id);
             safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps));
         }
-        let focused_windows = {}, closed_windows = {}, disabled_apps = {}, favourite_apps = {}, overlapped_windows = {}, minimized_windows = {};
+        let focused_windows = {}, closed_windows = {}, disabled_apps = {}, favourite_apps = {}, overlapped_windows = {}, minimized_windows = {}, window_visibility = {};
         let desktop_apps = [];
         apps.forEach((app) => {
             focused_windows = {
@@ -377,7 +378,11 @@ export class Desktop extends Component {
             minimized_windows = {
                 ...minimized_windows,
                 [app.id]: false,
-            }
+            };
+            window_visibility = {
+                ...window_visibility,
+                [app.id]: false,
+            };
             if (app.desktop_shortcut) desktop_apps.push(app.id);
         });
         this.setState({
@@ -387,6 +392,7 @@ export class Desktop extends Component {
             favourite_apps,
             overlapped_windows,
             minimized_windows,
+            window_visibility,
             desktop_apps
         }, () => {
             if (typeof callback === 'function') callback();
@@ -395,7 +401,7 @@ export class Desktop extends Component {
     }
 
     updateAppsData = () => {
-        let focused_windows = {}, closed_windows = {}, favourite_apps = {}, minimized_windows = {}, disabled_apps = {};
+        let focused_windows = {}, closed_windows = {}, favourite_apps = {}, minimized_windows = {}, disabled_apps = {}, window_visibility = {};
         let desktop_apps = [];
         apps.forEach((app) => {
             focused_windows = {
@@ -417,7 +423,11 @@ export class Desktop extends Component {
             favourite_apps = {
                 ...favourite_apps,
                 [app.id]: app.favourite
-            }
+            };
+            window_visibility = {
+                ...window_visibility,
+                [app.id]: ((this.state.window_visibility[app.id] !== undefined || this.state.window_visibility[app.id] !== null) ? this.state.window_visibility[app.id] : false)
+            };
             if (app.desktop_shortcut) desktop_apps.push(app.id);
         });
         this.setState({
@@ -426,6 +436,7 @@ export class Desktop extends Component {
             disabled_apps,
             minimized_windows,
             favourite_apps,
+            window_visibility,
             desktop_apps
         });
         this.initFavourite = { ...favourite_apps };
@@ -460,6 +471,9 @@ export class Desktop extends Component {
             if (this.state.closed_windows[app.id] === false) {
 
                 const pos = this.state.window_positions[app.id];
+                const isVisible = this.state.window_visibility[app.id] !== undefined
+                    ? this.state.window_visibility[app.id]
+                    : (!this.state.minimized_windows[app.id] && this.state.closed_windows[app.id] === false);
                 const props = {
                     title: app.title,
                     id: app.id,
@@ -472,6 +486,7 @@ export class Desktop extends Component {
                     hideSideBar: this.hideSideBar,
                     hasMinimised: this.hasMinimised,
                     minimized: this.state.minimized_windows[app.id],
+                    isVisible,
                     resizable: app.resizable,
                     allowMaximize: app.allowMaximize,
                     defaultWidth: app.defaultWidth,
@@ -547,7 +562,9 @@ export class Desktop extends Component {
         // remove focus and minimise this window
         minimized_windows[objId] = true;
         focused_windows[objId] = false;
-        this.setState({ minimized_windows, focused_windows });
+        this.setState({ minimized_windows, focused_windows }, () => {
+            this.setWindowVisibility(objId, false);
+        });
 
         this.hideSideBar(null, false);
 
@@ -574,6 +591,20 @@ export class Desktop extends Component {
             }
         }
         return result;
+    }
+
+    setWindowVisibility = (id, visible) => {
+        if (this.state.window_visibility[id] === visible) return;
+        this.setState(prev => ({
+            window_visibility: {
+                ...prev.window_visibility,
+                [id]: visible,
+            }
+        }), () => {
+            if (typeof window !== 'undefined' && window.dispatchEvent) {
+                window.dispatchEvent(new CustomEvent('desktop-window-visibility', { detail: { id, visible } }));
+            }
+        });
     }
 
     handleOpenAppEvent = (e) => {
@@ -603,9 +634,13 @@ export class Desktop extends Component {
                 r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
                 let minimized_windows = this.state.minimized_windows;
                 minimized_windows[objId] = false;
-                this.setState({ minimized_windows: minimized_windows }, this.saveSession);
+                this.setState({ minimized_windows: minimized_windows }, () => {
+                    this.setWindowVisibility(objId, true);
+                    this.saveSession();
+                });
             } else {
                 this.focus(objId);
+                this.setWindowVisibility(objId, true);
                 this.saveSession();
             }
             return;
@@ -649,6 +684,7 @@ export class Desktop extends Component {
                 closed_windows[objId] = false; // openes app's window
                 this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
                     this.focus(objId);
+                    this.setWindowVisibility(objId, true);
                     this.saveSession();
                 });
                 this.app_stack.push(objId);
@@ -701,7 +737,10 @@ export class Desktop extends Component {
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
-        this.setState({ closed_windows, favourite_apps }, this.saveSession);
+        this.setState({ closed_windows, favourite_apps }, () => {
+            this.setWindowVisibility(objId, false);
+            this.saveSession();
+        });
     }
 
     pinApp = (id) => {

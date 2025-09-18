@@ -12,6 +12,7 @@ export class Window extends Component {
     constructor(props) {
         super(props);
         this.id = null;
+        this._lastVisibility = props?.isVisible !== false;
         const isPortrait =
             typeof window !== "undefined" && window.innerHeight > window.innerWidth;
         this.startX =
@@ -55,6 +56,15 @@ export class Window extends Component {
         root?.addEventListener('super-arrow', this.handleSuperArrow);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
+        }
+    }
+
+    componentDidUpdate(prevProps) {
+        if (prevProps.isVisible !== this.props.isVisible) {
+            this._lastVisibility = this.props.isVisible !== false;
+            if (this.props.isVisible && !this.props.minimized) {
+                this.checkOverlap();
+            }
         }
     }
 
@@ -612,6 +622,8 @@ export class Window extends Component {
     }
 
     render() {
+        const windowVisible = this.props.isVisible !== false;
+        const contentVisible = windowVisible && !this.props.minimized;
         return (
             <>
                 {this.state.snapPreview && (
@@ -639,6 +651,8 @@ export class Window extends Component {
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
+                        aria-hidden={windowVisible ? undefined : 'true'}
+                        data-visible={windowVisible ? 'true' : 'false'}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                     >
@@ -663,7 +677,10 @@ export class Window extends Component {
                             ? <Settings />
                             : <WindowMainScreen screen={this.props.screen} title={this.props.title}
                                 addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
-                                openApp={this.props.openApp} />)}
+                                openApp={this.props.openApp}
+                                visible={contentVisible}
+                                windowId={this.id}
+                            />)}
                     </div>
                 </Draggable >
             </>
@@ -825,8 +842,8 @@ export function WindowEditButtons(props) {
 
 // Window's Main Screen
 export class WindowMainScreen extends Component {
-    constructor() {
-        super();
+    constructor(props) {
+        super(props);
         this.state = {
             setDarkBg: false,
         }
@@ -837,9 +854,17 @@ export class WindowMainScreen extends Component {
         }, 3000);
     }
     render() {
+        const visible = this.props.visible !== false;
+        const screenOptions = {
+            visible,
+            id: this.props.windowId,
+        };
         return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
-                {this.props.screen(this.props.addFolder, this.props.openApp)}
+            <div
+                className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}
+                data-visible={visible ? 'true' : 'false'}
+            >
+                {this.props.screen(this.props.addFolder, this.props.openApp, screenOptions)}
             </div>
         )
     }

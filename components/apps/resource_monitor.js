@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 // Number of samples to keep in the timeline
 const MAX_POINTS = 60;
 
-const ResourceMonitor = () => {
+const ResourceMonitor = ({ visible = true }) => {
   const cpuCanvas = useRef(null);
   const memCanvas = useRef(null);
   const fpsCanvas = useRef(null);
@@ -16,109 +16,16 @@ const ResourceMonitor = () => {
   const lastDrawRef = useRef(0);
   const THROTTLE_MS = 1000;
 
-  const [paused, setPaused] = useState(false);
+  const [manualPaused, setManualPaused] = useState(false);
+  const [visibilityPaused, setVisibilityPaused] = useState(!visible);
   const [stress, setStress] = useState(false);
   const [fps, setFps] = useState(0);
+
+  const isPaused = manualPaused || visibilityPaused;
 
   const stressWindows = useRef([]);
   const stressEls = useRef([]);
   const containerRef = useRef(null);
-
-  useEffect(() => () => cancelAnimationFrame(animRef.current), []);
-
-  // Spawn worker for network speed tests
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof Worker !== 'function') return;
-    workerRef.current = new Worker(
-      new URL('./speedtest.worker.js', import.meta.url),
-    );
-    workerRef.current.onmessage = (e) => {
-      const { speed } = e.data || {};
-      pushSample('net', speed);
-      scheduleDraw();
-    };
-    workerRef.current.postMessage({ type: 'start' });
-    return () => workerRef.current?.terminate();
-  }, [scheduleDraw]);
-
-  useEffect(() => {
-    if (workerRef.current) {
-      workerRef.current.postMessage({ type: paused ? 'stop' : 'start' });
-    }
-  }, [paused]);
-
-  // Sampling loop using requestAnimationFrame
-  useEffect(() => {
-    let raf;
-    let lastFrame = performance.now();
-    let lastSample = performance.now();
-
-    const sample = (now) => {
-      const dt = now - lastFrame;
-      lastFrame = now;
-      const currentFps = 1000 / dt;
-      if (!paused) setFps(currentFps);
-
-      if (!paused && now - lastSample >= 1000) {
-        const target = 1000 / 60; // 60 FPS ideal frame time
-        const cpu = Math.min(100, Math.max(0, ((dt - target) / target) * 100));
-        let mem = 0;
-        if (performance && performance.memory) {
-          const { usedJSHeapSize, totalJSHeapSize } = performance.memory;
-          mem = (usedJSHeapSize / totalJSHeapSize) * 100;
-        }
-        pushSample('cpu', cpu);
-        pushSample('mem', mem);
-        pushSample('fps', currentFps);
-        scheduleDraw();
-        lastSample = now;
-      }
-      raf = requestAnimationFrame(sample);
-    };
-    raf = requestAnimationFrame(sample);
-    return () => cancelAnimationFrame(raf);
-  }, [paused, scheduleDraw]);
-
-  // Stress test animation – many moving windows
-  useEffect(() => {
-    let raf;
-    const animate = () => {
-      if (stress && !paused) {
-        const rect = containerRef.current?.getBoundingClientRect();
-        stressWindows.current.forEach((w, i) => {
-          w.x += w.vx;
-          w.y += w.vy;
-          if (rect) {
-            if (w.x < 0 || w.x > rect.width - 20) w.vx *= -1;
-            if (w.y < 0 || w.y > rect.height - 20) w.vy *= -1;
-          }
-          const el = stressEls.current[i];
-          if (el) el.style.transform = `translate(${w.x}px, ${w.y}px)`;
-        });
-      }
-      raf = requestAnimationFrame(animate);
-    };
-    raf = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(raf);
-  }, [stress, paused]);
-
-  // Create or clear stress windows when toggled
-  useEffect(() => {
-    if (stress) {
-      const rect = containerRef.current?.getBoundingClientRect();
-      const width = rect?.width || 300;
-      const height = rect?.height || 200;
-      stressWindows.current = Array.from({ length: 40 }, () => ({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 4,
-        vy: (Math.random() - 0.5) * 4,
-      }));
-    } else {
-      stressWindows.current = [];
-      stressEls.current = [];
-    }
-  }, [stress]);
 
   const pushSample = (key, value) => {
     const arr = dataRef.current[key];
@@ -134,12 +41,14 @@ const ResourceMonitor = () => {
   };
 
   const animateCharts = useCallback(() => {
+    if (isPaused) return;
     const from = { ...displayRef.current };
     const to = { ...dataRef.current };
     const start = performance.now();
     const duration = 300;
 
     const step = (now) => {
+      if (isPaused) return;
       const t = Math.min(1, (now - start) / duration);
       const interpolated = {};
       ['cpu', 'mem', 'fps', 'net'].forEach((key) => {
@@ -160,17 +69,136 @@ const ResourceMonitor = () => {
 
     cancelAnimationFrame(animRef.current);
     animRef.current = requestAnimationFrame(step);
-  }, []);
+  }, [isPaused]);
 
   const scheduleDraw = useCallback(() => {
+    if (isPaused) return;
     const now = performance.now();
     if (now - lastDrawRef.current >= THROTTLE_MS) {
       lastDrawRef.current = now;
       animateCharts();
     }
-  }, [animateCharts]);
+  }, [animateCharts, isPaused]);
 
-  const togglePause = () => setPaused((p) => !p);
+  useEffect(() => {
+    setVisibilityPaused((prev) => {
+      const next = !visible;
+      return prev === next ? prev : next;
+    });
+  }, [visible]);
+
+  useEffect(() => () => cancelAnimationFrame(animRef.current), []);
+
+  useEffect(() => {
+    if (isPaused && animRef.current) {
+      cancelAnimationFrame(animRef.current);
+      animRef.current = undefined;
+    }
+  }, [isPaused]);
+
+  // Spawn worker for network speed tests
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof Worker !== 'function') return;
+    workerRef.current = new Worker(
+      new URL('./speedtest.worker.js', import.meta.url),
+    );
+    workerRef.current.postMessage({ type: 'start' });
+    return () => workerRef.current?.terminate();
+  }, []);
+
+  useEffect(() => {
+    if (!workerRef.current) return;
+    workerRef.current.onmessage = (e) => {
+      const { speed } = e.data || {};
+      pushSample('net', speed);
+      scheduleDraw();
+    };
+  }, [scheduleDraw]);
+
+  useEffect(() => {
+    if (workerRef.current) {
+      workerRef.current.postMessage({ type: isPaused ? 'stop' : 'start' });
+    }
+  }, [isPaused]);
+
+  // Sampling loop using requestAnimationFrame
+  useEffect(() => {
+    if (isPaused) {
+      return;
+    }
+    let raf;
+    let lastFrame = performance.now();
+    let lastSample = performance.now();
+
+    const sample = (now) => {
+      const dt = now - lastFrame;
+      lastFrame = now;
+      const currentFps = 1000 / dt;
+      if (!isPaused) setFps(currentFps);
+
+      if (!isPaused && now - lastSample >= 1000) {
+        const target = 1000 / 60; // 60 FPS ideal frame time
+        const cpu = Math.min(100, Math.max(0, ((dt - target) / target) * 100));
+        let mem = 0;
+        if (performance && performance.memory) {
+          const { usedJSHeapSize, totalJSHeapSize } = performance.memory;
+          mem = (usedJSHeapSize / totalJSHeapSize) * 100;
+        }
+        pushSample('cpu', cpu);
+        pushSample('mem', mem);
+        pushSample('fps', currentFps);
+        scheduleDraw();
+        lastSample = now;
+      }
+      raf = requestAnimationFrame(sample);
+    };
+    raf = requestAnimationFrame(sample);
+    return () => cancelAnimationFrame(raf);
+  }, [isPaused, scheduleDraw]);
+
+  // Stress test animation – many moving windows
+  useEffect(() => {
+    if (!stress || isPaused) {
+      return;
+    }
+    let raf;
+    const animate = () => {
+      const rect = containerRef.current?.getBoundingClientRect();
+      stressWindows.current.forEach((w, i) => {
+        w.x += w.vx;
+        w.y += w.vy;
+        if (rect) {
+          if (w.x < 0 || w.x > rect.width - 20) w.vx *= -1;
+          if (w.y < 0 || w.y > rect.height - 20) w.vy *= -1;
+        }
+        const el = stressEls.current[i];
+        if (el) el.style.transform = `translate(${w.x}px, ${w.y}px)`;
+      });
+      raf = requestAnimationFrame(animate);
+    };
+    raf = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(raf);
+  }, [stress, isPaused]);
+
+  // Create or clear stress windows when toggled
+  useEffect(() => {
+    if (stress) {
+      const rect = containerRef.current?.getBoundingClientRect();
+      const width = rect?.width || 300;
+      const height = rect?.height || 200;
+      stressWindows.current = Array.from({ length: 40 }, () => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 4,
+        vy: (Math.random() - 0.5) * 4,
+      }));
+    } else {
+      stressWindows.current = [];
+      stressEls.current = [];
+    }
+  }, [stress]);
+
+  const togglePause = () => setManualPaused((p) => !p);
   const toggleStress = () => setStress((s) => !s);
 
   return (
@@ -180,7 +208,7 @@ const ResourceMonitor = () => {
     >
       <div className="p-2 flex gap-2 items-center">
         <button onClick={togglePause} className="px-2 py-1 bg-ub-dark-grey rounded">
-          {paused ? 'Resume' : 'Pause'}
+          {manualPaused ? 'Resume' : 'Pause'}
         </button>
         <button onClick={toggleStress} className="px-2 py-1 bg-ub-dark-grey rounded">
           {stress ? 'Stop Stress' : 'Stress Test'}
@@ -259,6 +287,11 @@ function drawChart(canvas, values, color, label, maxVal) {
 
 export default ResourceMonitor;
 
-export const displayResourceMonitor = (addFolder, openApp) => (
-  <ResourceMonitor addFolder={addFolder} openApp={openApp} />
+export const displayResourceMonitor = (addFolder, openApp, options = {}) => (
+  <ResourceMonitor
+    addFolder={addFolder}
+    openApp={openApp}
+    visible={options.visible !== undefined ? options.visible : true}
+    windowId={options.id}
+  />
 );
