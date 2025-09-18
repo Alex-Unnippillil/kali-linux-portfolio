@@ -7,16 +7,17 @@ import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
+import { DEFAULT_WALLPAPER, getWallpaperById } from '../lib/wallpapers';
 
 export default class Ubuntu extends Component {
 	constructor() {
 		super();
-		this.state = {
-			screen_locked: false,
-			bg_image_name: 'wall-2',
-			booting_screen: true,
-			shutDownScreen: false
-		};
+                this.state = {
+                        screen_locked: false,
+                        bg_image_name: DEFAULT_WALLPAPER.id,
+                        booting_screen: true,
+                        shutDownScreen: false
+                };
 	}
 
 	componentDidMount() {
@@ -32,9 +33,11 @@ export default class Ubuntu extends Component {
 	getLocalData = () => {
 		// Get Previously selected Background Image
                 let bg_image_name = safeLocalStorage?.getItem('bg-image');
-		if (bg_image_name !== null && bg_image_name !== undefined) {
-			this.setState({ bg_image_name });
-		}
+                if (bg_image_name !== null && bg_image_name !== undefined) {
+                        this.setState({ bg_image_name: getWallpaperById(bg_image_name).id });
+                } else {
+                        this.setState({ bg_image_name: DEFAULT_WALLPAPER.id });
+                }
 
                 let booting_screen = safeLocalStorage?.getItem('booting_screen');
 		if (booting_screen !== null && booting_screen !== undefined) {
@@ -86,8 +89,9 @@ export default class Ubuntu extends Component {
 	};
 
 	changeBackgroundImage = (img_name) => {
-		this.setState({ bg_image_name: img_name });
-                safeLocalStorage?.setItem('bg-image', img_name);
+                const resolved = getWallpaperById(img_name).id;
+                this.setState({ bg_image_name: resolved });
+                safeLocalStorage?.setItem('bg-image', resolved);
 	};
 
 	shutDown = () => {

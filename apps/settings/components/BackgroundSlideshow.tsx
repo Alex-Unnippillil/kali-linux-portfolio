@@ -4,10 +4,17 @@ import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import { useSettings } from '../../../hooks/useSettings';
+import { DEFAULT_WALLPAPER } from '../../../lib/wallpapers';
+
+type WallpaperOption = {
+  id: string;
+  name?: string;
+  src: string;
+};
 
 export default function BackgroundSlideshow() {
   const { setWallpaper } = useSettings();
-  const [available, setAvailable] = useState<string[]>([]);
+  const [available, setAvailable] = useState<WallpaperOption[]>([]);
   const [selected, setSelected] = usePersistentState<string[]>(
     'bg-slideshow-selected',
     [],
@@ -23,9 +30,26 @@ export default function BackgroundSlideshow() {
   useEffect(() => {
     fetch('/api/wallpapers')
       .then((res) => res.json())
-      .then((files: string[]) => setAvailable(files))
+      .then((items: WallpaperOption[]) => {
+        if (Array.isArray(items)) {
+          setAvailable(
+            items.filter(
+              (item) => typeof item?.src === 'string' && typeof item?.id === 'string',
+            ),
+          );
+        } else {
+          setAvailable([]);
+        }
+      })
       .catch(() => setAvailable([]));
   }, []);
+
+  useEffect(() => {
+    if (available.length === 0) return;
+    setSelected((prev) =>
+      prev.filter((id) => available.some((item) => item.id === id)),
+    );
+  }, [available, setSelected]);
 
   useEffect(() => {
     if (!playing || selected.length === 0) {
@@ -33,9 +57,9 @@ export default function BackgroundSlideshow() {
       return;
     }
     const run = () => {
-      const file = selected[indexRef.current % selected.length];
-      const base = file.replace(/\.[^.]+$/, '');
-      setWallpaper(base);
+      const currentId = selected[indexRef.current % selected.length];
+      const target = available.find((item) => item.id === currentId);
+      setWallpaper(target?.id || DEFAULT_WALLPAPER.id);
       indexRef.current = (indexRef.current + 1) % selected.length;
     };
     run();
@@ -45,22 +69,22 @@ export default function BackgroundSlideshow() {
     };
   }, [playing, intervalMs, selected, setWallpaper]);
 
-  const toggle = (file: string) => {
+  const toggle = (id: string) => {
     setSelected((prev) =>
-      prev.includes(file)
-        ? prev.filter((f) => f !== file)
-        : [...prev, file],
+      prev.includes(id)
+        ? prev.filter((f) => f !== id)
+        : [...prev, id],
     );
   };
 
   return (
     <div className="p-4 space-y-4 text-ubt-grey">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        {available.map((file) => (
-          <label key={file} className="flex flex-col items-center cursor-pointer">
+        {available.map((option) => (
+          <label key={option.id} className="flex flex-col items-center cursor-pointer">
             <Image
-              src={`/images/wallpapers/${file}`}
-              alt={file}
+              src={option.src}
+              alt={option.name || option.id}
               width={96}
               height={64}
               sizes="96px"
@@ -68,8 +92,8 @@ export default function BackgroundSlideshow() {
             />
             <input
               type="checkbox"
-              checked={selected.includes(file)}
-              onChange={() => toggle(file)}
+              checked={selected.includes(option.id)}
+              onChange={() => toggle(option.id)}
             />
           </label>
         ))}

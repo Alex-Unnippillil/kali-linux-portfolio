@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
+import { WALLPAPERS, getWallpaperById } from '../../lib/wallpapers';
 
 export function Settings() {
     const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
@@ -8,11 +9,14 @@ export function Settings() {
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
 
-    const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
+    const wallpaperOptions = WALLPAPERS;
+    const resolvedWallpaper = getWallpaperById(wallpaper);
 
     const changeBackgroundImage = (e) => {
-        const name = e.currentTarget.dataset.path;
-        setWallpaper(name);
+        const id = e.currentTarget.dataset.wallpaperId;
+        if (id) {
+            setWallpaper(id);
+        }
     };
 
     let hexToRgb = (hex) => {
@@ -57,7 +61,7 @@ export function Settings() {
 
     return (
         <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"}>
-            <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4" style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}>
+            <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4" style={{ backgroundImage: `url(${resolvedWallpaper?.src || ''})`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}>
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Theme:</label>
@@ -197,12 +201,12 @@ export function Settings() {
             </div>
             <div className="flex flex-wrap justify-center items-center border-t border-gray-900">
                 {
-                    wallpapers.map((name, index) => (
+                    wallpaperOptions.map((option) => (
                         <div
-                            key={name}
+                            key={option.id}
                             role="button"
-                            aria-label={`Select ${name.replace('wall-', 'wallpaper ')}`}
-                            aria-pressed={name === wallpaper}
+                            aria-label={`Select ${option.name}`}
+                            aria-pressed={option.id === wallpaper}
                             tabIndex="0"
                             onClick={changeBackgroundImage}
                             onFocus={changeBackgroundImage}
@@ -212,9 +216,9 @@ export function Settings() {
                                     changeBackgroundImage(e);
                                 }
                             }}
-                            data-path={name}
-                            className={((name === wallpaper) ? " border-yellow-700 " : " border-transparent ") + " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"}
-                            style={{ backgroundImage: `url(/wallpapers/${name}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}
+                            data-wallpaper-id={option.id}
+                            className={((option.id === wallpaper) ? " border-yellow-700 " : " border-transparent ") + " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"}
+                            style={{ backgroundImage: `url(${option.src})`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}
                         ></div>
                     ))
                 }

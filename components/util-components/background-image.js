@@ -1,16 +1,29 @@
 "use client";
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react';
 import { useSettings } from '../../hooks/useSettings';
+import { DEFAULT_WALLPAPER, getWallpaperById } from '../../lib/wallpapers';
 
 export default function BackgroundImage() {
-    const { wallpaper } = useSettings();
+    const { wallpaper, setWallpaper } = useSettings();
+    const [resolvedWallpaper, setResolvedWallpaper] = useState(() => getWallpaperById(wallpaper));
     const [needsOverlay, setNeedsOverlay] = useState(false);
 
     useEffect(() => {
+        setResolvedWallpaper(getWallpaperById(wallpaper));
+    }, [wallpaper]);
+
+    useEffect(() => {
+        const src = resolvedWallpaper?.src;
+        if (!src) {
+            setNeedsOverlay(false);
+            return;
+        }
         const img = new Image();
-        img.src = `/wallpapers/${wallpaper}.webp`;
+        let cancelled = false;
+        img.src = src;
         img.onload = () => {
+            if (cancelled) return;
             const canvas = document.createElement('canvas');
             canvas.width = img.width;
             canvas.height = img.height;
@@ -31,21 +44,34 @@ export default function BackgroundImage() {
                 return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
             };
             const lum = 0.2126 * toLinear(avgR) + 0.7152 * toLinear(avgG) + 0.0722 * toLinear(avgB);
-            const contrast = (1.05) / (lum + 0.05); // white text luminance is 1
+            const contrast = 1.05 / (lum + 0.05); // white text luminance is 1
             setNeedsOverlay(contrast < 4.5);
         };
-    }, [wallpaper]);
+        img.onerror = () => {
+            if (resolvedWallpaper?.id && resolvedWallpaper.id !== DEFAULT_WALLPAPER.id) {
+                setWallpaper(DEFAULT_WALLPAPER.id);
+            }
+        };
+        return () => {
+            cancelled = true;
+        };
+    }, [resolvedWallpaper, setWallpaper]);
 
     return (
         <div className="bg-ubuntu-img absolute -z-10 top-0 right-0 overflow-hidden h-full w-full">
             <img
-                src={`/wallpapers/${wallpaper}.webp`}
-                alt=""
+                src={resolvedWallpaper?.src || DEFAULT_WALLPAPER.src}
+                alt={resolvedWallpaper?.name || ''}
                 className="w-full h-full object-cover"
+                onError={() => {
+                    if (resolvedWallpaper?.id !== DEFAULT_WALLPAPER.id) {
+                        setWallpaper(DEFAULT_WALLPAPER.id);
+                    }
+                }}
             />
             {needsOverlay && (
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 to-transparent" aria-hidden="true"></div>
             )}
         </div>
-    )
+    );
 }

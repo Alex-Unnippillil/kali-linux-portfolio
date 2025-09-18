@@ -1,10 +1,12 @@
 import React from 'react';
 import Clock from '../util-components/clock';
 import { useSettings } from '../../hooks/useSettings';
+import { DEFAULT_WALLPAPER, getWallpaperById } from '../../lib/wallpapers';
 
 export default function LockScreen(props) {
 
-    const { wallpaper } = useSettings();
+    const { wallpaper, setWallpaper } = useSettings();
+    const resolvedWallpaper = getWallpaperById(wallpaper);
 
     if (props.isLocked) {
         window.addEventListener('click', props.unLockScreen);
@@ -17,9 +19,14 @@ export default function LockScreen(props) {
             style={{ zIndex: "100", contentVisibility: 'auto' }}
             className={(props.isLocked ? " visible translate-y-0 " : " invisible -translate-y-full ") + " absolute outline-none bg-black bg-opacity-90 transform duration-500 select-none top-0 right-0 overflow-hidden m-0 p-0 h-screen w-screen"}>
             <img
-                src={`/wallpapers/${wallpaper}.webp`}
-                alt=""
+                src={resolvedWallpaper?.src || DEFAULT_WALLPAPER.src}
+                alt={resolvedWallpaper?.name || ''}
                 className={`absolute top-0 left-0 w-full h-full object-cover transform z-20 transition duration-500 ${props.isLocked ? 'blur-sm' : 'blur-none'}`}
+                onError={() => {
+                    if (resolvedWallpaper?.id !== DEFAULT_WALLPAPER.id) {
+                        setWallpaper(DEFAULT_WALLPAPER.id);
+                    }
+                }}
             />
             <div className="w-full h-full z-50 overflow-hidden relative flex flex-col justify-center items-center text-white">
                 <div className=" text-7xl">
