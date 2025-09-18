@@ -54,6 +54,10 @@ const getPort = () =>
       console.log(`✓ ${route}`);
     }
 
+    await run('npx', ['playwright', 'test'], {
+      env: { ...process.env, BASE_URL: `http://localhost:${port}` },
+    });
+
     console.log('verify: PASS');
     server.kill();
   } catch (err) {
