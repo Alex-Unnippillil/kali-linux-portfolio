@@ -155,6 +155,9 @@ export class Desktop extends Component {
         } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
             e.preventDefault();
             this.openApp('clipboard-manager');
+        } else if (e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey && e.key === '.') {
+            e.preventDefault();
+            this.openApp('emoji-picker');
         }
         else if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
