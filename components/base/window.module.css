@@ -7,3 +7,11 @@
   height: calc(100% + 10px);
   width: calc(100% - 10px);
 }
+
+.windowFrame {
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.windowMaximized {
+  border-radius: 0;
+}

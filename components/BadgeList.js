@@ -90,13 +90,13 @@ const BadgeList = ({ badges, className = '' }) => {
         >
           <div
             ref={modalRef}
-            className="bg-white text-black p-4 rounded shadow max-w-sm"
+            className="bg-white text-black p-4 rounded-[var(--radius-lg)] shadow max-w-sm"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="font-bold mb-2">{selected.label}</div>
             <div className="text-sm">{selected.description}</div>
             <button
-              className="mt-4 px-2 py-1 bg-blue-600 text-white rounded"
+              className="mt-4 px-2 py-1 bg-blue-600 text-white rounded-[var(--radius-sm)]"
               onClick={closeModal}
             >
               Close

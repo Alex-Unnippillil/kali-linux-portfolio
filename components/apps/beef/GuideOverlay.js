@@ -51,7 +51,7 @@ export default function GuideOverlay({ onClose }) {
       tabIndex={-1}
       onKeyDown={onKeyDown}
     >
-      <div className="max-w-md p-4 bg-gray-800 rounded shadow-lg">
+      <div className="max-w-md p-4 bg-gray-800 rounded-[var(--radius-lg)] shadow-lg">
         <div className="mb-2 text-center font-bold">
           Demo data, no live scanning
         </div>
@@ -62,7 +62,7 @@ export default function GuideOverlay({ onClose }) {
             type="button"
             onClick={prev}
             disabled={step === 0}
-            className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50 focus:outline-none focus:ring"
+            className="px-3 py-1 bg-gray-700 rounded-[var(--radius-sm)] disabled:opacity-50 focus:outline-none focus:ring"
           >
             Prev
           </button>
@@ -71,7 +71,7 @@ export default function GuideOverlay({ onClose }) {
             type="button"
             onClick={next}
             disabled={step === STEPS.length - 1}
-            className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50 focus:outline-none focus:ring"
+            className="px-3 py-1 bg-gray-700 rounded-[var(--radius-sm)] disabled:opacity-50 focus:outline-none focus:ring"
           >
             Next
           </button>
@@ -86,7 +86,7 @@ export default function GuideOverlay({ onClose }) {
         </label>
         <button
           onClick={handleClose}
-          className="mt-4 px-3 py-1 bg-gray-700 rounded focus:outline-none focus:ring"
+          className="mt-4 px-3 py-1 bg-gray-700 rounded-[var(--radius-sm)] focus:outline-none focus:ring"
         >
           Close
         </button>

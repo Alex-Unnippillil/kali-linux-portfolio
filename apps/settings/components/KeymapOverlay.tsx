@@ -74,7 +74,7 @@ export default function KeymapOverlay({ open, onClose }: KeymapOverlayProps) {
               data-conflict={conflicts.has(s.keys) ? 'true' : 'false'}
               className={
                 conflicts.has(s.keys)
-                  ? 'flex justify-between bg-red-600/70 px-2 py-1 rounded'
+                  ? 'flex justify-between bg-red-600/70 px-2 py-1 rounded-[var(--radius-sm)]'
                   : 'flex justify-between px-2 py-1'
               }
             >
@@ -83,7 +83,7 @@ export default function KeymapOverlay({ open, onClose }: KeymapOverlayProps) {
               <button
                 type="button"
                 onClick={() => setRebinding(s.description)}
-                className="px-2 py-1 bg-ub-orange text-white rounded text-sm"
+                className="px-2 py-1 bg-ub-orange text-white rounded-[var(--radius-sm)] text-sm"
               >
                 {rebinding === s.description ? 'Press keys...' : 'Rebind'}
               </button>

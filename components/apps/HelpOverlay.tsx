@@ -216,7 +216,7 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
       role="dialog"
       aria-modal="true"
     >
-      <div className="max-w-md p-4 bg-gray-800 rounded shadow-lg">
+      <div className="max-w-md p-4 bg-gray-800 rounded-[var(--radius-lg)] shadow-lg">
         <h2 className="text-xl font-bold mb-2">{gameId} Help</h2>
         <p className="mb-2">
           <strong>Objective:</strong> {info.objective}
@@ -244,8 +244,8 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
         )}
         <button
           onClick={onClose}
-          className="mt-4 px-3 py-1 bg-gray-700 rounded focus:outline-none focus:ring"
-        >
+          className="mt-4 px-3 py-1 bg-gray-700 rounded-[var(--radius-sm)] focus:outline-none focus:ring"
+          >
           Close
         </button>
       </div>

@@ -541,18 +541,18 @@ const OpenVASApp = () => {
           aria-modal="true"
           className="fixed inset-0 bg-black/70 flex items-center justify-center p-4"
         >
-          <div className="bg-gray-800 p-4 rounded max-w-md w-full">
+          <div className="bg-gray-800 p-4 rounded-[var(--radius-lg)] max-w-md w-full">
             <h3 className="text-lg mb-2">Host {activeHost.host} Findings</h3>
             <ul className="space-y-2 max-h-60 overflow-auto">
               {activeHost.vulns.map((v, i) => (
-                <li key={i} className="p-2 bg-gray-700 rounded">
+                <li key={i} className="p-2 bg-gray-700 rounded-[var(--radius-md)]">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold">{v.title}</span>
                     <div className="flex gap-1 ml-2">
-                      <span className="px-2 py-0.5 rounded text-xs bg-red-700">
+                      <span className="px-2 py-0.5 rounded-[var(--radius-sm)] text-xs bg-red-700">
                         CVSS {v.cvss}
                       </span>
-                      <span className="px-2 py-0.5 rounded text-xs bg-blue-700">
+                      <span className="px-2 py-0.5 rounded-[var(--radius-sm)] text-xs bg-blue-700">
                         EPSS {(v.epss * 100).toFixed(1)}%
                       </span>
                     </div>
@@ -561,7 +561,7 @@ const OpenVASApp = () => {
                     {v.remediation.map((tag) => (
                       <span
                         key={tag}
-                        className="inline-block mr-1 mb-1 px-2 py-0.5 bg-gray-600 rounded text-xs"
+                        className="inline-block mr-1 mb-1 px-2 py-0.5 bg-gray-600 rounded-[var(--radius-sm)] text-xs"
                       >
                         {tag}
                       </span>
@@ -573,7 +573,7 @@ const OpenVASApp = () => {
             <button
               type="button"
               onClick={() => setActiveHost(null)}
-              className="mt-4 px-3 py-1 bg-blue-600 rounded"
+              className="mt-4 px-3 py-1 bg-blue-600 rounded-[var(--radius-sm)]"
             >
               Close
             </button>
@@ -586,7 +586,7 @@ const OpenVASApp = () => {
           aria-modal="true"
           className="fixed inset-0 bg-black/70 flex items-center justify-center p-4"
         >
-          <div className="bg-gray-800 p-4 rounded max-w-md w-full">
+          <div className="bg-gray-800 p-4 rounded-[var(--radius-lg)] max-w-md w-full">
             <h3 className="text-lg mb-2">Issue Detail</h3>
             <p
               className="mb-2"
@@ -594,12 +594,12 @@ const OpenVASApp = () => {
             />
             <div className="flex gap-2 mb-2">
               {selected.cvss !== undefined && (
-                <span className="px-2 py-0.5 bg-red-700 rounded text-xs">
+                <span className="px-2 py-0.5 bg-red-700 rounded-[var(--radius-sm)] text-xs">
                   CVSS {selected.cvss}
                 </span>
               )}
               {selected.epss !== undefined && (
-                <span className="px-2 py-0.5 bg-blue-700 rounded text-xs">
+                <span className="px-2 py-0.5 bg-blue-700 rounded-[var(--radius-sm)] text-xs">
                   EPSS {(selected.epss * 100).toFixed(1)}%
                 </span>
               )}
@@ -612,7 +612,7 @@ const OpenVASApp = () => {
             <button
               type="button"
               onClick={() => setSelected(null)}
-              className="px-3 py-1 bg-blue-600 rounded"
+              className="px-3 py-1 bg-blue-600 rounded-[var(--radius-sm)]"
             >
               Close
             </button>

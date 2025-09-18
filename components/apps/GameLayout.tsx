@@ -217,19 +217,19 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           <div
             className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
             role="dialog"
-          aria-modal="true"
-        >
-          <button
-            type="button"
-            onClick={resume}
-            className="px-4 py-2 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-            autoFocus
+            aria-modal="true"
           >
-            Resume
-          </button>
-        </div>
-      )}
-      <div className="absolute top-2 right-2 z-40 flex space-x-2">
+            <button
+              type="button"
+              onClick={resume}
+              className="px-4 py-2 bg-gray-700 text-white rounded-[var(--radius-md)] focus:outline-none focus:ring"
+              autoFocus
+            >
+              Resume
+            </button>
+          </div>
+        )}
+        <div className="absolute top-2 right-2 z-40 flex space-x-2">
         <button
           type="button"
           onClick={() => setPaused((p) => !p)}
