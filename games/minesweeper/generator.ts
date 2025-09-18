@@ -42,8 +42,9 @@ export function generateBoard(
   }
 
   const safe = new Set<number>();
-  for (let dx = -1; dx <= 1; dx++) {
-    for (let dy = -1; dy <= 1; dy++) {
+  const SAFE_RADIUS = 2;
+  for (let dx = -SAFE_RADIUS; dx <= SAFE_RADIUS; dx++) {
+    for (let dy = -SAFE_RADIUS; dy <= SAFE_RADIUS; dy++) {
       const nx = startX + dx;
       const ny = startY + dy;
       if (nx >= 0 && nx < size && ny >= 0 && ny < size) {

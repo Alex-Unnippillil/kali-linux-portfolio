@@ -71,12 +71,15 @@ const generateBoard = (seed, sx, sy) => {
   }
 
   const safe = new Set();
-  for (let dx = -1; dx <= 1; dx++) {
-    for (let dy = -1; dy <= 1; dy++) {
-      const nx = sx + dx;
-      const ny = sy + dy;
-      if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE) {
-        safe.add(nx * BOARD_SIZE + ny);
+  if (typeof sx === 'number' && typeof sy === 'number') {
+    const SAFE_RADIUS = 2;
+    for (let dx = -SAFE_RADIUS; dx <= SAFE_RADIUS; dx++) {
+      for (let dy = -SAFE_RADIUS; dy <= SAFE_RADIUS; dy++) {
+        const nx = sx + dx;
+        const ny = sy + dy;
+        if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE) {
+          safe.add(nx * BOARD_SIZE + ny);
+        }
       }
     }
   }
@@ -589,12 +592,13 @@ const Minesweeper = () => {
 
   const handleClick = async (x, y) => {
     if (status === 'lost' || status === 'won' || paused) return;
-    if (!board) {
+    if (status === 'ready') {
       await startGame(x, y);
       playSound('reveal');
       return;
     }
 
+    if (!board) return;
     const newBoard = cloneBoard(board);
     const cell = newBoard[x][y];
 
@@ -1157,5 +1161,6 @@ const Minesweeper = () => {
   );
 };
 
+export { generateBoard };
 export default Minesweeper;
 
