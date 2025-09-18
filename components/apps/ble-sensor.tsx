@@ -1,33 +1,85 @@
-import React, { useState, useEffect, useRef } from 'react';
-import FormError from '../ui/FormError';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   loadProfiles,
-  loadProfile,
-  saveProfile,
   renameProfile,
   deleteProfile,
   SavedProfile,
   ServiceData,
-  CharacteristicData,
 } from '../../utils/bleProfiles';
+import useBluetoothController from '../../hooks/useBluetoothController';
+import {
+  forgetDevice,
+  updateCachedDeviceName,
+} from '../../utils/bluetoothManager';
 
-type BluetoothDevice = any;
-type BluetoothRemoteGATTServer = any;
+const PAIRING_STEPS: Array<{
+  key: 'request' | 'connect' | 'discover' | 'complete';
+  label: string;
+  description: string;
+  icon: string;
+}> = [
+  {
+    key: 'request',
+    label: 'Request device',
+    description: 'Grant permission to scan nearby Bluetooth devices.',
+    icon: '🔍',
+  },
+  {
+    key: 'connect',
+    label: 'Secure pairing',
+    description: 'Establishing an encrypted connection to the sensor.',
+    icon: '🔗',
+  },
+  {
+    key: 'discover',
+    label: 'Discover services',
+    description: 'Reading GATT characteristics exposed by the device.',
+    icon: '🛰️',
+  },
+  {
+    key: 'complete',
+    label: 'Ready',
+    description: 'Profile cached locally for quick reconnects.',
+    icon: '✅',
+  },
+];
 
-const MAX_RETRIES = 3;
+const STATUS_MESSAGES: Record<string, string> = {
+  idle: 'Ready to start a scan.',
+  requesting: 'Awaiting browser permission…',
+  connecting: 'Pairing with device…',
+  discovering: 'Reading device services…',
+  connected: 'Connected and streaming cached data.',
+  disconnected: 'Device is disconnected but cached data is available.',
+  reconnecting: 'Device went to sleep. Attempting to reconnect…',
+  error: 'Connection failed. Review the message below.',
+};
 
-const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+type StepStatus = 'complete' | 'active' | 'pending' | 'error';
 
 const BleSensor: React.FC = () => {
-  const supported = typeof navigator !== 'undefined' && 'bluetooth' in navigator;
-  const [deviceName, setDeviceName] = useState('');
-  const [services, setServices] = useState<ServiceData[]>([]);
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
+  const {
+    supported,
+    status,
+    step,
+    busy,
+    deviceName,
+    services,
+    batteryLevel,
+    error,
+    canRetry,
+    startPairing,
+    retryPairing,
+    disconnectDevice,
+    fromCache,
+  } = useBluetoothController();
   const [profiles, setProfiles] = useState<SavedProfile[]>([]);
   const bcRef = useRef<BroadcastChannel | null>(null);
 
-  const refreshProfiles = async () => setProfiles(await loadProfiles());
+  const refreshProfiles = async () => {
+    const list = await loadProfiles();
+    setProfiles(list);
+  };
 
   useEffect(() => {
     refreshProfiles();
@@ -37,168 +89,218 @@ const BleSensor: React.FC = () => {
       bcRef.current = bc;
       return () => bc.close();
     }
+    return () => {};
   }, []);
 
-  const connectWithRetry = async (
-    device: BluetoothDevice,
-    retries = MAX_RETRIES
-  ): Promise<BluetoothRemoteGATTServer> => {
-    let lastError: unknown = new Error('Unable to connect');
-    for (let attempt = 1; attempt <= retries; attempt++) {
-      try {
-        return await device.gatt!.connect();
-      } catch (err) {
-        lastError = err;
-        if (attempt < retries) {
-          await delay(1000 * attempt);
-        }
-      }
-    }
-    throw lastError;
-  };
-
-  const handleScan = async () => {
-    if (!supported || busy) return;
-    setError('');
-    setBusy(true);
-
-    const consent = window.confirm(
-      'This application will request access to nearby Bluetooth devices. Continue?'
-    );
-    if (!consent) {
-      setBusy(false);
+  const handlePrimaryAction = () => {
+    if (status === 'connected') {
+      disconnectDevice();
       return;
     }
-
-    try {
-      const device = await (navigator as any).bluetooth.requestDevice({
-        acceptAllDevices: true,
-        optionalServices: ['battery_service', 'device_information'],
-      });
-
-      const saved = await loadProfile(device.id);
-      if (saved) {
-        setDeviceName(saved.name);
-        setServices(saved.services);
-        return;
-      }
-
-      setDeviceName(device.name || 'Unknown device');
-
-      const server = await connectWithRetry(device);
-
-      device.addEventListener('gattserverdisconnected', () =>
-        setError('Device disconnected.')
-      );
-
-      const primServices = await server.getPrimaryServices();
-      const serviceData: ServiceData[] = [];
-
-      for (const service of primServices) {
-        const chars = await service.getCharacteristics();
-        const charData: CharacteristicData[] = await Promise.all(
-          chars.map(async (char: any) => {
-            try {
-              const val = await char.readValue();
-              const decoder = new TextDecoder();
-              return { uuid: char.uuid, value: decoder.decode(val.buffer) };
-            } catch {
-              return { uuid: char.uuid, value: '[unreadable]' };
-            }
-          })
-        );
-        serviceData.push({ uuid: service.uuid, characteristics: charData });
-      }
-      setServices(serviceData);
-      await saveProfile(device.id, {
-        name: device.name || 'Unknown device',
-        services: serviceData,
-      });
-      bcRef.current?.postMessage('update');
-      await refreshProfiles();
-    } catch (err) {
-      const e = err as DOMException;
-      if (e.name === 'NotAllowedError') {
-        setError('Permission to access Bluetooth was denied.');
-      } else if (e.name === 'NotFoundError') {
-        setError('No devices found.');
-      } else {
-        setError(e.message || 'An unknown error occurred.');
-      }
-    } finally {
-      setBusy(false);
+    if (canRetry) {
+      retryPairing();
+      return;
     }
+    startPairing();
+  };
+
+  const primaryLabel = (() => {
+    if (status === 'connected') return 'Disconnect';
+    if (canRetry) return 'Retry';
+    return 'Scan for Devices';
+  })();
+
+  const activeIndex = Math.max(
+    0,
+    PAIRING_STEPS.findIndex((item) => item.key === step)
+  );
+
+  const renderStepStatus = (index: number): StepStatus => {
+    if (index < activeIndex) return 'complete';
+    if (index === activeIndex) {
+      if (status === 'error') return 'error';
+      return 'active';
+    }
+    return 'pending';
   };
 
   return (
     <div className="h-full w-full bg-black p-4 text-white">
       {!supported && (
-        <p className="mb-4 text-sm text-yellow-400">
-          Web Bluetooth is not supported in this browser.
+        <p className="mb-4 rounded border border-yellow-400/50 bg-yellow-900/40 p-2 text-sm text-yellow-200">
+          Web Bluetooth is not supported in this browser. The simulator will
+          only show cached data.
         </p>
       )}
 
-      <button
-        onClick={handleScan}
-        disabled={!supported || busy}
-        className="mb-4 rounded bg-blue-600 px-3 py-1 disabled:opacity-50"
-      >
-        Scan for Devices
-      </button>
+      <div className="mb-4 rounded border border-slate-700 bg-slate-900/70 p-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-lg font-semibold" data-testid="device-name">
+              {deviceName || 'No device connected'}
+            </p>
+            <p className="text-sm text-slate-300">
+              {STATUS_MESSAGES[status] || STATUS_MESSAGES.idle}
+            </p>
+            {fromCache && status !== 'connected' && (
+              <p className="mt-1 text-xs text-slate-400">
+                Using cached services from the previous session.
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {batteryLevel !== null && batteryLevel !== undefined && (
+              <span
+                className="rounded bg-slate-800 px-2 py-1 text-sm"
+                data-testid="battery-level"
+              >
+                <span aria-hidden="true" className="mr-1">
+                  🔋
+                </span>
+                Battery {batteryLevel}%
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={handlePrimaryAction}
+              disabled={!supported || busy}
+              className="rounded bg-blue-600 px-3 py-1 text-sm font-medium disabled:opacity-60"
+            >
+              {busy ? 'Working…' : primaryLabel}
+            </button>
+          </div>
+        </div>
+      </div>
 
-      {error && <FormError className="mt-0 mb-4">{error}</FormError>}
+      <ul className="mb-4 space-y-2" aria-label="Pairing progress">
+        {PAIRING_STEPS.map((item, index) => {
+          const state = renderStepStatus(index);
+          const statusLabel =
+            state === 'complete'
+              ? 'Done'
+              : state === 'active'
+                ? 'In progress'
+                : state === 'error'
+                  ? 'Needs retry'
+                  : 'Pending';
+          const stateClass =
+            state === 'active'
+              ? 'bg-slate-900/80 border-slate-700'
+              : state === 'complete'
+                ? 'bg-slate-900/40 border-slate-700/70'
+                : state === 'error'
+                  ? 'bg-red-900/30 border-red-600/60'
+                  : 'bg-slate-900/20 border-slate-800';
+          return (
+            <li
+              key={item.key}
+              data-testid={`pairing-step-${item.key}`}
+              className={`flex items-start gap-3 rounded border p-3 text-sm ${stateClass}`}
+            >
+              <span aria-hidden="true" className="text-lg">
+                {item.icon}
+              </span>
+              <div className="flex-1">
+                <p className="font-semibold">{item.label}</p>
+                <p className="text-xs text-slate-300">{item.description}</p>
+              </div>
+              <span className="text-xs uppercase tracking-wide text-slate-300">
+                {statusLabel}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+
+      {error && (
+        <div
+          role="alert"
+          className="mb-4 rounded border border-red-500/40 bg-red-900/40 p-3 text-sm text-red-100"
+        >
+          <p>{error}</p>
+          {canRetry && (
+            <button
+              type="button"
+              onClick={() => retryPairing()}
+              className="mt-2 rounded bg-red-500/80 px-3 py-1 text-sm font-medium text-white hover:bg-red-500"
+            >
+              Retry pairing
+            </button>
+          )}
+        </div>
+      )}
+
+      <section className="mb-6">
+        <h2 className="mb-2 text-lg font-semibold">Discovered services</h2>
+        {services.length === 0 ? (
+          <p className="text-sm text-slate-300">
+            No services have been read yet. Start a scan to inspect a device profile.
+          </p>
+        ) : (
+          <ul className="space-y-3" data-testid="service-list">
+            {services.map((service: ServiceData) => (
+              <li key={service.uuid} className="rounded border border-slate-800 p-3">
+                <p className="mb-2 font-semibold">Service: {service.uuid}</p>
+                <ul className="space-y-1 text-sm">
+                  {service.characteristics.map((char) => (
+                    <li key={char.uuid} className="flex flex-col rounded bg-slate-900/60 p-2">
+                      <span className="font-mono text-xs text-slate-300">{char.uuid}</span>
+                      <span className="text-sm text-slate-100">{char.value}</span>
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {profiles.length > 0 && (
-        <div className="mb-4">
-          <p className="mb-2 font-bold">Saved Profiles</p>
-          <ul className="space-y-1">
-            {profiles.map((p) => (
-              <li key={p.deviceId} className="flex items-center space-x-2">
+        <section>
+          <h2 className="mb-2 text-lg font-semibold">Saved profiles</h2>
+          <ul className="space-y-2 text-sm">
+            {profiles.map((profile) => (
+              <li
+                key={profile.deviceId}
+                className="flex flex-wrap items-center gap-2 rounded border border-slate-800 p-2"
+              >
                 <input
-                  defaultValue={p.name}
-                  onBlur={async (e) => {
-                    await renameProfile(p.deviceId, e.target.value);
+                  defaultValue={profile.name}
+                  onBlur={async (event) => {
+                    const value = event.target.value.trim();
+                    if (!value) return;
+                    await renameProfile(profile.deviceId, value);
+                    updateCachedDeviceName(profile.deviceId, value);
                     bcRef.current?.postMessage('update');
-                    await refreshProfiles();
+                    refreshProfiles();
                   }}
-                  className="w-40 bg-gray-800 px-1"
+                  className="w-48 flex-1 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-sm"
                 />
+                {profile.batteryLevel !== undefined && profile.batteryLevel !== null && (
+                  <span className="rounded bg-slate-900 px-2 py-1 text-xs text-slate-300">
+                    🔋 {profile.batteryLevel}%
+                  </span>
+                )}
                 <button
+                  type="button"
                   onClick={async () => {
-                    await deleteProfile(p.deviceId);
+                    forgetDevice(profile.deviceId);
+                    await deleteProfile(profile.deviceId);
                     bcRef.current?.postMessage('update');
-                    await refreshProfiles();
+                    refreshProfiles();
                   }}
-                  className="text-red-400"
+                  className="rounded bg-red-600 px-2 py-1 text-xs font-semibold text-white"
                 >
                   Delete
                 </button>
               </li>
             ))}
           </ul>
-        </div>
+        </section>
       )}
-
-      {deviceName && <p className="mb-2">Connected to: {deviceName}</p>}
-
-      <ul className="space-y-2 overflow-auto">
-        {services.map((service) => (
-          <li key={service.uuid} className="border-b border-gray-700 pb-2">
-            <p className="font-bold">Service: {service.uuid}</p>
-            <ul className="ml-4 list-disc">
-              {service.characteristics.map((char) => (
-                <li key={char.uuid}>
-                  {char.uuid}: {char.value}
-                </li>
-              ))}
-            </ul>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 };
 
 export default BleSensor;
 export const displayBleSensor = () => <BleSensor />;
-
