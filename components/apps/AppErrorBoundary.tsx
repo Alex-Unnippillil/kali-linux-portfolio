@@ -2,34 +2,35 @@ import { Component, ErrorInfo, ReactNode } from 'react';
 import ErrorScreen from '../common/ErrorScreen';
 import { createLogger } from '../../lib/logger';
 
-interface Props {
+interface AppErrorBoundaryProps {
+  appId: string;
+  appTitle?: string;
   children: ReactNode;
+  onRetry?: () => void;
 }
 
-interface State {
+interface AppErrorBoundaryState {
   hasError: boolean;
   error?: Error | null;
   componentStack?: string;
 }
 
-class ErrorBoundary extends Component<Props, State> {
+class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorBoundaryState> {
   private logger = createLogger();
 
-  constructor(props: Props) {
+  constructor(props: AppErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error: Error): State {
-    return {
-      hasError: true,
-      error,
-    };
+  static getDerivedStateFromError(error: Error): AppErrorBoundaryState {
+    return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     this.setState({ componentStack: errorInfo?.componentStack });
-    this.logger.error('ErrorBoundary caught an error', {
+    this.logger.error('App boundary caught an error', {
+      appId: this.props.appId,
       error,
       componentStack: errorInfo?.componentStack,
     });
@@ -37,14 +38,15 @@ class ErrorBoundary extends Component<Props, State> {
 
   private handleRetry = () => {
     this.setState({ hasError: false, error: null, componentStack: undefined }, () => {
-      if (typeof window !== 'undefined') {
-        window.location.reload();
+      if (typeof this.props.onRetry === 'function') {
+        this.props.onRetry();
       }
     });
   };
 
   render() {
     if (this.state.hasError) {
+      const { appId, appTitle } = this.props;
       const code = [
         this.state.error?.message,
         this.state.error?.stack,
@@ -55,11 +57,11 @@ class ErrorBoundary extends Component<Props, State> {
 
       return (
         <ErrorScreen
-          title="The desktop shell crashed"
-          message="We hit an unexpected error while rendering the workspace. Reload to continue."
+          title={`${appTitle ?? 'App'} crashed`}
+          message={`The ${appTitle ?? appId} module reported an unexpected error. Try again or review the logs for more context.`}
           code={code}
           onRetry={this.handleRetry}
-          retryLabel="Reload"
+          layout="compact"
         />
       );
     }
@@ -68,4 +70,4 @@ class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-export default ErrorBoundary;
+export default AppErrorBoundary;
