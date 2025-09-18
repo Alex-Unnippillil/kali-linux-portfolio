@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import apps from '../../apps.config';
 
@@ -36,7 +36,19 @@ export default function VsCodeWrapper({ openApp }) {
     return list.filter((item) => fuzzyMatch(item.title, query));
   }, [query]);
 
-  useEffect(() => {
+  const iframeWindowRef = useRef(null);
+  const shortcutHandlerRef = useRef(null);
+
+  const detachShortcuts = useCallback(() => {
+    if (shortcutHandlerRef.current && iframeWindowRef.current) {
+      iframeWindowRef.current.removeEventListener('keydown', shortcutHandlerRef.current);
+      shortcutHandlerRef.current = null;
+    }
+  }, []);
+
+  const attachShortcuts = useCallback(() => {
+    if (!iframeWindowRef.current || shortcutHandlerRef.current) return;
+
     const handler = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'p') {
         e.preventDefault();
@@ -45,9 +57,28 @@ export default function VsCodeWrapper({ openApp }) {
         setVisible(false);
       }
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+
+    iframeWindowRef.current.addEventListener('keydown', handler);
+    shortcutHandlerRef.current = handler;
   }, []);
+
+  useEffect(() => () => detachShortcuts(), [detachShortcuts]);
+
+  const handleFrameLoad = useCallback((event) => {
+    iframeWindowRef.current = event.target?.contentWindow ?? null;
+  }, []);
+
+  const handleFrameFocus = useCallback(
+    (event) => {
+      iframeWindowRef.current = event.target?.contentWindow ?? null;
+      attachShortcuts();
+    },
+    [attachShortcuts],
+  );
+
+  const handleFrameBlur = useCallback(() => {
+    detachShortcuts();
+  }, [detachShortcuts]);
 
   const selectItem = (item) => {
     setVisible(false);
@@ -61,7 +92,7 @@ export default function VsCodeWrapper({ openApp }) {
 
   return (
     <div className="relative h-full w-full">
-      <VsCode />
+      <VsCode onFrameLoad={handleFrameLoad} onFrameFocus={handleFrameFocus} onFrameBlur={handleFrameBlur} />
       {visible && (
         <div className="absolute inset-0 flex items-start justify-center pt-24 bg-black/50">
           <div className="bg-gray-800 text-white w-11/12 max-w-md rounded shadow-lg p-2">
