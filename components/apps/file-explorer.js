@@ -104,6 +104,8 @@ export default function FileExplorer() {
   const [results, setResults] = useState([]);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
+  const [draggedFile, setDraggedFile] = useState(null);
+  const [activeDropDir, setActiveDropDir] = useState(null);
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -143,6 +145,62 @@ export default function FileExplorer() {
 
   const removeBuffer = async (name) => {
     if (unsavedDir) await opfsDelete(name, unsavedDir);
+  };
+
+  const resetDragState = () => {
+    setDraggedFile(null);
+    setActiveDropDir(null);
+  };
+
+  const handleFileDragStart = (file) => (event) => {
+    if (event?.dataTransfer) {
+      try {
+        event.dataTransfer.setData('application/x-file-explorer-item', file.name);
+        event.dataTransfer.effectAllowed = 'move';
+      } catch (e) {
+        // Ignore browsers that block custom drag data
+      }
+    }
+    setDraggedFile(file.name);
+  };
+
+  const handleFileDragEnd = () => {
+    resetDragState();
+  };
+
+  const handleDirectoryDragEnter = (dir) => (event) => {
+    if (!draggedFile) return;
+    event.preventDefault();
+    setActiveDropDir(dir.name);
+  };
+
+  const handleDirectoryDragOver = (dir) => (event) => {
+    if (!draggedFile) return;
+    event.preventDefault();
+    if (event.dataTransfer) {
+      try {
+        event.dataTransfer.dropEffect = 'move';
+      } catch (e) {
+        // ignore dropEffect errors when unsupported
+      }
+    }
+    if (activeDropDir !== dir.name) {
+      setActiveDropDir(dir.name);
+    }
+  };
+
+  const handleDirectoryDragLeave = (dir) => (event) => {
+    if (!draggedFile) return;
+    const nextTarget = event.relatedTarget;
+    if (nextTarget && event.currentTarget.contains(nextTarget)) return;
+    setActiveDropDir((current) => (current === dir.name ? null : current));
+  };
+
+  const handleDirectoryDrop = (_dir) => (event) => {
+    if (!draggedFile) return;
+    event.preventDefault();
+    resetDragState();
+    // File move is not implemented; drop is used for visual feedback only.
   };
 
   const openFallback = async (e) => {
@@ -314,7 +372,9 @@ export default function FileExplorer() {
         )}
       </div>
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-40 overflow-auto border-r border-gray-600">
+        <div
+          className={`w-40 overflow-auto border-r border-gray-600 drop-surface${draggedFile ? ' drop-surface-active' : ''}`}
+        >
           <div className="p-2 font-bold">Recent</div>
           {recent.map((r, i) => (
             <div
@@ -329,8 +389,14 @@ export default function FileExplorer() {
           {dirs.map((d, i) => (
             <div
               key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+              className={`px-2 cursor-pointer hover:bg-black hover:bg-opacity-30 drop-target${
+                activeDropDir === d.name ? ' drop-target-highlight' : ''
+              }`}
               onClick={() => openDir(d)}
+              onDragEnter={handleDirectoryDragEnter(d)}
+              onDragOver={handleDirectoryDragOver(d)}
+              onDragLeave={handleDirectoryDragLeave(d)}
+              onDrop={handleDirectoryDrop(d)}
             >
               {d.name}
             </div>
@@ -339,8 +405,13 @@ export default function FileExplorer() {
           {files.map((f, i) => (
             <div
               key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+              className={`px-2 cursor-pointer hover:bg-black hover:bg-opacity-30${
+                draggedFile === f.name ? ' dragging-elevated' : ''
+              }`}
               onClick={() => openFile(f)}
+              draggable
+              onDragStart={handleFileDragStart(f)}
+              onDragEnd={handleFileDragEnd}
             >
               {f.name}
             </div>

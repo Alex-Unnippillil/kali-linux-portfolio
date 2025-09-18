@@ -7,12 +7,26 @@ export class UbuntuApp extends Component {
         this.state = { launching: false, dragging: false, prefetched: false };
     }
 
-    handleDragStart = () => {
+    handleDragStart = (event) => {
         this.setState({ dragging: true });
+        if (event?.dataTransfer) {
+            try {
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('application/x-ubuntu-app', this.props.id);
+            } catch (e) {
+                // Ignore dataTransfer errors in unsupported browsers
+            }
+        }
+        if (typeof this.props.onDragStart === 'function') {
+            this.props.onDragStart(this.props.id, event);
+        }
     }
 
-    handleDragEnd = () => {
+    handleDragEnd = (event) => {
         this.setState({ dragging: false });
+        if (typeof this.props.onDragEnd === 'function') {
+            this.props.onDragEnd(this.props.id, event);
+        }
     }
 
     openApp = () => {
@@ -41,7 +55,9 @@ export class UbuntuApp extends Component {
                 draggable
                 onDragStart={this.handleDragStart}
                 onDragEnd={this.handleDragEnd}
-                className={(this.state.launching ? " app-icon-launch " : "") + (this.state.dragging ? " opacity-70 " : "") +
+                aria-grabbed={this.state.dragging}
+                className={(this.state.launching ? " app-icon-launch " : "") +
+                    (this.state.dragging ? " opacity-70 dragging-elevated " : " ") +
                     " p-1 m-px z-10 bg-white bg-opacity-0 hover:bg-opacity-20 focus:bg-white focus:bg-opacity-50 focus:border-yellow-700 focus:border-opacity-100 border border-transparent outline-none rounded select-none w-24 h-20 flex flex-col justify-start items-center text-center text-xs font-normal text-white transition-hover transition-active "}
                 id={"app-" + this.props.id}
                 onDoubleClick={this.openApp}
