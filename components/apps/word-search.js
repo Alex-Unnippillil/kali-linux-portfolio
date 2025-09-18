@@ -605,25 +605,25 @@ const WordSearch = () => {
           </div>
           <div className="flex flex-col gap-2">
             <button
-              className="px-4 py-1 bg-gray-700 hover:bg-gray-600"
+              className="px-4 py-1 bg-gray-700 interactive-surface"
               onClick={useHint}
             >
               Hint
             </button>
             <button
-              className="px-4 py-1 bg-gray-700 hover:bg-gray-600"
+              className="px-4 py-1 bg-gray-700 interactive-surface"
               onClick={() => reset(true)}
             >
               New Puzzle
             </button>
             <button
-              className="px-4 py-1 bg-gray-700 hover:bg-gray-600"
+              className="px-4 py-1 bg-gray-700 interactive-surface"
               onClick={() => setPaused((p) => !p)}
             >
               {paused ? "Resume" : "Pause"}
             </button>
             <button
-              className="px-4 py-1 bg-gray-700 hover:bg-gray-600"
+              className="px-4 py-1 bg-gray-700 interactive-surface"
               onClick={() => setSound((s) => !s)}
             >
               {sound ? "Sound Off" : "Sound On"}
@@ -666,7 +666,7 @@ const WordSearch = () => {
                 onChange={(e) => setSeed(e.target.value)}
               />
               <button
-                className="px-2 py-1 bg-gray-700 hover:bg-gray-600"
+                className="px-2 py-1 bg-gray-700 interactive-surface"
                 onClick={() => reset(true, seed)}
               >
                 Load
@@ -674,13 +674,13 @@ const WordSearch = () => {
             </div>
             <div className="flex gap-1">
               <button
-                className="flex-1 px-4 py-1 bg-gray-700 hover:bg-gray-600"
+                className="flex-1 px-4 py-1 bg-gray-700 interactive-surface"
                 onClick={share}
               >
                 Share
               </button>
               <button
-                className="flex-1 px-4 py-1 bg-gray-700 hover:bg-gray-600"
+                className="flex-1 px-4 py-1 bg-gray-700 interactive-surface"
                 onClick={() => window.print()}
               >
                 Print
@@ -747,7 +747,7 @@ const WordSearch = () => {
                 onChange={(e) => setNewListWords(e.target.value)}
               />
               <button
-                className="px-2 py-1 bg-gray-700 hover:bg-gray-600"
+                className="px-2 py-1 bg-gray-700 interactive-surface"
                 onClick={addList}
               >
                 Save List

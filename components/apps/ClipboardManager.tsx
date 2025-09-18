@@ -116,7 +116,7 @@ const ClipboardManager: React.FC = () => {
   return (
     <div className="p-4 space-y-2 text-white bg-ub-cool-grey h-full overflow-auto">
       <button
-        className="px-2 py-1 bg-gray-700 hover:bg-gray-600"
+        className="px-2 py-1 bg-gray-700 interactive-surface"
         onClick={clearHistory}
       >
         Clear History

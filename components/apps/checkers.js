@@ -397,31 +397,31 @@ const Checkers = () => {
       </label>
       <div className="space-x-2 mb-2">
         <button
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-2 py-1 bg-gray-700 interactive-surface rounded"
           onClick={reset}
         >
           Reset
         </button>
         <button
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-2 py-1 bg-gray-700 interactive-surface rounded"
           onClick={undo}
         >
           Undo
         </button>
         <button
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-2 py-1 bg-gray-700 interactive-surface rounded"
           onClick={() => setPaused((p) => !p)}
         >
           {paused ? 'Resume' : 'Pause'}
         </button>
         <button
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-2 py-1 bg-gray-700 interactive-surface rounded"
           onClick={() => setSound((s) => !s)}
         >
           {sound ? 'Sound On' : 'Sound Off'}
         </button>
         <button
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-2 py-1 bg-gray-700 interactive-surface rounded"
           onClick={showHint}
         >
           Hint

@@ -77,7 +77,7 @@ export default function VsCodeWrapper({ openApp }) {
                 <li key={`${item.type}-${item.id}`}>
                   <button
                     onClick={() => selectItem(item)}
-                    className="w-full text-left px-2 py-1 rounded hover:bg-gray-700"
+                    className="w-full text-left px-2 py-1 rounded interactive-surface"
                   >
                     {item.title}
                   </button>

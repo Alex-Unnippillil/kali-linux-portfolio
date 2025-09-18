@@ -763,7 +763,7 @@ const FlappyBird = () => {
             </select>
           </label>
           <button
-            className="px-6 py-3 w-32 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-6 py-3 w-32 bg-gray-700 interactive-surface rounded"
             onClick={() => {
               try {
                 localStorage.setItem("flappy-bird-skin", String(skin));

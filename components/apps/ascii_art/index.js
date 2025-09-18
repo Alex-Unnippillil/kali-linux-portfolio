@@ -491,35 +491,35 @@ export default function AsciiArt() {
         <button
           type="button"
           onClick={copyAscii}
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-2 py-1 bg-gray-700 interactive-surface rounded"
         >
           Copy Text
         </button>
         <button
           type="button"
           onClick={downloadAnsi}
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-2 py-1 bg-gray-700 interactive-surface rounded"
         >
           ANSI
         </button>
         <button
           type="button"
           onClick={downloadTxt}
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-2 py-1 bg-gray-700 interactive-surface rounded"
         >
           TXT
         </button>
         <button
           type="button"
           onClick={downloadPng}
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-2 py-1 bg-gray-700 interactive-surface rounded"
         >
           Export PNG
         </button>
         <button
           type="button"
           onClick={toggleTypingMode}
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-2 py-1 bg-gray-700 interactive-surface rounded"
         >
           {typingMode ? 'Image Mode' : 'Typing Mode'}
         </button>
@@ -528,14 +528,14 @@ export default function AsciiArt() {
             <button
               type="button"
               onClick={undo}
-              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+              className="px-2 py-1 bg-gray-700 interactive-surface rounded"
             >
               Undo
             </button>
             <button
               type="button"
               onClick={redo}
-              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+              className="px-2 py-1 bg-gray-700 interactive-surface rounded"
             >
               Redo
             </button>
@@ -544,7 +544,7 @@ export default function AsciiArt() {
         <button
           type="button"
           onClick={playAltText}
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-2 py-1 bg-gray-700 interactive-surface rounded"
         >
           Alt
         </button>

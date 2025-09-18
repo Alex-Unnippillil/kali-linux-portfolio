@@ -367,18 +367,18 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
         <div data-testid="combo-meter">Combo: {streak}</div>
       </div>
       <div className="flex space-x-2">
-        <button onClick={reset} className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded">
+        <button onClick={reset} className="px-2 py-1 bg-gray-700 interactive-surface rounded">
           Reset
         </button>
         <button
           onClick={() => setPaused((p) => !p)}
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-2 py-1 bg-gray-700 interactive-surface rounded"
         >
           {paused ? 'Resume' : 'Pause'}
         </button>
         <button
           onClick={() => setSound((s) => !s)}
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-2 py-1 bg-gray-700 interactive-surface rounded"
         >
           Sound: {sound ? 'On' : 'Off'}
         </button>
@@ -386,7 +386,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
           aria-label="Deck"
           value={deckType}
           onChange={(e) => setDeckType(e.target.value)}
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white"
+          className="px-2 py-1 bg-gray-700 interactive-surface rounded text-white"
         >
           <option value="emoji">Emoji</option>
           <option value="pattern">Pattern</option>
@@ -398,7 +398,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
             aria-label="Pattern theme"
             value={patternTheme}
             onChange={(e) => setPatternTheme(e.target.value)}
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white"
+            className="px-2 py-1 bg-gray-700 interactive-surface rounded text-white"
           >
             {Object.keys(PATTERN_THEMES).map((t) => (
               <option key={t} value={t}>
@@ -412,7 +412,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
             aria-label="Theme pack"
             value={themeName}
             onChange={(e) => setThemeName(e.target.value)}
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white"
+            className="px-2 py-1 bg-gray-700 interactive-surface rounded text-white"
           >
             {Object.keys(themePacks).map((t) => (
               <option key={t} value={t}>
@@ -425,7 +425,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
           aria-label="Timer mode"
           value={timerMode}
           onChange={(e) => setTimerMode(e.target.value)}
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white"
+          className="px-2 py-1 bg-gray-700 interactive-surface rounded text-white"
         >
           <option value="countup">Count Up</option>
           <option value="countdown">Countdown</option>
@@ -434,7 +434,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
           aria-label="Grid size"
           value={size}
           onChange={(e) => setSize(Number(e.target.value))}
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white"
+          className="px-2 py-1 bg-gray-700 interactive-surface rounded text-white"
         >
           <option value={2}>2x2</option>
           <option value={4}>4x4</option>
@@ -491,13 +491,13 @@ const Memory = () => {
         <div className="mb-4 flex space-x-2 items-center">
           <button
             onClick={() => setPlayerCount((c) => (c === 1 ? 2 : 1))}
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-2 py-1 bg-gray-700 interactive-surface rounded"
           >
             {playerCount === 1 ? 'Two Players' : 'One Player'}
           </button>
           <button
             onClick={handleDownloadTheme}
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-2 py-1 bg-gray-700 interactive-surface rounded"
           >
             Download Theme Pack
           </button>

@@ -1017,7 +1017,7 @@ const Minesweeper = () => {
         {shareCode && (
           <button
             onClick={copyCode}
-            className="px-1 py-0.5 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-1 py-0.5 bg-gray-700 interactive-surface rounded"
           >
             Copy Code
           </button>
@@ -1032,7 +1032,7 @@ const Minesweeper = () => {
         />
         <button
           onClick={loadFromCode}
-          className="px-1 py-0.5 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-1 py-0.5 bg-gray-700 interactive-surface rounded"
         >
           Load
         </button>
@@ -1097,26 +1097,26 @@ const Minesweeper = () => {
       <div className="flex space-x-2">
         {hasSave && (
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-4 py-2 bg-gray-700 interactive-surface rounded"
             onClick={loadSaved}
           >
             Load Save
           </button>
         )}
         <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-4 py-2 bg-gray-700 interactive-surface rounded"
           onClick={togglePause}
         >
           {paused ? 'Resume' : 'Pause'}
         </button>
         <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-4 py-2 bg-gray-700 interactive-surface rounded"
           onClick={toggleSound}
         >
           {sound ? 'Sound: On' : 'Sound: Off'}
         </button>
         <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-4 py-2 bg-gray-700 interactive-surface rounded"
           onClick={() => setShowSettings(true)}
         >
           Settings

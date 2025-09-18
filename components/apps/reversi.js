@@ -410,14 +410,14 @@ const Reversi = () => {
       <div className="mt-1 text-sm text-gray-300">{tip}</div>
       <div className="mt-2 flex space-x-2 items-center">
         <button
-          className="w-6 h-6 bg-gray-700 hover:bg-gray-600 rounded flex items-center justify-center"
+          className="w-6 h-6 bg-gray-700 interactive-surface rounded flex items-center justify-center"
           onClick={reset}
           aria-label="Reset"
         >
           <img src="/themes/Yaru/status/chrome_refresh.svg" width="24" height="24" alt="" />
         </button>
         <button
-          className="w-6 h-6 bg-gray-700 hover:bg-gray-600 rounded flex items-center justify-center disabled:opacity-50"
+          className="w-6 h-6 bg-gray-700 interactive-surface rounded flex items-center justify-center disabled:opacity-50"
           onClick={undo}
           disabled={!history.length}
           aria-label="Undo"
@@ -428,25 +428,25 @@ const Reversi = () => {
           </svg>
         </button>
         <button
-          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-3 py-1 bg-gray-700 interactive-surface rounded"
           onClick={() => setPaused((p) => !p)}
         >
           {paused ? 'Resume' : 'Pause'}
         </button>
         <button
-          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-3 py-1 bg-gray-700 interactive-surface rounded"
           onClick={() => setSound((s) => !s)}
         >
           {sound ? 'Sound: On' : 'Sound: Off'}
         </button>
         <button
-          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-3 py-1 bg-gray-700 interactive-surface rounded"
           onClick={() => setDiskTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
         >
           {diskTheme === 'dark' ? 'Theme: Dark' : 'Theme: Light'}
         </button>
         <select
-          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-3 py-1 bg-gray-700 interactive-surface rounded"
           value={difficulty}
           onChange={(e) => setDifficulty(e.target.value)}
         >
@@ -457,7 +457,7 @@ const Reversi = () => {
           ))}
         </select>
         <button
-          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-3 py-1 bg-gray-700 interactive-surface rounded"
           onClick={() => setUseBook((b) => !b)}
         >
           {useBook ? 'Book: On' : 'Book: Off'}

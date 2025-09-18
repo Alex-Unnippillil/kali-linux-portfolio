@@ -292,7 +292,7 @@ export default function ConnectFour() {
           </div>
         )}
         <button
-          className="absolute top-2 right-2 px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="absolute top-2 right-2 px-3 py-1 bg-gray-700 interactive-surface rounded"
           onClick={reset}
         >
           Restart
@@ -357,7 +357,7 @@ export default function ConnectFour() {
         </div>
         <div className="mt-4 flex gap-2">
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-4 py-2 bg-gray-700 interactive-surface rounded"
             onClick={undo}
             disabled={game.history.length === 0 || animDisc}
           >

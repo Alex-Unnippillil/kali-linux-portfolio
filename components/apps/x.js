@@ -131,10 +131,10 @@ export default function XApp() {
                 key={h}
                 type="button"
                 onClick={() => setFeedUser(h)}
-                className={`px-2 py-1 rounded-full text-sm ${
+                className={`px-2 py-1 rounded-full text-sm interactive-surface ${
                   feedUser === h
                     ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-gray-100 hover:bg-gray-600'
+                    : 'bg-gray-700 text-gray-100'
                 }`}
               >
                 {h}

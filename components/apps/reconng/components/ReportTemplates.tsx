@@ -112,14 +112,14 @@ export default function ReportTemplates() {
         <button
           type="button"
           onClick={exportReport}
-          className="bg-blue-600 hover:bg-blue-500 px-2 py-1 rounded"
+          className="bg-blue-600 text-white px-2 py-1 rounded interactive-surface"
         >
           Export
         </button>
         <button
           type="button"
           onClick={() => setShowDialog(true)}
-          className="bg-gray-600 hover:bg-gray-500 px-2 py-1 rounded"
+          className="bg-gray-600 px-2 py-1 rounded interactive-surface"
         >
           Import/Share
         </button>
@@ -141,14 +141,14 @@ export default function ReportTemplates() {
             <button
               type="button"
               onClick={copyShare}
-              className="bg-blue-600 hover:bg-blue-500 px-2 py-1 rounded"
+              className="bg-blue-600 text-white px-2 py-1 rounded interactive-surface"
             >
               Copy
             </button>
             <button
               type="button"
               onClick={() => setShowDialog(false)}
-              className="bg-gray-600 hover:bg-gray-500 px-2 py-1 rounded"
+              className="bg-gray-600 px-2 py-1 rounded interactive-surface"
             >
               Close
             </button>

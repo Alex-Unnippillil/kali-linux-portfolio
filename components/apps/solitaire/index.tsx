@@ -630,7 +630,7 @@ const Solitaire = () => {
       <div className="h-full w-full bg-green-700 text-white select-none p-2">
         <div className="flex justify-end mb-2">
           <select
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-2 py-1 bg-gray-700 interactive-surface rounded"
             value={variant}
             onChange={(e) => {
               const v = e.target.value as Variant;
@@ -723,7 +723,7 @@ const Solitaire = () => {
         </div>
         <div>Daily Streak: {stats.dailyStreak}</div>
         <select
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-2 py-1 bg-gray-700 interactive-surface rounded"
           value={variant}
           onChange={(e) => {
             const v = e.target.value as Variant;
@@ -736,25 +736,25 @@ const Solitaire = () => {
           <option value="freecell">FreeCell</option>
         </select>
         <button
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-2 py-1 bg-gray-700 interactive-surface rounded"
           onClick={() => start(drawMode, variant, true)}
         >
           Daily Deal
         </button>
         <button
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-2 py-1 bg-gray-700 interactive-surface rounded"
           onClick={showHint}
         >
           Hint
         </button>
         <button
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-2 py-1 bg-gray-700 interactive-surface rounded"
           onClick={runSolver}
         >
           Solve
         </button>
         <button
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-2 py-1 bg-gray-700 interactive-surface rounded"
           onClick={() => {
             const mode = drawMode === 1 ? 3 : 1;
             ReactGA.event({
@@ -768,7 +768,7 @@ const Solitaire = () => {
           Draw {drawMode === 1 ? '1' : '3'}
         </button>
         <button
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-2 py-1 bg-gray-700 interactive-surface rounded"
           onClick={() => {
             const opts = [3, 1, Infinity];
             const next = opts[(opts.indexOf(passLimit) + 1) % opts.length];
@@ -878,7 +878,7 @@ const Solitaire = () => {
       </div>
       <div className="mt-4">
         <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-4 py-2 bg-gray-700 interactive-surface rounded"
           onClick={() => start(drawMode, variant, isDaily)}
         >
           Restart
