@@ -23,6 +23,14 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { storeFocusTarget, restoreFocusTarget } from '../../utils/focusManager';
+
+const escapeForQuery = (value) => {
+    if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+        return CSS.escape(value);
+    }
+    return value.replace(/([!"#$%&'()*+,./:;<=>?@[\\\]^`{|}~\s])/g, '\\$1');
+};
 
 export class Desktop extends Component {
     constructor() {
@@ -30,6 +38,8 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.windowFocusPrefix = 'window:';
+        this.launcherFocusKey = 'launcher';
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -96,6 +106,12 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        if (prevState?.allAppsView && !this.state.allAppsView) {
+            restoreFocusTarget(this.launcherFocusKey, () => this.getLauncherTrigger() || this.getDesktopSurface());
+        }
     }
 
     checkForNewFolders = () => {
@@ -583,7 +599,52 @@ export class Desktop extends Component {
         }
     }
 
-    openApp = (objId) => {
+    resolveTriggerElement = (value) => {
+        if (!value) return null;
+        if (value instanceof HTMLElement) return value;
+        if (value.currentTarget instanceof HTMLElement) return value.currentTarget;
+        return null;
+    }
+
+    getLauncherTrigger = () => {
+        if (typeof document === 'undefined') return null;
+        const node = document.querySelector('[data-launcher-trigger="true"]');
+        return node instanceof HTMLElement ? node : null;
+    }
+
+    getDesktopSurface = () => {
+        if (typeof document === 'undefined') return null;
+        const node = document.getElementById('desktop');
+        if (node instanceof HTMLElement) {
+            if (!node.hasAttribute('tabindex')) {
+                node.setAttribute('tabindex', '-1');
+            }
+            return node;
+        }
+        return null;
+    }
+
+    getWindowFallbackTarget = (objId) => {
+        if (typeof document === 'undefined') return null;
+        const escapedId = escapeForQuery(objId);
+        const selectors = [
+            `[data-context="taskbar"][data-app-id="${escapedId}"]`,
+            `[data-context="app"][data-app-id="${escapedId}"]`,
+        ];
+        for (const selector of selectors) {
+            try {
+                const node = document.querySelector(selector);
+                if (node instanceof HTMLElement) {
+                    return node;
+                }
+            } catch (e) {
+                // ignore selector errors for unusual ids
+            }
+        }
+        return this.getLauncherTrigger() || this.getDesktopSurface();
+    }
+
+    openApp = (objId, options = {}) => {
 
         // google analytics
         ReactGA.event({
@@ -593,6 +654,11 @@ export class Desktop extends Component {
 
         // if the app is disabled
         if (this.state.disabled_apps[objId]) return;
+
+        const triggerElement = this.resolveTriggerElement(options.trigger);
+        if (triggerElement) {
+            storeFocusTarget(`${this.windowFocusPrefix}${objId}`, triggerElement);
+        }
 
         // if app is already open, focus it instead of spawning a new window
         if (this.state.closed_windows[objId] === false) {
@@ -701,7 +767,10 @@ export class Desktop extends Component {
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
-        this.setState({ closed_windows, favourite_apps }, this.saveSession);
+        this.setState({ closed_windows, favourite_apps }, () => {
+            this.saveSession();
+            restoreFocusTarget(`${this.windowFocusPrefix}${objId}`, () => this.getWindowFallbackTarget(objId));
+        });
     }
 
     pinApp = (id) => {
@@ -823,7 +892,20 @@ export class Desktop extends Component {
         this.setState({ showNameBar: false }, this.updateAppsData);
     }
 
-    showAllApps = () => { this.setState({ allAppsView: !this.state.allAppsView }) }
+    showAllApps = (event) => {
+        if (!this.state.allAppsView) {
+            const trigger = this.resolveTriggerElement(event?.currentTarget || event?.trigger || event);
+            if (trigger) {
+                storeFocusTarget(this.launcherFocusKey, trigger);
+            } else if (typeof document !== 'undefined') {
+                const active = document.activeElement;
+                if (active instanceof HTMLElement) {
+                    storeFocusTarget(this.launcherFocusKey, active);
+                }
+            }
+        }
+        this.setState({ allAppsView: !this.state.allAppsView });
+    }
 
     renderNameBar = () => {
         let addFolder = () => {
@@ -865,7 +947,7 @@ export class Desktop extends Component {
 
     render() {
         return (
-            <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+            <main id="desktop" role="main" tabIndex={-1} className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
 
                 {/* Window Area */}
                 <div

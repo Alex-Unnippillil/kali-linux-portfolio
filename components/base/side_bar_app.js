@@ -52,11 +52,12 @@ export class SideBarApp extends Component {
         this.setState({ scaleImage: true });
     }
 
-    openApp = () => {
+    openApp = (event) => {
         if (!this.props.isMinimized[this.id] && this.props.isClose[this.id]) {
             this.scaleImage();
         }
-        this.props.openApp(this.id);
+        const trigger = event && event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+        this.props.openApp(this.id, { trigger });
         this.setState({ showTitle: false, thumbnail: null });
     };
 

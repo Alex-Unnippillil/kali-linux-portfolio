@@ -82,7 +82,7 @@ export default function AppGrid({ openApp }) {
           icon={app.icon}
           name={app.title}
           displayName={<>{app.nodes}</>}
-          openApp={() => openApp && openApp(app.id)}
+          openApp={(id, options) => openApp && openApp(id ?? app.id, options)}
         />
       </div>
     );
