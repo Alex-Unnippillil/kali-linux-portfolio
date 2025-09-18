@@ -21,15 +21,22 @@ interface TabbedWindowProps {
   onNewTab?: () => TabDefinition;
   onTabsChange?: (tabs: TabDefinition[]) => void;
   className?: string;
+  initialActiveId?: string;
 }
 
 interface TabContextValue {
   id: string;
   active: boolean;
   close: () => void;
+  setTitle: (title: string) => void;
 }
 
-const TabContext = createContext<TabContextValue>({ id: '', active: false, close: () => {} });
+const TabContext = createContext<TabContextValue>({
+  id: '',
+  active: false,
+  close: () => {},
+  setTitle: () => {},
+});
 export const useTab = () => useContext(TabContext);
 
 const TabbedWindow: React.FC<TabbedWindowProps> = ({
@@ -37,9 +44,12 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   onNewTab,
   onTabsChange,
   className = '',
+  initialActiveId,
 }) => {
   const [tabs, setTabs] = useState<TabDefinition[]>(initialTabs);
-  const [activeId, setActiveId] = useState<string>(initialTabs[0]?.id || '');
+  const [activeId, setActiveId] = useState<string>(
+    (initialActiveId ?? initialTabs[0]?.id) || '',
+  );
   const prevActive = useRef<string>('');
   const dragSrc = useRef<number | null>(null);
 
@@ -62,6 +72,15 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
       });
     },
     [onTabsChange],
+  );
+
+  const updateTabTitle = useCallback(
+    (id: string, title: string) => {
+      updateTabs((prev) =>
+        prev.map((tab) => (tab.id === id ? { ...tab, title } : tab)),
+      );
+    },
+    [updateTabs],
   );
 
   const setActive = useCallback(
@@ -210,7 +229,12 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         {tabs.map((t) => (
           <TabContext.Provider
             key={t.id}
-            value={{ id: t.id, active: t.id === activeId, close: () => closeTab(t.id) }}
+            value={{
+              id: t.id,
+              active: t.id === activeId,
+              close: () => closeTab(t.id),
+              setTitle: (title: string) => updateTabTitle(t.id, title),
+            }}
           >
             <div
               className={`absolute inset-0 w-full h-full ${
