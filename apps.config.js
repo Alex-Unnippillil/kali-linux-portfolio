@@ -77,6 +77,7 @@ const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
 const TrashApp = createDynamicApp('trash', 'Trash');
 const SerialTerminalApp = createDynamicApp('serial-terminal', 'Serial Terminal');
+const VpnManagerApp = createDynamicApp('vpn-manager', 'VPN Manager');
 
 
 const WiresharkApp = createDynamicApp('wireshark', 'Wireshark');
@@ -163,6 +164,7 @@ const displayProjectGallery = createDisplay(ProjectGalleryApp);
 const displayTrash = createDisplay(TrashApp);
 const displayStickyNotes = createDisplay(StickyNotesApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);
+const displayVpnManager = createDisplay(VpnManagerApp);
 const displayWeatherWidget = createDisplay(WeatherWidgetApp);
 const displayInputLab = createDisplay(InputLabApp);
 
@@ -266,6 +268,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayInputLab,
+  },
+  {
+    id: 'vpn-manager',
+    title: 'VPN Manager',
+    icon: '/themes/Yaru/apps/resource-monitor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayVpnManager,
   },
 ];
 
