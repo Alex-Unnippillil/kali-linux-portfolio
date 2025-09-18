@@ -9,8 +9,21 @@ import React, {
   useCallback,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
+import { logEvent } from '../../utils/analytics';
+import {
+  addTrustedPath,
+  getSecurePasteEnabled,
+  getTrustedPaths,
+  isTrustedPath,
+  setSecurePasteEnabled as persistSecurePaste,
+  DEFAULT_TRUSTED_PATHS,
+  DEFAULT_SECURE_PASTE,
+} from '../../utils/settings/terminalLinks';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
+import { findSuspiciousLinks, type TerminalLinkMatch } from './utils/linkSecurity';
+import type { TerminalLinkClassification } from './utils/linkSecurity';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -88,6 +101,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const filesRef = useRef<Record<string, string>>(files);
   const aliasesRef = useRef<Record<string, string>>({});
   const historyRef = useRef<string[]>([]);
+  const trustedPathsRef = useRef<string[]>(DEFAULT_TRUSTED_PATHS);
+  const securePasteRef = useRef<boolean>(DEFAULT_SECURE_PASTE);
+  const linkProviderRef = useRef<{ dispose: () => void } | null>(null);
   const contextRef = useRef<CommandContext>({
     writeLine: () => {},
     files: filesRef.current,
@@ -101,6 +117,12 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [trustedPaths, setTrustedPaths] = useState<string[]>(DEFAULT_TRUSTED_PATHS);
+  const [securePaste, setSecurePaste] = useState<boolean>(DEFAULT_SECURE_PASTE);
+  const [pendingLink, setPendingLink] = useState<{
+    text: string;
+    classification: TerminalLinkClassification;
+  } | null>(null);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
@@ -145,6 +167,37 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
   contextRef.current.writeLine = writeLine;
 
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const [paths, secure] = await Promise.all([
+          getTrustedPaths(),
+          getSecurePasteEnabled(),
+        ]);
+        if (mounted) {
+          setTrustedPaths(paths);
+          trustedPathsRef.current = paths;
+          setSecurePaste(secure);
+          securePasteRef.current = secure;
+        }
+      } catch {
+        // ignore loading errors
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    trustedPathsRef.current = trustedPaths;
+  }, [trustedPaths]);
+
+  useEffect(() => {
+    securePasteRef.current = securePaste;
+  }, [securePaste]);
+
   const prompt = useCallback(() => {
     if (!termRef.current) return;
     termRef.current.writeln(
@@ -163,6 +216,114 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       handleInput(text);
     } catch {}
   };
+
+  const handleSecurePasteToggle = useCallback((next: boolean) => {
+    setSecurePaste(next);
+    securePasteRef.current = next;
+    persistSecurePaste(next).catch(() => {});
+    logEvent({
+      category: 'terminal',
+      action: 'secure_paste_toggle',
+      label: next ? 'enabled' : 'disabled',
+    });
+  }, []);
+
+  const recordLinkEvent = useCallback(
+    (action: string, classification: TerminalLinkClassification, detail?: string) => {
+      logEvent({
+        category: 'terminal',
+        action,
+        label: detail ? `${classification.kind}:${detail}` : classification.kind,
+      });
+    },
+    [],
+  );
+
+  const openLinkTarget = useCallback(
+    (target: string, classification: TerminalLinkClassification) => {
+      if (typeof window === 'undefined') return;
+      let href = target;
+      if (classification.kind === 'file') {
+        const normalized = classification.normalizedPath || target;
+        if (/^file:/i.test(target) || /^[a-z][a-z0-9+.-]*:/i.test(target)) {
+          href = target;
+        } else if (normalized) {
+          const encoded = encodeURI(normalized);
+          if (normalized.startsWith('//')) href = `file:${encoded}`;
+          else if (/^[a-z]:/i.test(normalized)) href = `file:///${encoded}`;
+          else if (normalized.startsWith('/')) href = `file://${encoded}`;
+        }
+      }
+      try {
+        window.open(href, '_blank', 'noopener,noreferrer');
+      } catch {
+        // ignore failures
+      }
+    },
+    [],
+  );
+
+  const handleMatchActivation = useCallback(
+    (match: TerminalLinkMatch) => {
+      const { classification, text } = match;
+      if (
+        classification.kind === 'file' &&
+        classification.normalizedPath &&
+        isTrustedPath(classification.normalizedPath, trustedPathsRef.current)
+      ) {
+        recordLinkEvent('link_open', classification, 'trusted');
+        openLinkTarget(text, classification);
+        termRef.current?.focus();
+        return;
+      }
+      if (!securePasteRef.current) {
+        recordLinkEvent('link_open', classification, 'secure-paste-disabled');
+        openLinkTarget(text, classification);
+        termRef.current?.focus();
+        return;
+      }
+      setPendingLink({ text, classification });
+      recordLinkEvent('link_prompt', classification);
+      termRef.current?.blur();
+    },
+    [openLinkTarget, recordLinkEvent],
+  );
+
+  const confirmPendingLink = useCallback(() => {
+    if (!pendingLink) return;
+    const { classification, text } = pendingLink;
+    recordLinkEvent('link_open', classification, 'confirmed');
+    openLinkTarget(text, classification);
+    setPendingLink(null);
+    termRef.current?.focus();
+  }, [pendingLink, openLinkTarget, recordLinkEvent]);
+
+  const cancelPendingLink = useCallback(() => {
+    if (pendingLink) {
+      recordLinkEvent('link_cancel', pendingLink.classification);
+    }
+    setPendingLink(null);
+    termRef.current?.focus();
+  }, [pendingLink, recordLinkEvent]);
+
+  const trustPendingLink = useCallback(async () => {
+    const current = pendingLink;
+    if (!current) return;
+    const { classification, text } = current;
+    if (classification.normalizedPath) {
+      try {
+        const updated = await addTrustedPath(classification.normalizedPath);
+        setTrustedPaths(updated);
+        recordLinkEvent('link_trust', classification);
+      } catch {
+        // ignore persistence errors
+      }
+    }
+    recordLinkEvent('link_open', classification, 'trusted');
+    openLinkTarget(text, classification);
+    setPendingLink(null);
+    termRef.current?.focus();
+  }, [pendingLink, openLinkTarget, recordLinkEvent]);
 
   const runWorker = useCallback(
     async (command: string) => {
@@ -373,12 +534,55 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       });
       updateOverflow();
       term.onScroll?.(updateOverflow);
+      linkProviderRef.current?.dispose();
+      linkProviderRef.current = term.registerLinkProvider({
+        provideLinks: (lineNumber, callback) => {
+          const line = term.buffer.active.getLine(lineNumber - 1);
+          if (!line) {
+            callback(undefined);
+            return;
+          }
+          const content = line.translateToString(true);
+          const matches = findSuspiciousLinks(content);
+          if (!matches.length) {
+            callback(undefined);
+            return;
+          }
+          callback(
+            matches.map((match) => ({
+              text: match.text,
+              range: {
+                start: { x: match.startIndex + 1, y: lineNumber },
+                end: { x: match.endIndex, y: lineNumber },
+              },
+              decorations: { pointerCursor: true, underline: true },
+              activate: (event: MouseEvent) => {
+                event.preventDefault();
+                event.stopPropagation();
+                handleMatchActivation(match);
+              },
+            })),
+          );
+        },
+      });
     })();
     return () => {
       disposed = true;
+      linkProviderRef.current?.dispose();
+      linkProviderRef.current = null;
       termRef.current?.dispose();
     };
-    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow]);
+    }, [
+      opfsSupported,
+      getDir,
+      readFile,
+      writeLine,
+      prompt,
+      handleInput,
+      autocomplete,
+      updateOverflow,
+      handleMatchActivation,
+    ]);
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();
@@ -410,8 +614,63 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     return () => window.removeEventListener('keydown', listener);
   }, [paletteOpen]);
 
+  const shouldOfferTrust =
+    pendingLink?.classification.kind === 'file' &&
+    pendingLink.classification.normalizedPath &&
+    !isTrustedPath(pendingLink.classification.normalizedPath, trustedPaths);
+
+  const promptDescription = pendingLink
+    ? pendingLink.classification.kind === 'shell'
+      ? 'Shell protocol links can trigger external handlers on your device. Confirm before continuing.'
+      : pendingLink.classification.kind === 'file'
+        ? 'Local file paths may expose sensitive directories. Only continue if you trust the destination.'
+        : undefined
+    : undefined;
+
   return (
     <div className="relative h-full w-full">
+      <ConfirmDialog
+        open={!!pendingLink}
+        title={
+          pendingLink?.classification.kind === 'shell'
+            ? 'Open shell link?'
+            : 'Open local path?'
+        }
+        description={promptDescription}
+        confirmLabel="Open link"
+        cancelLabel="Cancel"
+        destructive
+        onConfirm={confirmPendingLink}
+        onCancel={cancelPendingLink}
+        secondaryAction={
+          shouldOfferTrust
+            ? {
+                label: 'Trust path & open',
+                onAction: trustPendingLink,
+              }
+            : undefined
+        }
+      >
+        {pendingLink && (
+          <div className="mt-2 break-all rounded bg-black/40 px-2 py-1 font-mono text-sm text-green-300">
+            {pendingLink.text}
+          </div>
+        )}
+        <label className="mt-3 flex items-center gap-2 text-xs text-gray-300">
+          <input
+            type="checkbox"
+            checked={securePaste}
+            onChange={(event) => handleSecurePasteToggle(event.target.checked)}
+          />
+          Secure paste confirmation enabled
+        </label>
+        {shouldOfferTrust && pendingLink?.classification.normalizedPath && (
+          <p className="mt-2 text-xs text-gray-400">
+            This path is not in your trusted whitelist. Trusting it skips future prompts for this
+            location.
+          </p>
+        )}
+      </ConfirmDialog>
       {paletteOpen && (
         <div className="absolute inset-0 bg-black bg-opacity-75 flex items-start justify-center z-10">
           <div className="mt-10 w-80 bg-gray-800 p-4 rounded">
