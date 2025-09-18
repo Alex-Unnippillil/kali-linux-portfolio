@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import usePersistentState from '../../../hooks/usePersistentState';
+import searchIndex from '../../../utils/searchIndex';
 
 interface ModuleDef {
   deps: string[];
@@ -45,6 +46,16 @@ const ModulePlanner: React.FC = () => {
       ...plan.map((m) => `- ${m}`),
     ];
     setLog(lines.join('\n'));
+    searchIndex.recordSummary({
+      id: `reconng-${workspace}`,
+      title: `ReconNG workspace: ${workspace}`,
+      summary:
+        plan.length > 0
+          ? `Modules planned: ${plan.join(', ')}`
+          : 'No modules selected',
+      kind: 'workspace',
+      updatedAt: Date.now(),
+    });
   };
 
   const graphData = useMemo(() => {

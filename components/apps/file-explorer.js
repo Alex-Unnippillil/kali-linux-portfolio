@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
@@ -62,6 +62,18 @@ export async function saveFileDialog(options = {}) {
 const DB_NAME = 'file-explorer';
 const STORE_NAME = 'recent';
 
+const buildFullPath = (segments = [], leaf = '') => {
+  const parts = (segments || [])
+    .map((seg) => {
+      if (!seg?.name) return '';
+      return seg.name === '/' ? '' : seg.name;
+    })
+    .filter(Boolean);
+  if (leaf) parts.push(leaf);
+  const joined = parts.join('/');
+  return joined ? `/${joined}` : '/';
+};
+
 function openDB() {
   return getDb(DB_NAME, 1, {
     upgrade(db) {
@@ -105,6 +117,54 @@ export default function FileExplorer() {
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
 
+  const indexDirectory = useCallback(async (segments, directories, files) => {
+    if (typeof window === 'undefined' || !Array.isArray(segments)) return;
+    try {
+      const fileEntries = await Promise.all(
+        files.map(async (file) => {
+          let modified = null;
+          try {
+            const meta = await file.handle.getFile();
+            modified = meta.lastModified;
+          } catch {}
+          const name = file.name;
+          const dot = name.lastIndexOf('.');
+          const extension = dot > 0 ? name.slice(dot + 1).toLowerCase() : null;
+          return {
+            name,
+            path: buildFullPath(segments, name),
+            extension,
+            modified,
+            kind: 'file',
+          };
+        }),
+      );
+
+      const directoryEntries = directories.map((dir) => ({
+        name: dir.name,
+        path: buildFullPath(segments, dir.name),
+        extension: null,
+        modified: null,
+        kind: 'directory',
+      }));
+
+      const entries = [...directoryEntries, ...fileEntries].filter(
+        (entry) => entry.name && entry.path,
+      );
+      if (entries.length === 0) return;
+
+      const targetOrigin = window.location?.origin || '*';
+      window.postMessage(
+        {
+          type: 'search-index:index',
+          source: 'file-explorer',
+          entries,
+        },
+        targetOrigin,
+      );
+    } catch {}
+  }, []);
+
   const hasWorker = typeof Worker !== 'undefined';
   const {
     supported: opfsSupported,
@@ -127,10 +187,11 @@ export default function FileExplorer() {
     (async () => {
       setUnsavedDir(await getDir('unsaved'));
       setDirHandle(root);
-      setPath([{ name: root.name || '/', handle: root }]);
-      await readDir(root);
+      const initialPath = [{ name: root.name || '/', handle: root }];
+      setPath(initialPath);
+      await readDir(root, initialPath);
     })();
-  }, [opfsSupported, root, getDir]);
+  }, [opfsSupported, root, getDir, readDir]);
 
   const saveBuffer = async (name, data) => {
     if (unsavedDir) await opfsWrite(name, data, unsavedDir);
@@ -159,8 +220,9 @@ export default function FileExplorer() {
       setDirHandle(handle);
       addRecentDir(handle);
       setRecent(await getRecentDirs());
-      setPath([{ name: handle.name || '/', handle }]);
-      await readDir(handle);
+      const newPath = [{ name: handle.name || '/', handle }];
+      setPath(newPath);
+      await readDir(handle, newPath);
     } catch {}
   };
 
@@ -169,8 +231,9 @@ export default function FileExplorer() {
       const perm = await entry.handle.requestPermission({ mode: 'readwrite' });
       if (perm !== 'granted') return;
       setDirHandle(entry.handle);
-      setPath([{ name: entry.name, handle: entry.handle }]);
-      await readDir(entry.handle);
+      const newPath = [{ name: entry.name || '/', handle: entry.handle }];
+      setPath(newPath);
+      await readDir(entry.handle, newPath);
     } catch {}
   };
 
@@ -188,29 +251,36 @@ export default function FileExplorer() {
     setContent(text);
   };
 
-  const readDir = async (handle) => {
-    const ds = [];
-    const fs = [];
-    for await (const [name, h] of handle.entries()) {
-      if (h.kind === 'file') fs.push({ name, handle: h });
-      else if (h.kind === 'directory') ds.push({ name, handle: h });
-    }
-    setDirs(ds);
-    setFiles(fs);
-  };
+  const readDir = useCallback(
+    async (handle, segments) => {
+      if (!segments) return;
+      const ds = [];
+      const fs = [];
+      for await (const [name, h] of handle.entries()) {
+        if (h.kind === 'file') fs.push({ name, handle: h });
+        else if (h.kind === 'directory') ds.push({ name, handle: h });
+      }
+      setDirs(ds);
+      setFiles(fs);
+      indexDirectory(segments, ds, fs).catch(() => {});
+    },
+    [indexDirectory],
+  );
 
   const openDir = async (dir) => {
+    const newPath = [...path, { name: dir.name, handle: dir.handle }];
     setDirHandle(dir.handle);
-    setPath((p) => [...p, { name: dir.name, handle: dir.handle }]);
-    await readDir(dir.handle);
+    setPath(newPath);
+    await readDir(dir.handle, newPath);
   };
 
   const navigateTo = async (index) => {
     const target = path[index];
     if (!target) return;
+    const newPath = path.slice(0, index + 1);
     setDirHandle(target.handle);
-    setPath(path.slice(0, index + 1));
-    await readDir(target.handle);
+    setPath(newPath);
+    await readDir(target.handle, newPath);
   };
 
   const goBack = async () => {
@@ -219,7 +289,7 @@ export default function FileExplorer() {
     const prev = newPath[newPath.length - 1];
     setPath(newPath);
     setDirHandle(prev.handle);
-    await readDir(prev.handle);
+    await readDir(prev.handle, newPath);
   };
 
   const saveFile = async () => {
@@ -262,7 +332,13 @@ export default function FileExplorer() {
   if (!supported) {
     return (
       <div className="p-4 flex flex-col h-full">
-        <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
+        <input
+          ref={fallbackInputRef}
+          type="file"
+          onChange={openFallback}
+          className="hidden"
+          aria-hidden="true"
+        />
         {!currentFile && (
           <button
             onClick={() => fallbackInputRef.current?.click()}
@@ -277,6 +353,7 @@ export default function FileExplorer() {
               className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
               value={content}
               onChange={onChange}
+              aria-label="File contents"
             />
             <button
               onClick={async () => {
@@ -348,7 +425,12 @@ export default function FileExplorer() {
         </div>
         <div className="flex-1 flex flex-col">
           {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
+            <textarea
+              className="flex-1 p-2 bg-ub-cool-grey outline-none"
+              value={content}
+              onChange={onChange}
+              aria-label="File contents"
+            />
           )}
           <div className="p-2 border-t border-gray-600">
             <input
@@ -356,6 +438,7 @@ export default function FileExplorer() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Find in files"
               className="px-1 py-0.5 text-black"
+              aria-label="Search within files"
             />
             <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
               Search
