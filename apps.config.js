@@ -111,6 +111,7 @@ const SecurityToolsApp = createDynamicApp('security-tools', 'Security Tools');
 const SSHApp = createDynamicApp('ssh', 'SSH Command Builder');
 const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
 const HtmlRewriteApp = createDynamicApp('html-rewriter', 'HTML Rewriter');
+const XssPlaygroundApp = createDynamicApp('xss-playground', 'XSS Playground');
 const ContactApp = createDynamicApp('contact', 'Contact');
 
 
@@ -196,6 +197,7 @@ const displaySecurityTools = createDisplay(SecurityToolsApp);
 const displaySSH = createDisplay(SSHApp);
 const displayHTTP = createDisplay(HTTPApp);
 const displayHtmlRewrite = createDisplay(HtmlRewriteApp);
+const displayXssPlayground = createDisplay(XssPlaygroundApp);
 const displayContact = createDisplay(ContactApp);
 
 const displayHashcat = createDisplay(HashcatApp);
@@ -906,6 +908,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayHtmlRewrite,
+  },
+  {
+    id: 'xss-playground',
+    title: 'XSS Playground',
+    icon: '/themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayXssPlayground,
   },
   {
     id: 'contact',
