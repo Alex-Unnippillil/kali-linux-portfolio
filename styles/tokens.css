@@ -52,6 +52,21 @@
   --motion-medium: 300ms;
   --motion-slow: 500ms;
 
+  /* Elevation shadows */
+  --shadow-elevation-0: none;
+  --shadow-elevation-1: 0 1px 1px 0 color-mix(in srgb, var(--color-inverse) 16%, transparent),
+    0 1px 2px 0 color-mix(in srgb, var(--color-inverse) 12%, transparent);
+  --shadow-elevation-2: 0 2px 4px 0 color-mix(in srgb, var(--color-inverse) 18%, transparent),
+    0 1px 2px 0 color-mix(in srgb, var(--color-inverse) 10%, transparent);
+  --shadow-elevation-3: 0 4px 8px 0 color-mix(in srgb, var(--color-inverse) 20%, transparent),
+    0 1px 3px 0 color-mix(in srgb, var(--color-inverse) 12%, transparent);
+  --shadow-elevation-4: 0 6px 16px 0 color-mix(in srgb, var(--color-inverse) 22%, transparent),
+    0 2px 6px 0 color-mix(in srgb, var(--color-inverse) 14%, transparent);
+  --shadow-elevation-5: 0 10px 24px 0 color-mix(in srgb, var(--color-inverse) 24%, transparent),
+    0 4px 12px 0 color-mix(in srgb, var(--color-inverse) 16%, transparent);
+  --shadow-elevation-6: 0 16px 32px 0 color-mix(in srgb, var(--color-inverse) 26%, transparent),
+    0 6px 20px 0 color-mix(in srgb, var(--color-inverse) 18%, transparent);
+
   /* Fonts */
   --font-family-base: 'Ubuntu', sans-serif;
   --font-multiplier: 1;
