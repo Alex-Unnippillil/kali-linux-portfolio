@@ -1,5 +1,16 @@
 import modules from '../../components/apps/metasploit/modules.json';
 
+const resolvePlatforms = (input) => {
+  if (Array.isArray(input)) return input.filter(Boolean);
+  if (typeof input === 'string' && input) {
+    return input
+      .split(/[\\/,]/)
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  }
+  return [];
+};
+
 export default function handler(req, res) {
   if (process.env.FEATURE_TOOL_APIS !== 'enabled') {
     res.status(501).json({ error: 'Not implemented' });
@@ -30,13 +41,22 @@ export default function handler(req, res) {
       if (field === 'cve') {
         return (m.cve || []).some((c) => c.toLowerCase().includes(q));
       }
-      if (['name', 'type', 'platform'].includes(field)) {
+      if (field === 'name' || field === 'type') {
         return (m[field] || '').toLowerCase().includes(q);
+      }
+      if (field === 'platform') {
+        return resolvePlatforms(m.platform)
+          .join(', ')
+          .toLowerCase()
+          .includes(q);
       }
       return (
         m.name.toLowerCase().includes(q) ||
         (m.type || '').toLowerCase().includes(q) ||
-        (m.platform || '').toLowerCase().includes(q) ||
+        resolvePlatforms(m.platform)
+          .join(', ')
+          .toLowerCase()
+          .includes(q) ||
         (m.cve || []).some((c) => c.toLowerCase().includes(q)) ||
         m.description.toLowerCase().includes(q)
       );

@@ -13,6 +13,17 @@ const severityStyles = {
 
 const moduleTypes = ['auxiliary', 'exploit', 'post'];
 
+const resolvePlatforms = (mod) => {
+  if (Array.isArray(mod?.platform)) return mod.platform.filter(Boolean);
+  if (typeof mod?.platform === 'string' && mod.platform) {
+    return mod.platform
+      .split(/[\\/,]/)
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  }
+  return [];
+};
+
 const timelineSteps = 5;
 
 const banner = `Metasploit Framework Console (mock)\nFor legal and ethical use only.\nType 'search <term>' to search modules.`;
@@ -57,7 +68,14 @@ const MetasploitApp = ({
     []
   );
   const allPlatforms = useMemo(
-    () => Array.from(new Set(modules.map((m) => m.platform).filter(Boolean))).sort(),
+    () =>
+      Array.from(
+        new Set(
+          modules
+            .flatMap((m) => resolvePlatforms(m))
+            .filter(Boolean)
+        )
+      ).sort(),
     []
   );
 
@@ -93,7 +111,7 @@ const MetasploitApp = ({
     if (!q) return [];
     return modules.filter((m) => {
       if (selectedTag && !m.tags.includes(selectedTag)) return false;
-      if (selectedPlatform && m.platform !== selectedPlatform) return false;
+      if (selectedPlatform && !resolvePlatforms(m).includes(selectedPlatform)) return false;
       if (
         cveFilter &&
         !(m.cve || []).some((c) => c.toLowerCase().includes(cveFilter.toLowerCase()))
@@ -115,7 +133,7 @@ const MetasploitApp = ({
       (m) =>
         (!selectedSeverity || m.severity === selectedSeverity) &&
         (!selectedTag || m.tags.includes(selectedTag)) &&
-        (!selectedPlatform || m.platform === selectedPlatform) &&
+        (!selectedPlatform || resolvePlatforms(m).includes(selectedPlatform)) &&
         (!cveFilter ||
           (m.cve || []).some((c) =>
             c.toLowerCase().includes(cveFilter.toLowerCase())
@@ -357,7 +375,9 @@ const MetasploitApp = ({
               {filtered.map((m) => (
                 <li key={m.name} className="mb-1">
                   <span className="font-mono">{m.name}</span> - {m.description}
-                  {m.platform && <span className="ml-1">[{m.platform}]</span>}
+                  {resolvePlatforms(m).length > 0 && (
+                    <span className="ml-1">[{resolvePlatforms(m).join(', ')}]</span>
+                  )}
                   {(m.cve || []).map((c) => (
                     <span key={c} className="ml-1">{c}</span>
                   ))}
