@@ -66,6 +66,7 @@
     "jspdf": "^3.0.2",
     "kaitai-struct": "^0.10.0",
     "leaflet": "^1.9.4",
+    "lunr": "^2.3.9",
     "marked": "^16.2.1",
     "mathjs": "^14.6.0",
     "matter-js": "0.20.0",

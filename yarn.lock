@@ -9657,6 +9657,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"lunr@npm:^2.3.9":
+  version: 2.3.9
+  resolution: "lunr@npm:2.3.9"
+  checksum: 10c0/77d7dbb4fbd602aac161e2b50887d8eda28c0fa3b799159cee380fbb311f1e614219126ecbbd2c3a9c685f1720a8109b3c1ca85cc893c39b6c9cc6a62a1d8a8b
+  languageName: node
+  linkType: hard
+
 "luxon@npm:^3.7.1":
   version: 3.7.1
   resolution: "luxon@npm:3.7.1"
@@ -13922,6 +13929,7 @@ __metadata:
     jspdf: "npm:^3.0.2"
     kaitai-struct: "npm:^0.10.0"
     leaflet: "npm:^1.9.4"
+    lunr: "npm:^2.3.9"
     magic-string: "npm:0.30.18"
     marked: "npm:^16.2.1"
     mathjs: "npm:^14.6.0"
