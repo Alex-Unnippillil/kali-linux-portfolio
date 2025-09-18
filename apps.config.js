@@ -74,6 +74,8 @@ const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
 const InputLabApp = createDynamicApp('input-lab', 'Input Lab');
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 
+const UpdateCenterApp = createDynamicApp('update-center', 'Update Center');
+
 const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
 const TrashApp = createDynamicApp('trash', 'Trash');
 const SerialTerminalApp = createDynamicApp('serial-terminal', 'Serial Terminal');
@@ -167,6 +169,8 @@ const displayWeatherWidget = createDisplay(WeatherWidgetApp);
 const displayInputLab = createDisplay(InputLabApp);
 
 const displayGhidra = createDisplay(GhidraApp);
+
+const displayUpdateCenter = createDisplay(UpdateCenterApp);
 
 const displayAutopsy = createDisplay(AutopsyApp);
 const displayPluginManager = createDisplay(PluginManagerApp);
@@ -691,6 +695,15 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displaySettings,
+  },
+  {
+    id: 'update-center',
+    title: 'Update Center',
+    icon: '/themes/Yaru/apps/radar-symbolic.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayUpdateCenter,
   },
   {
     id: 'files',

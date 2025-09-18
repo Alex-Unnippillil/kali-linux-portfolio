@@ -14,7 +14,16 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  updateChannel: 'security',
+  updateAutoDownload: true,
+  updateAllowMetered: false,
+  updateDeferWindow: 'off',
 };
+
+const UPDATE_CHANNEL_KEY = 'update-channel';
+const UPDATE_AUTO_DOWNLOAD_KEY = 'update-auto-download';
+const UPDATE_ALLOW_METERED_KEY = 'update-allow-metered';
+const UPDATE_DEFER_WINDOW_KEY = 'update-defer-window';
 
 export async function getAccent() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.accent;
@@ -123,6 +132,48 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getUpdateChannel() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.updateChannel;
+  return window.localStorage.getItem(UPDATE_CHANNEL_KEY) || DEFAULT_SETTINGS.updateChannel;
+}
+
+export async function setUpdateChannel(channel) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(UPDATE_CHANNEL_KEY, channel);
+}
+
+export async function getUpdateAutoDownload() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.updateAutoDownload;
+  const stored = window.localStorage.getItem(UPDATE_AUTO_DOWNLOAD_KEY);
+  return stored === null ? DEFAULT_SETTINGS.updateAutoDownload : stored === 'true';
+}
+
+export async function setUpdateAutoDownload(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(UPDATE_AUTO_DOWNLOAD_KEY, value ? 'true' : 'false');
+}
+
+export async function getUpdateAllowMetered() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.updateAllowMetered;
+  const stored = window.localStorage.getItem(UPDATE_ALLOW_METERED_KEY);
+  return stored === null ? DEFAULT_SETTINGS.updateAllowMetered : stored === 'true';
+}
+
+export async function setUpdateAllowMetered(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(UPDATE_ALLOW_METERED_KEY, value ? 'true' : 'false');
+}
+
+export async function getUpdateDeferWindow() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.updateDeferWindow;
+  return window.localStorage.getItem(UPDATE_DEFER_WINDOW_KEY) || DEFAULT_SETTINGS.updateDeferWindow;
+}
+
+export async function setUpdateDeferWindow(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(UPDATE_DEFER_WINDOW_KEY, value);
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +188,10 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem(UPDATE_CHANNEL_KEY);
+  window.localStorage.removeItem(UPDATE_AUTO_DOWNLOAD_KEY);
+  window.localStorage.removeItem(UPDATE_ALLOW_METERED_KEY);
+  window.localStorage.removeItem(UPDATE_DEFER_WINDOW_KEY);
 }
 
 export async function exportSettings() {
@@ -151,6 +206,10 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    updateChannel,
+    updateAutoDownload,
+    updateAllowMetered,
+    updateDeferWindow,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +221,10 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getUpdateChannel(),
+    getUpdateAutoDownload(),
+    getUpdateAllowMetered(),
+    getUpdateDeferWindow(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -176,6 +239,10 @@ export async function exportSettings() {
     allowNetwork,
     haptics,
     theme,
+    updateChannel,
+    updateAutoDownload,
+    updateAllowMetered,
+    updateDeferWindow,
   });
 }
 
@@ -200,6 +267,10 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    updateChannel,
+    updateAutoDownload,
+    updateAllowMetered,
+    updateDeferWindow,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -211,6 +282,10 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (updateChannel !== undefined) await setUpdateChannel(updateChannel);
+  if (updateAutoDownload !== undefined) await setUpdateAutoDownload(updateAutoDownload);
+  if (updateAllowMetered !== undefined) await setUpdateAllowMetered(updateAllowMetered);
+  if (updateDeferWindow !== undefined) await setUpdateDeferWindow(updateDeferWindow);
   if (theme !== undefined) setTheme(theme);
 }
 
