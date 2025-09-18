@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BeEF Demo Target</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        font-family: 'Ubuntu', 'Segoe UI', sans-serif;
+        background: radial-gradient(circle at top, #1f2933 0%, #111827 60%, #0b1220 100%);
+        color: #f9fafb;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      main {
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        border-radius: 12px;
+        padding: 24px;
+        max-width: 520px;
+        box-shadow: 0 16px 32px rgba(0, 0, 0, 0.45);
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 1.5rem;
+      }
+      p {
+        margin: 0 0 12px;
+        font-size: 0.95rem;
+        line-height: 1.5;
+      }
+      .status {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 16px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        background: rgba(34, 197, 94, 0.15);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+        font-size: 0.9rem;
+      }
+      .status span:first-child {
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      }
+      code {
+        font-family: 'Fira Code', 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+        background: rgba(30, 41, 59, 0.8);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Local BeEF Hook Target</h1>
+      <p>
+        This lab target is fully sandboxed. It cannot reach the network and only
+        talks to its parent window via <code>postMessage</code>.
+      </p>
+      <div class="status" aria-live="polite">
+        <span>Status</span>
+        <span id="statusMessage">Awaiting sandbox initialization…</span>
+      </div>
+      <p class="hint">
+        Watch the command console in the main window to see simulated hook
+        events stream in real time.
+      </p>
+    </main>
+    <script>
+      (function () {
+        const defaultMessages = {
+          loading: 'Sandboxed page loaded in isolated environment.',
+          ready: 'Sandbox handshake acknowledged. Deploying local hook.',
+          probe: 'Local recon telemetry received.',
+          hooked: 'Simulated BeEF hook established locally.',
+          disconnected: 'Sandbox target closed the connection.',
+          error: 'Sandbox reported an error state.',
+        };
+
+        const statusEl = document.getElementById('statusMessage');
+
+        const updateStatus = (text) => {
+          if (statusEl) {
+            statusEl.textContent = text;
+          }
+        };
+
+        const notify = (stage, message) => {
+          const target = window.parent;
+          if (!target || typeof target.postMessage !== 'function') {
+            return;
+          }
+          target.postMessage(
+            {
+              source: 'beef-demo',
+              type: 'hook-status',
+              stage,
+              message,
+            },
+            '*'
+          );
+        };
+
+        window.addEventListener('load', () => {
+          updateStatus('Client bootstrap complete. Awaiting controller.');
+          notify('loading', defaultMessages.loading);
+          setTimeout(() => {
+            updateStatus('Enumerating local environment…');
+            notify('probe', defaultMessages.probe);
+          }, 450);
+        });
+
+        window.addEventListener('message', (event) => {
+          const data = event.data;
+          if (!data || typeof data !== 'object') {
+            return;
+          }
+          if (data.type === 'beef-demo:init') {
+            updateStatus('Control channel received. Simulating hook.');
+            notify('ready', defaultMessages.ready);
+            setTimeout(() => {
+              updateStatus('Hook established locally.');
+              notify('hooked', defaultMessages.hooked);
+            }, 600);
+          } else if (data.type === 'beef-demo:disconnect') {
+            updateStatus('Controller requested shutdown.');
+            notify('disconnected', defaultMessages.disconnected);
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>
