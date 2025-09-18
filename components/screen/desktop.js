@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Component } from 'react';
+import React, { Component, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 
 const BackgroundImage = dynamic(
@@ -23,6 +23,8 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import InputIndicator from '../common/InputIndicator';
+import useSession, { INPUT_SOURCES } from '../../hooks/useSession';
 
 export class Desktop extends Component {
     constructor() {
@@ -460,7 +462,7 @@ export class Desktop extends Component {
             if (this.state.closed_windows[app.id] === false) {
 
                 const pos = this.state.window_positions[app.id];
-                const props = {
+                const windowProps = {
                     title: app.title,
                     id: app.id,
                     screen: app.screen,
@@ -480,10 +482,16 @@ export class Desktop extends Component {
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
+                    session: this.props.session,
+                    availableInputSources: this.props.availableInputSources,
+                    getWindowInputSource: this.props.getWindowInputSource,
+                    setWindowInputSource: this.props.setWindowInputSource,
+                    clearWindowInputSource: this.props.clearWindowInputSource,
+                    activateInputSource: this.props.activateInputSource,
                 }
 
                 windowsJsx.push(
-                    <Window key={app.id} {...props} />
+                    <Window key={app.id} {...windowProps} />
                 )
             }
         });
@@ -967,6 +975,10 @@ export class Desktop extends Component {
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
 
+                <InputIndicator
+                    activeSourceId={this.props.session?.activeInputSource}
+                    sources={this.props.availableInputSources || []}
+                />
             </main>
         )
     }
@@ -974,5 +986,32 @@ export class Desktop extends Component {
 
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
-    return <Desktop {...props} snapEnabled={snapEnabled} />;
+    const {
+        session,
+        setSession,
+        resetSession,
+        getWindowInputSource,
+        setWindowInputSource,
+        clearWindowInputSource,
+        activateWindowInputSource,
+    } = useSession();
+
+    const handleClearSession = useCallback(() => {
+        resetSession();
+    }, [resetSession]);
+
+    return (
+        <Desktop
+            {...props}
+            snapEnabled={snapEnabled}
+            session={session}
+            setSession={setSession}
+            clearSession={handleClearSession}
+            getWindowInputSource={getWindowInputSource}
+            setWindowInputSource={setWindowInputSource}
+            clearWindowInputSource={clearWindowInputSource}
+            activateInputSource={activateWindowInputSource}
+            availableInputSources={INPUT_SOURCES}
+        />
+    );
 }

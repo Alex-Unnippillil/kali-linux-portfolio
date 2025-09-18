@@ -53,8 +53,17 @@ export class Window extends Component {
         window.addEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.addEventListener('super-arrow', this.handleSuperArrow);
+        if (this.props.isFocused && this.props.activateInputSource) {
+            this.props.activateInputSource(this.id);
+        }
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
+        }
+    }
+
+    componentDidUpdate(prevProps) {
+        if (!prevProps.isFocused && this.props.isFocused && this.props.activateInputSource) {
+            this.props.activateInputSource(this.id);
         }
     }
 
@@ -377,6 +386,9 @@ export class Window extends Component {
 
     focusWindow = () => {
         this.props.focus(this.id);
+        if (this.props.activateInputSource) {
+            this.props.activateInputSource(this.id);
+        }
     }
 
     minimizeWindow = () => {
@@ -660,7 +672,13 @@ export class Window extends Component {
                             pip={() => this.props.screen(this.props.addFolder, this.props.openApp)}
                         />
                         {(this.id === "settings"
-                            ? <Settings />
+                            ? <Settings
+                                session={this.props.session}
+                                availableInputSources={this.props.availableInputSources}
+                                getWindowInputSource={this.props.getWindowInputSource}
+                                setWindowInputSource={this.props.setWindowInputSource}
+                                clearWindowInputSource={this.props.clearWindowInputSource}
+                            />
                             : <WindowMainScreen screen={this.props.screen} title={this.props.title}
                                 addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
                                 openApp={this.props.openApp} />)}
