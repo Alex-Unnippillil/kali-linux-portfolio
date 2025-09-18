@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import WhiskerMenu from '../menu/WhiskerMenu';
 
 export default function Taskbar(props) {
     const runningApps = props.apps.filter(app => props.closed_windows[app.id] === false);
+    const launcherRef = useRef(null);
+    const menuRef = useRef(null);
+    const [menuOpen, setMenuOpen] = useState(false);
 
     const handleClick = (app) => {
         const id = app.id;
@@ -15,8 +19,44 @@ export default function Taskbar(props) {
         }
     };
 
+    const toggleMenu = useCallback(() => {
+        if (menuRef.current && typeof menuRef.current.toggle === 'function') {
+            menuRef.current.toggle();
+        }
+    }, []);
+
+    useEffect(() => {
+        const handleShortcut = (event) => {
+            if (event.key === 'Meta' && !event.altKey && !event.ctrlKey && !event.shiftKey) {
+                event.preventDefault();
+                toggleMenu();
+            }
+        };
+        window.addEventListener('keydown', handleShortcut);
+        return () => window.removeEventListener('keydown', handleShortcut);
+    }, [toggleMenu]);
+
     return (
-        <div className="absolute bottom-0 left-0 w-full h-10 bg-black bg-opacity-50 flex items-center z-40" role="toolbar">
+        <div className="absolute bottom-0 left-0 z-40 flex h-10 w-full items-center gap-1 bg-black bg-opacity-50 px-2" role="toolbar">
+            <button
+                ref={launcherRef}
+                type="button"
+                aria-label="Open applications menu"
+                aria-haspopup="true"
+                aria-expanded={menuOpen}
+                onClick={toggleMenu}
+                className="mr-2 flex items-center gap-2 rounded px-3 py-2 text-sm font-semibold tracking-wide text-white transition hover:bg-white hover:bg-opacity-10 focus:outline-none focus:ring-2 focus:ring-ubb-orange focus:ring-offset-2 focus:ring-offset-black/40"
+            >
+                <Image
+                    src="/themes/Yaru/status/icons8-kali-linux.svg"
+                    alt="Kali applications menu"
+                    width={24}
+                    height={24}
+                    sizes="24px"
+                />
+                <span className="hidden sm:inline">Applications</span>
+            </button>
+            <WhiskerMenu ref={menuRef} anchorRef={launcherRef} onOpenChange={setMenuOpen} />
             {runningApps.map(app => (
                 <button
                     key={app.id}
