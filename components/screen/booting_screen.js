@@ -1,41 +1,65 @@
 import React from 'react'
 import Image from 'next/image'
+import styles from './booting_screen.module.css'
 
-function BootingScreen(props) {
+function BootingScreen({ visible, isShutDown, turnOn }) {
+    const isVisible = visible || isShutDown
 
     return (
         <div
             style={{
-                ...(props.visible || props.isShutDown ? { zIndex: "100" } : { zIndex: "-20" }),
+                ...(isVisible ? { zIndex: '100' } : { zIndex: '-20' }),
                 contentVisibility: 'auto',
             }}
-            className={(props.visible || props.isShutDown ? " visible opacity-100" : " invisible opacity-0 ") + " absolute duration-500 select-none flex flex-col justify-around items-center top-0 right-0 overflow-hidden m-0 p-0 h-screen w-screen bg-black"}>
-            <Image
-                width={400}
-                height={400}
-                className="md:w-1/4 w-1/2"
-                src="/themes/Yaru/status/cof_orange_hex.svg"
-                alt="Ubuntu Logo"
-                sizes="(max-width: 768px) 50vw, 25vw"
-                priority
-            />
-            <div className="w-10 h-10 flex justify-center items-center rounded-full outline-none cursor-pointer" onClick={props.turnOn} >
-                {(props.isShutDown
-                    ? <div className="bg-white rounded-full flex justify-center items-center w-10 h-10 hover:bg-gray-300"><Image width={32} height={32} className="w-8" src="/themes/Yaru/status/power-button.svg" alt="Power Button" sizes="32px" priority/></div>
-                    : <Image width={40} height={40} className={" w-10 " + (props.visible ? " animate-spin " : "")} src="/themes/Yaru/status/process-working-symbolic.svg" alt="Ubuntu Process Symbol" sizes="40px" priority/>)}
+            className={`${styles.screen} ${isVisible ? styles.screenVisible : styles.screenHidden}`}
+        >
+            <div className={styles.logoCluster}>
+                <div className={styles.logoWrapper}>
+                    <span className={styles.logoGlow} aria-hidden="true" />
+                    <Image
+                        width={512}
+                        height={160}
+                        className={styles.logo}
+                        src="/images/kali-wordmark.svg"
+                        alt="Kali Linux logo"
+                        sizes="(max-width: 768px) 70vw, 30vw"
+                        priority
+                    />
+                </div>
+                <p className={styles.tagline}>Initializing the Kali Linux desktop environment</p>
             </div>
-            <Image
-                width={200}
-                height={100}
-                className="md:w-1/5 w-1/2"
-                src="/themes/Yaru/status/ubuntu_white_hex.svg"
-                alt="Kali Linux Name"
-                sizes="(max-width: 768px) 50vw, 20vw"
-            />
-            <div className="text-white mb-4">
-                <a className="underline" href="https://www.linkedin.com/in/unnippillil/" rel="noopener noreferrer" target="_blank">linkedin</a>
-                <span className="font-bold mx-1">|</span>
-                <a href="https://github.com/Alex-Unnippillil" rel="noopener noreferrer" target="_blank" className="underline">github</a>
+
+            <div className={styles.progressArea}>
+                {isShutDown ? (
+                    <button type="button" className={styles.powerButton} onClick={turnOn}>
+                        <Image
+                            width={40}
+                            height={40}
+                            className={styles.powerIcon}
+                            src="/themes/Yaru/status/power-button.svg"
+                            alt="Power Button"
+                            sizes="40px"
+                            priority
+                        />
+                        <span className={styles.powerLabel}>Power On</span>
+                    </button>
+                ) : (
+                    <div className={styles.spinner} role="status" aria-live="polite">
+                        <span className={styles.visuallyHidden}>Booting Kali Linux</span>
+                    </div>
+                )}
+            </div>
+
+            <div className={styles.links}>
+                <a href="https://www.linkedin.com/in/unnippillil/" rel="noopener noreferrer" target="_blank">
+                    LinkedIn
+                </a>
+                <span className={styles.linksDivider} aria-hidden="true">
+                    |
+                </span>
+                <a href="https://github.com/Alex-Unnippillil" rel="noopener noreferrer" target="_blank">
+                    GitHub
+                </a>
             </div>
         </div>
     )
