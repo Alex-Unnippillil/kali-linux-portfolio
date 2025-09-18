@@ -1,4 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  getResourceSamplingConfig,
+  isPowerSaverEnabled,
+  onPowerSaverChange,
+} from '../../utils/powerManager';
 
 // Number of samples to keep in the timeline
 const MAX_POINTS = 60;
@@ -14,7 +19,9 @@ const ResourceMonitor = () => {
   const displayRef = useRef({ cpu: [], mem: [], fps: [], net: [] });
   const animRef = useRef();
   const lastDrawRef = useRef(0);
-  const THROTTLE_MS = 1000;
+  const samplingConfigRef = useRef(
+    getResourceSamplingConfig(isPowerSaverEnabled()),
+  );
 
   const [paused, setPaused] = useState(false);
   const [stress, setStress] = useState(false);
@@ -25,6 +32,14 @@ const ResourceMonitor = () => {
   const containerRef = useRef(null);
 
   useEffect(() => () => cancelAnimationFrame(animRef.current), []);
+
+  useEffect(() => {
+    samplingConfigRef.current = getResourceSamplingConfig(isPowerSaverEnabled());
+    const unsubscribe = onPowerSaverChange((enabled) => {
+      samplingConfigRef.current = getResourceSamplingConfig(enabled);
+    });
+    return unsubscribe;
+  }, []);
 
   // Spawn worker for network speed tests
   useEffect(() => {
@@ -59,7 +74,7 @@ const ResourceMonitor = () => {
       const currentFps = 1000 / dt;
       if (!paused) setFps(currentFps);
 
-      if (!paused && now - lastSample >= 1000) {
+      if (!paused && now - lastSample >= samplingConfigRef.current.sampleInterval) {
         const target = 1000 / 60; // 60 FPS ideal frame time
         const cpu = Math.min(100, Math.max(0, ((dt - target) / target) * 100));
         let mem = 0;
@@ -164,7 +179,8 @@ const ResourceMonitor = () => {
 
   const scheduleDraw = useCallback(() => {
     const now = performance.now();
-    if (now - lastDrawRef.current >= THROTTLE_MS) {
+    const { drawThrottle } = samplingConfigRef.current;
+    if (now - lastDrawRef.current >= drawThrottle) {
       lastDrawRef.current = now;
       animateCharts();
     }
