@@ -7,6 +7,7 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import { registerAppTimer } from '../../utils/appRuntime';
 
 export class Window extends Component {
     constructor(props) {
@@ -35,8 +36,10 @@ export class Window extends Component {
             grabbed: false,
         }
         this._usageTimeout = null;
+        this._usageTimerCleanup = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._dockAnimation = null;
     }
 
     componentDidMount() {
@@ -66,9 +69,7 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
-        if (this._usageTimeout) {
-            clearTimeout(this._usageTimeout);
-        }
+        this.cleanupWindowTimers();
     }
 
     setDefaultWindowDimenstion = () => {
@@ -125,12 +126,21 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        if (this._usageTimerCleanup) {
+            this._usageTimerCleanup();
+            this._usageTimerCleanup = null;
+        }
         this._usageTimeout = setTimeout(() => {
             const usage = this.computeContentUsage();
             if (usage < 65) {
                 this.optimizeWindow();
             }
+            if (this._usageTimerCleanup) {
+                this._usageTimerCleanup();
+                this._usageTimerCleanup = null;
+            }
         }, 200);
+        this._usageTimerCleanup = registerAppTimer(this.id, this._usageTimeout);
     }
 
     optimizeWindow = () => {
@@ -477,10 +487,54 @@ export class Window extends Component {
         });
     }
 
+    cleanupWindowTimers = () => {
+        if (this._usageTimeout) {
+            clearTimeout(this._usageTimeout);
+            this._usageTimeout = null;
+        }
+        if (this._usageTimerCleanup) {
+            this._usageTimerCleanup();
+            this._usageTimerCleanup = null;
+        }
+        if (this._dockAnimation) {
+            if (typeof this._dockAnimation.cancel === 'function') {
+                this._dockAnimation.cancel();
+            } else if (typeof this._dockAnimation.pause === 'function') {
+                this._dockAnimation.pause();
+            }
+            if (typeof this._dockAnimation === 'object' && this._dockAnimation) {
+                this._dockAnimation.onfinish = null;
+            }
+            this._dockAnimation = null;
+        }
+    }
+
+    handleForceQuit = () => {
+        const shouldRestart = typeof window !== 'undefined' && typeof window.confirm === 'function'
+            ? window.confirm('Force quit this app and immediately relaunch it?')
+            : false;
+        this.forceQuitWindow(shouldRestart);
+    }
+
+    forceQuitWindow = (restart = false) => {
+        this.setWinowsPosition();
+        this.cleanupWindowTimers();
+        this.setState({ closed: true }, () => {
+            this.deactivateOverlay();
+            this.props.hideSideBar(this.id, false);
+            const handler = this.props.forceQuit || this.props.closed;
+            if (!handler) return;
+            if (handler === this.props.forceQuit) {
+                handler(this.id, { restart });
+            } else {
+                handler(this.id);
+            }
+        });
+    }
+
     handleTitleBarKeyDown = (e) => {
         if (e.key === ' ' || e.key === 'Space' || e.key === 'Enter') {
-            e.preventDefault();
-            e.stopPropagation();
+            this.blockEvent(e);
             if (this.state.grabbed) {
                 this.handleStop();
             } else {
@@ -518,6 +572,16 @@ export class Window extends Component {
         }
     }
 
+    blockEvent = (event) => {
+        if (!event) return;
+        if (typeof event.preventDefault === 'function') {
+            event.preventDefault();
+        }
+        if (typeof event.stopPropagation === 'function') {
+            event.stopPropagation();
+        }
+    }
+
     handleKeyDown = (e) => {
         if (e.key === 'Escape') {
             this.closeWindow();
@@ -525,40 +589,32 @@ export class Window extends Component {
             this.focusWindow();
         } else if (e.altKey) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.blockEvent(e);
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.blockEvent(e);
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.blockEvent(e);
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.blockEvent(e);
                 this.snapWindow('top');
             }
             this.focusWindow();
         } else if (e.shiftKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.blockEvent(e);
                 this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.blockEvent(e);
                 this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.blockEvent(e);
                 this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                this.blockEvent(e);
                 this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
             }
             this.focusWindow();
@@ -655,6 +711,7 @@ export class Window extends Component {
                             maximize={this.maximizeWindow}
                             isMaximised={this.state.maximized}
                             close={this.closeWindow}
+                            forceQuit={this.handleForceQuit}
                             id={this.id}
                             allowMaximize={this.props.allowMaximize !== false}
                             pip={() => this.props.screen(this.props.addFolder, this.props.openApp)}
@@ -819,6 +876,25 @@ export function WindowEditButtons(props) {
                     sizes="16px"
                 />
             </button>
+            {props.forceQuit && (
+                <button
+                    type="button"
+                    aria-label="Force quit window"
+                    title="Force quit"
+                    className="mx-1 focus:outline-none cursor-default bg-red-600 hover:bg-red-500 rounded-full flex justify-center items-center h-6 w-6 text-white"
+                    onClick={props.forceQuit}
+                >
+                    <svg
+                        viewBox="0 0 24 24"
+                        className="h-4 w-4"
+                        aria-hidden="true"
+                        focusable="false"
+                    >
+                        <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2" />
+                        <path d="M8 8L16 16M16 8L8 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                </button>
+            )}
         </div>
     )
 }

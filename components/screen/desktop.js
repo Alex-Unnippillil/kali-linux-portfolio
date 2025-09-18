@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { cleanupAppRuntime, ensureHeapBaseline } from '../../utils/appRuntime';
 
 export class Desktop extends Component {
     constructor() {
@@ -466,6 +467,7 @@ export class Desktop extends Component {
                     screen: app.screen,
                     addFolder: this.addToDesktop,
                     closed: this.closeApp,
+                    forceQuit: this.forceQuitApp,
                     openApp: this.openApp,
                     focus: this.focus,
                     isFocused: this.state.focused_windows[app.id],
@@ -610,6 +612,7 @@ export class Desktop extends Component {
             }
             return;
         } else {
+            ensureHeapBaseline(objId, 0);
             let closed_windows = this.state.closed_windows;
             let favourite_apps = this.state.favourite_apps;
             let frequentApps = [];
@@ -656,12 +659,14 @@ export class Desktop extends Component {
         }
     }
 
-    closeApp = async (objId) => {
+    closeApp = async (objId, options = {}) => {
+
+        const { skipSnapshot = false } = options;
 
         // capture window snapshot
         let image = null;
         const node = document.getElementById(objId);
-        if (node) {
+        if (node && !skipSnapshot) {
             try {
                 image = await toPng(node);
             } catch (e) {
@@ -702,6 +707,28 @@ export class Desktop extends Component {
         closed_windows[objId] = true; // closes the app's window
 
         this.setState({ closed_windows, favourite_apps }, this.saveSession);
+    }
+
+    forceQuitApp = async (objId, options = {}) => {
+        const { restart = false } = options;
+        cleanupAppRuntime(objId);
+
+        if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+            window.dispatchEvent(new CustomEvent('force-quit', { detail: { id: objId, restart } }));
+        }
+
+        if (typeof document !== 'undefined') {
+            const node = document.getElementById(objId);
+            node?.dispatchEvent(new CustomEvent('force-quit', { detail: { id: objId, restart } }));
+        }
+
+        if (this.state.closed_windows[objId] === false) {
+            await this.closeApp(objId, { skipSnapshot: true });
+        }
+
+        if (restart) {
+            setTimeout(() => this.openApp(objId), 0);
+        }
     }
 
     pinApp = (id) => {
