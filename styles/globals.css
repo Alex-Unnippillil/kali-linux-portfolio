@@ -20,6 +20,9 @@
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
   accent-color: var(--color-control-accent);
+  --scrollbar-track-color: var(--color-ub-cool-grey);
+  --scrollbar-thumb-color: var(--color-ub-dark-grey);
+  --scrollbar-thumb-hover-color: var(--color-primary);
 }
 
 /* Dark theme */
@@ -76,4 +79,34 @@ html[data-theme='matrix'] {
 *:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
+}
+
+/* Global scrollbar styling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background-color: var(--scrollbar-track-color);
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb-color);
+  border-radius: var(--radius-md);
+  border: 2px solid var(--scrollbar-track-color);
+  transition: background-color var(--motion-fast) ease, border-color var(--motion-fast) ease;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover-color);
+}
+
+*::-webkit-scrollbar-corner {
+  background-color: var(--scrollbar-track-color);
 }
