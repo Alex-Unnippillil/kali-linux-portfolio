@@ -8,6 +8,7 @@ import dynamic from 'next/dynamic';
 import usePersistentState from '../../../hooks/usePersistentState';
 import ReportTemplates from './components/ReportTemplates';
 import { useSettings } from '../../../hooks/useSettings';
+import { useNetworkProfile } from '../../../hooks/useNetworkProfile';
 
 const CytoscapeComponent = dynamic(
   async () => {
@@ -135,6 +136,7 @@ const createWorkspace = (index) => ({
 
 const ReconNG = () => {
   const { allowNetwork } = useSettings();
+  const { applyWorkspaceProfile } = useNetworkProfile();
   const [selectedModule, setSelectedModule] = useState(modules[0]);
   const [target, setTarget] = useState('');
   const [output, setOutput] = useState('');
@@ -154,6 +156,12 @@ const ReconNG = () => {
   const cyRef = useRef(null);
 
   const currentWorkspace = workspaces[activeWs];
+
+  useEffect(() => {
+    if (currentWorkspace?.name) {
+      applyWorkspaceProfile(currentWorkspace.name);
+    }
+  }, [currentWorkspace, applyWorkspaceProfile]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;

@@ -7,6 +7,7 @@ import {
   getActiveFetches,
   FetchEntry,
 } from '../../../lib/fetchProxy';
+import { useNetworkProfile } from '../../../hooks/useNetworkProfile';
 import { exportMetrics } from '../export';
 import RequestChart from './RequestChart';
 
@@ -18,6 +19,9 @@ const formatBytes = (bytes?: number) =>
 export default function NetworkInsights() {
   const [active, setActive] = useState<FetchEntry[]>(getActiveFetches());
   const [history, setHistory] = usePersistentState<FetchEntry[]>(HISTORY_KEY, []);
+  const { profile, activeWorkspace } = useNetworkProfile();
+  const { proxyEnabled, proxyUrl, vpnConnected, vpnLabel, dnsServers, env } = profile;
+  const envCount = Object.keys(env).length;
 
   useEffect(() => {
     const unsubStart = onFetchProxy('start', () => setActive(getActiveFetches()));
@@ -33,6 +37,21 @@ export default function NetworkInsights() {
 
   return (
     <div className="p-2 text-xs text-white bg-[var(--kali-bg)]">
+      <div className="mb-3 p-2 border border-gray-700 rounded bg-[var(--kali-panel)]">
+        <h2 className="font-bold mb-1">Network Profile</h2>
+        <dl className="grid grid-cols-2 gap-x-2 gap-y-1">
+          <dt className="text-gray-400">Workspace</dt>
+          <dd>{activeWorkspace ?? '—'}</dd>
+          <dt className="text-gray-400">Proxy</dt>
+          <dd>{proxyEnabled ? proxyUrl || 'Enabled' : 'Disabled'}</dd>
+          <dt className="text-gray-400">VPN</dt>
+          <dd>{vpnConnected ? `Connected${vpnLabel ? ` (${vpnLabel})` : ''}` : 'Disconnected'}</dd>
+          <dt className="text-gray-400">DNS</dt>
+          <dd>{dnsServers.length ? dnsServers.join(', ') : 'System default'}</dd>
+          <dt className="text-gray-400">Env</dt>
+          <dd>{envCount ? `${envCount} variable${envCount === 1 ? '' : 's'}` : 'None'}</dd>
+        </dl>
+      </div>
       <h2 className="font-bold mb-1">Active Fetches</h2>
       <ul className="mb-2 divide-y divide-gray-700 border border-gray-700 rounded bg-[var(--kali-panel)]">
         {active.length === 0 && <li className="p-1 text-gray-400">None</li>}

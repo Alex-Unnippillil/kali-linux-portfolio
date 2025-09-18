@@ -2,11 +2,14 @@ import React, { useEffect, useState } from "react";
 import Image from 'next/image';
 import SmallArrow from "./small_arrow";
 import { useSettings } from '../../hooks/useSettings';
+import { useNetworkProfile } from '../../hooks/useNetworkProfile';
 
 const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
 
 export default function Status() {
   const { allowNetwork } = useSettings();
+  const { profile, statusToast, clearStatusToast } = useNetworkProfile();
+  const { proxyEnabled, proxyUrl, vpnConnected, vpnLabel } = profile;
   const [online, setOnline] = useState(true);
 
   useEffect(() => {
@@ -38,11 +41,39 @@ export default function Status() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!statusToast) return undefined;
+    const timeout = window.setTimeout(() => {
+      clearStatusToast();
+    }, 4000);
+    return () => window.clearTimeout(timeout);
+  }, [statusToast, clearStatusToast]);
+
+  const networkTitle = (() => {
+    if (!online) return 'Offline';
+    const base = allowNetwork ? 'Online' : 'Online (requests blocked)';
+    const proxyStatus = proxyEnabled
+      ? ` • Proxy: ${proxyUrl ? proxyUrl : 'enabled'}`
+      : ' • Proxy: disabled';
+    const vpnStatus = vpnConnected
+      ? ` • VPN: ${vpnLabel ? vpnLabel : 'connected'}`
+      : ' • VPN: disconnected';
+    return `${base}${proxyStatus}${vpnStatus}`;
+  })();
+
   return (
-    <div className="flex justify-center items-center">
+    <div className="relative flex justify-center items-center">
+      {statusToast && (
+        <div
+          className="absolute top-full right-0 mt-2 px-2 py-1 text-xs bg-black/80 text-white rounded shadow-lg"
+          role="status"
+        >
+          {statusToast}
+        </div>
+      )}
       <span
         className="mx-1.5 relative"
-        title={online ? (allowNetwork ? 'Online' : 'Online (requests blocked)') : 'Offline'}
+        title={networkTitle}
       >
         <Image
           width={16}
@@ -55,6 +86,20 @@ export default function Status() {
         {!allowNetwork && (
           <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
         )}
+        {proxyEnabled && (
+          <span
+            className="absolute -bottom-1 -left-1 w-2 h-2 bg-blue-500 border border-black rounded-full"
+            aria-hidden="true"
+          />
+        )}
+      </span>
+      <span
+        className={`mx-1.5 px-1 py-0.5 rounded text-[0.6rem] font-semibold ${
+          vpnConnected ? 'bg-green-500 text-black' : 'bg-gray-700 text-gray-300'
+        }`}
+        title={vpnConnected ? `VPN connected${vpnLabel ? ` (${vpnLabel})` : ''}` : 'VPN disconnected'}
+      >
+        VPN
       </span>
       <span className="mx-1.5">
         <Image
