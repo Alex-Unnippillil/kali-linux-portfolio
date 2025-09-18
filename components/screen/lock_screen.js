@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import Clock from '../util-components/clock';
 import { useSettings } from '../../hooks/useSettings';
 
@@ -22,6 +23,14 @@ export default function LockScreen(props) {
                 className={`absolute top-0 left-0 w-full h-full object-cover transform z-20 transition duration-500 ${props.isLocked ? 'blur-sm' : 'blur-none'}`}
             />
             <div className="w-full h-full z-50 overflow-hidden relative flex flex-col justify-center items-center text-white">
+                <Image
+                    src="/assets/branding/kali-dragon.svg"
+                    alt="Kali Linux dragon logo"
+                    width={256}
+                    height={256}
+                    className="mb-12 h-24 w-24 sm:h-28 sm:w-28 md:h-32 md:w-32"
+                    sizes="(max-width: 640px) 96px, (max-width: 768px) 112px, 128px"
+                />
                 <div className=" text-7xl">
                     <Clock onlyTime={true} />
                 </div>
