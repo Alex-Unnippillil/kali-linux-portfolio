@@ -26,6 +26,7 @@
   --color-bg: #0f1317;
   --color-text: #F5F5F5;
   --kali-bg: rgba(15, 19, 23, 0.85);
+  --color-on-accent: #000000;
 
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
@@ -77,6 +78,7 @@
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
   --game-color-danger: #ff0000;
+  --color-on-accent: #000000;
 }
 
 /* Dyslexia-friendly fonts */
@@ -116,5 +118,6 @@
     --color-ub-orange: #ffff00;
     --color-ub-lite-abrgn: #00ffff;
     --color-ub-border-orange: #ffff00;
+    --color-on-accent: #000000;
   }
 }
