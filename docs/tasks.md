@@ -51,6 +51,9 @@ Implement safe, non-executing simulators for each tool. Features:
 Tools to cover: **BeEF, Ettercap, Metasploit, Wireshark, Kismet, Nikto, Autopsy, Nessus, Hydra, Nmap NSE, Radare2, Volatility, Hashcat, Metasploit Post, dsniff, John the Ripper, OpenVAS, Recon-ng, Ghidra, Mimikatz, Reaver**.
 
 ## Other Apps
+### Startup Manager
+- Surface mock startup services with impact scores, allow enabling/disabling and per-entry delays, and persist preferences with safe storage.
+
 ### About Alex
 - Replace static content with resume widget loaded from JSON; show skills as chips and project links.
 
