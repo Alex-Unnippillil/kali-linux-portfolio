@@ -34,12 +34,14 @@
   --game-color-danger: #b91c1c;
 
   /* Spacing scale */
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.5rem;
-  --space-6: 2rem;
+  --user-space-scale: 1;
+  --space-scale: calc(var(--preset-space-scale) * var(--user-space-scale));
+  --space-1: calc(0.25rem * var(--space-scale));
+  --space-2: calc(0.5rem * var(--space-scale));
+  --space-3: calc(0.75rem * var(--space-scale));
+  --space-4: calc(1rem * var(--space-scale));
+  --space-5: calc(1.5rem * var(--space-scale));
+  --space-6: calc(2rem * var(--space-scale));
 
   /* Radius */
   --radius-sm: 2px;
@@ -54,12 +56,30 @@
 
   /* Fonts */
   --font-family-base: 'Ubuntu', sans-serif;
-  --font-multiplier: 1;
+  --user-font-scale: 1;
+  --font-multiplier: calc(var(--preset-font-scale) * var(--user-font-scale));
+  --preset-font-scale: 1;
+  --preset-space-scale: 1;
   /* Minimum interactive target size */
   --hit-area: 32px;
   /* Focus outline */
   --focus-outline-color: var(--color-ubt-blue);
   --focus-outline-width: 2px;
+}
+
+:root[data-scale='compact'] {
+  --preset-font-scale: 0.9;
+  --preset-space-scale: 0.85;
+}
+
+:root[data-scale='balanced'] {
+  --preset-font-scale: 1;
+  --preset-space-scale: 1;
+}
+
+:root[data-scale='comfortable'] {
+  --preset-font-scale: 1.1;
+  --preset-space-scale: 1.2;
 }
 
 /* High contrast theme */
