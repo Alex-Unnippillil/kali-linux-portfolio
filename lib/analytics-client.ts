@@ -4,7 +4,9 @@ export type EventName =
   | 'contact_submit'
   | 'contact_submit_error'
   | 'outbound_link_click'
-  | 'download_click';
+  | 'download_click'
+  | 'evidence_capture'
+  | 'evidence_export';
 
 export function trackEvent(
   name: EventName,
