@@ -10,6 +10,7 @@ import { displayWeather } from './components/apps/weather';
 import { displayClipboardManager } from './components/apps/ClipboardManager';
 import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
+import { displayDiskAnalyzer } from './components/apps/disk-analyzer';
 import { displayScreenRecorder } from './components/apps/screen-recorder';
 import { displayNikto } from './components/apps/nikto';
 
@@ -709,6 +710,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayResourceMonitor,
+  },
+  {
+    id: 'disk-analyzer',
+    title: 'Disk Analyzer',
+    icon: '/themes/Yaru/apps/disk-analyzer.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayDiskAnalyzer,
   },
   {
     id: 'screen-recorder',
