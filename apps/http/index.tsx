@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from 'react';
 import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
+import CsrfLab from './components/CsrfLab';
 
 const HTTPBuilder: React.FC = () => {
   const [method, setMethod] = useState('GET');
@@ -66,16 +67,27 @@ const HTTPBuilder: React.FC = () => {
 const HTTPPreview: React.FC = () => {
   const countRef = useRef(1);
 
-  const createTab = (): TabDefinition => {
-    const id = Date.now().toString();
-    return { id, title: `Request ${countRef.current++}`, content: <HTTPBuilder /> };
+  const createHttpTab = (): TabDefinition => {
+    const index = countRef.current++;
+    return {
+      id: `http-${Date.now()}-${index}`,
+      title: `Request ${index}`,
+      content: <HTTPBuilder />,
+    };
+  };
+
+  const csrfTab: TabDefinition = {
+    id: 'csrf-lab',
+    title: 'CSRF Lab',
+    content: <CsrfLab />,
+    closable: false,
   };
 
   return (
     <TabbedWindow
       className="min-h-screen bg-gray-900 text-white"
-      initialTabs={[createTab()]}
-      onNewTab={createTab}
+      initialTabs={[createHttpTab(), csrfTab]}
+      onNewTab={createHttpTab}
     />
   );
 };
