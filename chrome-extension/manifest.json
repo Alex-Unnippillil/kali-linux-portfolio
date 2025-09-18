@@ -1,12 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "Doc PiP Media Controller",
-  "version": "1.0",
-  "description": "Omnibox with play/pause to control media across tabs using Document PiP.",
-  "permissions": ["tabs", "scripting"],
+  "name": "Reader Mode Companion",
+  "version": "1.1",
+  "description": "Toggle a clutter-free reader mode with typography and theme controls.",
+  "permissions": ["tabs", "storage"],
   "host_permissions": ["<all_urls>"],
   "action": {
-    "default_title": "Media Controller"
+    "default_title": "Toggle Reader Mode"
   },
   "background": {
     "service_worker": "background.js"

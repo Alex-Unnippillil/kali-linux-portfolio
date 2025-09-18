@@ -1,57 +1,43 @@
-let pipUrl = chrome.runtime.getURL('pip.html');
+const BADGE_CLEAR_DELAY = 2500;
+const badgeTimers = new Map();
 
-async function openPip() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab) return;
-  await chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    func: (url) => {
-      if (!window.documentPictureInPicture) return;
-      window.documentPictureInPicture.requestWindow({ width: 320, height: 60 }).then((win) => {
-        win.location.href = url;
-      });
-    },
-    args: [pipUrl],
-  });
+function scheduleBadgeClear(tabId) {
+  const timer = badgeTimers.get(tabId);
+  if (timer) {
+    clearTimeout(timer);
+  }
+  const timeoutId = setTimeout(() => {
+    chrome.action.setBadgeText({ tabId, text: '' });
+    badgeTimers.delete(tabId);
+  }, BADGE_CLEAR_DELAY);
+  badgeTimers.set(tabId, timeoutId);
 }
 
-chrome.action.onClicked.addListener(openPip);
+function showBadge(tabId, text, color) {
+  chrome.action.setBadgeBackgroundColor({ tabId, color });
+  chrome.action.setBadgeText({ tabId, text });
+  scheduleBadgeClear(tabId);
+}
 
-async function queryAllTabs() {
-  const tabs = await chrome.tabs.query({});
-  const results = [];
-  for (const tab of tabs) {
-    try {
-      const medias = await chrome.tabs.sendMessage(tab.id, { type: 'status' });
-      results.push({ tabId: tab.id, medias });
-    } catch (e) {
-      // ignore tabs without the content script
+async function handleAction(tab) {
+  if (tab.id === undefined) return;
+  try {
+    const response = await chrome.tabs.sendMessage(tab.id, { type: 'toggle-reader' });
+    if (!response) return;
+    if (response.status === 'shown') {
+      showBadge(tab.id, 'ON', '#16a34a');
+    } else if (response.status === 'hidden') {
+      chrome.action.setBadgeText({ tabId: tab.id, text: '' });
+    } else if (response.status === 'unsupported') {
+      showBadge(tab.id, '!', '#f97316');
     }
+  } catch (error) {
+    showBadge(tab.id, '✕', '#ef4444');
   }
-  return results;
 }
 
-function broadcast(action) {
-  chrome.tabs.query({}, (tabs) => {
-    for (const tab of tabs) {
-      chrome.tabs.sendMessage(tab.id, { type: action });
-    }
-  });
-}
-
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (msg.type === 'query') {
-    queryAllTabs().then((data) => sendResponse(data));
-    return true;
-  }
-  if (msg.type === 'control') {
-    broadcast(msg.action);
-  }
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.action.setBadgeBackgroundColor({ color: '#0f172a' });
 });
 
-function notify() {
-  chrome.runtime.sendMessage({ type: 'refresh' });
-}
-
-chrome.tabs.onActivated.addListener(notify);
-chrome.tabs.onUpdated.addListener(notify);
+chrome.action.onClicked.addListener(handleAction);
