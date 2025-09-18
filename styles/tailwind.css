@@ -4,10 +4,24 @@
 
 @layer utilities {
   .transition-hover {
-    @apply transition ease-out duration-150;
+    @apply transition ease-out;
+    transition-duration: var(--motion-medium);
   }
   .transition-active {
-    @apply transition ease-out duration-100;
+    @apply transition ease-out;
+    transition-duration: var(--motion-fast);
+  }
+
+  .motion-duration-fast {
+    transition-duration: var(--motion-fast) !important;
+  }
+
+  .motion-duration-medium {
+    transition-duration: var(--motion-medium) !important;
+  }
+
+  .motion-duration-slow {
+    transition-duration: var(--motion-slow) !important;
   }
 }
 

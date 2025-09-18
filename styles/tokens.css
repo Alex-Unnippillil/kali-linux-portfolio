@@ -48,9 +48,9 @@
   --radius-round: 9999px;
 
   /* Motion durations */
-  --motion-fast: 150ms;
-  --motion-medium: 300ms;
-  --motion-slow: 500ms;
+  --motion-fast: 120ms;
+  --motion-medium: 150ms;
+  --motion-slow: 180ms;
 
   /* Fonts */
   --font-family-base: 'Ubuntu', sans-serif;

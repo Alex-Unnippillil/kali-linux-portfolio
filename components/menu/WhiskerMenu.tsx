@@ -120,7 +120,7 @@ const WhiskerMenu: React.FC = () => {
         ref={buttonRef}
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        className="pl-3 pr-3 outline-none transition motion-duration-fast ease-in-out border-b-2 border-transparent py-1"
       >
         <Image
           src="/themes/Yaru/status/decompiler-symbolic.svg"

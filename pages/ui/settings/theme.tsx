@@ -18,12 +18,12 @@ function Toggle({
       role="switch"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
+      className={`relative w-12 h-6 rounded-full transition-colors motion-duration-medium focus:outline-none ${
         checked ? 'bg-ubt-blue' : 'bg-ubt-grey'
       }`}
     >
       <span
-        className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+        className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform motion-duration-medium ${
           checked ? 'translate-x-6' : ''
         }`}
       ></span>
