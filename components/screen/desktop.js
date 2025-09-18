@@ -2,6 +2,7 @@
 
 import React, { Component } from 'react';
 import dynamic from 'next/dynamic';
+import { TransitionGroup, CSSTransition } from 'react-transition-group';
 
 const BackgroundImage = dynamic(
     () => import('../util-components/background-image'),
@@ -23,6 +24,15 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+
+const WORKSPACE_TRANSITION_DURATION = 240;
+const WORKSPACE_EVENT_NAMES = [
+    'workspace-change',
+    'workspaceSwitch',
+    'workspace-switch',
+    'desktop-workspace-change',
+    'task-15:workspace-change',
+];
 
 export class Desktop extends Component {
     constructor() {
@@ -52,7 +62,13 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            workspaceKey: '0',
+            workspaceDirection: 'forward',
+            reduceMotion: false,
         }
+        this.workspaceNodeRefs = new Map();
+        this.motionMediaQuery = null;
+        this.motionClassObserver = null;
     }
 
     componentDidMount() {
@@ -89,6 +105,11 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        this.initializeWorkspaceMotion();
+        const workspaceFromProps = this.getWorkspaceProp(this.props);
+        if (workspaceFromProps !== undefined) {
+            this.transitionToWorkspace(workspaceFromProps);
+        }
     }
 
     componentWillUnmount() {
@@ -96,6 +117,26 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        if (this.motionMediaQuery) {
+            this.motionMediaQuery.removeEventListener('change', this.updateReduceMotion);
+        }
+        if (this.motionClassObserver) {
+            this.motionClassObserver.disconnect();
+            this.motionClassObserver = null;
+        }
+        if (typeof window !== 'undefined') {
+            WORKSPACE_EVENT_NAMES.forEach(eventName => {
+                window.removeEventListener(eventName, this.handleWorkspaceChangeEvent);
+            });
+        }
+    }
+
+    componentDidUpdate(prevProps) {
+        const prevWorkspace = this.getWorkspaceProp(prevProps);
+        const nextWorkspace = this.getWorkspaceProp(this.props);
+        if (nextWorkspace !== undefined && nextWorkspace !== prevWorkspace) {
+            this.transitionToWorkspace(nextWorkspace);
+        }
     }
 
     checkForNewFolders = () => {
@@ -825,6 +866,260 @@ export class Desktop extends Component {
 
     showAllApps = () => { this.setState({ allAppsView: !this.state.allAppsView }) }
 
+    initializeWorkspaceMotion = () => {
+        if (typeof window === 'undefined' || typeof document === 'undefined') return;
+        if (!this.motionMediaQuery && typeof window.matchMedia === 'function') {
+            this.motionMediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+            this.motionMediaQuery.addEventListener('change', this.updateReduceMotion);
+        }
+        if (!this.motionClassObserver && typeof MutationObserver !== 'undefined') {
+            this.motionClassObserver = new MutationObserver(this.updateReduceMotion);
+            this.motionClassObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        }
+        this.updateReduceMotion();
+        WORKSPACE_EVENT_NAMES.forEach(eventName => {
+            window.addEventListener(eventName, this.handleWorkspaceChangeEvent);
+        });
+    }
+
+    updateReduceMotion = () => {
+        if (typeof window === 'undefined' || typeof document === 'undefined') return;
+        let storedPreference = null;
+        try {
+            storedPreference = safeLocalStorage?.getItem('reduced-motion');
+        } catch (e) {
+            storedPreference = null;
+        }
+        const reduceFromStorage = storedPreference === 'true';
+        const reduceFromClass = document.documentElement.classList.contains('reduced-motion');
+        const reduceFromMedia = this.motionMediaQuery
+            ? this.motionMediaQuery.matches
+            : (typeof window.matchMedia === 'function'
+                ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+                : false);
+        const shouldReduce = Boolean(reduceFromStorage || reduceFromClass || reduceFromMedia);
+        if (this.state.reduceMotion !== shouldReduce) {
+            this.setState({ reduceMotion: shouldReduce });
+        }
+    }
+
+    handleWorkspaceChangeEvent = (event) => {
+        const detail = event?.detail;
+        const target = this.extractWorkspaceKey(detail);
+        const direction = detail && (detail.direction ?? detail.dir ?? detail.delta);
+        this.transitionToWorkspace(target, direction);
+    }
+
+    extractWorkspaceKey = (detail) => {
+        if (detail === null || detail === undefined) return undefined;
+        if (typeof detail === 'string' || typeof detail === 'number') return detail;
+        if (typeof detail === 'object') {
+            const keys = ['workspaceKey', 'workspaceId', 'workspace', 'index', 'id', 'key', 'to', 'next', 'name'];
+            for (const key of keys) {
+                if (Object.prototype.hasOwnProperty.call(detail, key)) {
+                    return detail[key];
+                }
+            }
+        }
+        return undefined;
+    }
+
+    normalizeWorkspaceKey = (value, fallback) => {
+        if (value === null || value === undefined) return fallback ?? '0';
+        if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+        if (typeof value === 'string') return value;
+        if (typeof value === 'object') {
+            if (Object.prototype.hasOwnProperty.call(value, 'id')) {
+                return this.normalizeWorkspaceKey(value.id, fallback);
+            }
+            if (Object.prototype.hasOwnProperty.call(value, 'key')) {
+                return this.normalizeWorkspaceKey(value.key, fallback);
+            }
+        }
+        return fallback ?? '0';
+    }
+
+    resolveWorkspaceDirection = (directionHint, nextKey, currentKey, currentDirection) => {
+        if (directionHint !== undefined && directionHint !== null) {
+            const normalized = String(directionHint).toLowerCase();
+            if (['backward', 'reverse', 'previous', 'prev', 'left', '-1'].includes(normalized)) {
+                return 'backward';
+            }
+            if (['forward', 'next', 'right', '+1'].includes(normalized)) {
+                return 'forward';
+            }
+        }
+        const nextNum = Number(nextKey);
+        const currentNum = Number(currentKey);
+        if (!Number.isNaN(nextNum) && !Number.isNaN(currentNum)) {
+            if (nextNum === currentNum) {
+                return currentDirection || 'forward';
+            }
+            return nextNum > currentNum ? 'forward' : 'backward';
+        }
+        return currentDirection || 'forward';
+    }
+
+    transitionToWorkspace = (workspaceValue, directionHint) => {
+        this.setState(prev => {
+            const nextKey = this.normalizeWorkspaceKey(workspaceValue, prev.workspaceKey);
+            const nextDirection = this.resolveWorkspaceDirection(directionHint, nextKey, prev.workspaceKey, prev.workspaceDirection);
+            if (nextKey === prev.workspaceKey && nextDirection === prev.workspaceDirection) {
+                return null;
+            }
+            const updates = { workspaceDirection: nextDirection };
+            if (nextKey !== prev.workspaceKey) {
+                updates.workspaceKey = nextKey;
+            }
+            return updates;
+        });
+    }
+
+    getWorkspaceProp = (props) => {
+        if (!props) return undefined;
+        if (props.activeWorkspace !== undefined) return props.activeWorkspace;
+        if (props.workspace !== undefined) return props.workspace;
+        if (props.workspaceKey !== undefined) return props.workspaceKey;
+        if (props.workspaceId !== undefined) return props.workspaceId;
+        if (props.workspaceIndex !== undefined) return props.workspaceIndex;
+        return undefined;
+    }
+
+    getWorkspaceNodeRef = (key) => {
+        const keyString = this.normalizeWorkspaceKey(key, '0');
+        if (!this.workspaceNodeRefs.has(keyString)) {
+            this.workspaceNodeRefs.set(keyString, React.createRef());
+        }
+        return this.workspaceNodeRefs.get(keyString);
+    }
+
+    handleWorkspaceExit = (key) => {
+        const keyString = this.normalizeWorkspaceKey(key, null);
+        if (keyString !== null && this.workspaceNodeRefs.has(keyString)) {
+            this.workspaceNodeRefs.delete(keyString);
+        }
+    }
+
+    renderWorkspaceContents = () => (
+        <>
+            {/* Window Area */}
+            <div
+                id="window-area"
+                role="main"
+                className="absolute h-full w-full bg-transparent"
+                data-context="desktop-area"
+            >
+                {this.renderWindows()}
+            </div>
+
+            {/* Background Image */}
+            <BackgroundImage />
+
+            {/* Ubuntu Side Menu Bar */}
+            <SideBar apps={apps}
+                hide={this.state.hideSideBar}
+                hideSideBar={this.hideSideBar}
+                favourite_apps={this.state.favourite_apps}
+                showAllApps={this.showAllApps}
+                allAppsView={this.state.allAppsView}
+                closed_windows={this.state.closed_windows}
+                focused_windows={this.state.focused_windows}
+                isMinimized={this.state.minimized_windows}
+                openAppByAppId={this.openApp} />
+
+            {/* Taskbar */}
+            <Taskbar
+                apps={apps}
+                closed_windows={this.state.closed_windows}
+                minimized_windows={this.state.minimized_windows}
+                focused_windows={this.state.focused_windows}
+                openApp={this.openApp}
+                minimize={this.hasMinimised}
+            />
+
+            {/* Desktop Apps */}
+            {this.renderDesktopApps()}
+
+            {/* Context Menus */}
+            <DesktopMenu
+                active={this.state.context_menus.desktop}
+                openApp={this.openApp}
+                addNewFolder={this.addNewFolder}
+                openShortcutSelector={this.openShortcutSelector}
+                clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+            />
+            <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
+            <AppMenu
+                active={this.state.context_menus.app}
+                pinned={this.initFavourite[this.state.context_app]}
+                pinApp={() => this.pinApp(this.state.context_app)}
+                unpinApp={() => this.unpinApp(this.state.context_app)}
+                onClose={this.hideAllContextMenu}
+            />
+            <TaskbarMenu
+                active={this.state.context_menus.taskbar}
+                minimized={this.state.context_app ? this.state.minimized_windows[this.state.context_app] : false}
+                onMinimize={() => {
+                    const id = this.state.context_app;
+                    if (!id) return;
+                    if (this.state.minimized_windows[id]) {
+                        this.openApp(id);
+                    } else {
+                        this.hasMinimised(id);
+                    }
+                }}
+                onClose={() => {
+                    const id = this.state.context_app;
+                    if (!id) return;
+                    this.closeApp(id);
+                }}
+                onCloseMenu={this.hideAllContextMenu}
+            />
+
+            {/* Folder Input Name Bar */}
+            {
+                (this.state.showNameBar
+                    ? this.renderNameBar()
+                    : null
+                )
+            }
+
+            { this.state.allAppsView ?
+                <AllApplications apps={apps}
+                    games={games}
+                    recentApps={this.app_stack}
+                    openApp={this.openApp} /> : null}
+
+            { this.state.showShortcutSelector ?
+                <ShortcutSelector apps={apps}
+                    games={games}
+                    onSelect={this.addShortcutToDesktop}
+                    onClose={() => this.setState({ showShortcutSelector: false })} /> : null}
+
+            { this.state.showWindowSwitcher ?
+                <WindowSwitcher
+                    windows={this.state.switcherWindows}
+                    onSelect={this.selectWindow}
+                    onClose={this.closeWindowSwitcher} /> : null}
+        </>
+    )
+
+    renderWorkspaceLayer = (nodeRef, workspaceKey, direction) => {
+        const layerProps = {
+            className: 'workspace-layer',
+            'data-workspace': workspaceKey,
+            'data-workspace-direction': direction,
+        };
+        if (nodeRef) {
+            layerProps.ref = nodeRef;
+        }
+        return (
+            <div {...layerProps}>
+                {this.renderWorkspaceContents()}
+            </div>
+        );
+    }
+
     renderNameBar = () => {
         let addFolder = () => {
             let folder_name = document.getElementById("folder-name-input").value;
@@ -864,111 +1159,39 @@ export class Desktop extends Component {
     }
 
     render() {
+        const { reduceMotion, workspaceKey, workspaceDirection } = this.state;
+        const mainProps = {
+            id: 'desktop',
+            role: 'main',
+            className: " h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent",
+        };
+        const nodeRef = this.getWorkspaceNodeRef(workspaceKey);
+
+        if (reduceMotion) {
+            return (
+                <main {...mainProps}>
+                    {this.renderWorkspaceLayer(nodeRef, workspaceKey, workspaceDirection)}
+                </main>
+            );
+        }
+
         return (
-            <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
-
-                {/* Window Area */}
-                <div
-                    id="window-area"
-                    role="main"
-                    className="absolute h-full w-full bg-transparent"
-                    data-context="desktop-area"
-                >
-                    {this.renderWindows()}
-                </div>
-
-                {/* Background Image */}
-                <BackgroundImage />
-
-                {/* Ubuntu Side Menu Bar */}
-                <SideBar apps={apps}
-                    hide={this.state.hideSideBar}
-                    hideSideBar={this.hideSideBar}
-                    favourite_apps={this.state.favourite_apps}
-                    showAllApps={this.showAllApps}
-                    allAppsView={this.state.allAppsView}
-                    closed_windows={this.state.closed_windows}
-                    focused_windows={this.state.focused_windows}
-                    isMinimized={this.state.minimized_windows}
-                    openAppByAppId={this.openApp} />
-
-                {/* Taskbar */}
-                <Taskbar
-                    apps={apps}
-                    closed_windows={this.state.closed_windows}
-                    minimized_windows={this.state.minimized_windows}
-                    focused_windows={this.state.focused_windows}
-                    openApp={this.openApp}
-                    minimize={this.hasMinimised}
-                />
-
-                {/* Desktop Apps */}
-                {this.renderDesktopApps()}
-
-                {/* Context Menus */}
-                <DesktopMenu
-                    active={this.state.context_menus.desktop}
-                    openApp={this.openApp}
-                    addNewFolder={this.addNewFolder}
-                    openShortcutSelector={this.openShortcutSelector}
-                    clearSession={() => { this.props.clearSession(); window.location.reload(); }}
-                />
-                <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
-                <AppMenu
-                    active={this.state.context_menus.app}
-                    pinned={this.initFavourite[this.state.context_app]}
-                    pinApp={() => this.pinApp(this.state.context_app)}
-                    unpinApp={() => this.unpinApp(this.state.context_app)}
-                    onClose={this.hideAllContextMenu}
-                />
-                <TaskbarMenu
-                    active={this.state.context_menus.taskbar}
-                    minimized={this.state.context_app ? this.state.minimized_windows[this.state.context_app] : false}
-                    onMinimize={() => {
-                        const id = this.state.context_app;
-                        if (!id) return;
-                        if (this.state.minimized_windows[id]) {
-                            this.openApp(id);
-                        } else {
-                            this.hasMinimised(id);
-                        }
-                    }}
-                    onClose={() => {
-                        const id = this.state.context_app;
-                        if (!id) return;
-                        this.closeApp(id);
-                    }}
-                    onCloseMenu={this.hideAllContextMenu}
-                />
-
-                {/* Folder Input Name Bar */}
-                {
-                    (this.state.showNameBar
-                        ? this.renderNameBar()
-                        : null
-                    )
-                }
-
-                { this.state.allAppsView ?
-                    <AllApplications apps={apps}
-                        games={games}
-                        recentApps={this.app_stack}
-                        openApp={this.openApp} /> : null}
-
-                { this.state.showShortcutSelector ?
-                    <ShortcutSelector apps={apps}
-                        games={games}
-                        onSelect={this.addShortcutToDesktop}
-                        onClose={() => this.setState({ showShortcutSelector: false })} /> : null}
-
-                { this.state.showWindowSwitcher ?
-                    <WindowSwitcher
-                        windows={this.state.switcherWindows}
-                        onSelect={this.selectWindow}
-                        onClose={this.closeWindowSwitcher} /> : null}
-
+            <main {...mainProps}>
+                <TransitionGroup component={null}>
+                    <CSSTransition
+                        key={workspaceKey}
+                        nodeRef={nodeRef}
+                        classNames="workspace-fade"
+                        timeout={WORKSPACE_TRANSITION_DURATION}
+                        mountOnEnter
+                        unmountOnExit
+                        onExited={() => this.handleWorkspaceExit(workspaceKey)}
+                    >
+                        {this.renderWorkspaceLayer(nodeRef, workspaceKey, workspaceDirection)}
+                    </CSSTransition>
+                </TransitionGroup>
             </main>
-        )
+        );
     }
 }
 

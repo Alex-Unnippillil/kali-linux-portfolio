@@ -530,3 +530,75 @@ textarea:focus-visible {
     color: #000 !important;
 }
 
+.workspace-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: flex-start;
+    align-content: flex-start;
+    flex-wrap: wrap-reverse;
+    pointer-events: auto;
+}
+
+.workspace-fade-enter {
+    opacity: 0;
+    transform: translateX(0);
+    z-index: 1;
+}
+
+.workspace-fade-enter[data-workspace-direction="forward"] {
+    transform: translateX(24px);
+}
+
+.workspace-fade-enter[data-workspace-direction="backward"] {
+    transform: translateX(-24px);
+}
+
+.workspace-fade-enter-active {
+    opacity: 1;
+    transform: translateX(0);
+    transition: opacity 240ms ease, transform 240ms ease;
+}
+
+.workspace-fade-exit {
+    opacity: 1;
+    transform: translateX(0);
+    z-index: 0;
+}
+
+.workspace-fade-exit-active[data-workspace-direction="forward"] {
+    opacity: 0;
+    transform: translateX(-24px);
+    transition: opacity 240ms ease, transform 240ms ease;
+}
+
+.workspace-fade-exit-active[data-workspace-direction="backward"] {
+    opacity: 0;
+    transform: translateX(24px);
+    transition: opacity 240ms ease, transform 240ms ease;
+}
+
+.workspace-fade-exit-active,
+.workspace-fade-exit-done {
+    pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .workspace-fade-enter,
+    .workspace-fade-enter-active,
+    .workspace-fade-exit,
+    .workspace-fade-exit-active {
+        transform: none !important;
+    }
+}
+
+.reduced-motion .workspace-fade-enter,
+.reduced-motion .workspace-fade-enter-active,
+.reduced-motion .workspace-fade-exit,
+.reduced-motion .workspace-fade-exit-active {
+    transform: none !important;
+}
+
