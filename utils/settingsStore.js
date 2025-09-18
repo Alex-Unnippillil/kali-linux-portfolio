@@ -14,6 +14,9 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  soundTheme: 'stealth',
+  soundThemeVolume: 0.7,
+  audioCues: true,
 };
 
 export async function getAccent() {
@@ -102,6 +105,39 @@ export async function setHaptics(value) {
   window.localStorage.setItem('haptics', value ? 'true' : 'false');
 }
 
+export async function getSoundTheme() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.soundTheme;
+  return window.localStorage.getItem('sound-theme') || DEFAULT_SETTINGS.soundTheme;
+}
+
+export async function setSoundTheme(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('sound-theme', value);
+}
+
+export async function getSoundThemeVolume() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.soundThemeVolume;
+  const stored = window.localStorage.getItem('sound-theme-volume');
+  const parsed = stored ? parseFloat(stored) : NaN;
+  return Number.isFinite(parsed) ? parsed : DEFAULT_SETTINGS.soundThemeVolume;
+}
+
+export async function setSoundThemeVolume(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('sound-theme-volume', String(value));
+}
+
+export async function getAudioCues() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.audioCues;
+  const stored = window.localStorage.getItem('audio-cues');
+  return stored === null ? DEFAULT_SETTINGS.audioCues : stored === 'true';
+}
+
+export async function setAudioCues(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('audio-cues', value ? 'true' : 'false');
+}
+
 export async function getPongSpin() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
   const val = window.localStorage.getItem('pong-spin');
@@ -137,6 +173,9 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('sound-theme');
+  window.localStorage.removeItem('sound-theme-volume');
+  window.localStorage.removeItem('audio-cues');
 }
 
 export async function exportSettings() {
@@ -151,6 +190,9 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    soundTheme,
+    soundThemeVolume,
+    audioCues,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +204,9 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getSoundTheme(),
+    getSoundThemeVolume(),
+    getAudioCues(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +220,9 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    soundTheme,
+    soundThemeVolume,
+    audioCues,
     theme,
   });
 }
@@ -199,6 +247,9 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    soundTheme,
+    soundThemeVolume,
+    audioCues,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +262,9 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (soundTheme !== undefined) await setSoundTheme(soundTheme);
+  if (soundThemeVolume !== undefined) await setSoundThemeVolume(soundThemeVolume);
+  if (audioCues !== undefined) await setAudioCues(audioCues);
   if (theme !== undefined) setTheme(theme);
 }
 

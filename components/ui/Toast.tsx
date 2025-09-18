@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useSettings } from '../../hooks/useSettings';
+import { ToastCategory, useSoundTheme } from '../../hooks/useSoundTheme';
 
 interface ToastProps {
   message: string;
@@ -6,6 +8,7 @@ interface ToastProps {
   onAction?: () => void;
   onClose?: () => void;
   duration?: number;
+  category?: ToastCategory;
 }
 
 const Toast: React.FC<ToastProps> = ({
@@ -14,9 +17,16 @@ const Toast: React.FC<ToastProps> = ({
   onAction,
   onClose,
   duration = 6000,
+  category = 'info',
 }) => {
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [visible, setVisible] = useState(false);
+  const { soundTheme, soundThemeVolume, audioCues } = useSettings();
+  const { playCategoryTone } = useSoundTheme({
+    themeId: soundTheme,
+    volumeMultiplier: soundThemeVolume,
+    enabled: audioCues,
+  });
 
   useEffect(() => {
     setVisible(true);
@@ -27,6 +37,10 @@ const Toast: React.FC<ToastProps> = ({
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [duration, onClose]);
+
+  useEffect(() => {
+    playCategoryTone(category);
+  }, [category, playCategoryTone]);
 
   return (
     <div
