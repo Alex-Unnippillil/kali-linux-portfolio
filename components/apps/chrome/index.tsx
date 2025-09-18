@@ -10,6 +10,7 @@ import { Readability } from '@mozilla/readability';
 import DOMPurify from 'dompurify';
 import AddressBar from './AddressBar';
 import { getCachedFavicon, cacheFavicon } from './bookmarks';
+import usePersistentState from '../../../hooks/usePersistentState';
 
 interface Tile {
   title: string;
@@ -28,7 +29,19 @@ interface TabData {
 
 const STORAGE_KEY = 'chrome-tabs';
 const HOME_URL = 'home://start';
-const SANDBOX_FLAGS = ['allow-scripts', 'allow-forms', 'allow-popups'] as const;
+const BASE_SANDBOX_FLAGS = ['allow-forms', 'allow-popups'] as const;
+const PERMISSION_KEYS = ['scripts', 'cookies'] as const;
+type PermissionKey = (typeof PERMISSION_KEYS)[number];
+type PermissionOverrides = Partial<Record<PermissionKey, boolean>>;
+type PermissionStore = Record<string, PermissionOverrides>;
+const DEFAULT_PERMISSIONS: Record<PermissionKey, boolean> = {
+  scripts: true,
+  cookies: false,
+};
+const OPTIONAL_SANDBOX_FLAGS: Record<PermissionKey, string> = {
+  scripts: 'allow-scripts',
+  cookies: 'allow-same-origin',
+};
 const CSP = "default-src 'self'; script-src 'none'; connect-src 'none';";
 const DEMO_ORIGINS = [
   'https://example.com',
@@ -61,6 +74,22 @@ const readTabs = (): { tabs: TabData[]; active: number } => {
 
 const saveTabs = (tabs: TabData[], active: number) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ tabs, active }));
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const isPermissionOverrides = (value: unknown): value is PermissionOverrides => {
+  if (!isRecord(value)) return false;
+  return Object.entries(value).every(
+    ([key, val]) =>
+      PERMISSION_KEYS.includes(key as PermissionKey) && typeof val === 'boolean',
+  );
+};
+
+const isPermissionStore = (value: unknown): value is PermissionStore => {
+  if (!isRecord(value)) return false;
+  return Object.values(value).every(isPermissionOverrides);
 };
 
 const Chrome: React.FC = () => {
@@ -99,6 +128,14 @@ const Chrome: React.FC = () => {
   const [newTitle, setNewTitle] = useState('');
   const [newUrl, setNewUrl] = useState('');
   const tileFileInput = useRef<HTMLInputElement | null>(null);
+  const [permissionStore, setPermissionStore] = usePersistentState<PermissionStore>(
+    'chrome-permissions',
+    () => ({}),
+    isPermissionStore,
+  );
+  const [showSiteSettings, setShowSiteSettings] = useState(false);
+  const [permissionNotice, setPermissionNotice] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -210,12 +247,64 @@ const Chrome: React.FC = () => {
   );
 
   const activeTab = tabs.find((t) => t.id === activeId)!;
+  const activeOrigin = useMemo(() => {
+    try {
+      const parsed = new URL(activeTab.url);
+      if (!/^https?:$/.test(parsed.protocol)) return null;
+      return parsed.origin;
+    } catch {
+      return null;
+    }
+  }, [activeTab.url]);
+  const activeHostname = useMemo(() => {
+    if (!activeOrigin) return '';
+    try {
+      return new URL(activeOrigin).hostname;
+    } catch {
+      return activeOrigin;
+    }
+  }, [activeOrigin]);
+  const activePermissions = useMemo(
+    () => {
+      const overrides = activeOrigin ? permissionStore[activeOrigin] : undefined;
+      return PERMISSION_KEYS.reduce((acc, key) => {
+        const overrideValue = overrides?.[key];
+        acc[key] =
+          overrideValue === undefined ? DEFAULT_PERMISSIONS[key] : overrideValue;
+        return acc;
+      }, {} as Record<PermissionKey, boolean>);
+    },
+    [activeOrigin, permissionStore],
+  );
+  const activeSandboxFlags = useMemo(() => {
+    const flags = new Set<string>(BASE_SANDBOX_FLAGS);
+    PERMISSION_KEYS.forEach((key) => {
+      const token = OPTIONAL_SANDBOX_FLAGS[key];
+      if (activePermissions[key]) {
+        flags.add(token);
+      } else {
+        flags.delete(token);
+      }
+    });
+    return Array.from(flags);
+  }, [activePermissions]);
+  const canEditPermissions = Boolean(activeOrigin);
 
   useEffect(() => {
     setTabs((prev) =>
       prev.map((t) => ({ ...t, blocked: t.blocked || !isAllowed(t.url) })),
     );
   }, [isAllowed]);
+
+  useEffect(() => {
+    if (!permissionNotice) return;
+    const id = window.setTimeout(() => setPermissionNotice(null), 2500);
+    return () => window.clearTimeout(id);
+  }, [permissionNotice]);
+
+  useEffect(() => {
+    setShowSiteSettings(false);
+  }, [activeOrigin]);
 
   const fetchArticle = useCallback(async (tabId: number, url: string) => {
     try {
@@ -436,6 +525,47 @@ const Chrome: React.FC = () => {
 
     }
   }, [activeId, activeTab.muted, setIframeMuted]);
+
+  const applyPermissionChange = useCallback(
+    (key: PermissionKey, value: boolean) => {
+      if (!activeOrigin) return;
+      setPermissionStore((prev) => {
+        const current = prev[activeOrigin] ?? {};
+        const nextOverrides: PermissionOverrides = { ...current };
+        if (value === DEFAULT_PERMISSIONS[key]) {
+          delete nextOverrides[key];
+        } else {
+          nextOverrides[key] = value;
+        }
+        if (Object.keys(nextOverrides).length === 0) {
+          const { [activeOrigin]: _omit, ...rest } = prev;
+          return rest;
+        }
+        return { ...prev, [activeOrigin]: nextOverrides };
+      });
+      if (activeHostname) {
+        const label = key === 'scripts' ? 'Scripts' : 'Cookies';
+        setPermissionNotice(
+          `${label} ${value ? 'enabled' : 'blocked'} for ${activeHostname}`,
+        );
+      }
+      setReloadToken((token) => token + 1);
+    },
+    [activeHostname, activeOrigin, setPermissionStore],
+  );
+
+  const resetPermissions = useCallback(() => {
+    if (!activeOrigin) return;
+    setPermissionStore((prev) => {
+      if (!prev[activeOrigin]) return prev;
+      const { [activeOrigin]: _omit, ...rest } = prev;
+      return rest;
+    });
+    if (activeHostname) {
+      setPermissionNotice(`Permissions reset for ${activeHostname}`);
+    }
+    setReloadToken((token) => token + 1);
+  }, [activeHostname, activeOrigin, setPermissionStore]);
 
   const moveTile = useCallback((idx: number, delta: number) => {
     setTiles((prev) => {
@@ -669,7 +799,7 @@ const Chrome: React.FC = () => {
 
   return (
     <div className="flex flex-col w-full h-full bg-ub-cool-grey text-white">
-      <div className="flex items-center bg-gray-800 text-sm p-1 space-x-1">
+      <div className="flex items-center bg-gray-800 text-sm p-1 space-x-1 relative">
         <button onClick={goBack} aria-label="Back" className="px-2">◀</button>
         <button onClick={goForward} aria-label="Forward" className="px-2">▶</button>
         <button onClick={reload} aria-label="Reload" className="px-2">↻</button>
@@ -696,6 +826,77 @@ const Chrome: React.FC = () => {
         >
           ⚑
         </button>
+        <div className="relative">
+          <button
+            onClick={() => setShowSiteSettings((s) => !s)}
+            aria-label="Site permissions"
+            className={`px-2 ${canEditPermissions ? '' : 'opacity-50 cursor-not-allowed'}`}
+            aria-disabled={canEditPermissions ? undefined : true}
+          >
+            ⚙
+          </button>
+          {showSiteSettings && (
+            <div className="absolute right-0 z-20 mt-2 w-72 rounded border border-gray-700 bg-gray-900 p-3 text-xs shadow-lg space-y-3">
+              {canEditPermissions && activeHostname ? (
+                <>
+                  <p className="font-semibold text-sm">Site permissions for {activeHostname}</p>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span>Scripts</span>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={activePermissions.scripts}
+                        aria-label="Scripts"
+                        className={`rounded px-2 py-1 ${
+                          activePermissions.scripts ? 'bg-green-700' : 'bg-red-700'
+                        }`}
+                        onClick={() =>
+                          applyPermissionChange('scripts', !activePermissions.scripts)
+                        }
+                      >
+                        {activePermissions.scripts ? 'Allowed' : 'Blocked'}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Cookies &amp; storage</span>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={activePermissions.cookies}
+                        aria-label="Cookies"
+                        className={`rounded px-2 py-1 ${
+                          activePermissions.cookies ? 'bg-green-700' : 'bg-red-700'
+                        }`}
+                        onClick={() =>
+                          applyPermissionChange('cookies', !activePermissions.cookies)
+                        }
+                      >
+                        {activePermissions.cookies ? 'Allowed' : 'Blocked'}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-1 text-gray-300">
+                    <p>Active sandbox flags:</p>
+                    <p className="text-[11px]">{activeSandboxFlags.join(', ') || '(none)'}</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="w-full rounded bg-gray-800 px-2 py-1"
+                    onClick={resetPermissions}
+                  >
+                    Reset to defaults
+                  </button>
+                  <p className="text-[11px] text-gray-400">
+                    Changes reload this tab immediately.
+                  </p>
+                </>
+              ) : (
+                <p>Site permissions are available for web pages only.</p>
+              )}
+            </div>
+          )}
+        </div>
         <AddressBar
           value={address}
           onChange={setAddress}
@@ -708,6 +909,11 @@ const Chrome: React.FC = () => {
           +
         </button>
       </div>
+      {permissionNotice && (
+        <div className="bg-green-700 px-3 py-1 text-xs" role="status">
+          {permissionNotice}
+        </div>
+      )}
       <div
         className="flex space-x-1 bg-gray-700 text-sm overflow-x-auto"
         ref={tabStripRef}
@@ -783,10 +989,11 @@ const Chrome: React.FC = () => {
           ) : (
             <iframe
               ref={iframeRef}
+              key={`${activeTab.id}-${reloadToken}`}
               src={activeTab.url}
               title={activeTab.url}
               className="w-full h-full"
-              sandbox={SANDBOX_FLAGS.join(' ')}
+              sandbox={activeSandboxFlags.join(' ')}
               // @ts-ignore - CSP is a valid attribute but not in the React types
               csp={CSP}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture; microphone; camera"
@@ -796,7 +1003,7 @@ const Chrome: React.FC = () => {
           )}
           {showFlags && (
             <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-2 space-y-1">
-              <p>Active sandbox flags: {SANDBOX_FLAGS.join(', ') || '(none)'}</p>
+              <p>Active sandbox flags: {activeSandboxFlags.join(', ') || '(none)'}</p>
               <p>
                 Pages run in an isolated iframe. Scripts, forms and popups work, but network
                 access is blocked by CSP.
