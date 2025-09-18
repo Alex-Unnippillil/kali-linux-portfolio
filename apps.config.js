@@ -107,6 +107,7 @@ const NessusApp = createDynamicApp('nessus', 'Nessus');
 const NmapNSEApp = createDynamicApp('nmap-nse', 'Nmap NSE');
 const OpenVASApp = createDynamicApp('openvas', 'OpenVAS');
 const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
+const OsintToolkitApp = createDynamicApp('osint-toolkit', 'OSINT Toolkit');
 const SecurityToolsApp = createDynamicApp('security-tools', 'Security Tools');
 const SSHApp = createDynamicApp('ssh', 'SSH Command Builder');
 const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
@@ -192,6 +193,7 @@ const displayNessus = createDisplay(NessusApp);
 const displayNmapNSE = createDisplay(NmapNSEApp);
 const displayOpenVAS = createDisplay(OpenVASApp);
 const displayReconNG = createDisplay(ReconNGApp);
+const displayOsintToolkit = createDisplay(OsintToolkitApp);
 const displaySecurityTools = createDisplay(SecurityToolsApp);
 const displaySSH = createDisplay(SSHApp);
 const displayHTTP = createDisplay(HTTPApp);
@@ -1032,6 +1034,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayOpenVAS,
+  },
+  {
+    id: 'osint-toolkit',
+    title: 'OSINT Toolkit',
+    icon: '/themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayOsintToolkit,
   },
   {
     id: 'recon-ng',
