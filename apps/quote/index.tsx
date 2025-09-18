@@ -1,5 +1,12 @@
 'use client';
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+  type SVGProps,
+} from 'react';
 import Filter from 'bad-words';
 import { toPng } from 'html-to-image';
 import offlineQuotes from '../../public/quotes/quotes.json';
@@ -7,6 +14,8 @@ import PlaylistBuilder from './components/PlaylistBuilder';
 import share, { canShare } from '../../utils/share';
 import Posterizer from './components/Posterizer';
 import copyToClipboard from '../../utils/clipboard';
+import EmptyState from '../../components/base/EmptyState';
+import { getEmptyStateCopy } from '../../modules/emptyStates';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -20,6 +29,25 @@ const TwitterIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <path d="M22.46 6c-.77.35-1.6.58-2.46.69a4.28 4.28 0 0 0 1.88-2.37 8.59 8.59 0 0 1-2.72 1.05 4.24 4.24 0 0 0-7.24 3.87A12.05 12.05 0 0 1 3 4.79a4.24 4.24 0 0 0 1.32 5.67 4.2 4.2 0 0 1-1.92-.53v.06a4.26 4.26 0 0 0 3.41 4.17 4.24 4.24 0 0 1-1.91.07 4.27 4.27 0 0 0 3.97 2.95A8.53 8.53 0 0 1 2 19.54a12.06 12.06 0 0 0 6.29 1.84c7.55 0 11.68-6.26 11.68-11.68 0-.18-.01-.35-.02-.53A8.34 8.34 0 0 0 22.46 6z" />
   </svg>
 );
+
+const EmptyQuotesIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.5}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="w-12 h-12"
+    {...props}
+  >
+    <path d="M7 7h7a4 4 0 0 1 4 4v3a4 4 0 0 1-4 4h-1l-3 3v-3H7a4 4 0 0 1-4-4v-3a4 4 0 0 1 4-4z" />
+    <path d="M19 3v2" />
+    <path d="M21 5h-4" />
+  </svg>
+);
+
+const quoteEmptyCopy = getEmptyStateCopy('quote-no-results');
 
 interface Quote {
   content: string;
@@ -86,6 +114,8 @@ export default function QuoteApp() {
   const [playing, setPlaying] = useState(false);
   const [loop, setLoop] = useState(false);
   const [shuffle, setShuffle] = useState(false);
+  const docsLink = quoteEmptyCopy.documentation;
+  const extraDoc = quoteEmptyCopy.secondaryDocumentation;
 
   useEffect(() => {
     const fav = localStorage.getItem('quote-favorites');
@@ -166,6 +196,13 @@ export default function QuoteApp() {
       return;
     }
     setCurrent(filtered[Math.floor(Math.random() * filtered.length)]);
+  };
+
+  const resetFilters = () => {
+    setCategory('');
+    setSearch('');
+    setAuthorFilter('');
+    setCurrent(null);
   };
 
   const nextQuote = useCallback(() => {
@@ -381,7 +418,31 @@ export default function QuoteApp() {
               </div>
             </div>
           ) : (
-            <p>No quotes found.</p>
+            <EmptyState
+              className="w-full bg-black/40 border-white/10"
+              icon={<EmptyQuotesIcon />}
+              title={quoteEmptyCopy.title}
+              description={quoteEmptyCopy.description}
+              primaryAction={{
+                label: quoteEmptyCopy.primaryActionLabel,
+                onClick: resetFilters,
+              }}
+              secondaryAction={
+                docsLink
+                  ? { label: docsLink.label, href: docsLink.url }
+                  : undefined
+              }
+              extraActions={
+                extraDoc
+                  ? [
+                      {
+                        label: extraDoc.label,
+                        href: extraDoc.url,
+                      },
+                    ]
+                  : undefined
+              }
+            />
           )}
         </div>
         <div className="flex flex-wrap justify-center gap-2 mt-4">
