@@ -3,11 +3,26 @@ import Image from 'next/image'
 import SideBarApp from '../base/side_bar_app';
 
 let renderApps = (props) => {
+    const workspace = props.workspace || {};
+    const closed_windows = workspace.closed_windows || {};
+    const focused_windows = workspace.focused_windows || {};
+    const minimized_windows = workspace.minimized_windows || {};
+
     let sideBarAppsJsx = [];
-    props.apps.forEach((app, index) => {
+    props.apps.forEach((app) => {
         if (props.favourite_apps[app.id] === false) return;
         sideBarAppsJsx.push(
-            <SideBarApp key={app.id} id={app.id} title={app.title} icon={app.icon} isClose={props.closed_windows} isFocus={props.focused_windows} openApp={props.openAppByAppId} isMinimized={props.isMinimized} openFromMinimised={props.openFromMinimised} />
+            <SideBarApp
+                key={app.id}
+                id={app.id}
+                title={app.title}
+                icon={app.icon}
+                isClose={closed_windows}
+                isFocus={focused_windows}
+                openApp={props.openAppByAppId}
+                isMinimized={minimized_windows}
+                openFromMinimised={props.openFromMinimised}
+            />
         );
     });
     return sideBarAppsJsx;
@@ -34,7 +49,7 @@ export default function SideBar(props) {
             >
                 {
                     (
-                        Object.keys(props.closed_windows).length !== 0
+                        Object.keys((props.workspace && props.workspace.closed_windows) || {}).length !== 0
                             ? renderApps(props)
                             : null
                     )
