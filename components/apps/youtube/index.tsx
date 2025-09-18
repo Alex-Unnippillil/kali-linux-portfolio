@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import useWatchLater, {
   Video as WatchLaterVideo,
 } from '../../../apps/youtube/state/watchLater';
+import useTooltip from '../../../hooks/useTooltip';
 
 type Video = WatchLaterVideo;
 
@@ -34,9 +35,8 @@ async function trimVideoCache() {
 }
 
 function ChannelHovercard({ id, name }: { id: string; name: string }) {
-  const [show, setShow] = useState(false);
+  const tooltip = useTooltip();
   const [info, setInfo] = useState<any>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchInfo = useCallback(async () => {
     if (info) return;
@@ -63,22 +63,19 @@ function ChannelHovercard({ id, name }: { id: string; name: string }) {
     }
   }, [id, info]);
 
-  const handleEnter = () => {
-    timer.current = setTimeout(() => {
-      setShow(true);
+  useEffect(() => {
+    if (tooltip.visible) {
       void fetchInfo();
-    }, 300);
-  };
-
-  const handleLeave = () => {
-    if (timer.current) clearTimeout(timer.current);
-    setShow(false);
-  };
+    }
+  }, [fetchInfo, tooltip.visible]);
 
   return (
-    <span className="relative" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
+    <span
+      className="relative"
+      {...tooltip.getTriggerProps()}
+    >
       {name}
-      {show && info && (
+      {tooltip.visible && info && (
         <div className="absolute z-10 mt-1 w-48 rounded bg-ub-cool-grey p-2 text-xs text-ubt-cool-grey shadow">
           <div className="font-bold">{info.name}</div>
           {info.subscriberCount && <div>{info.subscriberCount} subs</div>}
