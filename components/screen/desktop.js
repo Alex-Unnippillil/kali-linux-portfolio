@@ -52,7 +52,9 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            shortcutDragActive: false,
         }
+        this.desktopRef = React.createRef();
     }
 
     componentDidMount() {
@@ -144,6 +146,36 @@ export class Desktop extends Component {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
         document.removeEventListener('keydown', this.handleContextKey);
+    }
+
+    handleShortcutDragStart = () => {
+        if (!this.state.shortcutDragActive) {
+            this.setState({ shortcutDragActive: true });
+        }
+    }
+
+    handleShortcutDragEnd = () => {
+        if (this.state.shortcutDragActive) {
+            this.setState({ shortcutDragActive: false });
+        }
+    }
+
+    handleShortcutDrop = () => {
+        if (this.state.shortcutDragActive) {
+            this.setState({ shortcutDragActive: false });
+        }
+    }
+
+    handleDesktopDragOver = (event) => {
+        if (!this.state.shortcutDragActive) return;
+        event.preventDefault();
+        if (event.dataTransfer) {
+            try {
+                event.dataTransfer.dropEffect = 'move';
+            } catch (e) {
+                // ignore dropEffect errors in unsupported browsers
+            }
+        }
     }
 
     handleGlobalShortcut = (e) => {
@@ -444,6 +476,8 @@ export class Desktop extends Component {
                     openApp: this.openApp,
                     disabled: this.state.disabled_apps[app.id],
                     prefetch: app.screen?.prefetch,
+                    onDragStart: this.handleShortcutDragStart,
+                    onDragEnd: this.handleShortcutDragEnd,
                 }
 
                 appsJsx.push(
@@ -864,8 +898,18 @@ export class Desktop extends Component {
     }
 
     render() {
+        const desktopClassName = "h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent desktop-dropzone" +
+            (this.state.shortcutDragActive ? " desktop-dropzone-active" : "");
         return (
-            <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+            <main
+                id="desktop"
+                role="main"
+                ref={this.desktopRef}
+                data-drop-target="desktop"
+                className={desktopClassName}
+                onDrop={this.handleShortcutDrop}
+                onDragOver={this.handleDesktopDragOver}
+            >
 
                 {/* Window Area */}
                 <div
