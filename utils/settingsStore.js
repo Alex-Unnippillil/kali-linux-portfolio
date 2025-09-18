@@ -14,6 +14,14 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  focusMode: {
+    enabled: false,
+    defaultCadenceMinutes: 60,
+    summaryTimes: [],
+    overrides: {},
+    suppressToasts: true,
+    queueNonCritical: true,
+  },
 };
 
 export async function getAccent() {
@@ -102,6 +110,40 @@ export async function setHaptics(value) {
   window.localStorage.setItem('haptics', value ? 'true' : 'false');
 }
 
+export async function getFocusMode() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.focusMode;
+  try {
+    const stored = window.localStorage.getItem('focus-mode');
+    if (!stored) return DEFAULT_SETTINGS.focusMode;
+    const parsed = JSON.parse(stored);
+    return {
+      ...DEFAULT_SETTINGS.focusMode,
+      ...parsed,
+      overrides: {
+        ...DEFAULT_SETTINGS.focusMode.overrides,
+        ...(parsed?.overrides || {}),
+      },
+      summaryTimes: Array.isArray(parsed?.summaryTimes)
+        ? parsed.summaryTimes
+        : DEFAULT_SETTINGS.focusMode.summaryTimes,
+    };
+  } catch (err) {
+    console.warn('Failed to parse focus mode settings', err);
+    return DEFAULT_SETTINGS.focusMode;
+  }
+}
+
+export async function setFocusMode(value) {
+  if (typeof window === 'undefined') return;
+  const payload = {
+    ...DEFAULT_SETTINGS.focusMode,
+    ...value,
+    overrides: { ...value?.overrides },
+    summaryTimes: Array.isArray(value?.summaryTimes) ? value.summaryTimes : [],
+  };
+  window.localStorage.setItem('focus-mode', JSON.stringify(payload));
+}
+
 export async function getPongSpin() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
   const val = window.localStorage.getItem('pong-spin');
@@ -137,6 +179,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('focus-mode');
 }
 
 export async function exportSettings() {
@@ -151,6 +194,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    focusMode,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +206,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getFocusMode(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +220,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    focusMode,
     theme,
   });
 }
@@ -200,6 +246,7 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    focusMode,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -212,6 +259,7 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (focusMode !== undefined) await setFocusMode(focusMode);
 }
 
 export const defaults = DEFAULT_SETTINGS;
