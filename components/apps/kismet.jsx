@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ChannelChart from '../../apps/kismet/components/ChannelChart';
 
 // Helper to convert bytes to MAC address string
 const macToString = (bytes) =>
@@ -83,26 +84,6 @@ const parsePcap = (arrayBuffer, onNetwork) => {
     channelCounts,
     timeCounts,
   };
-};
-
-const ChannelChart = ({ data }) => {
-  const channels = Object.keys(data)
-    .map(Number)
-    .sort((a, b) => a - b);
-  const max = Math.max(1, ...channels.map((c) => data[c]));
-  return (
-    <div className="flex items-end h-40 space-x-1" aria-label="Channel chart">
-      {channels.map((c) => (
-        <div key={c} className="flex flex-col items-center">
-          <div
-            className="bg-blue-600 w-4"
-            style={{ height: `${(data[c] / max) * 100}%` }}
-          />
-          <span className="text-xs mt-1">{c}</span>
-        </div>
-      ))}
-    </div>
-  );
 };
 
 const TimeChart = ({ data }) => {
