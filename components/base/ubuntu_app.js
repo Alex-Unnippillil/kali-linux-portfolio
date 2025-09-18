@@ -42,7 +42,7 @@ export class UbuntuApp extends Component {
                 onDragStart={this.handleDragStart}
                 onDragEnd={this.handleDragEnd}
                 className={(this.state.launching ? " app-icon-launch " : "") + (this.state.dragging ? " opacity-70 " : "") +
-                    " p-1 m-px z-10 bg-white bg-opacity-0 hover:bg-opacity-20 focus:bg-white focus:bg-opacity-50 focus:border-yellow-700 focus:border-opacity-100 border border-transparent outline-none rounded select-none w-24 h-20 flex flex-col justify-start items-center text-center text-xs font-normal text-white transition-hover transition-active "}
+                    " p-2xs m-px z-10 bg-transparent hover:bg-kali-surface/30 focus:bg-kali-surface/40 focus:ring-2 focus:ring-kali-accent-primary/70 focus:ring-offset-2 focus:ring-offset-kali-background border border-transparent outline-none rounded-lg select-none w-24 h-20 flex flex-col justify-start items-center text-center text-xs font-normal text-kali-text-primary transition-colors transition-transform "}
                 id={"app-" + this.props.id}
                 onDoubleClick={this.openApp}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openApp(); } }}

@@ -123,7 +123,7 @@ export class SideBarApp extends Component {
                 {
                     (
                         this.props.isClose[this.id] === false
-                            ? <div className=" w-2 h-1 absolute bottom-0 left-1/2 transform -translate-x-1/2 bg-white rounded-md"></div>
+                            ? <div className="w-2 h-1 absolute bottom-0 left-1/2 transform -translate-x-1/2 bg-kali-accent-primary rounded-md"></div>
                             : null
                     )
                 }
@@ -132,7 +132,7 @@ export class SideBarApp extends Component {
                         className={
                             (this.state.showTitle ? " visible " : " invisible ") +
                             " pointer-events-none absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2" +
-                            " rounded border border-gray-400 border-opacity-40 shadow-lg overflow-hidden bg-black bg-opacity-50"
+                            " rounded border border-kali-border-subtle/40 shadow-lg overflow-hidden bg-kali-background/80"
                         }
                     >
                         <Image
@@ -148,7 +148,7 @@ export class SideBarApp extends Component {
                 <div
                     className={
                         (this.state.showTitle ? " visible " : " invisible ") +
-                        " w-max py-0.5 px-1.5 absolute top-1.5 left-full ml-3 m-1 text-ubt-grey text-opacity-90 text-sm bg-ub-grey bg-opacity-70 border-gray-400 border border-opacity-40 rounded-md"
+                        " w-max py-0.5 px-1.5 absolute top-1.5 left-full ml-3 m-1 text-kali-text-secondary text-opacity-90 text-sm bg-kali-surface/80 border border-kali-border-subtle/50 rounded-md"
                     }
                 >
                     {this.props.title}
