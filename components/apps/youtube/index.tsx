@@ -1,6 +1,12 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Chapter,
+  getActiveChapterIndex,
+  parseChapters,
+  seekToChapter,
+} from '../../../apps/youtube/state/chapters';
 import useWatchLater, {
   Video as WatchLaterVideo,
 } from '../../../apps/youtube/state/watchLater';
@@ -270,6 +276,13 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const [looping, setLooping] = useState(false);
   const [, setPlaybackRate] = useState(1);
   const [solidHeader, setSolidHeader] = useState(false);
+  const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [activeChapter, setActiveChapter] = useState(-1);
+  const [currentDetails, setCurrentDetails] = useState<any | null>(null);
+  const hasChapterHotkeys = useMemo(
+    () => chapters.some((chapter) => chapter.key || chapter.code),
+    [chapters],
+  );
 
   useEffect(() => {
     const onScroll = () => setSolidHeader(window.scrollY > 0);
@@ -277,13 +290,51 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    setChapters([]);
+    setActiveChapter(-1);
+    setCurrentDetails(null);
+    if (!current) return () => {
+      cancelled = true;
+    };
+
+    (async () => {
+      try {
+        const res = await fetch(
+          `https://piped.video/api/v1/streams/${current.id}`,
+        );
+        const data = await res.json();
+        if (cancelled) return;
+        setCurrentDetails(data);
+        let parsed = parseChapters(data?.chapters);
+        if (!parsed.length && data?.description) {
+          parsed = parseChapters(data.description);
+        }
+        setChapters(parsed);
+      } catch {
+        if (!cancelled) {
+          setChapters([]);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [current]);
+
   const downloadCurrent = useCallback(async () => {
     if (!current) return;
     try {
-      const infoRes = await fetch(
-        `https://piped.video/api/v1/streams/${current.id}`,
-      );
-      const info = await infoRes.json();
+      let info = currentDetails;
+      if (!info) {
+        const infoRes = await fetch(
+          `https://piped.video/api/v1/streams/${current.id}`,
+        );
+        info = await infoRes.json();
+        setCurrentDetails(info);
+      }
       const streamUrl =
         info?.videoStreams?.find((s: any) => s.container === 'mp4')?.url ||
         info?.videoStreams?.[0]?.url;
@@ -307,7 +358,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
     } catch {
       // ignore errors
     }
-  }, [current]);
+  }, [current, currentDetails]);
 
 
   useEffect(() => {
@@ -499,6 +550,30 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
     });
   }, [playVideo]);
 
+  const handleSeekChapter = useCallback(
+    (chapter: Chapter) => {
+      if (!playerRef.current) return;
+      seekToChapter(playerRef.current, chapter);
+      setActiveChapter(chapter.index);
+    },
+    [setActiveChapter],
+  );
+
+  const updateActiveChapter = useCallback(() => {
+    if (!playerRef.current || !chapters.length) return;
+    const currentTime = playerRef.current.getCurrentTime?.() ?? 0;
+    const index = getActiveChapterIndex(currentTime, chapters);
+    setActiveChapter((prev) => (prev === index ? prev : index));
+  }, [chapters, setActiveChapter]);
+
+  useEffect(() => {
+    if (!chapters.length) return;
+    updateActiveChapter();
+    if (typeof window === 'undefined') return;
+    const id = window.setInterval(updateActiveChapter, 400);
+    return () => window.clearInterval(id);
+  }, [chapters, updateActiveChapter]);
+
   useEffect(() => {
     const handleKeys = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -521,12 +596,24 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
         addWatchLater(current);
       } else if (e.key.toLowerCase() === 'n') {
         playNext();
+      } else if (chapters.length) {
+        const key = e.key.toLowerCase();
+        const match = chapters.find((chapter) => {
+          if (chapter.key && chapter.key === key) return true;
+          if (chapter.code && chapter.code === e.code) return true;
+          return false;
+        });
+        if (match) {
+          e.preventDefault();
+          handleSeekChapter(match);
+        }
       }
     };
     window.addEventListener('keydown', handleKeys);
     return () => window.removeEventListener('keydown', handleKeys);
   }, [
     current,
+    chapters,
     addQueue,
     addWatchLater,
     playNext,
@@ -534,6 +621,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
     markStart,
     markEnd,
     toggleLoop,
+    handleSeekChapter,
   ]);
 
   return (
@@ -653,6 +741,40 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
                 </svg>
               </button>
             </div>
+            {chapters.length > 0 && (
+              <div className="px-[6px] pb-[12px]" data-testid="chapter-list">
+                <div className="mb-[4px] flex items-center justify-between text-[12px] uppercase tracking-wide text-ubt-grey">
+                  <span>Chapters</span>
+                  {hasChapterHotkeys && <span>Number keys</span>}
+                </div>
+                <div className="max-h-48 space-y-[4px] overflow-y-auto pr-1">
+                  {chapters.map((chapter) => {
+                    const isActive = chapter.index === activeChapter;
+                    return (
+                      <button
+                        key={`${chapter.start}-${chapter.title}`}
+                        type="button"
+                        className={`flex w-full items-center gap-[8px] rounded px-2 py-1 text-left text-sm transition ${
+                          isActive
+                            ? 'bg-ub-cool-grey text-white'
+                            : 'bg-black/30 text-ubt-cool-grey hover:bg-black/50'
+                        }`}
+                        onClick={() => handleSeekChapter(chapter)}
+                        aria-current={isActive ? 'true' : undefined}
+                      >
+                        <span className="flex w-8 shrink-0 items-center justify-center font-mono text-xs text-ubt-green">
+                          {chapter.shortcutLabel ?? String(chapter.index + 1)}
+                        </span>
+                        <span className="flex-1 truncate">{chapter.title}</span>
+                        <span className="shrink-0 text-xs tabular-nums text-ubt-grey">
+                          {chapter.startLabel}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
         <VirtualGrid
