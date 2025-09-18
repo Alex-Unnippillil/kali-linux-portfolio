@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
+import QrToolContextMenu from './ContextMenu';
 
 interface BatchItem {
   name: string;
@@ -20,6 +21,7 @@ const QRTool: React.FC = () => {
   const [svg, setSvg] = useState('');
   const [csv, setCsv] = useState('');
   const [batch, setBatch] = useState<BatchItem[]>([]);
+  const containerRef = React.useRef<HTMLDivElement>(null);
   const workerRef = React.useRef<Worker | null>(null);
 
   const initWorker = React.useCallback(() => {
@@ -124,8 +126,47 @@ const QRTool: React.FC = () => {
     setBatch(items);
   };
 
+  const copyText = () => {
+    if (text.trim()) {
+      navigator.clipboard?.writeText(text).catch(() => {});
+    }
+  };
+
+  const clearBatch = () => {
+    setBatch([]);
+  };
+
+  const resetForm = () => {
+    setText('');
+    setCsv('');
+    setBatch([]);
+    setPng('');
+    setSvg('');
+    setInvert(false);
+    setLevel('M');
+  };
+
   return (
-    <div className="p-4 space-y-4 text-white bg-ub-cool-grey h-full overflow-auto">
+    <div
+      ref={containerRef}
+      className="p-4 space-y-4 text-white bg-ub-cool-grey h-full overflow-auto"
+    >
+      <QrToolContextMenu
+        targetRef={containerRef}
+        text={text}
+        png={png}
+        svg={svg}
+        csv={csv}
+        hasBatch={batch.length > 0}
+        invert={invert}
+        onCopyText={copyText}
+        onDownloadPng={downloadPng}
+        onDownloadSvg={downloadSvg}
+        onToggleInvert={() => setInvert((value) => !value)}
+        onReset={resetForm}
+        onGenerateBatch={generateBatch}
+        onClearBatch={clearBatch}
+      />
       <div className="space-y-2">
         <label htmlFor="qr-input" className="block">
           <span className="text-sm">Text</span>

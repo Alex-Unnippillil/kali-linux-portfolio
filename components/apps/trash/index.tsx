@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import TrashContextMenu from './ContextMenu';
 
 interface TrashItem {
   id: string;
@@ -24,6 +25,7 @@ const formatAge = (closedAt: number): string => {
 export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   const [items, setItems] = useState<TrashItem[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const purgeDays = parseInt(localStorage.getItem('trash-purge-days') || '30', 10);
@@ -79,6 +81,22 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     setSelected(null);
   };
 
+  const handleContextMenuOpen = useCallback(
+    (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      const card = target?.closest('[data-trash-index]') as HTMLElement | null;
+      if (card) {
+        const index = Number(card.dataset.trashIndex);
+        if (!Number.isNaN(index)) {
+          setSelected(index);
+        }
+        return true;
+      }
+      return items.length > 0;
+    },
+    [items.length],
+  );
+
   const handleKey = useCallback(
     (e: KeyboardEvent) => {
       if (selected === null) return;
@@ -133,11 +151,23 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
           </button>
         </div>
       </div>
-      <div className="flex flex-wrap content-start p-2 overflow-auto">
+      <TrashContextMenu
+        targetRef={listRef}
+        hasSelection={selected !== null}
+        hasItems={items.length > 0}
+        selectedTitle={selected !== null ? items[selected]?.title : undefined}
+        onRestore={restore}
+        onDelete={remove}
+        onRestoreAll={restoreAll}
+        onEmpty={empty}
+        onOpen={handleContextMenuOpen}
+      />
+      <div ref={listRef} className="flex flex-wrap content-start p-2 overflow-auto">
         {items.length === 0 && <div className="w-full text-center mt-10">Trash is empty</div>}
         {items.map((item, idx) => (
           <div
             key={item.closedAt}
+            data-trash-index={idx}
             tabIndex={0}
             onClick={() => setSelected(idx)}
             className={`m-2 border p-1 w-32 cursor-pointer ${selected === idx ? 'bg-ub-drk-abrgn' : ''}`}

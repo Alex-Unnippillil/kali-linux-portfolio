@@ -21,6 +21,13 @@ Attempted to load each route under `/apps` in Chromium, Firefox, and WebKit. All
 | /apps/weather_widget | HTTP 500 | HTTP 500 | HTTP 500 |
 | /apps/word_search | HTTP 500 | HTTP 500 | HTTP 500 |
 
+## Manual QA – Context menu ordering (2025-03-07)
+
+- [x] QR Scanner: confirmed context menu shows Copy result, Download preview, and Clear result before camera controls, with items disabled when no scan is available (code review).
+- [x] QR Tool: verified context menu lists Copy text, download actions, invert toggle, reset, and batch generation prior to the Batch management section.
+- [x] Project Gallery: ensured project-specific actions precede labeled filter helpers and global reset/clear options.
+- [x] Trash: checked that Restore and Delete appear ahead of the Bulk actions separator and global options.
+
 ## Serverful and Static modes (2025-02-13)
 
 - `yarn build` failed: Module not found: Can't resolve '../../ui/FormError' in `components/apps/serial-terminal.tsx`.
