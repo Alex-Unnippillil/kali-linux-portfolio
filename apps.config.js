@@ -112,6 +112,7 @@ const SSHApp = createDynamicApp('ssh', 'SSH Command Builder');
 const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
 const HtmlRewriteApp = createDynamicApp('html-rewriter', 'HTML Rewriter');
 const ContactApp = createDynamicApp('contact', 'Contact');
+const GpgManagerApp = createDynamicApp('gpg-manager', 'GPG Manager');
 
 
 
@@ -197,6 +198,7 @@ const displaySSH = createDisplay(SSHApp);
 const displayHTTP = createDisplay(HTTPApp);
 const displayHtmlRewrite = createDisplay(HtmlRewriteApp);
 const displayContact = createDisplay(ContactApp);
+const displayGpgManager = createDisplay(GpgManagerApp);
 
 const displayHashcat = createDisplay(HashcatApp);
 
@@ -915,6 +917,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayContact,
+  },
+  {
+    id: 'gpg-manager',
+    title: 'GPG Manager',
+    icon: '/themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayGpgManager,
   },
   {
     id: 'hydra',
