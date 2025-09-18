@@ -1,9 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createSamplingBridge } from './resource_monitor.bridge';
 
 // Number of samples to keep in the timeline
 const MAX_POINTS = 60;
 
 const ResourceMonitor = () => {
+  const samplingBridgeRef = useRef(createSamplingBridge());
+
   const cpuCanvas = useRef(null);
   const memCanvas = useRef(null);
   const fpsCanvas = useRef(null);
@@ -15,6 +18,9 @@ const ResourceMonitor = () => {
   const animRef = useRef();
   const lastDrawRef = useRef(0);
   const THROTTLE_MS = 1000;
+  const memoryLabel = samplingBridgeRef.current.usesApproximateMemory
+    ? 'Memory % (approx)'
+    : 'Memory %';
 
   const [paused, setPaused] = useState(false);
   const [stress, setStress] = useState(false);
@@ -23,6 +29,57 @@ const ResourceMonitor = () => {
   const stressWindows = useRef([]);
   const stressEls = useRef([]);
   const containerRef = useRef(null);
+
+  const pushSample = (key, value) => {
+    const arr = dataRef.current[key];
+    arr.push(value);
+    if (arr.length > MAX_POINTS) arr.shift();
+  };
+
+  const drawCharts = (dataset = dataRef.current) => {
+    drawChart(cpuCanvas.current, dataset.cpu, '#00ff00', 'CPU %', 100);
+    drawChart(memCanvas.current, dataset.mem, '#ffd700', memoryLabel, 100);
+    drawChart(fpsCanvas.current, dataset.fps, '#00ffff', 'FPS', 120);
+    drawChart(netCanvas.current, dataset.net, '#ff00ff', 'Mbps', 100);
+  };
+
+  const animateCharts = useCallback(() => {
+    const from = { ...displayRef.current };
+    const to = { ...dataRef.current };
+    const start = samplingBridgeRef.current.now();
+    const duration = 300;
+
+    const step = (timestamp) => {
+      const current = typeof timestamp === 'number' ? timestamp : samplingBridgeRef.current.now();
+      const t = Math.min(1, (current - start) / duration);
+      const interpolated = {};
+      ['cpu', 'mem', 'fps', 'net'].forEach((key) => {
+        const fromArr = from[key];
+        const toArr = to[key];
+        interpolated[key] = toArr.map((v, i) => {
+          const a = fromArr[i] ?? fromArr[fromArr.length - 1] ?? 0;
+          return a + (v - a) * t;
+        });
+      });
+      drawCharts(interpolated);
+      if (t < 1) {
+        animRef.current = requestAnimationFrame(step);
+      } else {
+        displayRef.current = to;
+      }
+    };
+
+    cancelAnimationFrame(animRef.current);
+    animRef.current = requestAnimationFrame(step);
+  }, []);
+
+  const scheduleDraw = useCallback(() => {
+    const now = samplingBridgeRef.current.now();
+    if (now - lastDrawRef.current >= THROTTLE_MS) {
+      lastDrawRef.current = now;
+      animateCharts();
+    }
+  }, [animateCharts]);
 
   useEffect(() => () => cancelAnimationFrame(animRef.current), []);
 
@@ -50,28 +107,28 @@ const ResourceMonitor = () => {
   // Sampling loop using requestAnimationFrame
   useEffect(() => {
     let raf;
-    let lastFrame = performance.now();
-    let lastSample = performance.now();
+    const { now: nowFn, hardwareConcurrency, sampleMemory } = samplingBridgeRef.current;
+    let lastFrame = nowFn();
+    let lastSample = nowFn();
 
-    const sample = (now) => {
-      const dt = now - lastFrame;
-      lastFrame = now;
+    const sample = () => {
+      const currentNow = nowFn();
+      const dt = currentNow - lastFrame || 0.0001;
+      lastFrame = currentNow;
       const currentFps = 1000 / dt;
       if (!paused) setFps(currentFps);
 
-      if (!paused && now - lastSample >= 1000) {
+      if (!paused && currentNow - lastSample >= 1000) {
         const target = 1000 / 60; // 60 FPS ideal frame time
-        const cpu = Math.min(100, Math.max(0, ((dt - target) / target) * 100));
-        let mem = 0;
-        if (performance && performance.memory) {
-          const { usedJSHeapSize, totalJSHeapSize } = performance.memory;
-          mem = (usedJSHeapSize / totalJSHeapSize) * 100;
-        }
+        const concurrencyFactor = Math.max(1, hardwareConcurrency);
+        const loadRatio = dt / target;
+        const cpu = Math.min(100, Math.max(0, (loadRatio - 1) * 100 * concurrencyFactor));
+        const mem = sampleMemory();
         pushSample('cpu', cpu);
         pushSample('mem', mem);
         pushSample('fps', currentFps);
         scheduleDraw();
-        lastSample = now;
+        lastSample = currentNow;
       }
       raf = requestAnimationFrame(sample);
     };
@@ -119,56 +176,6 @@ const ResourceMonitor = () => {
       stressEls.current = [];
     }
   }, [stress]);
-
-  const pushSample = (key, value) => {
-    const arr = dataRef.current[key];
-    arr.push(value);
-    if (arr.length > MAX_POINTS) arr.shift();
-  };
-
-  const drawCharts = (dataset = dataRef.current) => {
-    drawChart(cpuCanvas.current, dataset.cpu, '#00ff00', 'CPU %', 100);
-    drawChart(memCanvas.current, dataset.mem, '#ffd700', 'Memory %', 100);
-    drawChart(fpsCanvas.current, dataset.fps, '#00ffff', 'FPS', 120);
-    drawChart(netCanvas.current, dataset.net, '#ff00ff', 'Mbps', 100);
-  };
-
-  const animateCharts = useCallback(() => {
-    const from = { ...displayRef.current };
-    const to = { ...dataRef.current };
-    const start = performance.now();
-    const duration = 300;
-
-    const step = (now) => {
-      const t = Math.min(1, (now - start) / duration);
-      const interpolated = {};
-      ['cpu', 'mem', 'fps', 'net'].forEach((key) => {
-        const fromArr = from[key];
-        const toArr = to[key];
-        interpolated[key] = toArr.map((v, i) => {
-          const a = fromArr[i] ?? fromArr[fromArr.length - 1] ?? 0;
-          return a + (v - a) * t;
-        });
-      });
-      drawCharts(interpolated);
-      if (t < 1) {
-        animRef.current = requestAnimationFrame(step);
-      } else {
-        displayRef.current = to;
-      }
-    };
-
-    cancelAnimationFrame(animRef.current);
-    animRef.current = requestAnimationFrame(step);
-  }, []);
-
-  const scheduleDraw = useCallback(() => {
-    const now = performance.now();
-    if (now - lastDrawRef.current >= THROTTLE_MS) {
-      lastDrawRef.current = now;
-      animateCharts();
-    }
-  }, [animateCharts]);
 
   const togglePause = () => setPaused((p) => !p);
   const toggleStress = () => setStress((s) => !s);
