@@ -43,13 +43,13 @@ export default function ModuleCard({
       </div>
       <div className="flex flex-col gap-2 items-center">
         <Image
-          src="/themes/Yaru/status/about.svg"
+          src="/icons/64/status/about.svg"
           alt="Details"
           width={24}
           height={24}
         />
         <Image
-          src="/themes/Yaru/status/download.svg"
+          src="/icons/64/status/download.svg"
           alt="Run"
           width={24}
           height={24}

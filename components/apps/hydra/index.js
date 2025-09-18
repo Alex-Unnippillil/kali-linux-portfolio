@@ -440,8 +440,8 @@ const HydraApp = () => {
       <div className="grid grid-cols-2 gap-1.5">
         <div className="col-span-2 flex gap-1.5">
           {[
-            { label: 'SSH', value: 'ssh', icon: '/themes/Yaru/apps/ssh.svg' },
-            { label: 'FTP', value: 'ftp', icon: '/themes/Yaru/apps/ftp.svg' },
+            { label: 'SSH', value: 'ssh', icon: '/icons/64/apps/ssh.svg' },
+            { label: 'FTP', value: 'ftp', icon: '/icons/64/apps/ftp.svg' },
           ].map((m) => (
             <div
               key={m.value}
@@ -648,7 +648,7 @@ const HydraApp = () => {
       />
       <div className="mt-4 flex items-center gap-2">
         <img
-          src="/themes/Yaru/status/changes-prevent-symbolic.svg"
+          src="/icons/48/status/changes-prevent-symbolic.svg"
           alt="credentials"
           className="w-5 h-5"
         />

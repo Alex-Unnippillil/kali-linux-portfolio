@@ -194,7 +194,7 @@ export class Gedit extends Component {
                             ) : (
                                 <Image
                                     className="w-8 motion-safe:animate-spin"
-                                    src="/themes/Yaru/status/process-working-symbolic.svg"
+                                    src="/icons/48/status/process-working-symbolic.svg"
                                     alt="Ubuntu Process Symbol"
                                     width={32}
                                     height={32}

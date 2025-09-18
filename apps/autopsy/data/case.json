@@ -3,27 +3,27 @@
     {
       "timestamp": "2023-08-01T10:00:00Z",
       "event": "resume.docx created on desktop",
-      "thumbnail": "/themes/Yaru/apps/gedit.png"
+      "thumbnail": "/icons/128/apps/gedit.svg"
     },
     {
       "timestamp": "2023-08-01T12:30:00Z",
       "event": "photo.jpg taken on phone",
-      "thumbnail": "/themes/Yaru/apps/autopsy.svg"
+      "thumbnail": "/icons/128/apps/autopsy.svg"
     },
     {
       "timestamp": "2023-08-01T14:45:00Z",
       "event": "system.log updated",
-      "thumbnail": "/themes/Yaru/apps/autopsy.svg"
+      "thumbnail": "/icons/128/apps/autopsy.svg"
     },
     {
       "timestamp": "2023-08-01T16:15:00Z",
       "event": "run.exe executed",
-      "thumbnail": "/themes/Yaru/apps/autopsy.svg"
+      "thumbnail": "/icons/128/apps/autopsy.svg"
     },
     {
       "timestamp": "2023-08-01T18:20:00Z",
       "event": "Registry key modified",
-      "thumbnail": "/themes/Yaru/apps/autopsy.svg"
+      "thumbnail": "/icons/128/apps/autopsy.svg"
     }
   ],
   "fileTree": {
@@ -34,7 +34,7 @@
         "children": [
           {
             "name": "resume.docx",
-            "thumbnail": "/themes/Yaru/apps/gedit.png"
+            "thumbnail": "/icons/128/apps/gedit.svg"
           }
         ]
       },
@@ -43,7 +43,7 @@
         "children": [
           {
             "name": "photo.jpg",
-            "thumbnail": "/themes/Yaru/apps/autopsy.svg"
+            "thumbnail": "/icons/128/apps/autopsy.svg"
           }
         ]
       },
@@ -52,7 +52,7 @@
         "children": [
           {
             "name": "system.log",
-            "thumbnail": "/themes/Yaru/apps/autopsy.svg"
+            "thumbnail": "/icons/128/apps/autopsy.svg"
           }
         ]
       },
@@ -61,7 +61,7 @@
         "children": [
           {
             "name": "run.exe",
-            "thumbnail": "/themes/Yaru/apps/autopsy.svg"
+            "thumbnail": "/icons/128/apps/autopsy.svg"
           }
         ]
       },
@@ -70,7 +70,7 @@
         "children": [
           {
             "name": "HKCU\\Software\\Example",
-            "thumbnail": "/themes/Yaru/apps/autopsy.svg"
+            "thumbnail": "/icons/128/apps/autopsy.svg"
           }
         ]
       }

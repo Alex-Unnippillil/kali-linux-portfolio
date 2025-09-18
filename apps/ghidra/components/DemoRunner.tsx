@@ -33,13 +33,13 @@ export default function DemoRunner() {
     return (
       <div className="flex flex-col items-center space-y-4">
         <Image
-          src="/themes/Yaru/apps/ghidra.svg"
+          src="/icons/128/apps/ghidra.svg"
           width={256}
           height={256}
           alt="Ghidra screenshot 1"
         />
         <Image
-          src="/themes/Yaru/apps/ghidra.svg"
+          src="/icons/128/apps/ghidra.svg"
           width={256}
           height={256}
           alt="Ghidra screenshot 2"

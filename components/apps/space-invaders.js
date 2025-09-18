@@ -10,7 +10,7 @@ const STREAK_MULTIPLIER = 2;
 
 const SpaceInvaders = () => {
   const { loading, error } = useAssetLoader({
-    images: ['/themes/Yaru/status/ubuntu_white_hex.svg'],
+    images: ['/icons/256/status/kali-logo.svg'],
     sounds: [],
   });
 
