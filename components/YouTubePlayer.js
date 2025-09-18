@@ -29,12 +29,21 @@ export default function YouTubePlayer({ videoId }) {
 
     const createPlayer = () => {
       if (!containerRef.current) return;
+      const origin =
+        typeof window !== 'undefined' && window.location?.origin
+          ? window.location.origin
+          : undefined;
+
       playerRef.current = new YT.Player(containerRef.current, {
         videoId,
         host: 'https://www.youtube-nocookie.com',
+        // rel=0 is best effort—privacy-enhanced embeds may still surface
+        // related videos from the same channel when playback ends.
         playerVars: {
+          rel: 0,
+          modestbranding: 1,
           enablejsapi: 1,
-          origin: window.location.origin,
+          ...(origin ? { origin } : {}),
         },
         events: {
           onReady: (e) => {
@@ -170,7 +179,7 @@ export default function YouTubePlayer({ videoId }) {
   useEffect(() => {
     let cancelled = false;
     if (!search) {
-      setResults([]);
+      setResults((prev) => (prev.length ? [] : prev));
       return;
     }
     (async () => {
