@@ -38,6 +38,12 @@ button:focus-visible {
     scroll-behavior: auto !important;
 }
 
+.reduced-motion .closed-window {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    transform: translate(var(--window-transform-x), var(--window-transform-y)) scale(0.85) !important;
+}
+
 /* Top NavBar styling */
 
 .top-arrow-up {
@@ -46,10 +52,6 @@ button:focus-visible {
     border-block-end: 5px solid var(--color-muted);
 }
 
-
-.animateShow {
-    animation: transformDownShow 200ms 1 forwards;
-}
 
 @keyframes transformDownShow {
     0% {
@@ -110,9 +112,6 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     -moz-box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
 }
 
-.closed-window {
-    animation: closeWindow 200ms 1 forwards;
-}
 
 @keyframes closeWindow {
     0% {
@@ -152,9 +151,6 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     visibility: hidden;
 }
 
-.scalable-app-icon.scale {
-    animation: scaleAppImage 400ms 1 forwards;
-}
 
 /* Terminal enhancements */
 .crt-terminal {
@@ -167,10 +163,6 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 .crt-terminal .xterm-screen,
 .crt-terminal .xterm-viewport {
     background: transparent;
-}
-
-.xterm .xterm-cursor {
-    animation: cursor-pulse 1s steps(2) infinite;
 }
 
 dialog {
@@ -218,10 +210,6 @@ dialog {
 }
 
 /* Show Applications overlay animation */
-.all-apps-anim {
-    animation: allAppsScale 200ms ease-out;
-}
-
 @keyframes allAppsScale {
     from {
         opacity: 0;
@@ -235,10 +223,6 @@ dialog {
 }
 
 /* App icon click animation */
-.app-icon-launch {
-    animation: appIconLaunch 200ms ease-in-out;
-}
-
 @keyframes appIconLaunch {
     0% {
         transform: scale(1);
@@ -257,7 +241,6 @@ dialog {
 .card {
     position: relative;
     transform-style: preserve-3d;
-    transition: transform 0.6s ease, opacity 0.3s ease;
 }
 
 .card-face {
@@ -286,21 +269,15 @@ dialog {
     transform: rotateY(180deg);
 }
 
-.animate-deal {
-    transform: translateY(-20px);
-    opacity: 0;
-    animation: dealCard 0.3s forwards ease-out;
-}
-
 @keyframes dealCard {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
     to {
         transform: translateY(0);
         opacity: 1;
     }
-}
-
-.peek {
-    animation: dealerPeek 0.6s ease-in-out;
 }
 
 @keyframes dealerPeek {
@@ -322,11 +299,6 @@ dialog {
     border: 2px solid var(--color-inverse);
     position: absolute;
     inset-inline-start: 0;
-    transition: transform 0.3s;
-}
-
-.chip-pop {
-    animation: chipPop 0.3s ease-out forwards;
 }
 
 @keyframes chipPop {
@@ -334,8 +306,56 @@ dialog {
     to { transform: translateY(0) scale(1); opacity: 1; }
 }
 
-.shuffle {
-    animation: shuffleDeck 0.5s;
+@media (prefers-reduced-motion: no-preference) {
+    .animateShow {
+        animation: transformDownShow 200ms 1 forwards;
+    }
+
+    .closed-window {
+        animation: closeWindow 200ms 1 forwards;
+    }
+
+    .scalable-app-icon.scale {
+        animation: scaleAppImage 400ms 1 forwards;
+    }
+
+    .xterm .xterm-cursor {
+        animation: cursor-pulse 1s steps(2) infinite;
+    }
+
+    .all-apps-anim {
+        animation: allAppsScale 200ms ease-out;
+    }
+
+    .app-icon-launch {
+        animation: appIconLaunch 200ms ease-in-out;
+    }
+
+    .card {
+        transition: transform 0.6s ease, opacity 0.3s ease;
+    }
+
+    .chip {
+        transition: transform 0.3s;
+    }
+
+    .animate-deal {
+        transform: translateY(-20px);
+        opacity: 0;
+        animation: dealCard 0.3s forwards ease-out;
+    }
+
+    .peek {
+        animation: dealerPeek 0.6s ease-in-out;
+    }
+
+    .chip-pop {
+        animation: chipPop 0.3s ease-out forwards;
+    }
+
+    .shuffle {
+        animation: shuffleDeck 0.5s;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -346,6 +366,13 @@ dialog {
     .card.flipped {
         transform: none;
     }
+    .animateShow,
+    .all-apps-anim,
+    .app-icon-launch,
+    .scalable-app-icon.scale,
+    .xterm .xterm-cursor {
+        animation: none;
+    }
     .chip-pop,
     .animate-deal,
     .peek,
@@ -353,6 +380,12 @@ dialog {
         animation: none;
         transform: none;
         opacity: 1;
+    }
+    .closed-window {
+        animation: none;
+        opacity: 0;
+        visibility: hidden;
+        transform: translate(var(--window-transform-x), var(--window-transform-y)) scale(0.85);
     }
 }
 

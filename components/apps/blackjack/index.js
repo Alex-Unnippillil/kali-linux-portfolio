@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useReducer } from 'react';
 import ReactGA from 'react-ga4';
 import { BlackjackGame, handValue, cardValue, Shoe } from './engine';
 import { recommendAction } from '../../../games/blackjack/coach';
+import usePrefersReducedMotion from '../../../hooks/usePrefersReducedMotion';
+import { scheduleMotionFrame } from '../../../utils/motion';
 
 const CHIP_VALUES = [1, 5, 25, 100];
 const CHIP_COLORS = {
@@ -14,23 +16,33 @@ const CHIP_COLORS = {
 const Card = ({ card, faceDown, peeking }) => {
   const [flipped, setFlipped] = useState(false);
   const [hovered, setHovered] = useState(false);
-  const prefersReduced = useRef(false);
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const animationHandle = useRef(null);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      prefersReduced.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (animationHandle.current) {
+      animationHandle.current.cancel();
+      animationHandle.current = null;
     }
-  }, []);
 
-  useEffect(() => {
     if (faceDown) {
       setFlipped(false);
-    } else if (prefersReduced.current) {
+    } else if (prefersReducedMotion) {
       setFlipped(true);
     } else {
-      requestAnimationFrame(() => setFlipped(true));
+      animationHandle.current = scheduleMotionFrame(() => {
+        setFlipped(true);
+        animationHandle.current = null;
+      });
     }
-  }, [faceDown, card]);
+
+    return () => {
+      if (animationHandle.current) {
+        animationHandle.current.cancel();
+        animationHandle.current = null;
+      }
+    };
+  }, [faceDown, card, prefersReducedMotion]);
 
   return (
     <div
@@ -51,13 +63,8 @@ const Card = ({ card, faceDown, peeking }) => {
 const BetChips = ({ amount }) => {
   const [chips, setChips] = useState([]);
   const stackRef = useRef(null);
-  const prefersReduced = useRef(false);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      prefersReduced.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    }
-  }, []);
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const animationHandle = useRef(null);
 
   useEffect(() => {
     const newChips = [];
@@ -74,13 +81,32 @@ const BetChips = ({ amount }) => {
   }, [amount]);
 
   useEffect(() => {
-    if (!prefersReduced.current && stackRef.current) {
-      const last = stackRef.current.lastElementChild;
-      if (last) {
-        requestAnimationFrame(() => last.classList.add('chip-pop'));
+    if (animationHandle.current) {
+      animationHandle.current.cancel();
+      animationHandle.current = null;
+    }
+
+    const stack = stackRef.current;
+    const last = stack?.lastElementChild;
+
+    if (last) {
+      last.classList.remove('chip-pop');
+
+      if (!prefersReducedMotion) {
+        animationHandle.current = scheduleMotionFrame(() => {
+          last.classList.add('chip-pop');
+          animationHandle.current = null;
+        }, { fallbackDelay: 0 });
       }
     }
-  }, [chips]);
+
+    return () => {
+      if (animationHandle.current) {
+        animationHandle.current.cancel();
+        animationHandle.current = null;
+      }
+    };
+  }, [chips, prefersReducedMotion]);
 
   return (
     <div
