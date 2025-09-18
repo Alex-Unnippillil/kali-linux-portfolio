@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from 'react';
 import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
+import CSRFLab from './CSRFLab';
 
 const HTTPBuilder: React.FC = () => {
   const [method, setMethod] = useState('GET');
@@ -31,6 +32,7 @@ const HTTPBuilder: React.FC = () => {
           <select
             id="http-method"
             className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
+            aria-label="HTTP method"
             value={method}
             onChange={(e) => setMethod(e.target.value)}
           >
@@ -48,6 +50,7 @@ const HTTPBuilder: React.FC = () => {
             id="http-url"
             type="text"
             className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
+            aria-label="Request URL"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
           />
@@ -72,11 +75,16 @@ const HTTPPreview: React.FC = () => {
   };
 
   return (
-    <TabbedWindow
-      className="min-h-screen bg-gray-900 text-white"
-      initialTabs={[createTab()]}
-      onNewTab={createTab}
-    />
+    <div className="min-h-screen bg-gray-900 text-white overflow-auto">
+      <div className="p-4 space-y-6">
+        <TabbedWindow
+          className="rounded border border-gray-700 bg-gray-900 text-white"
+          initialTabs={[createTab()]}
+          onNewTab={createTab}
+        />
+        <CSRFLab />
+      </div>
+    </div>
   );
 };
 
