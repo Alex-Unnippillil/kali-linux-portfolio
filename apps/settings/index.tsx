@@ -31,6 +31,9 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    setTerminalFontScale,
+    setTerminalTheme,
+    setTerminalSize,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -80,6 +83,16 @@ export default function Settings() {
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
+      if (parsed.terminalFontScale !== undefined)
+        setTerminalFontScale(parsed.terminalFontScale);
+      if (parsed.terminalTheme !== undefined) setTerminalTheme(parsed.terminalTheme);
+      if (
+        parsed.terminalSize &&
+        typeof parsed.terminalSize.width === 'number' &&
+        typeof parsed.terminalSize.height === 'number'
+      ) {
+        setTerminalSize({ ...parsed.terminalSize });
+      }
     } catch (err) {
       console.error("Invalid settings", err);
     }
@@ -101,6 +114,9 @@ export default function Settings() {
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
     setTheme("default");
+    setTerminalFontScale(defaults.terminalFontScale);
+    setTerminalTheme(defaults.terminalTheme);
+    setTerminalSize({ ...defaults.terminalSize });
   };
 
   const [showKeymap, setShowKeymap] = useState(false);

@@ -3,6 +3,13 @@
 import { get, set, del } from 'idb-keyval';
 import { getTheme, setTheme } from './theme';
 
+const TERMINAL_FONT_SCALE_KEY = 'terminalFontScale';
+const LEGACY_TERMINAL_FONT_KEY = 'terminal-font';
+const TERMINAL_THEME_KEY = 'terminalTheme';
+const LEGACY_TERMINAL_THEME_KEY = 'terminal-theme';
+const TERMINAL_SIZE_KEY = 'terminalSize';
+const LEGACY_TERMINAL_SIZE_KEY = 'terminal-size';
+
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
   wallpaper: 'wall-2',
@@ -14,6 +21,9 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  terminalFontScale: 1,
+  terminalTheme: 'kali',
+  terminalSize: { width: 640, height: 384 },
 };
 
 export async function getAccent() {
@@ -123,6 +133,115 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+const parseNumber = (value) => {
+  const num = typeof value === 'string' ? parseFloat(value) : Number(value);
+  return Number.isFinite(num) ? num : undefined;
+};
+
+const parseTerminalSize = (value) => {
+  if (!value) return undefined;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (parsed && typeof parsed.width === 'number' && typeof parsed.height === 'number') {
+        return {
+          width: Math.max(0, Math.round(parsed.width)),
+          height: Math.max(0, Math.round(parsed.height)),
+        };
+      }
+    } catch (e) {
+      const match = value.trim().match(/^(\d+)(?:x|,|\s+)(\d+)$/i);
+      if (match) {
+        return {
+          width: Math.max(0, parseInt(match[1], 10)),
+          height: Math.max(0, parseInt(match[2], 10)),
+        };
+      }
+    }
+  } else if (typeof value === 'object' && value) {
+    const { width, height } = value;
+    if (typeof width === 'number' && typeof height === 'number') {
+      return {
+        width: Math.max(0, Math.round(width)),
+        height: Math.max(0, Math.round(height)),
+      };
+    }
+  }
+  return undefined;
+};
+
+export async function getTerminalFontScale() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.terminalFontScale;
+  const stored = window.localStorage.getItem(TERMINAL_FONT_SCALE_KEY);
+  if (stored !== null) {
+    const parsed = parseNumber(stored);
+    return parsed !== undefined ? parsed : DEFAULT_SETTINGS.terminalFontScale;
+  }
+  const legacy = window.localStorage.getItem(LEGACY_TERMINAL_FONT_KEY);
+  if (legacy !== null) {
+    window.localStorage.removeItem(LEGACY_TERMINAL_FONT_KEY);
+    const parsed = parseNumber(legacy);
+    const scale = parsed !== undefined ? parsed : DEFAULT_SETTINGS.terminalFontScale;
+    window.localStorage.setItem(TERMINAL_FONT_SCALE_KEY, String(scale));
+    return scale;
+  }
+  return DEFAULT_SETTINGS.terminalFontScale;
+}
+
+export async function setTerminalFontScale(scale) {
+  if (typeof window === 'undefined') return;
+  const parsed = parseNumber(scale);
+  const value = parsed !== undefined && parsed > 0 ? parsed : DEFAULT_SETTINGS.terminalFontScale;
+  window.localStorage.setItem(TERMINAL_FONT_SCALE_KEY, String(value));
+}
+
+export async function getTerminalTheme() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.terminalTheme;
+  const stored = window.localStorage.getItem(TERMINAL_THEME_KEY);
+  if (stored) return stored;
+  const legacy = window.localStorage.getItem(LEGACY_TERMINAL_THEME_KEY);
+  if (legacy) {
+    window.localStorage.removeItem(LEGACY_TERMINAL_THEME_KEY);
+    window.localStorage.setItem(TERMINAL_THEME_KEY, legacy);
+    return legacy;
+  }
+  return DEFAULT_SETTINGS.terminalTheme;
+}
+
+export async function setTerminalTheme(theme) {
+  if (typeof window === 'undefined') return;
+  if (theme === undefined || theme === null) {
+    window.localStorage.removeItem(TERMINAL_THEME_KEY);
+  } else {
+    window.localStorage.setItem(TERMINAL_THEME_KEY, String(theme));
+  }
+}
+
+export async function getTerminalSize() {
+  if (typeof window === 'undefined') return { ...DEFAULT_SETTINGS.terminalSize };
+  const stored = window.localStorage.getItem(TERMINAL_SIZE_KEY);
+  const parsedStored = parseTerminalSize(stored);
+  if (parsedStored) return parsedStored;
+  const legacy = window.localStorage.getItem(LEGACY_TERMINAL_SIZE_KEY);
+  const parsedLegacy = parseTerminalSize(legacy);
+  if (parsedLegacy) {
+    window.localStorage.removeItem(LEGACY_TERMINAL_SIZE_KEY);
+    window.localStorage.setItem(TERMINAL_SIZE_KEY, JSON.stringify(parsedLegacy));
+    return parsedLegacy;
+  }
+  return { ...DEFAULT_SETTINGS.terminalSize };
+}
+
+export async function setTerminalSize(size) {
+  if (typeof window === 'undefined') return;
+  const parsed = parseTerminalSize(size);
+  if (!parsed) {
+    window.localStorage.removeItem(TERMINAL_SIZE_KEY);
+    return;
+  }
+  window.localStorage.setItem(TERMINAL_SIZE_KEY, JSON.stringify(parsed));
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +256,9 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem(TERMINAL_FONT_SCALE_KEY);
+  window.localStorage.removeItem(TERMINAL_THEME_KEY);
+  window.localStorage.removeItem(TERMINAL_SIZE_KEY);
 }
 
 export async function exportSettings() {
@@ -151,6 +273,9 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    terminalFontScale,
+    terminalTheme,
+    terminalSize,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +287,9 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getTerminalFontScale(),
+    getTerminalTheme(),
+    getTerminalSize(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -176,6 +304,9 @@ export async function exportSettings() {
     allowNetwork,
     haptics,
     theme,
+    terminalFontScale,
+    terminalTheme,
+    terminalSize,
   });
 }
 
@@ -200,6 +331,9 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    terminalFontScale,
+    terminalTheme,
+    terminalSize,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -212,6 +346,10 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (terminalFontScale !== undefined)
+    await setTerminalFontScale(terminalFontScale);
+  if (terminalTheme !== undefined) await setTerminalTheme(terminalTheme);
+  if (terminalSize !== undefined) await setTerminalSize(terminalSize);
 }
 
 export const defaults = DEFAULT_SETTINGS;

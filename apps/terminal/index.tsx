@@ -7,10 +7,45 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useCallback,
+  useMemo,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
+import { useSettings, TerminalSize } from '../../hooks/useSettings';
+
+type TerminalThemeConfig = {
+  background: string;
+  foreground: string;
+  cursor: string;
+  selectionBackground?: string;
+  selectionForeground?: string;
+};
+
+const TERMINAL_THEMES: Record<string, TerminalThemeConfig> = {
+  kali: {
+    background: '#0f1317',
+    foreground: '#f5f5f5',
+    cursor: '#1793d1',
+    selectionBackground: '#1b2a38',
+  },
+  matrix: {
+    background: '#020c02',
+    foreground: '#8aff8a',
+    cursor: '#8aff8a',
+    selectionBackground: '#154815',
+  },
+  paper: {
+    background: '#f5f6f8',
+    foreground: '#1f2933',
+    cursor: '#1793d1',
+    selectionBackground: '#c7d2fe',
+    selectionForeground: '#1f2933',
+  },
+};
+
+const DEFAULT_TERMINAL_FONT_PX = 14;
+const MIN_TERMINAL_FONT_PX = 8;
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -105,6 +140,24 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
   const [overflow, setOverflow] = useState({ top: false, bottom: false });
+  const {
+    terminalFontScale,
+    terminalTheme,
+    terminalSize,
+    setTerminalSize: persistTerminalSize,
+  } = useSettings();
+  const [panelSize, setPanelSize] = useState<TerminalSize>(terminalSize);
+  const lastObservedSize = useRef<TerminalSize>(terminalSize);
+  const resolvedTheme = useMemo(
+    () => ({ ...(TERMINAL_THEMES[terminalTheme] ?? TERMINAL_THEMES.kali) }),
+    [terminalTheme],
+  );
+  const baseFontSize = useMemo(
+    () => Math.max(MIN_TERMINAL_FONT_PX, Math.round(DEFAULT_TERMINAL_FONT_PX * terminalFontScale)),
+    [terminalFontScale],
+  );
+  const fontSizeRef = useRef(baseFontSize);
+  const themeRef = useRef(resolvedTheme);
   const ansiColors = [
     '#000000',
     '#AA0000',
@@ -123,6 +176,31 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     '#55FFFF',
     '#FFFFFF',
   ];
+
+  useEffect(() => {
+    fontSizeRef.current = baseFontSize;
+  }, [baseFontSize]);
+
+  useEffect(() => {
+    themeRef.current = resolvedTheme;
+  }, [resolvedTheme]);
+
+  useEffect(() => {
+    setPanelSize(terminalSize);
+    lastObservedSize.current = terminalSize;
+    fitRef.current?.fit();
+  }, [terminalSize]);
+
+  useEffect(() => {
+    if (!termRef.current) return;
+    termRef.current.setOption('fontSize', baseFontSize);
+    fitRef.current?.fit();
+  }, [baseFontSize]);
+
+  useEffect(() => {
+    if (!termRef.current) return;
+    termRef.current.setOption('theme', resolvedTheme);
+  }, [resolvedTheme]);
 
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
@@ -309,11 +387,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         cols: 80,
         rows: 24,
         fontFamily: '"Fira Code", monospace',
-        theme: {
-          background: '#0f1317',
-          foreground: '#f5f5f5',
-          cursor: '#1793d1',
-        },
+        fontSize: fontSizeRef.current,
+        theme: themeRef.current,
       });
       const fit = new FitAddon();
       const search = new SearchAddon();
@@ -340,6 +415,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
             : `${existing}\n`;
         }
       }
+      term.setOption('fontSize', fontSizeRef.current);
+      term.setOption('theme', themeRef.current);
       writeLine('Welcome to the web terminal!');
       writeLine('Type "help" to see available commands.');
       prompt();
@@ -384,7 +461,25 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     const handleResize = () => fitRef.current?.fit();
     let observer: ResizeObserver | undefined;
     if (typeof ResizeObserver !== 'undefined') {
-      observer = new ResizeObserver(handleResize);
+      observer = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          if (!containerRef.current || entry.target !== containerRef.current) continue;
+          const width = Math.round(entry.contentRect.width);
+          const height = Math.round(entry.contentRect.height);
+          if (!width || !height) continue;
+          if (
+            !lastObservedSize.current ||
+            lastObservedSize.current.width !== width ||
+            lastObservedSize.current.height !== height
+          ) {
+            const nextSize = { width, height };
+            lastObservedSize.current = nextSize;
+            setPanelSize(nextSize);
+            persistTerminalSize(nextSize);
+          }
+        }
+        handleResize();
+      });
       if (containerRef.current) observer.observe(containerRef.current);
     }
     window.addEventListener('resize', handleResize);
@@ -392,7 +487,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       window.removeEventListener('resize', handleResize);
       observer?.disconnect();
     };
-  }, []);
+  }, [persistTerminalSize]);
 
   useEffect(() => {
     const listener = (e: KeyboardEvent) => {
@@ -447,6 +542,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       {settingsOpen && (
         <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-10">
           <div className="bg-gray-900 p-4 rounded space-y-4">
+            <p className="text-xs text-gray-300 text-center">
+              Changes here are saved automatically and persist between sessions.
+            </p>
             <div className="grid grid-cols-8 gap-2">
               {ansiColors.map((c, i) => (
                 <div key={i} className="h-4 w-4 rounded" style={{ backgroundColor: c }} />
@@ -488,7 +586,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           <button onClick={handlePaste} aria-label="Paste">
             <PasteIcon />
           </button>
-          <button onClick={() => setSettingsOpen(true)} aria-label="Settings">
+          <button
+            onClick={() => setSettingsOpen(true)}
+            aria-label="Terminal settings (auto-save)"
+            title="Terminal settings (auto-save)"
+          >
             <SettingsIcon />
           </button>
         </div>
@@ -497,10 +599,10 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
             ref={containerRef}
             className="resize overflow-hidden font-mono"
             style={{
-              width: '80ch',
-              height: '24em',
-              fontSize: 'clamp(1rem, 0.6vw + 1rem, 1.1rem)',
+              width: `${panelSize.width}px`,
+              height: `${panelSize.height}px`,
               lineHeight: 1.4,
+              backgroundColor: resolvedTheme.background,
             }}
           />
           {overflow.top && (
