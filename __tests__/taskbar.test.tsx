@@ -43,4 +43,25 @@ describe('Taskbar', () => {
     fireEvent.click(button);
     expect(openApp).toHaveBeenCalledWith('app1');
   });
+
+  it('renders attention badges with accessible labelling', () => {
+    render(
+      <Taskbar
+        apps={apps}
+        closed_windows={{ app1: false }}
+        minimized_windows={{ app1: false }}
+        focused_windows={{ app1: false }}
+        openApp={jest.fn()}
+        minimize={jest.fn()}
+        attention_states={{ app1: { badgeCount: 5, pulse: true } }}
+      />
+    );
+    const button = screen.getByRole('button', { name: /5 notifications/i });
+    expect(button).toHaveAttribute(
+      'aria-label',
+      expect.stringContaining('needs your attention')
+    );
+    const badge = screen.getByText('5');
+    expect(badge).toHaveAttribute('aria-hidden', 'true');
+  });
 });
