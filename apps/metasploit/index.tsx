@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/router';
+import DOMPurify from 'dompurify';
 import modulesData from '../../components/apps/metasploit/modules.json';
 import MetasploitApp from '../../components/apps/metasploit';
 import Toast from '../../components/ui/Toast';
@@ -24,6 +26,153 @@ const typeColors: Record<string, string> = {
   post: 'bg-green-600',
 };
 
+type MarkdownModule = string | { default: string };
+type MarkdownContext = {
+  keys: () => string[];
+} & ((id: string) => MarkdownModule);
+
+type RequireWithContext = {
+  <T = unknown>(path: string): T;
+  context?: (
+    path: string,
+    deep?: boolean,
+    filter?: RegExp,
+  ) => MarkdownContext;
+};
+
+declare const require: RequireWithContext;
+
+const ALLOWED_URI_REGEXP = /^(?:(?:https?|mailto|tel|ftp):|#|\/)/i;
+
+const createSlugger = () => {
+  const counts = new Map<string, number>();
+  const sanitize = (value: string) => {
+    const base = value
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/\s+/g, '-');
+    return base || 'section';
+  };
+  return {
+    reset: () => counts.clear(),
+    slug: (value: string) => {
+      const base = sanitize(value);
+      const count = counts.get(base) ?? 0;
+      counts.set(base, count + 1);
+      return count ? `${base}-${count}` : base;
+    },
+  };
+};
+
+let cachedDocsContext: MarkdownContext | null = null;
+
+const getDocsContext = (): MarkdownContext | null => {
+  if (cachedDocsContext) return cachedDocsContext;
+  if (typeof require === 'undefined' || typeof require.context !== 'function') {
+    return null;
+  }
+  cachedDocsContext = require.context(
+    '../../components/apps/metasploit/docs',
+    false,
+    /\.md$/,
+  );
+  return cachedDocsContext;
+};
+
+const toDocKey = (moduleName: string) => `./${moduleName.replace(/\//g, '__')}.md`;
+
+const defaultDocLoader = async (moduleName: string): Promise<string> => {
+  const context = getDocsContext();
+  if (!context) throw new Error('DOC_SOURCE_UNAVAILABLE');
+  const key = toDocKey(moduleName);
+  if (!context.keys().includes(key)) {
+    throw new Error('DOC_NOT_FOUND');
+  }
+  const mod = context<MarkdownModule>(key);
+  const assetUrl = typeof mod === 'string' ? mod : mod.default;
+  const response = await fetch(assetUrl);
+  if (!response.ok) {
+    throw new Error('DOC_FETCH_FAILED');
+  }
+  return response.text();
+};
+
+type MarkedModule = typeof import('marked');
+
+let markedModulePromise: Promise<MarkedModule> | null = null;
+
+const loadMarkedModule = async (): Promise<MarkedModule> => {
+  if (!markedModulePromise) {
+    markedModulePromise = (async () => {
+      try {
+        const mod = (await import('marked')) as MarkedModule;
+        mod.marked.setOptions({ mangle: false, headerIds: false });
+        return mod;
+      } catch (error) {
+        if (typeof require === 'function') {
+          const mod = require<MarkedModule>('marked');
+          mod.marked.setOptions({ mangle: false, headerIds: false });
+          return mod;
+        }
+        throw error;
+      }
+    })();
+  }
+  return markedModulePromise;
+};
+
+interface Heading {
+  id: string;
+  text: string;
+  depth: number;
+}
+
+const renderMarkdown = (markdown: string, markedModule: MarkedModule) => {
+  const slugger = createSlugger();
+  const tokens = markedModule.lexer(markdown) as Array<{
+    type?: string;
+    depth?: number;
+    text?: string;
+  }>;
+  slugger.reset();
+  const navHeadings: Heading[] = [];
+  tokens.forEach((token) => {
+    if (token?.type === 'heading' && typeof token.depth === 'number' && token.depth <= 4) {
+      const id = slugger.slug(token.text || '');
+      navHeadings.push({ id, text: token.text || '', depth: token.depth });
+    }
+  });
+  slugger.reset();
+  const renderer = new markedModule.Renderer();
+  renderer.heading = (text, level) => {
+    const id = slugger.slug(text);
+    return `<h${level} id="${id}">${text}</h${level}>`;
+  };
+  const rawHtml = markedModule.marked(markdown, { renderer });
+  const sanitized = DOMPurify.sanitize(rawHtml, {
+    USE_PROFILES: { html: true },
+    ALLOWED_URI_REGEXP,
+  });
+  return { html: sanitized, headings: navHeadings };
+};
+
+const defaultMarkdownRenderer = async (markdown: string) => {
+  const markedModule = await loadMarkedModule();
+  return renderMarkdown(markdown, markedModule);
+};
+
+type MarkdownRenderer = (
+  markdown: string,
+) => Promise<{ html: string; headings: Heading[] }>;
+
+interface DocsViewerProps {
+  moduleName: string | null;
+  docTitle?: string;
+  docLoader?: (moduleName: string) => Promise<string>;
+  markdownRenderer?: MarkdownRenderer;
+}
+
 function buildTree(mods: Module[]): TreeNode {
   const root: TreeNode = {};
   mods.forEach((mod) => {
@@ -41,6 +190,222 @@ function buildTree(mods: Module[]): TreeNode {
   });
   return root;
 }
+
+const decodeHashFromUrl = (value: string) => {
+  const [, hash] = value.split('#');
+  return hash ? decodeURIComponent(hash) : '';
+};
+
+export const DocsViewer: React.FC<DocsViewerProps> = ({
+  moduleName,
+  docTitle,
+  docLoader = defaultDocLoader,
+  markdownRenderer = defaultMarkdownRenderer,
+}) => {
+  const router = useRouter();
+  const [renderedHtml, setRenderedHtml] = useState('');
+  const [headings, setHeadings] = useState<Heading[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [activeHash, setActiveHash] = useState('');
+  const contentRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const scrollToHeading = useCallback(
+    (id: string, smooth = false) => {
+      if (!id) return;
+      const root = contentRef.current;
+      if (!root) return;
+      const safeId =
+        typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
+          ? CSS.escape(id)
+          : id.replace(/([^a-zA-Z0-9_-])/g, '\\$1');
+      const target = root.querySelector<HTMLElement>(`#${safeId}`);
+      if (target) {
+        target.scrollIntoView({
+          behavior: smooth ? 'smooth' : 'auto',
+          block: 'start',
+        });
+      }
+    },
+    [],
+  );
+
+  const basePath = useMemo(() => router.asPath.split('#')[0], [router.asPath]);
+
+  useEffect(() => {
+    setActiveHash(decodeHashFromUrl(router.asPath));
+  }, [router.asPath]);
+
+  useEffect(() => {
+    const events = router.events;
+    if (!events || !events.on) return;
+    const handler = (url: string) => {
+      setActiveHash(decodeHashFromUrl(url));
+    };
+    events.on('hashChangeComplete', handler);
+    return () => {
+      events.off?.('hashChangeComplete', handler);
+    };
+  }, [router.events]);
+
+  useEffect(() => {
+    if (!moduleName) {
+      setRenderedHtml('');
+      setHeadings([]);
+      setError(null);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      try {
+        const markdown = await docLoader(moduleName);
+        if (cancelled) return;
+        const { html, headings: navHeadings } = await markdownRenderer(
+          markdown,
+        );
+        if (cancelled) return;
+        setRenderedHtml(html);
+        setHeadings(navHeadings);
+        setError(null);
+        const container = scrollContainerRef.current;
+        if (container) {
+          if (typeof container.scrollTo === 'function') {
+            container.scrollTo({ top: 0 });
+          } else {
+            container.scrollTop = 0;
+          }
+        }
+      } catch {
+        if (cancelled) return;
+        setError('Documentation not available.');
+        setRenderedHtml('');
+        setHeadings([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [moduleName, docLoader, markdownRenderer]);
+
+  useEffect(() => {
+    if (!renderedHtml || !activeHash) return;
+    scrollToHeading(activeHash);
+  }, [renderedHtml, activeHash, scrollToHeading]);
+
+  useEffect(() => {
+    const root = contentRef.current;
+    if (!root) return;
+    root.querySelectorAll<HTMLAnchorElement>('a[href]').forEach((anchor) => {
+      const href = anchor.getAttribute('href') || '';
+      if (href.startsWith('#')) {
+        anchor.removeAttribute('target');
+        anchor.removeAttribute('rel');
+      } else {
+        anchor.setAttribute('target', '_blank');
+        anchor.setAttribute('rel', 'noopener noreferrer');
+      }
+    });
+  }, [renderedHtml]);
+
+  const handleJump = (id: string) => {
+    if (!id) return;
+    scrollToHeading(id, true);
+    setActiveHash(id);
+    void router.replace(`${basePath}#${encodeURIComponent(id)}`, undefined, {
+      shallow: true,
+      scroll: false,
+    });
+  };
+
+  const handleBackToTop = () => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      if (typeof container.scrollTo === 'function') {
+        container.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        container.scrollTop = 0;
+      }
+    }
+    setActiveHash('');
+    void router.replace(basePath, undefined, { shallow: true, scroll: false });
+  };
+
+  if (!moduleName) {
+    return (
+      <div className="rounded border border-dashed border-gray-300 p-4 text-sm text-gray-500 dark:border-gray-600 dark:text-gray-300">
+        Select a module to load documentation.
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-0 flex-col gap-4 md:flex-row">
+      <nav
+        aria-label="Module table of contents"
+        className="md:w-56 flex-shrink-0 space-y-3 rounded border border-gray-200 bg-white/70 p-3 text-sm dark:border-gray-700 dark:bg-ub-grey"
+      >
+        <div>
+          <p className="font-semibold">{docTitle || 'Module documentation'}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-300">
+            Jump to a section or return to the top.
+          </p>
+        </div>
+        <ul className="space-y-1">
+          {headings.map((heading) => {
+            const indent = Math.max(0, heading.depth - 2) * 12;
+            const isActive = activeHash === heading.id;
+            return (
+              <li key={heading.id}>
+                <button
+                  type="button"
+                  onClick={() => handleJump(heading.id)}
+                  className={`w-full rounded px-2 py-1 text-left hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                    isActive ? 'bg-gray-100 font-semibold dark:bg-gray-700' : ''
+                  }`}
+                  style={{ marginLeft: indent }}
+                >
+                  {heading.text}
+                </button>
+              </li>
+            );
+          })}
+          {headings.length === 0 && (
+            <li className="text-gray-500 dark:text-gray-300">No headings available.</li>
+          )}
+        </ul>
+        <button
+          type="button"
+          onClick={handleBackToTop}
+          className="w-full rounded bg-blue-600 px-2 py-1 text-white hover:bg-blue-500"
+        >
+          Back to top
+        </button>
+      </nav>
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-auto rounded border border-gray-200 bg-white/80 p-4 text-sm leading-relaxed text-gray-900 dark:border-gray-700 dark:bg-ub-grey dark:text-gray-200"
+      >
+        {loading ? (
+          <p>Loading documentation…</p>
+        ) : error ? (
+          <p>{error}</p>
+        ) : renderedHtml ? (
+          <div
+            ref={contentRef}
+            className="space-y-4"
+            dangerouslySetInnerHTML={{ __html: renderedHtml }}
+          />
+        ) : (
+          <p>No additional documentation is available for this module.</p>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const MetasploitPage: React.FC = () => {
   const [selected, setSelected] = useState<Module | null>(null);
@@ -165,21 +530,35 @@ const MetasploitPage: React.FC = () => {
         {renderTree(tree)}
       </div>
       <div className="flex-1 flex flex-col">
-        <div className="flex-1 overflow-auto p-4">
+        <div className="flex-1 flex flex-col gap-4 overflow-hidden p-4">
           {selected ? (
-            <div>
-              <h2 className="font-bold mb-2 flex items-center">
-                {selected.name}
-                <span
-                  className={`ml-2 text-xs text-white px-2 py-0.5 rounded ${typeColors[selected.type] || 'bg-gray-500'}`}
-                >
-                  {selected.type}
-                </span>
-              </h2>
-              <p className="whitespace-pre-wrap">{selected.description}</p>
-            </div>
+            <>
+              <header>
+                <h2 className="mb-2 flex items-center text-lg font-bold">
+                  {selected.name}
+                  <span
+                    className={`ml-2 rounded px-2 py-0.5 text-xs text-white ${
+                      typeColors[selected.type] || 'bg-gray-500'
+                    }`}
+                  >
+                    {selected.type}
+                  </span>
+                </h2>
+                <p className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-200">
+                  {selected.description}
+                </p>
+              </header>
+              <div className="flex-1 min-h-0">
+                <DocsViewer
+                  moduleName={selected.name}
+                  docTitle={selected.doc || selected.name}
+                />
+              </div>
+            </>
           ) : (
-            <p>Select a module to view details</p>
+            <div className="flex h-full items-center justify-center rounded border border-dashed border-gray-300 text-sm text-gray-500 dark:border-gray-600 dark:text-gray-300">
+              Select a module to view details.
+            </div>
           )}
         </div>
         <div ref={splitRef} className="h-96 border-t flex flex-col">
