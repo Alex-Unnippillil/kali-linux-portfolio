@@ -19,6 +19,7 @@ import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import Taskbar from './taskbar';
 import TaskbarMenu from '../context-menus/taskbar-menu';
+import WindowMenu from '../context-menus/window-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
@@ -30,6 +31,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.windowRefs = {};
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -46,6 +48,7 @@ export class Desktop extends Component {
                 default: false,
                 app: false,
                 taskbar: false,
+                window: false,
             },
             context_app: null,
             showNameBar: false,
@@ -96,6 +99,7 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        this.windowRefs = {};
     }
 
     checkForNewFolders = () => {
@@ -252,6 +256,17 @@ export class Desktop extends Component {
                 });
                 this.setState({ context_app: appId }, () => this.showContextMenu(e, "app"));
                 break;
+            case "window":
+                if (appId) {
+                    ReactGA.event({
+                        category: `Context Menu`,
+                        action: `Opened Window Context Menu`
+                    });
+                    this.setState({ context_app: appId }, () => this.showContextMenu(e, "window"));
+                } else {
+                    this.showContextMenu(e, "default");
+                }
+                break;
             case "taskbar":
                 ReactGA.event({
                     category: `Context Menu`,
@@ -285,6 +300,14 @@ export class Desktop extends Component {
             case "app":
                 ReactGA.event({ category: `Context Menu`, action: `Opened App Context Menu` });
                 this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "app"));
+                break;
+            case "window":
+                if (appId) {
+                    ReactGA.event({ category: `Context Menu`, action: `Opened Window Context Menu` });
+                    this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "window"));
+                } else {
+                    this.showContextMenu(fakeEvent, "default");
+                }
                 break;
             case "taskbar":
                 ReactGA.event({ category: `Context Menu`, action: `Opened Taskbar Context Menu` });
@@ -431,6 +454,100 @@ export class Desktop extends Component {
         this.initFavourite = { ...favourite_apps };
     }
 
+    setWindowRef = (id, node) => {
+        if (node) {
+            this.windowRefs[id] = node;
+        } else {
+            delete this.windowRefs[id];
+        }
+    }
+
+    getWindowRef = (id) => this.windowRefs[id];
+
+    startWindowMove = (id) => {
+        const instance = this.getWindowRef(id);
+        if (!instance) return;
+        if (typeof instance.focusWindow === 'function') {
+            instance.focusWindow();
+        }
+        if (typeof instance.changeCursorToMove === 'function') {
+            instance.changeCursorToMove();
+        }
+        const root = document.getElementById(id);
+        const title = root ? root.querySelector('.bg-ub-window-title') : null;
+        if (title && typeof title.focus === 'function') {
+            title.focus();
+        }
+    }
+
+    startWindowResize = (id) => {
+        const instance = this.getWindowRef(id);
+        if (!instance) return;
+        if (instance.state?.snapped && typeof instance.unsnapWindow === 'function') {
+            instance.unsnapWindow();
+        }
+        if (typeof instance.focusWindow === 'function') {
+            instance.focusWindow();
+        }
+        const root = document.getElementById(id);
+        if (root && typeof root.focus === 'function') {
+            root.focus();
+        }
+    }
+
+    handleWindowMenuAction = (action) => {
+        const id = this.state.context_app;
+        if (!id) return;
+        const instance = this.getWindowRef(id);
+        switch (action) {
+            case 'move':
+                if (instance && typeof instance.changeCursorToMove === 'function') {
+                    this.startWindowMove(id);
+                }
+                break;
+            case 'resize':
+                if (instance && instance.props?.resizable !== false && instance.state?.maximized !== true) {
+                    this.startWindowResize(id);
+                }
+                break;
+            case 'minimize':
+                if (this.state.minimized_windows[id]) {
+                    this.openApp(id);
+                } else if (instance && typeof instance.minimizeWindow === 'function') {
+                    instance.minimizeWindow();
+                }
+                break;
+            case 'maximize':
+                if (instance && instance.props?.allowMaximize !== false && typeof instance.maximizeWindow === 'function') {
+                    instance.maximizeWindow();
+                }
+                break;
+            case 'snap-left':
+                if (!this.props.snapEnabled || !instance) break;
+                if (instance.state?.snapped === 'left' && typeof instance.unsnapWindow === 'function') {
+                    instance.unsnapWindow();
+                } else if (typeof instance.snapWindow === 'function') {
+                    instance.snapWindow('left');
+                }
+                break;
+            case 'snap-right':
+                if (!this.props.snapEnabled || !instance) break;
+                if (instance.state?.snapped === 'right' && typeof instance.unsnapWindow === 'function') {
+                    instance.unsnapWindow();
+                } else if (typeof instance.snapWindow === 'function') {
+                    instance.snapWindow('right');
+                }
+                break;
+            case 'close':
+                if (instance && typeof instance.closeWindow === 'function') {
+                    instance.closeWindow();
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
     renderDesktopApps = () => {
         if (Object.keys(this.state.closed_windows).length === 0) return;
         let appsJsx = [];
@@ -483,7 +600,11 @@ export class Desktop extends Component {
                 }
 
                 windowsJsx.push(
-                    <Window key={app.id} {...props} />
+                    <Window
+                        key={app.id}
+                        ref={(node) => this.setWindowRef(app.id, node)}
+                        {...props}
+                    />
                 )
             }
         });
@@ -864,6 +985,19 @@ export class Desktop extends Component {
     }
 
     render() {
+        const contextWindowId = this.state.context_app;
+        const contextWindowRef = contextWindowId ? this.getWindowRef(contextWindowId) : null;
+        const isMinimized = contextWindowId ? this.state.minimized_windows[contextWindowId] : false;
+        const isMaximized = contextWindowRef?.state?.maximized ?? false;
+        const snapped = contextWindowRef?.state?.snapped ?? null;
+        const canMove = !!contextWindowRef && !isMaximized;
+        const allowResize = contextWindowRef?.props?.resizable !== false;
+        const canResize = !!contextWindowRef && allowResize && !isMaximized;
+        const allowMaximize = contextWindowRef?.props?.allowMaximize !== false;
+        const snapEnabled = !!this.props.snapEnabled;
+        const canSnapLeft = snapEnabled && !!contextWindowRef && !isMaximized;
+        const canSnapRight = snapEnabled && !!contextWindowRef && !isMaximized;
+
         return (
             <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
 
@@ -920,6 +1054,27 @@ export class Desktop extends Component {
                     pinApp={() => this.pinApp(this.state.context_app)}
                     unpinApp={() => this.unpinApp(this.state.context_app)}
                     onClose={this.hideAllContextMenu}
+                />
+                <WindowMenu
+                    active={this.state.context_menus.window}
+                    canMove={canMove}
+                    canResize={canResize}
+                    canSnapLeft={canSnapLeft}
+                    canSnapRight={canSnapRight}
+                    allowMaximize={allowMaximize}
+                    allowResize={allowResize}
+                    isMinimized={isMinimized}
+                    isMaximized={isMaximized}
+                    snapped={snapped}
+                    snapEnabled={snapEnabled}
+                    onMove={() => this.handleWindowMenuAction('move')}
+                    onResize={() => this.handleWindowMenuAction('resize')}
+                    onMinimize={() => this.handleWindowMenuAction('minimize')}
+                    onMaximize={() => this.handleWindowMenuAction('maximize')}
+                    onSnapLeft={() => this.handleWindowMenuAction('snap-left')}
+                    onSnapRight={() => this.handleWindowMenuAction('snap-right')}
+                    onClose={() => this.handleWindowMenuAction('close')}
+                    onCloseMenu={this.hideAllContextMenu}
                 />
                 <TaskbarMenu
                     active={this.state.context_menus.taskbar}
