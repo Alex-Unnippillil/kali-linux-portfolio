@@ -28,7 +28,7 @@ function AppMenu(props) {
             aria-hidden={!props.active}
             ref={menuRef}
             onKeyDown={handleKeyDown}
-            className={(props.active ? ' block ' : ' hidden ') + ' cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm'}
+            className={(props.active ? ' block ' : ' hidden ') + ' cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded-[var(--radius-md)] text-white py-4 absolute z-50 text-sm'}
         >
             <button
                 type="button"
