@@ -129,4 +129,5 @@ For each game below, build a canvas-based component with `requestAnimationFrame`
 ## Housekeeping
 - Keep `apps.config.js` organized with utilities and games grouped and exported consistently.
 - Monitor `fast-glob` updates and explore hash optimizations for the custom service worker.
+- Accessibility: ensure new notification and DND controls expose clear labels, focus states, and screen reader hints when quiet hours suppress alerts.
 
