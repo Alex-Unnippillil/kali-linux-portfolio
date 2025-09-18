@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
 import RouterProfiles, {
   ROUTER_PROFILES,
+  LockState,
   RouterProfile,
 } from './components/RouterProfiles';
 import APList from './components/APList';
@@ -76,8 +77,13 @@ const ReaverPanel: React.FC = () => {
   const [lockRemaining, setLockRemaining] = useState(0);
   const [stageIdx, setStageIdx] = useState(-1);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const burstRef = useRef(0); // attempts since last lock
-  const lockRef = useRef(0); // lockout seconds remaining
+  const lockedRef = useRef(false);
+  const lastLockStateRef = useRef<{ locked: boolean; remainingSeconds: number }>(
+    {
+      locked: false,
+      remainingSeconds: 0,
+    },
+  );
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const logRef = useRef<HTMLDivElement>(null);
 
@@ -92,57 +98,38 @@ const ReaverPanel: React.FC = () => {
     if (!running) return;
     intervalRef.current = setInterval(() => {
       setAttempts((prev) => {
-        // handle lockout countdown
-        if (lockRef.current > 0) {
-          lockRef.current -= 1;
-          setLockRemaining(lockRef.current);
+        if (lockedRef.current) {
           return prev;
         }
 
         const next = prev + rate;
-        burstRef.current += rate;
-
-        if (burstRef.current >= profile.lockAttempts) {
-          burstRef.current = 0;
-          if (profile.lockDuration > 0) {
-            lockRef.current = profile.lockDuration;
-            setLockRemaining(lockRef.current);
-            setLogs((l) => [
-              ...l,
-              { level: 'warn', text: `WPS locked for ${profile.lockDuration}s` },
-            ]);
-          }
-        }
 
         if (next % 1000 === 0) {
           setLogs((l) => [...l, { level: 'info', text: `Tried ${next} PINs` }]);
         }
 
         if (next >= TOTAL_PINS) {
-          clearInterval(intervalRef.current!);
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+          }
           setRunning(false);
           setStageIdx(stages.length);
           setLogs((l) => [...l, { level: 'success', text: `PIN found: ${FOUND_PIN}` }]);
           return TOTAL_PINS;
         }
+
         return next;
       });
     }, 1000);
-    return () => clearInterval(intervalRef.current!);
-  }, [running, rate, profile]);
-
-  // reset counters when profile changes
-  useEffect(() => {
-    burstRef.current = 0;
-    lockRef.current = 0;
-    setLockRemaining(0);
-  }, [profile]);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [running, rate]);
 
   const start = () => {
     setAttempts(0);
-    burstRef.current = 0;
-    lockRef.current = 0;
-    setLockRemaining(0);
     setStageIdx(0);
     setRunning(true);
     setLogs([{ level: 'info', text: 'Attack started' }]);
@@ -154,6 +141,30 @@ const ReaverPanel: React.FC = () => {
     setStageIdx(-1);
     setLogs((l) => [...l, { level: 'warn', text: 'Attack stopped' }]);
   };
+
+  const handleLockState = useCallback(
+    (state: LockState) => {
+      setLockRemaining(state.remainingSeconds);
+      lockedRef.current = state.locked;
+      const last = lastLockStateRef.current;
+      if (!last.locked && state.locked) {
+        setLogs((l) => [
+          ...l,
+          {
+            level: 'warn',
+            text: `WPS locked for ${state.remainingSeconds}s`,
+          },
+        ]);
+      } else if (last.locked && !state.locked) {
+        setLogs((l) => [...l, { level: 'info', text: 'WPS lock released' }]);
+      }
+      lastLockStateRef.current = {
+        locked: state.locked,
+        remainingSeconds: state.remainingSeconds,
+      };
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!running) return;
@@ -199,6 +210,8 @@ const ReaverPanel: React.FC = () => {
     }
   };
 
+  const activeRouter = routers[routerIdx];
+  const activeApLabel = activeRouter?.model ?? 'selected access point';
   const timeRemaining = (TOTAL_PINS - attempts) / rate + lockRemaining;
 
   return (
@@ -246,7 +259,13 @@ const ReaverPanel: React.FC = () => {
 
       <div className="mb-6">
         <h2 className="text-lg mb-2">PIN Brute-force Simulator</h2>
-        <RouterProfiles onChange={setProfile} />
+        <RouterProfiles
+          attempts={attempts}
+          activeApId={activeRouter?.model}
+          activeApLabel={activeApLabel}
+          onChange={setProfile}
+          onLockStateChange={handleLockState}
+        />
         <div className="flex items-center gap-4 mb-4 flex-wrap">
           <div className="flex items-center gap-2">
             <label htmlFor="rate" className="text-sm">
@@ -286,11 +305,6 @@ const ReaverPanel: React.FC = () => {
             style={{ width: `${(attempts / TOTAL_PINS) * 100}%` }}
           />
         </div>
-        {lockRemaining > 0 && (
-          <div className="text-sm text-red-400 mb-1">
-            WPS locked. Resuming in {lockRemaining}s
-          </div>
-        )}
         <div className="text-sm mb-2">
           Est. time remaining: {formatTime(timeRemaining)}
         </div>
