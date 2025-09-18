@@ -110,6 +110,7 @@ const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
 const SecurityToolsApp = createDynamicApp('security-tools', 'Security Tools');
 const SSHApp = createDynamicApp('ssh', 'SSH Command Builder');
 const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
+const CorsTesterApp = createDynamicApp('cors-tester', 'CORS Tester');
 const HtmlRewriteApp = createDynamicApp('html-rewriter', 'HTML Rewriter');
 const ContactApp = createDynamicApp('contact', 'Contact');
 
@@ -195,6 +196,7 @@ const displayReconNG = createDisplay(ReconNGApp);
 const displaySecurityTools = createDisplay(SecurityToolsApp);
 const displaySSH = createDisplay(SSHApp);
 const displayHTTP = createDisplay(HTTPApp);
+const displayCorsTester = createDisplay(CorsTesterApp);
 const displayHtmlRewrite = createDisplay(HtmlRewriteApp);
 const displayContact = createDisplay(ContactApp);
 
@@ -897,6 +899,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayHTTP,
+  },
+  {
+    id: 'cors-tester',
+    title: 'CORS Tester',
+    icon: '/themes/Yaru/apps/http.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCorsTester,
   },
   {
     id: 'html-rewriter',
