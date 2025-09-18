@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
+import TabbedWindow from '../../components/ui/TabbedWindow';
+import type { AppTabDefinition } from '../../types/apps';
 import RouterProfiles, {
   ROUTER_PROFILES,
   RouterProfile,
@@ -357,7 +358,7 @@ const ReaverApp: React.FC = () => {
 const ReaverPage: React.FC = () => {
   const countRef = useRef(1);
 
-  const createTab = (): TabDefinition => {
+  const createTab = (): AppTabDefinition => {
     const id = Date.now().toString();
     return { id, title: `Session ${countRef.current++}`, content: <ReaverApp /> };
   };

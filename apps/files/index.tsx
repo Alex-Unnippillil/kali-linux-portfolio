@@ -1,33 +1,33 @@
 'use client';
 
 import React, { useCallback, useRef, useState } from 'react';
-import TabbedWindow from '../../../components/ui/TabbedWindow';
-import type { AppTabDefinition } from '../../../types/apps';
-import Terminal, { TerminalProps } from '..';
+import TabbedWindow from '../../components/ui/TabbedWindow';
+import type { AppTabDefinition } from '../../types/apps';
+import FileExplorer from '../../components/apps/file-explorer';
 
-const TerminalTabs: React.FC<TerminalProps> = ({ openApp }) => {
-  const windowCountRef = useRef(0);
-  const sessionCountRef = useRef(1);
+const FilesApp: React.FC = () => {
+  const windowCounterRef = useRef(0);
+  const tabCounterRef = useRef(1);
 
   const makeTab = useCallback((): AppTabDefinition => {
-    const id = `terminal-${Date.now()}-${sessionCountRef.current}`;
-    const title = `Session ${sessionCountRef.current}`;
-    sessionCountRef.current += 1;
+    const id = `files-${Date.now()}-${tabCounterRef.current}`;
+    const title = `Window ${tabCounterRef.current}`;
+    tabCounterRef.current += 1;
     return {
       id,
       title,
-      content: <Terminal openApp={openApp} key={id} />,
+      content: <FileExplorer key={id} />,
     };
-  }, [openApp]);
+  }, []);
 
   const [windows, setWindows] = useState(() => [
-    { id: `terminal-window-${windowCountRef.current++}`, initialTabs: [makeTab()] },
+    { id: `files-window-${windowCounterRef.current++}`, initialTabs: [makeTab()] },
   ]);
 
   const handleDetach = useCallback((tab: AppTabDefinition) => {
     setWindows((prev) => [
       ...prev,
-      { id: `terminal-window-${windowCountRef.current++}`, initialTabs: [tab] },
+      { id: `files-window-${windowCounterRef.current++}`, initialTabs: [tab] },
     ]);
   }, []);
 
@@ -55,4 +55,4 @@ const TerminalTabs: React.FC<TerminalProps> = ({ openApp }) => {
   );
 };
 
-export default TerminalTabs;
+export default FilesApp;
