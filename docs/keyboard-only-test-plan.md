@@ -17,6 +17,8 @@
    - **Alt + ArrowUp** snaps it to the top half.
    - **Alt + ArrowDown** restores the window to its previous size and position.
 
+> **RTL note:** When the RTL toggle is enabled in **UI → Settings → Theme**, launcher grids and other directional lists treat **ArrowLeft** as forward and **ArrowRight** as backward so focus moves visually with the layout. Window management shortcuts (Shift/Alt + arrows) continue to use the physical key directions; snapping/resizing is not mirrored yet.
+
 ## Focus
 1. After resizing or snapping, press **Tab** to move focus inside the window.
 2. Continue pressing **Tab** to confirm focus can leave the window and is not trapped.

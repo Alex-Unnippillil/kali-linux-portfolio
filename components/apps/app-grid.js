@@ -3,6 +3,7 @@ import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { Grid } from 'react-window';
+import { useSettings } from '../../hooks/useSettings';
 
 function fuzzyHighlight(text, query) {
   const q = query.toLowerCase();
@@ -25,6 +26,8 @@ export default function AppGrid({ openApp }) {
   const gridRef = useRef(null);
   const columnCountRef = useRef(1);
   const [focusedIndex, setFocusedIndex] = useState(0);
+  const { direction } = useSettings();
+  const isRTL = direction === 'rtl';
 
   const filtered = useMemo(() => {
     if (!query) return apps.map((app) => ({ ...app, nodes: app.title }));
@@ -55,8 +58,10 @@ export default function AppGrid({ openApp }) {
       e.preventDefault();
       const colCount = columnCountRef.current;
       let idx = focusedIndex;
-      if (e.key === 'ArrowRight') idx = Math.min(idx + 1, filtered.length - 1);
-      if (e.key === 'ArrowLeft') idx = Math.max(idx - 1, 0);
+      const forwardKey = isRTL ? 'ArrowLeft' : 'ArrowRight';
+      const backwardKey = isRTL ? 'ArrowRight' : 'ArrowLeft';
+      if (e.key === forwardKey) idx = Math.min(idx + 1, filtered.length - 1);
+      if (e.key === backwardKey) idx = Math.max(idx - 1, 0);
       if (e.key === 'ArrowDown') idx = Math.min(idx + colCount, filtered.length - 1);
       if (e.key === 'ArrowUp') idx = Math.max(idx - colCount, 0);
       setFocusedIndex(idx);
@@ -68,7 +73,7 @@ export default function AppGrid({ openApp }) {
         el?.focus();
       }, 0);
     },
-    [filtered, focusedIndex]
+    [filtered, focusedIndex, isRTL]
   );
 
   const Cell = ({ columnIndex, rowIndex, style, data }) => {
@@ -89,30 +94,33 @@ export default function AppGrid({ openApp }) {
   };
 
   return (
-    <div className="flex flex-col items-center h-full">
+    <div className="flex flex-col items-center h-full" dir={direction}>
       <input
         className="mb-6 mt-4 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
         placeholder="Search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
-      <div className="w-full flex-1 h-[70vh] outline-none" onKeyDown={handleKeyDown}>
+      <div
+        className={`w-full flex-1 h-[70vh] outline-none ${isRTL ? 'rtl-grid-container' : ''}`}
+        onKeyDown={handleKeyDown}
+      >
         <AutoSizer>
           {({ height, width }) => {
             const columnCount = getColumnCount(width);
             columnCountRef.current = columnCount;
             const rowCount = Math.ceil(filtered.length / columnCount);
-            return (
-              <Grid
-                gridRef={gridRef}
-                columnCount={columnCount}
-                columnWidth={width / columnCount}
-                height={height}
-                rowCount={rowCount}
-                rowHeight={112}
-                width={width}
-                className="scroll-smooth"
-              >
+              return (
+                <Grid
+                  gridRef={gridRef}
+                  className={`${isRTL ? 'rtl-grid ' : ''}scroll-smooth`}
+                  columnCount={columnCount}
+                  columnWidth={width / columnCount}
+                  height={height}
+                  rowCount={rowCount}
+                  rowHeight={112}
+                  width={width}
+                >
                 {(props) => <Cell {...props} data={{ items: filtered, columnCount }} />}
               </Grid>
             );
