@@ -1,6 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import modulesData from '../data/module-index.json';
 import versionInfo from '../data/module-version.json';
+import SuccessTimeChart from './charts/SuccessTimeChart';
+import {
+  getUpdateMetrics,
+  installUpdatePipeline,
+  runUpdateJob,
+  subscribeToUpdateMetrics,
+  uninstallUpdatePipeline,
+  type UpdateMetrics,
+} from '../modules/updateCenter';
 
 interface Module {
   id: string;
@@ -15,16 +24,46 @@ interface Module {
   options: { name: string; label: string }[];
 }
 
+interface ModuleUpdateResult {
+  modules?: Module[];
+  version: string;
+  updateAvailable: boolean;
+  message: string;
+}
+
+const describeDuration = (ms: number): string => {
+  const seconds = ms / 1000;
+  if (seconds >= 10) return `${seconds.toFixed(0)}s`;
+  if (seconds >= 1) return `${seconds.toFixed(1)}s`;
+  return `${seconds.toFixed(2)}s`;
+};
+
+const UPDATE_JOB_ID = 'module-update-pipeline';
+
 const PopularModules: React.FC = () => {
   const [modules, setModules] = useState<Module[]>(modulesData as Module[]);
   const [version, setVersion] = useState<string>(versionInfo.version);
   const [updateMessage, setUpdateMessage] = useState<string>('');
   const [updateAvailable, setUpdateAvailable] = useState<boolean>(false);
+  const [metrics, setMetrics] = useState<UpdateMetrics>(getUpdateMetrics());
+  const [isUpdating, setIsUpdating] = useState(false);
   const [filter, setFilter] = useState<string>('');
   const [search, setSearch] = useState<string>('');
   const [selected, setSelected] = useState<Module | null>(null);
   const [options, setOptions] = useState<Record<string, string>>({});
   const [logFilter, setLogFilter] = useState<string>('');
+
+  const versionRef = useRef(version);
+  const modulesRef = useRef(modules);
+  const applyUpdateRef = useRef(false);
+
+  useEffect(() => {
+    versionRef.current = version;
+  }, [version]);
+
+  useEffect(() => {
+    modulesRef.current = modules;
+  }, [modules]);
 
   const tags = Array.from(new Set(modules.flatMap((m) => m.tags)));
   let listed = filter ? modules.filter((m) => m.tags.includes(filter)) : modules;
@@ -49,6 +88,11 @@ const PopularModules: React.FC = () => {
         .join('')}`
     : '';
 
+  const lastDurationLabel =
+    typeof metrics.lastDuration === 'number'
+      ? describeDuration(metrics.lastDuration)
+      : null;
+
   const filteredLog = selected
     ? selected.log.filter((l) =>
         l.message.toLowerCase().includes(logFilter.toLowerCase())
@@ -68,28 +112,87 @@ const PopularModules: React.FC = () => {
   };
 
   useEffect(() => {
-    fetch(`/api/modules/update?version=${version}`)
-      .then((res) => res.json())
-      .then((data) => setUpdateAvailable(data.needsUpdate))
-      .catch(() => setUpdateAvailable(false));
-  }, [version]);
+    if (typeof window === 'undefined') return;
+
+    installUpdatePipeline<ModuleUpdateResult>({
+      id: UPDATE_JOB_ID,
+      label: 'module_update',
+      schedule: '*/45 * * * * *',
+      packagesToRedact: () => modulesRef.current.map((m) => m.id),
+      execute: async () => {
+        const apply = applyUpdateRef.current;
+        const currentVersion = versionRef.current;
+        const res = await fetch(
+          `/api/modules/update?version=${encodeURIComponent(currentVersion)}`,
+        );
+        if (!res.ok) {
+          throw new Error(`Update check failed (${res.status})`);
+        }
+        const data = await res.json();
+        let nextVersion = currentVersion;
+        let fetchedModules: Module[] | undefined;
+        let message = '';
+        if (data.needsUpdate && apply) {
+          const modsRes = await fetch('/data/module-index.json');
+          if (!modsRes.ok) {
+            throw new Error('Failed to download module index');
+          }
+          fetchedModules = (await modsRes.json()) as Module[];
+          nextVersion = data.latest;
+          message = `Updated to v${data.latest}`;
+        } else if (data.needsUpdate) {
+          message = 'Update available';
+        } else if (apply) {
+          message = 'Already up to date';
+        }
+        return {
+          modules: fetchedModules,
+          version: nextVersion,
+          updateAvailable: apply ? false : Boolean(data.needsUpdate),
+          message,
+        };
+      },
+      onSuccess: (result) => {
+        if (result.modules) {
+          setModules(result.modules);
+        }
+        if (result.version && result.version !== versionRef.current) {
+          setVersion(result.version);
+        }
+        if (typeof result.updateAvailable === 'boolean') {
+          setUpdateAvailable(result.updateAvailable);
+        }
+        setUpdateMessage(result.message || '');
+      },
+      onFailure: (message) => {
+        setUpdateMessage(message || 'Update failed');
+      },
+    });
+
+    const unsubscribe = subscribeToUpdateMetrics((next) => setMetrics(next));
+
+    void runUpdateJob(UPDATE_JOB_ID).catch(() => {
+      // Errors are logged through the update pipeline
+    });
+
+    return () => {
+      unsubscribe();
+      uninstallUpdatePipeline(UPDATE_JOB_ID);
+    };
+  }, []);
 
   const handleUpdate = async () => {
+    if (isUpdating) return;
+    applyUpdateRef.current = true;
+    setIsUpdating(true);
+    setUpdateMessage('Checking for updates...');
     try {
-      const res = await fetch(`/api/modules/update?version=${version}`);
-      const data = await res.json();
-      if (data.needsUpdate) {
-        const mods = await fetch('/data/module-index.json').then((r) => r.json());
-        setModules(mods);
-        setVersion(data.latest);
-        setUpdateMessage(`Updated to v${data.latest}`);
-        setUpdateAvailable(false);
-      } else {
-        setUpdateMessage('Already up to date');
-        setUpdateAvailable(false);
-      }
+      await runUpdateJob(UPDATE_JOB_ID);
     } catch {
       setUpdateMessage('Update failed');
+    } finally {
+      applyUpdateRef.current = false;
+      setIsUpdating(false);
     }
   };
 
@@ -188,16 +291,50 @@ const PopularModules: React.FC = () => {
       <div className="flex items-center gap-2">
         <button
           onClick={handleUpdate}
-          className="px-2 py-1 text-sm rounded bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="px-2 py-1 text-sm rounded bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
+          disabled={isUpdating}
         >
-          Update Modules
+          {isUpdating ? 'Updating…' : 'Update Modules'}
         </button>
         <span className="text-xs">v{version}</span>
-        {updateAvailable && (
+        {isUpdating && (
+          <span className="text-xs text-blue-300">Running…</span>
+        )}
+        {updateAvailable && !isUpdating && (
           <span className="text-xs text-yellow-300">Update available</span>
         )}
       </div>
       {updateMessage && <p className="text-sm">{updateMessage}</p>}
+      <section
+        className="rounded bg-ub-grey p-4"
+        aria-labelledby="update-summary-heading"
+      >
+        <div className="flex items-center justify-between">
+          <h2 id="update-summary-heading" className="text-lg font-semibold">
+            Update Summary
+          </h2>
+          <span className="text-xs text-gray-300">
+            {metrics.attempts} run{metrics.attempts === 1 ? '' : 's'}
+          </span>
+        </div>
+        <SuccessTimeChart
+          successRate={metrics.successRate}
+          averageDuration={metrics.averageDuration}
+        />
+        {metrics.lastError ? (
+          <p className="mt-2 text-xs text-red-400">
+            Last error: {metrics.lastError}
+          </p>
+        ) : lastDurationLabel ? (
+          <p className="mt-2 text-xs text-gray-300">
+            Last run completed in {lastDurationLabel}
+          </p>
+        ) : (
+          <p className="mt-2 text-xs text-gray-400">
+            No update runs recorded yet.
+          </p>
+        )}
+      </section>
       <input
         type="text"
         placeholder="Search modules"
