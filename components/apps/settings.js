@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
+import VoiceControlSection from './settings/accessibility/VoiceControlSection';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme, voiceControlEnabled, setVoiceControlEnabled, voiceControlHotkey, setVoiceControlHotkey, voiceConfirmation, setVoiceConfirmation } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -176,6 +177,16 @@ export function Settings() {
                     />
                     Pong Spin
                 </label>
+            </div>
+            <div className="flex justify-center">
+                <VoiceControlSection
+                    enabled={voiceControlEnabled}
+                    requireConfirmation={voiceConfirmation}
+                    hotkey={voiceControlHotkey}
+                    onToggleEnabled={setVoiceControlEnabled}
+                    onToggleConfirmation={setVoiceConfirmation}
+                    onHotkeyChange={setVoiceControlHotkey}
+                />
             </div>
             <div className="flex justify-center my-4">
                 <div
