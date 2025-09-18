@@ -3,9 +3,10 @@ import React from 'react';
 interface TerminalOutputProps {
   text: string;
   ariaLabel?: string;
+  canCopy?: boolean;
 }
 
-export default function TerminalOutput({ text, ariaLabel }: TerminalOutputProps) {
+export default function TerminalOutput({ text, ariaLabel, canCopy = true }: TerminalOutputProps) {
   const lines = text.split('\n');
   const copyLine = async (line: string) => {
     try {
@@ -24,8 +25,20 @@ export default function TerminalOutput({ text, ariaLabel }: TerminalOutputProps)
           <span className="flex-1 whitespace-pre-wrap">{line}</span>
           <button
             className="ml-2 text-gray-400 hover:text-white"
-            onClick={() => copyLine(line)}
+            type="button"
+            disabled={!canCopy}
+            aria-disabled={!canCopy}
+            onClick={() => {
+              if (canCopy) {
+                void copyLine(line);
+              }
+            }}
             aria-label="copy line"
+            title={
+              canCopy
+                ? 'Copy line to clipboard'
+                : 'Clipboard access disabled by privacy settings'
+            }
           >
             📋
           </button>

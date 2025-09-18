@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kali Portfolio Privacy Simulation</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        margin: 2rem auto;
+        max-width: 720px;
+        line-height: 1.6;
+        padding: 0 1rem;
+        color: #111827;
+      }
+      h1,
+      h2 {
+        color: #0f172a;
+      }
+      code {
+        background: #f1f5f9;
+        padding: 0.1rem 0.3rem;
+        border-radius: 0.25rem;
+      }
+      a {
+        color: #2563eb;
+      }
+      section + section {
+        margin-top: 2rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Privacy &amp; Diagnostics Simulations</h1>
+      <p>
+        The Kali Linux Portfolio runs entirely in your browser. The privacy dashboard lets you disable simulated access to
+        capabilities so you can see how the desktop reacts when features are locked down.
+      </p>
+    </header>
+    <section>
+      <h2>What the toggles control</h2>
+      <ul>
+        <li>
+          <strong>Telemetry</strong> stores high level usage counters in <code>localStorage</code>. No network requests are sent and
+          you can wipe data by resetting settings.
+        </li>
+        <li>
+          <strong>Diagnostics</strong> enables extra logging inside developer tools and allows you to export anonymised JSON crash
+          reports. These logs never leave the browser without you downloading them.
+        </li>
+        <li>
+          <strong>App permissions</strong> flip feature flags that the sandboxed apps use. For example the Security Tools app will
+          disable clipboard buttons when access is revoked.
+        </li>
+      </ul>
+    </section>
+    <section>
+      <h2>Storage locations</h2>
+      <p>
+        Settings are saved with <code>IndexedDB</code> or <code>localStorage</code> on your device. Clearing the browser storage or
+        using the Reset option in the Settings app removes all collected data.
+      </p>
+    </section>
+    <section>
+      <h2>Offline by default</h2>
+      <p>
+        All demos stay offline. The privacy dashboard only toggles UI behaviour—no network calls are performed when you change a
+        permission. Keep the <strong>Allow Network</strong> flag disabled in Settings to enforce this globally.
+      </p>
+    </section>
+  </body>
+</html>
