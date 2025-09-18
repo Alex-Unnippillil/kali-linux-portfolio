@@ -46,6 +46,19 @@ export class SideBarApp extends Component {
     };
 
     scaleImage = () => {
+        const prefersReducedMotion = typeof window !== 'undefined' &&
+            window.matchMedia &&
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const manualReducedMotion = typeof document !== 'undefined' && (
+            document.body?.classList.contains('reduced-motion') ||
+            document.documentElement?.classList.contains('reduced-motion')
+        );
+
+        if (prefersReducedMotion || manualReducedMotion) {
+            this.setState({ scaleImage: false });
+            return;
+        }
+
         setTimeout(() => {
             this.setState({ scaleImage: false });
         }, 1000);

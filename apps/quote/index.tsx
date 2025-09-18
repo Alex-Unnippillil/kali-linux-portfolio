@@ -481,16 +481,24 @@ export default function QuoteApp() {
       </div>
       <style jsx>{`
         .animate-quote {
-          animation: fadeIn 150ms ease-in-out;
+          opacity: 1;
+          transform: translateY(0);
         }
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(4px);
+
+        @media (prefers-reduced-motion: no-preference) {
+          .animate-quote {
+            animation: fadeIn 150ms ease-in-out;
           }
-          to {
-            opacity: 1;
-            transform: translateY(0);
+
+          @keyframes fadeIn {
+            from {
+              opacity: 0;
+              transform: translateY(4px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
           }
         }
       `}</style>

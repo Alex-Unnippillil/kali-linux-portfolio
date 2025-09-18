@@ -85,12 +85,27 @@ body {
   margin-top: 5px;
 }
 
+
+@media (prefers-reduced-motion: no-preference) {
+  .fade-in {
+    animation: fadeIn 0.5s forwards;
+  }
+
+  .fade-out {
+    animation: fadeOut 0.5s forwards;
+  }
+
+  .animated-icon {
+    animation: float 3s ease-in-out infinite;
+  }
+}
+
 .fade-in {
-  animation: fadeIn 0.5s forwards;
+  opacity: 1;
 }
 
 .fade-out {
-  animation: fadeOut 0.5s forwards;
+  opacity: 0;
 }
 
 @keyframes fadeIn {
@@ -103,12 +118,20 @@ body {
   to { opacity: 0; }
 }
 
-.animated-icon {
-  animation: float 3s ease-in-out infinite;
-}
-
 @keyframes float {
   0% { transform: translateY(0); }
   50% { transform: translateY(-4px); }
   100% { transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-in,
+  .fade-out,
+  .animated-icon {
+    animation: none !important;
+  }
+
+  .animated-icon {
+    transform: translateY(0) !important;
+  }
 }
