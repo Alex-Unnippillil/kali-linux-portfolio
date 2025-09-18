@@ -24,11 +24,15 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
+const WINDOW_LAYOUT_STORAGE_KEY = 'desktop_window_layout';
+const isFiniteNumber = (value) => typeof value === 'number' && Number.isFinite(value);
+
 export class Desktop extends Component {
     constructor() {
         super();
         this.app_stack = [];
         this.initFavourite = {};
+        this.persistedLayout = {};
         this.allWindowClosed = false;
         this.state = {
             focused_windows: {},
@@ -59,27 +63,35 @@ export class Desktop extends Component {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
+        this.persistedLayout = this.readStoredLayout();
         this.fetchAppsData(() => {
             const session = this.props.session || {};
-            const positions = {};
-            if (session.dock && session.dock.length) {
-                let favourite_apps = { ...this.state.favourite_apps };
-                session.dock.forEach(id => {
-                    favourite_apps[id] = true;
-                });
-                this.setState({ favourite_apps });
-            }
+            const applySession = () => {
+                if (session.dock && session.dock.length) {
+                    let favourite_apps = { ...this.state.favourite_apps };
+                    session.dock.forEach(id => {
+                        favourite_apps[id] = true;
+                    });
+                    this.setState({ favourite_apps });
+                }
 
-            if (session.windows && session.windows.length) {
-                session.windows.forEach(({ id, x, y }) => {
-                    positions[id] = { x, y };
-                });
-                this.setState({ window_positions: positions }, () => {
-                    session.windows.forEach(({ id }) => this.openApp(id));
-                });
-            } else {
-                this.openApp('about-alex');
-            }
+                if (session.windows && session.windows.length) {
+                    const positions = {};
+                    session.windows.forEach(({ id, x, y }) => {
+                        positions[id] = { x, y };
+                    });
+                    this.setState(prev => ({
+                        window_positions: { ...prev.window_positions, ...positions }
+                    }), () => {
+                        this.persistWindowLayouts();
+                        session.windows.forEach(({ id }) => this.openApp(id));
+                    });
+                } else {
+                    this.openApp('about-alex');
+                }
+            };
+
+            this.applyStoredLayout(this.persistedLayout, applySession);
         });
         this.setContextListeners();
         this.setEventListeners();
@@ -96,6 +108,196 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+    }
+
+    sanitizeLayoutObject = (input) => {
+        if (!input || typeof input !== 'object') return {};
+        const result = {};
+        Object.entries(input).forEach(([id, value]) => {
+            if (!value || typeof value !== 'object') return;
+            const entry = {};
+            if ('x' in value && isFiniteNumber(value.x)) entry.x = value.x;
+            if ('y' in value && isFiniteNumber(value.y)) entry.y = value.y;
+            if ('width' in value && isFiniteNumber(value.width)) entry.width = value.width;
+            if ('height' in value && isFiniteNumber(value.height)) entry.height = value.height;
+            if (value.state && typeof value.state === 'object') {
+                const state = {};
+                if ('snapped' in value.state) {
+                    const snapped = value.state.snapped;
+                    if (snapped === null || typeof snapped === 'string') {
+                        state.snapped = snapped;
+                    }
+                }
+                if ('maximized' in value.state && typeof value.state.maximized === 'boolean') {
+                    state.maximized = value.state.maximized;
+                }
+                if ('minimized' in value.state && typeof value.state.minimized === 'boolean') {
+                    state.minimized = value.state.minimized;
+                }
+                if (Object.keys(state).length) {
+                    entry.state = state;
+                }
+            }
+            if (Object.keys(entry).length) {
+                result[id] = entry;
+            }
+        });
+        return result;
+    }
+
+    readStoredLayout = () => {
+        if (!safeLocalStorage) return {};
+        try {
+            const stored = safeLocalStorage.getItem(WINDOW_LAYOUT_STORAGE_KEY);
+            if (!stored) return {};
+            const parsed = JSON.parse(stored);
+            return this.sanitizeLayoutObject(parsed);
+        } catch (e) {
+            return {};
+        }
+    }
+
+    applyStoredLayout = (layout, callback) => {
+        const sanitized = this.sanitizeLayoutObject(layout);
+        this.persistedLayout = sanitized;
+        if (!Object.keys(sanitized).length) {
+            if (typeof callback === 'function') callback();
+            return sanitized;
+        }
+        this.setState(prev => {
+            const nextPositions = { ...prev.window_positions };
+            const nextMinimized = { ...prev.minimized_windows };
+            Object.entries(sanitized).forEach(([id, data]) => {
+                const prevEntry = nextPositions[id] || {};
+                const { state, ...rest } = data;
+                const nextEntry = { ...prevEntry, ...rest };
+                if (state) {
+                    const prevState = (prevEntry.state && typeof prevEntry.state === 'object') ? prevEntry.state : {};
+                    const mergedState = { ...prevState, ...state };
+                    if (Object.keys(mergedState).length) {
+                        nextEntry.state = mergedState;
+                    } else {
+                        delete nextEntry.state;
+                    }
+                    if (Object.prototype.hasOwnProperty.call(state, 'minimized')) {
+                        nextMinimized[id] = state.minimized;
+                    }
+                }
+                nextPositions[id] = nextEntry;
+            });
+            return {
+                window_positions: nextPositions,
+                minimized_windows: nextMinimized,
+            };
+        }, () => {
+            if (typeof callback === 'function') callback();
+        });
+        return sanitized;
+    }
+
+    persistWindowLayouts = () => {
+        if (!safeLocalStorage) return;
+        try {
+            const payload = this.sanitizeLayoutObject(this.state.window_positions);
+            safeLocalStorage.setItem(WINDOW_LAYOUT_STORAGE_KEY, JSON.stringify(payload));
+        } catch (e) {
+            // ignore storage errors
+        }
+    }
+
+    updateWindowLayoutEntry = (id, updates) => {
+        if (!id || !updates || typeof updates !== 'object') return;
+        this.setState(prev => {
+            const prevEntry = prev.window_positions[id] || {};
+            const nextEntry = { ...prevEntry };
+            let hasChange = false;
+            if (Object.prototype.hasOwnProperty.call(updates, 'x') && isFiniteNumber(updates.x)) {
+                nextEntry.x = updates.x;
+                hasChange = true;
+            }
+            if (Object.prototype.hasOwnProperty.call(updates, 'y') && isFiniteNumber(updates.y)) {
+                nextEntry.y = updates.y;
+                hasChange = true;
+            }
+            if (Object.prototype.hasOwnProperty.call(updates, 'width') && isFiniteNumber(updates.width)) {
+                nextEntry.width = updates.width;
+                hasChange = true;
+            }
+            if (Object.prototype.hasOwnProperty.call(updates, 'height') && isFiniteNumber(updates.height)) {
+                nextEntry.height = updates.height;
+                hasChange = true;
+            }
+            let minimizedUpdate;
+            if (updates.state && typeof updates.state === 'object') {
+                const prevState = (prevEntry.state && typeof prevEntry.state === 'object') ? prevEntry.state : {};
+                const mergedState = { ...prevState };
+                Object.keys(updates.state).forEach(key => {
+                    const value = updates.state[key];
+                    if (value === undefined) {
+                        delete mergedState[key];
+                    } else {
+                        mergedState[key] = value;
+                    }
+                    if (key === 'minimized' && typeof value === 'boolean') {
+                        minimizedUpdate = value;
+                    }
+                });
+                if (Object.keys(mergedState).length) {
+                    nextEntry.state = mergedState;
+                } else {
+                    delete nextEntry.state;
+                }
+                hasChange = true;
+            }
+
+            if (!hasChange) return null;
+
+            const nextPositions = { ...prev.window_positions, [id]: nextEntry };
+            const nextState = { window_positions: nextPositions };
+            if (typeof minimizedUpdate === 'boolean') {
+                nextState.minimized_windows = { ...prev.minimized_windows, [id]: minimizedUpdate };
+            }
+            return nextState;
+        }, () => {
+            this.persistWindowLayouts();
+            this.saveSession();
+        });
+    }
+
+    handleWindowLayoutChange = (id, layout) => {
+        if (!id || !layout || typeof layout !== 'object') return;
+        const snap = this.props.snapEnabled
+            ? (value) => Math.round(value / 8) * 8
+            : (value) => value;
+        const updates = {};
+        if (Object.prototype.hasOwnProperty.call(layout, 'x') && isFiniteNumber(layout.x)) {
+            updates.x = snap(layout.x);
+        }
+        if (Object.prototype.hasOwnProperty.call(layout, 'y') && isFiniteNumber(layout.y)) {
+            updates.y = snap(layout.y);
+        }
+        if (Object.prototype.hasOwnProperty.call(layout, 'width') && isFiniteNumber(layout.width)) {
+            updates.width = layout.width;
+        }
+        if (Object.prototype.hasOwnProperty.call(layout, 'height') && isFiniteNumber(layout.height)) {
+            updates.height = layout.height;
+        }
+        const stateUpdates = {};
+        if (Object.prototype.hasOwnProperty.call(layout, 'snapped') && (layout.snapped === null || typeof layout.snapped === 'string')) {
+            stateUpdates.snapped = layout.snapped;
+        }
+        if (Object.prototype.hasOwnProperty.call(layout, 'maximized') && typeof layout.maximized === 'boolean') {
+            stateUpdates.maximized = layout.maximized;
+        }
+        if (Object.prototype.hasOwnProperty.call(layout, 'minimized') && typeof layout.minimized === 'boolean') {
+            stateUpdates.minimized = layout.minimized;
+        }
+        if (Object.keys(stateUpdates).length) {
+            updates.state = stateUpdates;
+        }
+        if (Object.keys(updates).length) {
+            this.updateWindowLayoutEntry(id, updates);
+        }
     }
 
     checkForNewFolders = () => {
@@ -460,6 +662,7 @@ export class Desktop extends Component {
             if (this.state.closed_windows[app.id] === false) {
 
                 const pos = this.state.window_positions[app.id];
+                const layoutState = pos && typeof pos.state === 'object' ? pos.state : undefined;
                 const props = {
                     title: app.title,
                     id: app.id,
@@ -478,7 +681,11 @@ export class Desktop extends Component {
                     defaultHeight: app.defaultHeight,
                     initialX: pos ? pos.x : undefined,
                     initialY: pos ? pos.y : undefined,
-                    onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
+                    initialWidth: pos ? pos.width : undefined,
+                    initialHeight: pos ? pos.height : undefined,
+                    initialSnapped: layoutState?.snapped,
+                    initialMaximized: layoutState?.maximized,
+                    onLayoutChange: (layout) => this.handleWindowLayoutChange(app.id, layout),
                     snapEnabled: this.props.snapEnabled,
                 }
 
@@ -488,15 +695,6 @@ export class Desktop extends Component {
             }
         });
         return windowsJsx;
-    }
-
-    updateWindowPosition = (id, x, y) => {
-        const snap = this.props.snapEnabled
-            ? (v) => Math.round(v / 8) * 8
-            : (v) => v;
-        this.setState(prev => ({
-            window_positions: { ...prev.window_positions, [id]: { x: snap(x), y: snap(y) } }
-        }), this.saveSession);
     }
 
     saveSession = () => {
@@ -547,7 +745,9 @@ export class Desktop extends Component {
         // remove focus and minimise this window
         minimized_windows[objId] = true;
         focused_windows[objId] = false;
-        this.setState({ minimized_windows, focused_windows });
+        this.setState({ minimized_windows, focused_windows }, () => {
+            this.updateWindowLayoutEntry(objId, { state: { minimized: true } });
+        });
 
         this.hideSideBar(null, false);
 
@@ -603,7 +803,9 @@ export class Desktop extends Component {
                 r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
                 let minimized_windows = this.state.minimized_windows;
                 minimized_windows[objId] = false;
-                this.setState({ minimized_windows: minimized_windows }, this.saveSession);
+                this.setState({ minimized_windows: minimized_windows }, () => {
+                    this.updateWindowLayoutEntry(objId, { state: { minimized: false } });
+                });
             } else {
                 this.focus(objId);
                 this.saveSession();
@@ -701,7 +903,9 @@ export class Desktop extends Component {
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
-        this.setState({ closed_windows, favourite_apps }, this.saveSession);
+        this.setState({ closed_windows, favourite_apps }, () => {
+            this.updateWindowLayoutEntry(objId, { state: { minimized: false } });
+        });
     }
 
     pinApp = (id) => {
