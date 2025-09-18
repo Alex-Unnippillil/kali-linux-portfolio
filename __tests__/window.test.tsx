@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Window from '../components/base/window';
+import { TooltipProvider } from '../components/ui/TooltipProvider';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('react-draggable', () => ({
@@ -9,13 +10,18 @@ jest.mock('react-draggable', () => ({
 }));
 jest.mock('../components/apps/terminal', () => ({ displayTerminal: jest.fn() }));
 
+const renderWithTooltip = (
+  ui: React.ReactElement,
+  options?: Parameters<typeof render>[1]
+) => render(<TooltipProvider>{ui}</TooltipProvider>, options);
+
 describe('Window lifecycle', () => {
   it('invokes callbacks on close', () => {
     jest.useFakeTimers();
     const closed = jest.fn();
     const hideSideBar = jest.fn();
 
-    render(
+    renderWithTooltip(
       <Window
         id="test-window"
         title="Test"
@@ -45,7 +51,7 @@ describe('Window lifecycle', () => {
 describe('Window snapping preview', () => {
   it('shows preview when dragged near left edge', () => {
     const ref = React.createRef<Window>();
-    render(
+    renderWithTooltip(
       <Window
         id="test-window"
         title="Test"
@@ -82,7 +88,7 @@ describe('Window snapping preview', () => {
 
   it('hides preview when away from edge', () => {
     const ref = React.createRef<Window>();
-    render(
+    renderWithTooltip(
       <Window
         id="test-window"
         title="Test"
@@ -121,7 +127,7 @@ describe('Window snapping preview', () => {
 describe('Window snapping finalize and release', () => {
   it('snaps window on drag stop near left edge', () => {
     const ref = React.createRef<Window>();
-    render(
+    renderWithTooltip(
       <Window
         id="test-window"
         title="Test"
@@ -162,7 +168,7 @@ describe('Window snapping finalize and release', () => {
 
   it('releases snap with Alt+ArrowDown restoring size', () => {
     const ref = React.createRef<Window>();
-    render(
+    renderWithTooltip(
       <Window
         id="test-window"
         title="Test"
@@ -199,7 +205,12 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault: () => {},
+        stopPropagation: () => {},
+      } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
@@ -209,7 +220,7 @@ describe('Window snapping finalize and release', () => {
 
   it('releases snap when starting drag', () => {
     const ref = React.createRef<Window>();
-    render(
+    renderWithTooltip(
       <Window
         id="test-window"
         title="Test"
@@ -257,7 +268,7 @@ describe('Window snapping finalize and release', () => {
 
 describe('Window keyboard dragging', () => {
   it('moves window using arrow keys with grabbed state', () => {
-    render(
+    renderWithTooltip(
       <Window
         id="test-window"
         title="Test"
@@ -287,7 +298,7 @@ describe('Window keyboard dragging', () => {
 describe('Edge resistance', () => {
   it('clamps drag movement near boundaries', () => {
     const ref = React.createRef<Window>();
-    render(
+    renderWithTooltip(
       <Window
         id="test-window"
         title="Test"
@@ -333,7 +344,7 @@ describe('Window overlay inert behaviour', () => {
     document.body.appendChild(opener);
     opener.focus();
 
-    render(
+    renderWithTooltip(
       <Window
         id="test-window"
         title="Test"
@@ -374,7 +385,7 @@ describe('Window overlay inert behaviour', () => {
     document.body.appendChild(opener);
     opener.focus();
 
-    render(
+    renderWithTooltip(
       <Window
         id="test-window"
         title="Test"

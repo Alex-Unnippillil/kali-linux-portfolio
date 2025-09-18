@@ -1,13 +1,14 @@
 import React, { Component } from "react";
 import Image from 'next/image';
 import { toCanvas } from 'html-to-image';
+import { Tooltip } from '../ui/TooltipProvider';
 
 export class SideBarApp extends Component {
     constructor() {
         super();
         this.id = null;
         this.state = {
-            showTitle: false,
+            showPreview: false,
             scaleImage: false,
             thumbnail: null,
         };
@@ -57,7 +58,7 @@ export class SideBarApp extends Component {
             this.scaleImage();
         }
         this.props.openApp(this.id);
-        this.setState({ showTitle: false, thumbnail: null });
+        this.setState({ showPreview: false, thumbnail: null });
     };
 
     captureThumbnail = async () => {
@@ -87,73 +88,71 @@ export class SideBarApp extends Component {
 
     render() {
         return (
-            <button
-                type="button"
-                aria-label={this.props.title}
-                data-context="app"
-                data-app-id={this.props.id}
-                onClick={this.openApp}
-                onMouseEnter={() => {
-                    this.captureThumbnail();
-                    this.setState({ showTitle: true });
-                }}
-                onMouseLeave={() => {
-                    this.setState({ showTitle: false, thumbnail: null });
-                }}
-                className={(this.props.isClose[this.id] === false && this.props.isFocus[this.id] ? "bg-white bg-opacity-10 " : "") +
-                    " w-auto p-2 outline-none relative hover:bg-white hover:bg-opacity-10 rounded m-1 transition-hover transition-active"}
-                id={"sidebar-" + this.props.id}
+            <Tooltip
+                content={this.props.title}
+                placement={["right", "left", "top"]}
+                id={`tooltip-${this.props.id}`}
             >
-                <Image
-                    width={28}
-                    height={28}
-                    className="w-7"
-                    src={this.props.icon.replace('./', '/')}
-                    alt="Ubuntu App Icon"
-                    sizes="28px"
-                />
-                <Image
-                    width={28}
-                    height={28}
-                    className={(this.state.scaleImage ? " scale " : "") + " scalable-app-icon w-7 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"}
-                    src={this.props.icon.replace('./', '/')}
-                    alt=""
-                    sizes="28px"
-                />
-                {
-                    (
-                        this.props.isClose[this.id] === false
-                            ? <div className=" w-2 h-1 absolute bottom-0 left-1/2 transform -translate-x-1/2 bg-white rounded-md"></div>
-                            : null
-                    )
-                }
-                {this.state.thumbnail && (
-                    <div
-                        className={
-                            (this.state.showTitle ? " visible " : " invisible ") +
-                            " pointer-events-none absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2" +
-                            " rounded border border-gray-400 border-opacity-40 shadow-lg overflow-hidden bg-black bg-opacity-50"
-                        }
-                    >
-                        <Image
-                            width={128}
-                            height={80}
-                            src={this.state.thumbnail}
-                            alt={`Preview of ${this.props.title}`}
-                            className="w-32 h-20 object-cover"
-                            sizes="128px"
-                        />
-                    </div>
-                )}
-                <div
-                    className={
-                        (this.state.showTitle ? " visible " : " invisible ") +
-                        " w-max py-0.5 px-1.5 absolute top-1.5 left-full ml-3 m-1 text-ubt-grey text-opacity-90 text-sm bg-ub-grey bg-opacity-70 border-gray-400 border border-opacity-40 rounded-md"
-                    }
+                <button
+                    type="button"
+                    aria-label={this.props.title}
+                    data-context="app"
+                    data-app-id={this.props.id}
+                    onClick={this.openApp}
+                    onPointerEnter={() => {
+                        this.captureThumbnail();
+                        this.setState({ showPreview: true });
+                    }}
+                    onPointerLeave={() => {
+                        this.setState({ showPreview: false, thumbnail: null });
+                    }}
+                    className={(this.props.isClose[this.id] === false && this.props.isFocus[this.id] ? "bg-white bg-opacity-10 " : "") +
+                        " w-auto p-2 outline-none relative hover:bg-white hover:bg-opacity-10 rounded m-1 transition-hover transition-active"}
+                    id={"sidebar-" + this.props.id}
                 >
-                    {this.props.title}
-                </div>
-            </button>
+                    <Image
+                        width={28}
+                        height={28}
+                        className="w-7"
+                        src={this.props.icon.replace('./', '/')}
+                        alt="Ubuntu App Icon"
+                        sizes="28px"
+                    />
+                    <Image
+                        width={28}
+                        height={28}
+                        className={(this.state.scaleImage ? " scale " : "") + " scalable-app-icon w-7 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"}
+                        src={this.props.icon.replace('./', '/')}
+                        alt=""
+                        sizes="28px"
+                    />
+                    {
+                        (
+                            this.props.isClose[this.id] === false
+                                ? <div className=" w-2 h-1 absolute bottom-0 left-1/2 transform -translate-x-1/2 bg-white rounded-md"></div>
+                                : null
+                        )
+                    }
+                    {this.state.thumbnail && (
+                        <div
+                            className={
+                                (this.state.showPreview ? " visible " : " invisible " ) +
+                                " pointer-events-none absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2" +
+                                " rounded border border-gray-400 border-opacity-40 shadow-lg overflow-hidden bg-black bg-opacity-50"
+                            }
+                        >
+                            <Image
+                                width={128}
+                                height={80}
+                                src={this.state.thumbnail}
+                                alt={`Preview of ${this.props.title}`}
+                                className="w-32 h-20 object-cover"
+                                sizes="128px"
+                            />
+                        </div>
+                    )}
+                </button>
+            </Tooltip>
         );
     }
 }

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState, createContext, useContext } from 'react';
+import { Tooltip } from './TooltipProvider';
 
 function middleEllipsis(text: string, max = 30) {
   if (text.length <= max) return text;
@@ -170,40 +171,45 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     >
       <div className="flex flex-shrink-0 bg-gray-800 text-white text-sm overflow-x-auto">
         {tabs.map((t, i) => (
-          <div
-            key={t.id}
-            className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none ${
-              t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
-            }`}
-            draggable
-            onDragStart={handleDragStart(i)}
-            onDragOver={handleDragOver(i)}
-            onDrop={handleDrop(i)}
-            onClick={() => setActive(t.id)}
-          >
-            <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
-            {t.closable !== false && tabs.length > 1 && (
-              <button
-                className="p-0.5"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  closeTab(t.id);
-                }}
-                aria-label="Close Tab"
-              >
-                ×
-              </button>
-            )}
-          </div>
+          <Tooltip key={t.id} content={t.title} placement={["bottom", "top"]}>
+            <div
+              className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none ${
+                t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
+              }`}
+              draggable
+              onDragStart={handleDragStart(i)}
+              onDragOver={handleDragOver(i)}
+              onDrop={handleDrop(i)}
+              onClick={() => setActive(t.id)}
+            >
+              <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
+              {t.closable !== false && tabs.length > 1 && (
+                <Tooltip content="Close Tab" placement={["bottom", "top"]}>
+                  <button
+                    className="p-0.5"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeTab(t.id);
+                    }}
+                    aria-label="Close Tab"
+                  >
+                    ×
+                  </button>
+                </Tooltip>
+              )}
+            </div>
+          </Tooltip>
         ))}
         {onNewTab && (
-          <button
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700"
-            onClick={addTab}
-            aria-label="New Tab"
-          >
-            +
-          </button>
+          <Tooltip content="New Tab" placement={["bottom", "top"]}>
+            <button
+              className="px-2 py-1 bg-gray-800 hover:bg-gray-700"
+              onClick={addTab}
+              aria-label="New Tab"
+            >
+              +
+            </button>
+          </Tooltip>
         )}
       </div>
       <div className="flex-grow relative overflow-hidden">
