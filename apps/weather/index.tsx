@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type SVGProps } from 'react';
 import useWeatherState, {
   City,
   ForecastDay,
@@ -9,6 +9,26 @@ import useWeatherState, {
 } from './state';
 import Forecast from './components/Forecast';
 import CityDetail from './components/CityDetail';
+import EmptyState from '../../components/base/EmptyState';
+import { getEmptyStateCopy } from '../../modules/emptyStates';
+
+const EmptyWeatherIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.5}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="w-12 h-12"
+    {...props}
+  >
+    <path d="M3 16.5A4.5 4.5 0 0 1 7.5 12h.25A5.5 5.5 0 0 1 18.9 9.6a4.5 4.5 0 1 1 1.6 8.7H7.5A4.5 4.5 0 0 1 3 16.5z" />
+    <path d="M9 19.5l-.75 2M13.5 19.5l-.75 2M18 19.5l-.75 2" />
+  </svg>
+);
+
+const weatherEmptyCopy = getEmptyStateCopy('weather-no-cities');
 
 interface ReadingUpdate {
   temp: number;
@@ -123,6 +143,23 @@ export default function WeatherApp() {
     });
   };
 
+  const addSampleCity = () => {
+    const sample: City = {
+      id: 'berlin-52.52-13.405',
+      name: 'Berlin, DE',
+      lat: 52.52,
+      lon: 13.405,
+    };
+    setCities((prev) => {
+      if (prev.some((city) => city.id === sample.id)) {
+        return prev;
+      }
+      return [...prev, sample];
+    });
+  };
+  const docsLink = weatherEmptyCopy.documentation;
+  const extraDoc = weatherEmptyCopy.secondaryDocumentation;
+
   const saveGroup = () => {
     if (!groupName) return;
     const idx = groups.findIndex((g) => g.name === groupName);
@@ -190,6 +227,36 @@ export default function WeatherApp() {
         </button>
       </div>
       <div className="grid grid-cols-2 gap-4">
+        {cities.length === 0 && (
+          <EmptyState
+            className="col-span-2"
+            icon={<EmptyWeatherIcon />}
+            title={weatherEmptyCopy.title}
+            description={weatherEmptyCopy.description}
+            primaryAction={{
+              label: weatherEmptyCopy.primaryActionLabel,
+              onClick: addSampleCity,
+            }}
+            secondaryAction={
+              docsLink
+                ? {
+                    label: docsLink.label,
+                    href: docsLink.url,
+                  }
+                : undefined
+            }
+            extraActions={
+              extraDoc
+                ? [
+                    {
+                      label: extraDoc.label,
+                      href: extraDoc.url,
+                    },
+                  ]
+                : undefined
+            }
+          />
+        )}
         {cities.map((city, i) => (
           <div
             key={city.id}
