@@ -1,11 +1,52 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import WiresharkApp from '../components/apps/wireshark';
+import { getFrameDeltas } from '../components/apps/wireshark/frameMetrics';
+import { toPng } from 'html-to-image';
+
+jest.mock('html-to-image', () => ({
+  toPng: jest.fn(() => Promise.resolve('data:image/png;base64,mock-export')),
+}));
+
+jest.mock('cytoscape', () => ({
+  __esModule: true,
+  default: { use: jest.fn() },
+}));
+
+jest.mock('cytoscape-cose-bilkent', () => ({
+  __esModule: true,
+  default: jest.fn(),
+}));
+
+jest.mock('react-cytoscapejs', () => {
+  const React = require('react');
+  const MockComponent = ({ cy }) => {
+    React.useEffect(() => {
+      if (cy) {
+        const core = {
+          layout: jest.fn().mockReturnValue({ run: jest.fn() }),
+          destroy: jest.fn(),
+        };
+        if (typeof window !== 'undefined') {
+          // @ts-ignore
+          window.__mockCytoscapeCore = core;
+        }
+        cy(core);
+      }
+    }, [cy]);
+    return React.createElement('div', { 'data-testid': 'cytoscape-mock' });
+  };
+  return { __esModule: true, default: MockComponent };
+});
 
 describe('WiresharkApp', () => {
   beforeEach(() => {
     window.localStorage.clear();
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
   it('persists filter expressions via localStorage', async () => {
@@ -142,6 +183,104 @@ describe('WiresharkApp', () => {
     expect(writeText).toHaveBeenCalledWith(
       JSON.stringify([{ expression: 'tcp', color: 'Red' }], null, 2)
     );
+  });
+
+  it('runs simulated capture workflow and exports topology without console noise', async () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleWarn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const anchorClick = jest
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => {});
+
+    const originalRAF = window.requestAnimationFrame;
+    const originalCancelRAF = window.cancelAnimationFrame;
+    const rafCallbacks = new Map<number, FrameRequestCallback>();
+    let rafId = 0;
+
+    window.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+      rafId += 1;
+      rafCallbacks.set(rafId, cb);
+      return rafId;
+    }) as any;
+
+    window.cancelAnimationFrame = ((id: number) => {
+      rafCallbacks.delete(id);
+    }) as any;
+
+    const packets = [
+      {
+        timestamp: '1',
+        src: '10.0.0.5',
+        dest: '10.0.0.10',
+        protocol: 6,
+        info: 'tcp handshake',
+        len: 64,
+        data: new Uint8Array([1, 2, 3]),
+      },
+      {
+        timestamp: '2',
+        src: '10.0.0.10',
+        dest: '10.0.0.5',
+        protocol: 17,
+        info: 'udp follow-up',
+        len: 80,
+        data: new Uint8Array([4, 5, 6]),
+      },
+    ];
+
+    const user = userEvent.setup();
+
+    const { unmount } = render(<WiresharkApp initialPackets={packets} />);
+    let stillMounted = true;
+
+    try {
+      await screen.findByText('tcp handshake');
+
+      await user.click(screen.getByRole('button', { name: /add rule/i }));
+      const exprInputs = screen.getAllByPlaceholderText(/filter expression/i);
+      const colorSelects = screen.getAllByLabelText(/color/i);
+      await user.type(exprInputs[0], 'tcp');
+      await user.selectOptions(colorSelects[0], 'Red');
+      expect(screen.getByText('tcp handshake').closest('tr')).toHaveClass('text-red-500');
+
+      await user.click(screen.getByRole('button', { name: /Flows/i }));
+      const exportBtn = await screen.findByRole('button', { name: /Export PNG/i });
+      await user.click(exportBtn);
+      await waitFor(() => expect((toPng as jest.Mock)).toHaveBeenCalled());
+
+      for (const [id, callback] of Array.from(rafCallbacks.entries())) {
+        await act(async () => callback(id * 16));
+        rafCallbacks.delete(id);
+      }
+
+      const deltas = getFrameDeltas();
+      expect(deltas.length).toBeGreaterThan(0);
+      expect(deltas.every((delta) => delta <= 32)).toBe(true);
+
+      unmount();
+      stillMounted = false;
+
+      // @ts-ignore
+      const core = window.__mockCytoscapeCore as { destroy: jest.Mock } | undefined;
+      expect(core?.destroy).toHaveBeenCalled();
+
+      expect(consoleError).not.toHaveBeenCalled();
+      expect(consoleWarn).not.toHaveBeenCalled();
+    } finally {
+      if (stillMounted) {
+        try {
+          unmount();
+        } catch {
+          // ignore
+        }
+      }
+      rafCallbacks.clear();
+      window.requestAnimationFrame = originalRAF;
+      window.cancelAnimationFrame = originalCancelRAF;
+      anchorClick.mockRestore();
+      consoleError.mockRestore();
+      consoleWarn.mockRestore();
+    }
   });
 });
 
