@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import FormError from "../../ui/FormError";
+import Icon from "../../base/Icon";
 
 interface DeviceInfo {
   address: string;
@@ -129,11 +130,7 @@ const BluetoothApp: React.FC = () => {
                   key={d.address}
                   className="flex flex-col items-center rounded bg-gray-800 p-[6px]"
                 >
-                  <img
-                    src="/themes/Yaru/status/emblem-system-symbolic.svg"
-                    alt=""
-                    className="h-16 w-16"
-                  />
+                  <Icon name="wifi" size={32} className="h-16 w-16" title={d.name || d.address} />
                   <p className="mt-[6px] text-center text-sm font-bold">
                     {d.name || d.address}
                   </p>

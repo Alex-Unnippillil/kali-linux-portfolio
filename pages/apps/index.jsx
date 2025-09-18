@@ -1,6 +1,6 @@
-import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Icon from '../../components/base/Icon';
 
 const AppsPage = () => {
   const [apps, setApps] = useState([]);
@@ -48,14 +48,7 @@ const AppsPage = () => {
             aria-label={app.title}
           >
             {app.icon && (
-              <Image
-                src={app.icon}
-                alt=""
-                width={64}
-                height={64}
-                sizes="64px"
-                className="h-16 w-16"
-              />
+              <Icon name={app.icon} size={32} className="h-8 w-8" title={app.title} />
             )}
             <span className="mt-2">{app.title}</span>
           </Link>

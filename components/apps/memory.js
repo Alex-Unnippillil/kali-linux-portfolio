@@ -1,31 +1,44 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import GameLayout from './GameLayout';
 import { createDeck, PATTERN_THEMES, fisherYatesShuffle } from './memory_utils';
+import Icon from '../base/Icon';
 
 const DEFAULT_TIME = { 2: 30, 4: 60, 6: 120 };
 
 // Built-in theme assets that can be used by the memory game.
 const BUILT_IN_THEMES = {
   icons: [
-    '/themes/Yaru/apps/2048.svg',
-    '/themes/Yaru/apps/car-racer.svg',
-    '/themes/Yaru/apps/checkers.svg',
-    '/themes/Yaru/apps/flappy-bird.svg',
-    '/themes/Yaru/apps/frogger.svg',
-    '/themes/Yaru/apps/memory.svg',
-    '/themes/Yaru/apps/nmap-nse.svg',
-    '/themes/Yaru/apps/pacman.svg',
-    '/themes/Yaru/apps/pong.svg',
-    '/themes/Yaru/apps/radare2.svg',
-    '/themes/Yaru/apps/reversi.svg',
-    '/themes/Yaru/apps/snake.svg',
-    '/themes/Yaru/apps/sokoban.svg',
-    '/themes/Yaru/apps/tetris.svg',
-    '/themes/Yaru/apps/tictactoe.svg',
-    '/themes/Yaru/apps/tower-defense.svg',
-    '/themes/Yaru/apps/volatility.svg',
-    '/themes/Yaru/apps/wireshark.svg',
+    'terminal',
+    'code',
+    'game-arcade',
+    'music',
+    'weather',
+    'graph',
+    'shield',
+    'chip',
+    'network',
+    'radar',
+    'document',
+    'note',
+    'lab',
+    'analysis',
+    'qr',
+    'camera',
   ],
+};
+
+const normalizeThemeAsset = (asset, value) => {
+  if (typeof asset === 'string') {
+    if (asset.startsWith('/') || asset.includes('.')) {
+      return { value, image: asset };
+    }
+    return { value, icon: asset };
+  }
+  if (asset && typeof asset === 'object') {
+    if (asset.icon) return { value, icon: asset.icon };
+    if (asset.image) return { value, image: asset.image };
+  }
+  return { value, icon: 'app' };
 };
 
 /**
@@ -107,7 +120,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
       const pairs = (size * size) / 2;
       const selected = themeAssets
         .slice(0, pairs)
-        .map((src, i) => ({ value: i, image: src }));
+        .map((asset, i) => normalizeThemeAsset(asset, i));
       const doubled = [...selected, ...selected].map((card, index) => ({ id: index, ...card }));
       deck = fisherYatesShuffle(doubled);
     } else {
@@ -328,7 +341,9 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
                       isHighlighted ? 'bg-green-500 text-black' : 'bg-white text-black'
                     } ${reduceMotion.current ? '' : 'transition-colors duration-300'}`}
                   >
-                    {card.image ? (
+                    {card.icon ? (
+                      <Icon name={card.icon} size={24} className="w-3/4 h-3/4" />
+                    ) : card.image ? (
                       <img src={card.image} alt="" className="w-3/4 h-3/4 object-contain" />
                     ) : (
                       <span className={`text-4xl ${card.color || ''}`}>{card.value}</span>

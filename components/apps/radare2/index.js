@@ -10,6 +10,7 @@ import {
 import GraphView from "../../../apps/radare2/components/GraphView";
 import GuideOverlay from "./GuideOverlay";
 import { useTheme } from "../../../hooks/useTheme";
+import Icon from "../../base/Icon";
 
 const Radare2 = ({ initialData = {} }) => {
   const {
@@ -108,11 +109,7 @@ const Radare2 = ({ initialData = {} }) => {
     >
       {showGuide && <GuideOverlay onClose={() => setShowGuide(false)} />}
       <div className="flex gap-2 mb-2 flex-wrap items-center">
-        <img
-          src="/themes/Yaru/apps/radare2.svg"
-          alt="Radare2 badge"
-          className="w-12 h-12"
-        />
+        <Icon name="chip" size={32} className="w-12 h-12" title="Radare2 badge" />
         <input
           value={seekAddr}
           onChange={(e) => setSeekAddr(e.target.value)}

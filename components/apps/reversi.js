@@ -8,6 +8,7 @@ import {
   countPieces,
   getBookMove,
 } from './reversiLogic';
+import Icon from '../base/Icon';
 
 const BOARD_SIZE = 400;
 const CELL = BOARD_SIZE / SIZE;
@@ -414,7 +415,7 @@ const Reversi = () => {
           onClick={reset}
           aria-label="Reset"
         >
-          <img src="/themes/Yaru/status/chrome_refresh.svg" width="24" height="24" alt="" />
+          <Icon name="refresh" size={24} className="w-6 h-6" title="Restart" />
         </button>
         <button
           className="w-6 h-6 bg-gray-700 hover:bg-gray-600 rounded flex items-center justify-center disabled:opacity-50"

@@ -1,5 +1,5 @@
 import React from 'react';
-import Image from 'next/image';
+import Icon from '../base/Icon';
 
 export default function Taskbar(props) {
     const runningApps = props.apps.filter(app => props.closed_windows[app.id] === false);
@@ -28,13 +28,10 @@ export default function Taskbar(props) {
                     className={(props.focused_windows[app.id] && !props.minimized_windows[app.id] ? ' bg-white bg-opacity-20 ' : ' ') +
                         'relative flex items-center mx-1 px-2 py-1 rounded hover:bg-white hover:bg-opacity-10'}
                 >
-                    <Image
-                        width={24}
-                        height={24}
+                    <Icon
+                        name={app.icon}
+                        size={20}
                         className="w-5 h-5"
-                        src={app.icon.replace('./', '/')}
-                        alt=""
-                        sizes="24px"
                     />
                     <span className="ml-1 text-sm text-white whitespace-nowrap">{app.title}</span>
                     {!props.focused_windows[app.id] && !props.minimized_windows[app.id] && (
