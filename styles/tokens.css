@@ -42,9 +42,9 @@
   --space-6: 2rem;
 
   /* Radius */
-  --radius-sm: 2px;
-  --radius-md: 4px;
-  --radius-lg: 8px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
   --radius-round: 9999px;
 
   /* Motion durations */
