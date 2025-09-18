@@ -1,26 +1,56 @@
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import ErrorScreen from '../../components/common/ErrorScreen';
+import { createLogger } from '../../lib/logger';
 
 const AppsPage = () => {
   const [apps, setApps] = useState([]);
   const [query, setQuery] = useState('');
+  const [error, setError] = useState(null);
+  const [retryToken, setRetryToken] = useState(0);
+  const loggerRef = useRef(createLogger());
 
   useEffect(() => {
     let isMounted = true;
-    import('../../apps.config').then((mod) => {
-      if (isMounted) {
+    import('../../apps.config')
+      .then((mod) => {
+        if (!isMounted) return;
         setApps(mod.default);
-      }
-    });
+        setError(null);
+      })
+      .catch((err) => {
+        loggerRef.current.error('Failed to load app catalog', { error: err });
+        if (!isMounted) return;
+        setError(err instanceof Error ? err : new Error(String(err)));
+      });
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [retryToken]);
 
   const filteredApps = apps.filter(
     (app) => !app.disabled && app.title.toLowerCase().includes(query.toLowerCase()),
   );
+
+  if (error) {
+    const code = [error.message, error.stack].filter(Boolean).join('\n\n');
+    return (
+      <div className="min-h-screen bg-slate-900">
+        <ErrorScreen
+          title="Unable to load apps"
+          message="The application catalog failed to load. Retry to fetch it again or review the troubleshooting guide for manual fixes."
+          code={code}
+          onRetry={() => {
+            setError(null);
+            setApps([]);
+            setRetryToken((token) => token + 1);
+          }}
+          logHref="/docs/troubleshooting#app-catalog"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4">
