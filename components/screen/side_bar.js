@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
-import Image from 'next/image'
 import SideBarApp from '../base/side_bar_app';
+import { AppGridIcon } from '../shell/shell-icons';
 
 let renderApps = (props) => {
     let sideBarAppsJsx = [];
@@ -63,14 +63,7 @@ export function AllApps(props) {
             onClick={props.showApps}
         >
             <div className="relative">
-                <Image
-                    width={28}
-                    height={28}
-                    className="w-7"
-                    src="/themes/Yaru/system/view-app-grid-symbolic.svg"
-                    alt="Ubuntu view app"
-                    sizes="28px"
-                />
+                <AppGridIcon className="w-7" aria-hidden="true" />
                 <div
                     className={
                         (title ? " visible " : " invisible ") +
