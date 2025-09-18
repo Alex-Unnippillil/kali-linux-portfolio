@@ -173,6 +173,16 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: cursor-pulse 1s steps(2) infinite;
 }
 
+.xterm .xterm-fg-4,
+.xterm .xterm-fg-12 {
+    color: var(--color-primary);
+}
+
+.xterm .xterm-fg-7,
+.xterm .xterm-fg-15 {
+    color: var(--color-text);
+}
+
 dialog {
     display: flex;
     flex-direction: column;
