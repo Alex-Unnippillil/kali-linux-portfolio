@@ -61,6 +61,25 @@ function Timeline({ events, onSelect }) {
   }, [sorted]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const container = containerRef.current;
+    const windowNode = container ? container.closest('.main-window') : null;
+    const windowId = windowNode ? windowNode.id : null;
+    const handlePinch = (event) => {
+      const detail = event.detail || {};
+      if (detail.windowId && windowId && detail.windowId !== windowId) return;
+      const scale = detail.scale;
+      if (typeof scale !== 'number' || !isFinite(scale) || scale <= 0) return;
+      setZoom((current) => {
+        const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, current * scale));
+        return next;
+      });
+    };
+    window.addEventListener('desktop-pinch', handlePinch);
+    return () => window.removeEventListener('desktop-pinch', handlePinch);
+  }, [MAX_ZOOM, MIN_ZOOM]);
+
+  useEffect(() => {
     const minutesPerPixel = 1 / zoom;
     let scale;
     if (minutesPerPixel >= 1440) {

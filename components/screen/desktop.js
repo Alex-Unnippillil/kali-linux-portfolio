@@ -23,13 +23,19 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { useSettings } from '../../hooks/useSettings';
 
 export class Desktop extends Component {
     constructor() {
         super();
-        this.app_stack = [];
+        this.workspaceCount = 3;
+        this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
+        this.app_stack = this.workspaceStacks[0];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.gestureCleanup = null;
+        this.pointerState = null;
+        this.lastWorkspaceGesture = 0;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -41,6 +47,8 @@ export class Desktop extends Component {
             minimized_windows: {},
             window_positions: {},
             desktop_apps: [],
+            currentWorkspace: 0,
+            windowWorkspaces: {},
             context_menus: {
                 desktop: false,
                 default: false,
@@ -75,7 +83,30 @@ export class Desktop extends Component {
                     positions[id] = { x, y };
                 });
                 this.setState({ window_positions: positions }, () => {
-                    session.windows.forEach(({ id }) => this.openApp(id));
+                    const workspaceGroups = {};
+                    session.windows.forEach(({ id, workspace = 0 }) => {
+                        const index = Math.min(Math.max(workspace, 0), this.workspaceCount - 1);
+                        if (!workspaceGroups[index]) workspaceGroups[index] = [];
+                        workspaceGroups[index].push(id);
+                    });
+                    const entries = Object.entries(workspaceGroups).sort((a, b) => Number(a[0]) - Number(b[0]));
+                    const openNext = (idx = 0) => {
+                        if (idx >= entries.length) {
+                            this.switchWorkspaceTo(0);
+                            return;
+                        }
+                        const [workspaceKey, ids] = entries[idx];
+                        const workspaceIndex = Number(workspaceKey);
+                        this.switchWorkspaceTo(workspaceIndex, () => {
+                            ids.forEach(windowId => this.openApp(windowId, { workspace: workspaceIndex }));
+                            openNext(idx + 1);
+                        });
+                    };
+                    if (entries.length) {
+                        openNext();
+                    } else {
+                        this.openApp('about-alex');
+                    }
                 });
             } else {
                 this.openApp('about-alex');
@@ -89,6 +120,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        this.setupGestures();
     }
 
     componentWillUnmount() {
@@ -96,6 +128,198 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        this.teardownGestures();
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        if (prevProps.gesturesEnabled !== this.props.gesturesEnabled) {
+            this.setupGestures();
+        }
+        if (prevState.currentWorkspace !== this.state.currentWorkspace) {
+            this.app_stack = this.getWorkspaceStack();
+        }
+    }
+
+    getWorkspaceStack = (index = this.state.currentWorkspace) => {
+        return this.workspaceStacks[index] || [];
+    }
+
+    addToWorkspaceStack = (id, workspace) => {
+        const target = Math.min(Math.max(workspace, 0), this.workspaceCount - 1);
+        const stack = this.workspaceStacks[target];
+        if (!stack.includes(id)) {
+            stack.push(id);
+        }
+    }
+
+    removeFromWorkspaceStack = (id) => {
+        this.workspaceStacks.forEach(stack => {
+            const idx = stack.indexOf(id);
+            if (idx !== -1) {
+                stack.splice(idx, 1);
+            }
+        });
+    }
+
+    switchWorkspace = (direction) => {
+        const next = (this.state.currentWorkspace + direction + this.workspaceCount) % this.workspaceCount;
+        this.switchWorkspaceTo(next);
+    }
+
+    switchWorkspaceTo = (target, callback) => {
+        const clamped = Math.min(Math.max(target, 0), this.workspaceCount - 1);
+        if (clamped === this.state.currentWorkspace) {
+            if (typeof callback === 'function') callback();
+            return;
+        }
+        this.app_stack = this.getWorkspaceStack(clamped);
+        this.setState({ currentWorkspace: clamped }, () => {
+            this.giveFocusToLastApp();
+            if (typeof callback === 'function') callback();
+        });
+    }
+
+    handleWorkspaceGesture = (direction, options = {}) => {
+        const { force = false } = options;
+        const now = Date.now();
+        if (!force && now - this.lastWorkspaceGesture < 400) return;
+        this.lastWorkspaceGesture = now;
+        this.switchWorkspace(direction);
+    }
+
+    emitPinch = (scale) => {
+        if (!scale || Number.isNaN(scale)) return;
+        const windowId = this.getFocusedWindowId();
+        if (!windowId) return;
+        const target = document.getElementById(windowId);
+        if (!target) return;
+        const event = new CustomEvent('desktop-pinch', {
+            detail: { windowId, scale },
+            bubbles: true,
+        });
+        target.dispatchEvent(event);
+    }
+
+    computePointerAverage = (pointers) => {
+        let totalX = 0;
+        let totalY = 0;
+        let count = 0;
+        pointers.forEach(({ x, y }) => {
+            totalX += x;
+            totalY += y;
+            count += 1;
+        });
+        if (count === 0) return { x: 0, y: 0 };
+        return { x: totalX / count, y: totalY / count };
+    }
+
+    computePinchDistance = (pointers) => {
+        const values = Array.from(pointers.values());
+        if (values.length < 2) return 0;
+        const [a, b] = values;
+        return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    setupGestures = () => {
+        this.teardownGestures();
+        if (!this.props.gesturesEnabled || typeof window === 'undefined') {
+            return;
+        }
+
+        const pointerState = {
+            pointers: new Map(),
+            swipe: null,
+            pinchDistance: null,
+        };
+        this.pointerState = pointerState;
+
+        const handlePointerDown = (event) => {
+            if (event.pointerType !== 'touch') return;
+            pointerState.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+            if (pointerState.pointers.size === 2) {
+                pointerState.pinchDistance = this.computePinchDistance(pointerState.pointers);
+            } else if (pointerState.pointers.size === 3) {
+                pointerState.swipe = {
+                    start: this.computePointerAverage(pointerState.pointers),
+                    handled: false,
+                };
+            }
+        };
+
+        const handlePointerMove = (event) => {
+            if (event.pointerType !== 'touch') return;
+            if (!pointerState.pointers.has(event.pointerId)) return;
+            pointerState.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+            if (pointerState.pointers.size === 2 && pointerState.pinchDistance) {
+                const distance = this.computePinchDistance(pointerState.pointers);
+                if (distance > 0) {
+                    const scale = distance / pointerState.pinchDistance;
+                    if (Math.abs(scale - 1) > 0.05) {
+                        this.emitPinch(scale);
+                        pointerState.pinchDistance = distance;
+                    }
+                }
+            } else if (pointerState.pointers.size >= 3 && pointerState.swipe) {
+                if (pointerState.swipe.handled) return;
+                const avg = this.computePointerAverage(pointerState.pointers);
+                const deltaX = avg.x - pointerState.swipe.start.x;
+                const deltaY = avg.y - pointerState.swipe.start.y;
+                if (Math.abs(deltaX) > 80 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+                    this.handleWorkspaceGesture(deltaX > 0 ? -1 : 1);
+                    pointerState.swipe.handled = true;
+                }
+            }
+        };
+
+        const handlePointerUp = (event) => {
+            if (event.pointerType !== 'touch') return;
+            pointerState.pointers.delete(event.pointerId);
+            if (pointerState.pointers.size < 2) {
+                pointerState.pinchDistance = null;
+            }
+            if (!pointerState.swipe || pointerState.pointers.size < 3) {
+                pointerState.swipe = null;
+            }
+        };
+
+        const handleWheel = (event) => {
+            if (!this.props.gesturesEnabled) return;
+            if (event.ctrlKey) {
+                const scale = Math.exp(-event.deltaY * 0.002);
+                if (Math.abs(scale - 1) > 0.02) {
+                    this.emitPinch(scale);
+                }
+                return;
+            }
+            if (Math.abs(event.deltaX) > 40 && Math.abs(event.deltaX) > Math.abs(event.deltaY) * 1.5) {
+                const direction = event.deltaX > 0 ? 1 : -1;
+                this.handleWorkspaceGesture(direction);
+            }
+        };
+
+        window.addEventListener('pointerdown', handlePointerDown, { passive: true });
+        window.addEventListener('pointermove', handlePointerMove, { passive: true });
+        window.addEventListener('pointerup', handlePointerUp, { passive: true });
+        window.addEventListener('pointercancel', handlePointerUp, { passive: true });
+        window.addEventListener('wheel', handleWheel, { passive: true });
+
+        this.gestureCleanup = () => {
+            window.removeEventListener('pointerdown', handlePointerDown);
+            window.removeEventListener('pointermove', handlePointerMove);
+            window.removeEventListener('pointerup', handlePointerUp);
+            window.removeEventListener('pointercancel', handlePointerUp);
+            window.removeEventListener('wheel', handleWheel);
+            this.pointerState = null;
+        };
+    }
+
+    teardownGestures = () => {
+        if (typeof this.gestureCleanup === 'function') {
+            this.gestureCleanup();
+        }
+        this.gestureCleanup = null;
+        this.pointerState = null;
     }
 
     checkForNewFolders = () => {
@@ -147,7 +371,10 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcut = (e) => {
-        if (e.altKey && e.key === 'Tab') {
+        if (e.ctrlKey && e.metaKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+            e.preventDefault();
+            this.handleWorkspaceGesture(e.key === 'ArrowRight' ? 1 : -1, { force: true });
+        } else if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
             if (!this.state.showWindowSwitcher) {
                 this.openWindowSwitcher();
@@ -184,19 +411,20 @@ export class Desktop extends Component {
     }
 
     cycleApps = (direction) => {
-        if (!this.app_stack.length) return;
+        const stack = this.getWorkspaceStack();
+        if (!stack.length) return;
         const currentId = this.getFocusedWindowId();
-        let index = this.app_stack.indexOf(currentId);
+        let index = stack.indexOf(currentId);
         if (index === -1) index = 0;
-        let next = (index + direction + this.app_stack.length) % this.app_stack.length;
+        let next = (index + direction + stack.length) % stack.length;
         // Skip minimized windows
-        for (let i = 0; i < this.app_stack.length; i++) {
-            const id = this.app_stack[next];
+        for (let i = 0; i < stack.length; i++) {
+            const id = stack[next];
             if (!this.state.minimized_windows[id]) {
                 this.focus(id);
                 break;
             }
-            next = (next + direction + this.app_stack.length) % this.app_stack.length;
+            next = (next + direction + stack.length) % stack.length;
         }
     }
 
@@ -204,7 +432,8 @@ export class Desktop extends Component {
         const currentId = this.getFocusedWindowId();
         if (!currentId) return;
         const base = currentId.split('#')[0];
-        const windows = this.app_stack.filter(id => id.startsWith(base));
+        const stack = this.getWorkspaceStack();
+        const windows = stack.filter(id => id.startsWith(base));
         if (windows.length <= 1) return;
         let index = windows.indexOf(currentId);
         let next = (index + direction + windows.length) % windows.length;
@@ -212,7 +441,8 @@ export class Desktop extends Component {
     }
 
     openWindowSwitcher = () => {
-        const windows = this.app_stack
+        const stack = this.getWorkspaceStack();
+        const windows = stack
             .filter(id => this.state.closed_windows[id] === false)
             .map(id => apps.find(a => a.id === id))
             .filter(Boolean);
@@ -456,8 +686,10 @@ export class Desktop extends Component {
 
     renderWindows = () => {
         let windowsJsx = [];
-        apps.forEach((app, index) => {
+        apps.forEach((app) => {
             if (this.state.closed_windows[app.id] === false) {
+                const workspace = this.state.windowWorkspaces[app.id] ?? 0;
+                const isActiveWorkspace = workspace === this.state.currentWorkspace;
 
                 const pos = this.state.window_positions[app.id];
                 const props = {
@@ -483,7 +715,14 @@ export class Desktop extends Component {
                 }
 
                 windowsJsx.push(
-                    <Window key={app.id} {...props} />
+                    <div
+                        key={app.id}
+                        style={{ display: isActiveWorkspace ? undefined : 'none' }}
+                        aria-hidden={isActiveWorkspace ? undefined : true}
+                        data-workspace={workspace}
+                    >
+                        <Window {...props} />
+                    </div>
                 )
             }
         });
@@ -505,7 +744,8 @@ export class Desktop extends Component {
         const windows = openWindows.map(id => ({
             id,
             x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
-            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10
+            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10,
+            workspace: this.state.windowWorkspaces[id] ?? 0,
         }));
         const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
         this.props.setSession({ ...this.props.session, windows, dock });
@@ -557,9 +797,10 @@ export class Desktop extends Component {
     giveFocusToLastApp = () => {
         // if there is atleast one app opened, give it focus
         if (!this.checkAllMinimised()) {
-            for (const index in this.app_stack) {
-                if (!this.state.minimized_windows[this.app_stack[index]]) {
-                    this.focus(this.app_stack[index]);
+            const stack = this.getWorkspaceStack();
+            for (const id of stack) {
+                if (!this.state.minimized_windows[id]) {
+                    this.focus(id);
                     break;
                 }
             }
@@ -569,21 +810,33 @@ export class Desktop extends Component {
     checkAllMinimised = () => {
         let result = true;
         for (const key in this.state.minimized_windows) {
-            if (!this.state.closed_windows[key]) { // if app is opened
-                result = result & this.state.minimized_windows[key];
+            const workspace = this.state.windowWorkspaces[key] ?? 0;
+            if (workspace !== this.state.currentWorkspace) continue;
+            if (!this.state.closed_windows[key]) { // if app is opened in current workspace
+                result = result && this.state.minimized_windows[key];
             }
         }
         return result;
     }
 
     handleOpenAppEvent = (e) => {
-        const id = e.detail;
+        const detail = e.detail;
+        if (!detail) return;
+        if (typeof detail === 'string') {
+            this.openApp(detail);
+            return;
+        }
+        const { id, workspace } = detail;
         if (id) {
-            this.openApp(id);
+            this.openApp(id, { workspace });
         }
     }
 
-    openApp = (objId) => {
+    openApp = (objId, options = {}) => {
+
+        const targetWorkspace = options.workspace !== undefined
+            ? Math.min(Math.max(options.workspace, 0), this.workspaceCount - 1)
+            : this.state.currentWorkspace;
 
         // google analytics
         ReactGA.event({
@@ -596,6 +849,13 @@ export class Desktop extends Component {
 
         // if app is already open, focus it instead of spawning a new window
         if (this.state.closed_windows[objId] === false) {
+            const existingWorkspace = this.state.windowWorkspaces[objId] ?? 0;
+            if (existingWorkspace !== this.state.currentWorkspace) {
+                this.switchWorkspaceTo(existingWorkspace, () => {
+                    this.openApp(objId, { workspace: existingWorkspace });
+                });
+                return;
+            }
             // if it's minimised, restore its last position
             if (this.state.minimized_windows[objId]) {
                 this.focus(objId);
@@ -644,14 +904,19 @@ export class Desktop extends Component {
             recentApps = recentApps.slice(0, 10);
             safeLocalStorage?.setItem('recentApps', JSON.stringify(recentApps));
 
+            const shouldFocusCurrent = targetWorkspace === this.state.currentWorkspace;
+
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
-                this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
-                    this.focus(objId);
+                const windowWorkspaces = { ...this.state.windowWorkspaces, [objId]: targetWorkspace };
+                this.addToWorkspaceStack(objId, targetWorkspace);
+                this.setState({ closed_windows, favourite_apps, allAppsView: false, windowWorkspaces }, () => {
+                    if (shouldFocusCurrent) {
+                        this.focus(objId);
+                    }
                     this.saveSession();
                 });
-                this.app_stack.push(objId);
             }, 200);
         }
     }
@@ -688,7 +953,7 @@ export class Desktop extends Component {
         this.updateTrashIcon();
 
         // remove app from the app stack
-        this.app_stack.splice(this.app_stack.indexOf(objId), 1);
+        this.removeFromWorkspaceStack(objId);
 
         this.giveFocusToLastApp();
 
@@ -697,11 +962,13 @@ export class Desktop extends Component {
         // close window
         let closed_windows = this.state.closed_windows;
         let favourite_apps = this.state.favourite_apps;
+        const windowWorkspaces = { ...this.state.windowWorkspaces };
+        delete windowWorkspaces[objId];
 
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
-        this.setState({ closed_windows, favourite_apps }, this.saveSession);
+        this.setState({ closed_windows, favourite_apps, windowWorkspaces }, this.saveSession);
     }
 
     pinApp = (id) => {
@@ -952,7 +1219,7 @@ export class Desktop extends Component {
                 { this.state.allAppsView ?
                     <AllApplications apps={apps}
                         games={games}
-                        recentApps={this.app_stack}
+                        recentApps={this.getWorkspaceStack()}
                         openApp={this.openApp} /> : null}
 
                 { this.state.showShortcutSelector ?
@@ -974,5 +1241,6 @@ export class Desktop extends Component {
 
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
-    return <Desktop {...props} snapEnabled={snapEnabled} />;
+    const { touchpadGestures } = useSettings();
+    return <Desktop {...props} snapEnabled={snapEnabled} gesturesEnabled={touchpadGestures} />;
 }
