@@ -66,8 +66,10 @@ export function Settings() {
                     onChange={(e) => setTheme(e.target.value)}
                     className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
                 >
-                    <option value="default">Default</option>
+                    <option value="default">Light</option>
                     <option value="dark">Dark</option>
+                    <option value="high-contrast">High Contrast</option>
+                    <option value="system">System</option>
                     <option value="neon">Neon</option>
                     <option value="matrix">Matrix</option>
                 </select>

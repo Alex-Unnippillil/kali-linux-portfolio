@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useRef,
+} from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -22,7 +29,11 @@ import {
   setHaptics as saveHaptics,
   defaults,
 } from '../utils/settingsStore';
-import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import {
+  getTheme as loadTheme,
+  setTheme as saveTheme,
+  THEME_KEY,
+} from '../utils/theme';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -49,6 +60,19 @@ const shadeColor = (color: string, percent: number): string => {
   return `#${(0x1000000 + newR * 0x10000 + newG * 0x100 + newB)
     .toString(16)
     .slice(1)}`;
+};
+
+const createInstanceId = (): string => {
+  const cryptoObj =
+    typeof globalThis !== 'undefined'
+      ? (globalThis.crypto as Crypto | undefined)
+      : undefined;
+
+  if (cryptoObj && typeof cryptoObj.randomUUID === 'function') {
+    return cryptoObj.randomUUID();
+  }
+
+  return Math.random().toString(36).slice(2);
 };
 
 interface SettingsContextValue {
@@ -112,7 +136,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
-  const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [theme, setThemeState] = useState<string>(() => loadTheme());
+  const channelRef = useRef<BroadcastChannel | null>(null);
+  const instanceIdRef = useRef<string>(createInstanceId());
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -127,12 +153,102 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
-      setTheme(loadTheme());
+      setThemeState(loadTheme());
     })();
   }, []);
 
   useEffect(() => {
     saveTheme(theme);
+  }, [theme]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== THEME_KEY) return;
+      const nextTheme = event.newValue ?? loadTheme();
+      setThemeState((current) => (current === nextTheme ? current : nextTheme));
+    };
+
+    window.addEventListener('storage', handleStorage);
+
+    let channel: BroadcastChannel | null = null;
+
+    if ('BroadcastChannel' in window) {
+      channel = new BroadcastChannel('settings');
+      channelRef.current = channel;
+      const handleMessage = (
+        event: MessageEvent<{ type?: string; theme?: string; source?: string }>,
+      ) => {
+        if (!event.data || event.data.type !== 'theme') return;
+        if (event.data.source === instanceIdRef.current) return;
+        const nextTheme = event.data.theme;
+        if (typeof nextTheme !== 'string') return;
+        setThemeState((current) => (current === nextTheme ? current : nextTheme));
+      };
+      channel.addEventListener('message', handleMessage);
+
+      return () => {
+        window.removeEventListener('storage', handleStorage);
+        channel.removeEventListener('message', handleMessage);
+        channel.close();
+        if (channelRef.current === channel) {
+          channelRef.current = null;
+        }
+      };
+    }
+
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const channel = channelRef.current;
+    if (!channel) return;
+    channel.postMessage({
+      type: 'theme',
+      theme,
+      source: instanceIdRef.current,
+    });
+  }, [theme]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    if (theme !== 'system') return undefined;
+    if (typeof window.matchMedia !== 'function') return undefined;
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+    const applySystemTheme = () => {
+      saveTheme('system');
+      const channel = channelRef.current;
+      if (channel) {
+        channel.postMessage({
+          type: 'theme',
+          theme: 'system',
+          source: instanceIdRef.current,
+        });
+      }
+    };
+
+    applySystemTheme();
+
+    const listener = () => applySystemTheme();
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', listener);
+      return () => mediaQuery.removeEventListener('change', listener);
+    }
+
+    if (typeof mediaQuery.addListener === 'function') {
+      const legacyListener = () => listener();
+      mediaQuery.addListener(legacyListener);
+      return () => mediaQuery.removeListener(legacyListener);
+    }
+
+    return undefined;
   }, [theme]);
 
   useEffect(() => {
@@ -260,7 +376,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
-        setTheme,
+        setTheme: (value: string) => setThemeState(value),
       }}
     >
       {children}

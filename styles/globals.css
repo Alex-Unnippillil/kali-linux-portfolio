@@ -68,6 +68,24 @@ html[data-theme='matrix'] {
 
 }
 
+/* High contrast theme */
+html[data-theme='high-contrast'] {
+  --color-bg: #000000;
+  --color-text: #ffffff;
+  --color-primary: #ffd400;
+  --color-secondary: #000000;
+  --color-accent: #ffd400;
+  --color-muted: #111111;
+  --color-surface: #000000;
+  --color-inverse: #000000;
+  --color-border: #ffffff;
+  --color-terminal: #00ff00;
+  --color-dark: #000000;
+  --color-focus-ring: #ffffff;
+  --color-selection: #ffffff;
+  --color-control-accent: #ffd400;
+}
+
 ::selection {
   background: var(--color-selection);
   color: var(--color-inverse);
