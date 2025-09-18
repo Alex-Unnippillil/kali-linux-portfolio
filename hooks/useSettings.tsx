@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useRef,
+  useCallback,
+} from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -20,6 +28,9 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getRecentChanges as loadRecentChanges,
+  logRecentChange,
+  RECENT_CHANGES_LIMIT,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -51,6 +62,127 @@ const shadeColor = (color: string, percent: number): string => {
     .slice(1)}`;
 };
 
+type SettingSection = 'appearance' | 'accessibility' | 'privacy' | 'general';
+
+type SettingKey =
+  | 'accent'
+  | 'wallpaper'
+  | 'density'
+  | 'reducedMotion'
+  | 'fontScale'
+  | 'highContrast'
+  | 'largeHitAreas'
+  | 'pongSpin'
+  | 'allowNetwork'
+  | 'haptics'
+  | 'theme';
+
+export interface RecentSettingChange {
+  key: SettingKey;
+  label: string;
+  value: string;
+  timestamp: number;
+  section: SettingSection;
+}
+
+type ChangeMetadata = {
+  label: string;
+  section: SettingSection;
+  format?: (value: unknown) => string;
+};
+
+const booleanFormatter = (value: unknown) => (value ? 'On' : 'Off');
+const densityFormatter = (value: unknown) =>
+  value === 'compact' ? 'Compact' : 'Regular';
+const wallpaperFormatter = (value: unknown) => {
+  if (typeof value !== 'string') return '';
+  const suffix = value.replace('wall-', 'Wallpaper ');
+  return suffix.replace(/-/g, ' ');
+};
+const fontScaleFormatter = (value: unknown) => {
+  const numeric =
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string'
+        ? Number.parseFloat(value)
+        : Number.NaN;
+  if (!Number.isFinite(numeric)) return '';
+  const rounded = Math.round(numeric * 100) / 100;
+  return `${rounded.toString()}x`;
+};
+const themeFormatter = (value: unknown) => {
+  if (typeof value !== 'string') return '';
+  return value.charAt(0).toUpperCase() + value.slice(1);
+};
+
+const CHANGE_METADATA: Record<SettingKey, ChangeMetadata> = {
+  accent: { label: 'Accent color', section: 'appearance' },
+  wallpaper: {
+    label: 'Wallpaper',
+    section: 'appearance',
+    format: wallpaperFormatter,
+  },
+  density: { label: 'Density', section: 'accessibility', format: densityFormatter },
+  reducedMotion: {
+    label: 'Reduced motion',
+    section: 'accessibility',
+    format: booleanFormatter,
+  },
+  fontScale: {
+    label: 'Icon size',
+    section: 'accessibility',
+    format: fontScaleFormatter,
+  },
+  highContrast: {
+    label: 'High contrast',
+    section: 'accessibility',
+    format: booleanFormatter,
+  },
+  largeHitAreas: {
+    label: 'Large hit areas',
+    section: 'accessibility',
+    format: booleanFormatter,
+  },
+  pongSpin: {
+    label: 'Pong spin',
+    section: 'general',
+    format: booleanFormatter,
+  },
+  allowNetwork: {
+    label: 'External network access',
+    section: 'privacy',
+    format: (value) => (value ? 'Enabled' : 'Disabled'),
+  },
+  haptics: {
+    label: 'Haptics',
+    section: 'accessibility',
+    format: booleanFormatter,
+  },
+  theme: {
+    label: 'Theme',
+    section: 'appearance',
+    format: themeFormatter,
+  },
+};
+
+const fallbackFormatter = (value: unknown) => {
+  if (value === undefined || value === null) return '';
+  return String(value);
+};
+
+const formatChangeValue = (key: SettingKey, value: unknown) => {
+  const meta = CHANGE_METADATA[key];
+  if (!meta) return fallbackFormatter(value);
+  if (!meta.format) return fallbackFormatter(value);
+  const formatted = meta.format(value);
+  return formatted === undefined || formatted === null
+    ? ''
+    : String(formatted);
+};
+
+const mapSection = (key: SettingKey): SettingSection =>
+  CHANGE_METADATA[key]?.section ?? 'general';
+
 interface SettingsContextValue {
   accent: string;
   wallpaper: string;
@@ -63,6 +195,7 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  recentChanges: RecentSettingChange[];
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -88,6 +221,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  recentChanges: [],
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -102,34 +236,189 @@ export const SettingsContext = createContext<SettingsContextValue>({
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [accent, setAccent] = useState<string>(defaults.accent);
-  const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
-  const [density, setDensity] = useState<Density>(defaults.density as Density);
-  const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
-  const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
-  const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
-  const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
-  const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
-  const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
-  const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
-  const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [accent, setAccentState] = useState<string>(defaults.accent);
+  const [wallpaper, setWallpaperState] = useState<string>(defaults.wallpaper);
+  const [density, setDensityState] = useState<Density>(defaults.density as Density);
+  const [reducedMotion, setReducedMotionState] = useState<boolean>(
+    defaults.reducedMotion
+  );
+  const [fontScale, setFontScaleState] = useState<number>(defaults.fontScale);
+  const [highContrast, setHighContrastState] = useState<boolean>(
+    defaults.highContrast
+  );
+  const [largeHitAreas, setLargeHitAreasState] = useState<boolean>(
+    defaults.largeHitAreas
+  );
+  const [pongSpin, setPongSpinState] = useState<boolean>(defaults.pongSpin);
+  const [allowNetwork, setAllowNetworkState] = useState<boolean>(
+    defaults.allowNetwork
+  );
+  const [haptics, setHapticsState] = useState<boolean>(defaults.haptics);
+  const [theme, setThemeState] = useState<string>(() => loadTheme());
+  const [recentChanges, setRecentChanges] = useState<RecentSettingChange[]>([]);
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
     (async () => {
-      setAccent(await loadAccent());
-      setWallpaper(await loadWallpaper());
-      setDensity((await loadDensity()) as Density);
-      setReducedMotion(await loadReducedMotion());
-      setFontScale(await loadFontScale());
-      setHighContrast(await loadHighContrast());
-      setLargeHitAreas(await loadLargeHitAreas());
-      setPongSpin(await loadPongSpin());
-      setAllowNetwork(await loadAllowNetwork());
-      setHaptics(await loadHaptics());
-      setTheme(loadTheme());
+      setAccentState(await loadAccent());
+      setWallpaperState(await loadWallpaper());
+      setDensityState((await loadDensity()) as Density);
+      setReducedMotionState(await loadReducedMotion());
+      setFontScaleState(await loadFontScale());
+      setHighContrastState(await loadHighContrast());
+      setLargeHitAreasState(await loadLargeHitAreas());
+      setPongSpinState(await loadPongSpin());
+      setAllowNetworkState(await loadAllowNetwork());
+      setHapticsState(await loadHaptics());
+      setThemeState(loadTheme());
+      setRecentChanges(await loadRecentChanges());
     })();
   }, []);
+
+  const recordChange = useCallback(
+    async (key: SettingKey, value: unknown) => {
+      const label = CHANGE_METADATA[key]?.label;
+      if (!label) return;
+      const entry: RecentSettingChange = {
+        key,
+        label,
+        value: formatChangeValue(key, value),
+        section: mapSection(key),
+        timestamp: Date.now(),
+      };
+      setRecentChanges((prev) => {
+        const next = [entry, ...prev].slice(0, RECENT_CHANGES_LIMIT);
+        return next;
+      });
+      try {
+        await logRecentChange(entry);
+      } catch (error) {
+        console.error('Failed to persist setting change', error);
+      }
+    },
+    [logRecentChange, setRecentChanges]
+  );
+
+  const setAccent = useCallback(
+    (value: string) => {
+      setAccentState((prev) => {
+        if (prev === value) return prev;
+        void recordChange('accent', value);
+        return value;
+      });
+    },
+    [recordChange]
+  );
+
+  const setWallpaper = useCallback(
+    (value: string) => {
+      setWallpaperState((prev) => {
+        if (prev === value) return prev;
+        void recordChange('wallpaper', value);
+        return value;
+      });
+    },
+    [recordChange]
+  );
+
+  const setDensity = useCallback(
+    (value: Density) => {
+      setDensityState((prev) => {
+        if (prev === value) return prev;
+        void recordChange('density', value);
+        return value;
+      });
+    },
+    [recordChange]
+  );
+
+  const setReducedMotion = useCallback(
+    (value: boolean) => {
+      setReducedMotionState((prev) => {
+        if (prev === value) return prev;
+        void recordChange('reducedMotion', value);
+        return value;
+      });
+    },
+    [recordChange]
+  );
+
+  const setFontScale = useCallback(
+    (value: number) => {
+      setFontScaleState((prev) => {
+        if (prev === value) return prev;
+        void recordChange('fontScale', value);
+        return value;
+      });
+    },
+    [recordChange]
+  );
+
+  const setHighContrast = useCallback(
+    (value: boolean) => {
+      setHighContrastState((prev) => {
+        if (prev === value) return prev;
+        void recordChange('highContrast', value);
+        return value;
+      });
+    },
+    [recordChange]
+  );
+
+  const setLargeHitAreas = useCallback(
+    (value: boolean) => {
+      setLargeHitAreasState((prev) => {
+        if (prev === value) return prev;
+        void recordChange('largeHitAreas', value);
+        return value;
+      });
+    },
+    [recordChange]
+  );
+
+  const setPongSpin = useCallback(
+    (value: boolean) => {
+      setPongSpinState((prev) => {
+        if (prev === value) return prev;
+        void recordChange('pongSpin', value);
+        return value;
+      });
+    },
+    [recordChange]
+  );
+
+  const setAllowNetwork = useCallback(
+    (value: boolean) => {
+      setAllowNetworkState((prev) => {
+        if (prev === value) return prev;
+        void recordChange('allowNetwork', value);
+        return value;
+      });
+    },
+    [recordChange]
+  );
+
+  const setHaptics = useCallback(
+    (value: boolean) => {
+      setHapticsState((prev) => {
+        if (prev === value) return prev;
+        void recordChange('haptics', value);
+        return value;
+      });
+    },
+    [recordChange]
+  );
+
+  const setTheme = useCallback(
+    (value: string) => {
+      setThemeState((prev) => {
+        if (prev === value) return prev;
+        void recordChange('theme', value);
+        return value;
+      });
+    },
+    [recordChange]
+  );
 
   useEffect(() => {
     saveTheme(theme);
@@ -250,6 +539,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        recentChanges,
         setAccent,
         setWallpaper,
         setDensity,

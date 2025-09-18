@@ -16,6 +16,64 @@ const DEFAULT_SETTINGS = {
   haptics: true,
 };
 
+const RECENT_CHANGES_KEY = 'settings-recent-changes';
+export const RECENT_CHANGES_LIMIT = 20;
+
+const normalizeChange = (value) => {
+  if (typeof value !== 'object' || value === null) return null;
+  const { key, label, value: rawValue, timestamp, section } = value;
+  if (typeof key !== 'string' || typeof label !== 'string') return null;
+  const normalizedValue =
+    rawValue === undefined || rawValue === null
+      ? ''
+      : typeof rawValue === 'string'
+        ? rawValue
+        : String(rawValue);
+  const normalizedTimestamp =
+    typeof timestamp === 'number' && Number.isFinite(timestamp)
+      ? timestamp
+      : Date.now();
+  const normalizedSection =
+    typeof section === 'string' && section.length > 0 ? section : 'general';
+  return {
+    key,
+    label,
+    value: normalizedValue,
+    timestamp: normalizedTimestamp,
+    section: normalizedSection,
+  };
+};
+
+const readRecentChanges = () => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(RECENT_CHANGES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map(normalizeChange)
+      .filter((item) => item !== null);
+  } catch (error) {
+    console.error('Failed to read recent settings changes', error);
+    return [];
+  }
+};
+
+export async function getRecentChanges() {
+  return readRecentChanges();
+}
+
+export async function logRecentChange(change) {
+  if (typeof window === 'undefined') return [];
+  const entry = normalizeChange({ ...change, timestamp: Date.now() });
+  if (!entry) return readRecentChanges();
+  const existing = readRecentChanges();
+  const next = [entry, ...existing].slice(0, RECENT_CHANGES_LIMIT);
+  window.localStorage.setItem(RECENT_CHANGES_KEY, JSON.stringify(next));
+  return next;
+}
+
 export async function getAccent() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.accent;
   return (await get('accent')) || DEFAULT_SETTINGS.accent;
@@ -137,6 +195,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem(RECENT_CHANGES_KEY);
 }
 
 export async function exportSettings() {
