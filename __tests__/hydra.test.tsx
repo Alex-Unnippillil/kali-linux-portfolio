@@ -45,6 +45,41 @@ describe('Hydra target validation', () => {
   });
 });
 
+describe('Hydra service configuration validation', () => {
+  it('requires HTTP form fields before allowing a run', () => {
+    render(<HydraApp />);
+    const serviceSelect = screen.getByDisplayValue('SSH') as HTMLSelectElement;
+    fireEvent.change(serviceSelect, { target: { value: 'http-post-form' } });
+
+    const targetInput = screen.getByPlaceholderText('192.168.0.1');
+    fireEvent.change(targetInput, { target: { value: '1.2.3.4' } });
+
+    const pathInput = screen.getByPlaceholderText('/login');
+    const userFieldInput = screen.getByPlaceholderText('username');
+    const passFieldInput = screen.getByPlaceholderText('password');
+
+    fireEvent.change(pathInput, { target: { value: '' } });
+    fireEvent.change(userFieldInput, { target: { value: '' } });
+    fireEvent.change(passFieldInput, { target: { value: '' } });
+
+    const runBtn = screen.getByText('Run Hydra');
+    expect(runBtn).toBeDisabled();
+    expect(screen.getByText('Set the login form path.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Enter the username field name.')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Enter the password field name.')
+    ).toBeInTheDocument();
+
+    fireEvent.change(pathInput, { target: { value: '/portal' } });
+    fireEvent.change(userFieldInput, { target: { value: 'user' } });
+    fireEvent.change(passFieldInput, { target: { value: 'pass' } });
+
+    expect(runBtn).not.toBeDisabled();
+  });
+});
+
 describe('Hydra pause and resume', () => {
   beforeEach(() => {
     localStorage.setItem(

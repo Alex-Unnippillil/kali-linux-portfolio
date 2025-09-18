@@ -1,9 +1,240 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
+
+const serviceConfigDefinitions = {
+  ssh: {
+    label: 'SSH',
+    icon: '/themes/Yaru/apps/ssh.svg',
+    defaults: { port: '22' },
+    fields: [
+      {
+        key: 'port',
+        label: 'Port',
+        type: 'number',
+        placeholder: '22',
+        description: 'Hydra will append this port when the target does not include one.',
+      },
+    ],
+    guidance:
+      'Ensure the SSH service is reachable on the configured port before launching a run.',
+  },
+  ftp: {
+    label: 'FTP',
+    icon: '/themes/Yaru/apps/ftp.svg',
+    defaults: { port: '21', passive: true },
+    fields: [
+      {
+        key: 'port',
+        label: 'Port',
+        type: 'number',
+        placeholder: '21',
+        description: 'Use 21 for standard FTP or override for alternate ports.',
+      },
+      {
+        key: 'passive',
+        label: 'Passive mode',
+        type: 'checkbox',
+        description: 'Enable PASV mode to mimic NAT/firewall friendly data channels.',
+      },
+    ],
+    guidance:
+      'Most demos prefer passive mode so the client opens the data channel.',
+  },
+  'http-get': {
+    label: 'HTTP GET',
+    icon: '/themes/Yaru/apps/http.svg',
+    defaults: { path: '/' },
+    fields: [
+      {
+        key: 'path',
+        label: 'Request path',
+        type: 'text',
+        placeholder: '/admin',
+        description: 'Provide the relative path Hydra should request on every attempt.',
+      },
+    ],
+    guidance:
+      'Match the route that guards the login to preview the exact wordlist spray.',
+  },
+  'http-post-form': {
+    label: 'HTTP Form',
+    icon: '/themes/Yaru/apps/http.svg',
+    defaults: {
+      path: '/login',
+      usernameField: 'username',
+      passwordField: 'password',
+    },
+    fields: [
+      {
+        key: 'path',
+        label: 'Form path',
+        type: 'text',
+        placeholder: '/login',
+        description: 'Relative path to the HTML login form.',
+      },
+      {
+        key: 'usernameField',
+        label: 'Username field',
+        type: 'text',
+        placeholder: 'username',
+        description: 'Name attribute used for usernames in the form payload.',
+      },
+      {
+        key: 'passwordField',
+        label: 'Password field',
+        type: 'text',
+        placeholder: 'password',
+        description: 'Name attribute used for passwords in the form payload.',
+      },
+    ],
+    guidance:
+      'Hydra needs the exact field names from the HTML form to substitute credentials.',
+  },
+  smtp: {
+    label: 'SMTP',
+    icon: '/themes/Yaru/apps/hydra.svg',
+    defaults: { port: '587', startTls: true },
+    fields: [
+      {
+        key: 'port',
+        label: 'Port',
+        type: 'number',
+        placeholder: '587',
+        description: 'Common ports include 25, 465 (SSL), and 587 (submission).',
+      },
+      {
+        key: 'startTls',
+        label: 'STARTTLS negotiation',
+        type: 'checkbox',
+        description: 'Toggle STARTTLS to mirror secure submission requirements.',
+      },
+    ],
+    guidance:
+      'Set the port and STARTTLS flag to match the target mail server policy.',
+  },
+};
+
+const cloneServiceDefaults = () => {
+  const defaults = {};
+  Object.entries(serviceConfigDefinitions).forEach(([key, def]) => {
+    defaults[key] = def?.defaults ? { ...def.defaults } : {};
+  });
+  return defaults;
+};
+
+const validatePort = (value) => {
+  if (value === undefined || value === null || value === '') {
+    return 'Enter a port to continue.';
+  }
+  if (!/^\d+$/.test(String(value))) {
+    return 'Port must be numeric.';
+  }
+  const num = Number(value);
+  if (num < 1 || num > 65535) {
+    return 'Choose a port between 1 and 65535.';
+  }
+  return '';
+};
+
+const validateServiceConfig = (service, config = {}) => {
+  const errors = {};
+  switch (service) {
+    case 'ssh':
+    case 'ftp':
+    case 'smtp': {
+      const message = validatePort(config.port);
+      if (message) {
+        errors.port = message;
+      }
+      break;
+    }
+    case 'http-get': {
+      const path = (config.path || '').trim();
+      if (!path) {
+        errors.path = 'Provide the relative path to request.';
+      } else if (!path.startsWith('/')) {
+        errors.path = 'Paths should start with / to remain relative.';
+      }
+      break;
+    }
+    case 'http-post-form': {
+      const path = (config.path || '').trim();
+      if (!path) {
+        errors.path = 'Set the login form path.';
+      } else if (!path.startsWith('/')) {
+        errors.path = 'Paths should start with / to remain relative.';
+      }
+      if (!(config.usernameField || '').trim()) {
+        errors.usernameField = 'Enter the username field name.';
+      }
+      if (!(config.passwordField || '').trim()) {
+        errors.passwordField = 'Enter the password field name.';
+      }
+      break;
+    }
+    default:
+      break;
+  }
+  return { errors, isValid: Object.keys(errors).length === 0 };
+};
+
+const formatServiceConfigSummary = (service, config = {}) => {
+  const definition = serviceConfigDefinitions[service];
+  if (!definition) {
+    return 'Service options: (none)';
+  }
+  return [
+    'Service options:',
+    ...definition.fields.map((field) => {
+      const value = config[field.key];
+      if (field.type === 'checkbox') {
+        return `- ${field.label}: ${value ? 'enabled' : 'disabled'}`;
+      }
+      return `- ${field.label}: ${value || 'not set'}`;
+    }),
+  ].join('\n');
+};
+
+const getServiceLabel = (service) =>
+  serviceConfigDefinitions[service]?.label || service;
+
+const normalisePath = (path) => {
+  if (!path) return '';
+  return path.startsWith('/') ? path : `/${path}`;
+};
+
+const buildPreparedTarget = (baseTarget, service, config = {}) => {
+  const trimmed = (baseTarget || '').trim();
+  if (!trimmed) return '';
+  switch (service) {
+    case 'ssh':
+    case 'ftp':
+    case 'smtp': {
+      const port = (config.port || '').toString().trim();
+      if (port && !trimmed.includes(':')) {
+        return `${trimmed}:${port}`;
+      }
+      return trimmed;
+    }
+    case 'http-get': {
+      const path = normalisePath((config.path || '').trim());
+      return `${trimmed.replace(/\/$/, '')}${path || ''}`;
+    }
+    case 'http-post-form': {
+      const path = normalisePath((config.path || '').trim());
+      const usernameField = (config.usernameField || 'username').trim() || 'username';
+      const passwordField = (config.passwordField || 'password').trim() || 'password';
+      const base = `${trimmed.replace(/\/$/, '')}${path || ''}`;
+      return `${base}:${usernameField}=^USER^&${passwordField}=^PASS^:F=401`;
+    }
+    default:
+      return trimmed;
+  }
+};
 
 export const registerHydraProtocol = (protocol) => {
   if (!pluginServices.includes(protocol)) {
@@ -79,6 +310,58 @@ const HydraApp = () => {
   const canvasRef = useRef(null);
   const [progress, setProgress] = useState(0);
   const [showSaved, setShowSaved] = useState(false);
+  const [serviceConfigs, setServiceConfigs] = useState(cloneServiceDefaults);
+
+  const ensureServiceConfig = useCallback((svc) => {
+    setServiceConfigs((prev) => {
+      if (prev[svc]) {
+        return prev;
+      }
+      return {
+        ...prev,
+        [svc]: {
+          ...(serviceConfigDefinitions[svc]?.defaults || {}),
+        },
+      };
+    });
+  }, []);
+
+  useEffect(() => {
+    ensureServiceConfig(service);
+  }, [service, ensureServiceConfig]);
+
+  const currentServiceConfig = serviceConfigs[service] || {};
+  const currentServiceDefinition = serviceConfigDefinitions[service];
+  const serviceValidation = useMemo(
+    () => validateServiceConfig(service, currentServiceConfig),
+    [service, currentServiceConfig]
+  );
+  const serviceButtonEntries = useMemo(
+    () => Object.entries(serviceConfigDefinitions),
+    []
+  );
+
+  const handleServiceChange = useCallback(
+    (nextService) => {
+      ensureServiceConfig(nextService);
+      setService(nextService);
+    },
+    [ensureServiceConfig, setService]
+  );
+
+  const updateServiceConfig = useCallback(
+    (key, value) => {
+      setServiceConfigs((prev) => ({
+        ...prev,
+        [service]: {
+          ...(serviceConfigDefinitions[service]?.defaults || {}),
+          ...(prev[service] || {}),
+          [key]: value,
+        },
+      }));
+    },
+    [service, setServiceConfigs]
+  );
 
   const LOCKOUT_THRESHOLD = 10;
   const BACKOFF_THRESHOLD = 5;
@@ -102,6 +385,20 @@ const HydraApp = () => {
       setService(cfg.service || 'ssh');
       setSelectedUser(cfg.selectedUser || '');
       setSelectedPass(cfg.selectedPass || '');
+      if (cfg.serviceConfigs) {
+        setServiceConfigs((prev) => {
+          const defaults = cloneServiceDefaults();
+          const next = { ...defaults, ...prev };
+          Object.entries(cfg.serviceConfigs || {}).forEach(([key, value]) => {
+            next[key] = {
+              ...(defaults[key] || {}),
+              ...(prev[key] || {}),
+              ...value,
+            };
+          });
+          return next;
+        });
+      }
     }
   }, []);
 
@@ -118,6 +415,20 @@ const HydraApp = () => {
     const pass = passLists.find((l) => l.name === session.selectedPass);
     if (!user || !pass) return;
 
+    if (session.service && session.serviceConfig) {
+      setServiceConfigs((prev) => ({
+        ...prev,
+        [session.service]: {
+          ...(serviceConfigDefinitions[session.service]?.defaults || {}),
+          ...(prev[session.service] || {}),
+          ...session.serviceConfig,
+        },
+      }));
+    }
+
+    const resumeTarget =
+      session.preparedTarget || session.target || session.targetInput;
+
     setRunning(true);
     setPaused(false);
     setRunId((id) => id + 1);
@@ -129,10 +440,11 @@ const HydraApp = () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            target: session.target,
+            target: resumeTarget,
             service: session.service,
             userList: user.content,
             passList: pass.content,
+            options: session.serviceConfig,
             resume: true,
           }),
         });
@@ -155,10 +467,20 @@ const HydraApp = () => {
   useEffect(() => {
     const session = loadSession();
     if (session && userLists.length && passLists.length) {
-      setTarget(session.target || '');
+      setTarget(session.targetInput || session.target || '');
       setService(session.service || 'ssh');
       setSelectedUser(session.selectedUser || '');
       setSelectedPass(session.selectedPass || '');
+      if (session.service && session.serviceConfig) {
+        setServiceConfigs((prev) => ({
+          ...prev,
+          [session.service]: {
+            ...(serviceConfigDefinitions[session.service]?.defaults || {}),
+            ...(prev[session.service] || {}),
+            ...session.serviceConfig,
+          },
+        }));
+      }
       setTimeline(session.timeline || []);
       setInitialAttempt(session.attempt || 0);
       const lastTime = session.timeline?.slice(-1)[0]?.time || 0;
@@ -280,16 +602,24 @@ const HydraApp = () => {
           : attempt >= BACKOFF_THRESHOLD
           ? 'throttled'
           : 'attempt';
+      const preparedTarget = buildPreparedTarget(
+        target,
+        service,
+        currentServiceConfig
+      );
       setTimeline((t) => {
         const newTimeline = [
           ...t,
           { time: parseFloat(elapsed), user, password, result },
         ];
         saveSession({
-          target,
+          targetInput: target,
+          target: preparedTarget,
+          preparedTarget,
           service,
           selectedUser,
           selectedPass,
+          serviceConfig: currentServiceConfig,
           attempt,
           timeline: newTimeline,
         });
@@ -311,6 +641,21 @@ const HydraApp = () => {
       return;
     }
 
+    if (!serviceValidation.isValid) {
+      const guidance = Object.values(serviceValidation.errors).join('\n');
+      setOutput(
+        `Fix the ${service} configuration before running:\n${guidance}`
+      );
+      setAnnounce('Hydra validation failed');
+      return;
+    }
+
+    const preparedTarget = buildPreparedTarget(
+      target,
+      service,
+      currentServiceConfig
+    );
+
     setRunning(true);
     setPaused(false);
     setRunId((id) => id + 1);
@@ -318,14 +663,18 @@ const HydraApp = () => {
     setTimeline([]);
     startRef.current = Date.now();
     setInitialAttempt(0);
-    saveSession({
-      target,
+    const sessionConfig = {
+      targetInput: target,
+      target: preparedTarget,
+      preparedTarget,
       service,
       selectedUser,
       selectedPass,
+      serviceConfig: currentServiceConfig,
       attempt: 0,
       timeline: [],
-    });
+    };
+    saveSession(sessionConfig);
     setAnnounce('Hydra started');
     announceRef.current = Date.now();
     try {
@@ -334,10 +683,11 @@ const HydraApp = () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            target,
+            target: preparedTarget,
             service,
             userList: user.content,
             passList: pass.content,
+            options: currentServiceConfig,
           }),
         });
         const data = await res.json();
@@ -361,22 +711,45 @@ const HydraApp = () => {
     const pass = selectedPassList;
     const userCount = user?.content.split('\n').filter(Boolean).length || 0;
     const passCount = pass?.content.split('\n').filter(Boolean).length || 0;
+    const preparedTarget = buildPreparedTarget(
+      target,
+      service,
+      currentServiceConfig
+    );
     const report = [
       `Target: ${target || 'N/A'}`,
+      preparedTarget && preparedTarget !== target
+        ? `Prepared target: ${preparedTarget}`
+        : null,
       `Service: ${service}`,
       `Users: ${userCount}`,
       `Passwords: ${passCount}`,
       `Charset: ${charset} (${charset.length})`,
       `Rule: ${rule}`,
       `Estimated candidate space: ${candidateSpace.toLocaleString()}`,
+      formatServiceConfigSummary(service, currentServiceConfig),
+      !serviceValidation.isValid
+        ? [
+            'Service validation warnings:',
+            ...Object.values(serviceValidation.errors).map((msg) => `- ${msg}`),
+          ].join('\n')
+        : null,
       'Dry run only - no network requests made.',
-    ].join('\n');
+    ]
+      .filter(Boolean)
+      .join('\n');
     setOutput(report);
     setAnnounce('Dry run complete');
   };
 
   const handleSaveConfig = () => {
-    saveConfigStorage({ target, service, selectedUser, selectedPass });
+    saveConfigStorage({
+      target,
+      service,
+      selectedUser,
+      selectedPass,
+      serviceConfigs,
+    });
     setShowSaved(true);
     setTimeout(() => setShowSaved(false), 1500);
   };
@@ -384,7 +757,11 @@ const HydraApp = () => {
   const handleCopyConfig = async () => {
     try {
       await navigator.clipboard.writeText(
-        JSON.stringify({ target, service, selectedUser, selectedPass }, null, 2)
+        JSON.stringify(
+          { target, service, selectedUser, selectedPass, serviceConfigs },
+          null,
+          2
+        )
       );
       setShowSaved(true);
       setTimeout(() => setShowSaved(false), 1500);
@@ -438,21 +815,23 @@ const HydraApp = () => {
   return (
     <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
       <div className="grid grid-cols-2 gap-1.5">
-        <div className="col-span-2 flex gap-1.5">
-          {[
-            { label: 'SSH', value: 'ssh', icon: '/themes/Yaru/apps/ssh.svg' },
-            { label: 'FTP', value: 'ftp', icon: '/themes/Yaru/apps/ftp.svg' },
-          ].map((m) => (
-            <div
-              key={m.value}
-              onClick={() => setService(m.value)}
-              className={`flex items-center p-2 rounded border cursor-pointer text-sm ${
-                service === m.value ? 'bg-blue-600' : 'bg-gray-700'
+        <div className="col-span-2 flex flex-wrap gap-1.5">
+          {serviceButtonEntries.map(([key, meta]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => handleServiceChange(key)}
+              className={`flex items-center p-2 rounded border text-sm transition-colors ${
+                service === key
+                  ? 'bg-blue-600 border-blue-400'
+                  : 'bg-gray-700 border-gray-600 hover:bg-gray-600'
               }`}
             >
-              <img src={m.icon} alt={m.label} className="w-6 h-6 mr-2" />
-              <span>{m.label}</span>
-            </div>
+              {meta.icon && (
+                <img src={meta.icon} alt={meta.label} className="w-6 h-6 mr-2" />
+              )}
+              <span>{meta.label}</span>
+            </button>
           ))}
         </div>
         <div>
@@ -469,15 +848,86 @@ const HydraApp = () => {
           <label className="block mb-1">Service</label>
           <select
             value={service}
-            onChange={(e) => setService(e.target.value)}
+            onChange={(e) => handleServiceChange(e.target.value)}
             className="w-full p-2 rounded text-black"
           >
             {availableServices.map((s) => (
               <option key={s} value={s}>
-                {s}
+                {getServiceLabel(s)}
               </option>
             ))}
           </select>
+        </div>
+        <div className="col-span-2">
+          <div className="bg-gray-800 rounded p-3 space-y-3">
+            <div className="flex items-start gap-3">
+              {currentServiceDefinition?.icon && (
+                <img
+                  src={currentServiceDefinition.icon}
+                  alt={getServiceLabel(service)}
+                  className="w-8 h-8"
+                />
+              )}
+              <div>
+                <p className="text-sm font-semibold">
+                  {getServiceLabel(service)} options
+                </p>
+                <p className="text-xs text-gray-300">
+                  {currentServiceDefinition?.guidance ||
+                    'No additional configuration required for this service.'}
+                </p>
+              </div>
+            </div>
+            {currentServiceDefinition ? (
+              <div className="grid gap-3 md:grid-cols-2">
+                {currentServiceDefinition.fields.map((field) => (
+                  <div key={field.key} className="flex flex-col">
+                    {field.type === 'checkbox' ? (
+                      <label className="inline-flex items-center gap-2 text-sm font-semibold">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(currentServiceConfig[field.key])}
+                          onChange={(e) =>
+                            updateServiceConfig(field.key, e.target.checked)
+                          }
+                        />
+                        <span>{field.label}</span>
+                      </label>
+                    ) : (
+                      <>
+                        <label className="text-sm font-semibold mb-1">
+                          {field.label}
+                        </label>
+                        <input
+                          type={field.type}
+                          value={currentServiceConfig[field.key] ?? ''}
+                          onChange={(e) =>
+                            updateServiceConfig(field.key, e.target.value)
+                          }
+                          className="w-full p-2 rounded text-black"
+                          placeholder={field.placeholder}
+                        />
+                      </>
+                    )}
+                    {field.description && (
+                      <p className="text-xs text-gray-300 mt-1">
+                        {field.description}
+                      </p>
+                    )}
+                    {serviceValidation.errors[field.key] && (
+                      <p className="text-xs text-red-400 mt-1">
+                        {serviceValidation.errors[field.key]}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-300">
+                This service does not expose additional demo controls.
+              </p>
+            )}
+          </div>
         </div>
         <div>
           <label className="block mb-1">User List</label>
@@ -583,7 +1033,7 @@ const HydraApp = () => {
         <div className="col-span-2 flex flex-wrap gap-1.5 mt-2">
           <button
             onClick={runHydra}
-            disabled={running || !isTargetValid}
+            disabled={running || !isTargetValid || !serviceValidation.isValid}
             className="px-4 py-2 bg-green-600 rounded disabled:opacity-50"
           >
             {running ? 'Running...' : 'Run Hydra'}
