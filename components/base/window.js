@@ -6,6 +6,7 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import { createWindowManagerContract } from '../../utils/windowing/windowManager';
 import styles from './window.module.css';
 
 export class Window extends Component {
@@ -37,6 +38,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this.windowManager = createWindowManagerContract(props.id);
     }
 
     componentDidMount() {
@@ -56,6 +58,9 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        if (this.props.minimized) {
+            this.windowManager.freeze();
+        }
     }
 
     componentWillUnmount() {
@@ -69,6 +74,23 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        this.windowManager.resume();
+    }
+
+    componentDidUpdate(prevProps) {
+        if (!prevProps.minimized && this.props.minimized) {
+            this.windowManager.freeze();
+        } else if (prevProps.minimized && !this.props.minimized) {
+            this.windowManager.resume();
+        }
+    }
+
+    renderAppContent = () => {
+        if (!this.props.screen) return null;
+        const addFolder = this.props.id === "terminal" ? this.props.addFolder : null;
+        return this.windowManager.runWithScope(() =>
+            this.props.screen(addFolder, this.props.openApp, this.windowManager)
+        );
     }
 
     setDefaultWindowDimenstion = () => {
@@ -657,13 +679,11 @@ export class Window extends Component {
                             close={this.closeWindow}
                             id={this.id}
                             allowMaximize={this.props.allowMaximize !== false}
-                            pip={() => this.props.screen(this.props.addFolder, this.props.openApp)}
+                            pip={this.renderAppContent}
                         />
                         {(this.id === "settings"
                             ? <Settings />
-                            : <WindowMainScreen screen={this.props.screen} title={this.props.title}
-                                addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
-                                openApp={this.props.openApp} />)}
+                            : <WindowMainScreen renderContent={this.renderAppContent} />)}
                     </div>
                 </Draggable >
             </>
@@ -839,7 +859,7 @@ export class WindowMainScreen extends Component {
     render() {
         return (
             <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
-                {this.props.screen(this.props.addFolder, this.props.openApp)}
+                {typeof this.props.renderContent === 'function' ? this.props.renderContent() : null}
             </div>
         )
     }
