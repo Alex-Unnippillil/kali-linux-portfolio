@@ -32,6 +32,13 @@ const serialize = (tracks: Track[]) => JSON.stringify(tracks, null, 2);
 const isTrackArray = (v: unknown): v is Track[] =>
   Array.isArray(v) && v.every((t) => t && typeof t.url === "string");
 
+const MEDIA_INDICATOR_TIMEOUT = 1500;
+
+interface MediaIndicatorState {
+  id: number;
+  label: string;
+}
+
 const SpotifyApp = () => {
   const [playlistText, setPlaylistText] = usePersistentState(
     "spotify-playlist-text",
@@ -71,6 +78,33 @@ const SpotifyApp = () => {
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [hasFocus, setHasFocus] = useState(false);
+  const indicatorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [indicator, setIndicator] = useState<MediaIndicatorState | null>(null);
+
+  const scheduleIndicatorClear = () => {
+    if (indicatorTimeoutRef.current) {
+      clearTimeout(indicatorTimeoutRef.current);
+    }
+    indicatorTimeoutRef.current = window.setTimeout(() => {
+      setIndicator(null);
+      indicatorTimeoutRef.current = null;
+    }, MEDIA_INDICATOR_TIMEOUT);
+  };
+
+  const clearIndicator = () => {
+    if (indicatorTimeoutRef.current) {
+      clearTimeout(indicatorTimeoutRef.current);
+      indicatorTimeoutRef.current = null;
+    }
+    setIndicator(null);
+  };
+
+  const showIndicator = (label: string) => {
+    if (!hasFocus) return;
+    setIndicator({ id: Date.now(), label });
+    scheduleIndicatorClear();
+  };
 
   const loadPlaylist = () => {
     try {
@@ -109,14 +143,35 @@ const SpotifyApp = () => {
   }, [current, queue, setRecent, crossfade]);
 
   useEffect(() => {
-    let raf: number;
+    const request: (callback: FrameRequestCallback) => number =
+      typeof window !== "undefined" && window.requestAnimationFrame
+        ? window.requestAnimationFrame.bind(window)
+        : ((cb: FrameRequestCallback) =>
+            window.setTimeout(() => cb(Date.now()), 16)) as (
+            callback: FrameRequestCallback,
+          ) => number;
+    const cancel: (handle: number) => void =
+      typeof window !== "undefined" && window.cancelAnimationFrame
+        ? window.cancelAnimationFrame.bind(window)
+        : ((id: number) => window.clearTimeout(id));
+    let raf = 0;
     const tick = () => {
       setProgress(playerRef.current?.getCurrentTime() ?? 0);
-      raf = requestAnimationFrame(tick);
+      raf = request(tick);
     };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    raf = request(tick);
+    return () => cancel(raf);
   }, []);
+
+  useEffect(
+    () => () => {
+      if (indicatorTimeoutRef.current) {
+        clearTimeout(indicatorTimeoutRef.current);
+        indicatorTimeoutRef.current = null;
+      }
+    },
+    [],
+  );
 
   const next = () => {
     if (!queue.length) return;
@@ -134,13 +189,25 @@ const SpotifyApp = () => {
     if (e.code === "MediaTrackNext") {
       e.preventDefault();
       next();
+      showIndicator("Next track");
     } else if (e.code === "MediaTrackPrevious") {
       e.preventDefault();
       previous();
+      showIndicator("Previous track");
     } else if (e.code === "MediaPlayPause") {
       e.preventDefault();
       togglePlay();
+      showIndicator("Play/Pause");
     }
+  };
+
+  const handleFocus = () => {
+    setHasFocus(true);
+  };
+
+  const handleBlur = () => {
+    setHasFocus(false);
+    clearIndicator();
   };
 
   const currentTrack = queue[current];
@@ -152,9 +219,12 @@ const SpotifyApp = () => {
       }`}
       tabIndex={0}
       onKeyDown={handleKey}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      data-testid="spotify-app"
     >
-      <div className="flex items-center justify-between mb-2">
-        <div className="space-x-1.5">
+      <div className="flex items-center justify-between gap-4 mb-2">
+        <div className="flex items-center space-x-1.5">
           <button
             onClick={previous}
             title="Previous"
@@ -180,7 +250,7 @@ const SpotifyApp = () => {
             ⏭
           </button>
         </div>
-        <div className="space-x-4 text-sm flex items-center">
+        <div className="flex items-center gap-4 text-sm">
           <label className="flex items-center space-x-1">
             <span>Crossfade</span>
             <input
@@ -205,6 +275,17 @@ const SpotifyApp = () => {
           >
             {mini ? "Full" : "Mini"}
           </button>
+          {indicator && hasFocus && (
+            <span
+              key={indicator.id}
+              role="status"
+              aria-live="polite"
+              className="rounded border border-blue-400 bg-blue-500/10 px-2 py-1 text-xs font-semibold uppercase tracking-wide text-blue-100 animate-pulse"
+              data-testid="spotify-media-indicator"
+            >
+              {indicator.label}
+            </span>
+          )}
         </div>
       </div>
       {duration > 0 && (
