@@ -30,6 +30,13 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.previewObservers = {};
+        this.previewResizeObservers = {};
+        this.previewTimers = {};
+        this.previewPromises = {};
+        this.previewCache = {};
+        this.previewMeta = {};
+        this._isMounted = false;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -52,10 +59,12 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            window_previews: {},
         }
     }
 
     componentDidMount() {
+        this._isMounted = true;
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
@@ -92,10 +101,182 @@ export class Desktop extends Component {
     }
 
     componentWillUnmount() {
+        this._isMounted = false;
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        this.disposePreviewObservers();
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        if (prevState.closed_windows !== this.state.closed_windows) {
+            Object.keys(this.state.closed_windows).forEach((id) => {
+                const isOpen = this.state.closed_windows[id] === false;
+                const wasOpen = prevState.closed_windows ? prevState.closed_windows[id] === false : false;
+                if (isOpen && !wasOpen) {
+                    this.registerWindowPreview(id);
+                } else if (!isOpen && wasOpen) {
+                    this.stopPreviewObservation(id);
+                    this.clearPreviewState(id);
+                }
+            });
+        }
+
+        if (prevState.minimized_windows !== this.state.minimized_windows) {
+            Object.keys(this.state.minimized_windows).forEach((id) => {
+                const wasMin = prevState.minimized_windows ? prevState.minimized_windows[id] : false;
+                const isMin = this.state.minimized_windows[id];
+                if (isMin && isMin !== wasMin) {
+                    this.captureWindowPreview(id, { immediate: true });
+                }
+            });
+        }
+    }
+
+    disposePreviewObservers = () => {
+        Object.keys(this.previewObservers).forEach((id) => {
+            const observer = this.previewObservers[id];
+            if (observer) observer.disconnect();
+        });
+        Object.keys(this.previewResizeObservers).forEach((id) => {
+            const observer = this.previewResizeObservers[id];
+            if (observer && observer.disconnect) observer.disconnect();
+        });
+        Object.keys(this.previewTimers).forEach((id) => {
+            const timer = this.previewTimers[id];
+            if (timer) window.clearTimeout(timer);
+        });
+        this.previewObservers = {};
+        this.previewResizeObservers = {};
+        this.previewTimers = {};
+        this.previewPromises = {};
+        this.previewCache = {};
+        this.previewMeta = {};
+    }
+
+    registerWindowPreview = (id, attempt = 0) => {
+        if (typeof window === 'undefined') return;
+        if (this.previewObservers[id]) return;
+        const node = document.getElementById(id);
+        if (!node) {
+            if (attempt >= 5) return;
+            window.setTimeout(() => this.registerWindowPreview(id, attempt + 1), 200);
+            return;
+        }
+        const target = node.querySelector('.windowMainScreen') || node;
+        try {
+            const observer = new MutationObserver(() => this.schedulePreviewCapture(id));
+            observer.observe(target, { attributes: true, childList: true, subtree: true, characterData: true });
+            this.previewObservers[id] = observer;
+        } catch (e) {
+            // ignore observer errors (e.g. unsupported environment)
+        }
+        if (typeof ResizeObserver !== 'undefined') {
+            try {
+                const resizeObserver = new ResizeObserver(() => this.schedulePreviewCapture(id));
+                resizeObserver.observe(target);
+                this.previewResizeObservers[id] = resizeObserver;
+            } catch (e) {
+                // ignore resize observer errors
+            }
+        }
+        this.captureWindowPreview(id, { immediate: true });
+    }
+
+    stopPreviewObservation = (id) => {
+        const observer = this.previewObservers[id];
+        if (observer) {
+            observer.disconnect();
+            delete this.previewObservers[id];
+        }
+        const resizeObserver = this.previewResizeObservers[id];
+        if (resizeObserver && resizeObserver.disconnect) {
+            resizeObserver.disconnect();
+            delete this.previewResizeObservers[id];
+        }
+        const timer = this.previewTimers[id];
+        if (timer) {
+            window.clearTimeout(timer);
+            delete this.previewTimers[id];
+        }
+        delete this.previewPromises[id];
+        delete this.previewMeta[id];
+    }
+
+    clearPreviewState = (id) => {
+        delete this.previewCache[id];
+        if (!this._isMounted) return;
+        this.setState(prev => {
+            if (!prev.window_previews || !prev.window_previews[id]) return null;
+            const next = { ...prev.window_previews };
+            delete next[id];
+            return { window_previews: next };
+        });
+    }
+
+    schedulePreviewCapture = (id, throttleMs = 500) => {
+        if (this.previewTimers[id]) return;
+        const last = this.previewMeta[id]?.lastCaptured || 0;
+        const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        const delay = Math.max(120, throttleMs - (now - last));
+        this.previewTimers[id] = window.setTimeout(() => {
+            delete this.previewTimers[id];
+            this.captureWindowPreview(id, { immediate: false });
+        }, delay);
+    }
+
+    captureWindowPreview = async (id, options = {}) => {
+        if (typeof window === 'undefined') return null;
+        const { immediate = false } = options;
+        const existingPromise = this.previewPromises[id];
+        if (existingPromise) {
+            return existingPromise;
+        }
+        const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        const meta = this.previewMeta[id] || { lastCaptured: 0 };
+        const minInterval = immediate ? 0 : 400;
+        if (!immediate && now - meta.lastCaptured < minInterval) {
+            return this.previewCache[id] || null;
+        }
+        const node = document.getElementById(id);
+        if (!node || !node.getBoundingClientRect) {
+            return this.previewCache[id] || null;
+        }
+        const rect = node.getBoundingClientRect();
+        if (!rect.width || !rect.height) {
+            return this.previewCache[id] || null;
+        }
+
+        const promise = toPng(node, {
+            cacheBust: true,
+            pixelRatio: Math.min(1, Math.max(0.25, 280 / rect.width)),
+            skipFonts: true,
+        }).then((dataUrl) => {
+            const preview = {
+                dataUrl,
+                width: rect.width,
+                height: rect.height,
+                capturedAt: Date.now(),
+            };
+            this.previewCache[id] = preview;
+            this.previewMeta[id] = { lastCaptured: typeof performance !== 'undefined' ? performance.now() : Date.now() };
+            if (this._isMounted) {
+                this.setState(prev => ({
+                    window_previews: { ...prev.window_previews, [id]: preview }
+                }));
+            }
+            return preview;
+        }).catch(() => this.previewCache[id] || null).finally(() => {
+            delete this.previewPromises[id];
+        });
+
+        this.previewPromises[id] = promise;
+        return promise;
+    }
+
+    requestPreviewForTaskbar = (id, options = {}) => {
+        return this.captureWindowPreview(id, options);
     }
 
     checkForNewFolders = () => {
@@ -540,7 +721,8 @@ export class Desktop extends Component {
         this.setState({ hideSideBar: hide, overlapped_windows });
     }
 
-    hasMinimised = (objId) => {
+    hasMinimised = async (objId) => {
+        await this.captureWindowPreview(objId, { immediate: true });
         let minimized_windows = this.state.minimized_windows;
         var focused_windows = this.state.focused_windows;
 
@@ -603,7 +785,10 @@ export class Desktop extends Component {
                 r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
                 let minimized_windows = this.state.minimized_windows;
                 minimized_windows[objId] = false;
-                this.setState({ minimized_windows: minimized_windows }, this.saveSession);
+                this.setState({ minimized_windows: minimized_windows }, () => {
+                    this.saveSession();
+                    this.captureWindowPreview(objId, { immediate: true });
+                });
             } else {
                 this.focus(objId);
                 this.saveSession();
@@ -660,13 +845,13 @@ export class Desktop extends Component {
 
         // capture window snapshot
         let image = null;
-        const node = document.getElementById(objId);
-        if (node) {
-            try {
-                image = await toPng(node);
-            } catch (e) {
-                // ignore snapshot errors
+        try {
+            const preview = await this.captureWindowPreview(objId, { immediate: true });
+            if (preview && preview.dataUrl) {
+                image = preview.dataUrl;
             }
+        } catch (e) {
+            // ignore snapshot errors
         }
 
         // persist in trash with autopurge
@@ -689,6 +874,8 @@ export class Desktop extends Component {
 
         // remove app from the app stack
         this.app_stack.splice(this.app_stack.indexOf(objId), 1);
+        this.stopPreviewObservation(objId);
+        this.clearPreviewState(objId);
 
         this.giveFocusToLastApp();
 
@@ -900,6 +1087,8 @@ export class Desktop extends Component {
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    previews={this.state.window_previews}
+                    onPreviewRequest={this.requestPreviewForTaskbar}
                 />
 
                 {/* Desktop Apps */}
