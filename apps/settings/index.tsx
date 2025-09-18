@@ -202,7 +202,7 @@ export default function Settings() {
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
             <button
               onClick={handleReset}
-              className="px-4 py-2 rounded bg-ub-orange text-white"
+              className="px-4 py-2 rounded bg-ub-orange text-black"
             >
               Reset Desktop
             </button>
@@ -263,7 +263,7 @@ export default function Settings() {
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
             <button
               onClick={() => setShowKeymap(true)}
-              className="px-4 py-2 rounded bg-ub-orange text-white"
+              className="px-4 py-2 rounded bg-ub-orange text-black"
             >
               Edit Shortcuts
             </button>
@@ -275,13 +275,13 @@ export default function Settings() {
           <div className="flex justify-center my-4 space-x-4">
             <button
               onClick={handleExport}
-              className="px-4 py-2 rounded bg-ub-orange text-white"
+              className="px-4 py-2 rounded bg-ub-orange text-black"
             >
               Export Settings
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="px-4 py-2 rounded bg-ub-orange text-white"
+              className="px-4 py-2 rounded bg-ub-orange text-black"
             >
               Import Settings
             </button>

@@ -158,10 +158,11 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 
 /* Terminal enhancements */
 .crt-terminal {
-    background: var(--color-inverse);
-    color: var(--color-terminal);
-    text-shadow: 0 0 2px var(--color-terminal);
-    box-shadow: 0 0 10px color-mix(in srgb, var(--color-terminal), transparent 50%);
+    background: var(--color-terminal-bg);
+    color: var(--color-terminal-text);
+    border: 1px solid var(--color-terminal-border);
+    text-shadow: 0 0 2px color-mix(in srgb, var(--color-terminal), transparent 40%);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--color-terminal), transparent 55%);
 }
 
 .crt-terminal .xterm-screen,
