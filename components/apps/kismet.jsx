@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { batchLookupVendors, lookupVendor } from '../../utils/ouiLookup';
 
 // Helper to convert bytes to MAC address string
 const macToString = (bytes) =>
@@ -67,6 +68,7 @@ const parsePcap = (arrayBuffer, onNetwork) => {
       onNetwork?.({
         ssid: info.ssid,
         bssid: info.bssid,
+        vendor: lookupVendor(info.bssid),
         discoveredAt: pkt.tsSec * 1000 + Math.floor(pkt.tsUsec / 1000),
       });
     }
@@ -141,11 +143,16 @@ const KismetApp = ({ onNetworkDiscovered }) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const buffer = await file.arrayBuffer();
-    const { networks, channelCounts, timeCounts } = parsePcap(
+    const { networks: parsedNetworks, channelCounts, timeCounts } = parsePcap(
       buffer,
       onNetworkDiscovered,
     );
-    setNetworks(networks);
+    const vendors = batchLookupVendors(parsedNetworks.map((n) => n.bssid));
+    const networksWithVendors = parsedNetworks.map((network, index) => ({
+      ...network,
+      vendor: vendors[index],
+    }));
+    setNetworks(networksWithVendors);
     setChannels(channelCounts);
     setTimes(timeCounts);
   };
@@ -167,6 +174,7 @@ const KismetApp = ({ onNetworkDiscovered }) => {
               <tr className="text-left">
                 <th className="pr-2">SSID</th>
                 <th className="pr-2">BSSID</th>
+                <th className="pr-2">Vendor</th>
                 <th className="pr-2">Channel</th>
                 <th>Frames</th>
               </tr>
@@ -176,6 +184,7 @@ const KismetApp = ({ onNetworkDiscovered }) => {
                 <tr key={n.bssid} className="odd:bg-gray-800">
                   <td className="pr-2">{n.ssid || '(hidden)'}</td>
                   <td className="pr-2">{n.bssid}</td>
+                  <td className="pr-2">{n.vendor || 'Unknown'}</td>
                   <td className="pr-2">{n.channel ?? '-'}</td>
                   <td>{n.frames}</td>
                 </tr>
