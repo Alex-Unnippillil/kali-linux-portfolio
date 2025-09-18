@@ -14,6 +14,7 @@ import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
 import WindowSwitcher from '../screen/window-switcher'
+import WindowOverview from '../screen/window-overview'
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
@@ -52,6 +53,9 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            showWindowOverview: false,
+            overviewWindows: [],
+            overviewFocusId: null,
         }
     }
 
@@ -89,6 +93,9 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        window.addEventListener('desktop:open-overview', this.openWindowOverview);
+        window.addEventListener('desktop:close-overview', this.closeWindowOverview);
+        window.addEventListener('desktop:toggle-overview', this.toggleWindowOverview);
     }
 
     componentWillUnmount() {
@@ -96,6 +103,9 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        window.removeEventListener('desktop:open-overview', this.openWindowOverview);
+        window.removeEventListener('desktop:close-overview', this.closeWindowOverview);
+        window.removeEventListener('desktop:toggle-overview', this.toggleWindowOverview);
     }
 
     checkForNewFolders = () => {
@@ -147,6 +157,50 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcut = (e) => {
+        const isMetaShiftSpace = (
+            e.metaKey
+            && e.shiftKey
+            && !e.ctrlKey
+            && !e.altKey
+            && (e.code === 'Space' || e.key === ' ')
+        );
+        const isCtrlAltArrowUp = (
+            e.ctrlKey
+            && e.altKey
+            && !e.metaKey
+            && !e.shiftKey
+            && (e.key === 'ArrowUp' || e.key === 'Up')
+        );
+        const isStandaloneF9 = (
+            e.key === 'F9'
+            && !e.metaKey
+            && !e.ctrlKey
+            && !e.shiftKey
+            && !e.altKey
+        );
+        const overviewShortcut = isMetaShiftSpace || isCtrlAltArrowUp || isStandaloneF9;
+
+        if (overviewShortcut) {
+            e.preventDefault();
+            if (e.repeat) {
+                return;
+            }
+            if (this.state.showWindowOverview) {
+                this.closeWindowOverview();
+            } else {
+                this.openWindowOverview();
+            }
+            return;
+        }
+
+        if (this.state.showWindowOverview) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                this.closeWindowOverview();
+            }
+            return;
+        }
+
         if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
             if (!this.state.showWindowSwitcher) {
@@ -181,6 +235,103 @@ export class Desktop extends Component {
             }
         }
         return null;
+    }
+
+    computeOverviewWindows = () => {
+        return this.app_stack
+            .filter(id => this.state.closed_windows[id] === false && !this.state.minimized_windows[id])
+            .map(id => {
+                const meta = apps.find(app => app.id === id) || {};
+                return {
+                    id,
+                    title: meta.title || id,
+                    icon: meta.icon,
+                    isFocused: !!this.state.focused_windows[id],
+                };
+            });
+    }
+
+    updateOverviewSnapshot = (preferredFocusId = null) => {
+        if (!this.state.showWindowOverview) {
+            return;
+        }
+
+        const overviewWindows = this.computeOverviewWindows();
+        if (!overviewWindows.length) {
+            this.setState({
+                showWindowOverview: false,
+                overviewWindows: [],
+                overviewFocusId: null,
+            });
+            return;
+        }
+
+        const candidateIds = [preferredFocusId, this.getFocusedWindowId(), this.state.overviewFocusId]
+            .filter(Boolean);
+        const nextFocusId = candidateIds.find((id) => overviewWindows.some((win) => win.id === id))
+            || overviewWindows[0].id;
+
+        const windowsChanged = (
+            overviewWindows.length !== this.state.overviewWindows.length
+            || overviewWindows.some((entry, index) => {
+                const existing = this.state.overviewWindows[index];
+                if (!existing) return true;
+                return existing.id !== entry.id || existing.isFocused !== entry.isFocused;
+            })
+        );
+
+        if (!windowsChanged && nextFocusId === this.state.overviewFocusId) {
+            return;
+        }
+
+        this.setState({
+            overviewWindows,
+            overviewFocusId: nextFocusId,
+        });
+    }
+
+    openWindowOverview = () => {
+        const overviewWindows = this.computeOverviewWindows();
+        if (!overviewWindows.length) return;
+        if (this.state.showWindowSwitcher) {
+            this.closeWindowSwitcher();
+        }
+        const focusedId = this.getFocusedWindowId();
+        const overviewFocusId = overviewWindows.some(win => win.id === focusedId)
+            ? focusedId
+            : overviewWindows[0]?.id || null;
+        this.setState({
+            showWindowOverview: true,
+            overviewWindows,
+            overviewFocusId,
+        });
+    }
+
+    closeWindowOverview = () => {
+        if (!this.state.showWindowOverview) return;
+        this.setState({
+            showWindowOverview: false,
+            overviewWindows: [],
+            overviewFocusId: null,
+        });
+    }
+
+    toggleWindowOverview = () => {
+        if (this.state.showWindowOverview) {
+            this.closeWindowOverview();
+        } else {
+            this.openWindowOverview();
+        }
+    }
+
+    selectOverviewWindow = (id) => {
+        this.setState({
+            showWindowOverview: false,
+            overviewWindows: [],
+            overviewFocusId: null,
+        }, () => {
+            this.openApp(id);
+        });
     }
 
     cycleApps = (direction) => {
@@ -547,11 +698,11 @@ export class Desktop extends Component {
         // remove focus and minimise this window
         minimized_windows[objId] = true;
         focused_windows[objId] = false;
-        this.setState({ minimized_windows, focused_windows });
-
-        this.hideSideBar(null, false);
-
-        this.giveFocusToLastApp();
+        this.setState({ minimized_windows, focused_windows }, () => {
+            this.updateOverviewSnapshot();
+            this.hideSideBar(null, false);
+            this.giveFocusToLastApp();
+        });
     }
 
     giveFocusToLastApp = () => {
@@ -591,6 +742,10 @@ export class Desktop extends Component {
             action: `Opened ${objId} window`
         });
 
+        if (this.state.showWindowOverview) {
+            this.closeWindowOverview();
+        }
+
         // if the app is disabled
         if (this.state.disabled_apps[objId]) return;
 
@@ -603,7 +758,10 @@ export class Desktop extends Component {
                 r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
                 let minimized_windows = this.state.minimized_windows;
                 minimized_windows[objId] = false;
-                this.setState({ minimized_windows: minimized_windows }, this.saveSession);
+                this.setState({ minimized_windows: minimized_windows }, () => {
+                    this.saveSession();
+                    this.updateOverviewSnapshot(objId);
+                });
             } else {
                 this.focus(objId);
                 this.saveSession();
@@ -650,6 +808,7 @@ export class Desktop extends Component {
                 this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
                     this.focus(objId);
                     this.saveSession();
+                    this.updateOverviewSnapshot(objId);
                 });
                 this.app_stack.push(objId);
             }, 200);
@@ -701,7 +860,10 @@ export class Desktop extends Component {
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
-        this.setState({ closed_windows, favourite_apps }, this.saveSession);
+        this.setState({ closed_windows, favourite_apps }, () => {
+            this.saveSession();
+            this.updateOverviewSnapshot();
+        });
     }
 
     pinApp = (id) => {
@@ -744,7 +906,7 @@ export class Desktop extends Component {
                 }
             }
         }
-        this.setState({ focused_windows });
+        this.setState({ focused_windows }, () => this.updateOverviewSnapshot(objId));
     }
 
     addNewFolder = () => {
@@ -954,6 +1116,14 @@ export class Desktop extends Component {
                         games={games}
                         recentApps={this.app_stack}
                         openApp={this.openApp} /> : null}
+
+                { this.state.showWindowOverview ?
+                    <WindowOverview
+                        windows={this.state.overviewWindows}
+                        initialFocusId={this.state.overviewFocusId}
+                        onSelect={this.selectOverviewWindow}
+                        onClose={this.closeWindowOverview}
+                    /> : null}
 
                 { this.state.showShortcutSelector ?
                     <ShortcutSelector apps={apps}
