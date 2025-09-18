@@ -7,8 +7,8 @@ html {
 body{
     font-family: var(--font-family-base);
     font-display: swap;
-    background-color: var(--color-bg);
-    color: var(--color-text);
+    background-color: var(--color-surface-ground);
+    color: var(--color-text-primary);
 }
 
 button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .hit-area {
@@ -48,7 +48,7 @@ button:focus-visible {
 
 
 .animateShow {
-    animation: transformDownShow 200ms 1 forwards;
+    animation: transformDownShow var(--motion-duration-medium) 1 forwards;
 }
 
 @keyframes transformDownShow {
@@ -105,9 +105,9 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 }
 
 .window-shadow {
-    box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
-    -webkit-box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
-    -moz-box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
+    box-shadow: var(--shadow-lg);
+    -webkit-box-shadow: var(--shadow-lg);
+    -moz-box-shadow: var(--shadow-lg);
 }
 
 .closed-window {
@@ -143,8 +143,8 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 }
 
 .windowMainScreen::-webkit-scrollbar-thumb {
-    background-color: var(--color-border);
-    border-radius: 5px;
+    background-color: var(--color-border-subtle);
+    border-radius: var(--radius-sm);
 }
 
 /* SideBarApp Scale image onClick */
@@ -161,7 +161,7 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     background: var(--color-inverse);
     color: var(--color-terminal);
     text-shadow: 0 0 2px var(--color-terminal);
-    box-shadow: 0 0 10px color-mix(in srgb, var(--color-terminal), transparent 50%);
+    box-shadow: var(--shadow-terminal);
 }
 
 .crt-terminal .xterm-screen,

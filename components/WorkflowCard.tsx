@@ -25,20 +25,20 @@ const steps: Step[] = [
 ];
 
 const WorkflowCard: React.FC = () => (
-  <section className="p-4 rounded bg-ub-grey text-white">
-    <h2 className="text-xl font-bold mb-2">Workflow</h2>
-    <ul>
+  <section className="p-lg rounded-lg bg-surface-panel text-text-primary shadow-md space-y-sm">
+    <h2 className="text-xl font-bold">Workflow</h2>
+    <ul className="space-y-sm">
       {steps.map((s) => (
-        <li key={s.title} className="mb-2">
+        <li key={s.title} className="space-y-1">
           <a
             href={s.link}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-ub-orange underline"
+            className="text-brand-highlight underline hover:text-brand-secondary transition-colors duration-fast"
           >
             {s.title}
           </a>
-          <p className="text-sm">{s.description}</p>
+          <p className="text-sm text-text-muted">{s.description}</p>
         </li>
       ))}
     </ul>

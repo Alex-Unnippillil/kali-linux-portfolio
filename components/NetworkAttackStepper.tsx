@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import WarningBanner from './WarningBanner';
+import { tokenVar } from '../lib/designTokens';
 
 interface Step {
   title: string;
@@ -69,8 +70,8 @@ const NetworkAttackStepper: React.FC = () => {
   const edgeId = (e: { from: string; to: string }) => `${e.from}-${e.to}`;
 
   return (
-    <div className="p-4">
-      <svg viewBox="0 0 550 150" className="w-full h-40 mb-4">
+    <div className="p-lg space-y-md bg-surface-panel rounded-lg shadow-md">
+      <svg viewBox="0 0 550 150" className="w-full h-40">
         {edges.map((e) => {
           const from = nodes.find((n) => n.id === e.from)!;
           const to = nodes.find((n) => n.id === e.to)!;
@@ -82,7 +83,7 @@ const NetworkAttackStepper: React.FC = () => {
               y1={75}
               x2={to.x}
               y2={75}
-              stroke={active ? '#f87171' : '#9ca3af'}
+              stroke={active ? tokenVar('status', 'danger') : tokenVar('border', 'subtle')}
               strokeWidth={active ? 4 : 2}
             />
           );
@@ -93,8 +94,8 @@ const NetworkAttackStepper: React.FC = () => {
             <g key={n.id} transform={`translate(${n.x},75)`}>
               <circle
                 r={25}
-                fill={active ? '#fca5a5' : '#e5e7eb'}
-                stroke="#4b5563"
+                fill={active ? tokenVar('status', 'warning') : tokenVar('surface', 'muted')}
+                stroke={tokenVar('border', 'strong')}
                 strokeWidth={2}
               />
               <text textAnchor="middle" dy=".3em" className="text-xs">
@@ -104,28 +105,28 @@ const NetworkAttackStepper: React.FC = () => {
           );
         })}
       </svg>
-      <div className="mb-2">
-        <h2 className="text-lg font-bold">{current.title}</h2>
-        <p>{current.description}</p>
+      <div className="space-y-1">
+        <h2 className="text-lg font-bold text-text-primary">{current.title}</h2>
+        <p className="text-text-secondary">{current.description}</p>
       </div>
       <div className="space-y-2">
-        <div className="bg-green-100 border-l-4 border-green-500 p-2">
-          <strong>Mitigation:</strong> {current.mitigation}
+        <div className="border-l-4 border-status-success border-opacity-80 bg-surface-muted p-sm rounded-md text-text-primary">
+          <strong className="text-status-success">Mitigation:</strong> {current.mitigation}
         </div>
         <WarningBanner>{current.warning}</WarningBanner>
       </div>
-      <div className="mt-4 flex justify-between">
+      <div className="flex justify-between pt-md">
         <button
           onClick={() => setStep((s) => Math.max(0, s - 1))}
           disabled={step === 0}
-          className="px-4 py-2 bg-ubt-gray text-white rounded disabled:opacity-50"
+          className="px-md py-sm rounded-md bg-surface-muted text-text-primary disabled:opacity-50"
         >
           Previous
         </button>
         <button
           onClick={() => setStep((s) => Math.min(steps.length - 1, s + 1))}
           disabled={step === steps.length - 1}
-          className="px-4 py-2 bg-ubt-blue text-white rounded disabled:opacity-50"
+          className="px-md py-sm rounded-md bg-brand-primary text-text-inverse disabled:opacity-50 transition-colors duration-fast hover:bg-brand-secondary"
         >
           Next
         </button>
