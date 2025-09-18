@@ -8,6 +8,7 @@ import {
 } from './utils';
 import FormError from '../../ui/FormError';
 import StatsChart from '../../StatsChart';
+import { fade, transitionString } from '../../../utils/motion';
 
 // Enhanced John the Ripper interface that supports rule uploads,
 // basic hash analysis and mock distribution of cracking tasks.
@@ -449,7 +450,9 @@ const JohnApp = () => {
                       : 'repeating-linear-gradient(45deg,#1e3a8a,#1e3a8a 10px,#065f46 10px,#065f46 20px)',
                   backgroundSize: '20px 20px',
                   backgroundPosition: `${phase === 'wordlist' ? animOffset : -animOffset}px 0`,
-                  transition: prefersReducedMotion ? 'none' : 'width 0.2s ease-out',
+                  transition: prefersReducedMotion
+                    ? 'none'
+                    : transitionString('width', fade({ reducedMotion: prefersReducedMotion })),
                 }}
                 role="progressbar"
                 aria-valuenow={Math.round(progress)}

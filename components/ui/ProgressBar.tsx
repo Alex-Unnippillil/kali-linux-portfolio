@@ -16,7 +16,7 @@ export default function ProgressBar({ progress, className = '' }: ProgressBarPro
       aria-valuemax={100}
     >
       <div
-        className="h-full bg-blue-500 transition-all duration-200"
+        className="h-full bg-blue-500 transition-all motion-duration-fade motion-ease-fade"
         style={{ width: `${clamped}%` }}
       />
     </div>

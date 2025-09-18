@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { spring, transitionString } from '../../../utils/motion';
 
 const severityLevels = ['All', 'Critical', 'High', 'Medium', 'Low'];
 const severityColors = {
@@ -92,7 +93,9 @@ const HostBubbleChart = ({ hosts = sampleHosts }) => {
                 fill={severityColors[host.severity]}
                 aria-label={`${host.host} severity ${host.severity} CVSS ${host.cvss}`}
                 style={{
-                  transition: prefersReducedMotion ? 'none' : 'all 0.3s ease',
+                  transition: prefersReducedMotion
+                    ? 'none'
+                    : transitionString('all', spring({ reducedMotion: prefersReducedMotion })),
                 }}
               />
               <text

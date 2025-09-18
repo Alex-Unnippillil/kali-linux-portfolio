@@ -7,6 +7,7 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import { fade, spring } from '../../utils/motion';
 
 export class Window extends Component {
     constructor(props) {
@@ -400,9 +401,12 @@ export class Window extends Component {
         }
 
         const startTransform = node.style.transform;
+        const timing = spring({ reducedMotion: prefersReducedMotion });
+        const options = { duration: timing.duration, easing: timing.easing, fill: 'forwards' };
+        if (timing.delay) options.delay = timing.delay;
         this._dockAnimation = node.animate(
             [{ transform: startTransform }, { transform: endTransform }],
-            { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
+            options
         );
         this._dockAnimation.onfinish = () => {
             node.style.transform = endTransform;
@@ -437,9 +441,12 @@ export class Window extends Component {
             };
             this._dockAnimation.reverse();
         } else {
+            const timing = spring({ reducedMotion: prefersReducedMotion });
+            const options = { duration: timing.duration, easing: timing.easing, fill: 'forwards' };
+            if (timing.delay) options.delay = timing.delay;
             this._dockAnimation = node.animate(
                 [{ transform: startTransform }, { transform: endTransform }],
-                { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
+                options
             );
             this._dockAnimation.onfinish = () => {
                 node.style.transform = endTransform;
@@ -471,9 +478,10 @@ export class Window extends Component {
         this.setState({ closed: true }, () => {
             this.deactivateOverlay();
             this.props.hideSideBar(this.id, false);
+            const { duration } = fade();
             setTimeout(() => {
                 this.props.closed(this.id)
-            }, 300) // after 300ms this window will be unmounted from parent (Desktop)
+            }, duration); // sync with close animation timing
         });
     }
 

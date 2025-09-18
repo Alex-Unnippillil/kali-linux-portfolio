@@ -40,7 +40,7 @@ type AnimatedCard = Card & {
 };
 
 const renderCard = (card: Card) => (
-  <div className="w-16 h-24 min-w-[24px] min-h-[24px] rounded border border-black bg-white flex items-center justify-center transition-transform duration-300 shadow-[0_1px_0_rgba(0,0,0,0.5)]">
+  <div className="w-16 h-24 min-w-[24px] min-h-[24px] rounded border border-black bg-white flex items-center justify-center transition-transform motion-duration-spring motion-ease-spring shadow-[0_1px_0_rgba(0,0,0,0.5)]">
     <span className={card.color === 'red' ? 'text-red-600' : ''}>
       {valueToString(card.value)}{card.suit}
     </span>
@@ -681,7 +681,7 @@ const Solitaire = () => {
       {flying.map((c, i) => (
         <div
           key={`fly-${i}`}
-          className="absolute transition-transform duration-300"
+          className="absolute transition-transform motion-duration-spring motion-ease-spring"
           style={{ transform: `translate(${c.x}px, ${c.y}px)` }}
         >
           {renderCard(c)}
@@ -691,7 +691,7 @@ const Solitaire = () => {
         cascade.map((c, i) => (
           <div
             key={i}
-            className="absolute transition-transform duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)]"
+            className="absolute transition-transform motion-duration-spring motion-ease-spring"
             style={{
               transform: `translate(${c.x}px, ${c.y}px) rotate(${c.angle}deg)`,
               boxShadow: '0 8px 16px rgba(0,0,0,0.3)',
@@ -848,7 +848,7 @@ const Solitaire = () => {
               <div
                 key={idx}
                 className={`absolute ${
-                  !prefersReducedMotion ? 'transition-transform duration-300' : ''
+                  !prefersReducedMotion ? 'transition-transform motion-duration-spring motion-ease-spring' : ''
                 } ${
                   drag &&
                   drag.source === 'tableau' &&

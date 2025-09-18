@@ -310,7 +310,7 @@ const ContactApp: React.FC = () => {
           />
           <label
             htmlFor="contact-name"
-            className="absolute left-3 -top-2 bg-gray-800 px-1 text-xs text-gray-400 transition-all peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs peer-focus:text-blue-400"
+            className="absolute left-3 -top-2 bg-gray-800 px-1 text-xs text-gray-400 transition-all motion-duration-fade motion-ease-fade peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs peer-focus:text-blue-400"
           >
             Name
           </label>
@@ -329,7 +329,7 @@ const ContactApp: React.FC = () => {
           />
           <label
             htmlFor="contact-email"
-            className="absolute left-3 -top-2 bg-gray-800 px-1 text-xs text-gray-400 transition-all peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs peer-focus:text-blue-400"
+            className="absolute left-3 -top-2 bg-gray-800 px-1 text-xs text-gray-400 transition-all motion-duration-fade motion-ease-fade peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs peer-focus:text-blue-400"
           >
             Email
           </label>
@@ -353,7 +353,7 @@ const ContactApp: React.FC = () => {
           />
           <label
             htmlFor="contact-message"
-            className="absolute left-3 -top-2 bg-gray-800 px-1 text-xs text-gray-400 transition-all peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs peer-focus:text-blue-400"
+            className="absolute left-3 -top-2 bg-gray-800 px-1 text-xs text-gray-400 transition-all motion-duration-fade motion-ease-fade peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs peer-focus:text-blue-400"
           >
             Message
           </label>
