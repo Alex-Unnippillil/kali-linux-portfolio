@@ -72,6 +72,10 @@ const QuoteApp = createDynamicApp('quote', 'Quote');
 const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery');
 const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
 const InputLabApp = createDynamicApp('input-lab', 'Input Lab');
+const ShareTargetsManagerApp = createDynamicApp(
+  'share-targets',
+  'Share Targets'
+);
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 
 const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
@@ -165,6 +169,7 @@ const displayStickyNotes = createDisplay(StickyNotesApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);
 const displayWeatherWidget = createDisplay(WeatherWidgetApp);
 const displayInputLab = createDisplay(InputLabApp);
+const displayShareTargets = createDisplay(ShareTargetsManagerApp);
 
 const displayGhidra = createDisplay(GhidraApp);
 
@@ -266,6 +271,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayInputLab,
+  },
+  {
+    id: 'share-targets',
+    title: 'Share Targets',
+    icon: '/themes/Yaru/apps/share-targets.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayShareTargets,
   },
 ];
 
