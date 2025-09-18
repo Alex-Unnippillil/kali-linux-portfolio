@@ -9,11 +9,12 @@ const Terminal = forwardRef<HTMLDivElement, TerminalContainerProps>(
     <div
       ref={ref}
       data-testid="xterm-container"
-      className={`text-white ${className}`}
+      className={`bg-black text-[#f8f8f2] selection:bg-blue-600 selection:text-white ${className}`}
       style={{
-        background: 'var(--kali-bg)',
+        backgroundColor: '#000000',
+        color: '#f8f8f2',
         backdropFilter: 'blur(4px)',
-        border: '1px solid var(--color-border)',
+        border: '1px solid rgba(23, 147, 209, 0.35)',
         fontFamily: 'monospace',
         fontSize: 'clamp(1rem, 0.6vw + 1rem, 1.1rem)',
         lineHeight: 1.4,
