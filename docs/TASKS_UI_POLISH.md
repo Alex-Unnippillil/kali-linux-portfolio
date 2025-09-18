@@ -208,6 +208,7 @@ This document tracks UI polish tasks for the Kali/Ubuntu inspired desktop experi
 
 49. **Tooltips accessible**
     - **Accept:** Tooltips are announced on focus, not only hover.
+    - **How:** Use the shared `useTooltip` hook (`hooks/useTooltip.ts`) so every tooltip respects the 300 ms open / 120 ms close delays and supports keyboard focus out of the box.
 
 ## F) App UX improvements
 

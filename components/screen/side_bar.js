@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React from 'react'
 import Image from 'next/image'
 import SideBarApp from '../base/side_bar_app';
+import useTooltip from '../../hooks/useTooltip';
 
 let renderApps = (props) => {
     let sideBarAppsJsx = [];
@@ -48,19 +49,21 @@ export default function SideBar(props) {
 
 export function AllApps(props) {
 
-    const [title, setTitle] = useState(false);
+    const tooltip = useTooltip();
+    const { visible, getTriggerProps, hideImmediate } = tooltip;
+    const triggerProps = getTriggerProps();
 
     return (
         <div
+            {...triggerProps}
             className={`w-10 h-10 rounded m-1 hover:bg-white hover:bg-opacity-10 flex items-center justify-center transition-hover transition-active`}
             style={{ marginTop: 'auto' }}
-            onMouseEnter={() => {
-                setTitle(true);
+            onClick={(event) => {
+                hideImmediate();
+                if (typeof props.showApps === 'function') {
+                    props.showApps(event);
+                }
             }}
-            onMouseLeave={() => {
-                setTitle(false);
-            }}
-            onClick={props.showApps}
         >
             <div className="relative">
                 <Image
@@ -73,7 +76,7 @@ export function AllApps(props) {
                 />
                 <div
                     className={
-                        (title ? " visible " : " invisible ") +
+                        (visible ? " visible " : " invisible ") +
                         " w-max py-0.5 px-1.5 absolute top-1 left-full ml-5 text-ubt-grey text-opacity-90 text-sm bg-ub-grey bg-opacity-70 border-gray-400 border border-opacity-40 rounded-md"
                     }
                 >

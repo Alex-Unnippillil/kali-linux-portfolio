@@ -1,161 +1,193 @@
-import React, { Component } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from 'next/image';
 import { toCanvas } from 'html-to-image';
+import useTooltip from '../../hooks/useTooltip';
 
-export class SideBarApp extends Component {
-    constructor() {
-        super();
-        this.id = null;
-        this.state = {
-            showTitle: false,
-            scaleImage: false,
-            thumbnail: null,
-        };
-    }
+const BADGE_SUPPORT = typeof navigator !== 'undefined' && 'setAppBadge' in navigator && 'clearAppBadge' in navigator;
 
-    componentDidMount() {
-        this.id = this.props.id;
-        this.updateBadge();
-    }
+const getCount = (value) => {
+    if (Array.isArray(value)) return value.length;
+    if (typeof value === 'number') return value;
+    return 0;
+};
 
-    componentDidUpdate(prevProps) {
-        if (prevProps.notifications !== this.props.notifications || prevProps.tasks !== this.props.tasks) {
-            this.updateBadge();
+const useAppBadge = (notifications, tasks) => {
+    const notificationsCount = useMemo(() => getCount(notifications), [notifications]);
+    const tasksCount = useMemo(() => getCount(tasks), [tasks]);
+
+    useEffect(() => {
+        if (!BADGE_SUPPORT) return;
+        const count = notificationsCount + tasksCount;
+        if (count > 0 && navigator.setAppBadge) {
+            navigator.setAppBadge(count).catch(() => { });
+        } else if (navigator.clearAppBadge) {
+            navigator.clearAppBadge().catch(() => { });
         }
-    }
+    }, [notificationsCount, tasksCount]);
+};
 
-    updateBadge = () => {
-        if (typeof navigator === 'undefined') return;
-        const hasSet = 'setAppBadge' in navigator;
-        const hasClear = 'clearAppBadge' in navigator;
-        if (!hasSet && !hasClear) return;
+const useScaleImage = () => {
+    const [scale, setScale] = useState(false);
+    const timerRef = useRef(null);
 
-        const notifications = Array.isArray(this.props.notifications)
-            ? this.props.notifications.length
-            : (typeof this.props.notifications === 'number' ? this.props.notifications : 0);
-        const tasks = Array.isArray(this.props.tasks)
-            ? this.props.tasks.length
-            : (typeof this.props.tasks === 'number' ? this.props.tasks : 0);
-        const count = notifications + tasks;
-
-        if (count > 0 && hasSet) {
-            navigator.setAppBadge(count).catch(() => {});
-        } else if (hasClear) {
-            navigator.clearAppBadge().catch(() => {});
+    const trigger = useCallback(() => {
+        if (timerRef.current) {
+            clearTimeout(timerRef.current);
         }
-    };
-
-    scaleImage = () => {
-        setTimeout(() => {
-            this.setState({ scaleImage: false });
+        setScale(true);
+        timerRef.current = setTimeout(() => {
+            setScale(false);
+            timerRef.current = null;
         }, 1000);
-        this.setState({ scaleImage: true });
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            if (timerRef.current) {
+                clearTimeout(timerRef.current);
+            }
+        };
+    }, []);
+
+    return [scale, trigger];
+};
+
+const captureWindowThumbnail = async (id) => {
+    if (typeof document === 'undefined') return null;
+    const win = document.getElementById(id);
+    if (!win) return null;
+
+    const canvas = win.querySelector('canvas');
+    if (canvas && typeof canvas.toDataURL === 'function') {
+        try {
+            return canvas.toDataURL();
+        } catch (e) {
+            // ignore canvas taint errors
+        }
     }
 
-    openApp = () => {
-        if (!this.props.isMinimized[this.id] && this.props.isClose[this.id]) {
-            this.scaleImage();
-        }
-        this.props.openApp(this.id);
-        this.setState({ showTitle: false, thumbnail: null });
-    };
+    try {
+        const temp = await toCanvas(win);
+        return temp.toDataURL();
+    } catch (e) {
+        return null;
+    }
+};
 
-    captureThumbnail = async () => {
-        const win = document.getElementById(this.id);
-        if (!win) return;
-        let dataUrl = null;
-        const canvas = win.querySelector('canvas');
-        if (canvas && canvas.toDataURL) {
-            try {
-                dataUrl = canvas.toDataURL();
-            } catch (e) {
-                dataUrl = null;
-            }
-        }
-        if (!dataUrl) {
-            try {
-                const temp = await toCanvas(win);
-                dataUrl = temp.toDataURL();
-            } catch (e) {
-                dataUrl = null;
-            }
-        }
-        if (dataUrl) {
-            this.setState({ thumbnail: dataUrl });
-        }
-    };
+export default function SideBarApp(props) {
+    const {
+        id,
+        title,
+        icon,
+        isClose,
+        isFocus,
+        isMinimized,
+        openApp,
+        notifications,
+        tasks,
+    } = props;
 
-    render() {
-        return (
-            <button
-                type="button"
-                aria-label={this.props.title}
-                data-context="app"
-                data-app-id={this.props.id}
-                onClick={this.openApp}
-                onMouseEnter={() => {
-                    this.captureThumbnail();
-                    this.setState({ showTitle: true });
-                }}
-                onMouseLeave={() => {
-                    this.setState({ showTitle: false, thumbnail: null });
-                }}
-                className={(this.props.isClose[this.id] === false && this.props.isFocus[this.id] ? "bg-white bg-opacity-10 " : "") +
-                    " w-auto p-2 outline-none relative hover:bg-white hover:bg-opacity-10 rounded m-1 transition-hover transition-active"}
-                id={"sidebar-" + this.props.id}
-            >
-                <Image
-                    width={28}
-                    height={28}
-                    className="w-7"
-                    src={this.props.icon.replace('./', '/')}
-                    alt="Ubuntu App Icon"
-                    sizes="28px"
-                />
-                <Image
-                    width={28}
-                    height={28}
-                    className={(this.state.scaleImage ? " scale " : "") + " scalable-app-icon w-7 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"}
-                    src={this.props.icon.replace('./', '/')}
-                    alt=""
-                    sizes="28px"
-                />
-                {
-                    (
-                        this.props.isClose[this.id] === false
-                            ? <div className=" w-2 h-1 absolute bottom-0 left-1/2 transform -translate-x-1/2 bg-white rounded-md"></div>
-                            : null
-                    )
-                }
-                {this.state.thumbnail && (
-                    <div
-                        className={
-                            (this.state.showTitle ? " visible " : " invisible ") +
-                            " pointer-events-none absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2" +
-                            " rounded border border-gray-400 border-opacity-40 shadow-lg overflow-hidden bg-black bg-opacity-50"
-                        }
-                    >
-                        <Image
-                            width={128}
-                            height={80}
-                            src={this.state.thumbnail}
-                            alt={`Preview of ${this.props.title}`}
-                            className="w-32 h-20 object-cover"
-                            sizes="128px"
-                        />
-                    </div>
-                )}
+    const tooltip = useTooltip();
+    const { visible, getTriggerProps, hideImmediate } = tooltip;
+    const [thumbnail, setThumbnail] = useState(null);
+    const [scaleImage, triggerScaleImage] = useScaleImage();
+    const mountedRef = useRef(true);
+
+    useAppBadge(notifications, tasks);
+
+    useEffect(() => {
+        return () => {
+            mountedRef.current = false;
+        };
+    }, []);
+
+    const handleOpen = useCallback(() => {
+        if (!isMinimized?.[id] && isClose?.[id]) {
+            triggerScaleImage();
+        }
+        if (typeof openApp === 'function') {
+            openApp(id);
+        }
+        hideImmediate();
+        setThumbnail(null);
+    }, [hideImmediate, id, isClose, isMinimized, openApp, triggerScaleImage]);
+
+    const handleCapture = useCallback(async () => {
+        const dataUrl = await captureWindowThumbnail(id);
+        if (dataUrl && mountedRef.current) {
+            setThumbnail(dataUrl);
+        }
+    }, [id]);
+
+    const handleHide = useCallback(() => {
+        setThumbnail(null);
+    }, []);
+
+    const triggerProps = getTriggerProps({
+        onMouseEnter: () => { void handleCapture(); },
+        onFocus: () => { void handleCapture(); },
+        onMouseLeave: handleHide,
+        onBlur: handleHide,
+    });
+
+    const isOpen = isClose?.[id] === false;
+    const isFocused = isFocus?.[id];
+
+    const buttonClasses = `${isOpen && isFocused ? "bg-white bg-opacity-10 " : ""}` +
+        " w-auto p-2 outline-none relative hover:bg-white hover:bg-opacity-10 rounded m-1 transition-hover transition-active";
+
+    return (
+        <button
+            type="button"
+            aria-label={title}
+            data-context="app"
+            data-app-id={id}
+            onClick={handleOpen}
+            className={buttonClasses}
+            id={`sidebar-${id}`}
+            {...triggerProps}
+        >
+            <Image
+                width={28}
+                height={28}
+                className="w-7"
+                src={icon.replace('./', '/')}
+                alt="Ubuntu App Icon"
+                sizes="28px"
+            />
+            <Image
+                width={28}
+                height={28}
+                className={`${scaleImage ? " scale " : ""} scalable-app-icon w-7 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
+                src={icon.replace('./', '/')}
+                alt=""
+                sizes="28px"
+            />
+            {isOpen && !isFocused && (
+                <div className=" w-2 h-1 absolute bottom-0 left-1/2 transform -translate-x-1/2 bg-white rounded-md"></div>
+            )}
+            {thumbnail && (
                 <div
-                    className={
-                        (this.state.showTitle ? " visible " : " invisible ") +
-                        " w-max py-0.5 px-1.5 absolute top-1.5 left-full ml-3 m-1 text-ubt-grey text-opacity-90 text-sm bg-ub-grey bg-opacity-70 border-gray-400 border border-opacity-40 rounded-md"
-                    }
+                    className={`${visible ? " visible " : " invisible "}` +
+                    " pointer-events-none absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2" +
+                    " rounded border border-gray-400 border-opacity-40 shadow-lg overflow-hidden bg-black bg-opacity-50"}
                 >
-                    {this.props.title}
+                    <Image
+                        width={128}
+                        height={80}
+                        src={thumbnail}
+                        alt={`Preview of ${title}`}
+                        className="w-32 h-20 object-cover"
+                        sizes="128px"
+                    />
                 </div>
-            </button>
-        );
-    }
+            )}
+            <div
+                className={`${visible ? " visible " : " invisible "}` +
+                " w-max py-0.5 px-1.5 absolute top-1.5 left-full ml-3 m-1 text-ubt-grey text-opacity-90 text-sm bg-ub-grey bg-opacity-70 border-gray-400 border border-opacity-40 rounded-md"}
+            >
+                {title}
+            </div>
+        </button>
+    );
 }
-
-export default SideBarApp;
