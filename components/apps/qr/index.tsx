@@ -163,6 +163,58 @@ const QRScanner: React.FC = () => {
   );
 };
 
+export const QRPreview: React.FC<{
+  value: string;
+  size?: number;
+  label?: string;
+  className?: string;
+}> = ({ value, size = 160, label, className }) => {
+  const [preview, setPreview] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    const payload = value || ' ';
+    QRCode.toDataURL(payload, { width: size })
+      .then((url) => {
+        if (active) setPreview(url);
+      })
+      .catch(() => {
+        if (active) setPreview('');
+      });
+    return () => {
+      active = false;
+    };
+  }, [value, size]);
+
+  const containerClass = ['flex flex-col items-center gap-2', className]
+    .filter(Boolean)
+    .join(' ');
+  const alt = label ? `QR code for ${label}` : 'QR code';
+
+  return (
+    <div className={containerClass}>
+      {preview ? (
+        <img
+          src={preview}
+          alt={alt}
+          style={{ width: size, height: size }}
+          className="rounded border border-black/10 shadow-sm"
+        />
+      ) : (
+        <div
+          className="flex items-center justify-center rounded border border-dashed border-gray-400 bg-white text-xs text-gray-600"
+          style={{ width: size, height: size }}
+        >
+          Generating QR…
+        </div>
+      )}
+      {label && (
+        <span className="max-w-[220px] text-center text-xs text-gray-500">{label}</span>
+      )}
+    </div>
+  );
+};
+
 const FlashIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     viewBox="0 0 24 24"
