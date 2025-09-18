@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { clampPosition, computeMovementBounds, getRelativePosition, measureDesktopRect } from '../../utils/windowBounds';
 
 export class Desktop extends Component {
     constructor() {
@@ -30,6 +31,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this._resizeFrame = null;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -89,6 +91,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        window.addEventListener('resize', this.handleDesktopResize);
     }
 
     componentWillUnmount() {
@@ -96,6 +99,11 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        window.removeEventListener('resize', this.handleDesktopResize);
+        if (this._resizeFrame) {
+            cancelAnimationFrame(this._resizeFrame);
+            this._resizeFrame = null;
+        }
     }
 
     checkForNewFolders = () => {
@@ -490,13 +498,61 @@ export class Desktop extends Component {
         return windowsJsx;
     }
 
-    updateWindowPosition = (id, x, y) => {
+    updateWindowPosition = (id, x, y, options = {}) => {
         const snap = this.props.snapEnabled
             ? (v) => Math.round(v / 8) * 8
             : (v) => v;
-        this.setState(prev => ({
-            window_positions: { ...prev.window_positions, [id]: { x: snap(x), y: snap(y) } }
-        }), this.saveSession);
+
+        let nextX = snap(x);
+        let nextY = snap(y);
+
+        const containerRect = options.containerRect ?? measureDesktopRect();
+        if (containerRect) {
+            const element = options.element ?? (typeof document !== 'undefined' ? document.getElementById(id) : null);
+            const windowRect = options.windowRect ?? element?.getBoundingClientRect();
+            const bounds = computeMovementBounds(containerRect, windowRect ? { width: windowRect.width, height: windowRect.height } : undefined);
+            const clamped = clampPosition({ x: nextX, y: nextY }, bounds);
+            nextX = clamped.x;
+            nextY = clamped.y;
+
+            if (element) {
+                element.style.transform = `translate(${nextX}px, ${nextY}px)`;
+                element.style.setProperty('--window-transform-x', `${nextX}px`);
+                element.style.setProperty('--window-transform-y', `${nextY}px`);
+            }
+        }
+
+        const finalX = nextX;
+        const finalY = nextY;
+
+        this.setState(prev => {
+            const previous = prev.window_positions[id];
+            if (previous && previous.x === finalX && previous.y === finalY) {
+                return null;
+            }
+            return {
+                window_positions: { ...prev.window_positions, [id]: { x: finalX, y: finalY } }
+            };
+        }, this.saveSession);
+    }
+
+    handleDesktopResize = () => {
+        if (typeof window === 'undefined') return;
+        if (this._resizeFrame) {
+            cancelAnimationFrame(this._resizeFrame);
+        }
+        this._resizeFrame = window.requestAnimationFrame(() => {
+            const containerRect = measureDesktopRect();
+            if (!containerRect) return;
+            const openWindows = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
+            openWindows.forEach(id => {
+                const element = document.getElementById(id);
+                if (!element) return;
+                const rect = element.getBoundingClientRect();
+                const position = getRelativePosition(rect, containerRect);
+                this.updateWindowPosition(id, position.x, position.y, { containerRect, windowRect: rect, element });
+            });
+        });
     }
 
     saveSession = () => {

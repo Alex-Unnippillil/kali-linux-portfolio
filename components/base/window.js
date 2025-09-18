@@ -7,6 +7,7 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import { clampPosition, computeMovementBounds, getRelativePosition, measureDesktopRect } from '../../utils/windowBounds';
 
 export class Window extends Component {
     constructor(props) {
@@ -92,14 +93,35 @@ export class Window extends Component {
     }
 
     resizeBoundries = () => {
+        const containerRect = measureDesktopRect();
+        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+        const baseWidth = containerRect?.width ?? viewportWidth;
+        const baseHeight = containerRect?.height ?? viewportHeight;
+
+        const node = typeof document !== 'undefined' ? document.getElementById(this.id) : null;
+        const nodeRect = node?.getBoundingClientRect();
+
+        const windowWidth = nodeRect?.width ?? (baseWidth * (this.state.width / 100));
+        const windowHeight = nodeRect?.height ?? (baseHeight * (this.state.height / 100));
+
+        const boundsRect = containerRect ?? { width: baseWidth, height: baseHeight };
+        const bounds = computeMovementBounds(boundsRect, { width: windowWidth, height: windowHeight });
+
+        if (node && containerRect) {
+            const relativePosition = getRelativePosition(nodeRect ?? node.getBoundingClientRect(), containerRect);
+            const clampedPosition = clampPosition(relativePosition, bounds);
+            if (relativePosition.x !== clampedPosition.x || relativePosition.y !== clampedPosition.y) {
+                node.style.transform = `translate(${clampedPosition.x}px, ${clampedPosition.y}px)`;
+            }
+            node.style.setProperty('--window-transform-x', `${clampedPosition.x}px`);
+            node.style.setProperty('--window-transform-y', `${clampedPosition.y}px`);
+        }
+
         this.setState({
             parentSize: {
-                height: window.innerHeight //parent height
-                    - (window.innerHeight * (this.state.height / 100.0))  // this window's height
-                    - 28 // some padding
-                ,
-                width: window.innerWidth // parent width
-                    - (window.innerWidth * (this.state.width / 100.0)) //this window's width
+                height: bounds.bottom,
+                width: bounds.right,
             }
         }, () => {
             if (this._uiExperiments) {
