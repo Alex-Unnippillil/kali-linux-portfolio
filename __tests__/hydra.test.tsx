@@ -75,6 +75,14 @@ describe('Hydra pause and resume', () => {
     });
     fireEvent.click(screen.getByText('Run Hydra'));
 
+    const runCall = (global.fetch as jest.Mock).mock.calls.find(
+      ([, options]) => options && typeof options.body === 'string' && options.body.includes('"target"')
+    );
+    expect(runCall).toBeTruthy();
+    const runBody = JSON.parse(runCall?.[1]?.body || '{}');
+    expect(runBody.concurrency).toBe(1);
+    expect(runBody.baseDelay).toBe(500);
+
     const pauseBtn = await screen.findByTestId('pause-button');
     fireEvent.click(pauseBtn);
     expect(global.fetch).toHaveBeenCalledWith(
@@ -84,10 +92,12 @@ describe('Hydra pause and resume', () => {
 
     const resumeBtn = await screen.findByTestId('resume-button');
     fireEvent.click(resumeBtn);
-    expect(global.fetch).toHaveBeenCalledWith(
-      '/api/hydra',
-      expect.objectContaining({ body: JSON.stringify({ action: 'resume' }) })
+    const resumeCall = (global.fetch as jest.Mock).mock.calls.find(
+      ([, options]) => options && typeof options.body === 'string' && options.body.includes('"resume"')
     );
+    expect(resumeCall).toBeTruthy();
+    const resumeBody = JSON.parse(resumeCall?.[1]?.body || '{}');
+    expect(resumeBody).toMatchObject({ action: 'resume', concurrency: 1, baseDelay: 500 });
 
     await act(async () => {
       runResolve();
@@ -133,10 +143,12 @@ describe('Hydra session restore', () => {
     unmount();
     render(<HydraApp />);
 
-    expect(global.fetch).toHaveBeenCalledWith(
-      '/api/hydra',
-      expect.objectContaining({ body: expect.stringContaining('resume') })
+    const resumeCall = (global.fetch as jest.Mock).mock.calls.find(
+      ([, options]) => options && typeof options.body === 'string' && options.body.includes('"resume"')
     );
+    expect(resumeCall).toBeTruthy();
+    const resumeBody = JSON.parse(resumeCall?.[1]?.body || '{}');
+    expect(resumeBody).toMatchObject({ resume: true, concurrency: 1, baseDelay: 500 });
 
     await act(async () => {
       runResolve();
