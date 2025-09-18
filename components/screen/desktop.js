@@ -55,6 +55,76 @@ export class Desktop extends Component {
         }
     }
 
+    getFallbackWindowBounds = () => {
+        if (typeof window === 'undefined') {
+            return { x: 0, y: 0, width: 0, height: 0 };
+        }
+        const viewportWidth = window.innerWidth || 0;
+        const viewportHeight = window.innerHeight || 0;
+        const width = Math.round(viewportWidth * 0.7);
+        const height = Math.round(viewportHeight * 0.7);
+        const x = Math.max(Math.round((viewportWidth - width) / 2), 0);
+        const y = Math.max(Math.round((viewportHeight - height) / 2), 0);
+        return { x, y, width, height };
+    }
+
+    validateWindowBounds = (raw) => {
+        const fallback = this.getFallbackWindowBounds();
+        if (!raw || typeof raw !== 'object') {
+            return fallback;
+        }
+
+        if (typeof window === 'undefined') {
+            return {
+                x: typeof raw.x === 'number' && Number.isFinite(raw.x) ? raw.x : fallback.x,
+                y: typeof raw.y === 'number' && Number.isFinite(raw.y) ? raw.y : fallback.y,
+                width: typeof raw.width === 'number' && Number.isFinite(raw.width) ? raw.width : fallback.width,
+                height: typeof raw.height === 'number' && Number.isFinite(raw.height) ? raw.height : fallback.height,
+            };
+        }
+
+        const viewportWidth = window.innerWidth || 0;
+        const viewportHeight = window.innerHeight || 0;
+
+        const parseNumber = (value) => {
+            if (typeof value === 'number') {
+                return Number.isFinite(value) ? value : null;
+            }
+            if (typeof value === 'string' && value.trim() !== '') {
+                const parsed = parseFloat(value);
+                return Number.isFinite(parsed) ? parsed : null;
+            }
+            return null;
+        };
+
+        const sanitizeSize = (value, fallbackValue, max) => {
+            const parsed = parseNumber(value);
+            if (parsed === null) return fallbackValue;
+            if (parsed <= 0) return fallbackValue;
+            if (max > 0 && parsed > max) return fallbackValue;
+            return parsed;
+        };
+
+        const width = sanitizeSize(raw.width, fallback.width, viewportWidth);
+        const height = sanitizeSize(raw.height, fallback.height, viewportHeight);
+
+        const maxX = viewportWidth ? Math.max(viewportWidth - width, 0) : null;
+        const maxY = viewportHeight ? Math.max(viewportHeight - height, 0) : null;
+
+        const sanitizePosition = (value, fallbackValue, max) => {
+            const parsed = parseNumber(value);
+            if (parsed === null) return fallbackValue;
+            if (parsed < 0) return fallbackValue;
+            if (typeof max === 'number' && parsed > max) return fallbackValue;
+            return parsed;
+        };
+
+        const x = sanitizePosition(raw.x, fallback.x, maxX);
+        const y = sanitizePosition(raw.y, fallback.y, maxY);
+
+        return { x, y, width, height };
+    }
+
     componentDidMount() {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
@@ -71,11 +141,13 @@ export class Desktop extends Component {
             }
 
             if (session.windows && session.windows.length) {
-                session.windows.forEach(({ id, x, y }) => {
-                    positions[id] = { x, y };
+                session.windows.forEach((win) => {
+                    if (!win || !win.id) return;
+                    const safe = this.validateWindowBounds(win);
+                    positions[win.id] = safe;
                 });
                 this.setState({ window_positions: positions }, () => {
-                    session.windows.forEach(({ id }) => this.openApp(id));
+                    session.windows.forEach(({ id }) => { if (id) this.openApp(id); });
                 });
             } else {
                 this.openApp('about-alex');
@@ -495,7 +567,14 @@ export class Desktop extends Component {
             ? (v) => Math.round(v / 8) * 8
             : (v) => v;
         this.setState(prev => ({
-            window_positions: { ...prev.window_positions, [id]: { x: snap(x), y: snap(y) } }
+            window_positions: {
+                ...prev.window_positions,
+                [id]: {
+                    ...(prev.window_positions[id] || {}),
+                    x: snap(x),
+                    y: snap(y)
+                }
+            }
         }), this.saveSession);
     }
 
@@ -504,8 +583,12 @@ export class Desktop extends Component {
         const openWindows = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
         const windows = openWindows.map(id => ({
             id,
-            x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
-            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10
+            ...this.validateWindowBounds({
+                x: this.state.window_positions[id]?.x ?? 60,
+                y: this.state.window_positions[id]?.y ?? 10,
+                width: this.state.window_positions[id]?.width,
+                height: this.state.window_positions[id]?.height,
+            })
         }));
         const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
         this.props.setSession({ ...this.props.session, windows, dock });

@@ -5,6 +5,8 @@ export interface SessionWindow {
   id: string;
   x: number;
   y: number;
+  width?: number;
+  height?: number;
 }
 
 export interface DesktopSession {
