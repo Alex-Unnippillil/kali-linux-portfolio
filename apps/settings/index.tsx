@@ -12,6 +12,14 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import {
+  useAccessibilityPrefs,
+  HOVER_ZOOM_MIN,
+  HOVER_ZOOM_MAX,
+  FULLSCREEN_ZOOM_MIN,
+  FULLSCREEN_ZOOM_MAX,
+  type ColorFilter,
+} from "../../hooks/useAccessibilityPrefs";
 
 export default function Settings() {
   const {
@@ -32,6 +40,21 @@ export default function Settings() {
     theme,
     setTheme,
   } = useSettings();
+  const {
+    hoverLensEnabled,
+    fullScreenMagnifierEnabled,
+    hoverZoom,
+    fullscreenZoom,
+    filterStyle,
+    toggleHoverLens,
+    toggleFullscreenMagnifier,
+    setHoverZoom,
+    setFullscreenZoom,
+    toggleFilter,
+    isFilterActive,
+    reset: resetVisualAssist,
+    shortcuts: accessibilityShortcuts,
+  } = useAccessibilityPrefs();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const tabs = [
@@ -267,6 +290,140 @@ export default function Settings() {
             >
               Edit Shortcuts
             </button>
+          </div>
+          <div className="border-t border-gray-900 mt-6 pt-6 px-4 space-y-4">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-ubt-grey">
+                Visual Assist
+              </h3>
+              <p className="text-sm text-ubt-grey/80">
+                Magnify content and apply color filters for additional clarity.
+              </p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-ubt-grey">Hover lens</span>
+                  <ToggleSwitch
+                    checked={hoverLensEnabled}
+                    onChange={toggleHoverLens}
+                    ariaLabel="Hover lens"
+                  />
+                </div>
+                <label className="block text-left text-sm text-ubt-grey">
+                  Lens zoom
+                  <input
+                    type="range"
+                    min={HOVER_ZOOM_MIN}
+                    max={HOVER_ZOOM_MAX}
+                    step={0.1}
+                    value={hoverZoom}
+                    onChange={(event) =>
+                      setHoverZoom(parseFloat(event.target.value))
+                    }
+                    className="mt-1 w-full ubuntu-slider"
+                    aria-label="Hover lens zoom"
+                    disabled={!hoverLensEnabled}
+                  />
+                  <span className="text-xs text-ubt-grey/70">
+                    {hoverZoom.toFixed(1)}x magnification
+                  </span>
+                </label>
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-ubt-grey">Full-screen magnifier</span>
+                  <ToggleSwitch
+                    checked={fullScreenMagnifierEnabled}
+                    onChange={toggleFullscreenMagnifier}
+                    ariaLabel="Full-screen magnifier"
+                  />
+                </div>
+                <label className="block text-left text-sm text-ubt-grey">
+                  Magnifier zoom
+                  <input
+                    type="range"
+                    min={FULLSCREEN_ZOOM_MIN}
+                    max={FULLSCREEN_ZOOM_MAX}
+                    step={0.1}
+                    value={fullscreenZoom}
+                    onChange={(event) =>
+                      setFullscreenZoom(parseFloat(event.target.value))
+                    }
+                    className="mt-1 w-full ubuntu-slider"
+                    aria-label="Full-screen magnifier zoom"
+                    disabled={!fullScreenMagnifierEnabled}
+                  />
+                  <span className="text-xs text-ubt-grey/70">
+                    {fullscreenZoom.toFixed(1)}x magnification
+                  </span>
+                </label>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <span className="block text-sm text-ubt-grey mb-2">
+                    Color filters
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {(
+                      [
+                        { key: "protanopia", label: "Protanopia" },
+                        { key: "deuteranopia", label: "Deuteranopia" },
+                        { key: "tritanopia", label: "Tritanopia" },
+                        { key: "grayscale", label: "Grayscale" },
+                      ] as { key: ColorFilter; label: string }[]
+                    ).map((option) => (
+                      <button
+                        key={option.key}
+                        type="button"
+                        onClick={() => toggleFilter(option.key)}
+                        className={`px-3 py-2 rounded border transition-colors ${
+                          isFilterActive(option.key)
+                            ? "bg-ub-orange text-white border-ub-orange"
+                            : "bg-ub-cool-grey text-ubt-grey border-gray-700"
+                        }`}
+                        aria-pressed={isFilterActive(option.key)}
+                        aria-label={`Toggle ${option.label} filter`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div
+                  className="rounded border border-gray-700 bg-black/40 p-4 text-left"
+                  style={{
+                    filter: filterStyle === "none" ? undefined : filterStyle,
+                  }}
+                  aria-label="Color filter preview"
+                >
+                  <p className="text-base font-semibold text-white">
+                    Visual Assist preview
+                  </p>
+                  <p className="mt-1 text-sm text-ubt-grey">
+                    Explore the interface with your selected filters to ensure
+                    comfortable contrast.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <button
+                onClick={resetVisualAssist}
+                className="rounded bg-gray-800 px-3 py-2 text-sm text-white hover:bg-gray-700"
+                type="button"
+              >
+                Reset Visual Assist
+              </button>
+              <ul className="flex flex-wrap gap-3 text-xs text-ubt-grey/80">
+                {accessibilityShortcuts.map((shortcut) => (
+                  <li key={shortcut.id} className="flex items-center gap-1">
+                    <span>{shortcut.description}:</span>
+                    <kbd className="rounded bg-gray-800 px-2 py-1 font-mono text-white">
+                      {shortcut.combo}
+                    </kbd>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </>
       )}
