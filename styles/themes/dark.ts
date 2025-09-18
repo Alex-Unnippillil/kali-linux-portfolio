@@ -1,0 +1,46 @@
+import { ThemeDefinition } from './types';
+
+export const darkTheme: ThemeDefinition = {
+  metadata: {
+    id: 'dark',
+    name: 'Obsidian Terminal',
+    description: 'Matte black surfaces with neon lilac highlights for late-night operators.',
+    version: '1.0.0',
+    mode: 'dark',
+    tags: ['dark', 'high-contrast'],
+    createdAt: '2024-01-01T00:00:00.000Z',
+    attribution: {
+      author: 'Kali Linux Portfolio Maintainers',
+      license: 'CC BY-SA 4.0',
+      source: 'Custom dark variant tuned for WCAG AA compliance',
+    },
+  },
+  colors: {
+    background: '#000000',
+    surface: '#121212',
+    surfaceAlt: '#0a0a0a',
+    muted: '#1f1f1f',
+    text: '#e5e5e5',
+    textMuted: '#bdbdbd',
+    accent: '#bb86fc',
+    accentMuted: '#6c4ab6',
+    accentContrast: '#000000',
+    border: '#333333',
+    borderStrong: '#6c4ab6',
+    focus: '#bb86fc',
+    selection: '#1e88e5',
+    success: '#4caf50',
+    warning: '#ff9800',
+    danger: '#ef5350',
+    info: '#64b5f6',
+    terminal: '#00ff00',
+  },
+  typography: {
+    fontFamily: "'Ubuntu', sans-serif",
+    headingFamily: "'Ubuntu', sans-serif",
+    monospaceFamily: "'Fira Code', 'Ubuntu Mono', monospace",
+    baseFontSize: '16px',
+    lineHeight: 1.6,
+    letterSpacing: '0.01em',
+  },
+};

@@ -12,6 +12,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import ThemeGallery from "../../components/apps/theme-gallery/ThemeGallery";
 
 export default function Settings() {
   const {
@@ -29,7 +30,6 @@ export default function Settings() {
     setHighContrast,
     haptics,
     setHaptics,
-    theme,
     setTheme,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -121,18 +121,8 @@ export default function Settings() {
               backgroundPosition: "center center",
             }}
           ></div>
-          <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey">Theme:</label>
-            <select
-              value={theme}
-              onChange={(e) => setTheme(e.target.value)}
-              className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
-            >
-              <option value="default">Default</option>
-              <option value="dark">Dark</option>
-              <option value="neon">Neon</option>
-              <option value="matrix">Matrix</option>
-            </select>
+          <div className="px-4 pt-4">
+            <ThemeGallery />
           </div>
           <div className="flex justify-center my-4">
             <label className="mr-2 text-ubt-grey">Accent:</label>
