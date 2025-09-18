@@ -1,0 +1,16 @@
+.container {
+  position: relative;
+  color: inherit;
+  background-color: rgba(15, 19, 23,
+      var(--terminal-opacity-current, var(--terminal-opacity, 0.85)));
+  border: 1px solid var(--color-border);
+  backdrop-filter: blur(var(--terminal-backdrop-blur, 12px));
+  -webkit-backdrop-filter: blur(var(--terminal-backdrop-blur, 12px));
+  box-shadow: inset 0 0 0 9999px rgba(0, 0, 0,
+      var(--terminal-overlay-opacity, 0.2));
+  background-clip: padding-box;
+  transition:
+    background-color var(--motion-fast, 150ms) ease,
+    box-shadow var(--motion-fast, 150ms) ease,
+    backdrop-filter var(--motion-fast, 150ms) ease;
+}

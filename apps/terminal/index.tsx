@@ -88,6 +88,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const filesRef = useRef<Record<string, string>>(files);
   const aliasesRef = useRef<Record<string, string>>({});
   const historyRef = useRef<string[]>([]);
+  const transparencyHydrated = useRef(false);
   const contextRef = useRef<CommandContext>({
     writeLine: () => {},
     files: filesRef.current,
@@ -101,6 +102,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [transparencyEnabled, setTransparencyEnabled] = useState(true);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
@@ -123,6 +125,23 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     '#55FFFF',
     '#FFFFFF',
   ];
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = window.localStorage.getItem('terminal-transparency');
+    if (stored === 'disabled') {
+      setTransparencyEnabled(false);
+    }
+    transparencyHydrated.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !transparencyHydrated.current) return;
+    window.localStorage.setItem(
+      'terminal-transparency',
+      transparencyEnabled ? 'enabled' : 'disabled',
+    );
+  }, [transparencyEnabled]);
 
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
@@ -446,7 +465,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       )}
       {settingsOpen && (
         <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-10">
-          <div className="bg-gray-900 p-4 rounded space-y-4">
+          <div className="bg-gray-900 p-4 rounded space-y-4 w-[min(90vw,24rem)]">
             <div className="grid grid-cols-8 gap-2">
               {ansiColors.map((c, i) => (
                 <div key={i} className="h-4 w-4 rounded" style={{ backgroundColor: c }} />
@@ -457,6 +476,27 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               <span className="text-green-400">script.sh</span>{' '}
               <span className="text-gray-300">README.md</span>
             </pre>
+            <div className="space-y-2">
+              <label
+                htmlFor="terminal-transparency-toggle"
+                className="flex items-center justify-between gap-4 text-sm text-white"
+              >
+                <span>Enable transparency</span>
+                <input
+                  id="terminal-transparency-toggle"
+                  type="checkbox"
+                  className="h-4 w-4"
+                  aria-describedby="terminal-transparency-help"
+                  checked={transparencyEnabled}
+                  onChange={(event) =>
+                    setTransparencyEnabled(event.target.checked)
+                  }
+                />
+              </label>
+              <p id="terminal-transparency-help" className="text-xs text-gray-400">
+                Turn off to use a solid background for improved readability.
+              </p>
+            </div>
             <div className="flex justify-end gap-2">
               <button
                 className="px-2 py-1 bg-gray-700 rounded"
@@ -501,6 +541,13 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               height: '24em',
               fontSize: 'clamp(1rem, 0.6vw + 1rem, 1.1rem)',
               lineHeight: 1.4,
+              ...(transparencyEnabled
+                ? {}
+                : ({
+                    '--terminal-opacity-current': '1',
+                    '--terminal-overlay-opacity': '0',
+                    '--terminal-backdrop-blur': '0px',
+                  } as React.CSSProperties)),
             }}
           />
           {overflow.top && (
