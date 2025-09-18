@@ -3,6 +3,9 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import KeywordSearchPanel from './KeywordSearchPanel';
 import demoArtifacts from './data/sample-artifacts.json';
+import FilePreview, {
+  SUPPORTED_IMAGE_TYPES,
+} from '../../../apps/autopsy/components/FilePreview';
 import ReportExport from '../../../apps/autopsy/components/ReportExport';
 import demoCase from '../../../apps/autopsy/data/case.json';
 
@@ -13,6 +16,61 @@ const escapeFilename = (str = '') =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+
+
+const MAX_PREVIEW_CACHE = 12;
+const MAX_TEXT_PREVIEW = 4000;
+
+const FILE_TYPE_LABELS = {
+  txt: 'Text document',
+  log: 'Log file',
+  md: 'Markdown document',
+  json: 'JSON data',
+  csv: 'CSV data',
+  png: 'PNG image',
+  jpg: 'JPEG image',
+  jpeg: 'JPEG image',
+  gif: 'GIF image',
+  bmp: 'Bitmap image',
+  webp: 'WebP image',
+  pdf: 'PDF document',
+};
+
+const IMAGE_MIME_TYPES = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  bmp: 'image/bmp',
+  webp: 'image/webp',
+};
+
+const getExtension = (name = '') => {
+  const parts = name.split('.');
+  if (parts.length < 2) return '';
+  return parts.pop().toLowerCase();
+};
+
+const describeFileType = (extension) =>
+  FILE_TYPE_LABELS[extension] ||
+  (extension ? `${extension.toUpperCase()} file` : 'Unknown');
+
+const getImageMimeType = (extension) =>
+  IMAGE_MIME_TYPES[extension] || 'application/octet-stream';
+
+const isTypingTarget = (target) => {
+  if (!target || typeof target !== 'object') return false;
+  const element = target;
+  if (element.isContentEditable) return true;
+  const tagName = typeof element.tagName === 'string' ? element.tagName : '';
+  return (
+    tagName === 'INPUT' ||
+    tagName === 'TEXTAREA' ||
+    tagName === 'SELECT' ||
+    tagName === 'BUTTON' ||
+    tagName === 'A'
+  );
+};
 
 
 function Timeline({ events, onSelect }) {
@@ -355,10 +413,58 @@ function Autopsy({ initialArtifacts = null }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [keyword, setKeyword] = useState('');
   const [previewTab, setPreviewTab] = useState('hex');
+  const [isPreviewOpen, setIsPreviewOpen] = useState(true);
   const [timelineEvents] = useState(
     demoCase.timeline.map((t) => ({ name: t.event, timestamp: t.timestamp }))
   );
   const parseWorkerRef = useRef(null);
+  const previewCacheRef = useRef(new Map());
+
+  const releasePreviewCache = useCallback(() => {
+    const cache = previewCacheRef.current;
+    if (!cache) return;
+    if (typeof URL !== 'undefined') {
+      cache.forEach((entry) => {
+        if (entry?.imageUrl) {
+          URL.revokeObjectURL(entry.imageUrl);
+        }
+      });
+    }
+    cache.clear();
+  }, []);
+
+  const cachePreviewData = (key, data) => {
+    const cache = previewCacheRef.current;
+    const existing = cache.get(key);
+    if (
+      existing &&
+      existing.imageUrl &&
+      existing.imageUrl !== data.imageUrl &&
+      typeof URL !== 'undefined'
+    ) {
+      URL.revokeObjectURL(existing.imageUrl);
+    }
+    cache.set(key, data);
+    while (cache.size > MAX_PREVIEW_CACHE) {
+      const oldestKey = cache.keys().next().value;
+      const oldest = cache.get(oldestKey);
+      if (oldest?.imageUrl && typeof URL !== 'undefined') {
+        URL.revokeObjectURL(oldest.imageUrl);
+      }
+      cache.delete(oldestKey);
+    }
+  };
+
+  const applyPreviewState = (cacheKey, data) => {
+    setSelectedFile(data);
+    setIsPreviewOpen(true);
+    setPreviewTab((prev) => {
+      if (!data.availableTabs.includes(prev) || selectedFile?.id !== cacheKey) {
+        return 'hex';
+      }
+      return prev;
+    });
+  };
 
   useEffect(() => {
     fetch('/plugin-marketplace.json')
@@ -366,6 +472,20 @@ function Autopsy({ initialArtifacts = null }) {
       .then(setPlugins)
       .catch(() => setPlugins([]));
   }, []);
+
+  useEffect(() => {
+    return () => {
+      releasePreviewCache();
+    };
+  }, [releasePreviewCache]);
+
+  useEffect(() => {
+    if (!fileTree) return;
+    releasePreviewCache();
+    setSelectedFile(null);
+    setPreviewTab('hex');
+    setIsPreviewOpen(true);
+  }, [fileTree, releasePreviewCache]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof Worker === 'function') {
@@ -495,63 +615,105 @@ function Autopsy({ initialArtifacts = null }) {
   const decodeBase64 = (b64) =>
     Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 
-  const selectFile = async (file) => {
+  const selectFile = async (file, filePath = file.name) => {
+    const cacheKey = filePath || file.name;
+    const cached = previewCacheRef.current.get(cacheKey);
+    if (cached) {
+      applyPreviewState(cacheKey, cached);
+      return;
+    }
+
     try {
       const bytes = decodeBase64(file.content || '');
       const hex = bufferToHex(bytes);
-      const strings = new TextDecoder()
-        .decode(bytes)
-        .replace(/[^\x20-\x7E]+/g, ' ');
+      const decoder =
+        typeof TextDecoder !== 'undefined' ? new TextDecoder() : null;
+      const decodedStrings = decoder
+        ? decoder.decode(bytes).replace(/[^\x20-\x7E]+/g, ' ')
+        : '';
+      const strings =
+        decodedStrings.length > MAX_TEXT_PREVIEW
+          ? `${decodedStrings.slice(0, MAX_TEXT_PREVIEW)}…`
+          : decodedStrings;
+      const extension = getExtension(file.name);
+      const type = describeFileType(extension);
+      const size = bytes.length;
+
       let hash = '';
-      if (crypto && crypto.subtle) {
-        const buf = await crypto.subtle.digest('SHA-256', bytes);
-        hash = bufferToHex(new Uint8Array(buf)).replace(/ /g, '');
+      if (typeof crypto !== 'undefined' && crypto.subtle) {
+        try {
+          const buf = await crypto.subtle.digest('SHA-256', bytes);
+          hash = bufferToHex(new Uint8Array(buf)).replace(/ /g, '');
+        } catch {
+          hash = '';
+        }
       }
-      const known = hashDB[hash];
+      const known = hash ? hashDB[hash] : null;
+
       let imageUrl = null;
-      const isImage = /\.(png|jpe?g|gif|bmp|webp)$/i.test(file.name);
+      const isImage = extension && SUPPORTED_IMAGE_TYPES.includes(extension);
       if (isImage && typeof URL !== 'undefined') {
         try {
-          imageUrl = URL.createObjectURL(new Blob([bytes]));
+          const arrayBuffer =
+            bytes.byteOffset === 0 &&
+            bytes.byteLength === bytes.buffer.byteLength
+              ? bytes.buffer
+              : bytes.buffer.slice(
+                  bytes.byteOffset,
+                  bytes.byteOffset + bytes.byteLength
+                );
+          const blob = new Blob([arrayBuffer], {
+            type: getImageMimeType(extension),
+          });
+          imageUrl = URL.createObjectURL(blob);
         } catch {
           imageUrl = null;
         }
       }
-      setSelectedFile({
+
+      const availableTabs = ['hex', 'text'];
+      if (imageUrl) availableTabs.push('image');
+
+      const previewData = {
+        id: cacheKey,
         name: file.name,
         hex,
         strings,
         hash,
         known,
         imageUrl,
-      });
-      setPreviewTab('hex');
+        size,
+        type,
+        availableTabs,
+      };
+
+      cachePreviewData(cacheKey, previewData);
+      applyPreviewState(cacheKey, previewData);
     } catch (e) {
-      setSelectedFile({
+      const fallback = {
+        id: cacheKey,
         name: file.name,
         hex: '',
         strings: '',
         hash: '',
         known: null,
         imageUrl: null,
-      });
-      setPreviewTab('hex');
+        size: 0,
+        type: describeFileType(getExtension(file.name)),
+        availableTabs: ['hex', 'text'],
+      };
+      cachePreviewData(cacheKey, fallback);
+      applyPreviewState(cacheKey, fallback);
     }
   };
 
-  useEffect(() => {
-    return () => {
-      if (selectedFile && selectedFile.imageUrl) {
-        URL.revokeObjectURL(selectedFile.imageUrl);
-      }
-    };
-  }, [selectedFile]);
-
-  const renderTree = (node) => {
+  const renderTree = (node, parentPath = '') => {
     if (!node) return null;
     const isFolder = !!node.children;
+    const nodePath = parentPath ? `${parentPath}/${node.name}` : node.name;
+    const isSelected = selectedFile?.id === nodePath;
     return (
-      <div key={node.name} className="pl-2">
+      <div key={nodePath} className="pl-2">
         <div className="flex items-center h-8">
           <span className="mr-1">{isFolder ? '📁' : '📄'}</span>
           {isFolder ? (
@@ -559,8 +721,11 @@ function Autopsy({ initialArtifacts = null }) {
           ) : (
             <button
               type="button"
-              onClick={() => selectFile(node)}
-              className="text-blue-400 underline"
+              onClick={() => selectFile(node, nodePath)}
+              className={`underline ${
+                isSelected ? 'text-ub-orange font-semibold' : 'text-blue-400'
+              }`}
+              aria-pressed={isSelected}
             >
               {node.name}
             </button>
@@ -568,12 +733,31 @@ function Autopsy({ initialArtifacts = null }) {
         </div>
         {isFolder && (
           <div className="pl-4">
-            {node.children.map((c) => renderTree(c))}
+            {node.children.map((c) => renderTree(c, nodePath))}
           </div>
         )}
       </div>
     );
   };
+
+
+  useEffect(() => {
+    if (!selectedFile) return undefined;
+    const handleKeydown = (event) => {
+      if (
+        event.code !== 'Space' &&
+        event.key !== ' ' &&
+        event.key !== 'Spacebar'
+      ) {
+        return;
+      }
+      if (isTypingTarget(event.target)) return;
+      event.preventDefault();
+      setIsPreviewOpen((prev) => !prev);
+    };
+    window.addEventListener('keydown', handleKeydown);
+    return () => window.removeEventListener('keydown', handleKeydown);
+  }, [selectedFile]);
 
 
   useEffect(() => {
@@ -720,66 +904,13 @@ function Autopsy({ initialArtifacts = null }) {
                 {renderTree(fileTree)}
               </div>
               {selectedFile && (
-                <div className="flex-grow bg-ub-grey p-2 rounded text-xs">
-                  <div className="font-bold mb-1">{selectedFile.name}</div>
-                  <div className="mb-1">SHA-256: {selectedFile.hash}</div>
-                  {selectedFile.known && (
-                    <div className="mb-1 text-green-400">
-                      Known: {selectedFile.known}
-                    </div>
-                  )}
-                  <div className="flex space-x-2 mb-2">
-                    <button
-                      className={`${
-                        previewTab === 'hex'
-                          ? 'bg-ub-orange text-black'
-                          : 'bg-ub-cool-grey'
-                      } px-2 py-1 rounded`}
-                      onClick={() => setPreviewTab('hex')}
-                    >
-                      Hex
-                    </button>
-                    <button
-                      className={`${
-                        previewTab === 'text'
-                          ? 'bg-ub-orange text-black'
-                          : 'bg-ub-cool-grey'
-                      } px-2 py-1 rounded`}
-                      onClick={() => setPreviewTab('text')}
-                    >
-                      Text
-                    </button>
-                    {selectedFile.imageUrl && (
-                      <button
-                        className={`${
-                          previewTab === 'image'
-                            ? 'bg-ub-orange text-black'
-                            : 'bg-ub-cool-grey'
-                        } px-2 py-1 rounded`}
-                        onClick={() => setPreviewTab('image')}
-                      >
-                        Image
-                      </button>
-                    )}
-                  </div>
-                  {previewTab === 'hex' && (
-                    <pre className="font-mono whitespace-pre-wrap break-all">
-                      {selectedFile.hex}
-                    </pre>
-                  )}
-                  {previewTab === 'text' && (
-                    <pre className="font-mono whitespace-pre-wrap break-all">
-                      {selectedFile.strings}
-                    </pre>
-                  )}
-                  {previewTab === 'image' && selectedFile.imageUrl && (
-                    <img
-                      src={selectedFile.imageUrl}
-                      alt={selectedFile.name}
-                      className="max-w-full h-auto"
-                    />
-                  )}
-                </div>
+                <FilePreview
+                  file={selectedFile}
+                  activeTab={previewTab}
+                  onTabChange={setPreviewTab}
+                  isOpen={isPreviewOpen}
+                  onToggle={() => setIsPreviewOpen((prev) => !prev)}
+                />
               )}
             </div>
           )}
