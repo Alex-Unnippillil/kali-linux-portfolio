@@ -1,6 +1,13 @@
 'use client';
 
-import { useRef, useState, useCallback, useEffect, ChangeEvent } from 'react';
+import {
+  useRef,
+  useState,
+  useCallback,
+  useEffect,
+  ChangeEvent,
+  useMemo,
+} from 'react';
 import QRCode from 'qrcode';
 import Presets from './components/Presets';
 import Scan from './components/Scan';
@@ -10,18 +17,147 @@ import {
   saveLastGeneration,
   saveLastScan,
 } from '../../utils/qrStorage';
+import { safeLocalStorage } from '../../utils/safeStorage';
+
+type StylePreferences = {
+  size: number;
+  margin: number;
+  ecc: 'L' | 'M' | 'Q' | 'H';
+  foregroundColor: string;
+  backgroundColor: string;
+};
+
+const STYLE_STORAGE_KEY = 'qr-style-preferences';
+
+const defaultStylePreferences: StylePreferences = {
+  size: 256,
+  margin: 1,
+  ecc: 'M',
+  foregroundColor: '#000000',
+  backgroundColor: '#ffffff',
+};
+
+const parseHexChannel = (value: string) => {
+  const channel = Number.parseInt(value, 16);
+  return Number.isNaN(channel) ? 0 : channel;
+};
+
+const hexToRgb = (hex: string): [number, number, number] => {
+  const normalized = hex.replace('#', '');
+  if (normalized.length === 3) {
+    const r = parseHexChannel(normalized[0] + normalized[0]);
+    const g = parseHexChannel(normalized[1] + normalized[1]);
+    const b = parseHexChannel(normalized[2] + normalized[2]);
+    return [r, g, b];
+  }
+
+  if (normalized.length === 6) {
+    const r = parseHexChannel(normalized.slice(0, 2));
+    const g = parseHexChannel(normalized.slice(2, 4));
+    const b = parseHexChannel(normalized.slice(4, 6));
+    return [r, g, b];
+  }
+
+  return [0, 0, 0];
+};
+
+const relativeLuminance = (hex: string) => {
+  const [r, g, b] = hexToRgb(hex).map((channel) => {
+    const normalized = channel / 255;
+    return normalized <= 0.03928
+      ? normalized / 12.92
+      : Math.pow((normalized + 0.055) / 1.055, 2.4);
+  });
+
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+
+const calculateContrastRatio = (foreground: string, background: string) => {
+  const l1 = relativeLuminance(foreground);
+  const l2 = relativeLuminance(background);
+  const [lighter, darker] = l1 >= l2 ? [l1, l2] : [l2, l1];
+  const ratio = (lighter + 0.05) / (darker + 0.05);
+  return Number.isFinite(ratio) ? ratio : 1;
+};
+
+const readStylePreferences = (): StylePreferences => {
+  if (!safeLocalStorage) return defaultStylePreferences;
+
+  try {
+    const stored = safeLocalStorage.getItem(STYLE_STORAGE_KEY);
+    if (!stored) return defaultStylePreferences;
+
+    const parsed = JSON.parse(stored) as Partial<StylePreferences>;
+    const eccValues: StylePreferences['ecc'][] = ['L', 'M', 'Q', 'H'];
+
+    return {
+      size:
+        typeof parsed.size === 'number' ? parsed.size : defaultStylePreferences.size,
+      margin:
+        typeof parsed.margin === 'number' ? parsed.margin : defaultStylePreferences.margin,
+      ecc: eccValues.includes(parsed.ecc as StylePreferences['ecc'])
+        ? (parsed.ecc as StylePreferences['ecc'])
+        : defaultStylePreferences.ecc,
+      foregroundColor:
+        typeof parsed.foregroundColor === 'string'
+          ? parsed.foregroundColor
+          : defaultStylePreferences.foregroundColor,
+      backgroundColor:
+        typeof parsed.backgroundColor === 'string'
+          ? parsed.backgroundColor
+          : defaultStylePreferences.backgroundColor,
+    };
+  } catch {
+    return defaultStylePreferences;
+  }
+};
 
 export default function QR() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const initialPreferencesRef = useRef<StylePreferences>();
+
+  if (!initialPreferencesRef.current) {
+    initialPreferencesRef.current = readStylePreferences();
+  }
+
+  const initialPreferences = initialPreferencesRef.current as StylePreferences;
+
   const [payload, setPayload] = useState('');
   const [mode, setMode] = useState<'generate' | 'scan'>('generate');
-  const [size, setSize] = useState(256);
-  const [margin, setMargin] = useState(1);
-  const [ecc, setEcc] = useState<'L' | 'M' | 'Q' | 'H'>('M');
+  const [size, setSize] = useState(initialPreferences.size);
+  const [margin, setMargin] = useState(initialPreferences.margin);
+  const [ecc, setEcc] = useState<'L' | 'M' | 'Q' | 'H'>(initialPreferences.ecc);
+  const [foregroundColor, setForegroundColor] = useState(
+    initialPreferences.foregroundColor,
+  );
+  const [backgroundColor, setBackgroundColor] = useState(
+    initialPreferences.backgroundColor,
+  );
   const [logo, setLogo] = useState<string | null>(null);
   const [scanResult, setScanResult] = useState('');
   const [lastGen, setLastGen] = useState('');
   const [lastScan, setLastScan] = useState('');
+
+  useEffect(() => {
+    if (!safeLocalStorage) return;
+
+    const preferences: StylePreferences = {
+      size,
+      margin,
+      ecc,
+      foregroundColor,
+      backgroundColor,
+    };
+
+    safeLocalStorage.setItem(STYLE_STORAGE_KEY, JSON.stringify(preferences));
+  }, [size, margin, ecc, foregroundColor, backgroundColor]);
+
+  const contrastRatio = useMemo(
+    () => calculateContrastRatio(foregroundColor, backgroundColor),
+    [foregroundColor, backgroundColor],
+  );
+  const formattedContrast = contrastRatio.toFixed(2);
+  const isLowContrast = contrastRatio < 4.5;
 
   useEffect(() => {
     setLastGen(loadLastGeneration());
@@ -69,6 +205,10 @@ export default function QR() {
       width: size,
       type: 'svg',
       errorCorrectionLevel: ecc,
+      color: {
+        dark: foregroundColor,
+        light: backgroundColor,
+      },
     });
     if (logo) {
       const imgSize = size * 0.2;
@@ -83,7 +223,7 @@ export default function QR() {
     link.download = `qr-${size}.svg`;
     link.click();
     URL.revokeObjectURL(url);
-  }, [payload, size, margin, ecc, logo]);
+  }, [payload, size, margin, ecc, logo, foregroundColor, backgroundColor]);
 
   return (
     <div className="p-4 space-y-4 text-white bg-ub-cool-grey h-full overflow-auto">
@@ -110,7 +250,11 @@ export default function QR() {
 
       <div className="w-64 aspect-square mx-auto">
         {mode === 'generate' ? (
-          <canvas ref={canvasRef} className="w-full h-full bg-white" />
+          <canvas
+            ref={canvasRef}
+            className="w-full h-full rounded"
+            style={{ backgroundColor }}
+          />
         ) : (
           <Scan onResult={setScanResult} />
         )}
@@ -125,6 +269,8 @@ export default function QR() {
             margin={margin}
             ecc={ecc}
             logo={logo}
+            foregroundColor={foregroundColor}
+            backgroundColor={backgroundColor}
           />
           <div className="flex items-center gap-2 flex-wrap">
             <label htmlFor="qr-size" className="text-sm flex items-center gap-1">
@@ -178,6 +324,40 @@ export default function QR() {
                 className="ml-1 rounded p-1 text-black"
               />
             </label>
+            <label
+              htmlFor="qr-foreground"
+              className="text-sm flex items-center gap-1"
+            >
+              Foreground color
+              <input
+                id="qr-foreground"
+                type="color"
+                value={foregroundColor}
+                onChange={(e) => setForegroundColor(e.target.value)}
+                className="ml-1 h-8 w-12 cursor-pointer rounded border border-gray-500 bg-transparent"
+              />
+            </label>
+            <label
+              htmlFor="qr-background"
+              className="text-sm flex items-center gap-1"
+            >
+              Background color
+              <input
+                id="qr-background"
+                type="color"
+                value={backgroundColor}
+                onChange={(e) => setBackgroundColor(e.target.value)}
+                className="ml-1 h-8 w-12 cursor-pointer rounded border border-gray-500 bg-transparent"
+              />
+            </label>
+            <div className="text-xs leading-tight text-gray-300 max-w-xs">
+              <p>{`Contrast ratio ${formattedContrast}:1 (WCAG)`}</p>
+              {isLowContrast && (
+                <p className="text-yellow-300">
+                  Warning: Low contrast may impact scanning. Aim for at least 4.5:1.
+                </p>
+              )}
+            </div>
             {logo && (
               <button
                 type="button"
