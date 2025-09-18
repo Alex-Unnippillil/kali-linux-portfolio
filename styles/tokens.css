@@ -33,13 +33,41 @@
   --game-color-warning: #d97706;
   --game-color-danger: #b91c1c;
 
-  /* Spacing scale */
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.5rem;
-  --space-6: 2rem;
+  /* Spacing scale (4px increments) */
+  --space-unit: 0.25rem;
+  --space-0: 0px;
+  --space-1: calc(var(--space-unit) * 1);
+  --space-2: calc(var(--space-unit) * 2);
+  --space-3: calc(var(--space-unit) * 3);
+  --space-4: calc(var(--space-unit) * 4);
+  --space-5: calc(var(--space-unit) * 5);
+  --space-6: calc(var(--space-unit) * 6);
+  --space-7: calc(var(--space-unit) * 7);
+  --space-8: calc(var(--space-unit) * 8);
+  --space-9: calc(var(--space-unit) * 9);
+  --space-10: calc(var(--space-unit) * 10);
+  --space-11: calc(var(--space-unit) * 11);
+  --space-12: calc(var(--space-unit) * 12);
+  --space-13: calc(var(--space-unit) * 13);
+  --space-14: calc(var(--space-unit) * 14);
+  --space-15: calc(var(--space-unit) * 15);
+  --space-16: calc(var(--space-unit) * 16);
+  --space-17: calc(var(--space-unit) * 17);
+  --space-18: calc(var(--space-unit) * 18);
+  --space-19: calc(var(--space-unit) * 19);
+  --space-20: calc(var(--space-unit) * 20);
+  --space-21: calc(var(--space-unit) * 21);
+  --space-22: calc(var(--space-unit) * 22);
+  --space-23: calc(var(--space-unit) * 23);
+  --space-24: calc(var(--space-unit) * 24);
+  --space-25: calc(var(--space-unit) * 25);
+  --space-26: calc(var(--space-unit) * 26);
+  --space-27: calc(var(--space-unit) * 27);
+  --space-28: calc(var(--space-unit) * 28);
+  --space-29: calc(var(--space-unit) * 29);
+  --space-30: calc(var(--space-unit) * 30);
+  --space-31: calc(var(--space-unit) * 31);
+  --space-32: calc(var(--space-unit) * 32);
 
   /* Radius */
   --radius-sm: 2px;

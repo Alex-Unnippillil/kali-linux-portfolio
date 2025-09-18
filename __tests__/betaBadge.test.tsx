@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import BetaBadge from '../components/BetaBadge';
+import BetaBadge from '../components/layout/BetaBadge';
 
 describe('BetaBadge', () => {
   test('is focusable via keyboard', async () => {
