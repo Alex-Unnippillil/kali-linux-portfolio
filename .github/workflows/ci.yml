@@ -62,6 +62,43 @@ jobs:
       - run: yarn install --immutable --immutable-cache
       - run: yarn npm audit
 
+  bundle-size:
+    runs-on: ubuntu-latest
+    needs: install
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - name: Build bundle with stats
+        run: yarn build:stats
+      - name: Run size limit checks
+        run: yarn size-limit:ci | tee size-limit-report.json
+      - name: Upload bundle stats
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-bundle-stats
+          path: |
+            .next/analyze/client/stats.json
+            size-limit-report.json
+          if-no-files-found: error
+      - name: Bundle size report
+        if: ${{ always() }}
+        uses: andresz1/size-limit-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          skip_step: build
+          script: cat size-limit-report.json
+
   vercel-preview:
     runs-on: ubuntu-latest
     needs: install
