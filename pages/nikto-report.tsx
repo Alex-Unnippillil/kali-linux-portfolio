@@ -2,6 +2,12 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 
+import {
+  generateNiktoHtmlReport,
+  generateNiktoJsonReport,
+  type NiktoReportMetadata,
+} from '../utils/niktoReportGenerators';
+
 interface NiktoFinding {
   path: string;
   finding: string;
@@ -22,6 +28,19 @@ const NiktoReport: React.FC = () => {
   const [severity, setSeverity] = useState('All');
   const [pathFilter, setPathFilter] = useState('');
   const [selected, setSelected] = useState<NiktoFinding | null>(null);
+
+  const metadata = useMemo<NiktoReportMetadata>(
+    () => ({
+      target: {
+        host: 'example.com',
+        port: '443',
+        protocol: 'https',
+      },
+      command: 'nikto -h example.com -ssl',
+      notes: 'Static training data packaged with the Kali Linux Portfolio demo.',
+    }),
+    []
+  );
 
   useEffect(() => {
     const load = async () => {
@@ -55,13 +74,39 @@ const NiktoReport: React.FC = () => {
   );
 
   const exportJSON = () => {
-    const blob = new Blob([JSON.stringify(filtered, null, 2)], {
+    const report = generateNiktoJsonReport(filtered, {
+      ...metadata,
+      filters: {
+        severity,
+        pathPrefix: pathFilter,
+      },
+    });
+    const blob = new Blob([JSON.stringify(report, null, 2)], {
       type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = 'nikto-findings.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportHTML = () => {
+    const html = generateNiktoHtmlReport(filtered, {
+      ...metadata,
+      filters: {
+        severity,
+        pathPrefix: pathFilter,
+      },
+    });
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'nikto-findings.html';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -132,6 +177,26 @@ const NiktoReport: React.FC = () => {
             </option>
           ))}
         </select>
+        <button
+          type="button"
+          onClick={exportHTML}
+          className="p-2 bg-blue-600 rounded"
+          aria-label="Export HTML"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            width={24}
+            height={24}
+          >
+            <path d="M12 3v12m0 0l4-4m-4 4-4-4" />
+            <path d="M4.5 15.75v3.75A2.25 2.25 0 006.75 21h10.5A2.25 2.25 0 0019.5 19.5v-3.75" />
+          </svg>
+        </button>
         <button
           type="button"
           onClick={exportJSON}

@@ -3,6 +3,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import HeaderLab from './components/HeaderLab';
 
+import {
+  generateNiktoJsonReport,
+  type NiktoReportMetadata,
+} from '../../utils/niktoReportGenerators';
+
 interface NiktoFinding {
   path: string;
   finding: string;
@@ -40,6 +45,18 @@ const NiktoPage: React.FC = () => {
 
   const command = `nikto -h ${host || 'TARGET'}${port ? ` -p ${port}` : ''}${ssl ? ' -ssl' : ''}`;
 
+  const metadata = useMemo<NiktoReportMetadata>(
+    () => ({
+      target: {
+        host: host || 'TARGET',
+        port: port || undefined,
+        protocol: ssl ? 'https' : 'http',
+      },
+      command,
+    }),
+    [command, host, port, ssl]
+  );
+
   const grouped = useMemo(() => {
     return findings.reduce<Record<string, NiktoFinding[]>>((acc, f) => {
       acc[f.severity] = acc[f.severity] || [];
@@ -65,22 +82,30 @@ const NiktoPage: React.FC = () => {
     return `${proto}${host}${port ? `:${port}` : ''}`;
   }, [host, port, ssl]);
 
-  const copySection = async (list: NiktoFinding[]) => {
+  const copySection = async (list: NiktoFinding[], severityLabel: string) => {
     try {
-      await navigator.clipboard?.writeText(JSON.stringify(list, null, 2));
+      const report = generateNiktoJsonReport(list, {
+        ...metadata,
+        filters: { severity: severityLabel },
+      });
+      await navigator.clipboard?.writeText(JSON.stringify(report, null, 2));
     } catch {
       // ignore
     }
   };
 
-  const exportSection = (list: NiktoFinding[], sev: string) => {
-    const blob = new Blob([JSON.stringify(list, null, 2)], {
+  const exportSection = (list: NiktoFinding[], severityLabel: string) => {
+    const report = generateNiktoJsonReport(list, {
+      ...metadata,
+      filters: { severity: severityLabel },
+    });
+    const blob = new Blob([JSON.stringify(report, null, 2)], {
       type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `nikto-${sev.toLowerCase()}.json`;
+    a.download = `nikto-${severityLabel.toLowerCase()}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -197,7 +222,7 @@ const NiktoPage: React.FC = () => {
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        copySection(list);
+                        copySection(list, sev);
                       }}
                       className="text-xs bg-blue-600 px-2 py-1 rounded"
                     >
