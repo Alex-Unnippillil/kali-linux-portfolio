@@ -80,6 +80,7 @@ const SerialTerminalApp = createDynamicApp('serial-terminal', 'Serial Terminal')
 
 
 const WiresharkApp = createDynamicApp('wireshark', 'Wireshark');
+const PacketCrafterApp = createDynamicApp('packet-crafter', 'Packet Crafter');
 const BleSensorApp = createDynamicApp('ble-sensor', 'BLE Sensor');
 const DsniffApp = createDynamicApp('dsniff', 'dsniff');
 const BeefApp = createDynamicApp('beef', 'BeEF');
@@ -172,6 +173,7 @@ const displayAutopsy = createDisplay(AutopsyApp);
 const displayPluginManager = createDisplay(PluginManagerApp);
 
 const displayWireshark = createDisplay(WiresharkApp);
+const displayPacketCrafter = createDisplay(PacketCrafterApp);
 const displayBleSensor = createDisplay(BleSensorApp);
 const displayBeef = createDisplay(BeefApp);
 const displayMetasploit = createDisplay(MetasploitApp);
@@ -754,6 +756,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayWireshark,
+  },
+  {
+    id: 'packet-crafter',
+    title: 'Packet Crafter',
+    icon: '/themes/Yaru/apps/wireshark.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPacketCrafter,
   },
   {
     id: 'todoist',
