@@ -23,6 +23,7 @@ import {
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import designTokens from '../styles/tokens.json';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -49,6 +50,21 @@ const shadeColor = (color: string, percent: number): string => {
   return `#${(0x1000000 + newR * 0x10000 + newG * 0x100 + newB)
     .toString(16)
     .slice(1)}`;
+};
+
+const hexToRgb = (color: string): string | null => {
+  if (!color.startsWith('#')) return null;
+  const normalized = color.slice(1);
+  if (![3, 6].includes(normalized.length)) return null;
+  const chunk = normalized.length === 3 ? 1 : 2;
+  const parts = normalized.match(new RegExp(`.{${chunk}}`, 'g'));
+  if (!parts) return null;
+  const values = parts.map((part) => {
+    const pair = part.length === 1 ? part.repeat(2) : part;
+    return parseInt(pair, 16);
+  });
+  if (values.some((value) => Number.isNaN(value))) return null;
+  return values.join(' ');
 };
 
 interface SettingsContextValue {
@@ -137,16 +153,34 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const border = shadeColor(accent, -0.2);
-    const vars: Record<string, string> = {
-      '--color-ub-orange': accent,
-      '--color-ub-border-orange': border,
-      '--color-primary': accent,
-      '--color-accent': accent,
-      '--color-focus-ring': accent,
-      '--color-selection': accent,
-      '--color-control-accent': accent,
-    };
-    Object.entries(vars).forEach(([key, value]) => {
+    const highlight = shadeColor(accent, 0.2);
+    const glow = shadeColor(accent, 0.35);
+    const entries: Array<[string, string]> = [
+      ['--color-accent-primary', accent],
+      ['--color-border-accent', border],
+      ['--color-accent-secondary', highlight],
+      ['--color-accent-glow', glow],
+    ];
+
+    const accentRgb = hexToRgb(accent);
+    const borderRgb = hexToRgb(border);
+    const highlightRgb = hexToRgb(highlight);
+    const glowRgb = hexToRgb(glow);
+
+    if (accentRgb) {
+      entries.push(['--color-accent-primary-rgb', accentRgb]);
+    }
+    if (borderRgb) {
+      entries.push(['--color-border-accent-rgb', borderRgb]);
+    }
+    if (highlightRgb) {
+      entries.push(['--color-accent-secondary-rgb', highlightRgb]);
+    }
+    if (glowRgb) {
+      entries.push(['--color-accent-glow-rgb', glowRgb]);
+    }
+
+    entries.forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
     saveAccent(accent);
@@ -157,28 +191,44 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [wallpaper]);
 
   useEffect(() => {
-    const spacing: Record<Density, Record<string, string>> = {
-      regular: {
-        '--space-1': '0.25rem',
-        '--space-2': '0.5rem',
-        '--space-3': '0.75rem',
-        '--space-4': '1rem',
-        '--space-5': '1.5rem',
-        '--space-6': '2rem',
-      },
-      compact: {
-        '--space-1': '0.125rem',
-        '--space-2': '0.25rem',
-        '--space-3': '0.5rem',
-        '--space-4': '0.75rem',
-        '--space-5': '1rem',
-        '--space-6': '1.5rem',
-      },
+    const scaleSpacing = (value: string, factor: number) => {
+      if (value.endsWith('rem')) {
+        const numeric = parseFloat(value.replace('rem', ''));
+        return `${Math.max(numeric * factor, 0).toFixed(4).replace(/0+$/, '').replace(/\.$/, '') || '0'}rem`;
+      }
+      if (value.endsWith('px')) {
+        const numeric = parseFloat(value.replace('px', ''));
+        return `${Math.max(numeric * factor, 0)}px`;
+      }
+      return value;
     };
-    const vars = spacing[density];
-    Object.entries(vars).forEach(([key, value]) => {
-      document.documentElement.style.setProperty(key, value);
+
+    const regularSpacing = designTokens.spacing;
+    const compactSpacing = Object.fromEntries(
+      Object.entries(regularSpacing).map(([key, value]) => [key, scaleSpacing(value, 0.75)]),
+    );
+
+    const spacingScale = density === 'compact' ? compactSpacing : regularSpacing;
+    Object.entries(spacingScale).forEach(([key, value]) => {
+      document.documentElement.style.setProperty(`--space-${key}`, value);
     });
+
+    const aliasMap: Record<string, string> = {
+      '2xs': '--space-1',
+      xs: '--space-2',
+      sm: '--space-3',
+      md: '--space-4',
+      lg: '--space-5',
+      xl: '--space-6',
+    };
+
+    Object.entries(aliasMap).forEach(([source, target]) => {
+      const value = spacingScale[source];
+      if (value) {
+        document.documentElement.style.setProperty(target, value);
+      }
+    });
+
     saveDensity(density);
   }, [density]);
 

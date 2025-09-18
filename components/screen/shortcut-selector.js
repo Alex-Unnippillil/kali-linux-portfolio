@@ -55,9 +55,9 @@ class ShortcutSelector extends React.Component {
 
     render() {
         return (
-            <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim">
+            <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-kali-background/85 backdrop-blur text-kali-text-primary all-apps-anim">
                 <input
-                    className="mt-10 mb-8 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
+                    className="mt-10 mb-8 w-2/3 md:w-1/3 px-4 py-2 rounded-lg bg-kali-background/60 text-kali-text-primary border border-kali-border-subtle/50 focus:outline-none focus:ring-2 focus:ring-kali-accent-primary/60"
                     placeholder="Search"
                     value={this.state.query}
                     onChange={this.handleChange}
@@ -66,7 +66,7 @@ class ShortcutSelector extends React.Component {
                     {this.renderApps()}
                 </div>
                 <button
-                    className="mb-8 px-4 py-2 rounded bg-black bg-opacity-20 text-white"
+                    className="mb-8 px-4 py-2 rounded-lg bg-kali-surface-muted/70 text-kali-text-primary border border-kali-border-subtle/40 hover:bg-kali-surface-muted"
                     onClick={this.props.onClose}
                 >
                     Cancel

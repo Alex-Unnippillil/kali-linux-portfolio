@@ -57,21 +57,21 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 text-white">
-      <div className="bg-ub-grey p-4 rounded w-3/4 md:w-1/3">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-kali-background/80 backdrop-blur text-kali-text-primary">
+      <div className="bg-kali-surface rounded-lg shadow-kali-window p-4 w-3/4 md:w-1/3 border border-kali-border-subtle/40">
         <input
           ref={inputRef}
           value={query}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          className="w-full mb-4 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
+          className="w-full mb-4 px-2 py-1 rounded bg-kali-background/60 text-kali-text-primary focus:outline-none focus:ring-2 focus:ring-kali-accent-primary/60"
           placeholder="Search windows"
         />
         <ul>
           {filtered.map((w, i) => (
             <li
               key={w.id}
-              className={`px-2 py-1 rounded ${i === selected ? 'bg-ub-orange text-black' : ''}`}
+              className={`px-2 py-1 rounded transition-colors ${i === selected ? 'bg-kali-accent-primary text-kali-text-inverted' : ''}`}
             >
               {w.title}
             </li>

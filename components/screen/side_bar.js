@@ -74,7 +74,7 @@ export function AllApps(props) {
                 <div
                     className={
                         (title ? " visible " : " invisible ") +
-                        " w-max py-0.5 px-1.5 absolute top-1 left-full ml-5 text-ubt-grey text-opacity-90 text-sm bg-ub-grey bg-opacity-70 border-gray-400 border border-opacity-40 rounded-md"
+                        " w-max py-0.5 px-1.5 absolute top-1 left-full ml-5 text-kali-text-secondary text-opacity-90 text-sm bg-kali-surface/80 border border-kali-border-subtle/50 rounded-md"
                     }
                 >
                     Show Applications

@@ -524,41 +524,41 @@ export class Window extends Component {
         } else if (e.key === 'Tab') {
             this.focusWindow();
         } else if (e.altKey) {
+            const intercept = () => {
+                if (typeof e.preventDefault === 'function') e.preventDefault();
+                if (typeof e.stopPropagation === 'function') e.stopPropagation();
+            };
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                intercept();
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                intercept();
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                intercept();
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                intercept();
                 this.snapWindow('top');
             }
             this.focusWindow();
         } else if (e.shiftKey) {
             const step = 1;
+            const intercept = () => {
+                if (typeof e.preventDefault === 'function') e.preventDefault();
+                if (typeof e.stopPropagation === 'function') e.stopPropagation();
+            };
             if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                intercept();
                 this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                intercept();
                 this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                intercept();
                 this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                intercept();
                 this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
             }
             this.focusWindow();
@@ -623,7 +623,7 @@ export class Window extends Component {
                 )}
                 <Draggable
                     axis="both"
-                    handle=".bg-ub-window-title"
+                    handle=".bg-kali-chrome"
                     grid={this.props.snapEnabled ? [8, 8] : [1, 1]}
                     scale={1}
                     onStart={this.changeCursorToMove}
@@ -677,14 +677,14 @@ export default Window
 export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
     return (
         <div
-            className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
+            className={"relative bg-kali-chrome border-t border-kali-border-strong/40 px-3 text-kali-text-secondary w-full select-none rounded-b-none flex items-center h-11"}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
         >
-            <div className="flex justify-center w-full text-sm font-bold">{title}</div>
+            <div className="flex justify-center w-full text-sm font-semibold text-kali-text-primary">{title}</div>
         </div>
     )
 }
@@ -807,7 +807,7 @@ export function WindowEditButtons(props) {
                 type="button"
                 id={`close-${props.id}`}
                 aria-label="Window close"
-                className="mx-1 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6"
+                className="mx-1 focus:outline-none cursor-default bg-kali-surface-muted/80 hover:bg-kali-surface-muted rounded-full text-kali-text-primary flex justify-center items-center h-6 w-6"
                 onClick={props.close}
             >
                 <NextImage
@@ -838,7 +838,7 @@ export class WindowMainScreen extends Component {
     }
     render() {
         return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
+            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-kali-background " : " bg-kali-surface-muted/95")}> 
                 {this.props.screen(this.props.addFolder, this.props.openApp)}
             </div>
         )
