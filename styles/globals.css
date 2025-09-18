@@ -19,6 +19,8 @@
   --color-focus-ring: var(--color-accent);
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
+  --color-accent-contrast: #ffffff;
+  --accent-ring-color: var(--color-accent);
   accent-color: var(--color-control-accent);
 }
 

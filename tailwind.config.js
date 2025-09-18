@@ -36,6 +36,25 @@ module.exports = {
         'ubt-gedit-dark': 'var(--color-ubt-gedit-dark)',
         'ub-border-orange': 'var(--color-ub-border-orange)',
         'ub-dark-grey': 'var(--color-ub-dark-grey)',
+        accent: 'var(--color-accent)',
+        'accent-contrast': 'var(--color-accent-contrast)',
+        'accent-ring': 'var(--accent-ring-color)',
+      },
+      backgroundColor: {
+        accent: 'var(--color-control-accent)',
+      },
+      textColor: {
+        accent: 'var(--color-accent-contrast)',
+      },
+      borderColor: {
+        accent: 'var(--color-ub-border-orange)',
+      },
+      ringColor: {
+        DEFAULT: 'var(--accent-ring-color)',
+        accent: 'var(--accent-ring-color)',
+      },
+      outlineColor: {
+        accent: 'var(--color-focus-ring)',
       },
       fontFamily: {
         ubuntu: ['Ubuntu', 'sans-serif'],
