@@ -3,6 +3,7 @@ import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 import apps, { utilities, games } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import searchIndex, { SearchIndexEntry } from '../../utils/searchIndex';
 
 type AppMeta = {
   id: string;
@@ -27,6 +28,12 @@ const WhiskerMenu: React.FC = () => {
   const [highlight, setHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [indexedEntries, setIndexedEntries] = useState<SearchIndexEntry[]>(() =>
+    searchIndex.getEntries(),
+  );
+  const [indexingEnabled, setIndexingEnabled] = useState<boolean>(() =>
+    searchIndex.isEnabled(),
+  );
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
@@ -37,7 +44,7 @@ const WhiskerMenu: React.FC = () => {
     } catch {
       return [];
     }
-  }, [allApps, open]);
+  }, [allApps]);
   const utilityApps: AppMeta[] = utilities as any;
   const gameApps: AppMeta[] = games as any;
 
@@ -65,6 +72,25 @@ const WhiskerMenu: React.FC = () => {
     }
     return list;
   }, [category, query, allApps, favoriteApps, recentApps, utilityApps, gameApps]);
+
+  const indexedResults = useMemo(() => {
+    if (!query) return [] as SearchIndexEntry[];
+    const q = query.toLowerCase();
+    return indexedEntries
+      .filter((entry) => {
+        const fields = [
+          entry.title,
+          entry.subtitle,
+          entry.path,
+          entry.summary,
+          entry.extension ?? undefined,
+        ];
+        return fields.some((value) =>
+          typeof value === 'string' ? value.toLowerCase().includes(q) : false,
+        );
+      })
+      .slice(0, 5);
+  }, [indexedEntries, query]);
 
   useEffect(() => {
     if (!open) return;
@@ -114,6 +140,14 @@ const WhiskerMenu: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [open]);
 
+  useEffect(() => {
+    const unsubscribe = searchIndex.subscribe((entries) => {
+      setIndexedEntries(entries);
+      setIndexingEnabled(searchIndex.isEnabled());
+    });
+    return unsubscribe;
+  }, []);
+
   return (
     <div className="relative">
       <button
@@ -160,7 +194,44 @@ const WhiskerMenu: React.FC = () => {
               value={query}
               onChange={e => setQuery(e.target.value)}
               autoFocus
+              aria-label="Search applications"
             />
+            {query && indexingEnabled && indexedResults.length > 0 && (
+              <div className="mb-3">
+                <h3 className="mb-1 text-xs uppercase tracking-wide text-ubt-grey">
+                  Search index
+                </h3>
+                <ul className="space-y-1 text-xs">
+                  {indexedResults.map((entry) => (
+                    <li
+                      key={entry.id}
+                      className="rounded bg-gray-800 px-2 py-1"
+                    >
+                      <div className="flex items-center justify-between gap-2 font-semibold">
+                        <span>{entry.title}</span>
+                        <span className="text-[10px] capitalize text-ubt-grey">
+                          {entry.source}
+                        </span>
+                      </div>
+                      {entry.summary ? (
+                        <div className="text-ubt-grey">{entry.summary}</div>
+                      ) : (
+                        entry.subtitle && (
+                          <div className="break-all text-ubt-grey">
+                            {entry.subtitle}
+                          </div>
+                        )
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {query && !indexingEnabled && (
+              <div className="mb-3 text-xs text-ubt-grey">
+                Desktop indexing is disabled in Privacy settings.
+              </div>
+            )}
             <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
               {currentApps.map((app, idx) => (
                 <div key={app.id} className={idx === highlight ? 'ring-2 ring-ubb-orange' : ''}>

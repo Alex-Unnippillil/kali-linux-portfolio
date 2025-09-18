@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import seedrandom from 'seedrandom';
 import modules from '../../../components/apps/metasploit/modules.json';
 import usePersistentState from '../../../hooks/usePersistentState';
+import searchIndex from '../../../utils/searchIndex';
 
 interface ModuleInfo {
   name: string;
@@ -44,6 +45,13 @@ const TargetEmulator: React.FC = () => {
         ...prev.filter((s) => s.name !== mod.name),
         { name: mod.name, output: text },
       ]);
+      searchIndex.recordSummary({
+        id: mod.name,
+        title: `Metasploit session: ${mod.name}`,
+        summary: `Session ${sessionId} opened against ${ip}:${port}`,
+        kind: 'session',
+        updatedAt: Date.now(),
+      });
     } else {
       setOutput('Select a module to run.');
     }

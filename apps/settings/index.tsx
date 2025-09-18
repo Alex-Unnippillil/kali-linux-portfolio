@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -12,6 +12,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import searchIndex from "../../utils/searchIndex";
 
 export default function Settings() {
   const {
@@ -54,6 +55,22 @@ export default function Settings() {
   ];
 
   const changeBackground = (name: string) => setWallpaper(name);
+
+  const [indexingEnabled, setIndexingEnabled] = useState<boolean>(() =>
+    searchIndex.isEnabled(),
+  );
+
+  useEffect(() => {
+    const unsubscribe = searchIndex.subscribe(() => {
+      setIndexingEnabled(searchIndex.isEnabled());
+    });
+    return unsubscribe;
+  }, []);
+
+  const toggleIndexing = (value: boolean) => {
+    setIndexingEnabled(value);
+    searchIndex.setEnabled(value);
+  };
 
   const handleExport = async () => {
     const data = await exportSettingsData();
@@ -285,6 +302,23 @@ export default function Settings() {
             >
               Import Settings
             </button>
+          </div>
+          <div className="flex flex-col items-center space-y-2 text-center text-sm text-ubt-grey">
+            <div className="flex items-center space-x-3">
+              <ToggleSwitch
+                checked={indexingEnabled}
+                onChange={toggleIndexing}
+                ariaLabel="Toggle desktop search indexing"
+              />
+              <span className="text-white">
+                {indexingEnabled ? "Indexing enabled" : "Indexing disabled"}
+              </span>
+            </div>
+            <p className="max-w-lg">
+              Control whether recent sessions, workspaces, and file metadata are
+              stored locally to power desktop search. Data never leaves your
+              browser.
+            </p>
           </div>
         </>
       )}
