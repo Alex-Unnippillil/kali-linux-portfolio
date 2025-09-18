@@ -1,14 +1,29 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
+import { displayManager } from '../../modules/displayManager';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme, activeDisplayId, setActiveDisplayId } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
+    const [displays, setDisplays] = useState(() => displayManager.getDisplays());
+
+    useEffect(() => {
+        const unsubscribe = displayManager.subscribe(({ displays }) => {
+            setDisplays(displays);
+        });
+        return () => {
+            if (typeof unsubscribe === 'function') {
+                unsubscribe();
+            }
+        };
+    }, []);
+
+    const activeDisplay = displays.find(display => display.id === activeDisplayId) || displays[0];
 
     const changeBackgroundImage = (e) => {
         const name = e.currentTarget.dataset.path;
@@ -72,6 +87,25 @@ export function Settings() {
                     <option value="matrix">Matrix</option>
                 </select>
             </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey">Active Display:</label>
+                <select
+                    value={activeDisplayId}
+                    onChange={(e) => setActiveDisplayId(e.target.value)}
+                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                >
+                    {displays.map(display => (
+                        <option key={display.id} value={display.id}>
+                            {`${display.label} (${display.width}×${display.height})`}
+                        </option>
+                    ))}
+                </select>
+            </div>
+            {activeDisplay && (
+                <p className="text-center text-ubt-grey -mt-2 mb-4">
+                    {`Scale ${activeDisplay.scaleFactor.toFixed(2)} • Origin (${activeDisplay.left}, ${activeDisplay.top})`}
+                </p>
+            )}
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Accent:</label>
                 <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">

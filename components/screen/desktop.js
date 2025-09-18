@@ -23,11 +23,13 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { displayManager, computeWindowPlacement } from '../../modules/displayManager';
 
 export class Desktop extends Component {
     constructor() {
         super();
         this.app_stack = [];
+        this.unsubscribeDisplay = null;
         this.initFavourite = {};
         this.allWindowClosed = false;
         this.state = {
@@ -74,7 +76,9 @@ export class Desktop extends Component {
                 session.windows.forEach(({ id, x, y }) => {
                     positions[id] = { x, y };
                 });
-                this.setState({ window_positions: positions }, () => {
+                const activeDisplay = displayManager.getActiveDisplay();
+                const normalizedPositions = activeDisplay ? this.normalizePositionsForDisplay(positions, activeDisplay) : positions;
+                this.setState({ window_positions: normalizedPositions }, () => {
                     session.windows.forEach(({ id }) => this.openApp(id));
                 });
             } else {
@@ -89,6 +93,9 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        this.unsubscribeDisplay = displayManager.subscribe(({ activeDisplay }) => {
+            this.ensurePositionsWithinDisplay(activeDisplay);
+        });
     }
 
     componentWillUnmount() {
@@ -96,6 +103,10 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        if (this.unsubscribeDisplay) {
+            this.unsubscribeDisplay();
+            this.unsubscribeDisplay = null;
+        }
     }
 
     checkForNewFolders = () => {
@@ -431,6 +442,54 @@ export class Desktop extends Component {
         this.initFavourite = { ...favourite_apps };
     }
 
+    getAppMeta = (id) => {
+        return apps.find(app => app.id === id);
+    }
+
+    calculatePlacement = (app, existingPosition, display) => {
+        if (!app || !display) return existingPosition || null;
+        const existing = existingPosition ?? undefined;
+        const { position } = computeWindowPlacement(display, {
+            defaultWidth: app.defaultWidth,
+            defaultHeight: app.defaultHeight,
+            existingPosition: existing,
+        });
+        return position;
+    }
+
+    normalizePositionsForDisplay = (positions, display) => {
+        if (!display) return positions;
+        const normalized = { ...positions };
+        Object.keys(positions).forEach(id => {
+            const app = this.getAppMeta(id);
+            if (!app) return;
+            const placement = this.calculatePlacement(app, positions[id], display);
+            if (placement) {
+                normalized[id] = placement;
+            }
+        });
+        return normalized;
+    }
+
+    ensurePositionsWithinDisplay = (display) => {
+        if (!display) return;
+        this.setState(prev => {
+            let changed = false;
+            const nextPositions = { ...prev.window_positions };
+            Object.keys(prev.window_positions).forEach(id => {
+                const app = this.getAppMeta(id);
+                if (!app) return;
+                const current = prev.window_positions[id];
+                const placement = this.calculatePlacement(app, current, display);
+                if (placement && (!current || placement.x !== current.x || placement.y !== current.y)) {
+                    nextPositions[id] = placement;
+                    changed = true;
+                }
+            });
+            return changed ? { window_positions: nextPositions } : null;
+        }, this.saveSession);
+    }
+
     renderDesktopApps = () => {
         if (Object.keys(this.state.closed_windows).length === 0) return;
         let appsJsx = [];
@@ -610,8 +669,6 @@ export class Desktop extends Component {
             }
             return;
         } else {
-            let closed_windows = this.state.closed_windows;
-            let favourite_apps = this.state.favourite_apps;
             let frequentApps = [];
             try { frequentApps = JSON.parse(safeLocalStorage?.getItem('frequentApps') || '[]'); } catch (e) { frequentApps = []; }
             var currentApp = frequentApps.find(app => app.id === objId);
@@ -645,9 +702,27 @@ export class Desktop extends Component {
             safeLocalStorage?.setItem('recentApps', JSON.stringify(recentApps));
 
             setTimeout(() => {
-                favourite_apps[objId] = true; // adds opened app to sideBar
-                closed_windows[objId] = false; // openes app's window
-                this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
+                this.setState(prev => {
+                    const favourite_apps = { ...prev.favourite_apps, [objId]: true };
+                    const closed_windows = { ...prev.closed_windows, [objId]: false };
+                    const activeDisplay = displayManager.getActiveDisplay();
+                    let window_positions = prev.window_positions;
+                    if (activeDisplay) {
+                        const appMeta = this.getAppMeta(objId);
+                        if (appMeta) {
+                            const placement = this.calculatePlacement(appMeta, prev.window_positions[objId], activeDisplay);
+                            if (placement) {
+                                window_positions = { ...prev.window_positions, [objId]: placement };
+                            }
+                        }
+                    }
+                    return {
+                        closed_windows,
+                        favourite_apps,
+                        window_positions,
+                        allAppsView: false,
+                    };
+                }, () => {
                     this.focus(objId);
                     this.saveSession();
                 });

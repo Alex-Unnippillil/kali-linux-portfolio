@@ -20,9 +20,12 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getActiveDisplayId as loadActiveDisplayId,
+  setActiveDisplayId as saveActiveDisplayId,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import { displayManager } from '../modules/displayManager';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -63,6 +66,7 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  activeDisplayId: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +78,7 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setActiveDisplayId: (value: string) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +93,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  activeDisplayId: defaults.activeDisplayId,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +105,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setActiveDisplayId: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -113,6 +120,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [activeDisplayId, setActiveDisplayId] = useState<string>(defaults.activeDisplayId);
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -127,6 +135,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setActiveDisplayId(await loadActiveDisplayId());
       setTheme(loadTheme());
     })();
   }, []);
@@ -134,6 +143,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveTheme(theme);
   }, [theme]);
+
+  useEffect(() => {
+    saveActiveDisplayId(activeDisplayId);
+    displayManager.setActiveDisplay(activeDisplayId);
+  }, [activeDisplayId]);
 
   useEffect(() => {
     const border = shadeColor(accent, -0.2);
@@ -250,6 +264,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        activeDisplayId,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +276,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setActiveDisplayId,
       }}
     >
       {children}

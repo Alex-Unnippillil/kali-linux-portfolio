@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
+import { displayManager } from "../../modules/displayManager";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
   resetSettings,
@@ -31,6 +32,8 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    activeDisplayId,
+    setActiveDisplayId,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -52,6 +55,20 @@ export default function Settings() {
     "wall-7",
     "wall-8",
   ];
+  const [displays, setDisplays] = useState(() => displayManager.getDisplays());
+
+  useEffect(() => {
+    const unsubscribe = displayManager.subscribe(({ displays }) => {
+      setDisplays(displays);
+    });
+    return () => {
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+    };
+  }, []);
+
+  const activeDisplay = displays.find((display) => display.id === activeDisplayId) || displays[0];
 
   const changeBackground = (name: string) => setWallpaper(name);
 
@@ -134,6 +151,25 @@ export default function Settings() {
               <option value="matrix">Matrix</option>
             </select>
           </div>
+          <div className="flex justify-center my-4">
+            <label className="mr-2 text-ubt-grey">Active Display:</label>
+            <select
+              value={activeDisplayId}
+              onChange={(e) => setActiveDisplayId(e.target.value)}
+              className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+            >
+              {displays.map((display) => (
+                <option key={display.id} value={display.id}>
+                  {`${display.label} (${display.width}×${display.height})`}
+                </option>
+              ))}
+            </select>
+          </div>
+          {activeDisplay && (
+            <p className="text-center text-ubt-grey -mt-2 mb-4">
+              {`Scale ${activeDisplay.scaleFactor.toFixed(2)} • Origin (${activeDisplay.left}, ${activeDisplay.top})`}
+            </p>
+          )}
           <div className="flex justify-center my-4">
             <label className="mr-2 text-ubt-grey">Accent:</label>
             <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
