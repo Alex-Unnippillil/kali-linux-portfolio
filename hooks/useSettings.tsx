@@ -21,7 +21,7 @@ import {
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
   defaults,
-} from '../utils/settingsStore';
+} from '../utils/settings';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
 
