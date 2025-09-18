@@ -79,6 +79,7 @@ const TrashApp = createDynamicApp('trash', 'Trash');
 const SerialTerminalApp = createDynamicApp('serial-terminal', 'Serial Terminal');
 
 
+const AppArmorLabApp = createDynamicApp('apparmor', 'AppArmor Lab');
 const WiresharkApp = createDynamicApp('wireshark', 'Wireshark');
 const BleSensorApp = createDynamicApp('ble-sensor', 'BLE Sensor');
 const DsniffApp = createDynamicApp('dsniff', 'dsniff');
@@ -171,6 +172,7 @@ const displayGhidra = createDisplay(GhidraApp);
 const displayAutopsy = createDisplay(AutopsyApp);
 const displayPluginManager = createDisplay(PluginManagerApp);
 
+const displayAppArmorLab = createDisplay(AppArmorLabApp);
 const displayWireshark = createDisplay(WiresharkApp);
 const displayBleSensor = createDisplay(BleSensorApp);
 const displayBeef = createDisplay(BeefApp);
@@ -745,6 +747,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayMetasploit,
+  },
+  {
+    id: 'apparmor',
+    title: 'AppArmor Lab',
+    icon: '/themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayAppArmorLab,
   },
   {
     id: 'wireshark',
