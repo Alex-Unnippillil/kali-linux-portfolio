@@ -9,10 +9,16 @@ export class UbuntuApp extends Component {
 
     handleDragStart = () => {
         this.setState({ dragging: true });
+        if (typeof this.props.onDragStart === 'function') {
+            this.props.onDragStart(this.props.id);
+        }
     }
 
     handleDragEnd = () => {
         this.setState({ dragging: false });
+        if (typeof this.props.onDragEnd === 'function') {
+            this.props.onDragEnd(this.props.id);
+        }
     }
 
     openApp = () => {
