@@ -7,36 +7,56 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import {
+    clampRectToDisplay,
+    findDisplayForRect,
+    getDisplayById,
+    getDisplayLayout,
+    getWorkspaceRect,
+    scaleSizeBetweenDisplays,
+} from '../../utils/displayManager';
 
 export class Window extends Component {
     constructor(props) {
         super(props);
         this.id = null;
-        const isPortrait =
-            typeof window !== "undefined" && window.innerHeight > window.innerWidth;
-        this.startX =
-            props.initialX ??
-            (isPortrait ? window.innerWidth * 0.05 : 60);
-        this.startY = props.initialY ?? 10;
+        const displays = typeof window !== "undefined" ? getDisplayLayout() : [];
+        const preferredDisplay = props.initialDisplayId ? getDisplayById(props.initialDisplayId, displays) : (displays[0] || null);
+        const fallbackWidth = typeof window !== "undefined" ? window.innerWidth : 1920;
+        const fallbackHeight = typeof window !== "undefined" ? window.innerHeight : 1080;
+        const referenceWidth = preferredDisplay ? preferredDisplay.width : fallbackWidth;
+        const referenceHeight = preferredDisplay ? preferredDisplay.height : fallbackHeight;
+        const offsetX = preferredDisplay ? preferredDisplay.x : 0;
+        const offsetY = preferredDisplay ? preferredDisplay.y : 0;
+        const isPortrait = referenceHeight > referenceWidth;
+        this.startX = props.initialX ?? (isPortrait ? offsetX + referenceWidth * 0.05 : offsetX + 60);
+        this.startY = props.initialY ?? (offsetY + 10);
+        const initialWidth = props.defaultWidth || (isPortrait ? 90 : 60);
+        const initialHeight = props.defaultHeight || 85;
         this.state = {
             cursorType: "cursor-default",
-            width: props.defaultWidth || (isPortrait ? 90 : 60),
-            height: props.defaultHeight || 85,
+            width: initialWidth,
+            height: initialHeight,
             closed: false,
             maximized: false,
             parentSize: {
                 height: 100,
-                width: 100
+                width: 100,
+                minX: 0,
+                minY: 0,
             },
+            workspace: null,
             snapPreview: null,
             snapPosition: null,
             snapped: null,
             lastSize: null,
             grabbed: false,
-        }
+            activeDisplayId: props.initialDisplayId || (preferredDisplay ? preferredDisplay.id : null),
+        };
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._displayTransitioning = false;
     }
 
     componentDidMount() {
@@ -47,7 +67,8 @@ export class Window extends Component {
         ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
 
         // on window resize, resize boundary
-        window.addEventListener('resize', this.resizeBoundries);
+        window.addEventListener('resize', this.handleViewportResize);
+        window.addEventListener('kali-display-change', this.handleDisplayLayoutChange);
         // Listen for context menu events to toggle inert background
         window.addEventListener('context-menu-open', this.setInertBackground);
         window.addEventListener('context-menu-close', this.removeInertBackground);
@@ -56,12 +77,18 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(() => this.initializeDisplayContext());
+        } else {
+            this.initializeDisplayContext();
+        }
     }
 
     componentWillUnmount() {
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
-        window.removeEventListener('resize', this.resizeBoundries);
+        window.removeEventListener('resize', this.handleViewportResize);
+        window.removeEventListener('kali-display-change', this.handleDisplayLayoutChange);
         window.removeEventListener('context-menu-open', this.setInertBackground);
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
@@ -69,6 +96,118 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+    }
+
+    handleViewportResize = () => {
+        this.initializeDisplayContext();
+    }
+
+    handleDisplayLayoutChange = () => {
+        this.initializeDisplayContext();
+    }
+
+    prefersReducedMotion = () => {
+        return !!(typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    }
+
+    getActiveDisplay = (displays = getDisplayLayout()) => {
+        return getDisplayById(this.state.activeDisplayId, displays);
+    }
+
+    initializeDisplayContext = () => {
+        const displays = getDisplayLayout();
+        const workspace = getWorkspaceRect(displays);
+        const node = typeof document !== 'undefined' ? document.getElementById(this.id) : null;
+        const rect = node ? node.getBoundingClientRect() : null;
+        const detectedDisplay = findDisplayForRect(rect, displays);
+        this.setState((prev) => ({
+            activeDisplayId: detectedDisplay ? detectedDisplay.id : prev.activeDisplayId,
+            workspace,
+        }), () => {
+            this.resizeBoundries();
+        });
+    }
+
+    ensureWithinCurrentDisplay = () => {
+        const node = typeof document !== 'undefined' ? document.getElementById(this.id) : null;
+        if (!node) return;
+        const rect = node.getBoundingClientRect();
+        const displays = getDisplayLayout();
+        const display = findDisplayForRect(rect, displays);
+        if (!display) return;
+        const clamped = clampRectToDisplay({ x: rect.x, y: rect.y, width: rect.width, height: rect.height }, display);
+        if (Math.abs(clamped.x - rect.x) > 0.5 || Math.abs(clamped.y - rect.y) > 0.5) {
+            const endTransform = `translate(${clamped.x}px, ${clamped.y}px)`;
+            node.style.transform = endTransform;
+            this.setWinowsPosition(display.id);
+        }
+    }
+
+    maybeHandleDisplayChange = (rect) => {
+        if (!rect || this._displayTransitioning) return;
+        const displays = getDisplayLayout();
+        const targetDisplay = findDisplayForRect(rect, displays);
+        const currentDisplay = this.getActiveDisplay(displays);
+        if (!targetDisplay || !currentDisplay || targetDisplay.id === currentDisplay.id) return;
+        this.transitionToDisplay(targetDisplay, rect, currentDisplay, displays);
+    }
+
+    transitionToDisplay = (targetDisplay, rect, previousDisplay = null, displays = getDisplayLayout()) => {
+        if (!targetDisplay) return;
+        const node = typeof document !== 'undefined' ? document.getElementById(this.id) : null;
+        if (!node || this._displayTransitioning) return;
+        this._displayTransitioning = true;
+        const currentDisplay = previousDisplay || this.getActiveDisplay(displays);
+        const scaledSize = scaleSizeBetweenDisplays(rect.width, rect.height, currentDisplay, targetDisplay);
+        const newWidthPercent = (scaledSize.width / targetDisplay.width) * 100;
+        const newHeightPercent = (scaledSize.height / targetDisplay.height) * 100;
+        const clamped = clampRectToDisplay({
+            x: rect.x,
+            y: rect.y,
+            width: scaledSize.width,
+            height: scaledSize.height,
+        }, targetDisplay);
+        const startTransform = node.style.transform || `translate(${rect.x}px, ${rect.y}px)`;
+        const endTransform = `translate(${clamped.x}px, ${clamped.y}px)`;
+        let finished = false;
+        const finalize = () => {
+            if (finished) return;
+            finished = true;
+            node.style.transform = endTransform;
+            node.style.transition = '';
+            this._displayTransitioning = false;
+            this.setWinowsPosition(targetDisplay.id);
+            this.checkOverlap();
+        };
+        node.style.transition = 'width 220ms ease, height 220ms ease';
+        this.setState({
+            width: newWidthPercent,
+            height: newHeightPercent,
+            snapPreview: null,
+            snapPosition: null,
+            activeDisplayId: targetDisplay.id,
+        }, () => {
+            this.resizeBoundries();
+        });
+        if (this.prefersReducedMotion() || typeof node.animate !== 'function') {
+            finalize();
+            return;
+        }
+        const animation = node.animate(
+            [{ transform: startTransform }, { transform: endTransform }],
+            { duration: 220, easing: 'ease-in-out', fill: 'forwards' }
+        );
+        animation.onfinish = finalize;
+        animation.oncancel = finalize;
+    }
+
+    getDraggableBounds = () => {
+        const parentSize = this.state.parentSize || {};
+        const minX = Number.isFinite(parentSize.minX) ? parentSize.minX : 0;
+        const minY = Number.isFinite(parentSize.minY) ? parentSize.minY : 0;
+        const maxX = Number.isFinite(parentSize.width) ? parentSize.width : minX;
+        const maxY = Number.isFinite(parentSize.height) ? parentSize.height : minY;
+        return { left: minX, top: minY, right: maxX, bottom: maxY };
     }
 
     setDefaultWindowDimenstion = () => {
@@ -79,12 +218,24 @@ export class Window extends Component {
             );
             return;
         }
-
-        const isPortrait = window.innerHeight > window.innerWidth;
+        const displays = getDisplayLayout();
+        const activeDisplay = this.getActiveDisplay(displays);
+        const fallbackWidth = typeof window !== 'undefined' ? window.innerWidth : 1920;
+        const fallbackHeight = typeof window !== 'undefined' ? window.innerHeight : 1080;
+        const widthRef = activeDisplay ? activeDisplay.width : fallbackWidth;
+        const heightRef = activeDisplay ? activeDisplay.height : fallbackHeight;
+        const offsetX = activeDisplay ? activeDisplay.x : 0;
+        const offsetY = activeDisplay ? activeDisplay.y : 0;
+        const isPortrait = heightRef > widthRef;
+        if (this.props.initialX === undefined || this.props.initialX === null) {
+            this.startX = isPortrait ? offsetX + widthRef * 0.05 : offsetX + 60;
+        }
+        if (this.props.initialY === undefined || this.props.initialY === null) {
+            this.startY = offsetY + 10;
+        }
         if (isPortrait) {
-            this.startX = window.innerWidth * 0.05;
             this.setState({ height: 85, width: 90 }, this.resizeBoundries);
-        } else if (window.innerWidth < 640) {
+        } else if (widthRef < 640) {
             this.setState({ height: 60, width: 85 }, this.resizeBoundries);
         } else {
             this.setState({ height: 85, width: 60 }, this.resizeBoundries);
@@ -92,16 +243,31 @@ export class Window extends Component {
     }
 
     resizeBoundries = () => {
+        const displays = getDisplayLayout();
+        const display = this.getActiveDisplay(displays);
+        const workspace = getWorkspaceRect(displays);
+        const fallbackWidth = typeof window !== 'undefined' ? window.innerWidth : 1920;
+        const fallbackHeight = typeof window !== 'undefined' ? window.innerHeight : 1080;
+        const widthRef = display ? display.width : fallbackWidth;
+        const heightRef = display ? display.height : fallbackHeight;
+        const windowWidthPx = widthRef * (this.state.width / 100.0);
+        const windowHeightPx = heightRef * (this.state.height / 100.0);
+        const minX = workspace.x;
+        const minY = workspace.y;
+        const maxX = workspace.x + workspace.width - windowWidthPx;
+        const maxY = workspace.y + workspace.height - windowHeightPx;
         this.setState({
             parentSize: {
-                height: window.innerHeight //parent height
-                    - (window.innerHeight * (this.state.height / 100.0))  // this window's height
-                    - 28 // some padding
-                ,
-                width: window.innerWidth // parent width
-                    - (window.innerWidth * (this.state.width / 100.0)) //this window's width
-            }
+                width: maxX < minX ? minX : maxX,
+                height: maxY < minY ? minY : maxY,
+                minX,
+                minY,
+            },
+            workspace,
         }, () => {
+            if (!this._displayTransitioning) {
+                this.ensureWithinCurrentDisplay();
+            }
             if (this._uiExperiments) {
                 this.scheduleUsageCheck();
             }
@@ -207,21 +373,29 @@ export class Window extends Component {
 
     handleVerticleResize = () => {
         if (this.props.resizable === false) return;
-        const px = (this.state.height / 100) * window.innerHeight + 1;
+        const displays = getDisplayLayout();
+        const display = this.getActiveDisplay(displays);
+        const fallbackHeight = typeof window !== 'undefined' ? window.innerHeight : 1080;
+        const heightRef = display ? display.height : fallbackHeight;
+        const px = (this.state.height / 100) * heightRef + 1;
         const snapped = this.snapToGrid(px);
-        const heightPercent = snapped / window.innerHeight * 100;
+        const heightPercent = snapped / heightRef * 100;
         this.setState({ height: heightPercent }, this.resizeBoundries);
     }
 
     handleHorizontalResize = () => {
         if (this.props.resizable === false) return;
-        const px = (this.state.width / 100) * window.innerWidth + 1;
+        const displays = getDisplayLayout();
+        const display = this.getActiveDisplay(displays);
+        const fallbackWidth = typeof window !== 'undefined' ? window.innerWidth : 1920;
+        const widthRef = display ? display.width : fallbackWidth;
+        const px = (this.state.width / 100) * widthRef + 1;
         const snapped = this.snapToGrid(px);
-        const widthPercent = snapped / window.innerWidth * 100;
+        const widthPercent = snapped / widthRef * 100;
         this.setState({ width: widthPercent }, this.resizeBoundries);
     }
 
-    setWinowsPosition = () => {
+    setWinowsPosition = (forcedDisplayId) => {
         var r = document.querySelector("#" + this.id);
         if (!r) return;
         var rect = r.getBoundingClientRect();
@@ -229,8 +403,14 @@ export class Window extends Component {
         const y = this.snapToGrid(rect.y - 32);
         r.style.setProperty('--window-transform-x', x.toFixed(1).toString() + "px");
         r.style.setProperty('--window-transform-y', y.toFixed(1).toString() + "px");
+        const displays = getDisplayLayout();
+        const display = forcedDisplayId ? getDisplayById(forcedDisplayId, displays) : findDisplayForRect(rect, displays);
+        const displayId = display ? display.id : this.state.activeDisplayId;
+        if (displayId && displayId !== this.state.activeDisplayId) {
+            this.setState({ activeDisplayId: displayId });
+        }
         if (this.props.onPositionChange) {
-            this.props.onPositionChange(x, y);
+            this.props.onPositionChange(x, y, displayId);
         }
     }
 
@@ -258,25 +438,26 @@ export class Window extends Component {
     snapWindow = (position) => {
         this.setWinowsPosition();
         const { width, height } = this.state;
+        const display = this.getActiveDisplay();
+        if (!display) return;
         let newWidth = width;
         let newHeight = height;
-        let transform = '';
+        let transformX = display.x - 1;
+        let transformY = display.y - 2;
         if (position === 'left') {
             newWidth = 50;
             newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
         } else if (position === 'right') {
             newWidth = 50;
             newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
+            transformX = display.x + display.width / 2;
         } else if (position === 'top') {
             newWidth = 100.2;
             newHeight = 50;
-            transform = 'translate(-1pt,-2pt)';
         }
         const r = document.querySelector("#" + this.id);
-        if (r && transform) {
-            r.style.transform = transform;
+        if (r) {
+            r.style.transform = `translate(${transformX}px,${transformY}px)`;
         }
         this.setState({
             snapPreview: null,
@@ -285,7 +466,10 @@ export class Window extends Component {
             lastSize: { width, height },
             width: newWidth,
             height: newHeight
-        }, this.resizeBoundries);
+        }, () => {
+            this.resizeBoundries();
+            this.setWinowsPosition(display.id);
+        });
     }
 
     checkOverlap = () => {
@@ -317,18 +501,21 @@ export class Window extends Component {
         var r = document.querySelector("#" + this.id);
         if (!r) return;
         var rect = r.getBoundingClientRect();
+        const displays = getDisplayLayout();
+        const display = this.getActiveDisplay(displays);
+        if (!display) return;
         const threshold = 30;
         let snap = null;
-        if (rect.left <= threshold) {
-            snap = { left: '0', top: '0', width: '50%', height: '100%' };
+        if (rect.left <= display.x + threshold) {
+            snap = { left: `${display.x}px`, top: `${display.y}px`, width: `${display.width / 2}px`, height: `${display.height}px` };
             this.setState({ snapPreview: snap, snapPosition: 'left' });
         }
-        else if (rect.right >= window.innerWidth - threshold) {
-            snap = { left: '50%', top: '0', width: '50%', height: '100%' };
+        else if (rect.right >= display.x + display.width - threshold) {
+            snap = { left: `${display.x + display.width / 2}px`, top: `${display.y}px`, width: `${display.width / 2}px`, height: `${display.height}px` };
             this.setState({ snapPreview: snap, snapPosition: 'right' });
         }
-        else if (rect.top <= threshold) {
-            snap = { left: '0', top: '0', width: '100%', height: '50%' };
+        else if (rect.top <= display.y + threshold) {
+            snap = { left: `${display.x}px`, top: `${display.y}px`, width: `${display.width}px`, height: `${display.height / 2}px` };
             this.setState({ snapPreview: snap, snapPosition: 'top' });
         }
         else {
@@ -341,8 +528,11 @@ export class Window extends Component {
         const threshold = 30;
         const resistance = 0.35; // how much to slow near edges
         let { x, y } = data;
-        const maxX = this.state.parentSize.width;
-        const maxY = this.state.parentSize.height;
+        const bounds = this.getDraggableBounds();
+        const maxX = bounds.right;
+        const maxY = bounds.bottom;
+        const minX = bounds.left;
+        const minY = bounds.top;
 
         const resist = (pos, min, max) => {
             if (pos < min) return min;
@@ -352,17 +542,25 @@ export class Window extends Component {
             return pos;
         }
 
-        x = resist(x, 0, maxX);
-        y = resist(y, 0, maxY);
+        x = resist(x, minX, maxX);
+        y = resist(y, minY, maxY);
         node.style.transform = `translate(${x}px, ${y}px)`;
     }
 
     handleDrag = (e, data) => {
+        let node = null;
         if (data && data.node) {
+            node = data.node;
             this.applyEdgeResistance(data.node, data);
+        } else {
+            node = typeof document !== 'undefined' ? document.getElementById(this.id) : null;
         }
         this.checkOverlap();
         this.checkSnapPreview();
+        const rect = node ? node.getBoundingClientRect() : null;
+        if (rect) {
+            this.maybeHandleDisplayChange(rect);
+        }
     }
 
     handleStop = () => {
@@ -371,7 +569,14 @@ export class Window extends Component {
         if (snapPos) {
             this.snapWindow(snapPos);
         } else {
-            this.setState({ snapPreview: null, snapPosition: null });
+            this.setState({ snapPreview: null, snapPosition: null }, () => {
+                this.setWinowsPosition();
+                const node = typeof document !== 'undefined' ? document.getElementById(this.id) : null;
+                const rect = node ? node.getBoundingClientRect() : null;
+                if (rect) {
+                    this.maybeHandleDisplayChange(rect);
+                }
+            });
         }
     }
 
@@ -519,46 +724,56 @@ export class Window extends Component {
     }
 
     handleKeyDown = (e) => {
+        const safePreventDefault = () => {
+            if (typeof e.preventDefault === 'function') {
+                e.preventDefault();
+            }
+        };
+        const safeStopPropagation = () => {
+            if (typeof e.stopPropagation === 'function') {
+                e.stopPropagation();
+            }
+        };
         if (e.key === 'Escape') {
             this.closeWindow();
         } else if (e.key === 'Tab') {
             this.focusWindow();
         } else if (e.altKey) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                safePreventDefault();
+                safeStopPropagation();
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                safePreventDefault();
+                safeStopPropagation();
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                safePreventDefault();
+                safeStopPropagation();
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                safePreventDefault();
+                safeStopPropagation();
                 this.snapWindow('top');
             }
             this.focusWindow();
         } else if (e.shiftKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                safePreventDefault();
+                safeStopPropagation();
                 this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                safePreventDefault();
+                safeStopPropagation();
                 this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                safePreventDefault();
+                safeStopPropagation();
                 this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                safePreventDefault();
+                safeStopPropagation();
                 this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
             }
             this.focusWindow();
@@ -584,34 +799,14 @@ export class Window extends Component {
         }
     }
 
-    snapWindow = (pos) => {
-        this.focusWindow();
-        const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
-        let transform = '';
-        if (pos === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (pos === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        }
-        const node = document.getElementById(this.id);
-        if (node && transform) {
-            node.style.transform = transform;
-        }
-        this.setState({
-            snapped: pos,
-            lastSize: { width, height },
-            width: newWidth,
-            height: newHeight
-        }, this.resizeBoundries);
-    }
-
     render() {
+        const display = this.getActiveDisplay();
+        const fallbackWidth = typeof window !== 'undefined' ? window.innerWidth : 1920;
+        const fallbackHeight = typeof window !== 'undefined' ? window.innerHeight : 1080;
+        const widthRef = display ? display.width : fallbackWidth;
+        const heightRef = display ? display.height : fallbackHeight;
+        const widthPx = widthRef * (this.state.width / 100);
+        const heightPx = heightRef * (this.state.height / 100);
         return (
             <>
                 {this.state.snapPreview && (
@@ -631,10 +826,10 @@ export class Window extends Component {
                     onDrag={this.handleDrag}
                     allowAnyClick={false}
                     defaultPosition={{ x: this.startX, y: this.startY }}
-                    bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
+                    bounds={this.getDraggableBounds()}
                 >
                     <div
-                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
+                        style={{ width: `${widthPx}px`, height: `${heightPx}px` }}
                         className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                         id={this.id}
                         role="dialog"
