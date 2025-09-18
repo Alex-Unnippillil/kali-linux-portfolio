@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
+import QrContextMenu from './ContextMenu';
 
 const QRScanner: React.FC = () => {
+  const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const controlsRef = useRef<{ stop: () => void } | null>(null);
   const trackRef = useRef<MediaStreamTrack | null>(null);
@@ -13,6 +15,7 @@ const QRScanner: React.FC = () => {
   const [facing, setFacing] = useState<'environment' | 'user'>('environment');
   const [torch, setTorch] = useState(false);
   const [preview, setPreview] = useState('');
+  const [torchAvailable, setTorchAvailable] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -29,6 +32,18 @@ const QRScanner: React.FC = () => {
         });
         streamRef.current = stream;
         trackRef.current = stream.getVideoTracks()[0] || null;
+        const currentTrack = trackRef.current as any;
+        if (currentTrack?.getCapabilities) {
+          const capabilities = currentTrack.getCapabilities();
+          const hasTorch = Boolean(capabilities?.torch);
+          setTorchAvailable(hasTorch);
+          if (!hasTorch) {
+            setTorch(false);
+          }
+        } else {
+          setTorchAvailable(false);
+          setTorch(false);
+        }
         if (!active) return;
         const videoEl = videoRef.current;
         if (videoEl) {
@@ -80,14 +95,25 @@ const QRScanner: React.FC = () => {
       streamRef.current?.getTracks().forEach((t) => t.stop());
       if (video) video.srcObject = null;
       trackRef.current = null;
+      setTorchAvailable(false);
+      setTorch(false);
     };
   }, [facing]);
 
   useEffect(() => {
     const track = trackRef.current as any;
-    if (!track) return;
+    if (!track) {
+      setTorchAvailable(false);
+      setTorch(false);
+      return;
+    }
     const capabilities = track.getCapabilities?.();
-    if (!capabilities?.torch) return;
+    const hasTorch = Boolean(capabilities?.torch);
+    setTorchAvailable(hasTorch);
+    if (!hasTorch) {
+      setTorch(false);
+      return;
+    }
     track.applyConstraints({ advanced: [{ torch }] }).catch(() => {});
   }, [torch]);
 
@@ -105,6 +131,20 @@ const QRScanner: React.FC = () => {
     if (result) navigator.clipboard?.writeText(result).catch(() => {});
   };
 
+  const downloadPreview = () => {
+    if (!preview) return;
+    const link = document.createElement('a');
+    link.href = preview;
+    link.download = 'qr-result.png';
+    link.click();
+  };
+
+  const clearResult = () => {
+    setResult('');
+    setPreview('');
+    setError('');
+  };
+
   const toggleTorch = () => {
     setTorch((t) => !t);
   };
@@ -114,7 +154,22 @@ const QRScanner: React.FC = () => {
   };
 
   return (
-    <div className="p-4 space-y-4 text-white bg-ub-cool-grey h-full flex flex-col items-center">
+    <div
+      ref={containerRef}
+      className="p-4 space-y-4 text-white bg-ub-cool-grey h-full flex flex-col items-center"
+    >
+      <QrContextMenu
+        targetRef={containerRef}
+        hasResult={result !== ''}
+        hasPreview={preview !== ''}
+        torchOn={torch}
+        torchAvailable={torchAvailable}
+        onCopyResult={copyResult}
+        onDownloadPreview={downloadPreview}
+        onClearResult={clearResult}
+        onSwitchCamera={switchCamera}
+        onToggleTorch={toggleTorch}
+      />
       <div className="relative w-full max-w-sm">
         <video ref={videoRef} className="w-full rounded-md border-2 border-white bg-black" />
         <div className="absolute top-2 right-2 flex gap-2">

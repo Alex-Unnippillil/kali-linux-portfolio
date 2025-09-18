@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import projectsData from '../../data/projects.json';
+import projectsData from '../../../data/projects.json';
+import ProjectGalleryContextMenu from './ContextMenu';
 
 interface Project {
   id: number;
@@ -35,6 +36,8 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
   const [tags, setTags] = useState<string[]>([]);
   const [ariaMessage, setAriaMessage] = useState('');
   const [selected, setSelected] = useState<Project[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [contextProject, setContextProject] = useState<Project | null>(null);
 
   const readFilters = async () => {
     try {
@@ -124,6 +127,12 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
     [projects, stack, year, type, tags, search]
   );
 
+  const hasFilters =
+    search !== '' || stack !== '' || year !== '' || type !== '' || tags.length > 0;
+  const hasComparison = selected.length > 0;
+  const isContextCompared =
+    contextProject != null && selected.some((p) => p.id === contextProject.id);
+
   useEffect(() => {
     writeFilters({ search, stack, year, type, tags });
   }, [search, stack, year, type, tags]);
@@ -154,8 +163,98 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
     });
   };
 
+  const openRepo = useCallback(() => {
+    if (!contextProject) return;
+    window.open(contextProject.repo, '_blank', 'noopener,noreferrer');
+  }, [contextProject]);
+
+  const copyRepo = useCallback(() => {
+    if (!contextProject) return;
+    navigator.clipboard?.writeText(contextProject.repo).catch(() => {});
+  }, [contextProject]);
+
+  const openDemo = useCallback(() => {
+    if (!contextProject?.demo) return;
+    window.open(contextProject.demo, '_blank', 'noopener,noreferrer');
+  }, [contextProject]);
+
+  const copyDemo = useCallback(() => {
+    if (!contextProject?.demo) return;
+    navigator.clipboard?.writeText(contextProject.demo).catch(() => {});
+  }, [contextProject]);
+
+  const openDemoInChrome = useCallback(() => {
+    if (!contextProject?.demo) return;
+    openInChrome(contextProject.demo);
+  }, [contextProject, openInChrome]);
+
+  const filterByStack = useCallback(() => {
+    if (!contextProject?.stack.length) return;
+    setStack(contextProject.stack[0]);
+  }, [contextProject]);
+
+  const addTagsToFilter = useCallback(() => {
+    if (!contextProject?.tags.length) return;
+    setTags((prev) => Array.from(new Set([...prev, ...contextProject.tags])));
+  }, [contextProject]);
+
+  const resetAllFilters = useCallback(() => {
+    setSearch('');
+    setStack('');
+    setYear('');
+    setType('');
+    setTags([]);
+  }, []);
+
+  const clearComparison = useCallback(() => {
+    setSelected([]);
+  }, []);
+
+  const handleContextMenuOpen = useCallback(
+    (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      const card = target?.closest('[data-project-id]') as HTMLElement | null;
+      if (card) {
+        const id = Number(card.dataset.projectId);
+        if (!Number.isNaN(id)) {
+          const projectMatch = projects.find((p) => p.id === id) || null;
+          setContextProject(projectMatch);
+        }
+      } else {
+        setContextProject(null);
+      }
+      return true;
+    },
+    [projects],
+  );
+
   return (
-    <div className="p-4 h-full overflow-auto bg-ub-cool-grey text-white">
+    <div
+      ref={containerRef}
+      className="p-4 h-full overflow-auto bg-ub-cool-grey text-white"
+    >
+      <ProjectGalleryContextMenu
+        targetRef={containerRef}
+        project={contextProject}
+        hasFilters={hasFilters}
+        hasComparison={hasComparison}
+        isCompared={isContextCompared}
+        onOpenRepo={openRepo}
+        onCopyRepo={copyRepo}
+        onOpenDemo={openDemo}
+        onCopyDemo={copyDemo}
+        onOpenDemoInChrome={openDemoInChrome}
+        onToggleCompare={() => {
+          if (contextProject) {
+            toggleSelect(contextProject);
+          }
+        }}
+        onFilterByStack={filterByStack}
+        onAddTagsToFilter={addTagsToFilter}
+        onResetFilters={resetAllFilters}
+        onClearComparison={clearComparison}
+        onOpen={handleContextMenuOpen}
+      />
       <div className="flex flex-wrap gap-2 mb-4">
         <input
           aria-label="Search"
@@ -257,6 +356,7 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
         {filtered.map((project) => (
           <div
             key={project.id}
+            data-project-id={project.id}
             className="mb-4 break-inside-avoid bg-gray-800 rounded shadow overflow-hidden"
           >
             <div className="flex flex-col md:flex-row h-48">
