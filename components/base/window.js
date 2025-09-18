@@ -37,6 +37,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._windowAnimation = null;
     }
 
     componentDidMount() {
@@ -69,6 +70,8 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        this.stopWindowAnimation();
+        this.resetSidebarIconAnimation();
     }
 
     setDefaultWindowDimenstion = () => {
@@ -198,6 +201,88 @@ export class Window extends Component {
 
     changeCursorToDefault = () => {
         this.setState({ cursorType: "cursor-default", grabbed: false })
+    }
+
+    stopWindowAnimation = () => {
+        if (this._windowAnimation) {
+            try {
+                this._windowAnimation.cancel();
+            } catch (e) {
+                // ignore cancel errors
+            }
+            this._windowAnimation = null;
+        }
+    }
+
+    prefersReducedMotion = () => {
+        if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+            return false;
+        }
+        return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+
+    shouldAnimate = (node) => {
+        if (!node) return false;
+        if (this.prefersReducedMotion()) return false;
+        return typeof node.animate === 'function';
+    }
+
+    getWindowNode = () => {
+        if (typeof document === 'undefined') return null;
+        return document.getElementById(this.id);
+    }
+
+    getSidebarButton = () => {
+        if (typeof document === 'undefined') return null;
+        return document.getElementById(`sidebar-${this.id}`);
+    }
+
+    resetSidebarIconAnimation = () => {
+        const icon = this.getSidebarButton();
+        if (!icon) return;
+        const pulse = icon.querySelector('.scalable-app-icon');
+        if (pulse) {
+            pulse.classList.remove('scale');
+        }
+    }
+
+    animateSidebarIcon = () => {
+        if (this.prefersReducedMotion()) return;
+        const iconButton = this.getSidebarButton();
+        if (!iconButton) return;
+        const pulse = iconButton.querySelector('.scalable-app-icon');
+        if (!pulse) return;
+        pulse.classList.remove('scale');
+        // Force reflow to restart animation
+        void pulse.offsetWidth;
+        pulse.classList.add('scale');
+        pulse.addEventListener('animationend', () => {
+            pulse.classList.remove('scale');
+        }, { once: true });
+    }
+
+    getCurrentTransform = (node) => {
+        if (!node) return 'translate(0px, 0px) scale(1)';
+        const inline = node.style.transform;
+        if (inline && inline !== 'none') return inline;
+        if (typeof window !== 'undefined' && typeof window.getComputedStyle === 'function') {
+            const computed = window.getComputedStyle(node).transform;
+            if (computed && computed !== 'none') {
+                return computed;
+            }
+        }
+        const x = node.style.getPropertyValue('--window-transform-x') || '0px';
+        const y = node.style.getPropertyValue('--window-transform-y') || '0px';
+        return `translate(${x}, ${y}) scale(1)`;
+    }
+
+    prepareAnimation = (node) => {
+        const current = this.getCurrentTransform(node);
+        this.stopWindowAnimation();
+        if (node && current) {
+            node.style.transform = current;
+        }
+        return current;
     }
 
     snapToGrid = (value) => {
@@ -380,74 +465,113 @@ export class Window extends Component {
     }
 
     minimizeWindow = () => {
-        let posx = -310;
-        if (this.state.maximized) {
-            posx = -510;
-        }
         this.setWinowsPosition();
-        // get corrosponding sidebar app's position
-        var r = document.querySelector("#sidebar-" + this.id);
-        var sidebBarApp = r.getBoundingClientRect();
+        const node = this.getWindowNode();
+        if (!node) return;
 
-        const node = document.querySelector("#" + this.id);
-        const endTransform = `translate(${posx}px,${sidebBarApp.y.toFixed(1) - 240}px) scale(0.2)`;
-        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const startTransform = this.prepareAnimation(node);
+        const sidebarButton = this.getSidebarButton();
+        const iconRect = sidebarButton ? sidebarButton.getBoundingClientRect() : null;
+        const parentRect = node.parentElement ? node.parentElement.getBoundingClientRect() : null;
+        const windowRect = node.getBoundingClientRect();
+        const scaleFactor = 0.2;
 
-        if (prefersReducedMotion) {
+        let endTransform = null;
+        if (iconRect && parentRect) {
+            const targetX = iconRect.left + iconRect.width / 2 - parentRect.left - (windowRect.width * scaleFactor) / 2;
+            const targetY = iconRect.top + iconRect.height / 2 - parentRect.top - (windowRect.height * scaleFactor) / 2;
+            endTransform = `translate(${targetX}px, ${targetY}px) scale(${scaleFactor})`;
+        }
+        if (!endTransform) {
+            let posx = -310;
+            if (this.state.maximized) {
+                posx = -510;
+            }
+            const fallbackY = iconRect && parentRect ? iconRect.top - parentRect.top - 240 : -240;
+            endTransform = `translate(${posx}px,${fallbackY}px) scale(${scaleFactor})`;
+        }
+
+        this.animateSidebarIcon();
+
+        if (!this.shouldAnimate(node)) {
             node.style.transform = endTransform;
             this.props.hasMinimised(this.id);
             return;
         }
 
-        const startTransform = node.style.transform;
-        this._dockAnimation = node.animate(
-            [{ transform: startTransform }, { transform: endTransform }],
+        const previousOrigin = node.style.transformOrigin;
+        node.style.transformOrigin = 'top left';
+
+        const animation = node.animate(
+            [
+                { transform: startTransform },
+                { transform: endTransform }
+            ],
             { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
         );
-        this._dockAnimation.onfinish = () => {
+        this._windowAnimation = animation;
+        animation.onfinish = () => {
             node.style.transform = endTransform;
+            node.style.transformOrigin = previousOrigin;
             this.props.hasMinimised(this.id);
-            this._dockAnimation.onfinish = null;
+            this._windowAnimation = null;
+        };
+        animation.oncancel = () => {
+            node.style.transformOrigin = previousOrigin;
+            if (this._windowAnimation === animation) {
+                this._windowAnimation = null;
+            }
         };
     }
 
     restoreWindow = () => {
-        const node = document.querySelector("#" + this.id);
+        const node = this.getWindowNode();
+        if (!node) return;
+
+        const startTransform = this.prepareAnimation(node);
         this.setDefaultWindowDimenstion();
         // get previous position
         let posx = node.style.getPropertyValue("--window-transform-x");
         let posy = node.style.getPropertyValue("--window-transform-y");
-        const startTransform = node.style.transform;
-        const endTransform = `translate(${posx},${posy})`;
-        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const endTransform = `translate(${posx || '0px'},${posy || '0px'}) scale(1)`;
 
-        if (prefersReducedMotion) {
+        if (this.props.minimized) {
+            this.animateSidebarIcon();
+        }
+
+        if (!this.shouldAnimate(node)) {
             node.style.transform = endTransform;
-            this.setState({ maximized: false });
-            this.checkOverlap();
+            this.setState({ maximized: false }, () => {
+                this.checkOverlap();
+            });
             return;
         }
 
-        if (this._dockAnimation) {
-            this._dockAnimation.onfinish = () => {
-                node.style.transform = endTransform;
-                this.setState({ maximized: false });
+        const previousOrigin = node.style.transformOrigin;
+        node.style.transformOrigin = 'top left';
+
+        const animation = node.animate(
+            [
+                { transform: startTransform },
+                { transform: endTransform }
+            ],
+            { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
+        );
+        this._windowAnimation = animation;
+        animation.onfinish = () => {
+            node.style.transform = endTransform;
+            node.style.transformOrigin = previousOrigin;
+            this.setState({ maximized: false }, () => {
                 this.checkOverlap();
-                this._dockAnimation.onfinish = null;
-            };
-            this._dockAnimation.reverse();
-        } else {
-            this._dockAnimation = node.animate(
-                [{ transform: startTransform }, { transform: endTransform }],
-                { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
-            );
-            this._dockAnimation.onfinish = () => {
-                node.style.transform = endTransform;
-                this.setState({ maximized: false });
-                this.checkOverlap();
-                this._dockAnimation.onfinish = null;
-            };
-        }
+            });
+            this._windowAnimation = null;
+        };
+        animation.oncancel = () => {
+            node.style.transformOrigin = previousOrigin;
+            if (this._windowAnimation === animation) {
+                this._windowAnimation = null;
+            }
+        };
     }
 
     maximizeWindow = () => {
@@ -457,12 +581,50 @@ export class Window extends Component {
         }
         else {
             this.focusWindow();
-            var r = document.querySelector("#" + this.id);
+            const node = this.getWindowNode();
+            if (!node) return;
             this.setWinowsPosition();
-            // translate window to maximize position
-            r.style.transform = `translate(-1pt,-2pt)`;
-            this.setState({ maximized: true, height: 96.3, width: 100.2 });
-            this.props.hideSideBar(this.id, true);
+            const startTransform = this.prepareAnimation(node);
+            const endTransform = 'translate(-1pt,-2pt) scale(1)';
+
+            this.animateSidebarIcon();
+
+            const applyState = () => {
+                node.style.transform = endTransform;
+                this.setState({ maximized: true, height: 96.3, width: 100.2 }, () => {
+                    this.resizeBoundries();
+                });
+                this.props.hideSideBar(this.id, true);
+            };
+
+            if (!this.shouldAnimate(node)) {
+                applyState();
+                return;
+            }
+
+            const previousOrigin = node.style.transformOrigin;
+            node.style.transformOrigin = 'top left';
+
+            const animation = node.animate(
+                [
+                    { transform: startTransform },
+                    { transform: endTransform }
+                ],
+                { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
+            );
+            this._windowAnimation = animation;
+            animation.onfinish = () => {
+                node.style.transform = endTransform;
+                node.style.transformOrigin = previousOrigin;
+                applyState();
+                this._windowAnimation = null;
+            };
+            animation.oncancel = () => {
+                node.style.transformOrigin = previousOrigin;
+                if (this._windowAnimation === animation) {
+                    this._windowAnimation = null;
+                }
+            };
         }
     }
 
