@@ -37,6 +37,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._rulePreviewState = null;
     }
 
     componentDidMount() {
@@ -53,6 +54,8 @@ export class Window extends Component {
         window.addEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.addEventListener('super-arrow', this.handleSuperArrow);
+        root?.addEventListener('window-rule-preview', this.handleRulePreview);
+        root?.addEventListener('window-rule-preview-revert', this.handleRulePreviewRevert);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -66,6 +69,8 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        root?.removeEventListener('window-rule-preview', this.handleRulePreview);
+        root?.removeEventListener('window-rule-preview-revert', this.handleRulePreviewRevert);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
@@ -131,6 +136,46 @@ export class Window extends Component {
                 this.optimizeWindow();
             }
         }, 200);
+    }
+
+    handleRulePreview = (event) => {
+        const detail = event && event.detail ? event.detail : {};
+        const next = {};
+        if (typeof detail.width === 'number' && Number.isFinite(detail.width)) {
+            next.width = Math.min(Math.max(detail.width, 10), 100);
+        }
+        if (typeof detail.height === 'number' && Number.isFinite(detail.height)) {
+            next.height = Math.min(Math.max(detail.height, 10), 100);
+        }
+        if (!Object.keys(next).length) {
+            return;
+        }
+        if (!this._rulePreviewState) {
+            this._rulePreviewState = {
+                width: this.state.width,
+                height: this.state.height,
+            };
+        }
+        this.setState(next, () => {
+            this.resizeBoundries();
+            this.checkOverlap();
+        });
+    }
+
+    handleRulePreviewRevert = () => {
+        if (!this._rulePreviewState) return;
+        const { width, height } = this._rulePreviewState;
+        this._rulePreviewState = null;
+        this.setState(
+            {
+                width: width !== null && width !== undefined ? width : this.state.width,
+                height: height !== null && height !== undefined ? height : this.state.height,
+            },
+            () => {
+                this.resizeBoundries();
+                this.checkOverlap();
+            }
+        );
     }
 
     optimizeWindow = () => {
@@ -377,6 +422,19 @@ export class Window extends Component {
 
     focusWindow = () => {
         this.props.focus(this.id);
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(
+                new CustomEvent('desktop-active-window', {
+                    detail: {
+                        id: this.id,
+                        title: this.props.title,
+                        width: this.state.width,
+                        height: this.state.height,
+                        maximized: this.state.maximized,
+                    },
+                })
+            );
+        }
     }
 
     minimizeWindow = () => {
@@ -639,6 +697,9 @@ export class Window extends Component {
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
+                        data-maximized={this.state.maximized ? 'true' : 'false'}
+                        data-window-width={this.state.width}
+                        data-window-height={this.state.height}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                     >
