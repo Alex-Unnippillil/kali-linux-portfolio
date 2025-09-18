@@ -1,6 +1,8 @@
 import dynamic from 'next/dynamic';
 import Meta from '../components/SEO/Meta';
 import BetaBadge from '../components/BetaBadge';
+import ErrorBoundary from '../components/core/ErrorBoundary';
+import MainContentSkeleton from '../components/common/MainContentSkeleton';
 
 const Ubuntu = dynamic(
   () =>
@@ -10,8 +12,16 @@ const Ubuntu = dynamic(
     }),
   {
     ssr: false,
-    loading: () => <p>Loading Ubuntu...</p>,
+    loading: () => <MainContentSkeleton />,
   }
+);
+const InstallButtonSkeleton = () => (
+  <div
+    role="status"
+    aria-label="Loading install options"
+    aria-busy="true"
+    className="mx-auto mt-6 h-12 w-56 animate-pulse rounded bg-white/10"
+  />
 );
 const InstallButton = dynamic(
   () =>
@@ -21,7 +31,7 @@ const InstallButton = dynamic(
     }),
   {
     ssr: false,
-    loading: () => <p>Loading install options...</p>,
+    loading: () => <InstallButtonSkeleton />,
   }
 );
 
@@ -34,9 +44,13 @@ const App = () => (
       Skip to content
     </a>
     <Meta />
-    <Ubuntu />
-    <BetaBadge />
-    <InstallButton />
+    <ErrorBoundary>
+      <>
+        <Ubuntu />
+        <BetaBadge />
+        <InstallButton />
+      </>
+    </ErrorBoundary>
   </>
 );
 
