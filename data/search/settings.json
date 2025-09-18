@@ -1,0 +1,56 @@
+[
+  {
+    "id": "theme",
+    "title": "Theme presets",
+    "description": "Toggle between default, dark, neon, and matrix shells for the desktop chrome.",
+    "url": "/apps/settings",
+    "path": "settings.display.theme",
+    "keywords": ["appearance", "dark mode", "matrix", "neon"],
+    "boost": 3
+  },
+  {
+    "id": "accent",
+    "title": "Accent color picker",
+    "description": "Choose from the curated palette to recolor window chrome and highlights while checking contrast.",
+    "url": "/apps/settings",
+    "path": "settings.display.accent",
+    "keywords": ["contrast", "accessibility", "color"],
+    "boost": 3
+  },
+  {
+    "id": "wallpaper",
+    "title": "Wallpaper selector",
+    "description": "Cycle through the bundled Yaru-inspired wallpapers and preview them live on the desktop.",
+    "url": "/apps/settings",
+    "path": "settings.display.wallpaper",
+    "keywords": ["background", "wallpaper", "preview"],
+    "boost": 2
+  },
+  {
+    "id": "reduced-motion",
+    "title": "Reduced motion",
+    "description": "Disable non-essential animations for motion-sensitive visitors and keep gameplay comfortable.",
+    "url": "/apps/settings",
+    "path": "settings.accessibility.motion",
+    "keywords": ["accessibility", "animation", "motion"],
+    "boost": 3
+  },
+  {
+    "id": "large-hit-areas",
+    "title": "Large hit areas",
+    "description": "Expand control targets to make touch and keyboard navigation easier across every app.",
+    "url": "/apps/settings",
+    "path": "settings.accessibility.hit-areas",
+    "keywords": ["accessibility", "touch", "inputs"],
+    "boost": 2
+  },
+  {
+    "id": "allow-network",
+    "title": "Allow network requests",
+    "description": "Toggle simulated network access for apps that would otherwise make outbound HTTP calls.",
+    "url": "/apps/settings",
+    "path": "settings.privacy.network",
+    "keywords": ["privacy", "network", "offline"],
+    "boost": 2
+  }
+]

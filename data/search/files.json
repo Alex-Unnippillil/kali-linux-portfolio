@@ -1,0 +1,47 @@
+[
+  {
+    "id": "resume-pdf",
+    "title": "Resume (PDF)",
+    "description": "Printable resume highlighting security research, tooling, and speaking engagements.",
+    "url": "/assets/Alex-Unnippillil-Resume.pdf",
+    "path": "Documents/Resume/Alex-Unnippillil-Resume.pdf",
+    "keywords": ["resume", "cv", "pdf"],
+    "boost": 4
+  },
+  {
+    "id": "timeline",
+    "title": "Research timeline",
+    "description": "One-page overview of conference talks, publications, and notable tool releases.",
+    "url": "/assets/timeline.pdf",
+    "path": "Documents/Briefing/timeline.pdf",
+    "keywords": ["timeline", "talks", "publications"],
+    "boost": 3
+  },
+  {
+    "id": "contact-card",
+    "title": "Contact card (vCard)",
+    "description": "Drop the vCard into your address book to keep social links and email in sync.",
+    "url": "/assets/alex-unnippillil.vcf",
+    "path": "Documents/Contacts/alex-unnippillil.vcf",
+    "keywords": ["contact", "vcard", "profile"],
+    "boost": 2
+  },
+  {
+    "id": "module-report",
+    "title": "Module audit report",
+    "description": "Static HTML report summarizing module health pulled from the dependency scanner.",
+    "url": "/module-report.html",
+    "path": "Reports/module-report.html",
+    "keywords": ["report", "dependencies", "audit"],
+    "boost": 2
+  },
+  {
+    "id": "autopsy-evidence",
+    "title": "Autopsy evidence pack",
+    "description": "JSON bundle of artifacts used by the Autopsy case simulator for walkthroughs.",
+    "url": "/autopsy-demo.json",
+    "path": "Cases/autopsy-demo.json",
+    "keywords": ["forensics", "autopsy", "artifacts"],
+    "boost": 2
+  }
+]

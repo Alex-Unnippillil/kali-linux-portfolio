@@ -1,0 +1,66 @@
+[
+  {
+    "id": "terminal",
+    "title": "Terminal",
+    "description": "Simulated Kali Linux shell with guided missions, autocomplete, and command history.",
+    "url": "/apps/terminal",
+    "keywords": ["shell", "cli", "bash", "simulation"],
+    "boost": 6
+  },
+  {
+    "id": "resource-monitor",
+    "title": "Resource Monitor",
+    "description": "Live CPU, memory, and network telemetry visualized with gauges and sparkline charts.",
+    "url": "/apps/resource-monitor",
+    "keywords": ["performance", "metrics", "monitoring", "cpu"],
+    "boost": 4
+  },
+  {
+    "id": "hashcat",
+    "title": "Hashcat Simulator",
+    "description": "Guided password auditing scenarios with progress dashboards and realistic attack modes.",
+    "url": "/apps/hashcat",
+    "keywords": ["password", "cracking", "security", "audit"],
+    "boost": 5
+  },
+  {
+    "id": "wireshark",
+    "title": "Packet Analyzer",
+    "description": "Wireshark-inspired capture viewer with timeline playback, filters, and traffic summaries.",
+    "url": "/apps/wireshark",
+    "keywords": ["network", "pcap", "analysis", "packets"],
+    "boost": 5
+  },
+  {
+    "id": "autopsy",
+    "title": "Autopsy Case",
+    "description": "Forensic triage sandbox that walks through sample disk artifacts and evidence tagging.",
+    "url": "/apps/autopsy",
+    "keywords": ["forensics", "disk", "artifacts", "investigation"],
+    "boost": 4
+  },
+  {
+    "id": "volatility",
+    "title": "Volatility Lab",
+    "description": "Memory forensics walkthrough featuring profile selection, plugin output, and annotations.",
+    "url": "/apps/volatility",
+    "keywords": ["memory", "forensics", "malware", "analysis"],
+    "boost": 4
+  },
+  {
+    "id": "project-gallery",
+    "title": "Project Gallery",
+    "description": "Interactive showcase of featured research, talks, and tooling with quick filters.",
+    "url": "/apps/project-gallery",
+    "keywords": ["portfolio", "projects", "talks", "demos"],
+    "boost": 3
+  },
+  {
+    "id": "wordle",
+    "title": "Wordle Daily",
+    "description": "Daily Wordle clone with accessibility-first controls, hints, and shareable grids.",
+    "url": "/apps/wordle",
+    "keywords": ["game", "puzzle", "daily", "word"],
+    "boost": 2
+  }
+]
