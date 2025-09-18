@@ -1,23 +1,32 @@
+import React from 'react';
 import { renderHook, act } from '@testing-library/react';
-import { SettingsProvider, useSettings } from '../hooks/useSettings';
+import { ThemeProvider } from '../components/providers/ThemeProvider';
+import { useTheme } from '../hooks/useTheme';
+import { THEME_DEFINITIONS } from '../lib/theme/tokens';
 import { getTheme, getUnlockedThemes, setTheme } from '../utils/theme';
 
+
+const ThemeWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <ThemeProvider>{children}</ThemeProvider>
+);
 
 describe('theme persistence and unlocking', () => {
   beforeEach(() => {
     window.localStorage.clear();
     document.documentElement.dataset.theme = '';
     document.documentElement.className = '';
+    document.documentElement.style.cssText = '';
   });
 
   test('theme persists across sessions', () => {
-    const { result } = renderHook(() => useSettings(), {
-      wrapper: SettingsProvider,
+    const { result, unmount } = renderHook(() => useTheme(), {
+      wrapper: ThemeWrapper,
     });
     act(() => result.current.setTheme('dark'));
     expect(result.current.theme).toBe('dark');
     expect(getTheme()).toBe('dark');
     expect(window.localStorage.getItem('app:theme')).toBe('dark');
+    unmount();
 
   });
 
@@ -35,28 +44,20 @@ describe('theme persistence and unlocking', () => {
   });
 
   test('updates CSS variables without reload', () => {
-    const style = document.createElement('style');
-    style.innerHTML = `
-      :root { --color-bg: white; }
-      html[data-theme='dark'] { --color-bg: black; }
-      html[data-theme='neon'] { --color-bg: red; }
-    `;
-    document.head.appendChild(style);
-
     setTheme('default');
     expect(
-      getComputedStyle(document.documentElement).getPropertyValue('--color-bg')
-    ).toBe('white');
+      document.documentElement.style.getPropertyValue('--color-bg').trim(),
+    ).toBe(THEME_DEFINITIONS.default.tokens.background);
 
     setTheme('dark');
     expect(
-      getComputedStyle(document.documentElement).getPropertyValue('--color-bg')
-    ).toBe('black');
+      document.documentElement.style.getPropertyValue('--color-bg').trim(),
+    ).toBe(THEME_DEFINITIONS.dark.tokens.background);
 
     setTheme('neon');
     expect(
-      getComputedStyle(document.documentElement).getPropertyValue('--color-bg')
-    ).toBe('red');
+      document.documentElement.style.getPropertyValue('--color-bg').trim(),
+    ).toBe(THEME_DEFINITIONS.neon.tokens.background);
   });
 
   test('defaults to system preference when no stored theme', () => {

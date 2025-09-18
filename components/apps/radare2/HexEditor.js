@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 const BYTES_PER_ROW = 16;
 
-const HexEditor = ({ hex, theme }) => {
+const HexEditor = ({ hex, palette }) => {
   const [bytes, setBytes] = useState([]);
   const [patches, setPatches] = useState([]);
   const [selection, setSelection] = useState([null, null]);
@@ -13,22 +13,20 @@ const HexEditor = ({ hex, theme }) => {
   const prefersReduced = useRef(false);
   const visibleRef = useRef(true);
   const colorsRef = useRef({
-    surface: '#374151',
-    accent: '#fbbf24',
-    text: '#ffffff',
-    border: '#4b5563',
+    surface: palette.surface,
+    accent: palette.accent,
+    text: palette.text,
+    border: palette.border,
   });
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const style = getComputedStyle(document.documentElement);
     colorsRef.current = {
-      surface: style.getPropertyValue('--r2-surface').trim() || '#374151',
-      accent: style.getPropertyValue('--r2-accent').trim() || '#fbbf24',
-      text: style.getPropertyValue('--r2-text').trim() || '#ffffff',
-      border: style.getPropertyValue('--r2-border').trim() || '#4b5563',
+      surface: palette.surface,
+      accent: palette.accent,
+      text: palette.text,
+      border: palette.border,
     };
-  }, [theme]);
+  }, [palette.accent, palette.border, palette.surface, palette.text]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -162,8 +160,8 @@ const HexEditor = ({ hex, theme }) => {
           ref={containerRef}
           className="overflow-auto p-2 rounded max-h-64 flex-1"
           style={{
-            backgroundColor: 'var(--r2-surface)',
-            border: '1px solid var(--r2-border)',
+            backgroundColor: palette.surface,
+            border: `1px solid ${palette.border}`,
           }}
         >
           <div className="text-xs font-mono">
@@ -184,10 +182,10 @@ const HexEditor = ({ hex, theme }) => {
                       className="w-6 h-6 flex items-center justify-center rounded focus:outline-none focus-visible:ring-2"
                       style={{
                         backgroundColor: selected
-                          ? 'var(--r2-accent)'
-                          : 'var(--r2-surface)',
-                        color: selected ? '#000' : 'var(--r2-text)',
-                        '--tw-ring-color': 'var(--r2-accent)',
+                          ? palette.accent
+                          : palette.surface,
+                        color: selected ? '#000' : palette.text,
+                        '--tw-ring-color': palette.accent,
                         marginLeft: colIdx === 8 ? '0.5rem' : undefined,
                       }}
                     >
@@ -206,8 +204,8 @@ const HexEditor = ({ hex, theme }) => {
           onClick={handleMiniMapClick}
           className="rounded cursor-pointer"
           style={{
-            backgroundColor: 'var(--r2-surface)',
-            border: '1px solid var(--r2-border)',
+            backgroundColor: palette.surface,
+            border: `1px solid ${palette.border}`,
           }}
           aria-label="hex mini map"
         />
@@ -217,8 +215,8 @@ const HexEditor = ({ hex, theme }) => {
           onClick={() => workerRef.current?.postMessage({ type: 'export' })}
           className="px-3 py-1 rounded"
           style={{
-            backgroundColor: 'var(--r2-surface)',
-            border: '1px solid var(--r2-border)',
+            backgroundColor: palette.surface,
+            border: `1px solid ${palette.border}`,
           }}
         >
           Export Patches

@@ -8,9 +8,17 @@ interface Block {
   edges?: string[];
 }
 
+interface ThemePalette {
+  bg: string;
+  surface: string;
+  text: string;
+  accent: string;
+  border: string;
+}
+
 interface GraphViewProps {
   blocks: Block[];
-  theme: string;
+  palette: ThemePalette;
 }
 
 const ForceGraph2D = dynamic(
@@ -18,17 +26,11 @@ const ForceGraph2D = dynamic(
   { ssr: false },
 );
 
-const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
+const GraphView: React.FC<GraphViewProps> = ({ blocks, palette }) => {
   const fgRef = useRef<any | null>(null);
   const [center, setCenter] = useState({ x: 0, y: 0 });
   const [selected, setSelected] = useState<Block | null>(null);
-  const [colors, setColors] = useState({
-    bg: "#000",
-    surface: "#374151",
-    text: "#fff",
-    accent: "#fbbf24",
-    border: "#4b5563",
-  });
+  const colors = palette;
 
   const graphData = useMemo(() => {
     const nodes = blocks.map((b) => ({ id: b.addr }));
@@ -38,18 +40,6 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
     );
     return { nodes, links };
   }, [blocks]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const style = getComputedStyle(document.documentElement);
-    setColors({
-      bg: style.getPropertyValue("--r2-bg").trim() || "#000",
-      surface: style.getPropertyValue("--r2-surface").trim() || "#374151",
-      text: style.getPropertyValue("--r2-text").trim() || "#fff",
-      accent: style.getPropertyValue("--r2-accent").trim() || "#fbbf24",
-      border: style.getPropertyValue("--r2-border").trim() || "#4b5563",
-    });
-  }, [theme]);
 
   useEffect(() => {
     const fg = fgRef.current;
@@ -187,8 +177,8 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
           onClick={zoomIn}
           className="px-2 py-1 rounded"
           style={{
-            backgroundColor: "var(--r2-surface)",
-            border: "1px solid var(--r2-border)",
+            backgroundColor: colors.surface,
+            border: `1px solid ${colors.border}`,
           }}
         >
           +
@@ -197,8 +187,8 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
           onClick={zoomOut}
           className="px-2 py-1 rounded"
           style={{
-            backgroundColor: "var(--r2-surface)",
-            border: "1px solid var(--r2-border)",
+            backgroundColor: colors.surface,
+            border: `1px solid ${colors.border}`,
           }}
         >
           -
@@ -207,8 +197,8 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
           onClick={() => pan(0, -20)}
           className="px-2 py-1 rounded"
           style={{
-            backgroundColor: "var(--r2-surface)",
-            border: "1px solid var(--r2-border)",
+            backgroundColor: colors.surface,
+            border: `1px solid ${colors.border}`,
           }}
         >
           ↑
@@ -217,8 +207,8 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
           onClick={() => pan(0, 20)}
           className="px-2 py-1 rounded"
           style={{
-            backgroundColor: "var(--r2-surface)",
-            border: "1px solid var(--r2-border)",
+            backgroundColor: colors.surface,
+            border: `1px solid ${colors.border}`,
           }}
         >
           ↓
@@ -227,8 +217,8 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
           onClick={() => pan(-20, 0)}
           className="px-2 py-1 rounded"
           style={{
-            backgroundColor: "var(--r2-surface)",
-            border: "1px solid var(--r2-border)",
+            backgroundColor: colors.surface,
+            border: `1px solid ${colors.border}`,
           }}
         >
           ←
@@ -237,8 +227,8 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
           onClick={() => pan(20, 0)}
           className="px-2 py-1 rounded"
           style={{
-            backgroundColor: "var(--r2-surface)",
-            border: "1px solid var(--r2-border)",
+            backgroundColor: colors.surface,
+            border: `1px solid ${colors.border}`,
           }}
         >
           →
@@ -246,7 +236,7 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
       </div>
       <div
         className="h-64 rounded"
-        style={{ backgroundColor: "var(--r2-surface)" }}
+        style={{ backgroundColor: colors.surface }}
       >
         <ForceGraph2D
           ref={fgRef}
@@ -266,8 +256,8 @@ const GraphView: React.FC<GraphViewProps> = ({ blocks, theme }) => {
         <div
           className="mt-2 p-2 rounded text-sm"
           style={{
-            backgroundColor: "var(--r2-surface)",
-            border: "1px solid var(--r2-border)",
+            backgroundColor: colors.surface,
+            border: `1px solid ${colors.border}`,
           }}
         >
           <div>Block: {selected.addr}</div>
