@@ -101,17 +101,22 @@ export default class Ubuntu extends Component {
                 const statusBar = document.getElementById('status-bar');
                 // Consider using a React ref if the status bar element lives within this component tree
                 statusBar?.blur();
-		this.setState({ shutDownScreen: true });
+                this.setState({ shutDownScreen: true });
                 safeLocalStorage?.setItem('shut-down', true);
-	};
+        };
 
-	turnOn = () => {
-		ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
-
-		this.setState({ shutDownScreen: false, booting_screen: true });
-		this.setTimeOutBootScreen();
+        cancelShutdown = () => {
+                this.setState({ shutDownScreen: false });
                 safeLocalStorage?.setItem('shut-down', false);
-	};
+        };
+
+        turnOn = () => {
+                ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+
+                this.setState({ shutDownScreen: false, booting_screen: true });
+                this.setTimeOutBootScreen();
+                safeLocalStorage?.setItem('shut-down', false);
+        };
 
 	render() {
 		return (
@@ -121,11 +126,13 @@ export default class Ubuntu extends Component {
 					bgImgName={this.state.bg_image_name}
 					unLockScreen={this.unLockScreen}
 				/>
-				<BootingScreen
-					visible={this.state.booting_screen}
-					isShutDown={this.state.shutDownScreen}
-					turnOn={this.turnOn}
-				/>
+                                <BootingScreen
+                                        visible={this.state.booting_screen}
+                                        isShutDown={this.state.shutDownScreen}
+                                        turnOn={this.turnOn}
+                                        cancelShutdown={this.cancelShutdown}
+                                        lockScreen={this.lockScreen}
+                                />
 				<Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
 				<Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
 			</div>
