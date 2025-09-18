@@ -24,6 +24,128 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
+export const DESKTOP_ACTIONS = Object.freeze([
+    {
+        id: 'open-window-switcher',
+        label: 'Open Window Switcher',
+        description: 'Show the overview of open windows managed by the desktop switcher.',
+        operation: 'openWindowSwitcher',
+    },
+    {
+        id: 'cycle-apps',
+        label: 'Cycle Through Apps',
+        description: 'Focus the next or previous application window in the stack.',
+        operation: 'cycleApps',
+    },
+    {
+        id: 'cycle-app-windows',
+        label: 'Cycle Windows of Focused App',
+        description: 'Rotate focus across the open windows that belong to the same application.',
+        operation: 'cycleAppWindows',
+    },
+    {
+        id: 'open-clipboard-manager',
+        label: 'Open Clipboard Manager',
+        description: 'Launch the clipboard manager utility window.',
+        operation: 'openApp',
+        args: ['clipboard-manager'],
+    },
+    {
+        id: 'snap-focused-window',
+        label: 'Snap Focused Window',
+        description: 'Dispatch the Super+Arrow command to the active window for snapping.',
+        operation: 'dispatchSuperArrow',
+    },
+    {
+        id: 'toggle-all-apps',
+        label: 'Toggle Application Overview',
+        description: 'Open or close the all applications launcher grid.',
+        operation: 'showAllApps',
+    },
+    {
+        id: 'show-shortcut-selector',
+        label: 'Open Shortcut Selector',
+        description: 'Launch the desktop shortcut selector dialog.',
+        operation: 'openShortcutSelector',
+    },
+    {
+        id: 'focus-last-app',
+        label: 'Focus Last Active App',
+        description: 'Return focus to the most recently used non-minimized window.',
+        operation: 'giveFocusToLastApp',
+    },
+    {
+        id: 'minimize-focused',
+        label: 'Minimize Focused Window',
+        description: 'Minimize the currently focused window and advance focus.',
+        operation: 'hasMinimised',
+    },
+    {
+        id: 'open-settings',
+        label: 'Open Settings',
+        description: 'Launch the desktop settings panel.',
+        operation: 'openApp',
+        args: ['settings'],
+    },
+]);
+
+export const DESKTOP_SHORTCUTS = Object.freeze([
+    {
+        id: 'alt-tab',
+        combo: 'Alt+Tab',
+        actionId: 'open-window-switcher',
+        description: 'Open the window switcher overlay.',
+    },
+    {
+        id: 'alt-shift-tab',
+        combo: 'Alt+Shift+Tab',
+        actionId: 'cycle-apps',
+        description: 'Cycle backwards through open applications.',
+    },
+    {
+        id: 'ctrl-shift-v',
+        combo: 'Ctrl+Shift+V',
+        actionId: 'open-clipboard-manager',
+        description: 'Launch the Clipboard Manager app.',
+    },
+    {
+        id: 'alt-backtick',
+        combo: 'Alt+`',
+        actionId: 'cycle-app-windows',
+        description: 'Cycle windows for the focused application.',
+    },
+    {
+        id: 'alt-tilde',
+        combo: 'Alt+~',
+        actionId: 'cycle-app-windows',
+        description: 'Cycle windows for the focused application.',
+    },
+    {
+        id: 'super-arrow-left',
+        combo: 'Super+ArrowLeft',
+        actionId: 'snap-focused-window',
+        description: 'Snap the focused window to the left half of the screen.',
+    },
+    {
+        id: 'super-arrow-right',
+        combo: 'Super+ArrowRight',
+        actionId: 'snap-focused-window',
+        description: 'Snap the focused window to the right half of the screen.',
+    },
+    {
+        id: 'super-arrow-up',
+        combo: 'Super+ArrowUp',
+        actionId: 'snap-focused-window',
+        description: 'Snap the focused window to the top.',
+    },
+    {
+        id: 'super-arrow-down',
+        combo: 'Super+ArrowDown',
+        actionId: 'snap-focused-window',
+        description: 'Snap the focused window to the bottom.',
+    },
+]);
+
 export class Desktop extends Component {
     constructor() {
         super();
@@ -166,12 +288,15 @@ export class Desktop extends Component {
         }
         else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
             e.preventDefault();
-            const id = this.getFocusedWindowId();
-            if (id) {
-                const event = new CustomEvent('super-arrow', { detail: e.key });
-                document.getElementById(id)?.dispatchEvent(event);
-            }
+            this.dispatchSuperArrow(e.key);
         }
+    }
+
+    dispatchSuperArrow = (direction) => {
+        const id = this.getFocusedWindowId();
+        if (!id) return;
+        const event = new CustomEvent('super-arrow', { detail: direction });
+        document.getElementById(id)?.dispatchEvent(event);
     }
 
     getFocusedWindowId = () => {
