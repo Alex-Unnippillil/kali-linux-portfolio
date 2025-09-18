@@ -269,13 +269,17 @@ export function Settings() {
                     await importSettingsData(text);
                     try {
                         const parsed = JSON.parse(text);
-                        if (parsed.accent !== undefined) setAccent(parsed.accent);
-                        if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
-                        if (parsed.density !== undefined) setDensity(parsed.density);
-                        if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
-                        if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);
-                        if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
+                        const data = (parsed && typeof parsed === 'object')
+                            ? (parsed.data && typeof parsed.data === 'object' ? parsed.data : parsed)
+                            : {};
+                        if (data.accent !== undefined) setAccent(data.accent);
+                        if (data.wallpaper !== undefined) setWallpaper(data.wallpaper);
+                        if (data.density !== undefined) setDensity(data.density);
+                        if (data.reducedMotion !== undefined) setReducedMotion(data.reducedMotion);
+                        if (data.largeHitAreas !== undefined) setLargeHitAreas(data.largeHitAreas);
+                        if (data.highContrast !== undefined) setHighContrast(data.highContrast);
                         if (parsed.theme !== undefined) { setTheme(parsed.theme); }
+                        else if (data.theme !== undefined) { setTheme(data.theme); }
                     } catch (err) {
                         console.error('Invalid settings', err);
                     }

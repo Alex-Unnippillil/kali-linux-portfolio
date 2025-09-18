@@ -71,15 +71,22 @@ export default function Settings() {
     await importSettingsData(text);
     try {
       const parsed = JSON.parse(text);
-      if (parsed.accent !== undefined) setAccent(parsed.accent);
-      if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
-      if (parsed.density !== undefined) setDensity(parsed.density);
-      if (parsed.reducedMotion !== undefined)
-        setReducedMotion(parsed.reducedMotion);
-      if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
-      if (parsed.highContrast !== undefined)
-        setHighContrast(parsed.highContrast);
+      const data =
+        parsed && typeof parsed === "object"
+          ? typeof parsed.data === "object" && parsed.data !== null
+            ? parsed.data
+            : parsed
+          : {};
+      if (data.accent !== undefined) setAccent(data.accent);
+      if (data.wallpaper !== undefined) setWallpaper(data.wallpaper);
+      if (data.density !== undefined) setDensity(data.density);
+      if (data.reducedMotion !== undefined)
+        setReducedMotion(data.reducedMotion);
+      if (data.fontScale !== undefined) setFontScale(data.fontScale);
+      if (data.highContrast !== undefined)
+        setHighContrast(data.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
+      else if (data.theme !== undefined) setTheme(data.theme);
     } catch (err) {
       console.error("Invalid settings", err);
     }

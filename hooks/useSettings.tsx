@@ -1,26 +1,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
 import {
-  getAccent as loadAccent,
-  setAccent as saveAccent,
-  getWallpaper as loadWallpaper,
-  setWallpaper as saveWallpaper,
-  getDensity as loadDensity,
-  setDensity as saveDensity,
-  getReducedMotion as loadReducedMotion,
-  setReducedMotion as saveReducedMotion,
-  getFontScale as loadFontScale,
-  setFontScale as saveFontScale,
-  getHighContrast as loadHighContrast,
-  setHighContrast as saveHighContrast,
-  getLargeHitAreas as loadLargeHitAreas,
-  setLargeHitAreas as saveLargeHitAreas,
-  getPongSpin as loadPongSpin,
-  setPongSpin as savePongSpin,
-  getAllowNetwork as loadAllowNetwork,
-  setAllowNetwork as saveAllowNetwork,
-  getHaptics as loadHaptics,
-  setHaptics as saveHaptics,
   defaults,
+  loadSettings,
+  setSetting,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
@@ -117,16 +99,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      setAccent(await loadAccent());
-      setWallpaper(await loadWallpaper());
-      setDensity((await loadDensity()) as Density);
-      setReducedMotion(await loadReducedMotion());
-      setFontScale(await loadFontScale());
-      setHighContrast(await loadHighContrast());
-      setLargeHitAreas(await loadLargeHitAreas());
-      setPongSpin(await loadPongSpin());
-      setAllowNetwork(await loadAllowNetwork());
-      setHaptics(await loadHaptics());
+      const settings = await loadSettings();
+      setAccent(settings.accent);
+      setWallpaper(settings.wallpaper);
+      setDensity(settings.density as Density);
+      setReducedMotion(settings.reducedMotion);
+      setFontScale(settings.fontScale);
+      setHighContrast(settings.highContrast);
+      setLargeHitAreas(settings.largeHitAreas);
+      setPongSpin(settings.pongSpin);
+      setAllowNetwork(settings.allowNetwork);
+      setHaptics(settings.haptics);
       setTheme(loadTheme());
     })();
   }, []);
@@ -149,11 +132,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
-    saveAccent(accent);
+    void setSetting('accent', accent);
   }, [accent]);
 
   useEffect(() => {
-    saveWallpaper(wallpaper);
+    void setSetting('wallpaper', wallpaper);
   }, [wallpaper]);
 
   useEffect(() => {
@@ -179,35 +162,35 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
-    saveDensity(density);
+    void setSetting('density', density);
   }, [density]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('reduced-motion', reducedMotion);
-    saveReducedMotion(reducedMotion);
+    void setSetting('reducedMotion', reducedMotion);
   }, [reducedMotion]);
 
   useEffect(() => {
     document.documentElement.style.setProperty('--font-multiplier', fontScale.toString());
-    saveFontScale(fontScale);
+    void setSetting('fontScale', fontScale);
   }, [fontScale]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('high-contrast', highContrast);
-    saveHighContrast(highContrast);
+    void setSetting('highContrast', highContrast);
   }, [highContrast]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('large-hit-area', largeHitAreas);
-    saveLargeHitAreas(largeHitAreas);
+    void setSetting('largeHitAreas', largeHitAreas);
   }, [largeHitAreas]);
 
   useEffect(() => {
-    savePongSpin(pongSpin);
+    void setSetting('pongSpin', pongSpin);
   }, [pongSpin]);
 
   useEffect(() => {
-    saveAllowNetwork(allowNetwork);
+    void setSetting('allowNetwork', allowNetwork);
     if (typeof window === 'undefined') return;
     if (!fetchRef.current) fetchRef.current = window.fetch.bind(window);
     if (!allowNetwork) {
@@ -233,7 +216,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [allowNetwork]);
 
   useEffect(() => {
-    saveHaptics(haptics);
+    void setSetting('haptics', haptics);
   }, [haptics]);
 
   return (
