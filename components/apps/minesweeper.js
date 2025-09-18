@@ -4,6 +4,7 @@ import usePersistedState from '../../hooks/usePersistedState';
 import calculate3BV from '../../games/minesweeper/metrics';
 import { serializeBoard, deserializeBoard } from '../../games/minesweeper/save';
 import { getDailySeed } from '../../utils/dailySeed';
+import { getChordTargets, isChordCombo } from '../../games/minesweeper/chording';
 
 /**
  * Classic Minesweeper implementation.
@@ -15,6 +16,7 @@ const BOARD_SIZE = 8;
 const MINES_COUNT = 10;
 const CELL_SIZE = 32;
 const CANVAS_SIZE = BOARD_SIZE * CELL_SIZE;
+const LONG_PRESS_MS = 500;
 
 const numberColors = [
   '#0000ff',
@@ -171,7 +173,7 @@ const calculateRiskMap = (board) => {
   return risk;
 };
 
-const Minesweeper = () => {
+const Minesweeper = ({ enableChordShortcuts = false } = {}) => {
   const canvasRef = useRef(null);
   const audioRef = useRef(null);
   const workerRef = useRef(null);
@@ -214,14 +216,34 @@ const Minesweeper = () => {
   const [faceBtnDown, setFaceBtnDown] = useState(false);
   const [cursor, setCursor] = useState({ x: 0, y: 0 });
   const [cursorVisible, setCursorVisible] = useState(false);
+  const [touchIndicator, setTouchIndicator] = useState(null);
   const leftDown = useRef(false);
   const rightDown = useRef(false);
   const chorded = useRef(false);
+  const spaceDown = useRef(false);
+  const usedSpaceChord = useRef(false);
+  const touchTimeout = useRef(null);
+  const touchRAF = useRef(null);
+  const touchStartRef = useRef(0);
+  const touchOrigin = useRef({ x: 0, y: 0 });
+  const touchCell = useRef(null);
+  const touchMoved = useRef(false);
+  const longPressTriggered = useRef(false);
+  const isTouching = useRef(false);
   const flagAnim = useRef({});
 
   useEffect(() => {
     initWorker();
     return () => workerRef.current?.terminate();
+  }, []);
+
+  useEffect(() => () => {
+    if (touchTimeout.current) {
+      clearTimeout(touchTimeout.current);
+    }
+    if (touchRAF.current) {
+      cancelAnimationFrame(touchRAF.current);
+    }
   }, []);
 
   useEffect(() => {
@@ -350,7 +372,9 @@ const Minesweeper = () => {
           ctx.fillStyle = cell.revealed
             ? '#d1d5db'
             : isCursor
-            ? leftDown.current || rightDown.current
+            ? leftDown.current ||
+              rightDown.current ||
+              (enableChordShortcuts && spaceDown.current)
               ? '#4b5563'
               : '#374151'
             : '#1f2937';
@@ -732,62 +756,138 @@ const Minesweeper = () => {
   const handleChord = async (x, y) => {
     if (status !== 'playing' || paused || !board) return;
     const newBoard = cloneBoard(board);
-    const cell = newBoard[x][y];
-    if (!cell.revealed || cell.adjacent === 0) return;
-    let flagged = 0;
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dy = -1; dy <= 1; dy++) {
-        if (dx === 0 && dy === 0) continue;
-        const nx = x + dx;
-        const ny = y + dy;
-        if (
-          nx >= 0 &&
-          nx < BOARD_SIZE &&
-          ny >= 0 &&
-          ny < BOARD_SIZE &&
-          newBoard[nx][ny].flagged
-        ) {
-          flagged++;
-        }
+    const targets = getChordTargets(newBoard, x, y);
+    if (!targets.length) return;
+
+    for (const { x: nx, y: ny } of targets) {
+      const { hit, cells: revealed } = await computeRevealed(newBoard, [[nx, ny]]);
+      revealed.forEach(([cx, cy]) => {
+        newBoard[cx][cy].revealed = true;
+      });
+      if (hit) {
+        setBoard(newBoard);
+        setStatus('lost');
+        const time = (Date.now() - startTime) / 1000;
+        setElapsed(time);
+        const finalBV = calculate3BV(newBoard);
+        setBV(finalBV);
+        setBVPS(time > 0 ? finalBV / time : finalBV);
+        playSound('boom');
+        setAriaMessage('Boom! Game over');
+        return;
       }
     }
-    if (flagged !== cell.adjacent) return;
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dy = -1; dy <= 1; dy++) {
-        if (dx === 0 && dy === 0) continue;
-        const nx = x + dx;
-        const ny = y + dy;
-        if (
-          nx >= 0 &&
-          nx < BOARD_SIZE &&
-          ny >= 0 &&
-          ny < BOARD_SIZE &&
-          !newBoard[nx][ny].flagged
-        ) {
-          const { hit, cells: revealed } = await computeRevealed(
-            newBoard,
-            [[nx, ny]],
-          );
-          revealed.forEach(([cx, cy]) => {
-            newBoard[cx][cy].revealed = true;
-          });
-          if (hit) {
-            setBoard(newBoard);
-            setStatus('lost');
-            const time = (Date.now() - startTime) / 1000;
-            setElapsed(time);
-            const finalBV = calculate3BV(newBoard);
-            setBV(finalBV);
-            setBVPS(time > 0 ? finalBV / time : finalBV);
-            playSound('boom');
-            setAriaMessage('Boom! Game over');
-            return;
-          }
-        }
-      }
-    }
+
     setBoard(newBoard);
     checkAndHandleWin(newBoard);
+  };
+
+  const cancelTouchTimers = () => {
+    if (touchTimeout.current) {
+      clearTimeout(touchTimeout.current);
+      touchTimeout.current = null;
+    }
+    if (touchRAF.current) {
+      cancelAnimationFrame(touchRAF.current);
+      touchRAF.current = null;
+    }
+  };
+
+  const updateTouchIndicator = () => {
+    if (!isTouching.current || !touchCell.current) return;
+    const progress = Math.min(
+      (Date.now() - touchStartRef.current) / LONG_PRESS_MS,
+      1,
+    );
+    setTouchIndicator((prev) =>
+      prev ? { ...prev, progress } : { ...touchCell.current, progress },
+    );
+    if (progress < 1 && !longPressTriggered.current) {
+      touchRAF.current = requestAnimationFrame(updateTouchIndicator);
+    }
+  };
+
+  const startTouchHold = (x, y) => {
+    cancelTouchTimers();
+    touchStartRef.current = Date.now();
+    setTouchIndicator({ x, y, progress: 0 });
+    touchTimeout.current = setTimeout(() => {
+      if (!isTouching.current || touchMoved.current) return;
+      const coords = touchCell.current;
+      if (!coords) return;
+      longPressTriggered.current = true;
+      toggleFlag(coords.x, coords.y);
+      setTouchIndicator(null);
+      setFacePressed(false);
+      leftDown.current = false;
+      cancelTouchTimers();
+    }, LONG_PRESS_MS);
+    touchRAF.current = requestAnimationFrame(updateTouchIndicator);
+  };
+
+  const endTouchInteraction = (shouldReveal) => {
+    cancelTouchTimers();
+    const coords = touchCell.current;
+    setTouchIndicator(null);
+    setFacePressed(false);
+    leftDown.current = false;
+    chorded.current = false;
+    isTouching.current = false;
+    const reveal = shouldReveal && coords;
+    touchCell.current = null;
+    touchMoved.current = false;
+    longPressTriggered.current = false;
+    if (reveal) {
+      handleClick(reveal.x, reveal.y);
+    }
+    setCursorVisible(false);
+  };
+
+  const handleTouchStart = (e) => {
+    if (!canvasRef.current) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    e.preventDefault();
+    const rect = canvasRef.current.getBoundingClientRect();
+    const y = Math.floor((touch.clientX - rect.left) / CELL_SIZE);
+    const x = Math.floor((touch.clientY - rect.top) / CELL_SIZE);
+    setCursor({ x, y });
+    setCursorVisible(true);
+    setFacePressed(true);
+    leftDown.current = true;
+    isTouching.current = true;
+    touchMoved.current = false;
+    longPressTriggered.current = false;
+    touchCell.current = { x, y };
+    touchOrigin.current = { x: touch.clientX, y: touch.clientY };
+    startTouchHold(x, y);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isTouching.current) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    const dx = touch.clientX - touchOrigin.current.x;
+    const dy = touch.clientY - touchOrigin.current.y;
+    if (Math.hypot(dx, dy) > 10) {
+      touchMoved.current = true;
+      cancelTouchTimers();
+      setTouchIndicator(null);
+      setFacePressed(false);
+      leftDown.current = false;
+    }
+  };
+
+  const handleTouchEnd = (e) => {
+    if (!isTouching.current) return;
+    e.preventDefault();
+    const shouldReveal = !longPressTriggered.current && !touchMoved.current;
+    endTouchInteraction(shouldReveal);
+  };
+
+  const handleTouchCancel = () => {
+    if (!isTouching.current) return;
+    endTouchInteraction(false);
   };
 
   const handleMouseDown = (e) => {
@@ -799,6 +899,7 @@ const Minesweeper = () => {
     setFacePressed(true);
     if (e.button === 0) {
       leftDown.current = true;
+      usedSpaceChord.current = false;
     } else if (e.button === 2) {
       rightDown.current = true;
       e.preventDefault();
@@ -814,7 +915,16 @@ const Minesweeper = () => {
     setCursor({ x, y });
     setFacePressed(false);
     if (e.button === 0) {
-      if (rightDown.current) {
+      const shouldChord = isChordCombo({
+        left: true,
+        right: rightDown.current,
+        space: enableChordShortcuts && spaceDown.current,
+        allowSpaceModifier: enableChordShortcuts,
+      });
+      if (shouldChord) {
+        if (enableChordShortcuts && spaceDown.current) {
+          usedSpaceChord.current = true;
+        }
         handleChord(x, y);
         rightDown.current = false;
         chorded.current = true;
@@ -823,7 +933,13 @@ const Minesweeper = () => {
       }
       leftDown.current = false;
     } else if (e.button === 2) {
-      if (leftDown.current) {
+      const shouldChord = isChordCombo({
+        left: leftDown.current,
+        right: true,
+        space: enableChordShortcuts && spaceDown.current,
+        allowSpaceModifier: enableChordShortcuts,
+      });
+      if (shouldChord) {
         handleChord(x, y);
         leftDown.current = false;
         chorded.current = true;
@@ -832,7 +948,13 @@ const Minesweeper = () => {
       }
       rightDown.current = false;
     }
-    if (!leftDown.current && !rightDown.current) chorded.current = false;
+    if (
+      !leftDown.current &&
+      !rightDown.current &&
+      !(enableChordShortcuts && spaceDown.current)
+    ) {
+      chorded.current = false;
+    }
   };
 
   const handleMouseMove = (e) => {
@@ -846,6 +968,10 @@ const Minesweeper = () => {
   const handleMouseLeave = () => {
     leftDown.current = false;
     rightDown.current = false;
+    if (enableChordShortcuts) {
+      spaceDown.current = false;
+      usedSpaceChord.current = false;
+    }
     chorded.current = false;
     setCursorVisible(false);
     setFacePressed(false);
@@ -873,8 +999,33 @@ const Minesweeper = () => {
       setCursorVisible(true);
     } else if (e.key.toLowerCase() === 'f') {
       toggleFlag(cursor.x, cursor.y);
-    } else if (e.key === ' ' || e.key === 'Enter') {
+    } else if (e.key === 'Enter') {
       handleClick(cursor.x, cursor.y);
+    } else if (e.key === ' ') {
+      e.preventDefault();
+      if (enableChordShortcuts) {
+        if (!spaceDown.current) {
+          spaceDown.current = true;
+          usedSpaceChord.current = false;
+          setFacePressed(true);
+        }
+        setCursorVisible(true);
+      } else {
+        handleClick(cursor.x, cursor.y);
+      }
+    }
+  };
+
+  const handleKeyUp = (e) => {
+    if (e.key === ' ' && enableChordShortcuts) {
+      e.preventDefault();
+      spaceDown.current = false;
+      setFacePressed(false);
+      if (!usedSpaceChord.current) {
+        handleClick(cursor.x, cursor.y);
+      }
+      usedSpaceChord.current = false;
+      chorded.current = false;
     }
   };
 
@@ -1069,20 +1220,54 @@ const Minesweeper = () => {
           {face}
         </button>
       </div>
-      <canvas
-        ref={canvasRef}
-        width={CANVAS_SIZE}
-        height={CANVAS_SIZE}
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        onContextMenu={handleContextMenu}
-        tabIndex={0}
-        onKeyDown={handleKeyDown}
-        className="bg-gray-700 mb-4"
-        style={{ imageRendering: 'pixelated' }}
-      />
+      <div
+        className="relative mb-4"
+        style={{ width: CANVAS_SIZE, height: CANVAS_SIZE }}
+      >
+        <canvas
+          ref={canvasRef}
+          width={CANVAS_SIZE}
+          height={CANVAS_SIZE}
+          onMouseDown={handleMouseDown}
+          onMouseUp={handleMouseUp}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
+          onContextMenu={handleContextMenu}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchCancel}
+          tabIndex={0}
+          onKeyDown={handleKeyDown}
+          onKeyUp={handleKeyUp}
+          className="bg-gray-700 w-full h-full"
+          style={{ imageRendering: 'pixelated' }}
+        />
+        {touchIndicator && (
+          <div
+            className="pointer-events-none absolute"
+            style={{
+              left: touchIndicator.y * CELL_SIZE,
+              top: touchIndicator.x * CELL_SIZE,
+              width: CELL_SIZE,
+              height: CELL_SIZE,
+            }}
+          >
+            <div
+              className="absolute inset-1 rounded-full border border-blue-300 opacity-80"
+              style={{
+                transform: `scale(${0.8 + 0.2 * touchIndicator.progress})`,
+              }}
+            />
+            <div
+              className="absolute inset-1 rounded-full bg-blue-400 opacity-30"
+              style={{
+                transform: `scale(${Math.max(touchIndicator.progress, 0.05)})`,
+              }}
+            />
+          </div>
+        )}
+      </div>
       <div className="mt-2 mb-2">
         {status === 'ready'
           ? 'Click any cell to start'
