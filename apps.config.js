@@ -12,6 +12,7 @@ import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayScreenRecorder } from './components/apps/screen-recorder';
 import { displayNikto } from './components/apps/nikto';
+import { displayEmojiPicker } from './components/apps/emoji/Picker';
 
 export const chromeDefaultTiles = [
   { title: 'MDN', url: 'https://developer.mozilla.org/' },
@@ -230,6 +231,19 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayClipboardManager,
+  },
+  {
+    id: 'emoji-picker',
+    title: 'Emoji Picker',
+    icon: '/themes/Yaru/apps/emoji.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayEmojiPicker,
+    resizable: false,
+    allowMaximize: false,
+    defaultWidth: 42,
+    defaultHeight: 60,
   },
   {
     id: 'figlet',
