@@ -11,6 +11,7 @@ import {
   Enemy,
   createEnemyPool,
   spawnEnemy,
+  TOWER_TYPES,
 } from "../games/tower-defense";
 
 const GRID_SIZE = 10;
@@ -18,6 +19,7 @@ const CELL_SIZE = 40;
 const CANVAS_SIZE = GRID_SIZE * CELL_SIZE;
 
 type Vec = { x: number; y: number };
+type EditorTool = "path" | "spawner" | "tower" | "erase";
 
 const DIRS: Vec[] = [
   { x: 1, y: 0 },
@@ -26,57 +28,208 @@ const DIRS: Vec[] = [
   { x: 0, y: -1 },
 ];
 
+const cellKey = (value: Vec) => `${value.x},${value.y}`;
+
+const clampCoord = (value: number) => {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(GRID_SIZE - 1, Math.max(0, Math.round(value)));
+};
+
+const isEnemyType = (
+  value: unknown,
+): value is keyof typeof ENEMY_TYPES =>
+  typeof value === "string" && value in ENEMY_TYPES;
+
+const normalizeVecArray = (value: unknown): Vec[] => {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const result: Vec[] = [];
+  value.forEach((item) => {
+    if (!item || typeof item !== "object") return;
+    const { x, y } = item as Record<string, unknown>;
+    if (typeof x !== "number" || typeof y !== "number") return;
+    const vec = { x: clampCoord(x), y: clampCoord(y) };
+    const key = cellKey(vec);
+    if (seen.has(key)) return;
+    seen.add(key);
+    result.push(vec);
+  });
+  return result;
+};
+
+const normalizeTowers = (value: unknown): Tower[] => {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const result: Tower[] = [];
+  value.forEach((item) => {
+    if (!item || typeof item !== "object") return;
+    const { x, y, range, damage, level, type } = item as Record<string, unknown>;
+    if (
+      typeof x !== "number" ||
+      typeof y !== "number" ||
+      typeof range !== "number" ||
+      typeof damage !== "number" ||
+      typeof level !== "number"
+    ) {
+      return;
+    }
+    const vec = { x: clampCoord(x), y: clampCoord(y) };
+    const key = cellKey(vec);
+    if (seen.has(key)) return;
+    seen.add(key);
+    const normalized: Tower = {
+      x: vec.x,
+      y: vec.y,
+      range: Math.max(0, range),
+      damage: Math.max(0, damage),
+      level: Math.max(1, Math.floor(level)),
+    };
+    if (typeof type === "string" && type in TOWER_TYPES) {
+      normalized.type = type as Tower["type"];
+    }
+    result.push(normalized);
+  });
+  return result;
+};
+
+export type WaveSpawnConfig = {
+  spawner: number;
+  type: keyof typeof ENEMY_TYPES;
+  count: number;
+};
+
+export type WaveDefinition = {
+  name: string;
+  spawns: WaveSpawnConfig[];
+};
+
+const normalizeWaveArray = (value: unknown): WaveDefinition[] => {
+  if (!Array.isArray(value)) return [];
+  return value.map((entry, index) => {
+    if (Array.isArray(entry)) {
+      const spawns = entry
+        .map((type) =>
+          isEnemyType(type)
+            ? { spawner: 0, type, count: 1 }
+            : null,
+        )
+        .filter(Boolean) as WaveSpawnConfig[];
+      return { name: `Wave ${index + 1}`, spawns };
+    }
+    if (!entry || typeof entry !== "object") {
+      return { name: `Wave ${index + 1}`, spawns: [] };
+    }
+    const obj = entry as Record<string, unknown>;
+    const name = typeof obj.name === "string" && obj.name.trim()
+      ? obj.name
+      : `Wave ${index + 1}`;
+    const rawSpawns = Array.isArray(obj.spawns) ? obj.spawns : [];
+    const spawns = rawSpawns
+      .map((spawn) => {
+        if (!spawn || typeof spawn !== "object") return null;
+        const spawnObj = spawn as Record<string, unknown>;
+        const { spawner, type, count } = spawnObj;
+        if (!isEnemyType(type)) return null;
+        const spawnerIndex =
+          typeof spawner === "number" && Number.isInteger(spawner) && spawner >= 0
+            ? spawner
+            : 0;
+        const normalizedCount =
+          typeof count === "number" && Number.isFinite(count)
+            ? Math.max(1, Math.floor(count))
+            : 1;
+        return {
+          spawner: spawnerIndex,
+          type,
+          count: normalizedCount,
+        } satisfies WaveSpawnConfig;
+      })
+      .filter(Boolean) as WaveSpawnConfig[];
+    return {
+      name,
+      spawns,
+    };
+  });
+};
+
+export type LevelData = {
+  path: Vec[];
+  spawners: Vec[];
+  towers: Tower[];
+  waves: WaveDefinition[];
+};
+
+const sanitizeLevelData = (data: LevelData): LevelData => {
+  const path = normalizeVecArray(data.path);
+  const spawners = normalizeVecArray(data.spawners);
+  const towers = normalizeTowers(data.towers);
+  const maxSpawnerIndex = spawners.length > 0 ? spawners.length - 1 : 0;
+  const waves = normalizeWaveArray(data.waves).map((wave, index) => ({
+    name: wave.name || `Wave ${index + 1}`,
+    spawns: wave.spawns
+      .filter((spawn) => isEnemyType(spawn.type))
+      .map((spawn) => ({
+        spawner: Math.min(
+          maxSpawnerIndex,
+          Math.max(0, Math.floor(spawn.spawner)),
+        ),
+        type: spawn.type,
+        count: Math.max(1, Math.floor(spawn.count)),
+      })),
+  }));
+  return { path, spawners, towers, waves };
+};
+
+export const serializeLevel = (data: LevelData) =>
+  JSON.stringify(sanitizeLevelData(data), null, 2);
+
+export const deserializeLevel = (json: string): LevelData => {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    return { path: [], spawners: [], towers: [], waves: [] };
+  }
+  if (!parsed || typeof parsed !== "object") {
+    return { path: [], spawners: [], towers: [], waves: [] };
+  }
+  const obj = parsed as Record<string, unknown>;
+  const level: LevelData = {
+    path: normalizeVecArray(obj.path),
+    spawners: normalizeVecArray(obj.spawners),
+    towers: normalizeTowers(obj.towers),
+    waves: normalizeWaveArray(obj.waves),
+  };
+  return sanitizeLevelData(level);
+};
+
 const computeFlowField = (
-  start: Vec,
-  goal: Vec,
+  path: Vec[],
   towers: Tower[],
 ): Vec[][] | null => {
-  const obstacle = new Set(towers.map((t) => `${t.x},${t.y}`));
-  const h = (a: Vec) => Math.abs(a.x - goal.x) + Math.abs(a.y - goal.y);
-  const key = (p: Vec) => `${p.x},${p.y}`;
-  const open: (Vec & { f: number })[] = [{ ...start, f: h(start) }];
-  const came = new Map<string, string>();
-  const g = new Map<string, number>();
-  g.set(key(start), 0);
-  while (open.length) {
-    open.sort((a, b) => a.f - b.f);
-    const current = open.shift()!;
-    if (current.x === goal.x && current.y === goal.y) break;
-    for (const d of DIRS) {
-      const nx = current.x + d.x;
-      const ny = current.y + d.y;
-      if (
-        nx < 0 ||
-        ny < 0 ||
-        nx >= GRID_SIZE ||
-        ny >= GRID_SIZE ||
-        obstacle.has(key({ x: nx, y: ny }))
-      )
-        continue;
-      const nk = key({ x: nx, y: ny });
-      const tentative = (g.get(key(current)) ?? 0) + 1;
-      if (tentative < (g.get(nk) ?? Infinity)) {
-        came.set(nk, key(current));
-        g.set(nk, tentative);
-        const f = tentative + h({ x: nx, y: ny });
-        const existing = open.find((o) => o.x === nx && o.y === ny);
-        if (existing) existing.f = f;
-        else open.push({ x: nx, y: ny, f });
-      }
-    }
-  }
-  if (!came.has(key(goal))) return null;
+  if (path.length < 2) return null;
+  const goal = path[path.length - 1];
+  const pathSet = new Set(path.map(cellKey));
+  const obstacles = new Set(towers.map(cellKey));
+  if (!pathSet.has(cellKey(goal))) return null;
   const field: Vec[][] = Array.from({ length: GRID_SIZE }, () =>
     Array.from({ length: GRID_SIZE }, () => ({ x: 0, y: 0 })),
   );
-  let cur = key(goal);
-  while (cur !== key(start)) {
-    const prev = came.get(cur);
-    if (!prev) break;
-    const [cx, cy] = cur.split(",").map(Number);
-    const [px, py] = prev.split(",").map(Number);
-    field[px][py] = { x: cx - px, y: cy - py };
-    cur = prev;
+  const visited = new Set<string>([cellKey(goal)]);
+  const queue: Vec[] = [goal];
+  while (queue.length) {
+    const current = queue.shift()!;
+    for (const dir of DIRS) {
+      const nx = current.x + dir.x;
+      const ny = current.y + dir.y;
+      if (nx < 0 || ny < 0 || nx >= GRID_SIZE || ny >= GRID_SIZE) continue;
+      const neighbor = { x: nx, y: ny };
+      const key = cellKey(neighbor);
+      if (!pathSet.has(key) || obstacles.has(key) || visited.has(key)) continue;
+      field[nx][ny] = { x: current.x - nx, y: current.y - ny };
+      visited.add(key);
+      queue.push(neighbor);
+    }
   }
   return field;
 };
@@ -86,12 +239,44 @@ interface EnemyInstance extends Enemy {
   progress: number;
 }
 
+type WaveEvent = { spawner: number; type: keyof typeof ENEMY_TYPES };
+
+const toolLabels: Record<EditorTool, string> = {
+  path: "Path",
+  spawner: "Spawner",
+  tower: "Tower",
+  erase: "Erase",
+};
+
+const defaultWave = (index: number): WaveDefinition => ({
+  name: `Wave ${index + 1}`,
+  spawns: [],
+});
+
+const expandWave = (wave: WaveDefinition): WaveEvent[] => {
+  const events: WaveEvent[] = [];
+  wave.spawns.forEach((spawn) => {
+    const total = Math.max(1, Math.floor(spawn.count));
+    const spawnerIndex = Math.max(0, Math.floor(spawn.spawner));
+    for (let i = 0; i < total; i += 1) {
+      events.push({ spawner: spawnerIndex, type: spawn.type });
+    }
+  });
+  return events;
+};
+
 const TowerDefense = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const animationRef = useRef<number>();
   const [editing, setEditing] = useState(true);
-  const [path, setPath] = useState<{ x: number; y: number }[]>([]);
+  const [activeTool, setActiveTool] = useState<EditorTool>("path");
+  const [path, setPath] = useState<Vec[]>([]);
   const pathSetRef = useRef<Set<string>>(new Set());
+  const [spawners, setSpawners] = useState<Vec[]>([]);
+  const spawnerSetRef = useRef<Set<string>>(new Set());
   const [towers, setTowers] = useState<Tower[]>([]);
+  const towersRef = useRef<Tower[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
   const [hovered, setHovered] = useState<number | null>(null);
   const enemiesRef = useRef<EnemyInstance[]>([]);
@@ -113,97 +298,217 @@ const TowerDefense = () => {
   >([]);
   const damageTicksRef = useRef<{ x: number; y: number; life: number }[]>([]);
   const flowFieldRef = useRef<Vec[][] | null>(null);
+  const goalRef = useRef<Vec | null>(null);
+  const spawnersRef = useRef<Vec[]>([]);
+  const expandedWavesRef = useRef<WaveEvent[][]>([]);
 
-  const [waveConfig, setWaveConfig] = useState<
-    (keyof typeof ENEMY_TYPES)[][]
-  >([Array(5).fill("fast") as (keyof typeof ENEMY_TYPES)[]]);
+  const [waveConfig, setWaveConfig] = useState<WaveDefinition[]>([
+    defaultWave(0),
+  ]);
+  const [spawnDrafts, setSpawnDrafts] = useState<
+    Record<number, WaveSpawnConfig>
+  >({ 0: { spawner: 0, type: "fast", count: 1 } });
   const [waveJson, setWaveJson] = useState("");
+
+  useEffect(() => {
+    towersRef.current = towers;
+  }, [towers]);
+
+  useEffect(() => {
+    spawnersRef.current = spawners;
+  }, [spawners]);
+
+  useEffect(() => {
+    pathSetRef.current = new Set(path.map(cellKey));
+  }, [path]);
+
+  useEffect(() => {
+    spawnerSetRef.current = new Set(spawners.map(cellKey));
+  }, [spawners]);
+
+  useEffect(() => {
+    goalRef.current = path.length ? path[path.length - 1] : null;
+    flowFieldRef.current = path.length >= 2 ? computeFlowField(path, towers) : null;
+  }, [path, towers]);
+
   useEffect(() => {
     setWaveJson(JSON.stringify(waveConfig, null, 2));
+    expandedWavesRef.current = waveConfig.map(expandWave);
   }, [waveConfig]);
-  const addWave = () => setWaveConfig((w) => [...w, []]);
-  const addEnemyToWave = (
-    index: number,
-    type: keyof typeof ENEMY_TYPES,
-  ) => {
-    setWaveConfig((w) => {
-      const copy = w.map((wave) => [...wave]);
-      copy[index].push(type);
-      return copy;
+
+  useEffect(() => {
+    setSpawnDrafts((drafts) => {
+      const next: Record<number, WaveSpawnConfig> = {};
+      let changed = Object.keys(drafts).length !== waveConfig.length;
+      waveConfig.forEach((_, index) => {
+        const existing = drafts[index] ?? { spawner: 0, type: "fast", count: 1 };
+        const sanitized: WaveSpawnConfig = {
+          spawner:
+            spawners.length === 0
+              ? 0
+              : Math.min(existing.spawner, Math.max(0, spawners.length - 1)),
+          type: isEnemyType(existing.type) ? existing.type : "fast",
+          count: existing.count > 0 ? Math.floor(existing.count) : 1,
+        };
+        if (
+          !drafts[index] ||
+          drafts[index].spawner !== sanitized.spawner ||
+          drafts[index].type !== sanitized.type ||
+          drafts[index].count !== sanitized.count
+        ) {
+          changed = true;
+        }
+        next[index] = sanitized;
+      });
+      return changed ? next : drafts;
     });
+  }, [waveConfig, spawners.length]);
+
+  const resetSimulation = () => {
+    running.current = false;
+    waveCountdownRef.current = null;
+    waveRef.current = 1;
+    enemiesSpawnedRef.current = 0;
+    spawnTimer.current = 0;
+    enemiesRef.current = [];
+    damageNumbersRef.current = [];
+    damageTicksRef.current = [];
   };
-  const importWaves = () => {
-    try {
-      const data = JSON.parse(waveJson) as (keyof typeof ENEMY_TYPES)[][];
-      if (Array.isArray(data)) setWaveConfig(data);
-    } catch {
-      alert("Invalid wave JSON");
-    }
-  };
-  const exportWaves = () => {
-    const json = JSON.stringify(waveConfig, null, 2);
-    setWaveJson(json);
-    navigator.clipboard
-      ?.writeText(json)
-      .catch(() => {});
+
+  const shiftSelectionAfterRemoval = (index: number) => {
+    setSelected((current) => {
+      if (current === null) return null;
+      if (current === index) return null;
+      if (current > index) return current - 1;
+      return current;
+    });
   };
 
   const togglePath = (x: number, y: number) => {
-    const key = `${x},${y}`;
-    setPath((p) => {
+    if (x < 0 || y < 0 || x >= GRID_SIZE || y >= GRID_SIZE) return;
+    const key = cellKey({ x, y });
+    setPath((current) => {
       const set = pathSetRef.current;
       if (set.has(key)) {
         set.delete(key);
-        return p.filter((c) => !(c.x === x && c.y === y));
+        return current.filter((cell) => !(cell.x === x && cell.y === y));
+      }
+      if (spawnerSetRef.current.has(key)) return current;
+      if (towersRef.current.some((tower) => tower.x === x && tower.y === y)) {
+        return current;
       }
       set.add(key);
-      return [...p, { x, y }];
+      return [...current, { x, y }];
     });
   };
 
-  const handleCanvasClick = (e: React.MouseEvent) => {
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
-    const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
-    const key = `${x},${y}`;
-    if (editing) {
-      togglePath(x, y);
-      return;
-    }
-    const existing = towers.findIndex((t) => t.x === x && t.y === y);
-    if (existing >= 0) {
-      setSelected(existing);
-      return;
-    }
-    if (pathSetRef.current.has(key)) return;
-    setTowers((ts) => [...ts, { x, y, range: 1, damage: 1, level: 1 }]);
+  const toggleSpawner = (x: number, y: number) => {
+    if (x < 0 || y < 0 || x >= GRID_SIZE || y >= GRID_SIZE) return;
+    const key = cellKey({ x, y });
+    setSpawners((current) => {
+      const set = spawnerSetRef.current;
+      if (set.has(key)) {
+        set.delete(key);
+        return current.filter((spawner) => !(spawner.x === x && spawner.y === y));
+      }
+      if (!pathSetRef.current.has(key)) return current;
+      if (towersRef.current.some((tower) => tower.x === x && tower.y === y)) {
+        return current;
+      }
+      set.add(key);
+      return [...current, { x, y }];
+    });
   };
 
-  const handleCanvasMove = (e: React.MouseEvent) => {
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
-    const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
-    const idx = towers.findIndex((t) => t.x === x && t.y === y);
-    setHovered(idx >= 0 ? idx : null);
+  const toggleTower = (x: number, y: number) => {
+    if (x < 0 || y < 0 || x >= GRID_SIZE || y >= GRID_SIZE) return;
+    const key = cellKey({ x, y });
+    setTowers((current) => {
+      const index = current.findIndex((tower) => tower.x === x && tower.y === y);
+      if (index >= 0) {
+        const next = current.filter((_, i) => i !== index);
+        shiftSelectionAfterRemoval(index);
+        return next;
+      }
+      if (pathSetRef.current.has(key) || spawnerSetRef.current.has(key)) {
+        return current;
+      }
+      return [...current, { x, y, range: 1, damage: 1, level: 1 }];
+    });
+  };
+
+  const eraseAt = (x: number, y: number) => {
+    if (x < 0 || y < 0 || x >= GRID_SIZE || y >= GRID_SIZE) return;
+    const key = cellKey({ x, y });
+    setPath((current) => {
+      const set = pathSetRef.current;
+      if (!set.has(key)) return current;
+      set.delete(key);
+      return current.filter((cell) => !(cell.x === x && cell.y === y));
+    });
+    setSpawners((current) => {
+      const set = spawnerSetRef.current;
+      if (!set.has(key)) return current;
+      set.delete(key);
+      return current.filter((spawner) => !(spawner.x === x && spawner.y === y));
+    });
+    setTowers((current) => {
+      const index = current.findIndex((tower) => tower.x === x && tower.y === y);
+      if (index === -1) return current;
+      const next = current.filter((_, i) => i !== index);
+      shiftSelectionAfterRemoval(index);
+      return next;
+    });
+  };
+
+  const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = Math.floor((event.clientX - rect.left) / CELL_SIZE);
+    const y = Math.floor((event.clientY - rect.top) / CELL_SIZE);
+    if (editing) {
+      switch (activeTool) {
+        case "path":
+          togglePath(x, y);
+          break;
+        case "spawner":
+          toggleSpawner(x, y);
+          break;
+        case "tower":
+          toggleTower(x, y);
+          break;
+        case "erase":
+          eraseAt(x, y);
+          break;
+        default:
+          break;
+      }
+      return;
+    }
+    const index = towersRef.current.findIndex(
+      (tower) => tower.x === x && tower.y === y,
+    );
+    if (index >= 0) setSelected(index);
+  };
+
+  const handleCanvasMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = Math.floor((event.clientX - rect.left) / CELL_SIZE);
+    const y = Math.floor((event.clientY - rect.top) / CELL_SIZE);
+    const index = towersRef.current.findIndex(
+      (tower) => tower.x === x && tower.y === y,
+    );
+    setHovered(index >= 0 ? index : null);
   };
 
   const handleCanvasLeave = () => setHovered(null);
-
-  useEffect(() => {
-    if (path.length >= 2) {
-      flowFieldRef.current = computeFlowField(
-        path[0],
-        path[path.length - 1],
-        towers,
-      );
-    }
-  }, [path, towers]);
 
   const draw = () => {
     const ctx = canvasRef.current?.getContext("2d");
     if (!ctx) return;
     ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-    ctx.strokeStyle = "#555";
+    ctx.strokeStyle = "#333";
     for (let i = 0; i <= GRID_SIZE; i += 1) {
       ctx.beginPath();
       ctx.moveTo(i * CELL_SIZE, 0);
@@ -214,81 +519,112 @@ const TowerDefense = () => {
       ctx.lineTo(CANVAS_SIZE, i * CELL_SIZE);
       ctx.stroke();
     }
-    ctx.fillStyle = "rgba(255,255,0,0.2)";
-    path.forEach((c) => {
-      ctx.fillRect(c.x * CELL_SIZE, c.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-      ctx.strokeStyle = "yellow";
-      ctx.strokeRect(c.x * CELL_SIZE, c.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+
+    ctx.fillStyle = "rgba(255,215,0,0.25)";
+    ctx.strokeStyle = "rgba(255,215,0,0.6)";
+    path.forEach((cell) => {
+      ctx.fillRect(cell.x * CELL_SIZE, cell.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+      ctx.strokeRect(cell.x * CELL_SIZE, cell.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
     });
-    ctx.fillStyle = "blue";
-    towers.forEach((t, i) => {
+
+    ctx.fillStyle = "rgba(0,255,0,0.25)";
+    ctx.strokeStyle = "rgba(0,255,0,0.6)";
+    spawners.forEach((spawner, index) => {
+      ctx.fillRect(
+        spawner.x * CELL_SIZE,
+        spawner.y * CELL_SIZE,
+        CELL_SIZE,
+        CELL_SIZE,
+      );
+      ctx.strokeRect(
+        spawner.x * CELL_SIZE,
+        spawner.y * CELL_SIZE,
+        CELL_SIZE,
+        CELL_SIZE,
+      );
+      ctx.fillStyle = "rgba(0,255,0,0.8)";
+      ctx.font = "12px sans-serif";
+      ctx.fillText(
+        String(index + 1),
+        spawner.x * CELL_SIZE + 4,
+        spawner.y * CELL_SIZE + 12,
+      );
+      ctx.fillStyle = "rgba(0,255,0,0.25)";
+    });
+
+    ctx.fillStyle = "rgba(80,160,255,1)";
+    towers.forEach((tower, index) => {
       ctx.beginPath();
       ctx.arc(
-        t.x * CELL_SIZE + CELL_SIZE / 2,
-        t.y * CELL_SIZE + CELL_SIZE / 2,
+        tower.x * CELL_SIZE + CELL_SIZE / 2,
+        tower.y * CELL_SIZE + CELL_SIZE / 2,
         CELL_SIZE / 3,
         0,
         Math.PI * 2,
       );
       ctx.fill();
-      if (selected === i || hovered === i) {
-        ctx.strokeStyle = "yellow";
+      if (selected === index || hovered === index) {
+        ctx.strokeStyle = "rgba(255,255,0,0.8)";
         ctx.beginPath();
         ctx.arc(
-          t.x * CELL_SIZE + CELL_SIZE / 2,
-          t.y * CELL_SIZE + CELL_SIZE / 2,
-          t.range * CELL_SIZE,
+          tower.x * CELL_SIZE + CELL_SIZE / 2,
+          tower.y * CELL_SIZE + CELL_SIZE / 2,
+          tower.range * CELL_SIZE,
           0,
           Math.PI * 2,
         );
         ctx.stroke();
       }
     });
-    ctx.fillStyle = "red";
-    enemiesRef.current.forEach((en) => {
+
+    ctx.fillStyle = "rgba(255,80,80,1)";
+    enemiesRef.current.forEach((enemy) => {
       ctx.beginPath();
       ctx.arc(
-        en.x * CELL_SIZE + CELL_SIZE / 2,
-        en.y * CELL_SIZE + CELL_SIZE / 2,
+        enemy.x * CELL_SIZE + CELL_SIZE / 2,
+        enemy.y * CELL_SIZE + CELL_SIZE / 2,
         CELL_SIZE / 4,
         0,
         Math.PI * 2,
       );
       ctx.fill();
     });
-    damageTicksRef.current.forEach((t) => {
-      ctx.strokeStyle = `rgba(255,0,0,${t.life})`;
+
+    damageTicksRef.current.forEach((tick) => {
+      ctx.strokeStyle = `rgba(255,0,0,${tick.life})`;
       ctx.beginPath();
       ctx.arc(
-        t.x * CELL_SIZE + CELL_SIZE / 2,
-        t.y * CELL_SIZE + CELL_SIZE / 2,
-        (CELL_SIZE / 2) * (1 - t.life),
+        tick.x * CELL_SIZE + CELL_SIZE / 2,
+        tick.y * CELL_SIZE + CELL_SIZE / 2,
+        (CELL_SIZE / 2) * (1 - tick.life),
         0,
         Math.PI * 2,
       );
       ctx.stroke();
     });
-    damageNumbersRef.current.forEach((d) => {
-      ctx.fillStyle = `rgba(255,255,255,${d.life})`;
+
+    damageNumbersRef.current.forEach((damage) => {
+      ctx.fillStyle = `rgba(255,255,255,${damage.life})`;
       ctx.font = "12px sans-serif";
       ctx.fillText(
-        d.value.toString(),
-        d.x * CELL_SIZE + CELL_SIZE / 2,
-        d.y * CELL_SIZE + CELL_SIZE / 2 - (1 - d.life) * 10,
+        damage.value.toString(),
+        damage.x * CELL_SIZE + CELL_SIZE / 2,
+        damage.y * CELL_SIZE + CELL_SIZE / 2 - (1 - damage.life) * 10,
       );
     });
   };
 
   const spawnEnemyInstance = () => {
-    if (!path.length) return;
-    const wave = waveConfig[waveRef.current - 1] || [];
-    const type = wave[enemiesSpawnedRef.current];
-    if (!type) return;
-    const spec = ENEMY_TYPES[type];
+    const currentWave = expandedWavesRef.current[waveRef.current - 1] || [];
+    const event = currentWave[enemiesSpawnedRef.current];
+    if (!event) return;
+    const spawner = spawnersRef.current[event.spawner];
+    if (!spawner) return;
+    const spec = ENEMY_TYPES[event.type];
     const enemy = spawnEnemy(enemyPool.current, {
-      id: Date.now(),
-      x: path[0].x,
-      y: path[0].y,
+      id: Date.now() + enemiesSpawnedRef.current,
+      x: spawner.x,
+      y: spawner.y,
       pathIndex: 0,
       progress: 0,
       health: spec.health,
@@ -296,7 +632,7 @@ const TowerDefense = () => {
       baseSpeed: spec.speed,
       slow: null,
       dot: null,
-      type,
+      type: event.type,
     });
     if (enemy) enemiesRef.current.push(enemy as EnemyInstance);
   };
@@ -307,7 +643,7 @@ const TowerDefense = () => {
 
     if (waveCountdownRef.current !== null) {
       waveCountdownRef.current -= dt;
-      forceRerender((n) => n + 1);
+      forceRerender((value) => value + 1);
       if (waveCountdownRef.current <= 0) {
         waveCountdownRef.current = null;
         running.current = true;
@@ -316,176 +652,344 @@ const TowerDefense = () => {
       }
     } else if (running.current) {
       spawnTimer.current += dt;
-      const currentWave = waveConfig[waveRef.current - 1] || [];
+      const currentWave = expandedWavesRef.current[waveRef.current - 1] || [];
       if (
-        spawnTimer.current > 1 &&
+        spawnTimer.current >= 1 &&
         enemiesSpawnedRef.current < currentWave.length
       ) {
         spawnTimer.current = 0;
         spawnEnemyInstance();
         enemiesSpawnedRef.current += 1;
       }
-      enemiesRef.current.forEach((en) => {
+
+      enemiesRef.current.forEach((enemy) => {
         const field = flowFieldRef.current;
-        if (!field) return;
-        const cellX = Math.floor(en.x);
-        const cellY = Math.floor(en.y);
+        const goal = goalRef.current;
+        if (!field || !goal) return;
+        const cellX = Math.max(0, Math.min(GRID_SIZE - 1, Math.floor(enemy.x)));
+        const cellY = Math.max(0, Math.min(GRID_SIZE - 1, Math.floor(enemy.y)));
         const vec = field[cellX]?.[cellY];
         if (!vec) return;
-        const step = (en.baseSpeed * dt) / CELL_SIZE;
-        en.x += vec.x * step;
-        en.y += vec.y * step;
+        const step = (enemy.baseSpeed * dt) / CELL_SIZE;
+        enemy.x += vec.x * step;
+        enemy.y += vec.y * step;
       });
-      enemiesRef.current = enemiesRef.current.filter((e) => {
-        const goal = path[path.length - 1];
+
+      const goal = goalRef.current;
+      enemiesRef.current = enemiesRef.current.filter((enemy) => {
+        if (!goal) return enemy.health > 0;
         const reached =
-          Math.floor(e.x) === goal?.x && Math.floor(e.y) === goal?.y;
-        return e.health > 0 && !reached;
+          Math.floor(enemy.x) === goal.x && Math.floor(enemy.y) === goal.y;
+        return enemy.health > 0 && !reached;
       });
-      towers.forEach((t) => {
-        (t as any).cool = (t as any).cool ? (t as any).cool - dt : 0;
-        if ((t as any).cool <= 0) {
-          const enemy = enemiesRef.current.find(
-            (e) => Math.hypot(e.x - t.x, e.y - t.y) <= t.range,
+
+      towersRef.current.forEach((tower) => {
+        const mutableTower = tower as Tower & { cool?: number };
+        mutableTower.cool = mutableTower.cool ? mutableTower.cool - dt : 0;
+        if ((mutableTower.cool ?? 0) <= 0) {
+          const target = enemiesRef.current.find(
+            (enemy) => Math.hypot(enemy.x - tower.x, enemy.y - tower.y) <= tower.range,
           );
-          if (enemy) {
-            enemy.health -= t.damage;
+          if (target) {
+            target.health -= tower.damage;
             damageNumbersRef.current.push({
-              x: enemy.x,
-              y: enemy.y,
-              value: t.damage,
+              x: target.x,
+              y: target.y,
+              value: tower.damage,
               life: 1,
             });
             damageTicksRef.current.push({
-              x: enemy.x,
-              y: enemy.y,
+              x: target.x,
+              y: target.y,
               life: 1,
             });
-            (t as any).cool = 1;
+            mutableTower.cool = 1;
           }
         }
       });
-      damageNumbersRef.current.forEach((d) => {
-        d.y -= dt * 0.5;
-        d.life -= dt * 2;
+
+      damageNumbersRef.current.forEach((damage) => {
+        damage.y -= dt * 0.5;
+        damage.life -= dt * 2;
       });
       damageNumbersRef.current = damageNumbersRef.current.filter(
-        (d) => d.life > 0,
+        (damage) => damage.life > 0,
       );
-      damageTicksRef.current.forEach((t) => {
-        t.life -= dt * 2;
+
+      damageTicksRef.current.forEach((tick) => {
+        tick.life -= dt * 2;
       });
-      damageTicksRef.current = damageTicksRef.current.filter((t) => t.life > 0);
-        if (
-          enemiesSpawnedRef.current >= currentWave.length &&
-          enemiesRef.current.length === 0
-        ) {
-          running.current = false;
-          if (waveRef.current < waveConfig.length) {
-            waveRef.current += 1;
-            waveCountdownRef.current = 5;
-          }
-          forceRerender((n) => n + 1);
+      damageTicksRef.current = damageTicksRef.current.filter(
+        (tick) => tick.life > 0,
+      );
+
+      if (
+        enemiesSpawnedRef.current >= currentWave.length &&
+        enemiesRef.current.length === 0
+      ) {
+        running.current = false;
+        if (waveRef.current < expandedWavesRef.current.length) {
+          waveRef.current += 1;
+          waveCountdownRef.current = 5;
         }
+        forceRerender((value) => value + 1);
       }
-      draw();
-      requestAnimationFrame(update);
-    };
+    }
+
+    draw();
+    animationRef.current = requestAnimationFrame(update);
+  };
 
   useEffect(() => {
     lastTime.current = performance.now();
-    requestAnimationFrame(update);
+    animationRef.current = requestAnimationFrame(update);
+    return () => {
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-    const start = () => {
-      if (!path.length || !waveConfig.length) return;
-      setEditing(false);
-      waveRef.current = 1;
-      waveCountdownRef.current = 3;
-      forceRerender((n) => n + 1);
-    };
+  const start = () => {
+    const hasEnemies = expandedWavesRef.current.some((wave) => wave.length > 0);
+    if (path.length < 2 || spawners.length === 0 || !hasEnemies) return;
+    setEditing(false);
+    resetSimulation();
+    waveCountdownRef.current = 3;
+    forceRerender((value) => value + 1);
+  };
 
   const upgrade = (type: "range" | "damage") => {
     if (selected === null) return;
-    setTowers((ts) => {
-      const t = { ...ts[selected] };
-      upgradeTower(t, type);
-      const arr = [...ts];
-      arr[selected] = t;
-      return arr;
+    setTowers((current) => {
+      const next = [...current];
+      const tower = { ...next[selected] };
+      upgradeTower(tower, type);
+      next[selected] = tower;
+      return next;
     });
   };
 
+  const addWave = () => {
+    setWaveConfig((waves) => [...waves, defaultWave(waves.length)]);
+  };
+
+  const updateWaveName = (index: number, name: string) => {
+    setWaveConfig((waves) =>
+      waves.map((wave, i) => (i === index ? { ...wave, name } : wave)),
+    );
+  };
+
+  const addSpawnToWave = (index: number) => {
+    if (!spawners.length) return;
+    const draft = spawnDrafts[index] ?? { spawner: 0, type: "fast", count: 1 };
+    setWaveConfig((waves) =>
+      waves.map((wave, i) =>
+        i === index
+          ? {
+              ...wave,
+              spawns: [
+                ...wave.spawns,
+                {
+                  spawner: Math.min(
+                    Math.max(0, Math.floor(draft.spawner)),
+                    spawners.length - 1,
+                  ),
+                  type: draft.type,
+                  count: Math.max(1, Math.floor(draft.count)),
+                },
+              ],
+            }
+          : wave,
+      ),
+    );
+  };
+
+  const removeSpawn = (waveIndex: number, spawnIndex: number) => {
+    setWaveConfig((waves) =>
+      waves.map((wave, i) =>
+        i === waveIndex
+          ? {
+              ...wave,
+              spawns: wave.spawns.filter((_, j) => j !== spawnIndex),
+            }
+          : wave,
+      ),
+    );
+  };
+
+  const updateSpawnDraftValue = (
+    index: number,
+    value: Partial<WaveSpawnConfig>,
+  ) => {
+    setSpawnDrafts((drafts) => {
+      const current = drafts[index] ?? { spawner: 0, type: "fast", count: 1 };
+      const nextDraft: WaveSpawnConfig = {
+        spawner:
+          value.spawner !== undefined
+            ? Math.max(0, Math.floor(value.spawner))
+            : current.spawner,
+        type: value.type ?? current.type,
+        count:
+          value.count !== undefined
+            ? Math.max(1, Math.floor(value.count))
+            : current.count,
+      };
+      return { ...drafts, [index]: nextDraft };
+    });
+  };
+
+  const importWaves = () => {
+    try {
+      const data = JSON.parse(waveJson);
+      const normalized = normalizeWaveArray(data);
+      setWaveConfig(normalized.length ? normalized : [defaultWave(0)]);
+    } catch {
+      alert("Invalid wave JSON");
+    }
+  };
+
+  const exportWaves = () => {
+    const json = JSON.stringify(waveConfig, null, 2);
+    setWaveJson(json);
+    navigator.clipboard?.writeText(json).catch(() => {});
+  };
+
+  const handleDownloadLevel = () => {
+    const json = serializeLevel({
+      path,
+      spawners,
+      towers,
+      waves: waveConfig,
+    });
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "tower-defense-level.json";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const applyLevelData = (data: LevelData) => {
+    const sanitized = sanitizeLevelData(data);
+    setPath(sanitized.path);
+    pathSetRef.current = new Set(sanitized.path.map(cellKey));
+    setSpawners(sanitized.spawners);
+    spawnerSetRef.current = new Set(sanitized.spawners.map(cellKey));
+    setTowers(sanitized.towers);
+    setWaveConfig(
+      sanitized.waves.length ? sanitized.waves : [defaultWave(0)],
+    );
+    resetSimulation();
+    setSelected(null);
+    setEditing(true);
+  };
+
+  const handleFileChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        const level = deserializeLevel(reader.result);
+        applyLevelData(level);
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = "";
+  };
+
+  const openFilePicker = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleToggleEditing = () => {
+    setEditing((prev) => {
+      const next = !prev;
+      if (next) {
+        resetSimulation();
+      }
+      return next;
+    });
+  };
+
+  const canStart =
+    waveCountdownRef.current === null &&
+    !running.current &&
+    path.length >= 2 &&
+    spawners.length > 0 &&
+    expandedWavesRef.current.some((wave) => wave.length > 0);
+
   return (
     <GameLayout gameId="tower-defense">
-      <div className="p-2 space-y-2">
+      <div className="p-2 space-y-3 text-sm text-gray-200">
         {waveCountdownRef.current !== null && (
           <div className="text-center bg-gray-700 text-white py-1 rounded">
-            Wave {waveRef.current} in {Math.ceil(waveCountdownRef.current)}
+            Wave {waveRef.current} in {Math.max(0, Math.ceil(waveCountdownRef.current))}
           </div>
         )}
-        <div className="space-x-2 mb-2">
+        <div className="flex flex-wrap gap-2">
           <button
             className="px-2 py-1 bg-gray-700 rounded"
-            onClick={() => setEditing((e) => !e)}
+            onClick={handleToggleEditing}
           >
-            {editing ? "Finish Editing" : "Edit Map"}
+            {editing ? "Play Level" : "Edit Level"}
           </button>
           <button
-            className="px-2 py-1 bg-gray-700 rounded"
+            className="px-2 py-1 bg-blue-700 rounded disabled:opacity-50"
             onClick={start}
-            disabled={running.current || waveCountdownRef.current !== null}
+            disabled={!canStart}
           >
             Start
           </button>
+          <button
+            className="px-2 py-1 bg-gray-700 rounded"
+            onClick={handleDownloadLevel}
+          >
+            Download Level
+          </button>
+          <button
+            className="px-2 py-1 bg-gray-700 rounded"
+            onClick={openFilePicker}
+          >
+            Upload Level
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json"
+            className="hidden"
+            onChange={handleFileChange}
+          />
         </div>
-        <div className="space-y-1 mb-2 text-xs">
-          {waveConfig.map((wave, i) => (
-            <div key={i} className="flex items-center space-x-2">
-              <span>
-                Wave {i + 1}: {wave.join(", ") || "empty"}
-              </span>
-              {(
-                Object.keys(ENEMY_TYPES) as (keyof typeof ENEMY_TYPES)[]
-              ).map((t) => (
+
+        {editing && (
+          <div className="space-y-2 text-xs text-gray-300">
+            <div className="flex flex-wrap gap-2">
+              {(Object.keys(toolLabels) as EditorTool[]).map((tool) => (
                 <button
-                  key={t}
-                  className="bg-gray-700 px-1 rounded"
-                  onClick={() => addEnemyToWave(i, t)}
+                  key={tool}
+                  className={`px-2 py-1 rounded border border-gray-700 ${
+                    activeTool === tool ? "bg-blue-700" : "bg-gray-800"
+                  }`}
+                  onClick={() => setActiveTool(tool)}
                 >
-                  +{t}
+                  {toolLabels[tool]}
                 </button>
               ))}
             </div>
-          ))}
-          <button
-            className="bg-gray-700 text-xs px-2 py-1 rounded"
-            onClick={addWave}
-          >
-            Add Wave
-          </button>
-          <textarea
-            className="w-full bg-black text-white p-1 rounded h-24"
-            value={waveJson}
-            onChange={(e) => setWaveJson(e.target.value)}
-          />
-          <div className="space-x-2">
-            <button
-              className="px-2 py-1 bg-gray-700 rounded"
-              onClick={importWaves}
-            >
-              Import
-            </button>
-            <button
-              className="px-2 py-1 bg-gray-700 rounded"
-              onClick={exportWaves}
-            >
-              Export
-            </button>
+            <p className="text-gray-400">
+              Paths define where enemies can walk. Place spawners on the path and
+              keep towers on open tiles. Use the erase tool to clear any tile.
+            </p>
           </div>
-        </div>
-        <div className="flex">
+        )}
+
+        <div className="flex gap-2">
           <canvas
             ref={canvasRef}
             width={CANVAS_SIZE}
@@ -495,17 +999,17 @@ const TowerDefense = () => {
             onMouseMove={handleCanvasMove}
             onMouseLeave={handleCanvasLeave}
           />
-          {selected !== null && (
-            <div className="ml-2 flex flex-col space-y-1 items-center">
+          {selected !== null && towers[selected] && (
+            <div className="ml-2 flex flex-col space-y-2 text-xs">
               <RangeUpgradeTree tower={towers[selected]} />
               <button
-                className="bg-gray-700 text-xs px-2 py-1 rounded"
+                className="bg-gray-700 px-2 py-1 rounded"
                 onClick={() => upgrade("range")}
               >
                 +Range
               </button>
               <button
-                className="bg-gray-700 text-xs px-2 py-1 rounded"
+                className="bg-gray-700 px-2 py-1 rounded"
                 onClick={() => upgrade("damage")}
               >
                 +Damage
@@ -513,6 +1017,151 @@ const TowerDefense = () => {
             </div>
           )}
         </div>
+
+        <div className="space-y-3 text-xs">
+          <div className="space-y-2">
+            {waveConfig.map((wave, index) => (
+              <div
+                key={index}
+                className="border border-gray-700 rounded p-2 space-y-2"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold text-gray-100">
+                    Wave {index + 1}
+                  </span>
+                  <input
+                    className="bg-gray-900 border border-gray-700 rounded px-1 py-0.5 text-xs flex-1 min-w-[120px]"
+                    value={wave.name}
+                    onChange={(event) => updateWaveName(index, event.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  {wave.spawns.length === 0 ? (
+                    <p className="text-gray-500">
+                      No spawns yet. Use the controls below to add enemies.
+                    </p>
+                  ) : (
+                    wave.spawns.map((spawn, spawnIndex) => (
+                      <div
+                        key={spawnIndex}
+                        className="flex flex-wrap items-center gap-2"
+                      >
+                        <span>
+                          Spawner {spawn.spawner + 1} · {spawn.type} × {spawn.count}
+                        </span>
+                        <button
+                          className="px-2 py-1 bg-gray-800 rounded"
+                          onClick={() => removeSpawn(index, spawnIndex)}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div className="flex flex-wrap items-end gap-2">
+                  <label className="flex flex-col text-[10px] uppercase tracking-wide">
+                    Spawner
+                    <select
+                      className="bg-gray-900 border border-gray-700 rounded px-1 py-0.5 text-xs"
+                      value={Math.min(
+                        spawners.length > 0
+                          ? spawnDrafts[index]?.spawner ?? 0
+                          : 0,
+                        Math.max(0, spawners.length - 1),
+                      )}
+                      onChange={(event) =>
+                        updateSpawnDraftValue(index, {
+                          spawner: Number(event.target.value),
+                        })
+                      }
+                    >
+                      {spawners.length === 0 ? (
+                        <option value={0}>Place a spawner</option>
+                      ) : (
+                        spawners.map((_, spawnerIndex) => (
+                          <option key={spawnerIndex} value={spawnerIndex}>
+                            Spawner {spawnerIndex + 1}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </label>
+                  <label className="flex flex-col text-[10px] uppercase tracking-wide">
+                    Enemy
+                    <select
+                      className="bg-gray-900 border border-gray-700 rounded px-1 py-0.5 text-xs"
+                      value={spawnDrafts[index]?.type ?? "fast"}
+                      onChange={(event) =>
+                        updateSpawnDraftValue(index, {
+                          type: event.target.value as keyof typeof ENEMY_TYPES,
+                        })
+                      }
+                    >
+                      {(Object.keys(ENEMY_TYPES) as (keyof typeof ENEMY_TYPES)[]).map(
+                        (type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </label>
+                  <label className="flex flex-col text-[10px] uppercase tracking-wide">
+                    Count
+                    <input
+                      className="bg-gray-900 border border-gray-700 rounded px-1 py-0.5 text-xs w-16"
+                      type="number"
+                      min={1}
+                      value={spawnDrafts[index]?.count ?? 1}
+                      onChange={(event) =>
+                        updateSpawnDraftValue(index, {
+                          count: Number(event.target.value) || 1,
+                        })
+                      }
+                    />
+                  </label>
+                  <button
+                    className="px-2 py-1 bg-gray-700 rounded disabled:opacity-50"
+                    onClick={() => addSpawnToWave(index)}
+                    disabled={!spawners.length}
+                  >
+                    Add Spawn
+                  </button>
+                </div>
+              </div>
+            ))}
+            <button
+              className="px-2 py-1 bg-gray-700 rounded"
+              onClick={addWave}
+            >
+              Add Wave
+            </button>
+          </div>
+
+          <div className="space-y-1">
+            <textarea
+              className="w-full bg-black text-white p-2 rounded h-32"
+              value={waveJson}
+              onChange={(event) => setWaveJson(event.target.value)}
+            />
+            <div className="flex flex-wrap gap-2">
+              <button
+                className="px-2 py-1 bg-gray-700 rounded"
+                onClick={importWaves}
+              >
+                Import JSON
+              </button>
+              <button
+                className="px-2 py-1 bg-gray-700 rounded"
+                onClick={exportWaves}
+              >
+                Copy JSON
+              </button>
+            </div>
+          </div>
+        </div>
+
         {!editing && <DpsCharts towers={towers} />}
       </div>
     </GameLayout>
@@ -520,3 +1169,4 @@ const TowerDefense = () => {
 };
 
 export default TowerDefense;
+
