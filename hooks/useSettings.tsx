@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+  useRef,
+} from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -23,6 +31,17 @@ import {
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import {
+  recordSettingsMutation,
+  loadSettingsHistory,
+  persistSettingsHistory,
+  type SettingsHistoryEntry,
+} from '../middleware/settingsHistory';
+import {
+  persistSettingsSnapshot,
+  type SettingsSnapshot,
+} from '../utils/settings';
+
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -63,6 +82,8 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  history: SettingsHistoryEntry[];
+  recentChange: SettingsHistoryEntry | null;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +95,8 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  undoHistoryEntry: (id: string) => Promise<void>;
+  clearRecentChange: () => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +111,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  history: [],
+  recentChange: null,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,37 +124,146 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  undoHistoryEntry: async () => {},
+  clearRecentChange: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [accent, setAccent] = useState<string>(defaults.accent);
-  const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
-  const [density, setDensity] = useState<Density>(defaults.density as Density);
-  const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
-  const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
-  const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
-  const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
-  const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
-  const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
-  const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
-  const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [accent, setAccentState] = useState<string>(defaults.accent);
+  const [wallpaper, setWallpaperState] = useState<string>(defaults.wallpaper);
+  const [density, setDensityState] = useState<Density>(
+    defaults.density as Density,
+  );
+  const [reducedMotion, setReducedMotionState] = useState<boolean>(
+    defaults.reducedMotion,
+  );
+  const [fontScale, setFontScaleState] = useState<number>(defaults.fontScale);
+  const [highContrast, setHighContrastState] = useState<boolean>(
+    defaults.highContrast,
+  );
+  const [largeHitAreas, setLargeHitAreasState] = useState<boolean>(
+    defaults.largeHitAreas,
+  );
+  const [pongSpin, setPongSpinState] = useState<boolean>(defaults.pongSpin);
+  const [allowNetwork, setAllowNetworkState] = useState<boolean>(
+    defaults.allowNetwork,
+  );
+  const [haptics, setHapticsState] = useState<boolean>(defaults.haptics);
+  const [theme, setThemeState] = useState<string>(() => loadTheme());
+  const [history, setHistory] = useState<SettingsHistoryEntry[]>([]);
+  const [recentChange, setRecentChange] =
+    useState<SettingsHistoryEntry | null>(null);
+  const [initialized, setInitialized] = useState(false);
+  const [historyReady, setHistoryReady] = useState(false);
+
+  const snapshotRef = useRef<SettingsSnapshot | null>(null);
+  const historyRef = useRef<SettingsHistoryEntry[]>([]);
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
-      setAccent(await loadAccent());
-      setWallpaper(await loadWallpaper());
-      setDensity((await loadDensity()) as Density);
-      setReducedMotion(await loadReducedMotion());
-      setFontScale(await loadFontScale());
-      setHighContrast(await loadHighContrast());
-      setLargeHitAreas(await loadLargeHitAreas());
-      setPongSpin(await loadPongSpin());
-      setAllowNetwork(await loadAllowNetwork());
-      setHaptics(await loadHaptics());
-      setTheme(loadTheme());
+      try {
+        const [
+          accentValue,
+          wallpaperValue,
+          densityValue,
+          reducedMotionValue,
+          fontScaleValue,
+          highContrastValue,
+          largeHitAreasValue,
+          pongSpinValue,
+          allowNetworkValue,
+          hapticsValue,
+        ] = await Promise.all([
+          loadAccent(),
+          loadWallpaper(),
+          loadDensity(),
+          loadReducedMotion(),
+          loadFontScale(),
+          loadHighContrast(),
+          loadLargeHitAreas(),
+          loadPongSpin(),
+          loadAllowNetwork(),
+          loadHaptics(),
+        ]);
+        if (cancelled) return;
+        setAccentState(accentValue);
+        setWallpaperState(wallpaperValue);
+        setDensityState(densityValue as Density);
+        setReducedMotionState(reducedMotionValue);
+        setFontScaleState(fontScaleValue);
+        setHighContrastState(highContrastValue);
+        setLargeHitAreasState(largeHitAreasValue);
+        setPongSpinState(pongSpinValue);
+        setAllowNetworkState(allowNetworkValue);
+        setHapticsState(hapticsValue);
+        setThemeState(loadTheme());
+      } catch (error) {
+        console.error('Failed to load settings from storage', error);
+      } finally {
+        if (!cancelled) {
+          setInitialized(true);
+        }
+      }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const storedHistory = await loadSettingsHistory();
+        if (cancelled) return;
+        historyRef.current = storedHistory;
+        setHistory(storedHistory);
+      } catch (error) {
+        console.error('Failed to load settings history', error);
+      } finally {
+        if (!cancelled) setHistoryReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const buildSnapshot = useCallback(
+    (): SettingsSnapshot => ({
+      accent,
+      wallpaper,
+      density,
+      reducedMotion,
+      fontScale,
+      highContrast,
+      largeHitAreas,
+      pongSpin,
+      allowNetwork,
+      haptics,
+      theme,
+    }),
+    [
+      accent,
+      wallpaper,
+      density,
+      reducedMotion,
+      fontScale,
+      highContrast,
+      largeHitAreas,
+      pongSpin,
+      allowNetwork,
+      haptics,
+      theme,
+    ],
+  );
+
+  useEffect(() => {
+    if (!initialized) return;
+    snapshotRef.current = buildSnapshot();
+  }, [buildSnapshot, initialized]);
 
   useEffect(() => {
     saveTheme(theme);
@@ -188,7 +322,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [reducedMotion]);
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--font-multiplier', fontScale.toString());
+    document.documentElement.style.setProperty(
+      '--font-multiplier',
+      fontScale.toString(),
+    );
     saveFontScale(fontScale);
   }, [fontScale]);
 
@@ -198,7 +335,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [highContrast]);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('large-hit-area', largeHitAreas);
+    document.documentElement.classList.toggle(
+      'large-hit-area',
+      largeHitAreas,
+    );
     saveLargeHitAreas(largeHitAreas);
   }, [largeHitAreas]);
 
@@ -216,8 +356,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           typeof input === 'string'
             ? input
             : 'url' in input
-              ? input.url
-              : input.href;
+            ? input.url
+            : input.href;
         if (
           /^https?:/i.test(url) &&
           !url.startsWith(window.location.origin) &&
@@ -236,6 +376,206 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  const applyStateUpdates = useCallback(
+    (updates: Partial<SettingsSnapshot>) => {
+      if (updates.accent !== undefined) setAccentState(updates.accent);
+      if (updates.wallpaper !== undefined) setWallpaperState(updates.wallpaper);
+      if (updates.density !== undefined)
+        setDensityState(updates.density as Density);
+      if (updates.reducedMotion !== undefined)
+        setReducedMotionState(updates.reducedMotion);
+      if (updates.fontScale !== undefined) setFontScaleState(updates.fontScale);
+      if (updates.highContrast !== undefined)
+        setHighContrastState(updates.highContrast);
+      if (updates.largeHitAreas !== undefined)
+        setLargeHitAreasState(updates.largeHitAreas);
+      if (updates.pongSpin !== undefined) setPongSpinState(updates.pongSpin);
+      if (updates.allowNetwork !== undefined)
+        setAllowNetworkState(updates.allowNetwork);
+      if (updates.haptics !== undefined) setHapticsState(updates.haptics);
+      if (updates.theme !== undefined) setThemeState(updates.theme);
+    },
+    [],
+  );
+
+  const commitChange = useCallback(
+    (updates: Partial<SettingsSnapshot>, summary: string, source: string) => {
+      const previous = snapshotRef.current ?? buildSnapshot();
+      const next: SettingsSnapshot = { ...previous, ...updates };
+      applyStateUpdates(updates);
+      snapshotRef.current = next;
+
+      if (!initialized) return;
+
+      void recordSettingsMutation({
+        before: previous,
+        after: next,
+        summary,
+        source,
+        history: historyReady ? historyRef.current : undefined,
+      })
+        .then(({ entry, history: updatedHistory }) => {
+          if (!entry) return;
+          historyRef.current = updatedHistory;
+          setHistory(updatedHistory);
+          setRecentChange(entry);
+        })
+        .catch((error) => {
+          console.error('Failed to record settings history', error);
+        });
+    },
+    [applyStateUpdates, buildSnapshot, historyReady, initialized],
+  );
+
+  const setAccent = useCallback(
+    (value: string) => {
+      commitChange({ accent: value }, 'Accent color updated', 'accent');
+    },
+    [commitChange],
+  );
+
+  const setWallpaper = useCallback(
+    (value: string) => {
+      commitChange(
+        { wallpaper: value },
+        `Wallpaper changed to ${value}`,
+        'wallpaper',
+      );
+    },
+    [commitChange],
+  );
+
+  const setDensity = useCallback(
+    (value: Density) => {
+      commitChange(
+        { density: value },
+        `Interface density set to ${value}`,
+        'density',
+      );
+    },
+    [commitChange],
+  );
+
+  const setReducedMotion = useCallback(
+    (value: boolean) => {
+      commitChange(
+        { reducedMotion: value },
+        `Reduced motion ${value ? 'enabled' : 'disabled'}`,
+        'reducedMotion',
+      );
+    },
+    [commitChange],
+  );
+
+  const setFontScale = useCallback(
+    (value: number) => {
+      commitChange(
+        { fontScale: value },
+        `Font scale set to ${value.toFixed(2)}`,
+        'fontScale',
+      );
+    },
+    [commitChange],
+  );
+
+  const setHighContrast = useCallback(
+    (value: boolean) => {
+      commitChange(
+        { highContrast: value },
+        `High contrast ${value ? 'enabled' : 'disabled'}`,
+        'highContrast',
+      );
+    },
+    [commitChange],
+  );
+
+  const setLargeHitAreas = useCallback(
+    (value: boolean) => {
+      commitChange(
+        { largeHitAreas: value },
+        `Large hit areas ${value ? 'enabled' : 'disabled'}`,
+        'largeHitAreas',
+      );
+    },
+    [commitChange],
+  );
+
+  const setPongSpin = useCallback(
+    (value: boolean) => {
+      commitChange(
+        { pongSpin: value },
+        `Pong spin ${value ? 'enabled' : 'disabled'}`,
+        'pongSpin',
+      );
+    },
+    [commitChange],
+  );
+
+  const setAllowNetwork = useCallback(
+    (value: boolean) => {
+      commitChange(
+        { allowNetwork: value },
+        `Network requests ${value ? 'enabled' : 'blocked'}`,
+        'allowNetwork',
+      );
+    },
+    [commitChange],
+  );
+
+  const setHaptics = useCallback(
+    (value: boolean) => {
+      commitChange(
+        { haptics: value },
+        `Haptics ${value ? 'enabled' : 'disabled'}`,
+        'haptics',
+      );
+    },
+    [commitChange],
+  );
+
+  const setTheme = useCallback(
+    (value: string) => {
+      commitChange({ theme: value }, `Theme switched to ${value}`, 'theme');
+    },
+    [commitChange],
+  );
+
+  const undoHistoryEntry = useCallback(
+    async (id: string) => {
+      const entry = historyRef.current.find((item) => item.id === id);
+      if (!entry || entry.undone) return;
+
+      const snapshot = { ...entry.before } as SettingsSnapshot;
+      applyStateUpdates(snapshot);
+      snapshotRef.current = snapshot;
+      setRecentChange((current) => (current?.id === id ? null : current));
+
+      try {
+        await persistSettingsSnapshot(snapshot);
+      } catch (error) {
+        console.error('Failed to persist settings during undo', error);
+      }
+
+      const updatedHistory = historyRef.current.map((item) =>
+        item.id === id
+          ? { ...item, undone: true, undoneAt: new Date().toISOString() }
+          : item,
+      );
+      historyRef.current = updatedHistory;
+      setHistory(updatedHistory);
+      try {
+        await persistSettingsHistory(updatedHistory);
+      } catch (error) {
+        console.error('Failed to persist settings history', error);
+      }
+    },
+    [applyStateUpdates],
+  );
+
+  const clearRecentChange = useCallback(() => {
+    setRecentChange(null);
+  }, []);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -250,6 +590,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        history,
+        recentChange,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +603,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        undoHistoryEntry,
+        clearRecentChange,
       }}
     >
       {children}
