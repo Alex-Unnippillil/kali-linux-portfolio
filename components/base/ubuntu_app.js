@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import Image from 'next/image'
+import Icon from './Icon'
 
 export class UbuntuApp extends Component {
     constructor() {
@@ -50,13 +50,11 @@ export class UbuntuApp extends Component {
                 onMouseEnter={this.handlePrefetch}
                 onFocus={this.handlePrefetch}
             >
-                <Image
-                    width={40}
-                    height={40}
-                    className="mb-1 w-10"
-                    src={this.props.icon.replace('./', '/')}
-                    alt={"Kali " + this.props.name}
-                    sizes="40px"
+                <Icon
+                    name={this.props.icon}
+                    size={32}
+                    title={this.props.name}
+                    className="mb-1 w-8 h-8"
                 />
                 {this.props.displayName || this.props.name}
 

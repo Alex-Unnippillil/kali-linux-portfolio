@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
+import Icon from '../../base/Icon';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
@@ -440,8 +441,8 @@ const HydraApp = () => {
       <div className="grid grid-cols-2 gap-1.5">
         <div className="col-span-2 flex gap-1.5">
           {[
-            { label: 'SSH', value: 'ssh', icon: '/themes/Yaru/apps/ssh.svg' },
-            { label: 'FTP', value: 'ftp', icon: '/themes/Yaru/apps/ftp.svg' },
+            { label: 'SSH', value: 'ssh', icon: 'terminal' },
+            { label: 'FTP', value: 'ftp', icon: 'network' },
           ].map((m) => (
             <div
               key={m.value}
@@ -450,7 +451,7 @@ const HydraApp = () => {
                 service === m.value ? 'bg-blue-600' : 'bg-gray-700'
               }`}
             >
-              <img src={m.icon} alt={m.label} className="w-6 h-6 mr-2" />
+              <Icon name={m.icon} size={24} className="w-6 h-6 mr-2" title={m.label} />
               <span>{m.label}</span>
             </div>
           ))}
@@ -647,11 +648,7 @@ const HydraApp = () => {
         onAttemptChange={handleAttempt}
       />
       <div className="mt-4 flex items-center gap-2">
-        <img
-          src="/themes/Yaru/status/changes-prevent-symbolic.svg"
-          alt="credentials"
-          className="w-5 h-5"
-        />
+        <Icon name="shield" size={20} className="w-5 h-5" title="Credentials" />
         <div className="flex-1 bg-gray-700 h-2 rounded">
           <div
             className="bg-green-500 h-2 rounded"

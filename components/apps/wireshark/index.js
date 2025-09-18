@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import Image from 'next/image';
+import Icon from '../base/Icon';
 import Waterfall from './Waterfall';
 import BurstChart from './BurstChart';
 import { protocolName, getRowColor, matchesDisplayFilter } from './utils';
@@ -225,16 +225,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
             className="flex items-center justify-between bg-gray-800 rounded p-2"
           >
             <div className="flex items-center space-x-2">
-              <Image
-                src={
-                  iface.type === 'wired'
-                    ? '/themes/Yaru/status/network-wireless-signal-good-symbolic.svg'
-                    : '/themes/Yaru/status/network-wireless-signal-good-symbolic.svg'
-                }
-                alt={iface.type}
-                width={24}
-                height={24}
-              />
+              <Icon name="network" size={24} className="w-6 h-6" title={iface.type} />
               <span className="text-white">{iface.name}</span>
             </div>
             <div className="flex items-center space-x-1">

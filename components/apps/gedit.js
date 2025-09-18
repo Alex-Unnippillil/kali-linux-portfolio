@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
+import Icon from '../base/Icon';
 import ReactGA from 'react-ga4';
 import emailjs from '@emailjs/browser';
 import ProgressBar from '../ui/ProgressBar';
@@ -192,14 +193,11 @@ export class Gedit extends Component {
                             {this.state.showProgress ? (
                                 <ProgressBar progress={this.state.progress} />
                             ) : (
-                                <Image
-                                    className="w-8 motion-safe:animate-spin"
-                                    src="/themes/Yaru/status/process-working-symbolic.svg"
-                                    alt="Ubuntu Process Symbol"
-                                    width={32}
-                                    height={32}
-                                    sizes="32px"
-                                    priority
+                                <Icon
+                                    name="refresh"
+                                    size={32}
+                                    className="w-8 h-8 motion-safe:animate-spin"
+                                    title="Sending"
                                 />
                             )}
                         </div>

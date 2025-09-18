@@ -1,5 +1,5 @@
 import React, { Component } from "react";
-import Image from 'next/image';
+import Icon from './Icon';
 import { toCanvas } from 'html-to-image';
 
 export class SideBarApp extends Component {
@@ -104,21 +104,16 @@ export class SideBarApp extends Component {
                     " w-auto p-2 outline-none relative hover:bg-white hover:bg-opacity-10 rounded m-1 transition-hover transition-active"}
                 id={"sidebar-" + this.props.id}
             >
-                <Image
-                    width={28}
-                    height={28}
-                    className="w-7"
-                    src={this.props.icon.replace('./', '/')}
-                    alt="Ubuntu App Icon"
-                    sizes="28px"
+                <Icon
+                    name={this.props.icon}
+                    size={24}
+                    className="w-6 h-6"
+                    title={this.props.title}
                 />
-                <Image
-                    width={28}
-                    height={28}
-                    className={(this.state.scaleImage ? " scale " : "") + " scalable-app-icon w-7 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"}
-                    src={this.props.icon.replace('./', '/')}
-                    alt=""
-                    sizes="28px"
+                <Icon
+                    name={this.props.icon}
+                    size={24}
+                    className={(this.state.scaleImage ? " scale " : "") + " scalable-app-icon w-6 h-6 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"}
                 />
                 {
                     (
