@@ -4,6 +4,14 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(0);
   const inputRef = useRef(null);
+  const commitSelection = (id) => {
+    if (!id) return;
+    if (typeof onSelect === 'function') {
+      onSelect(id);
+    } else if (typeof onClose === 'function') {
+      onClose();
+    }
+  };
 
   const filtered = windows.filter((w) =>
     w.title.toLowerCase().includes(query.toLowerCase())
@@ -64,14 +72,25 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
           value={query}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          className="w-full mb-4 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
+          className="w-full mb-4 px-2 py-1 rounded bg-black bg-opacity-20 focus-visible-ring"
           placeholder="Search windows"
         />
-        <ul>
+        <ul role="listbox" aria-label="Open windows">
           {filtered.map((w, i) => (
             <li
               key={w.id}
-              className={`px-2 py-1 rounded ${i === selected ? 'bg-ub-orange text-black' : ''}`}
+              role="option"
+              tabIndex={0}
+              aria-selected={i === selected}
+              onFocus={() => setSelected(i)}
+              onClick={() => commitSelection(w.id)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  commitSelection(w.id);
+                }
+              }}
+              className={`px-2 py-1 rounded focus-visible-ring ${i === selected ? 'bg-ub-orange text-black' : ''}`}
             >
               {w.title}
             </li>

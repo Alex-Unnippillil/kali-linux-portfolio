@@ -120,7 +120,7 @@ const WhiskerMenu: React.FC = () => {
         ref={buttonRef}
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        className="pl-3 pr-3 focus-visible-ring transition duration-100 ease-in-out border-b-2 border-transparent py-1"
       >
         <Image
           src="/themes/Yaru/status/decompiler-symbolic.svg"
@@ -146,7 +146,7 @@ const WhiskerMenu: React.FC = () => {
             {CATEGORIES.map(cat => (
               <button
                 key={cat.id}
-                className={`text-left px-2 py-1 rounded mb-1 ${category === cat.id ? 'bg-gray-700' : ''}`}
+                className={`text-left px-2 py-1 rounded mb-1 focus-visible-ring ${category === cat.id ? 'bg-gray-700' : ''}`}
                 onClick={() => setCategory(cat.id)}
               >
                 {cat.label}
@@ -155,7 +155,7 @@ const WhiskerMenu: React.FC = () => {
           </div>
           <div className="p-3">
             <input
-              className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
+              className="mb-3 w-64 px-2 py-1 rounded bg-black bg-opacity-20 focus-visible-ring"
               placeholder="Search"
               value={query}
               onChange={e => setQuery(e.target.value)}

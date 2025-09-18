@@ -91,12 +91,12 @@ export default function AppGrid({ openApp }) {
   return (
     <div className="flex flex-col items-center h-full">
       <input
-        className="mb-6 mt-4 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
+        className="mb-6 mt-4 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus-visible-ring"
         placeholder="Search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
-      <div className="w-full flex-1 h-[70vh] outline-none" onKeyDown={handleKeyDown}>
+      <div className="w-full flex-1 h-[70vh]" onKeyDown={handleKeyDown}>
         <AutoSizer>
           {({ height, width }) => {
             const columnCount = getColumnCount(width);

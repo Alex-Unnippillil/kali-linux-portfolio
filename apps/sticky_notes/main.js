@@ -73,6 +73,8 @@ function createNoteElement(note) {
   const colorInput = document.createElement('input');
   colorInput.type = 'color';
   colorInput.value = note.color;
+  colorInput.classList.add('focus-visible-ring');
+  colorInput.setAttribute('aria-label', 'Sticky note color');
   colorInput.addEventListener('input', (e) => {
     note.color = e.target.value;
     el.style.backgroundColor = note.color;
@@ -81,7 +83,8 @@ function createNoteElement(note) {
 
   const deleteBtn = document.createElement('button');
   deleteBtn.textContent = 'Delete';
-  deleteBtn.className = 'delete-note';
+  deleteBtn.className = 'delete-note focus-visible-ring';
+  deleteBtn.type = 'button';
   deleteBtn.addEventListener('click', () => {
     notes = notes.filter((n) => n.id !== note.id);
     el.remove();
@@ -94,6 +97,8 @@ function createNoteElement(note) {
 
   const textarea = document.createElement('textarea');
   textarea.value = note.content;
+  textarea.classList.add('focus-visible-ring');
+  textarea.setAttribute('aria-label', 'Sticky note text');
   textarea.addEventListener('input', (e) => {
     note.content = e.target.value;
     void saveNotes();
