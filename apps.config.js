@@ -113,6 +113,8 @@ const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
 const HtmlRewriteApp = createDynamicApp('html-rewriter', 'HTML Rewriter');
 const ContactApp = createDynamicApp('contact', 'Contact');
 
+const BackupApp = createDynamicApp('backup', 'Backup Planner');
+
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -201,6 +203,8 @@ const displayContact = createDisplay(ContactApp);
 const displayHashcat = createDisplay(HashcatApp);
 
 const displayKismet = createDisplay(KismetApp);
+
+const displayBackup = createDisplay(BackupApp);
 
 // Utilities list used for the "Utilities" folder on the desktop
 const utilityList = [
@@ -691,6 +695,15 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displaySettings,
+  },
+  {
+    id: 'backup',
+    title: 'Backup Planner',
+    icon: '/themes/Yaru/system/folder.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayBackup,
   },
   {
     id: 'files',
