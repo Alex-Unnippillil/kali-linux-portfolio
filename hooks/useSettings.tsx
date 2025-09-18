@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useRef,
+} from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -24,6 +31,25 @@ import {
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
+
+type SettingsBroadcastPayload = {
+  accent: string;
+  wallpaper: string;
+  density: Density;
+  reducedMotion: boolean;
+  fontScale: number;
+  highContrast: boolean;
+  largeHitAreas: boolean;
+  pongSpin: boolean;
+  allowNetwork: boolean;
+  haptics: boolean;
+  theme: string;
+};
+
+type SettingsBroadcastMessage = {
+  sourceId: string;
+  payload: SettingsBroadcastPayload;
+};
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -114,6 +140,105 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
+  const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
+  const latestSettingsRef = useRef<SettingsBroadcastPayload>({
+    accent,
+    wallpaper,
+    density,
+    reducedMotion,
+    fontScale,
+    highContrast,
+    largeHitAreas,
+    pongSpin,
+    allowNetwork,
+    haptics,
+    theme,
+  });
+  const isApplyingRemoteUpdateRef = useRef(false);
+  const instanceIdRef = useRef<string>('');
+
+  if (!instanceIdRef.current) {
+    instanceIdRef.current =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : Math.random().toString(36).slice(2);
+  }
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('BroadcastChannel' in window)) {
+      return;
+    }
+
+    const channel = new BroadcastChannel('settings');
+    broadcastChannelRef.current = channel;
+
+    const handleMessage = (event: MessageEvent<SettingsBroadcastMessage>) => {
+      const { data } = event;
+      if (!data || data.sourceId === instanceIdRef.current) return;
+
+      const { payload } = data;
+      if (!payload) return;
+
+      const current = latestSettingsRef.current;
+      const hasChanges = (Object.keys(payload) as (keyof SettingsBroadcastPayload)[]).some(
+        (key) => payload[key] !== current[key]
+      );
+
+      if (!hasChanges) return;
+
+      isApplyingRemoteUpdateRef.current = true;
+
+      if (payload.accent !== current.accent) setAccent(payload.accent);
+      if (payload.wallpaper !== current.wallpaper) setWallpaper(payload.wallpaper);
+      if (payload.density !== current.density) setDensity(payload.density);
+      if (payload.reducedMotion !== current.reducedMotion)
+        setReducedMotion(payload.reducedMotion);
+      if (payload.fontScale !== current.fontScale) setFontScale(payload.fontScale);
+      if (payload.highContrast !== current.highContrast) setHighContrast(payload.highContrast);
+      if (payload.largeHitAreas !== current.largeHitAreas)
+        setLargeHitAreas(payload.largeHitAreas);
+      if (payload.pongSpin !== current.pongSpin) setPongSpin(payload.pongSpin);
+      if (payload.allowNetwork !== current.allowNetwork) setAllowNetwork(payload.allowNetwork);
+      if (payload.haptics !== current.haptics) setHaptics(payload.haptics);
+      if (payload.theme !== current.theme) setTheme(payload.theme);
+    };
+
+    channel.addEventListener('message', handleMessage);
+
+    return () => {
+      channel.removeEventListener('message', handleMessage);
+      channel.close();
+      broadcastChannelRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    latestSettingsRef.current = {
+      accent,
+      wallpaper,
+      density,
+      reducedMotion,
+      fontScale,
+      highContrast,
+      largeHitAreas,
+      pongSpin,
+      allowNetwork,
+      haptics,
+      theme,
+    };
+  }, [
+    accent,
+    wallpaper,
+    density,
+    reducedMotion,
+    fontScale,
+    highContrast,
+    largeHitAreas,
+    pongSpin,
+    allowNetwork,
+    haptics,
+    theme,
+  ]);
 
   useEffect(() => {
     (async () => {
@@ -235,6 +360,33 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveHaptics(haptics);
   }, [haptics]);
+
+  useEffect(() => {
+    if (isApplyingRemoteUpdateRef.current) {
+      isApplyingRemoteUpdateRef.current = false;
+      return;
+    }
+
+    const channel = broadcastChannelRef.current;
+    if (!channel) return;
+
+    channel.postMessage({
+      sourceId: instanceIdRef.current,
+      payload: latestSettingsRef.current,
+    });
+  }, [
+    accent,
+    wallpaper,
+    density,
+    reducedMotion,
+    fontScale,
+    highContrast,
+    largeHitAreas,
+    pongSpin,
+    allowNetwork,
+    haptics,
+    theme,
+  ]);
 
   return (
     <SettingsContext.Provider
