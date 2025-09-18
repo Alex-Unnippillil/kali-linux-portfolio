@@ -1,6 +1,6 @@
 import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import InstallButton from '../components/InstallButton';
+import InstallButton from '../components/layout/InstallButton';
 import { initA2HS } from '@/src/pwa/a2hs';
 
 describe('InstallButton', () => {

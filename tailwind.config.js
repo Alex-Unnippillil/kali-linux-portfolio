@@ -1,5 +1,9 @@
 const plugin = require('tailwindcss/plugin');
 
+const spacingTokens = Object.fromEntries(
+  Array.from({ length: 33 }, (_, index) => [`space-${index}`, `var(--space-${index})`])
+);
+
 module.exports = {
   darkMode: 'class',
   mode: 'jit',
@@ -11,6 +15,7 @@ module.exports = {
   ],
   theme: {
     extend: {
+      spacing: spacingTokens,
       screens: {
         '3xl': '1920px',
       },
