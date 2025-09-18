@@ -1,6 +1,7 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import { logEvent } from './analytics';
+import { measureAppLaunch } from './performanceMetrics';
 
 export const createDynamicApp = (id, title) =>
   dynamic(
@@ -18,6 +19,8 @@ export const createDynamicApp = (id, title) =>
             {`Unable to load ${title}`}
           </div>
         );
+      } finally {
+        measureAppLaunch(id, title);
       }
     },
     {
