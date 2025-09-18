@@ -1,6 +1,15 @@
 import React, { Component } from 'react'
 import Image from 'next/image'
 
+const getMotionDurationFromToken = (token = '--motion-medium', fallback = 150) => {
+    if (typeof window === 'undefined') {
+        return fallback;
+    }
+    const rawValue = getComputedStyle(document.documentElement).getPropertyValue(token);
+    const parsed = parseFloat(rawValue);
+    return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 export class UbuntuApp extends Component {
     constructor() {
         super();
@@ -17,8 +26,9 @@ export class UbuntuApp extends Component {
 
     openApp = () => {
         if (this.props.disabled) return;
+        const motionMedium = getMotionDurationFromToken('--motion-medium', 150);
         this.setState({ launching: true }, () => {
-            setTimeout(() => this.setState({ launching: false }), 300);
+            setTimeout(() => this.setState({ launching: false }), motionMedium);
         });
         this.props.openApp(this.props.id);
     }
