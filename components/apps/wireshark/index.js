@@ -228,8 +228,8 @@ const WiresharkApp = ({ initialPackets = [] }) => {
               <Image
                 src={
                   iface.type === 'wired'
-                    ? '/themes/Yaru/status/network-wireless-signal-good-symbolic.svg'
-                    : '/themes/Yaru/status/network-wireless-signal-good-symbolic.svg'
+                    ? '/icons/48/status/network-wireless-signal-good-symbolic.svg'
+                    : '/icons/48/status/network-wireless-signal-good-symbolic.svg'
                 }
                 alt={iface.type}
                 width={24}

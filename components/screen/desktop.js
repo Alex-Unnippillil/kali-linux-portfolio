@@ -110,7 +110,7 @@ export class Desktop extends Component {
                 apps.push({
                     id: `new-folder-${folder.id}`,
                     title: folder.name,
-                    icon: '/themes/Yaru/system/folder.png',
+                    icon: '/icons/128/system/folder.svg',
                     disabled: true,
                     favourite: false,
                     desktop_shortcut: true,
@@ -793,8 +793,8 @@ export class Desktop extends Component {
         const appIndex = apps.findIndex(app => app.id === 'trash');
         if (appIndex !== -1) {
             const icon = trash.length
-                ? '/themes/Yaru/status/user-trash-full-symbolic.svg'
-                : '/themes/Yaru/status/user-trash-symbolic.svg';
+                ? '/icons/48/status/user-trash-full-symbolic.svg'
+                : '/icons/48/status/user-trash-symbolic.svg';
             if (apps[appIndex].icon !== icon) {
                 apps[appIndex].icon = icon;
                 this.forceUpdate();
@@ -808,7 +808,7 @@ export class Desktop extends Component {
         apps.push({
             id: `new-folder-${folder_id}`,
             title: folder_name,
-            icon: '/themes/Yaru/system/folder.png',
+            icon: '/icons/128/system/folder.svg',
             disabled: true,
             favourite: false,
             desktop_shortcut: true,

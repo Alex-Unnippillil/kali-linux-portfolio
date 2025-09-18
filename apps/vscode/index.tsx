@@ -57,7 +57,7 @@ export default function VsCode() {
           />
           <div className="absolute top-4 left-4 flex items-center gap-4 bg-black/50 p-4 rounded">
             <Image
-              src="/themes/Yaru/system/view-app-grid-symbolic.svg"
+              src="/icons/48/system/view-app-grid-symbolic.svg"
               alt="Open Folder"
               width={64}
               height={64}

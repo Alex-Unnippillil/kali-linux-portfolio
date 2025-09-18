@@ -4,9 +4,9 @@ import { useState, useEffect, useCallback } from 'react';
 import useTrashState from './state';
 import HistoryList from './components/HistoryList';
 
-const DEFAULT_ICON = '/themes/Yaru/system/folder.png';
-const EMPTY_ICON = '/themes/Yaru/status/user-trash-symbolic.svg';
-const FULL_ICON = '/themes/Yaru/status/user-trash-full-symbolic.svg';
+const DEFAULT_ICON = '/icons/128/system/folder.svg';
+const EMPTY_ICON = '/icons/64/status/user-trash-symbolic.svg';
+const FULL_ICON = '/icons/64/status/user-trash-full-symbolic.svg';
 
 export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   const {

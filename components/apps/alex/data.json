@@ -1,11 +1,11 @@
 {
   "sections": [
-    {"id": "about", "label": "About Me", "icon": "/themes/Yaru/status/about.svg", "alt": "about Unnippillil"},
-    {"id": "education", "label": "Education", "icon": "/themes/Yaru/status/education.svg", "alt": "Unnippillil' education"},
-    {"id": "skills", "label": "Skills", "icon": "/themes/Yaru/status/skills.svg", "alt": "Unnippillil' skills"},
-    {"id": "certs", "label": "Certs", "icon": "/themes/Yaru/status/experience.svg", "alt": "Unnippillil's certifications"},
-    {"id": "projects", "label": "Projects", "icon": "/themes/Yaru/status/projects.svg", "alt": "Unnippillil' projects"},
-    {"id": "resume", "label": "Resume", "icon": "/themes/Yaru/status/download.svg", "alt": "Unnippillil's resume"}
+    {"id": "about", "label": "About Me", "icon": "/icons/64/status/about.svg", "alt": "about Unnippillil"},
+    {"id": "education", "label": "Education", "icon": "/icons/64/status/education.svg", "alt": "Unnippillil' education"},
+    {"id": "skills", "label": "Skills", "icon": "/icons/64/status/skills.svg", "alt": "Unnippillil' skills"},
+    {"id": "certs", "label": "Certs", "icon": "/icons/64/status/experience.svg", "alt": "Unnippillil's certifications"},
+    {"id": "projects", "label": "Projects", "icon": "/icons/64/status/projects.svg", "alt": "Unnippillil' projects"},
+    {"id": "resume", "label": "Resume", "icon": "/icons/64/status/download.svg", "alt": "Unnippillil's resume"}
   ],
   "skills": {
     "networkingSecurity": [

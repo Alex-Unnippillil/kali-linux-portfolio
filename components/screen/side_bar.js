@@ -67,7 +67,7 @@ export function AllApps(props) {
                     width={28}
                     height={28}
                     className="w-7"
-                    src="/themes/Yaru/system/view-app-grid-symbolic.svg"
+                    src="/icons/48/system/view-app-grid-symbolic.svg"
                     alt="Ubuntu view app"
                     sizes="28px"
                 />

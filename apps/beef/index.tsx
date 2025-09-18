@@ -30,7 +30,7 @@ const BeefPage: React.FC = () => {
       <header className="flex items-center justify-between p-4">
         <div className="flex items-center gap-2">
           <Image
-            src="/themes/Yaru/apps/beef.svg"
+            src="/icons/128/apps/beef.svg"
             alt="BeEF badge"
             width={48}
             height={48}
@@ -39,12 +39,12 @@ const BeefPage: React.FC = () => {
         </div>
         <div className="flex gap-2">
           <img
-            src="/themes/Yaru/window/window-minimize-symbolic.svg"
+            src="/icons/48/window/window-minimize-symbolic.svg"
             alt="minimize"
             className="w-6 h-6"
           />
           <img
-            src="/themes/Yaru/window/window-close-symbolic.svg"
+            src="/icons/48/window/window-close-symbolic.svg"
             alt="close"
             className="w-6 h-6"
           />

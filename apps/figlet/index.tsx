@@ -491,7 +491,7 @@ const FigletApp: React.FC = () => {
           aria-label="Export PNG"
         >
           <img
-            src="/themes/Yaru/actions/document-save-as-png-symbolic.svg"
+            src="/icons/48/actions/document-save-as-symbolic.svg"
             alt=""
             className="w-6 h-6"
           />
@@ -502,7 +502,7 @@ const FigletApp: React.FC = () => {
           aria-label="Export SVG"
         >
           <img
-            src="/themes/Yaru/actions/document-save-as-svg-symbolic.svg"
+            src="/icons/48/actions/document-save-as-symbolic.svg"
             alt=""
             className="w-6 h-6"
           />

@@ -743,7 +743,7 @@ export function WindowEditButtons(props) {
                     onClick={togglePin}
                 >
                     <NextImage
-                        src="/themes/Yaru/window/window-pin-symbolic.svg"
+                        src="/icons/48/window/window-pin-symbolic.svg"
                         alt="Kali window pin"
                         className="h-4 w-4 inline"
                         width={16}
@@ -759,7 +759,7 @@ export function WindowEditButtons(props) {
                 onClick={props.minimize}
             >
                 <NextImage
-                    src="/themes/Yaru/window/window-minimize-symbolic.svg"
+                    src="/icons/48/window/window-minimize-symbolic.svg"
                     alt="Kali window minimize"
                     className="h-4 w-4 inline"
                     width={16}
@@ -777,7 +777,7 @@ export function WindowEditButtons(props) {
                             onClick={props.maximize}
                         >
                             <NextImage
-                                src="/themes/Yaru/window/window-restore-symbolic.svg"
+                                src="/icons/48/window/window-restore-symbolic.svg"
                                 alt="Kali window restore"
                                 className="h-4 w-4 inline"
                                 width={16}
@@ -793,7 +793,7 @@ export function WindowEditButtons(props) {
                             onClick={props.maximize}
                         >
                             <NextImage
-                                src="/themes/Yaru/window/window-maximize-symbolic.svg"
+                                src="/icons/48/window/window-maximize-symbolic.svg"
                                 alt="Kali window maximize"
                                 className="h-4 w-4 inline"
                                 width={16}
@@ -811,7 +811,7 @@ export function WindowEditButtons(props) {
                 onClick={props.close}
             >
                 <NextImage
-                    src="/themes/Yaru/window/window-close-symbolic.svg"
+                    src="/icons/48/window/window-close-symbolic.svg"
                     alt="Kali window close"
                     className="h-4 w-4 inline"
                     width={16}

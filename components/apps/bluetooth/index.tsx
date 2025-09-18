@@ -130,7 +130,7 @@ const BluetoothApp: React.FC = () => {
                   className="flex flex-col items-center rounded bg-gray-800 p-[6px]"
                 >
                   <img
-                    src="/themes/Yaru/status/emblem-system-symbolic.svg"
+                    src="/icons/48/status/emblem-system-symbolic.svg"
                     alt=""
                     className="h-16 w-16"
                   />
