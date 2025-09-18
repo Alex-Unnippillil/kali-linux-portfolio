@@ -1,0 +1,5 @@
+[
+  { "expression": "tcp", "color": "Red" },
+  { "expression": "udp", "color": "Blue" },
+  { "expression": "icmp", "color": "Yellow" }
+]

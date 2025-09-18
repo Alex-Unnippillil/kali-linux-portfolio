@@ -1,38 +1,55 @@
 import React, { useRef } from 'react';
 import { colorDefinitions } from '../../../components/apps/wireshark/colorDefs';
-
-interface Rule {
-  expression: string;
-  color: string;
-}
+import {
+  sanitizeRuleSet,
+  useColoring,
+  type ColorRule,
+} from '../../../components/apps/wireshark/coloringContext';
 
 interface Props {
-  rules: Rule[];
-  onChange: (rules: Rule[]) => void;
+  rules?: ColorRule[];
+  onChange?: (rules: ColorRule[]) => void;
 }
 
-const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
+const ColorRuleEditor: React.FC<Props> = ({ rules: propRules, onChange }) => {
   const fileRef = useRef<HTMLInputElement>(null);
+  const coloring = useColoring();
+  const shouldUseContext = coloring.isProvided && propRules === undefined;
+  const rules = propRules ?? coloring.rules;
+
+  const commitRules = (next: ColorRule[]) => {
+    const sanitized = sanitizeRuleSet(next);
+    if (onChange) {
+      onChange(sanitized);
+    }
+    if (shouldUseContext) {
+      coloring.setRules(sanitized);
+    }
+  };
 
   const handleRuleChange = (
     index: number,
-    field: keyof Rule,
+    field: keyof ColorRule,
     value: string
   ) => {
-    const updated = rules.map((r, i) => (i === index ? { ...r, [field]: value } : r));
-    onChange(updated);
+    const updated = rules.map((r, i) =>
+      i === index ? { ...r, [field]: value } : r
+    );
+    commitRules(updated);
   };
 
   const handleAdd = () => {
-    onChange([...rules, { expression: '', color: '' }]);
+    commitRules([...rules, { expression: '', color: '' }]);
   };
 
   const handleRemove = (index: number) => {
-    onChange(rules.filter((_, i) => i !== index));
+    commitRules(rules.filter((_, i) => i !== index));
   };
 
   const handleExport = () => {
-    const json = JSON.stringify(rules, null, 2);
+    const json = shouldUseContext
+      ? coloring.exportRules()
+      : JSON.stringify(sanitizeRuleSet(rules), null, 2);
     if (navigator?.clipboard?.writeText) {
       try {
         navigator.clipboard.writeText(json);
@@ -57,8 +74,15 @@ const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
       reader.onload = () => {
         try {
           const parsed = JSON.parse(reader.result as string);
-          if (Array.isArray(parsed)) {
-            onChange(parsed);
+          const sanitized = shouldUseContext
+            ? coloring.importRules(parsed)
+            : sanitizeRuleSet(parsed);
+          if (shouldUseContext) {
+            if (onChange) {
+              onChange(sanitized);
+            }
+          } else {
+            commitRules(sanitized);
           }
         } catch {
           // ignore invalid JSON
