@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState, createContext, useContext } from 'react';
+import { resetCursorState, setCursorState } from '../../utils/cursorManager';
 
 function middleEllipsis(text: string, max = 30) {
   if (text.length <= max) return text;
@@ -102,6 +103,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   const handleDragStart = (index: number) => (e: React.DragEvent) => {
     dragSrc.current = index;
     e.dataTransfer.effectAllowed = 'move';
+    setCursorState('move');
   };
 
   const handleDragOver = (index: number) => (e: React.DragEvent) => {
@@ -112,13 +114,24 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   const handleDrop = (index: number) => (e: React.DragEvent) => {
     e.preventDefault();
     const src = dragSrc.current;
-    if (src === null || src === index) return;
+    if (src === null || src === index) {
+      dragSrc.current = null;
+      resetCursorState();
+      return;
+    }
     updateTabs((prev) => {
       const next = [...prev];
       const [moved] = next.splice(src, 1);
       next.splice(index, 0, moved);
       return next;
     });
+    dragSrc.current = null;
+    resetCursorState();
+  };
+
+  const handleDragEnd = () => {
+    dragSrc.current = null;
+    resetCursorState();
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -179,6 +192,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             onDragStart={handleDragStart(i)}
             onDragOver={handleDragOver(i)}
             onDrop={handleDrop(i)}
+            onDragEnd={handleDragEnd}
             onClick={() => setActive(t.id)}
           >
             <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>

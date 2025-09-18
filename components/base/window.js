@@ -7,6 +7,7 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import { resetCursorState, setCursorState } from '../../utils/cursorManager';
 
 export class Window extends Component {
     constructor(props) {
@@ -60,6 +61,7 @@ export class Window extends Component {
 
     componentWillUnmount() {
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+        resetCursorState();
 
         window.removeEventListener('resize', this.resizeBoundries);
         window.removeEventListener('context-menu-open', this.setInertBackground);
@@ -193,11 +195,23 @@ export class Window extends Component {
         if (this.state.snapped) {
             this.unsnapWindow();
         }
+        setCursorState('move');
         this.setState({ cursorType: "cursor-move", grabbed: true })
     }
 
     changeCursorToDefault = () => {
+        resetCursorState();
         this.setState({ cursorType: "cursor-default", grabbed: false })
+    }
+
+    changeCursorToBusy = () => {
+        setCursorState('busy');
+        this.setState({ cursorType: "cursor-busy" });
+    }
+
+    resetCursorAfterResize = () => {
+        resetCursorState();
+        this.setState({ cursorType: "cursor-default" });
     }
 
     snapToGrid = (value) => {
@@ -642,8 +656,20 @@ export class Window extends Component {
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                        {this.props.resizable !== false && (
+                            <WindowYBorder
+                                resize={this.handleHorizontalResize}
+                                onResizeStart={this.changeCursorToBusy}
+                                onResizeEnd={this.resetCursorAfterResize}
+                            />
+                        )}
+                        {this.props.resizable !== false && (
+                            <WindowXBorder
+                                resize={this.handleVerticleResize}
+                                onResizeStart={this.changeCursorToBusy}
+                                onResizeEnd={this.resetCursorAfterResize}
+                            />
+                        )}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
@@ -703,8 +729,15 @@ export class WindowYBorder extends Component {
             return (
                 <div
                     className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
+                    onDragStart={(e) => {
+                        e.dataTransfer.setDragImage(this.trpImg, 0, 0);
+                        if (e.dataTransfer) {
+                            e.dataTransfer.effectAllowed = 'move';
+                        }
+                        if (typeof this.props.onResizeStart === 'function') this.props.onResizeStart();
+                    }}
                     onDrag={this.props.resize}
+                    onDragEnd={() => { if (typeof this.props.onResizeEnd === 'function') this.props.onResizeEnd(); }}
                 ></div>
             )
         }
@@ -722,8 +755,15 @@ export class WindowXBorder extends Component {
             return (
                 <div
                     className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
+                    onDragStart={(e) => {
+                        e.dataTransfer.setDragImage(this.trpImg, 0, 0);
+                        if (e.dataTransfer) {
+                            e.dataTransfer.effectAllowed = 'move';
+                        }
+                        if (typeof this.props.onResizeStart === 'function') this.props.onResizeStart();
+                    }}
                     onDrag={this.props.resize}
+                    onDragEnd={() => { if (typeof this.props.onResizeEnd === 'function') this.props.onResizeEnd(); }}
                 ></div>
             )
         }

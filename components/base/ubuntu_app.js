@@ -1,5 +1,6 @@
 import React, { Component } from 'react'
 import Image from 'next/image'
+import { resetCursorState, setCursorState } from '../../utils/cursorManager'
 
 export class UbuntuApp extends Component {
     constructor() {
@@ -7,11 +8,24 @@ export class UbuntuApp extends Component {
         this.state = { launching: false, dragging: false, prefetched: false };
     }
 
-    handleDragStart = () => {
+    handleDragStart = (event) => {
+        if (this.props.disabled) {
+            event.preventDefault();
+            setCursorState('not-allowed');
+            if (typeof window !== 'undefined') {
+                window.setTimeout(() => resetCursorState(), 32);
+            }
+            return;
+        }
+        if (event?.dataTransfer) {
+            event.dataTransfer.effectAllowed = 'copy';
+        }
+        setCursorState('copy');
         this.setState({ dragging: true });
     }
 
     handleDragEnd = () => {
+        resetCursorState();
         this.setState({ dragging: false });
     }
 

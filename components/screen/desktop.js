@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { getCursorState, resetCursorState, setCursorState } from '../../utils/cursorManager';
 
 export class Desktop extends Component {
     constructor() {
@@ -83,6 +84,7 @@ export class Desktop extends Component {
         });
         this.setContextListeners();
         this.setEventListeners();
+        this.setupCursorListeners();
         this.checkForNewFolders();
         this.checkForAppShortcuts();
         this.updateTrashIcon();
@@ -93,6 +95,7 @@ export class Desktop extends Component {
 
     componentWillUnmount() {
         this.removeContextListeners();
+        this.removeCursorListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
@@ -144,6 +147,68 @@ export class Desktop extends Component {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
         document.removeEventListener('keydown', this.handleContextKey);
+    }
+
+    setupCursorListeners = () => {
+        if (typeof document === 'undefined') return;
+        document.addEventListener('dragstart', this.handleGlobalDragStart, true);
+        document.addEventListener('dragover', this.handleGlobalDragOver, true);
+        document.addEventListener('drop', this.handleGlobalDragEnd, true);
+        document.addEventListener('dragend', this.handleGlobalDragEnd, true);
+        document.addEventListener('dragleave', this.handleGlobalDragLeave, true);
+        resetCursorState();
+    }
+
+    removeCursorListeners = () => {
+        if (typeof document === 'undefined') return;
+        document.removeEventListener('dragstart', this.handleGlobalDragStart, true);
+        document.removeEventListener('dragover', this.handleGlobalDragOver, true);
+        document.removeEventListener('drop', this.handleGlobalDragEnd, true);
+        document.removeEventListener('dragend', this.handleGlobalDragEnd, true);
+        document.removeEventListener('dragleave', this.handleGlobalDragLeave, true);
+    }
+
+    handleGlobalDragStart = (event) => {
+        this.applyCursorFromEffect(event?.dataTransfer?.effectAllowed);
+    }
+
+    handleGlobalDragOver = (event) => {
+        const transfer = event?.dataTransfer;
+        if (!transfer) return;
+        const effect = transfer.dropEffect && transfer.dropEffect !== 'none'
+            ? transfer.dropEffect
+            : transfer.effectAllowed;
+        this.applyCursorFromEffect(effect);
+    }
+
+    handleGlobalDragEnd = () => {
+        if (getCursorState() === 'busy') return;
+        resetCursorState();
+    }
+
+    handleGlobalDragLeave = (event) => {
+        if (getCursorState() === 'busy') return;
+        if (!event.relatedTarget) {
+            resetCursorState();
+        }
+    }
+
+    applyCursorFromEffect = (effect) => {
+        if (!effect) return;
+        if (getCursorState() === 'busy') return;
+        const cursor = this.mapEffectToCursor(effect);
+        if (!cursor) return;
+        setCursorState(cursor);
+    }
+
+    mapEffectToCursor = (effect) => {
+        if (!effect) return null;
+        const normalized = effect.toString().toLowerCase();
+        if (normalized === 'none') return 'not-allowed';
+        if (normalized.includes('copy')) return 'copy';
+        if (normalized.includes('move')) return 'move';
+        if (normalized.includes('link')) return 'copy';
+        return null;
     }
 
     handleGlobalShortcut = (e) => {
