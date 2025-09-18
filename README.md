@@ -448,6 +448,7 @@ play/pause and track controls include keyboard hotkeys.
 | Reaver | /apps/reaver | Security Tool (simulated) |
 | Recon-ng | /apps/reconng | Security Tool (simulated) |
 | Volatility | /apps/volatility | Security Tool (simulated) |
+| VPN Manager | /apps/vpn-manager | Security Tool (simulated) |
 | Wireshark | /apps/wireshark | Security Tool (simulated, lab use only) |
 
 > All security apps are **non-operational simulations** intended for education/demos. They **do not** execute exploits and should not be used for any unauthorized activity.
