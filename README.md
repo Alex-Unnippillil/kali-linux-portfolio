@@ -77,6 +77,7 @@ To send text or links directly into the Sticky Notes app:
 Copy `.env.local.example` to `.env.local` and fill in required API keys:
 
 - `NEXT_PUBLIC_ENABLE_ANALYTICS` – enable client-side analytics when set to `true`.
+- `NEXT_PUBLIC_ENABLE_FIRST_BOOT_CHECKLIST` – set to `disabled` to hide the first-boot checklist wizard.
 - `FEATURE_TOOL_APIS` – toggle simulated tool APIs (`enabled` or `disabled`).
 - `RECAPTCHA_SECRET` and related `NEXT_PUBLIC_RECAPTCHA_*` keys for contact form spam protection.
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` – Supabase credentials. When unset, Supabase-backed APIs and features are disabled.
@@ -217,6 +218,7 @@ Copy `.env.local.example` to `.env.local` and fill in required values.
 | `NEXT_PUBLIC_UI_EXPERIMENTS` | Enable experimental UI heuristics. |
 | `NEXT_PUBLIC_STATIC_EXPORT` | Set to `'true'` during `yarn export` to disable server APIs. |
 | `NEXT_PUBLIC_SHOW_BETA` | Set to `1` to display a small beta badge in the UI. |
+| `NEXT_PUBLIC_ENABLE_FIRST_BOOT_CHECKLIST` | Toggle the onboarding checklist; set to `disabled` to suppress it on launch. |
 | `FEATURE_TOOL_APIS` | Enable server-side tool API routes like Hydra and John; set to `enabled` to allow. |
 | `FEATURE_HYDRA` | Allow the Hydra API (`/api/hydra`); requires `FEATURE_TOOL_APIS`. |
 
