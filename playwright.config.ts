@@ -1,8 +1,9 @@
 import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './tests',
-  testMatch: /.*\.spec\.ts/,
+  testDir: '.',
+  testMatch: /(?:^|\/(playwright|tests)\/).*\.spec\.ts$/,
+  testIgnore: ['**/node_modules/**', '**/__tests__/**'],
   use: {
     baseURL: process.env.BASE_URL || 'http://localhost:3000',
   },

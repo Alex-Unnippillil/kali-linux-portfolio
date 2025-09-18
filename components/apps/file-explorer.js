@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import AutoSizer from 'react-virtualized-auto-sizer';
+import { FixedSizeList as List } from 'react-window';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
@@ -91,17 +93,77 @@ async function addRecentDir(handle) {
   } catch {}
 }
 
+const VirtualListOuter = React.forwardRef(function VirtualListOuter(
+  { className = '', style, ...rest },
+  ref,
+) {
+  return (
+    <div
+      ref={ref}
+      style={style}
+      className={className ? `overflow-y-auto ${className}` : 'overflow-y-auto'}
+      data-testid="file-explorer-virtual-list"
+      {...rest}
+    />
+  );
+});
+
+const ROW_HEIGHT = 32;
+
+const ListRow = ({ index, style, data }) => {
+  const item = data.items[index];
+  const { openDir, openFile } = data;
+
+  if (item.type === 'section') {
+    return (
+      <div
+        style={{ ...style, display: 'flex', alignItems: 'center' }}
+        className="px-2 py-1 font-bold text-xs uppercase tracking-wide text-gray-200 bg-black bg-opacity-20"
+        data-testid="file-explorer-section"
+      >
+        {item.label}
+      </div>
+    );
+  }
+
+  const handleClick = () => {
+    if (item.kind === 'directory') openDir(item);
+    else openFile(item);
+  };
+
+  return (
+    <div
+      style={{ ...style, display: 'flex', alignItems: 'center' }}
+      className="px-2 flex items-center cursor-pointer hover:bg-black hover:bg-opacity-30"
+      onClick={handleClick}
+      data-testid="file-explorer-item"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          handleClick();
+        }
+      }}
+    >
+      <span className="truncate" title={item.name}>
+        {item.name}
+      </span>
+    </div>
+  );
+};
+
 export default function FileExplorer() {
   const [supported, setSupported] = useState(true);
   const [dirHandle, setDirHandle] = useState(null);
-  const [files, setFiles] = useState([]);
-  const [dirs, setDirs] = useState([]);
+  const [entries, setEntries] = useState([]);
   const [path, setPath] = useState([]);
   const [recent, setRecent] = useState([]);
   const [currentFile, setCurrentFile] = useState(null);
   const [content, setContent] = useState('');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+  const [typeFilter, setTypeFilter] = useState('all');
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
 
@@ -189,14 +251,15 @@ export default function FileExplorer() {
   };
 
   const readDir = async (handle) => {
-    const ds = [];
-    const fs = [];
+    const dirs = [];
+    const files = [];
     for await (const [name, h] of handle.entries()) {
-      if (h.kind === 'file') fs.push({ name, handle: h });
-      else if (h.kind === 'directory') ds.push({ name, handle: h });
+      if (h.kind === 'directory') dirs.push({ name, handle: h, kind: 'directory' });
+      else if (h.kind === 'file') files.push({ name, handle: h, kind: 'file' });
     }
-    setDirs(ds);
-    setFiles(fs);
+    dirs.sort((a, b) => a.name.localeCompare(b.name));
+    files.sort((a, b) => a.name.localeCompare(b.name));
+    setEntries([...dirs, ...files]);
   };
 
   const openDir = async (dir) => {
@@ -259,6 +322,35 @@ export default function FileExplorer() {
 
   useEffect(() => () => workerRef.current?.terminate(), []);
 
+  const filteredEntries = useMemo(() => {
+    if (typeFilter === 'directory') return entries.filter((entry) => entry.kind === 'directory');
+    if (typeFilter === 'file') return entries.filter((entry) => entry.kind === 'file');
+    return entries;
+  }, [entries, typeFilter]);
+
+  const listItems = useMemo(() => {
+    const sections = [];
+    const dirs = filteredEntries.filter((entry) => entry.kind === 'directory');
+    const files = filteredEntries.filter((entry) => entry.kind === 'file');
+
+    if (typeFilter !== 'file' && dirs.length) {
+      sections.push({ type: 'section', label: 'Folders', key: 'section-folders' });
+      sections.push(
+        ...dirs.map((entry, index) => ({ ...entry, key: `dir-${entry.name}-${index}` })),
+      );
+    }
+
+    if (typeFilter !== 'directory' && files.length) {
+      sections.push({ type: 'section', label: 'Files', key: 'section-files' });
+      sections.push(
+        ...files.map((entry, index) => ({ ...entry, key: `file-${entry.name}-${index}` })),
+      );
+    }
+    return sections;
+  }, [filteredEntries, typeFilter]);
+
+  const itemKey = (index, data) => data.items[index].key || index;
+
   if (!supported) {
     return (
       <div className="p-4 flex flex-col h-full">
@@ -314,37 +406,58 @@ export default function FileExplorer() {
         )}
       </div>
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-40 overflow-auto border-r border-gray-600">
-          <div className="p-2 font-bold">Recent</div>
-          {recent.map((r, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openRecent(r)}
+        <div className="w-48 flex flex-col border-r border-gray-600 bg-black bg-opacity-20">
+          <div className="max-h-40 overflow-auto border-b border-gray-600">
+            <div className="sticky top-0 z-10 bg-ub-cool-grey bg-opacity-90 p-2 font-bold">Recent</div>
+            {recent.length === 0 && (
+              <div className="px-2 py-1 text-gray-300">No recent directories</div>
+            )}
+            {recent.map((r, i) => (
+              <div
+                key={i}
+                className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+                onClick={() => openRecent(r)}
+              >
+                {r.name}
+              </div>
+            ))}
+          </div>
+          <div className="border-b border-gray-600 p-2 bg-black bg-opacity-30">
+            <label htmlFor="file-type-filter" className="block text-xs uppercase tracking-wide text-gray-300">
+              Type filter
+            </label>
+            <select
+              id="file-type-filter"
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="mt-1 w-full rounded bg-ub-cool-grey p-1 text-white"
             >
-              {r.name}
-            </div>
-          ))}
-          <div className="p-2 font-bold">Directories</div>
-          {dirs.map((d, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openDir(d)}
-            >
-              {d.name}
-            </div>
-          ))}
-          <div className="p-2 font-bold">Files</div>
-          {files.map((f, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openFile(f)}
-            >
-              {f.name}
-            </div>
-          ))}
+              <option value="all">All</option>
+              <option value="file">Files</option>
+              <option value="directory">Folders</option>
+            </select>
+          </div>
+          <div className="flex-1 min-h-0">
+            {listItems.length > 0 ? (
+              <AutoSizer>
+                {({ height, width }) => (
+                  <List
+                    height={height}
+                    width={width}
+                    itemCount={listItems.length}
+                    itemSize={ROW_HEIGHT}
+                    itemData={{ items: listItems, openDir, openFile }}
+                    itemKey={itemKey}
+                    outerElementType={VirtualListOuter}
+                  >
+                    {ListRow}
+                  </List>
+                )}
+              </AutoSizer>
+            ) : (
+              <div className="p-2 text-gray-300">No items</div>
+            )}
+          </div>
         </div>
         <div className="flex-1 flex flex-col">
           {currentFile && (
