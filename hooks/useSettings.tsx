@@ -6,6 +6,8 @@ import {
   setWallpaper as saveWallpaper,
   getDensity as loadDensity,
   setDensity as saveDensity,
+  getDirection as loadDirectionSetting,
+  setDirection as saveDirectionSetting,
   getReducedMotion as loadReducedMotion,
   setReducedMotion as saveReducedMotion,
   getFontScale as loadFontScale,
@@ -24,6 +26,7 @@ import {
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
+type Direction = 'ltr' | 'rtl';
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -55,6 +58,7 @@ interface SettingsContextValue {
   accent: string;
   wallpaper: string;
   density: Density;
+  direction: Direction;
   reducedMotion: boolean;
   fontScale: number;
   highContrast: boolean;
@@ -66,6 +70,7 @@ interface SettingsContextValue {
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
+  setDirection: (value: Direction) => void;
   setReducedMotion: (value: boolean) => void;
   setFontScale: (value: number) => void;
   setHighContrast: (value: boolean) => void;
@@ -80,6 +85,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   accent: defaults.accent,
   wallpaper: defaults.wallpaper,
   density: defaults.density as Density,
+  direction: (defaults.direction as Direction) || 'ltr',
   reducedMotion: defaults.reducedMotion,
   fontScale: defaults.fontScale,
   highContrast: defaults.highContrast,
@@ -91,6 +97,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
+  setDirection: () => {},
   setReducedMotion: () => {},
   setFontScale: () => {},
   setHighContrast: () => {},
@@ -105,6 +112,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [accent, setAccent] = useState<string>(defaults.accent);
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
+  const [direction, setDirection] = useState<Direction>(
+    (defaults.direction as Direction) || 'ltr',
+  );
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
   const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
@@ -120,6 +130,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAccent(await loadAccent());
       setWallpaper(await loadWallpaper());
       setDensity((await loadDensity()) as Density);
+      setDirection((await loadDirectionSetting()) as Direction);
       setReducedMotion(await loadReducedMotion());
       setFontScale(await loadFontScale());
       setHighContrast(await loadHighContrast());
@@ -183,6 +194,22 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [density]);
 
   useEffect(() => {
+    saveDirectionSetting(direction);
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('dir', direction);
+      document.body?.setAttribute('data-direction', direction);
+    }
+  }, [direction]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    return () => {
+      document.documentElement.setAttribute('dir', 'ltr');
+      document.body?.setAttribute('data-direction', 'ltr');
+    };
+  }, []);
+
+  useEffect(() => {
     document.documentElement.classList.toggle('reduced-motion', reducedMotion);
     saveReducedMotion(reducedMotion);
   }, [reducedMotion]);
@@ -242,6 +269,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         accent,
         wallpaper,
         density,
+        direction,
         reducedMotion,
         fontScale,
         highContrast,
@@ -253,6 +281,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAccent,
         setWallpaper,
         setDensity,
+        setDirection,
         setReducedMotion,
         setFontScale,
         setHighContrast,

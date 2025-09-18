@@ -7,6 +7,7 @@ const DEFAULT_SETTINGS = {
   accent: '#1793d1',
   wallpaper: 'wall-2',
   density: 'regular',
+  direction: 'ltr',
   reducedMotion: false,
   fontScale: 1,
   highContrast: false,
@@ -44,6 +45,18 @@ export async function getDensity() {
 export async function setDensity(density) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem('density', density);
+}
+
+export async function getDirection() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.direction;
+  const stored = window.localStorage.getItem('direction');
+  return stored === 'rtl' ? 'rtl' : 'ltr';
+}
+
+export async function setDirection(direction) {
+  if (typeof window === 'undefined') return;
+  const value = direction === 'rtl' ? 'rtl' : 'ltr';
+  window.localStorage.setItem('direction', value);
 }
 
 export async function getReducedMotion() {
@@ -130,6 +143,7 @@ export async function resetSettings() {
     del('bg-image'),
   ]);
   window.localStorage.removeItem('density');
+  window.localStorage.removeItem('direction');
   window.localStorage.removeItem('reduced-motion');
   window.localStorage.removeItem('font-scale');
   window.localStorage.removeItem('high-contrast');
@@ -144,6 +158,7 @@ export async function exportSettings() {
     accent,
     wallpaper,
     density,
+    direction,
     reducedMotion,
     fontScale,
     highContrast,
@@ -155,6 +170,7 @@ export async function exportSettings() {
     getAccent(),
     getWallpaper(),
     getDensity(),
+    getDirection(),
     getReducedMotion(),
     getFontScale(),
     getHighContrast(),
@@ -168,6 +184,7 @@ export async function exportSettings() {
     accent,
     wallpaper,
     density,
+    direction,
     reducedMotion,
     fontScale,
     highContrast,
@@ -192,6 +209,7 @@ export async function importSettings(json) {
     accent,
     wallpaper,
     density,
+    direction,
     reducedMotion,
     fontScale,
     highContrast,
@@ -204,6 +222,7 @@ export async function importSettings(json) {
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
   if (density !== undefined) await setDensity(density);
+  if (direction === 'rtl' || direction === 'ltr') await setDirection(direction);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
   if (fontScale !== undefined) await setFontScale(fontScale);
   if (highContrast !== undefined) await setHighContrast(highContrast);
