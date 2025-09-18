@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import PipPortalProvider, { usePipPortal } from "../common/PipPortal";
+import { useDesktop } from "../core/DesktopProvider";
 
 interface VideoPlayerProps {
   src: string;
@@ -16,6 +17,7 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { open, close } = usePipPortal();
+  const { tokens } = useDesktop();
   const [pipSupported, setPipSupported] = useState(false);
   const [docPipSupported, setDocPipSupported] = useState(false);
   const [isPip, setIsPip] = useState(false);
@@ -134,7 +136,7 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
         <button
           type="button"
           onClick={togglePiP}
-          className="absolute bottom-2 right-2 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white"
+          className={`absolute bottom-2 right-2 rounded bg-black bg-opacity-50 text-white ${tokens.control} ${tokens.subtleText}`.trim()}
         >
           {isPip ? "Exit PiP" : "PiP"}
         </button>
@@ -143,7 +145,7 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
         <button
           type="button"
           onClick={openDocPip}
-          className="absolute bottom-2 right-16 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white"
+          className={`absolute bottom-2 right-16 rounded bg-black bg-opacity-50 text-white ${tokens.control} ${tokens.subtleText}`.trim()}
         >
           Doc-PiP
         </button>

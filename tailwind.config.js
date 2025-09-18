@@ -40,6 +40,9 @@ module.exports = {
       fontFamily: {
         ubuntu: ['Ubuntu', 'sans-serif'],
       },
+      spacing: {
+        'hit-target': 'var(--hit-target)',
+      },
       minWidth: {
         '0': '0',
         '1/4': '25%',
@@ -53,6 +56,7 @@ module.exports = {
         '1/2': '50%',
         '3/4': '75%',
         'full': '100%',
+        'hit-target': 'var(--hit-target)',
       },
       zIndex: {
         '-10': '-10',
@@ -68,6 +72,7 @@ module.exports = {
         'app-icon-lg': '96px',
         'tray-icon': '16px',
         'tray-icon-lg': '32px',
+        'hit-target': 'var(--hit-target)',
       },
       keyframes: {
         glow: {
