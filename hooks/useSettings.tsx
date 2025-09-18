@@ -22,18 +22,12 @@ import {
   setHaptics as saveHaptics,
   defaults,
 } from '../utils/settingsStore';
+import { accentColorValues } from '../apps/settings/navigation';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
-export const ACCENT_OPTIONS = [
-  '#1793d1', // kali blue (default)
-  '#e53e3e', // red
-  '#d97706', // orange
-  '#38a169', // green
-  '#805ad5', // purple
-  '#ed64a6', // pink
-];
+export const ACCENT_OPTIONS = accentColorValues;
 
 // Utility to lighten or darken a hex color by a percentage
 const shadeColor = (color: string, percent: number): string => {

@@ -3,6 +3,7 @@ import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
 import { displayX } from './components/apps/x';
 import { displaySpotify } from './components/apps/spotify';
 import { displaySettings } from './components/apps/settings';
+import { settingsNavigation } from './apps/settings/navigation';
 import { displayChrome } from './components/apps/chrome';
 import { displayGedit } from './components/apps/gedit';
 import { displayTodoist } from './components/apps/todoist';
@@ -691,6 +692,9 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displaySettings,
+    metadata: {
+      navigation: settingsNavigation,
+    },
   },
   {
     id: 'files',
