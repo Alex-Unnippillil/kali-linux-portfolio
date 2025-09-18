@@ -1,8 +1,15 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import PluginManager from '../components/apps/plugin-manager';
+import {
+  clearAllInstallSnapshots,
+  resetInstallManager,
+} from '../utils/installManager';
 
 describe('PluginManager', () => {
   beforeEach(() => {
+    jest.useFakeTimers();
+    resetInstallManager();
+    clearAllInstallSnapshots();
     localStorage.clear();
     (global as any).URL.createObjectURL = jest.fn(() => 'blob:mock');
     (global as any).URL.revokeObjectURL = jest.fn();
@@ -23,11 +30,13 @@ describe('PluginManager', () => {
     (global as any).fetch = jest.fn((url: string) => {
       if (url === '/api/plugins') {
         return Promise.resolve({
+          ok: true,
           json: () => Promise.resolve([{ id: 'demo', file: 'demo.json' }]),
         });
       }
       if (url === '/api/plugins/demo.json') {
         return Promise.resolve({
+          ok: true,
           json: () =>
             Promise.resolve({
               id: 'demo',
@@ -40,20 +49,30 @@ describe('PluginManager', () => {
     });
   });
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   test('installs plugin from catalog', async () => {
     render(<PluginManager />);
     const button = await screen.findByText('Install');
     fireEvent.click(button);
+    await act(async () => {
+      jest.runAllTimers();
+    });
     await waitFor(() =>
       expect(localStorage.getItem('installedPlugins')).toContain('sandbox')
     );
-    expect(button.textContent).toBe('Installed');
+    expect(await screen.findByText('Installed')).toBeInTheDocument();
   });
 
   test('persists last plugin run and exports CSV', async () => {
     const { unmount } = render(<PluginManager />);
     const installBtn = await screen.findByText('Install');
     fireEvent.click(installBtn);
+    await act(async () => {
+      jest.runAllTimers();
+    });
     await waitFor(() =>
       expect(localStorage.getItem('installedPlugins')).toContain('demo')
     );
