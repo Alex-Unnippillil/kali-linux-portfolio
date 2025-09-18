@@ -5,18 +5,20 @@ import BootingScreen from './screen/booting_screen';
 import Desktop from './screen/desktop';
 import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
+import ShutdownOverlay from './screen/shutdown_overlay';
 import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
 
 export default class Ubuntu extends Component {
 	constructor() {
 		super();
-		this.state = {
-			screen_locked: false,
-			bg_image_name: 'wall-2',
-			booting_screen: true,
-			shutDownScreen: false
-		};
+                this.state = {
+                        screen_locked: false,
+                        bg_image_name: 'wall-2',
+                        booting_screen: true,
+                        shutDownScreen: false,
+                        powerMenuOpen: false
+                };
 	}
 
 	componentDidMount() {
@@ -48,15 +50,16 @@ export default class Ubuntu extends Component {
 
 		// get shutdown state
                 let shut_down = safeLocalStorage?.getItem('shut-down');
-		if (shut_down !== null && shut_down !== undefined && shut_down === 'true') this.shutDown();
-		else {
-			// Get previous lock screen state
+                if (shut_down !== null && shut_down !== undefined && shut_down === 'true') {
+                        this.setState({ shutDownScreen: true, booting_screen: false, powerMenuOpen: false });
+                } else {
+                        // Get previous lock screen state
                         let screen_locked = safeLocalStorage?.getItem('screen-locked');
-			if (screen_locked !== null && screen_locked !== undefined) {
-				this.setState({ screen_locked: screen_locked === 'true' ? true : false });
-			}
-		}
-	};
+                        if (screen_locked !== null && screen_locked !== undefined) {
+                                this.setState({ screen_locked: screen_locked === 'true' ? true : false });
+                        }
+                }
+        };
 
 	lockScreen = () => {
 		// google analytics
@@ -93,42 +96,74 @@ export default class Ubuntu extends Component {
 	shutDown = () => {
 		ReactGA.send({ hitType: "pageview", page: "/switch-off", title: "Custom Title" });
 
-		ReactGA.event({
-			category: `Screen Change`,
-			action: `Switched off the Ubuntu`
-		});
+                ReactGA.event({
+                        category: `Screen Change`,
+                        action: `Opened power menu`
+                });
 
                 const statusBar = document.getElementById('status-bar');
                 // Consider using a React ref if the status bar element lives within this component tree
                 statusBar?.blur();
-		this.setState({ shutDownScreen: true });
-                safeLocalStorage?.setItem('shut-down', true);
-	};
+                this.setState({ powerMenuOpen: true });
+        };
 
-	turnOn = () => {
-		ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+        turnOn = () => {
+                ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
-		this.setState({ shutDownScreen: false, booting_screen: true });
-		this.setTimeOutBootScreen();
+                this.setState({ shutDownScreen: false, booting_screen: true, powerMenuOpen: false });
+                this.setTimeOutBootScreen();
                 safeLocalStorage?.setItem('shut-down', false);
-	};
+        };
 
-	render() {
-		return (
-			<div className="w-screen h-screen overflow-hidden" id="monitor-screen">
-				<LockScreen
+        closePowerMenu = () => {
+                this.setState({ powerMenuOpen: false });
+                safeLocalStorage?.setItem('shut-down', false);
+        };
+
+        suspendSystem = () => {
+                this.closePowerMenu();
+                this.lockScreen();
+        };
+
+        restartSystem = () => {
+                this.setState({ powerMenuOpen: false }, () => {
+                        this.turnOn();
+                });
+        };
+
+        confirmPowerOff = () => {
+                ReactGA.event({
+                        category: `Screen Change`,
+                        action: `Switched off the Ubuntu`
+                });
+
+                this.setState({ shutDownScreen: true, booting_screen: false, powerMenuOpen: false });
+                safeLocalStorage?.setItem('shut-down', true);
+        };
+
+        render() {
+                return (
+                        <div className="w-screen h-screen overflow-hidden" id="monitor-screen">
+                                <LockScreen
 					isLocked={this.state.screen_locked}
 					bgImgName={this.state.bg_image_name}
 					unLockScreen={this.unLockScreen}
 				/>
-				<BootingScreen
-					visible={this.state.booting_screen}
-					isShutDown={this.state.shutDownScreen}
-					turnOn={this.turnOn}
-				/>
-				<Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
-				<Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
-			</div>
-		);
-	}
+                                <BootingScreen
+                                        visible={this.state.booting_screen}
+                                        isShutDown={this.state.shutDownScreen}
+                                        turnOn={this.turnOn}
+                                />
+                                <ShutdownOverlay
+                                        open={this.state.powerMenuOpen}
+                                        onClose={this.closePowerMenu}
+                                        onSuspend={this.suspendSystem}
+                                        onRestart={this.restartSystem}
+                                        onPowerOff={this.confirmPowerOff}
+                                />
+                                <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
+                                <Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
+                        </div>
+                );
+        }
 }
