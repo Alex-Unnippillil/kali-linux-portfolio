@@ -37,6 +37,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._previousGeometry = null;
     }
 
     componentDidMount() {
@@ -71,24 +72,29 @@ export class Window extends Component {
         }
     }
 
-    setDefaultWindowDimenstion = () => {
+    getDefaultWindowSize = () => {
         if (this.props.defaultHeight && this.props.defaultWidth) {
-            this.setState(
-                { height: this.props.defaultHeight, width: this.props.defaultWidth },
-                this.resizeBoundries
-            );
-            return;
+            return { height: this.props.defaultHeight, width: this.props.defaultWidth };
         }
-
         const isPortrait = window.innerHeight > window.innerWidth;
         if (isPortrait) {
-            this.startX = window.innerWidth * 0.05;
-            this.setState({ height: 85, width: 90 }, this.resizeBoundries);
-        } else if (window.innerWidth < 640) {
-            this.setState({ height: 60, width: 85 }, this.resizeBoundries);
-        } else {
-            this.setState({ height: 85, width: 60 }, this.resizeBoundries);
+            return { height: 85, width: 90 };
         }
+        if (window.innerWidth < 640) {
+            return { height: 60, width: 85 };
+        }
+        return { height: 85, width: 60 };
+    }
+
+    setDefaultWindowDimenstion = () => {
+        const size = this.getDefaultWindowSize();
+        if (!this.props.defaultHeight || !this.props.defaultWidth) {
+            const isPortrait = window.innerHeight > window.innerWidth;
+            if (isPortrait) {
+                this.startX = window.innerWidth * 0.05;
+            }
+        }
+        this.setState({ height: size.height, width: size.width }, this.resizeBoundries);
     }
 
     resizeBoundries = () => {
@@ -234,8 +240,11 @@ export class Window extends Component {
         }
     }
 
-    unsnapWindow = () => {
-        if (!this.state.snapped) return;
+    unsnapWindow = (callback) => {
+        if (!this.state.snapped) {
+            if (callback) callback();
+            return;
+        }
         var r = document.querySelector("#" + this.id);
         if (r) {
             const x = r.style.getPropertyValue('--window-transform-x');
@@ -249,9 +258,15 @@ export class Window extends Component {
                 width: this.state.lastSize.width,
                 height: this.state.lastSize.height,
                 snapped: null
-            }, this.resizeBoundries);
+            }, () => {
+                this.resizeBoundries();
+                if (callback) callback();
+            });
         } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            this.setState({ snapped: null }, () => {
+                this.resizeBoundries();
+                if (callback) callback();
+            });
         }
     }
 
@@ -413,26 +428,38 @@ export class Window extends Component {
 
     restoreWindow = () => {
         const node = document.querySelector("#" + this.id);
-        this.setDefaultWindowDimenstion();
+        if (!node) {
+            return;
+        }
+        const fallback = this._previousGeometry || this.getDefaultWindowSize();
+        const targetWidth = fallback.width;
+        const targetHeight = fallback.height;
         // get previous position
         let posx = node.style.getPropertyValue("--window-transform-x");
         let posy = node.style.getPropertyValue("--window-transform-y");
+        if (!posx) posx = '0px';
+        if (!posy) posy = '0px';
         const startTransform = node.style.transform;
         const endTransform = `translate(${posx},${posy})`;
         const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-        if (prefersReducedMotion) {
+        const finalizeRestore = () => {
             node.style.transform = endTransform;
-            this.setState({ maximized: false });
-            this.checkOverlap();
+            this.setState({ maximized: false, width: targetWidth, height: targetHeight }, () => {
+                this._previousGeometry = null;
+                this.resizeBoundries();
+                this.checkOverlap();
+            });
+        }
+
+        if (prefersReducedMotion) {
+            finalizeRestore();
             return;
         }
 
         if (this._dockAnimation) {
             this._dockAnimation.onfinish = () => {
-                node.style.transform = endTransform;
-                this.setState({ maximized: false });
-                this.checkOverlap();
+                finalizeRestore();
                 this._dockAnimation.onfinish = null;
             };
             this._dockAnimation.reverse();
@@ -442,9 +469,7 @@ export class Window extends Component {
                 { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
             );
             this._dockAnimation.onfinish = () => {
-                node.style.transform = endTransform;
-                this.setState({ maximized: false });
-                this.checkOverlap();
+                finalizeRestore();
                 this._dockAnimation.onfinish = null;
             };
         }
@@ -452,17 +477,38 @@ export class Window extends Component {
 
     maximizeWindow = () => {
         if (this.props.allowMaximize === false) return;
+        if (this.props.minimized) return;
         if (this.state.maximized) {
             this.restoreWindow();
         }
         else {
+            if (this.state.snapped) {
+                this.unsnapWindow(() => {
+                    this.maximizeWindow();
+                });
+                return;
+            }
             this.focusWindow();
             var r = document.querySelector("#" + this.id);
+            if (!r) return;
             this.setWinowsPosition();
+            this._previousGeometry = { width: this.state.width, height: this.state.height };
             // translate window to maximize position
             r.style.transform = `translate(-1pt,-2pt)`;
-            this.setState({ maximized: true, height: 96.3, width: 100.2 });
+            this.setState({ maximized: true, height: 96.3, width: 100.2 }, () => {
+                this.resizeBoundries();
+            });
             this.props.hideSideBar(this.id, true);
+        }
+    }
+
+    handleTitleBarDoubleClick = () => {
+        if (this.props.allowMaximize === false) return;
+        if (this.props.minimized) return;
+        if (this.state.maximized) {
+            this.restoreWindow();
+        } else {
+            this.maximizeWindow();
         }
     }
 
@@ -649,6 +695,7 @@ export class Window extends Component {
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
+                            onDoubleClick={this.handleTitleBarDoubleClick}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -674,7 +721,7 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onDoubleClick }) {
     return (
         <div
             className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
@@ -683,6 +730,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
+            onDoubleClick={onDoubleClick}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>

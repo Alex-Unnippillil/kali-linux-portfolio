@@ -199,7 +199,12 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault: () => {},
+        stopPropagation: () => {},
+      } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
@@ -252,6 +257,67 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBeNull();
     expect(ref.current!.state.width).toBe(60);
     expect(ref.current!.state.height).toBe(85);
+  });
+});
+
+describe('Window maximize toggle', () => {
+  it('restores previous geometry after consecutive title bar double-clicks', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    act(() => {
+      ref.current!.setState({ width: 72, height: 66 });
+    });
+
+    act(() => {
+      ref.current!.snapWindow('left');
+    });
+
+    const matchMediaSpy = jest
+      .spyOn(window, 'matchMedia')
+      .mockImplementation(
+        (query) =>
+          ({
+            matches: /prefers-reduced-motion/.test(query),
+            media: query,
+            onchange: null,
+            addListener: () => {},
+            removeListener: () => {},
+            addEventListener: () => {},
+            removeEventListener: () => {},
+            dispatchEvent: () => false,
+          }) as MediaQueryList
+      );
+
+    try {
+      const titleBar = screen.getByRole('button', { name: /test/i });
+
+      fireEvent.doubleClick(titleBar);
+
+      expect(ref.current!.state.maximized).toBe(true);
+      expect(ref.current!.state.width).toBeCloseTo(100.2);
+      expect(ref.current!.state.height).toBeCloseTo(96.3);
+
+      fireEvent.doubleClick(titleBar);
+
+      expect(ref.current!.state.maximized).toBe(false);
+      expect(ref.current!.state.width).toBe(72);
+      expect(ref.current!.state.height).toBe(66);
+    } finally {
+      matchMediaSpy.mockRestore();
+    }
   });
 });
 
