@@ -278,21 +278,21 @@ const ContactApp: React.FC = () => {
           <button
             type="button"
             onClick={() => copyToClipboard(EMAIL)}
-            className="underline mr-2"
+            className="kali-button mr-2 px-2 py-1 text-xs"
           >
             Copy address
           </button>
           <button
             type="button"
             onClick={() => copyToClipboard(message)}
-            className="underline mr-2"
+            className="kali-button mr-2 px-2 py-1 text-xs"
           >
             Copy message
           </button>
           <button
             type="button"
             onClick={() => openMailto(EMAIL, '', message)}
-            className="underline"
+            className="kali-button px-2 py-1 text-xs"
           >
             Open email app
           </button>
@@ -386,7 +386,7 @@ const ContactApp: React.FC = () => {
         <button
           type="submit"
           disabled={submitting}
-          className="flex items-center justify-center rounded bg-blue-600 px-4 py-2 disabled:opacity-50"
+          className="kali-button flex justify-center px-4 py-2 disabled:opacity-60"
         >
           {submitting ? (
             <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

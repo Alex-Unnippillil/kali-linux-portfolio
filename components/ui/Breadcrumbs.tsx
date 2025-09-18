@@ -17,7 +17,7 @@ const Breadcrumbs: React.FC<Props> = ({ path, onNavigate }) => {
           <button
             type="button"
             onClick={() => onNavigate(idx)}
-            className="hover:underline focus:outline-none"
+            className="kali-button px-2 py-1 text-xs"
           >
             {seg.name || '/'}
           </button>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { CSSProperties, useEffect, useRef, useState } from "react";
 import PipPortalProvider, { usePipPortal } from "../common/PipPortal";
 
 interface VideoPlayerProps {
@@ -19,6 +19,11 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
   const [pipSupported, setPipSupported] = useState(false);
   const [docPipSupported, setDocPipSupported] = useState(false);
   const [isPip, setIsPip] = useState(false);
+  const overlayButtonVars: CSSProperties = {
+    "--kali-button-bg": "rgba(10, 16, 23, 0.85)",
+    "--kali-button-border": "rgba(255, 255, 255, 0.2)",
+    "--kali-button-shadow-outer": "none",
+  };
 
   useEffect(() => {
     const video = videoRef.current;
@@ -93,6 +98,12 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
       const [vol, setVol] = useState(initialVolume);
       const send = (msg: any) =>
         window.opener?.postMessage({ source: "doc-pip", ...msg }, "*");
+      const buttonVars: CSSProperties = {
+        "--kali-button-bg": "#10161f",
+        "--kali-button-border": "rgba(255, 255, 255, 0.25)",
+        "--kali-button-shadow-outer": "none",
+      };
+
       return (
         <div
           style={{
@@ -105,9 +116,27 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
             alignItems: "center",
           }}
         >
-          <button onClick={() => send({ type: "toggle" })}>Play/Pause</button>
-          <button onClick={() => send({ type: "seek", delta: -5 })}>-5s</button>
-          <button onClick={() => send({ type: "seek", delta: 5 })}>+5s</button>
+          <button
+            className="kali-button px-2 py-1 text-xs"
+            style={buttonVars}
+            onClick={() => send({ type: "toggle" })}
+          >
+            Play/Pause
+          </button>
+          <button
+            className="kali-button px-2 py-1 text-xs"
+            style={buttonVars}
+            onClick={() => send({ type: "seek", delta: -5 })}
+          >
+            -5s
+          </button>
+          <button
+            className="kali-button px-2 py-1 text-xs"
+            style={buttonVars}
+            onClick={() => send({ type: "seek", delta: 5 })}
+          >
+            +5s
+          </button>
           <input
             type="range"
             min={0}
@@ -134,7 +163,8 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
         <button
           type="button"
           onClick={togglePiP}
-          className="absolute bottom-2 right-2 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white"
+          className="kali-button absolute bottom-2 right-2 px-2 py-1 text-xs"
+          style={overlayButtonVars}
         >
           {isPip ? "Exit PiP" : "PiP"}
         </button>
@@ -143,7 +173,8 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
         <button
           type="button"
           onClick={openDocPip}
-          className="absolute bottom-2 right-16 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white"
+          className="kali-button absolute bottom-2 right-16 px-2 py-1 text-xs"
+          style={overlayButtonVars}
         >
           Doc-PiP
         </button>

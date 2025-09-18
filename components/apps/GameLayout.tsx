@@ -215,68 +215,52 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
         {paused && (
           <div
-            className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
+            className="absolute inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75"
             role="dialog"
-          aria-modal="true"
-        >
+            aria-modal="true"
+          >
+            <button
+              type="button"
+              onClick={resume}
+              className="kali-button px-4 py-2 text-base"
+              autoFocus
+            >
+              Resume
+            </button>
+          </div>
+        )}
+        <div className="absolute top-2 right-2 z-40 flex space-x-2">
           <button
             type="button"
-            onClick={resume}
-            className="px-4 py-2 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-            autoFocus
+            onClick={() => setPaused((p) => !p)}
+            className="kali-button px-2 py-1"
           >
-            Resume
+            {paused ? 'Resume' : 'Pause'}
+          </button>
+          <button type="button" onClick={snapshot} className="kali-button px-2 py-1">
+            Snapshot
+          </button>
+          <button type="button" onClick={replay} className="kali-button px-2 py-1">
+            Replay
+          </button>
+          <button type="button" onClick={shareApp} className="kali-button px-2 py-1">
+            Share
+          </button>
+          {highScore !== undefined && (
+            <button type="button" onClick={shareScore} className="kali-button px-2 py-1">
+              Share Score
+            </button>
+          )}
+          <button
+            type="button"
+            aria-label="Help"
+            aria-expanded={showHelp}
+            onClick={toggle}
+            className="kali-button flex h-8 w-8 items-center justify-center rounded-full p-0"
+          >
+            ?
           </button>
         </div>
-      )}
-      <div className="absolute top-2 right-2 z-40 flex space-x-2">
-        <button
-          type="button"
-          onClick={() => setPaused((p) => !p)}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-        >
-          {paused ? 'Resume' : 'Pause'}
-        </button>
-        <button
-          type="button"
-          onClick={snapshot}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-        >
-          Snapshot
-        </button>
-        <button
-          type="button"
-          onClick={replay}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-        >
-          Replay
-        </button>
-        <button
-          type="button"
-          onClick={shareApp}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-        >
-          Share
-        </button>
-        {highScore !== undefined && (
-          <button
-            type="button"
-            onClick={shareScore}
-            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-          >
-            Share Score
-          </button>
-        )}
-        <button
-          type="button"
-          aria-label="Help"
-          aria-expanded={showHelp}
-          onClick={toggle}
-          className="bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
-        >
-          ?
-        </button>
-      </div>
       {children}
       <div className="absolute top-2 left-2 z-10 text-sm space-y-1">
         {stage !== undefined && <div>Stage: {stage}</div>}
