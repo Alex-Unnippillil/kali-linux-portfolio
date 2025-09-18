@@ -21,7 +21,7 @@ describe('Hydra Stepper', () => {
     jest.useRealTimers();
   });
 
-  it('shows backoff indicator', () => {
+  it('shows backoff indicator and rate info', () => {
     render(
       <Stepper
         active
@@ -33,6 +33,9 @@ describe('Hydra Stepper', () => {
     );
     expect(screen.getByTestId('backoff-bar')).toBeInTheDocument();
     expect(screen.getByText(/Delay: 500ms/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Concurrency: 1 \| Throughput: 2\.0 attempts\/s/)
+    ).toBeInTheDocument();
   });
 
   it('locks out after reaching threshold', () => {
@@ -55,5 +58,21 @@ describe('Hydra Stepper', () => {
       jest.advanceTimersByTime(1000);
     });
     expect(screen.getAllByText(/Locked out/i).length).toBeGreaterThan(0);
+  });
+
+  it('reflects higher throughput for additional concurrency', () => {
+    render(
+      <Stepper
+        totalAttempts={20}
+        lockoutThreshold={10}
+        runId={2}
+        concurrency={4}
+        baseDelayMs={250}
+      />
+    );
+
+    expect(
+      screen.getByText(/Concurrency: 4 \| Throughput: 16\.0 attempts\/s/)
+    ).toBeInTheDocument();
   });
 });

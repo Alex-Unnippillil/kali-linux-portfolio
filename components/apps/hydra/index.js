@@ -5,6 +5,29 @@ import AttemptTimeline from './Timeline';
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
 
+const DEFAULT_CONCURRENCY = 1;
+const MIN_CONCURRENCY = 1;
+const MAX_CONCURRENCY = 10;
+const DEFAULT_BASE_DELAY = 500;
+const MIN_BASE_DELAY = 100;
+const MAX_BASE_DELAY = 2000;
+
+const sanitizeConcurrency = (value) => {
+  const num = Number(value);
+  if (!Number.isFinite(num)) {
+    return DEFAULT_CONCURRENCY;
+  }
+  return Math.min(MAX_CONCURRENCY, Math.max(MIN_CONCURRENCY, Math.round(num)));
+};
+
+const sanitizeDelay = (value) => {
+  const num = Number(value);
+  if (!Number.isFinite(num)) {
+    return DEFAULT_BASE_DELAY;
+  }
+  return Math.min(MAX_BASE_DELAY, Math.max(MIN_BASE_DELAY, Math.round(num)));
+};
+
 export const registerHydraProtocol = (protocol) => {
   if (!pluginServices.includes(protocol)) {
     pluginServices.push(protocol);
@@ -52,6 +75,18 @@ const saveConfigStorage = (config) => {
   localStorage.setItem('hydra/config', JSON.stringify(config));
 };
 
+const loadRateConfig = () => {
+  try {
+    return JSON.parse(localStorage.getItem('hydra/rate') || 'null');
+  } catch {
+    return null;
+  }
+};
+
+const saveRateConfig = (config) => {
+  localStorage.setItem('hydra/rate', JSON.stringify(config));
+};
+
 const HydraApp = () => {
   const [target, setTarget] = useState('');
   const [service, setService] = useState('ssh');
@@ -79,6 +114,8 @@ const HydraApp = () => {
   const canvasRef = useRef(null);
   const [progress, setProgress] = useState(0);
   const [showSaved, setShowSaved] = useState(false);
+  const [concurrency, setConcurrency] = useState(DEFAULT_CONCURRENCY);
+  const [baseDelay, setBaseDelay] = useState(DEFAULT_BASE_DELAY);
 
   const LOCKOUT_THRESHOLD = 10;
   const BACKOFF_THRESHOLD = 5;
@@ -94,6 +131,18 @@ const HydraApp = () => {
   }, [target]);
 
   useEffect(() => {
+    const rate = loadRateConfig();
+    if (rate) {
+      if (typeof rate.concurrency === 'number') {
+        setConcurrency(sanitizeConcurrency(rate.concurrency));
+      }
+      if (typeof rate.baseDelay === 'number') {
+        setBaseDelay(sanitizeDelay(rate.baseDelay));
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     setUserLists(loadWordlists('hydraUserLists'));
     setPassLists(loadWordlists('hydraPassLists'));
     const cfg = loadConfig();
@@ -102,6 +151,12 @@ const HydraApp = () => {
       setService(cfg.service || 'ssh');
       setSelectedUser(cfg.selectedUser || '');
       setSelectedPass(cfg.selectedPass || '');
+      if (typeof cfg.concurrency === 'number') {
+        setConcurrency(sanitizeConcurrency(cfg.concurrency));
+      }
+      if (typeof cfg.baseDelay === 'number') {
+        setBaseDelay(sanitizeDelay(cfg.baseDelay));
+      }
     }
   }, []);
 
@@ -113,10 +168,34 @@ const HydraApp = () => {
     saveWordlists('hydraPassLists', passLists);
   }, [passLists]);
 
+  useEffect(() => {
+    saveRateConfig({
+      concurrency,
+      baseDelay,
+    });
+    const session = loadSession();
+    if (session) {
+      saveSession({
+        ...session,
+        concurrency,
+        baseDelay,
+      });
+    }
+  }, [concurrency, baseDelay]);
+
   const resumeAttack = async (session) => {
     const user = userLists.find((l) => l.name === session.selectedUser);
     const pass = passLists.find((l) => l.name === session.selectedPass);
     if (!user || !pass) return;
+
+    const sessionConcurrency =
+      typeof session.concurrency === 'number'
+        ? sanitizeConcurrency(session.concurrency)
+        : concurrency;
+    const sessionBaseDelay =
+      typeof session.baseDelay === 'number'
+        ? sanitizeDelay(session.baseDelay)
+        : baseDelay;
 
     setRunning(true);
     setPaused(false);
@@ -134,6 +213,8 @@ const HydraApp = () => {
             userList: user.content,
             passList: pass.content,
             resume: true,
+            concurrency: sessionConcurrency,
+            baseDelay: sessionBaseDelay,
           }),
         });
         const data = await res.json();
@@ -161,6 +242,12 @@ const HydraApp = () => {
       setSelectedPass(session.selectedPass || '');
       setTimeline(session.timeline || []);
       setInitialAttempt(session.attempt || 0);
+      if (typeof session.concurrency === 'number') {
+        setConcurrency(sanitizeConcurrency(session.concurrency));
+      }
+      if (typeof session.baseDelay === 'number') {
+        setBaseDelay(sanitizeDelay(session.baseDelay));
+      }
       const lastTime = session.timeline?.slice(-1)[0]?.time || 0;
       startRef.current = Date.now() - lastTime * 1000;
       resumeAttack(session);
@@ -263,42 +350,56 @@ const HydraApp = () => {
     });
   }, [candidateStats]);
 
-  const handleAttempt = (attempt) => {
+  const handleAttempt = ({ attempt: attemptNumber, throughput = 0 } = {}) => {
+    if (typeof attemptNumber !== 'number') {
+      return;
+    }
+    const rate = Number.isFinite(throughput) ? throughput : 0;
     const now = Date.now();
-    if (attempt > 0 && startRef.current) {
-      const elapsed = ((now - startRef.current) / 1000).toFixed(1);
+    if (attemptNumber > 0 && startRef.current) {
+      const elapsed = Number(((now - startRef.current) / 1000).toFixed(1));
       const users =
         selectedUserList?.content.split('\n').filter(Boolean) || [];
       const passes =
         selectedPassList?.content.split('\n').filter(Boolean) || [];
       const passCount = passes.length || 1;
-      const user = users[Math.floor((attempt - 1) / passCount)] || '';
-      const password = passes[(attempt - 1) % passCount] || '';
+      const user = users[Math.floor((attemptNumber - 1) / passCount)] || '';
+      const password = passes[(attemptNumber - 1) % passCount] || '';
       const result =
-        attempt >= LOCKOUT_THRESHOLD
+        attemptNumber >= LOCKOUT_THRESHOLD
           ? 'lockout'
-          : attempt >= BACKOFF_THRESHOLD
+          : attemptNumber >= BACKOFF_THRESHOLD
           ? 'throttled'
           : 'attempt';
       setTimeline((t) => {
         const newTimeline = [
           ...t,
-          { time: parseFloat(elapsed), user, password, result },
+          {
+            time: elapsed,
+            user,
+            password,
+            result,
+            attempt: attemptNumber,
+            throughput: rate,
+          },
         ];
         saveSession({
           target,
           service,
           selectedUser,
           selectedPass,
-          attempt,
+          attempt: attemptNumber,
           timeline: newTimeline,
+          concurrency,
+          baseDelay,
         });
         return newTimeline;
       });
     }
     if (now - announceRef.current > 1000) {
       const limit = Math.min(LOCKOUT_THRESHOLD, totalAttempts);
-      setAnnounce(`Attempt ${attempt} of ${limit}`);
+      const rateText = rate > 0 ? ` @ ${rate.toFixed(1)} attempts/s` : '';
+      setAnnounce(`Attempt ${attemptNumber} of ${limit}${rateText}`);
       announceRef.current = now;
     }
   };
@@ -325,6 +426,8 @@ const HydraApp = () => {
       selectedPass,
       attempt: 0,
       timeline: [],
+      concurrency,
+      baseDelay,
     });
     setAnnounce('Hydra started');
     announceRef.current = Date.now();
@@ -338,6 +441,8 @@ const HydraApp = () => {
             service,
             userList: user.content,
             passList: pass.content,
+            concurrency,
+            baseDelay,
           }),
         });
         const data = await res.json();
@@ -368,6 +473,8 @@ const HydraApp = () => {
       `Passwords: ${passCount}`,
       `Charset: ${charset} (${charset.length})`,
       `Rule: ${rule}`,
+      `Concurrency: ${concurrency} workers`,
+      `Base delay: ${baseDelay}ms`,
       `Estimated candidate space: ${candidateSpace.toLocaleString()}`,
       'Dry run only - no network requests made.',
     ].join('\n');
@@ -376,7 +483,14 @@ const HydraApp = () => {
   };
 
   const handleSaveConfig = () => {
-    saveConfigStorage({ target, service, selectedUser, selectedPass });
+    saveConfigStorage({
+      target,
+      service,
+      selectedUser,
+      selectedPass,
+      concurrency,
+      baseDelay,
+    });
     setShowSaved(true);
     setTimeout(() => setShowSaved(false), 1500);
   };
@@ -384,7 +498,11 @@ const HydraApp = () => {
   const handleCopyConfig = async () => {
     try {
       await navigator.clipboard.writeText(
-        JSON.stringify({ target, service, selectedUser, selectedPass }, null, 2)
+        JSON.stringify(
+          { target, service, selectedUser, selectedPass, concurrency, baseDelay },
+          null,
+          2
+        )
       );
       setShowSaved(true);
       setTimeout(() => setShowSaved(false), 1500);
@@ -412,7 +530,11 @@ const HydraApp = () => {
       await fetch('/api/hydra', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'resume' }),
+        body: JSON.stringify({
+          action: 'resume',
+          concurrency,
+          baseDelay,
+        }),
       });
     }
   };
@@ -635,6 +757,55 @@ const HydraApp = () => {
             </button>
           )}
         </div>
+        <div className="col-span-2 grid grid-cols-2 gap-2 mt-3">
+          <div>
+            <label className="block mb-1">Concurrency</label>
+            <input
+              type="range"
+              min={MIN_CONCURRENCY}
+              max={MAX_CONCURRENCY}
+              value={concurrency}
+              onChange={(e) => setConcurrency(sanitizeConcurrency(e.target.value))}
+              className="w-full"
+            />
+            <input
+              type="number"
+              min={MIN_CONCURRENCY}
+              max={MAX_CONCURRENCY}
+              step={1}
+              value={concurrency}
+              onChange={(e) => setConcurrency(sanitizeConcurrency(e.target.value))}
+              className="w-full p-2 mt-1 rounded text-black"
+            />
+            <p className="text-xs text-gray-300 mt-1">
+              Simulated parallel attempts per batch.
+            </p>
+          </div>
+          <div>
+            <label className="block mb-1">Base delay (ms)</label>
+            <input
+              type="range"
+              min={MIN_BASE_DELAY}
+              max={MAX_BASE_DELAY}
+              step={50}
+              value={baseDelay}
+              onChange={(e) => setBaseDelay(sanitizeDelay(e.target.value))}
+              className="w-full"
+            />
+            <input
+              type="number"
+              min={MIN_BASE_DELAY}
+              max={MAX_BASE_DELAY}
+              step={50}
+              value={baseDelay}
+              onChange={(e) => setBaseDelay(sanitizeDelay(e.target.value))}
+              className="w-full p-2 mt-1 rounded text-black"
+            />
+            <p className="text-xs text-gray-300 mt-1">
+              Starting delay before throttling doubles the wait time.
+            </p>
+          </div>
+        </div>
       </div>
 
       <Stepper
@@ -645,6 +816,8 @@ const HydraApp = () => {
         runId={runId}
         initialAttempt={initialAttempt}
         onAttemptChange={handleAttempt}
+        concurrency={concurrency}
+        baseDelayMs={baseDelay}
       />
       <div className="mt-4 flex items-center gap-2">
         <img
