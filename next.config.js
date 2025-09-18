@@ -124,6 +124,20 @@ module.exports = withBundleAnalyzer(
   withPWA({
     ...(isStaticExport && { output: 'export' }),
     webpack: configureWebpack,
+    modularizeImports: {
+      lodash: {
+        transform: 'lodash/{{member}}',
+        preventFullImport: true,
+      },
+      'date-fns': {
+        transform: 'date-fns/{{member}}',
+        preventFullImport: true,
+      },
+      'lucide-react': {
+        transform: 'lucide-react/dist/esm/icons/{{memberKebabCase}}',
+        preventFullImport: true,
+      },
+    },
 
     // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
     eslint: {

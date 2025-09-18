@@ -10,6 +10,7 @@ const customJestConfig = {
     '^@xterm/xterm/css/xterm.css$': '<rootDir>/__mocks__/styleMock.js',
     '^@/(.*)$': '<rootDir>/$1',
   },
+  transformIgnorePatterns: ['/node_modules/(?!lucide-react/)'],
   testPathIgnorePatterns: [
     '<rootDir>/playwright/',
     '<rootDir>/__tests__/playwright/',
