@@ -31,12 +31,14 @@ export class Window extends Component {
             snapPreview: null,
             snapPosition: null,
             snapped: null,
+            snapTarget: null,
             lastSize: null,
             grabbed: false,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._releaseHandled = false;
     }
 
     componentDidMount() {
@@ -53,6 +55,10 @@ export class Window extends Component {
         window.addEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.addEventListener('super-arrow', this.handleSuperArrow);
+        window.addEventListener('pointerup', this.handlePointerUp);
+        window.addEventListener('pointercancel', this.handlePointerUp);
+        window.addEventListener('touchend', this.handlePointerUp, { passive: true });
+        window.addEventListener('touchcancel', this.handlePointerUp, { passive: true });
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -66,8 +72,22 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        window.removeEventListener('pointerup', this.handlePointerUp);
+        window.removeEventListener('pointercancel', this.handlePointerUp);
+        window.removeEventListener('touchend', this.handlePointerUp);
+        window.removeEventListener('touchcancel', this.handlePointerUp);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        if (
+            this.state.snapped &&
+            this.state.snapTarget &&
+            (prevState.snapTarget !== this.state.snapTarget || prevState.snapped !== this.state.snapped)
+        ) {
+            this.applySnapTarget(this.state.snapTarget);
         }
     }
 
@@ -92,16 +112,28 @@ export class Window extends Component {
     }
 
     resizeBoundries = () => {
-        this.setState({
-            parentSize: {
-                height: window.innerHeight //parent height
-                    - (window.innerHeight * (this.state.height / 100.0))  // this window's height
-                    - 28 // some padding
-                ,
-                width: window.innerWidth // parent width
-                    - (window.innerWidth * (this.state.width / 100.0)) //this window's width
+        this.setState((prev) => {
+            const viewportHeight = window.innerHeight;
+            const viewportWidth = window.innerWidth;
+            const parentHeight = viewportHeight
+                - (viewportHeight * (prev.height / 100.0))
+                - 28;
+            const parentWidth = viewportWidth
+                - (viewportWidth * (prev.width / 100.0));
+            const nextState = {
+                parentSize: {
+                    height: parentHeight,
+                    width: parentWidth
+                }
+            };
+            if (prev.snapped) {
+                nextState.snapTarget = this.calculateSnapTarget(prev.snapped);
             }
+            return nextState;
         }, () => {
+            if (this.state.snapped && this.state.snapTarget) {
+                this.applySnapTarget(this.state.snapTarget);
+            }
             if (this._uiExperiments) {
                 this.scheduleUsageCheck();
             }
@@ -248,44 +280,79 @@ export class Window extends Component {
             this.setState({
                 width: this.state.lastSize.width,
                 height: this.state.lastSize.height,
-                snapped: null
+                snapped: null,
+                snapTarget: null
             }, this.resizeBoundries);
         } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            this.setState({ snapped: null, snapTarget: null }, this.resizeBoundries);
+        }
+    }
+
+    getSnapHeightPercent = () => {
+        const viewportHeight = window.innerHeight || 0;
+        if (!viewportHeight) return 96.3;
+        const safeHeight = ((viewportHeight - 28) / viewportHeight) * 100;
+        return Math.max(30, Math.min(96.3, safeHeight));
+    }
+
+    calculateSnapTarget = (position) => {
+        const viewportWidth = window.innerWidth || 0;
+        const viewportHeight = window.innerHeight || 0;
+        const heightPercent = position === 'top' ? 50 : this.getSnapHeightPercent();
+        const widthPercent = position === 'top' ? 100 : 50;
+        const widthPx = viewportWidth * (widthPercent / 100);
+        const heightPx = viewportHeight * (heightPercent / 100);
+        let translateX = 0;
+        if (position === 'right') {
+            translateX = Math.max(0, viewportWidth - widthPx);
+        }
+        const translateY = -2;
+        const preview = position === 'top'
+            ? { left: '0', top: '0', width: '100%', height: '50%' }
+            : position === 'right'
+                ? { left: '50%', top: '0', width: '50%', height: '100%' }
+                : { left: '0', top: '0', width: '50%', height: '100%' };
+        return {
+            position,
+            translateX,
+            translateY,
+            widthPercent,
+            heightPercent,
+            preview,
+            bounds: {
+                left: translateX,
+                top: 0,
+                width: widthPx,
+                height: heightPx
+            }
+        };
+    }
+
+    applySnapTarget = (target) => {
+        if (!target) return;
+        const node = document.getElementById(this.id);
+        if (node) {
+            node.style.transform = `translate(${target.translateX}px, ${target.translateY}px)`;
         }
     }
 
     snapWindow = (position) => {
         this.setWinowsPosition();
         const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
-        let transform = '';
-        if (position === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (position === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        } else if (position === 'top') {
-            newWidth = 100.2;
-            newHeight = 50;
-            transform = 'translate(-1pt,-2pt)';
-        }
-        const r = document.querySelector("#" + this.id);
-        if (r && transform) {
-            r.style.transform = transform;
-        }
+        const target = this.calculateSnapTarget(position);
+        this.applySnapTarget(target);
         this.setState({
             snapPreview: null,
             snapPosition: null,
             snapped: position,
+            snapTarget: target,
             lastSize: { width, height },
-            width: newWidth,
-            height: newHeight
-        }, this.resizeBoundries);
+            width: target.widthPercent,
+            height: target.heightPercent
+        }, () => {
+            this.resizeBoundries();
+            this.checkOverlap();
+        });
     }
 
     checkOverlap = () => {
@@ -318,21 +385,32 @@ export class Window extends Component {
         if (!r) return;
         var rect = r.getBoundingClientRect();
         const threshold = 30;
-        let snap = null;
+        let nextPosition = null;
         if (rect.left <= threshold) {
-            snap = { left: '0', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'left' });
+            nextPosition = 'left';
         }
         else if (rect.right >= window.innerWidth - threshold) {
-            snap = { left: '50%', top: '0', width: '50%', height: '100%' };
-            this.setState({ snapPreview: snap, snapPosition: 'right' });
+            nextPosition = 'right';
         }
         else if (rect.top <= threshold) {
-            snap = { left: '0', top: '0', width: '100%', height: '50%' };
-            this.setState({ snapPreview: snap, snapPosition: 'top' });
+            nextPosition = 'top';
         }
-        else {
-            if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
+        if (nextPosition) {
+            const target = this.calculateSnapTarget(nextPosition);
+            const preview = target.preview;
+            if (
+                this.state.snapPosition !== nextPosition ||
+                !this.state.snapPreview ||
+                this.state.snapPreview.left !== preview.left ||
+                this.state.snapPreview.top !== preview.top ||
+                this.state.snapPreview.width !== preview.width ||
+                this.state.snapPreview.height !== preview.height
+            ) {
+                this.setState({ snapPreview: preview, snapPosition: nextPosition });
+            }
+        }
+        else if (!this.state.snapped && (this.state.snapPreview || this.state.snapPosition)) {
+            this.setState({ snapPreview: null, snapPosition: null });
         }
     }
 
@@ -365,13 +443,35 @@ export class Window extends Component {
         this.checkSnapPreview();
     }
 
+    handleDragStop = () => {
+        this._releaseHandled = true;
+        this.handleStop();
+        setTimeout(() => {
+            this._releaseHandled = false;
+        }, 0);
+    }
+
+    handlePointerUp = () => {
+        if (!this.state.grabbed || this._releaseHandled) {
+            return;
+        }
+        this._releaseHandled = true;
+        this.handleStop();
+        setTimeout(() => {
+            this._releaseHandled = false;
+        }, 0);
+    }
+
     handleStop = () => {
         this.changeCursorToDefault();
         const snapPos = this.state.snapPosition;
         if (snapPos) {
             this.snapWindow(snapPos);
         } else {
-            this.setState({ snapPreview: null, snapPosition: null });
+            this.setWinowsPosition();
+            this.setState({ snapPreview: null, snapPosition: null, snapTarget: null }, () => {
+                this.checkOverlap();
+            });
         }
     }
 
@@ -519,49 +619,48 @@ export class Window extends Component {
     }
 
     handleKeyDown = (e) => {
+        const preventDefault = () => {
+            if (typeof e.preventDefault === 'function') {
+                e.preventDefault();
+            }
+            if (typeof e.stopPropagation === 'function') {
+                e.stopPropagation();
+            }
+        };
         if (e.key === 'Escape') {
             this.closeWindow();
         } else if (e.key === 'Tab') {
             this.focusWindow();
         } else if (e.altKey) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                preventDefault();
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                preventDefault();
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                preventDefault();
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                preventDefault();
                 this.snapWindow('top');
             }
             this.focusWindow();
         } else if (e.shiftKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                preventDefault();
                 this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                preventDefault();
                 this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                preventDefault();
                 this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+                preventDefault();
                 this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
             }
-            this.focusWindow();
         }
     }
 
@@ -584,33 +683,6 @@ export class Window extends Component {
         }
     }
 
-    snapWindow = (pos) => {
-        this.focusWindow();
-        const { width, height } = this.state;
-        let newWidth = width;
-        let newHeight = height;
-        let transform = '';
-        if (pos === 'left') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = 'translate(-1pt,-2pt)';
-        } else if (pos === 'right') {
-            newWidth = 50;
-            newHeight = 96.3;
-            transform = `translate(${window.innerWidth / 2}px,-2pt)`;
-        }
-        const node = document.getElementById(this.id);
-        if (node && transform) {
-            node.style.transform = transform;
-        }
-        this.setState({
-            snapped: pos,
-            lastSize: { width, height },
-            width: newWidth,
-            height: newHeight
-        }, this.resizeBoundries);
-    }
-
     render() {
         return (
             <>
@@ -627,7 +699,7 @@ export class Window extends Component {
                     grid={this.props.snapEnabled ? [8, 8] : [1, 1]}
                     scale={1}
                     onStart={this.changeCursorToMove}
-                    onStop={this.handleStop}
+                    onStop={this.handleDragStop}
                     onDrag={this.handleDrag}
                     allowAnyClick={false}
                     defaultPosition={{ x: this.startX, y: this.startY }}
@@ -635,11 +707,22 @@ export class Window extends Component {
                 >
                     <div
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        className={[
+                            styles.windowFrame,
+                            this.state.cursorType,
+                            this.state.closed ? 'closed-window' : '',
+                            this.state.maximized ? 'duration-300 rounded-none' : 'rounded-lg rounded-b-none',
+                            this.props.minimized ? 'opacity-0 invisible duration-200' : '',
+                            this.state.grabbed ? 'opacity-70' : '',
+                            this.state.snapPreview ? 'ring-2 ring-blue-400' : '',
+                            this.props.isFocused ? 'z-30' : 'z-20 notFocused',
+                            'opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col'
+                        ].filter(Boolean).join(' ')}
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
                         tabIndex={0}
+                        data-snap-position={this.state.snapped || undefined}
                         onKeyDown={this.handleKeyDown}
                     >
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
