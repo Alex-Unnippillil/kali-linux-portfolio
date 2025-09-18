@@ -153,7 +153,7 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 }
 
 .scalable-app-icon.scale {
-    animation: scaleAppImage 400ms 1 forwards;
+    animation: scaleAppImage var(--motion-duration-modal, 400ms) var(--motion-easing-emphasized, ease) 0s 1 forwards;
 }
 
 /* Terminal enhancements */
@@ -219,7 +219,7 @@ dialog {
 
 /* Show Applications overlay animation */
 .all-apps-anim {
-    animation: allAppsScale 200ms ease-out;
+    animation: allAppsScale var(--motion-duration-reveal, 200ms) var(--motion-easing-decelerate, ease-out);
 }
 
 @keyframes allAppsScale {
@@ -236,7 +236,7 @@ dialog {
 
 /* App icon click animation */
 .app-icon-launch {
-    animation: appIconLaunch 200ms ease-in-out;
+    animation: appIconLaunch var(--motion-duration-reveal, 200ms) var(--motion-easing-emphasized, ease-in-out);
 }
 
 @keyframes appIconLaunch {

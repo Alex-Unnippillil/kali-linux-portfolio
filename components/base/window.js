@@ -7,8 +7,11 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import { MotionContext } from '../ui/MotionProvider';
 
 export class Window extends Component {
+    static contextType = MotionContext;
+
     constructor(props) {
         super(props);
         this.id = null;
@@ -37,6 +40,17 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+    }
+
+    getMotionDuration = (token, fallback) => {
+        const motion = this.context;
+        const value = motion?.durations?.[token];
+        return typeof value === 'number' ? value : fallback;
+    }
+
+    getMotionPreset = (name) => {
+        const motion = this.context;
+        return motion?.presets?.[name];
     }
 
     componentDidMount() {
@@ -125,12 +139,13 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        const delay = this.getMotionDuration('reveal', 200);
         this._usageTimeout = setTimeout(() => {
             const usage = this.computeContentUsage();
             if (usage < 65) {
                 this.optimizeWindow();
             }
-        }, 200);
+        }, delay);
     }
 
     optimizeWindow = () => {
@@ -149,7 +164,8 @@ export class Window extends Component {
                 height: Math.max(prev.height - 1, 20)
             }), () => {
                 if (this.computeContentUsage() < 80) {
-                    setTimeout(shrink, 50);
+                    const delay = this.getMotionDuration('micro', 50);
+                    setTimeout(shrink, delay);
                 }
             });
         };
@@ -391,18 +407,28 @@ export class Window extends Component {
 
         const node = document.querySelector("#" + this.id);
         const endTransform = `translate(${posx}px,${sidebBarApp.y.toFixed(1) - 240}px) scale(0.2)`;
-        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const motion = this.context;
+        const prefersReducedMotion = motion?.reducedMotion;
 
-        if (prefersReducedMotion) {
+        if (!node) {
+            this.props.hasMinimised(this.id);
+            return;
+        }
+
+        if (prefersReducedMotion || typeof node.animate !== 'function') {
             node.style.transform = endTransform;
             this.props.hasMinimised(this.id);
             return;
         }
 
         const startTransform = node.style.transform;
+        const preset = this.getMotionPreset('shellWindow');
+        const duration = preset?.duration ?? this.getMotionDuration('window', 300);
+        const easing = preset?.easing ?? motion?.easings?.emphasized ?? motion?.easings?.standard ?? 'linear';
+
         this._dockAnimation = node.animate(
             [{ transform: startTransform }, { transform: endTransform }],
-            { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
+            { duration, easing, fill: 'forwards' }
         );
         this._dockAnimation.onfinish = () => {
             node.style.transform = endTransform;
@@ -419,10 +445,11 @@ export class Window extends Component {
         let posy = node.style.getPropertyValue("--window-transform-y");
         const startTransform = node.style.transform;
         const endTransform = `translate(${posx},${posy})`;
-        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const motion = this.context;
+        const prefersReducedMotion = motion?.reducedMotion;
 
-        if (prefersReducedMotion) {
-            node.style.transform = endTransform;
+        if (prefersReducedMotion || !node || typeof node.animate !== 'function') {
+            if (node) node.style.transform = endTransform;
             this.setState({ maximized: false });
             this.checkOverlap();
             return;
@@ -437,9 +464,12 @@ export class Window extends Component {
             };
             this._dockAnimation.reverse();
         } else {
+            const preset = this.getMotionPreset('shellWindow');
+            const duration = preset?.duration ?? this.getMotionDuration('window', 300);
+            const easing = preset?.easing ?? motion?.easings?.emphasized ?? motion?.easings?.standard ?? 'linear';
             this._dockAnimation = node.animate(
                 [{ transform: startTransform }, { transform: endTransform }],
-                { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
+                { duration, easing, fill: 'forwards' }
             );
             this._dockAnimation.onfinish = () => {
                 node.style.transform = endTransform;
@@ -471,9 +501,10 @@ export class Window extends Component {
         this.setState({ closed: true }, () => {
             this.deactivateOverlay();
             this.props.hideSideBar(this.id, false);
+            const delay = this.getMotionDuration('window', 300);
             setTimeout(() => {
                 this.props.closed(this.id)
-            }, 300) // after 300ms this window will be unmounted from parent (Desktop)
+            }, delay) // matches window close transition
         });
     }
 
@@ -612,13 +643,27 @@ export class Window extends Component {
     }
 
     render() {
+        const windowPreset = this.getMotionPreset('shellWindow');
+        const overlayPreset = this.getMotionPreset('shellOverlay');
+        const windowStyle = {
+            width: `${this.state.width}%`,
+            height: `${this.state.height}%`,
+            transition: windowPreset?.transition ?? 'none',
+        };
         return (
             <>
                 {this.state.snapPreview && (
                     <div
                         data-testid="snap-preview"
-                        className="fixed border-2 border-dashed border-white bg-white bg-opacity-10 pointer-events-none z-40 transition-opacity"
-                        style={{ left: this.state.snapPreview.left, top: this.state.snapPreview.top, width: this.state.snapPreview.width, height: this.state.snapPreview.height }}
+                        data-motion-preset="shellOverlay"
+                        className="fixed border-2 border-dashed border-white bg-white bg-opacity-10 pointer-events-none z-40"
+                        style={{
+                            left: this.state.snapPreview.left,
+                            top: this.state.snapPreview.top,
+                            width: this.state.snapPreview.width,
+                            height: this.state.snapPreview.height,
+                            transition: overlayPreset?.transition ?? 'none',
+                        }}
                     />
                 )}
                 <Draggable
@@ -634,8 +679,9 @@ export class Window extends Component {
                     bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
                 >
                     <div
-                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        style={windowStyle}
+                        data-motion-preset="shellWindow"
+                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
@@ -825,16 +871,26 @@ export function WindowEditButtons(props) {
 
 // Window's Main Screen
 export class WindowMainScreen extends Component {
+    static contextType = MotionContext;
+
     constructor() {
         super();
         this.state = {
             setDarkBg: false,
         }
+        this._bgTimeout = null;
     }
     componentDidMount() {
-        setTimeout(() => {
+        const motion = this.context;
+        const delay = motion?.durations?.linger ?? 3000;
+        this._bgTimeout = setTimeout(() => {
             this.setState({ setDarkBg: true });
-        }, 3000);
+        }, delay);
+    }
+    componentWillUnmount() {
+        if (this._bgTimeout) {
+            clearTimeout(this._bgTimeout);
+        }
     }
     render() {
         return (

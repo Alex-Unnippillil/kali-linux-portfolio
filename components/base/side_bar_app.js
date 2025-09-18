@@ -1,8 +1,11 @@
 import React, { Component } from "react";
 import Image from 'next/image';
 import { toCanvas } from 'html-to-image';
+import { MotionContext } from '../ui/MotionProvider';
 
 export class SideBarApp extends Component {
+    static contextType = MotionContext;
+
     constructor() {
         super();
         this.id = null;
@@ -46,9 +49,11 @@ export class SideBarApp extends Component {
     };
 
     scaleImage = () => {
+        const motion = this.context;
+        const idleDuration = motion?.durations?.idle ?? 1000;
         setTimeout(() => {
             this.setState({ scaleImage: false });
-        }, 1000);
+        }, idleDuration);
         this.setState({ scaleImage: true });
     }
 
@@ -86,12 +91,15 @@ export class SideBarApp extends Component {
     };
 
     render() {
+        const motion = this.context;
+        const interactive = motion?.presets?.shellInteractive;
         return (
             <button
                 type="button"
                 aria-label={this.props.title}
                 data-context="app"
                 data-app-id={this.props.id}
+                data-motion-preset="shellInteractive"
                 onClick={this.openApp}
                 onMouseEnter={() => {
                     this.captureThumbnail();
@@ -101,8 +109,9 @@ export class SideBarApp extends Component {
                     this.setState({ showTitle: false, thumbnail: null });
                 }}
                 className={(this.props.isClose[this.id] === false && this.props.isFocus[this.id] ? "bg-white bg-opacity-10 " : "") +
-                    " w-auto p-2 outline-none relative hover:bg-white hover:bg-opacity-10 rounded m-1 transition-hover transition-active"}
+                    " w-auto p-2 outline-none relative hover:bg-white hover:bg-opacity-10 rounded m-1"}
                 id={"sidebar-" + this.props.id}
+                style={{ transition: interactive?.transition ?? 'none' }}
             >
                 <Image
                     width={28}
