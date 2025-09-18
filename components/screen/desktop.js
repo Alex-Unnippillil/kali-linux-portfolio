@@ -22,24 +22,70 @@ import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { ensureDisplayConfig, saveDisplayConfig } from '../../utils/displayState';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import useSession from '../../hooks/useSession';
+
+const createWorkspaceDefaults = () => {
+    const focused_windows = {};
+    const closed_windows = {};
+    const overlapped_windows = {};
+    const minimized_windows = {};
+    apps.forEach(app => {
+        focused_windows[app.id] = false;
+        closed_windows[app.id] = true;
+        overlapped_windows[app.id] = false;
+        minimized_windows[app.id] = false;
+    });
+    return {
+        focused_windows,
+        closed_windows,
+        overlapped_windows,
+        minimized_windows,
+        window_positions: {},
+        app_stack: [],
+    };
+};
+
+const normalizeWorkspaceSnapshot = (snapshot = createWorkspaceDefaults()) => {
+    const base = createWorkspaceDefaults();
+    const result = {
+        focused_windows: { ...base.focused_windows, ...(snapshot.focused_windows || {}) },
+        closed_windows: { ...base.closed_windows, ...(snapshot.closed_windows || {}) },
+        overlapped_windows: { ...base.overlapped_windows, ...(snapshot.overlapped_windows || {}) },
+        minimized_windows: { ...base.minimized_windows, ...(snapshot.minimized_windows || {}) },
+        window_positions: {},
+        app_stack: Array.isArray(snapshot.app_stack) ? [...snapshot.app_stack] : [],
+    };
+
+    Object.keys(snapshot.window_positions || {}).forEach(id => {
+        if (id in base.closed_windows) {
+            result.window_positions[id] = snapshot.window_positions[id];
+        }
+    });
+
+    result.app_stack = result.app_stack.filter(id => id in base.closed_windows);
+
+    return result;
+};
 
 export class Desktop extends Component {
     constructor() {
         super();
-        this.app_stack = [];
+        const defaultWorkspace = createWorkspaceDefaults();
+        this.app_stack = [...defaultWorkspace.app_stack];
         this.initFavourite = {};
         this.allWindowClosed = false;
         this.state = {
-            focused_windows: {},
-            closed_windows: {},
+            focused_windows: defaultWorkspace.focused_windows,
+            closed_windows: defaultWorkspace.closed_windows,
             allAppsView: false,
-            overlapped_windows: {},
+            overlapped_windows: defaultWorkspace.overlapped_windows,
             disabled_apps: {},
             favourite_apps: {},
             hideSideBar: false,
-            minimized_windows: {},
-            window_positions: {},
+            minimized_windows: defaultWorkspace.minimized_windows,
+            window_positions: defaultWorkspace.window_positions,
             desktop_apps: [],
             context_menus: {
                 desktop: false,
@@ -52,8 +98,207 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            activeDisplayId: 'display-1',
+            displayOrder: ['display-1'],
+            displayMeta: { 'display-1': { name: 'Primary Display' } },
+            displayWorkspaces: { 'display-1': defaultWorkspace },
         }
     }
+
+    snapshotActiveWorkspace = (state = this.state, appStack = this.app_stack) => normalizeWorkspaceSnapshot({
+        focused_windows: state.focused_windows,
+        closed_windows: state.closed_windows,
+        overlapped_windows: state.overlapped_windows,
+        minimized_windows: state.minimized_windows,
+        window_positions: state.window_positions,
+        app_stack: Array.isArray(appStack) ? [...appStack] : [...this.app_stack],
+    });
+
+    updateStateAndWorkspace = (partialState, callback) => {
+        this.setState(prev => {
+            const merged = { ...prev, ...partialState };
+            const snapshot = this.snapshotActiveWorkspace(merged);
+            return {
+                ...partialState,
+                displayWorkspaces: {
+                    ...prev.displayWorkspaces,
+                    [prev.activeDisplayId]: snapshot,
+                },
+            };
+        }, () => {
+            if (typeof callback === 'function') callback();
+        });
+    };
+
+    switchDisplay = (nextDisplayId) => {
+        if (!nextDisplayId || nextDisplayId === this.state.activeDisplayId) return;
+        this.setState(prev => {
+            const currentSnapshot = this.snapshotActiveWorkspace(prev);
+            const nextSnapshot = normalizeWorkspaceSnapshot(prev.displayWorkspaces[nextDisplayId] || createWorkspaceDefaults());
+            return {
+                activeDisplayId: nextDisplayId,
+                focused_windows: nextSnapshot.focused_windows,
+                closed_windows: nextSnapshot.closed_windows,
+                overlapped_windows: nextSnapshot.overlapped_windows,
+                minimized_windows: nextSnapshot.minimized_windows,
+                window_positions: nextSnapshot.window_positions,
+                displayWorkspaces: {
+                    ...prev.displayWorkspaces,
+                    [prev.activeDisplayId]: currentSnapshot,
+                    [nextDisplayId]: nextSnapshot,
+                },
+            };
+        }, () => {
+            const workspace = this.state.displayWorkspaces[nextDisplayId] || normalizeWorkspaceSnapshot();
+            this.app_stack = [...workspace.app_stack];
+            this.hideSideBar(null, false);
+            this.saveSession();
+        });
+    };
+
+    handlePrimaryDisplayChange = (event) => {
+        const detail = event?.detail;
+        const nextId = typeof detail === 'string' ? detail : detail?.id;
+        if (typeof nextId !== 'string') return;
+        this.switchDisplay(nextId);
+    };
+
+    handleDisplaysUpdated = (event) => {
+        const detail = event?.detail;
+        let config = Array.isArray(detail) ? detail : ensureDisplayConfig();
+        config = (config || []).filter(display => display && typeof display.id === 'string');
+        if (!config.length) {
+            config = [{ id: 'display-1', name: 'Primary Display' }];
+        }
+
+        const order = config.map(display => display.id);
+        const meta = {};
+        config.forEach((display, index) => {
+            meta[display.id] = { name: display.name || `Display ${index + 1}` };
+        });
+
+        this.setState(prev => {
+            const workspaces = { ...prev.displayWorkspaces };
+            order.forEach(id => {
+                workspaces[id] = normalizeWorkspaceSnapshot(workspaces[id] || createWorkspaceDefaults());
+            });
+            Object.keys(workspaces).forEach(id => {
+                if (!order.includes(id)) {
+                    delete workspaces[id];
+                }
+            });
+
+            let activeDisplayId = prev.activeDisplayId;
+            if (!order.includes(activeDisplayId)) {
+                activeDisplayId = order[0];
+            }
+
+            const activeWorkspace = normalizeWorkspaceSnapshot(workspaces[activeDisplayId] || createWorkspaceDefaults());
+            return {
+                displayOrder: order,
+                displayMeta: meta,
+                activeDisplayId,
+                displayWorkspaces: { ...workspaces, [activeDisplayId]: activeWorkspace },
+                focused_windows: activeWorkspace.focused_windows,
+                closed_windows: activeWorkspace.closed_windows,
+                overlapped_windows: activeWorkspace.overlapped_windows,
+                minimized_windows: activeWorkspace.minimized_windows,
+                window_positions: activeWorkspace.window_positions,
+            };
+        }, () => {
+            const workspace = this.state.displayWorkspaces[this.state.activeDisplayId];
+            this.app_stack = [...(workspace?.app_stack || [])];
+            this.hideSideBar(null, false);
+            this.saveSession();
+            saveDisplayConfig(this.state.displayOrder.map(id => ({ id, name: this.state.displayMeta[id]?.name || '' })));
+        });
+    };
+
+    initializeDisplays = () => {
+        const session = this.props.session || {};
+        const configDisplays = ensureDisplayConfig();
+        const displaysMap = new Map();
+
+        configDisplays.forEach((display, index) => {
+            if (!display || typeof display.id !== 'string') return;
+            const label = display.name || `Display ${index + 1}`;
+            displaysMap.set(display.id, { id: display.id, name: label });
+        });
+
+        const sessionDisplays = Array.isArray(session.displays) ? session.displays : [];
+        sessionDisplays.forEach((display, index) => {
+            if (!display || typeof display.id !== 'string') return;
+            const label = display.name || `Display ${configDisplays.length + index + 1}`;
+            displaysMap.set(display.id, { id: display.id, name: label });
+        });
+
+        if (displaysMap.size === 0) {
+            displaysMap.set('display-1', { id: 'display-1', name: 'Primary Display' });
+        }
+
+        const order = Array.from(displaysMap.keys());
+        const meta = {};
+        const workspaces = { ...this.state.displayWorkspaces };
+
+        const legacyWindows = !sessionDisplays.length && Array.isArray(session.windows) ? session.windows : [];
+
+        order.forEach((id, index) => {
+            const descriptor = displaysMap.get(id);
+            meta[id] = { name: descriptor?.name || `Display ${index + 1}` };
+
+            const stored = sessionDisplays.find(display => display.id === id);
+            let snapshot = normalizeWorkspaceSnapshot(workspaces[id] || createWorkspaceDefaults());
+
+            let windowsToRestore = [];
+            if (stored && Array.isArray(stored.windows)) {
+                windowsToRestore = stored.windows;
+            } else if (!stored && index === 0 && legacyWindows.length) {
+                windowsToRestore = legacyWindows;
+            }
+
+            windowsToRestore.forEach(({ id: appId, x, y, minimized }) => {
+                if (!(appId in snapshot.closed_windows)) return;
+                snapshot.closed_windows[appId] = false;
+                snapshot.minimized_windows[appId] = !!minimized;
+                snapshot.window_positions[appId] = { x, y };
+                snapshot.app_stack = snapshot.app_stack.filter(existing => existing !== appId);
+                snapshot.app_stack.push(appId);
+            });
+
+            if (snapshot.app_stack.length) {
+                const last = snapshot.app_stack[snapshot.app_stack.length - 1];
+                Object.keys(snapshot.focused_windows).forEach(key => {
+                    snapshot.focused_windows[key] = key === last;
+                });
+            }
+
+            workspaces[id] = normalizeWorkspaceSnapshot(snapshot);
+        });
+
+        const requestedActive = typeof session.activeDisplay === 'string' ? session.activeDisplay : null;
+        const activeDisplayId = requestedActive && order.includes(requestedActive)
+            ? requestedActive
+            : order[0];
+        const activeWorkspace = normalizeWorkspaceSnapshot(workspaces[activeDisplayId] || createWorkspaceDefaults());
+        this.app_stack = [...activeWorkspace.app_stack];
+
+        this.setState({
+            activeDisplayId,
+            displayOrder: order,
+            displayMeta: meta,
+            displayWorkspaces: { ...workspaces, [activeDisplayId]: activeWorkspace },
+            focused_windows: activeWorkspace.focused_windows,
+            closed_windows: activeWorkspace.closed_windows,
+            overlapped_windows: activeWorkspace.overlapped_windows,
+            minimized_windows: activeWorkspace.minimized_windows,
+            window_positions: activeWorkspace.window_positions,
+        }, () => {
+            saveDisplayConfig(order.map(id => ({ id, name: meta[id]?.name || '' })));
+            if (!activeWorkspace.app_stack.length) {
+                this.openApp('about-alex');
+            }
+        });
+    };
 
     componentDidMount() {
         // google analytics
@@ -61,7 +306,6 @@ export class Desktop extends Component {
 
         this.fetchAppsData(() => {
             const session = this.props.session || {};
-            const positions = {};
             if (session.dock && session.dock.length) {
                 let favourite_apps = { ...this.state.favourite_apps };
                 session.dock.forEach(id => {
@@ -69,17 +313,7 @@ export class Desktop extends Component {
                 });
                 this.setState({ favourite_apps });
             }
-
-            if (session.windows && session.windows.length) {
-                session.windows.forEach(({ id, x, y }) => {
-                    positions[id] = { x, y };
-                });
-                this.setState({ window_positions: positions }, () => {
-                    session.windows.forEach(({ id }) => this.openApp(id));
-                });
-            } else {
-                this.openApp('about-alex');
-            }
+            this.initializeDisplays();
         });
         this.setContextListeners();
         this.setEventListeners();
@@ -89,6 +323,8 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        window.addEventListener('desktop:primary-display-change', this.handlePrimaryDisplayChange);
+        window.addEventListener('desktop:displays-updated', this.handleDisplaysUpdated);
     }
 
     componentWillUnmount() {
@@ -96,6 +332,8 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        window.removeEventListener('desktop:primary-display-change', this.handlePrimaryDisplayChange);
+        window.removeEventListener('desktop:displays-updated', this.handleDisplaysUpdated);
     }
 
     checkForNewFolders = () => {
@@ -380,14 +618,14 @@ export class Desktop extends Component {
             }
             if (app.desktop_shortcut) desktop_apps.push(app.id);
         });
-        this.setState({
+        this.updateStateAndWorkspace({
             focused_windows,
             closed_windows,
             disabled_apps,
             favourite_apps,
             overlapped_windows,
             minimized_windows,
-            desktop_apps
+            desktop_apps,
         }, () => {
             if (typeof callback === 'function') callback();
         });
@@ -420,13 +658,13 @@ export class Desktop extends Component {
             }
             if (app.desktop_shortcut) desktop_apps.push(app.id);
         });
-        this.setState({
+        this.updateStateAndWorkspace({
             focused_windows,
             closed_windows,
             disabled_apps,
             minimized_windows,
             favourite_apps,
-            desktop_apps
+            desktop_apps,
         });
         this.initFavourite = { ...favourite_apps };
     }
@@ -494,36 +732,57 @@ export class Desktop extends Component {
         const snap = this.props.snapEnabled
             ? (v) => Math.round(v / 8) * 8
             : (v) => v;
-        this.setState(prev => ({
-            window_positions: { ...prev.window_positions, [id]: { x: snap(x), y: snap(y) } }
-        }), this.saveSession);
+        const window_positions = { ...this.state.window_positions, [id]: { x: snap(x), y: snap(y) } };
+        this.updateStateAndWorkspace({ window_positions }, this.saveSession);
     }
 
     saveSession = () => {
         if (!this.props.setSession) return;
-        const openWindows = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
-        const windows = openWindows.map(id => ({
-            id,
-            x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
-            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10
-        }));
+        const snapshots = {
+            ...this.state.displayWorkspaces,
+            [this.state.activeDisplayId]: this.snapshotActiveWorkspace(),
+        };
+        const displays = this.state.displayOrder.map(id => {
+            const workspace = normalizeWorkspaceSnapshot(snapshots[id] || createWorkspaceDefaults());
+            const openWindows = Object.keys(workspace.closed_windows).filter(key => workspace.closed_windows[key] === false);
+            const windows = openWindows.map(key => ({
+                id: key,
+                x: workspace.window_positions[key] ? workspace.window_positions[key].x : 60,
+                y: workspace.window_positions[key] ? workspace.window_positions[key].y : 10,
+                minimized: workspace.minimized_windows[key] || false,
+            }));
+            return {
+                id,
+                name: this.state.displayMeta[id]?.name || '',
+                windows,
+            };
+        });
+        const activeDisplay = this.state.activeDisplayId;
+        const activeWindows = displays.find(display => display.id === activeDisplay)?.windows || [];
         const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
-        this.props.setSession({ ...this.props.session, windows, dock });
+        const sessionPayload = {
+            ...this.props.session,
+            windows: activeWindows,
+            dock,
+            displays,
+            activeDisplay,
+        };
+        this.props.setSession(sessionPayload);
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('desktop:session-updated', { detail: sessionPayload }));
+        }
     }
 
     hideSideBar = (objId, hide) => {
-        if (hide === this.state.hideSideBar) return;
-
         if (objId === null) {
             if (hide === false) {
-                this.setState({ hideSideBar: false });
-            }
-            else {
-                for (const key in this.state.overlapped_windows) {
-                    if (this.state.overlapped_windows[key]) {
-                        this.setState({ hideSideBar: true });
-                        return;
-                    }  // if any window is overlapped then hide the SideBar
+                if (this.state.hideSideBar !== false) {
+                    this.updateStateAndWorkspace({ hideSideBar: false });
+                }
+            } else {
+                const hasOverlap = Object.values(this.state.overlapped_windows || {}).some(Boolean);
+                if (hasOverlap && this.state.hideSideBar !== true) {
+                    this.updateStateAndWorkspace({ hideSideBar: true });
                 }
             }
             return;
@@ -531,27 +790,28 @@ export class Desktop extends Component {
 
         if (hide === false) {
             for (const key in this.state.overlapped_windows) {
-                if (this.state.overlapped_windows[key] && key !== objId) return; // if any window is overlapped then don't show the SideBar
+                if (this.state.overlapped_windows[key] && key !== objId) {
+                    return; // if any window is overlapped then don't show the SideBar
+                }
             }
         }
 
-        let overlapped_windows = this.state.overlapped_windows;
-        overlapped_windows[objId] = hide;
-        this.setState({ hideSideBar: hide, overlapped_windows });
+        const overlapped_windows = { ...this.state.overlapped_windows, [objId]: hide };
+        if (this.state.overlapped_windows[objId] === hide && this.state.hideSideBar === hide) {
+            return;
+        }
+        this.updateStateAndWorkspace({ hideSideBar: hide, overlapped_windows });
     }
 
     hasMinimised = (objId) => {
-        let minimized_windows = this.state.minimized_windows;
-        var focused_windows = this.state.focused_windows;
+        const minimized_windows = { ...this.state.minimized_windows, [objId]: true };
+        const focused_windows = { ...this.state.focused_windows, [objId]: false };
 
-        // remove focus and minimise this window
-        minimized_windows[objId] = true;
-        focused_windows[objId] = false;
-        this.setState({ minimized_windows, focused_windows });
-
-        this.hideSideBar(null, false);
-
-        this.giveFocusToLastApp();
+        this.updateStateAndWorkspace({ minimized_windows, focused_windows }, () => {
+            this.hideSideBar(null, false);
+            this.giveFocusToLastApp();
+            this.saveSession();
+        });
     }
 
     giveFocusToLastApp = () => {
@@ -594,66 +854,67 @@ export class Desktop extends Component {
         // if the app is disabled
         if (this.state.disabled_apps[objId]) return;
 
+        const isOpen = this.state.closed_windows[objId] === false;
+
         // if app is already open, focus it instead of spawning a new window
-        if (this.state.closed_windows[objId] === false) {
-            // if it's minimised, restore its last position
+        if (isOpen) {
             if (this.state.minimized_windows[objId]) {
-                this.focus(objId);
-                var r = document.querySelector("#" + objId);
-                r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
-                let minimized_windows = this.state.minimized_windows;
-                minimized_windows[objId] = false;
-                this.setState({ minimized_windows: minimized_windows }, this.saveSession);
+                const minimized_windows = { ...this.state.minimized_windows, [objId]: false };
+                this.updateStateAndWorkspace({ minimized_windows }, () => {
+                    this.focus(objId);
+                    const node = document.querySelector(`#${objId}`);
+                    if (node) {
+                        const x = node.style.getPropertyValue("--window-transform-x");
+                        const y = node.style.getPropertyValue("--window-transform-y");
+                        node.style.transform = `translate(${x},${y}) scale(1)`;
+                    }
+                    this.saveSession();
+                });
             } else {
                 this.focus(objId);
                 this.saveSession();
             }
             return;
-        } else {
-            let closed_windows = this.state.closed_windows;
-            let favourite_apps = this.state.favourite_apps;
-            let frequentApps = [];
-            try { frequentApps = JSON.parse(safeLocalStorage?.getItem('frequentApps') || '[]'); } catch (e) { frequentApps = []; }
-            var currentApp = frequentApps.find(app => app.id === objId);
-            if (currentApp) {
-                frequentApps.forEach((app) => {
-                    if (app.id === currentApp.id) {
-                        app.frequency += 1; // increase the frequency if app is found 
-                    }
-                });
-            } else {
-                frequentApps.push({ id: objId, frequency: 1 }); // new app opened
-            }
-
-            frequentApps.sort((a, b) => {
-                if (a.frequency < b.frequency) {
-                    return 1;
-                }
-                if (a.frequency > b.frequency) {
-                    return -1;
-                }
-                return 0; // sort according to decreasing frequencies
-            });
-
-            safeLocalStorage?.setItem('frequentApps', JSON.stringify(frequentApps));
-
-            let recentApps = [];
-            try { recentApps = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]'); } catch (e) { recentApps = []; }
-            recentApps = recentApps.filter(id => id !== objId);
-            recentApps.unshift(objId);
-            recentApps = recentApps.slice(0, 10);
-            safeLocalStorage?.setItem('recentApps', JSON.stringify(recentApps));
-
-            setTimeout(() => {
-                favourite_apps[objId] = true; // adds opened app to sideBar
-                closed_windows[objId] = false; // openes app's window
-                this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
-                    this.focus(objId);
-                    this.saveSession();
-                });
-                this.app_stack.push(objId);
-            }, 200);
         }
+
+        let frequentApps = [];
+        try { frequentApps = JSON.parse(safeLocalStorage?.getItem('frequentApps') || '[]'); } catch (e) { frequentApps = []; }
+        const currentApp = frequentApps.find(app => app.id === objId);
+        if (currentApp) {
+            frequentApps = frequentApps.map(app => app.id === currentApp.id ? { ...app, frequency: app.frequency + 1 } : app);
+        } else {
+            frequentApps.push({ id: objId, frequency: 1 }); // new app opened
+        }
+
+        frequentApps.sort((a, b) => {
+            if (a.frequency < b.frequency) {
+                return 1;
+            }
+            if (a.frequency > b.frequency) {
+                return -1;
+            }
+            return 0; // sort according to decreasing frequencies
+        });
+
+        safeLocalStorage?.setItem('frequentApps', JSON.stringify(frequentApps));
+
+        let recentApps = [];
+        try { recentApps = JSON.parse(safeLocalStorage?.getItem('recentApps') || '[]'); } catch (e) { recentApps = []; }
+        recentApps = recentApps.filter(id => id !== objId);
+        recentApps.unshift(objId);
+        recentApps = recentApps.slice(0, 10);
+        safeLocalStorage?.setItem('recentApps', JSON.stringify(recentApps));
+
+        setTimeout(() => {
+            const closed_windows = { ...this.state.closed_windows, [objId]: false };
+            const favourite_apps = { ...this.state.favourite_apps, [objId]: true };
+            const minimized_windows = { ...this.state.minimized_windows, [objId]: false };
+
+            this.updateStateAndWorkspace({ closed_windows, favourite_apps, minimized_windows, allAppsView: false }, () => {
+                this.focus(objId);
+                this.saveSession();
+            });
+        }, 200);
     }
 
     closeApp = async (objId) => {
@@ -688,20 +949,23 @@ export class Desktop extends Component {
         this.updateTrashIcon();
 
         // remove app from the app stack
-        this.app_stack.splice(this.app_stack.indexOf(objId), 1);
+        this.app_stack = this.app_stack.filter(id => id !== objId);
 
-        this.giveFocusToLastApp();
+        const closed_windows = { ...this.state.closed_windows, [objId]: true };
+        const favourite_apps = { ...this.state.favourite_apps };
+        const minimized_windows = { ...this.state.minimized_windows, [objId]: false };
+        const focused_windows = { ...this.state.focused_windows, [objId]: false };
+        const overlapped_windows = { ...this.state.overlapped_windows, [objId]: false };
 
-        this.hideSideBar(null, false);
+        if (this.initFavourite[objId] === false) {
+            favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
+        }
 
-        // close window
-        let closed_windows = this.state.closed_windows;
-        let favourite_apps = this.state.favourite_apps;
-
-        if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
-        closed_windows[objId] = true; // closes the app's window
-
-        this.setState({ closed_windows, favourite_apps }, this.saveSession);
+        this.updateStateAndWorkspace({ closed_windows, favourite_apps, minimized_windows, focused_windows, overlapped_windows }, () => {
+            this.hideSideBar(null, false);
+            this.giveFocusToLastApp();
+            this.saveSession();
+        });
     }
 
     pinApp = (id) => {
@@ -733,18 +997,17 @@ export class Desktop extends Component {
     }
 
     focus = (objId) => {
-        // removes focus from all window and 
-        // gives focus to window with 'id = objId'
-        var focused_windows = this.state.focused_windows;
-        focused_windows[objId] = true;
-        for (let key in focused_windows) {
-            if (focused_windows.hasOwnProperty(key)) {
-                if (key !== objId) {
-                    focused_windows[key] = false;
-                }
-            }
-        }
-        this.setState({ focused_windows });
+        if (this.state.closed_windows[objId]) return;
+
+        const focused_windows = { ...this.state.focused_windows };
+        Object.keys(focused_windows).forEach(key => {
+            focused_windows[key] = key === objId;
+        });
+
+        this.app_stack = this.app_stack.filter(id => id !== objId);
+        this.app_stack.push(objId);
+
+        this.updateStateAndWorkspace({ focused_windows });
     }
 
     addNewFolder = () => {
@@ -864,6 +1127,8 @@ export class Desktop extends Component {
     }
 
     render() {
+        const activeWorkspace = this.snapshotActiveWorkspace();
+        const displayIndex = this.state.displayOrder.indexOf(this.state.activeDisplayId);
         return (
             <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
 
@@ -887,19 +1152,17 @@ export class Desktop extends Component {
                     favourite_apps={this.state.favourite_apps}
                     showAllApps={this.showAllApps}
                     allAppsView={this.state.allAppsView}
-                    closed_windows={this.state.closed_windows}
-                    focused_windows={this.state.focused_windows}
-                    isMinimized={this.state.minimized_windows}
+                    workspace={activeWorkspace}
                     openAppByAppId={this.openApp} />
 
                 {/* Taskbar */}
                 <Taskbar
                     apps={apps}
-                    closed_windows={this.state.closed_windows}
-                    minimized_windows={this.state.minimized_windows}
-                    focused_windows={this.state.focused_windows}
+                    workspace={activeWorkspace}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    displayId={this.state.activeDisplayId}
+                    displayIndex={displayIndex >= 0 ? displayIndex : 0}
                 />
 
                 {/* Desktop Apps */}
@@ -974,5 +1237,14 @@ export class Desktop extends Component {
 
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
-    return <Desktop {...props} snapEnabled={snapEnabled} />;
+    const { session, setSession, resetSession } = useSession();
+    return (
+        <Desktop
+            {...props}
+            snapEnabled={snapEnabled}
+            session={session}
+            setSession={setSession}
+            clearSession={resetSession}
+        />
+    );
 }

@@ -1,12 +1,73 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
+import { ensureDisplayConfig, generateDisplayId, saveDisplayConfig } from '../../utils/displayState';
 
 export function Settings() {
     const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const [displays, setDisplays] = useState(() => ensureDisplayConfig());
+    const [activeDisplay, setActiveDisplay] = useState('display-1');
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
+
+    const persistDisplays = useCallback((list) => {
+        const sanitized = list.map((display, index) => {
+            const rawName = typeof display.name === 'string' ? display.name.trim() : '';
+            return { id: display.id, name: rawName || `Display ${index + 1}` };
+        });
+        saveDisplayConfig(sanitized);
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('desktop:displays-updated', { detail: sanitized }));
+        }
+        return sanitized;
+    }, []);
+
+    const handleDisplayNameChange = useCallback((id, value) => {
+        setDisplays((prev) => prev.map((display) => (display.id === id ? { ...display, name: value } : display)));
+    }, []);
+
+    const handleDisplayNameBlur = useCallback((id) => {
+        setDisplays((prev) => {
+            const updated = prev.map((display, index) => {
+                if (display.id !== id) return display;
+                const trimmed = typeof display.name === 'string' ? display.name.trim() : '';
+                return { ...display, name: trimmed || `Display ${index + 1}` };
+            });
+            return persistDisplays(updated);
+        });
+    }, [persistDisplays]);
+
+    const handleAddDisplay = useCallback(() => {
+        setDisplays((prev) => {
+            const id = generateDisplayId(prev);
+            const next = [...prev, { id, name: `Display ${prev.length + 1}` }];
+            return persistDisplays(next);
+        });
+    }, [persistDisplays]);
+
+    const handleRemoveDisplay = useCallback((id) => {
+        setDisplays((prev) => {
+            if (prev.length <= 1) return prev;
+            const next = prev.filter((display) => display.id !== id);
+            const sanitized = persistDisplays(next);
+            if (activeDisplay === id) {
+                const fallback = sanitized[0]?.id || 'display-1';
+                setActiveDisplay(fallback);
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('desktop:primary-display-change', { detail: fallback }));
+                }
+            }
+            return sanitized;
+        });
+    }, [activeDisplay, persistDisplays]);
+
+    const handleSetPrimary = useCallback((id) => {
+        setActiveDisplay(id);
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('desktop:primary-display-change', { detail: id }));
+        }
+    }, []);
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
 
@@ -42,6 +103,68 @@ export function Settings() {
     const accentText = useCallback(() => {
         return contrastRatio(accent, '#000000') > contrastRatio(accent, '#ffffff') ? '#000000' : '#ffffff';
     }, [accent, contrastRatio]);
+
+    useEffect(() => {
+        const syncFromDetail = (detail) => {
+            if (!detail) return;
+            if (Array.isArray(detail.displays) && detail.displays.length) {
+                setDisplays(detail.displays.map((display, index) => ({
+                    id: display.id,
+                    name: display.name || `Display ${index + 1}`,
+                })));
+            }
+            if (typeof detail.activeDisplay === 'string') {
+                setActiveDisplay(detail.activeDisplay);
+            }
+        };
+
+        const handleSessionUpdate = (event) => {
+            syncFromDetail(event?.detail);
+        };
+
+        const handleDisplaysUpdated = (event) => {
+            const detail = event?.detail;
+            if (Array.isArray(detail) && detail.length) {
+                setDisplays(detail.map((display, index) => ({
+                    id: display.id,
+                    name: display.name || `Display ${index + 1}`,
+                })));
+            }
+        };
+
+        const handlePrimaryDisplay = (event) => {
+            const detail = event?.detail;
+            const id = typeof detail === 'string' ? detail : detail?.id;
+            if (typeof id === 'string') {
+                setActiveDisplay(id);
+            }
+        };
+
+        if (typeof window !== 'undefined') {
+            window.addEventListener('desktop:session-updated', handleSessionUpdate);
+            window.addEventListener('desktop:displays-updated', handleDisplaysUpdated);
+            window.addEventListener('desktop:primary-display-change', handlePrimaryDisplay);
+            try {
+                const stored = window.localStorage.getItem('desktop-session');
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    syncFromDetail(parsed);
+                } else {
+                    syncFromDetail({ displays: ensureDisplayConfig(), activeDisplay: 'display-1' });
+                }
+            } catch {
+                // ignore sync errors
+            }
+        }
+
+        return () => {
+            if (typeof window !== 'undefined') {
+                window.removeEventListener('desktop:session-updated', handleSessionUpdate);
+                window.removeEventListener('desktop:displays-updated', handleDisplaysUpdated);
+                window.removeEventListener('desktop:primary-display-change', handlePrimaryDisplay);
+            }
+        };
+    }, []);
 
     useEffect(() => {
         let raf = requestAnimationFrame(() => {
@@ -219,6 +342,69 @@ export function Settings() {
                     ))
                 }
             </div>
+            <section className="w-full px-6 py-4 border-t border-gray-900">
+                <h2 className="text-lg text-ubt-grey mb-1">Displays &amp; Workspaces</h2>
+                <p className="text-sm text-ubt-grey mb-4">
+                    Manage saved workspaces for each connected display and choose which one is primary.
+                </p>
+                <ul className="space-y-3">
+                    {displays.map((display, index) => (
+                        <li key={display.id} className="bg-black bg-opacity-30 rounded-md p-3">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3">
+                                <label className="text-xs uppercase tracking-wide text-ubt-grey">
+                                    Display {index + 1}
+                                </label>
+                                <input
+                                    type="text"
+                                    value={display.name}
+                                    onChange={(e) => handleDisplayNameChange(display.id, e.target.value)}
+                                    onBlur={() => handleDisplayNameBlur(display.id)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            e.currentTarget.blur();
+                                        }
+                                    }}
+                                    className="mt-2 sm:mt-0 flex-1 bg-ub-cool-grey text-white px-2 py-1 rounded border border-ubt-cool-grey focus:outline-none focus:ring"
+                                    placeholder={`Display ${index + 1}`}
+                                />
+                            </div>
+                            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                                <button
+                                    type="button"
+                                    onClick={() => handleSetPrimary(display.id)}
+                                    className={(activeDisplay === display.id
+                                        ? 'border-ub-orange text-ub-orange cursor-default '
+                                        : 'border-ubt-grey text-ubt-grey hover:border-white hover:text-white ') +
+                                        'px-3 py-1 rounded border transition-colors'}
+                                    disabled={activeDisplay === display.id}
+                                >
+                                    {activeDisplay === display.id ? 'Primary display' : 'Set as primary'}
+                                </button>
+                                {displays.length > 1 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemoveDisplay(display.id)}
+                                        className="px-3 py-1 rounded border border-ubt-grey text-ubt-grey hover:text-white hover:border-white transition-colors"
+                                    >
+                                        Remove
+                                    </button>
+                                )}
+                                <span className="ml-auto text-ubt-grey">
+                                    {activeDisplay === display.id ? 'Current primary workspace' : 'Workspace saved'}
+                                </span>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+                <button
+                    type="button"
+                    onClick={handleAddDisplay}
+                    className="mt-4 px-3 py-1 rounded border border-ubt-grey text-ubt-grey hover:text-white hover:border-white transition-colors"
+                >
+                    Add display workspace
+                </button>
+            </section>
             <div className="flex justify-center my-4 border-t border-gray-900 pt-4 space-x-4">
                 <button
                     onClick={async () => {
