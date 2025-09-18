@@ -1,10 +1,17 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { protocolName } from '../../../components/apps/wireshark/utils';
 import FilterHelper from './FilterHelper';
 import presets from '../filters/presets.json';
 import LayerView from './LayerView';
+import type { Packet } from '../types';
+import { EXPORT_COLUMNS } from '../types';
+import {
+  packetsToCsv,
+  packetsToNdjson,
+  toStructuredPacket,
+} from '../utils/export';
 
 
 interface PcapViewerProps {
@@ -27,17 +34,6 @@ const toHex = (bytes: Uint8Array) =>
   Array.from(bytes, (b, i) =>
     `${b.toString(16).padStart(2, '0')}${(i + 1) % 16 === 0 ? '\n' : ' '}`
   ).join('');
-
-interface Packet {
-  timestamp: string;
-  src: string;
-  dest: string;
-  protocol: number;
-  info: string;
-  data: Uint8Array;
-  sport?: number;
-  dport?: number;
-}
 
 interface Layer {
   name: string;
@@ -234,6 +230,159 @@ const decodePacketLayers = (pkt: Packet): Layer[] => {
   return layers;
 };
 
+interface TimelineBounds {
+  min: number;
+  max: number;
+}
+
+interface TimelineSelection {
+  start: number;
+  end: number;
+}
+
+interface MiniTimelineProps {
+  packets: Packet[];
+  bounds: TimelineBounds;
+  selection: TimelineSelection;
+  onChange: (selection: TimelineSelection) => void;
+}
+
+const MiniTimeline: React.FC<MiniTimelineProps> = ({
+  packets,
+  bounds,
+  selection,
+  onChange,
+}) => {
+  const span = Math.max(bounds.max - bounds.min, Number.EPSILON);
+  const toPercent = useCallback(
+    (value: number) =>
+      Math.min(
+        100,
+        Math.max(0, ((value - bounds.min) / span) * 100)
+      ),
+    [bounds.min, span]
+  );
+
+  const startPercent = toPercent(selection.start);
+  const endPercent = toPercent(selection.end);
+  const lower = Math.min(startPercent, endPercent);
+  const upper = Math.max(startPercent, endPercent);
+  const step = span / Math.min(Math.max(packets.length, 50), 1000);
+  const sliderStep = Number.isFinite(step) && step > 0 ? step : 0.000001;
+
+  const formatValue = (value: number) => {
+    if (!Number.isFinite(value)) return '';
+    if (span < 1) return value.toFixed(6);
+    if (span < 100) return value.toFixed(3);
+    return value.toFixed(0);
+  };
+
+  const handleStart = (value: number) => {
+    const clamped = Math.min(Math.max(value, bounds.min), bounds.max);
+    const nextStart = Math.min(clamped, selection.end);
+    onChange({ start: nextStart, end: Math.max(selection.end, nextStart) });
+  };
+
+  const handleEnd = (value: number) => {
+    const clamped = Math.min(Math.max(value, bounds.min), bounds.max);
+    const nextEnd = Math.max(clamped, selection.start);
+    onChange({ start: Math.min(selection.start, nextEnd), end: nextEnd });
+  };
+
+  return (
+    <div className="w-full space-y-1" aria-label="Packet timeline selector">
+      <div className="flex justify-between text-[11px] text-gray-300">
+        <span>Start: {formatValue(selection.start)}</span>
+        <span>End: {formatValue(selection.end)}</span>
+      </div>
+      <div className="relative h-10 select-none">
+        <div className="absolute top-1/2 left-0 right-0 h-2 -translate-y-1/2 rounded bg-gray-700" />
+        <div
+          className="absolute top-1/2 h-2 -translate-y-1/2 rounded bg-blue-500/40"
+          style={{
+            left: `${lower}%`,
+            width: `${Math.max(upper - lower, 0.5)}%`,
+          }}
+        />
+        <div className="absolute inset-0 pointer-events-none">
+          {packets.map((pkt, idx) => {
+            const time = Number.parseFloat(pkt.timestamp);
+            if (!Number.isFinite(time)) return null;
+            const left = `${toPercent(time)}%`;
+            return (
+              <span
+                key={`${time}-${idx}`}
+                className="absolute bottom-0 h-2 w-px bg-gray-500/60"
+                style={{ left }}
+              />
+            );
+          })}
+        </div>
+        <input
+          type="range"
+          min={bounds.min}
+          max={bounds.max}
+          step={sliderStep}
+          value={selection.start}
+          onChange={(event) => handleStart(Number(event.target.value))}
+          className="timeline-handle absolute inset-0 z-10"
+          aria-label="Start timestamp"
+        />
+        <input
+          type="range"
+          min={bounds.min}
+          max={bounds.max}
+          step={sliderStep}
+          value={selection.end}
+          onChange={(event) => handleEnd(Number(event.target.value))}
+          className="timeline-handle absolute inset-0 z-20"
+          aria-label="End timestamp"
+        />
+      </div>
+      <style jsx>{`
+        .timeline-handle {
+          -webkit-appearance: none;
+          appearance: none;
+          background: transparent;
+          width: 100%;
+          height: 100%;
+        }
+        .timeline-handle::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 14px;
+          height: 14px;
+          border-radius: 9999px;
+          background: #60a5fa;
+          border: 2px solid #0f172a;
+          cursor: grab;
+        }
+        .timeline-handle:active::-webkit-slider-thumb {
+          cursor: grabbing;
+        }
+        .timeline-handle::-moz-range-thumb {
+          width: 14px;
+          height: 14px;
+          border-radius: 9999px;
+          background: #60a5fa;
+          border: 2px solid #0f172a;
+          cursor: grab;
+        }
+        .timeline-handle:active::-moz-range-thumb {
+          cursor: grabbing;
+        }
+        .timeline-handle::-webkit-slider-runnable-track {
+          -webkit-appearance: none;
+          background: transparent;
+        }
+        .timeline-handle::-moz-range-track {
+          background: transparent;
+        }
+      `}</style>
+    </div>
+  );
+};
+
 const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
   const [packets, setPackets] = useState<Packet[]>([]);
   const [filter, setFilter] = useState('');
@@ -246,6 +395,10 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     'Info',
   ]);
   const [dragCol, setDragCol] = useState<string | null>(null);
+  const [selection, setSelection] = useState<{ start: number; end: number } | null>(
+    null
+  );
+  const [exportMessage, setExportMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -289,16 +442,145 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     setSelected(null);
   };
 
-  const filtered = packets.filter((p) => {
-    if (!filter) return true;
-    const term = filter.toLowerCase();
+  const filtered = useMemo(() => {
+    return packets.filter((p) => {
+      if (!filter) return true;
+      const term = filter.toLowerCase();
+      return (
+        p.src.toLowerCase().includes(term) ||
+        p.dest.toLowerCase().includes(term) ||
+        protocolName(p.protocol).toLowerCase().includes(term) ||
+        (p.info || '').toLowerCase().includes(term)
+      );
+    });
+  }, [packets, filter]);
+
+  const timelineBounds = useMemo(() => {
+    if (!filtered.length) return null;
+    const times = filtered
+      .map((pkt) => Number.parseFloat(pkt.timestamp))
+      .filter((v) => Number.isFinite(v));
+    if (!times.length) return null;
+    return {
+      min: Math.min(...times),
+      max: Math.max(...times),
+    };
+  }, [filtered]);
+
+  useEffect(() => {
+    if (!timelineBounds) {
+      setSelection(null);
+      return;
+    }
+    setSelection((prev) => {
+      if (!prev) {
+        return { start: timelineBounds.min, end: timelineBounds.max };
+      }
+      const nextStart = Math.min(
+        Math.max(prev.start, timelineBounds.min),
+        timelineBounds.max
+      );
+      const nextEnd = Math.min(
+        Math.max(prev.end, timelineBounds.min),
+        timelineBounds.max
+      );
+      if (nextStart === prev.start && nextEnd === prev.end) {
+        return prev;
+      }
+      return {
+        start: Math.min(nextStart, nextEnd),
+        end: Math.max(nextStart, nextEnd),
+      };
+    });
+  }, [timelineBounds]);
+
+  useEffect(() => {
+    setExportMessage(null);
+  }, [filter, selection, packets]);
+
+  const visiblePackets = useMemo(() => {
+    if (!selection || !timelineBounds) return filtered;
+    return filtered.filter((pkt) => {
+      const time = Number.parseFloat(pkt.timestamp);
+      if (!Number.isFinite(time)) return true;
+      return time >= selection.start && time <= selection.end;
+    });
+  }, [filtered, selection, timelineBounds]);
+
+  const rangeActive = useMemo(() => {
+    if (!selection || !timelineBounds) return false;
+    const span = timelineBounds.max - timelineBounds.min;
+    const tolerance = Math.max(span * 0.0001, 0.0001);
     return (
-      p.src.toLowerCase().includes(term) ||
-      p.dest.toLowerCase().includes(term) ||
-      protocolName(p.protocol).toLowerCase().includes(term) ||
-      (p.info || '').toLowerCase().includes(term)
+      Math.abs(selection.start - timelineBounds.min) > tolerance ||
+      Math.abs(selection.end - timelineBounds.max) > tolerance
     );
-  });
+  }, [selection, timelineBounds]);
+
+  useEffect(() => {
+    if (selected === null) return;
+    if (selected >= visiblePackets.length) {
+      setSelected(visiblePackets.length ? 0 : null);
+    }
+  }, [selected, visiblePackets]);
+
+  const handleSelectionChange = useCallback(
+    (next: { start: number; end: number }) => {
+      setSelection((prev) => {
+        if (prev && prev.start === next.start && prev.end === next.end) {
+          return prev;
+        }
+        return next;
+      });
+    },
+    []
+  );
+
+  const handleExport = useCallback(
+    (format: 'ndjson' | 'csv') => {
+      if (!visiblePackets.length) {
+        alert('No packets match the current filter and time selection.');
+        return;
+      }
+      const structured = visiblePackets.map(toStructuredPacket);
+      if (structured.length !== visiblePackets.length) {
+        alert('Mismatch between visible packets and export selection.');
+        return;
+      }
+      const columnsList = EXPORT_COLUMNS.join(', ');
+      const rangeLabel =
+        selection && timelineBounds
+          ? rangeActive
+            ? `${selection.start.toFixed(6)} → ${selection.end.toFixed(6)}`
+            : 'Full capture'
+          : 'Full capture';
+      const confirmed = window.confirm(
+        `Export ${structured.length} packets with columns ${columnsList} for ${rangeLabel}?`
+      );
+      if (!confirmed) return;
+      const content =
+        format === 'ndjson'
+          ? packetsToNdjson(visiblePackets)
+          : packetsToCsv(visiblePackets);
+      const blob = new Blob([content], {
+        type:
+          format === 'ndjson'
+            ? 'application/x-ndjson'
+            : 'text/csv;charset=utf-8',
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download =
+        format === 'ndjson' ? 'wireshark-export.ndjson' : 'wireshark-export.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+      setExportMessage(
+        `Exported ${structured.length} packets (${columnsList}) for ${rangeLabel}.`
+      );
+    },
+    [rangeActive, selection, timelineBounds, visiblePackets]
+  );
 
   return (
     <div className="p-4 text-white bg-ub-cool-grey h-full w-full flex flex-col space-y-2">
@@ -369,6 +651,41 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
               ))}
             </div>
           )}
+          <div className="flex items-center gap-2 text-xs text-gray-200">
+            <span>
+              Showing {visiblePackets.length}{' '}
+              {rangeActive ? 'filtered' : 'total'} packets
+            </span>
+            <button
+              type="button"
+              onClick={() => handleExport('ndjson')}
+              className="px-2 py-1 bg-gray-700 rounded"
+            >
+              Download NDJSON
+            </button>
+            <button
+              type="button"
+              onClick={() => handleExport('csv')}
+              className="px-2 py-1 bg-gray-700 rounded"
+            >
+              Download CSV
+            </button>
+            {exportMessage && (
+              <span aria-live="polite" className="text-green-400">
+                {exportMessage}
+              </span>
+            )}
+          </div>
+
+          {timelineBounds && selection && (
+            <MiniTimeline
+              packets={filtered}
+              bounds={timelineBounds}
+              selection={selection}
+              onChange={handleSelectionChange}
+            />
+          )}
+
           <div className="flex flex-1 overflow-hidden space-x-2">
             <div className="overflow-auto flex-1">
               <table className="text-xs w-full font-mono">
@@ -397,7 +714,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((pkt, i) => (
+                  {visiblePackets.map((pkt, i) => (
                     <tr
                       key={i}
                       className={`cursor-pointer hover:bg-gray-700 ${
@@ -442,10 +759,10 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
             <div className="flex-1 bg-black overflow-auto p-2 text-xs font-mono space-y-1">
               {selected !== null ? (
                 <>
-                  {decodePacketLayers(filtered[selected]).map((layer, i) => (
+                  {decodePacketLayers(visiblePackets[selected]).map((layer, i) => (
                     <LayerView key={i} name={layer.name} fields={layer.fields} />
                   ))}
-                  <pre className="text-green-400">{toHex(filtered[selected].data)}</pre>
+                  <pre className="text-green-400">{toHex(visiblePackets[selected].data)}</pre>
                 </>
               ) : (
                 'Select a packet'
