@@ -55,6 +55,32 @@ export class Desktop extends Component {
         }
     }
 
+    getSafeModeDisabledSet = () => {
+        const ids = Array.isArray(this.props.safeDisabledAppIds) ? this.props.safeDisabledAppIds : [];
+        return new Set(ids);
+    }
+
+    areSameIds = (prevIds, nextIds) => {
+        const prevList = Array.isArray(prevIds) ? [...prevIds].sort() : [];
+        const nextList = Array.isArray(nextIds) ? [...nextIds].sort() : [];
+        if (prevList.length !== nextList.length) return false;
+        for (let index = 0; index < prevList.length; index += 1) {
+            if (prevList[index] !== nextList[index]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    applySafeModeOverrides = () => {
+        const safeModeDisabled = this.getSafeModeDisabledSet();
+        const disabled_apps = {};
+        apps.forEach((app) => {
+            disabled_apps[app.id] = app.disabled || safeModeDisabled.has(app.id);
+        });
+        this.setState({ disabled_apps });
+    }
+
     componentDidMount() {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
@@ -96,6 +122,15 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+    }
+
+    componentDidUpdate(prevProps) {
+        if (
+            prevProps.safeMode !== this.props.safeMode ||
+            !this.areSameIds(prevProps.safeDisabledAppIds, this.props.safeDisabledAppIds)
+        ) {
+            this.applySafeModeOverrides();
+        }
     }
 
     checkForNewFolders = () => {
@@ -352,6 +387,7 @@ export class Desktop extends Component {
             safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps));
         }
         let focused_windows = {}, closed_windows = {}, disabled_apps = {}, favourite_apps = {}, overlapped_windows = {}, minimized_windows = {};
+        const safeModeDisabled = this.getSafeModeDisabledSet();
         let desktop_apps = [];
         apps.forEach((app) => {
             focused_windows = {
@@ -364,7 +400,7 @@ export class Desktop extends Component {
             };
             disabled_apps = {
                 ...disabled_apps,
-                [app.id]: app.disabled,
+                [app.id]: app.disabled || safeModeDisabled.has(app.id),
             };
             favourite_apps = {
                 ...favourite_apps,
@@ -396,6 +432,7 @@ export class Desktop extends Component {
 
     updateAppsData = () => {
         let focused_windows = {}, closed_windows = {}, favourite_apps = {}, minimized_windows = {}, disabled_apps = {};
+        const safeModeDisabled = this.getSafeModeDisabledSet();
         let desktop_apps = [];
         apps.forEach((app) => {
             focused_windows = {
@@ -408,7 +445,7 @@ export class Desktop extends Component {
             };
             disabled_apps = {
                 ...disabled_apps,
-                [app.id]: app.disabled
+                [app.id]: app.disabled || safeModeDisabled.has(app.id)
             };
             closed_windows = {
                 ...closed_windows,
