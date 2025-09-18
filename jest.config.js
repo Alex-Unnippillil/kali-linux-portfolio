@@ -2,6 +2,8 @@ const nextJest = require('next/jest');
 
 const createJestConfig = nextJest({ dir: './' });
 
+const esmModules = ['unified', 'remark-parse', 'remark-gfm', 'remark-rehype', 'rehype-stringify'];
+
 const customJestConfig = {
   testEnvironment: 'jest-environment-jsdom',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
@@ -15,6 +17,7 @@ const customJestConfig = {
     '<rootDir>/__tests__/playwright/',
     '<rootDir>/tests/',
   ],
+  transformIgnorePatterns: [`/node_modules/(?!(${esmModules.join('|')})/)`],
 };
 
 module.exports = createJestConfig(customJestConfig);
