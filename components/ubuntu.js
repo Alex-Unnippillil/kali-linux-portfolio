@@ -7,30 +7,52 @@ import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
+import CommandLauncher from './menu/CommandLauncher';
 
 export default class Ubuntu extends Component {
-	constructor() {
-		super();
-		this.state = {
-			screen_locked: false,
-			bg_image_name: 'wall-2',
-			booting_screen: true,
-			shutDownScreen: false
-		};
-	}
+        constructor() {
+                super();
+                this.state = {
+                        screen_locked: false,
+                        bg_image_name: 'wall-2',
+                        booting_screen: true,
+                        shutDownScreen: false,
+                        commandLauncherOpen: false,
+                        commandLauncherActivation: 0
+                };
+        }
 
-	componentDidMount() {
-		this.getLocalData();
-	}
+        componentDidMount() {
+                this.getLocalData();
+                window.addEventListener('keydown', this.handleGlobalKeyDown);
+        }
 
-	setTimeOutBootScreen = () => {
-		setTimeout(() => {
-			this.setState({ booting_screen: false });
-		}, 2000);
-	};
+        componentWillUnmount() {
+                window.removeEventListener('keydown', this.handleGlobalKeyDown);
+        }
 
-	getLocalData = () => {
-		// Get Previously selected Background Image
+        setTimeOutBootScreen = () => {
+                setTimeout(() => {
+                        this.setState({ booting_screen: false });
+                }, 2000);
+        };
+
+        handleGlobalKeyDown = (event) => {
+                if (event.altKey && !event.ctrlKey && !event.shiftKey && !event.metaKey && event.key === 'F2') {
+                        event.preventDefault();
+                        this.setState({
+                                commandLauncherOpen: true,
+                                commandLauncherActivation: Date.now()
+                        });
+                }
+        };
+
+        closeCommandLauncher = () => {
+                this.setState({ commandLauncherOpen: false });
+        };
+
+        getLocalData = () => {
+                // Get Previously selected Background Image
                 let bg_image_name = safeLocalStorage?.getItem('bg-image');
 		if (bg_image_name !== null && bg_image_name !== undefined) {
 			this.setState({ bg_image_name });
@@ -69,11 +91,11 @@ export default class Ubuntu extends Component {
                 const statusBar = document.getElementById('status-bar');
                 // Consider using a React ref if the status bar element lives within this component tree
                 statusBar?.blur();
-		setTimeout(() => {
-			this.setState({ screen_locked: true });
-		}, 100); // waiting for all windows to close (transition-duration)
+                setTimeout(() => {
+                        this.setState({ screen_locked: true, commandLauncherOpen: false });
+                }, 100); // waiting for all windows to close (transition-duration)
                 safeLocalStorage?.setItem('screen-locked', true);
-	};
+        };
 
 	unLockScreen = () => {
 		ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
@@ -101,9 +123,9 @@ export default class Ubuntu extends Component {
                 const statusBar = document.getElementById('status-bar');
                 // Consider using a React ref if the status bar element lives within this component tree
                 statusBar?.blur();
-		this.setState({ shutDownScreen: true });
+                this.setState({ shutDownScreen: true, commandLauncherOpen: false });
                 safeLocalStorage?.setItem('shut-down', true);
-	};
+        };
 
 	turnOn = () => {
 		ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
@@ -121,14 +143,19 @@ export default class Ubuntu extends Component {
 					bgImgName={this.state.bg_image_name}
 					unLockScreen={this.unLockScreen}
 				/>
-				<BootingScreen
-					visible={this.state.booting_screen}
-					isShutDown={this.state.shutDownScreen}
-					turnOn={this.turnOn}
-				/>
-				<Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
-				<Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
-			</div>
-		);
-	}
+                                <BootingScreen
+                                        visible={this.state.booting_screen}
+                                        isShutDown={this.state.shutDownScreen}
+                                        turnOn={this.turnOn}
+                                />
+                                <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
+                                <Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
+                                <CommandLauncher
+                                        open={this.state.commandLauncherOpen}
+                                        onClose={this.closeCommandLauncher}
+                                        activationToken={this.state.commandLauncherActivation}
+                                />
+                        </div>
+                );
+        }
 }
