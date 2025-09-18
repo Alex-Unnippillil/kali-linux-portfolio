@@ -1,10 +1,13 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { protocolName } from '../../../components/apps/wireshark/utils';
 import FilterHelper from './FilterHelper';
 import presets from '../filters/presets.json';
 import LayerView from './LayerView';
+import TrafficChart from './TrafficChart';
+import { aggregateTraffic } from './trafficStats';
+import type { Packet } from './trafficTypes';
 
 
 interface PcapViewerProps {
@@ -27,17 +30,6 @@ const toHex = (bytes: Uint8Array) =>
   Array.from(bytes, (b, i) =>
     `${b.toString(16).padStart(2, '0')}${(i + 1) % 16 === 0 ? '\n' : ' '}`
   ).join('');
-
-interface Packet {
-  timestamp: string;
-  src: string;
-  dest: string;
-  protocol: number;
-  info: string;
-  data: Uint8Array;
-  sport?: number;
-  dport?: number;
-}
 
 interface Layer {
   name: string;
@@ -96,6 +88,7 @@ const parsePcap = (buf: ArrayBuffer): Packet[] => {
       sport: meta.sport,
       dport: meta.dport,
       data,
+      length: origLen || capLen,
     });
     offset += capLen;
   }
@@ -140,6 +133,7 @@ const parsePcapNg = (buf: ArrayBuffer): Packet[] => {
       const tsHigh = view.getUint32(offset + 12, little);
       const tsLow = view.getUint32(offset + 16, little);
       const capLen = view.getUint32(offset + 20, little);
+      const origLen = view.getUint32(offset + 24, little);
       const dataStart = offset + 28;
       const data = new Uint8Array(buf.slice(dataStart, dataStart + capLen));
       const meta: any = parseEthernetIpv4(data);
@@ -154,6 +148,7 @@ const parsePcapNg = (buf: ArrayBuffer): Packet[] => {
         sport: meta.sport,
         dport: meta.dport,
         data,
+        length: origLen || capLen,
       });
     }
 
@@ -246,6 +241,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     'Info',
   ]);
   const [dragCol, setDragCol] = useState<string | null>(null);
+  const [pauseCharts, setPauseCharts] = useState(false);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -289,16 +285,22 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     setSelected(null);
   };
 
-  const filtered = packets.filter((p) => {
-    if (!filter) return true;
-    const term = filter.toLowerCase();
-    return (
-      p.src.toLowerCase().includes(term) ||
-      p.dest.toLowerCase().includes(term) ||
-      protocolName(p.protocol).toLowerCase().includes(term) ||
-      (p.info || '').toLowerCase().includes(term)
-    );
-  });
+  const filtered = useMemo(() => {
+    return packets.filter((p) => {
+      if (!filter) return true;
+      const term = filter.toLowerCase();
+      return (
+        p.src.toLowerCase().includes(term) ||
+        p.dest.toLowerCase().includes(term) ||
+        protocolName(p.protocol).toLowerCase().includes(term) ||
+        (p.info || '').toLowerCase().includes(term)
+      );
+    });
+  }, [packets, filter]);
+
+  const traffic = useMemo(() => aggregateTraffic(filtered), [filtered]);
+  const topSources = traffic.sources.slice(0, 8);
+  const topDestinations = traffic.destinations.slice(0, 8);
 
   return (
     <div className="p-4 text-white bg-ub-cool-grey h-full w-full flex flex-col space-y-2">
@@ -369,6 +371,30 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
               ))}
             </div>
           )}
+          <div className="space-y-3 rounded border border-gray-800 bg-gray-900/70 p-3">
+            <div className="flex flex-col gap-2 text-xs text-gray-200 sm:flex-row sm:items-center sm:justify-between">
+              <span className="font-semibold uppercase tracking-wide text-gray-300">
+                Traffic summary
+              </span>
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={pauseCharts}
+                  onChange={(e) => setPauseCharts(e.target.checked)}
+                  className="h-3 w-3 rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-400"
+                />
+                <span>Pause charts</span>
+              </label>
+            </div>
+            <div className="grid gap-3 lg:grid-cols-2">
+              <TrafficChart title="Top Sources" data={topSources} paused={pauseCharts} />
+              <TrafficChart
+                title="Top Destinations"
+                data={topDestinations}
+                paused={pauseCharts}
+              />
+            </div>
+          </div>
           <div className="flex flex-1 overflow-hidden space-x-2">
             <div className="overflow-auto flex-1">
               <table className="text-xs w-full font-mono">
