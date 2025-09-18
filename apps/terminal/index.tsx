@@ -9,6 +9,7 @@ import React, {
   useCallback,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
+import ASCII_DRAGON from '../../data/terminal/ascii-dragon';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
 
@@ -76,6 +77,8 @@ const files: Record<string, string> = {
   'README.md': 'Welcome to the web terminal.\nThis is a fake file used for demos.',
 };
 
+const BANNER_STORAGE_KEY = 'apps.terminal.bannerDisabled';
+
 const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<any>(null);
@@ -101,9 +104,12 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [bannerEnabled, setBannerEnabled] = useState(true);
+  const [bannerPreferenceLoaded, setBannerPreferenceLoaded] = useState(false);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
+  const initializationDoneRef = useRef(false);
   const [overflow, setOverflow] = useState({ top: false, bottom: false });
   const ansiColors = [
     '#000000',
@@ -192,6 +198,31 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   );
 
   contextRef.current.runWorker = runWorker;
+
+  useEffect(() => {
+    let storedDisabled = false;
+    try {
+      storedDisabled =
+        window.localStorage.getItem(BANNER_STORAGE_KEY) === 'true';
+    } catch {
+      storedDisabled = false;
+    }
+    setBannerEnabled(!storedDisabled);
+    setBannerPreferenceLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!bannerPreferenceLoaded) return;
+    try {
+      if (bannerEnabled) {
+        window.localStorage.removeItem(BANNER_STORAGE_KEY);
+      } else {
+        window.localStorage.setItem(BANNER_STORAGE_KEY, 'true');
+      }
+    } catch {
+      // Ignore storage errors.
+    }
+  }, [bannerEnabled, bannerPreferenceLoaded]);
 
   useEffect(() => {
     registryRef.current = {
@@ -294,6 +325,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   }));
 
   useEffect(() => {
+    if (!bannerPreferenceLoaded || initializationDoneRef.current) return;
+    initializationDoneRef.current = true;
     let disposed = false;
     (async () => {
       const [{ Terminal: XTerm }, { FitAddon }, { SearchAddon }] = await Promise.all([
@@ -340,8 +373,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
             : `${existing}\n`;
         }
       }
-      writeLine('Welcome to the web terminal!');
-      writeLine('Type "help" to see available commands.');
+      if (bannerEnabled) {
+        ASCII_DRAGON.split('\n').forEach((line) => {
+          writeLine(line);
+        });
+        writeLine('');
+        writeLine('Welcome to the web terminal!');
+        writeLine('Type "help" to see available commands.');
+      }
       prompt();
       term.onData((d: string) => handleInput(d));
       term.onKey(({ domEvent }: any) => {
@@ -378,7 +417,18 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       disposed = true;
       termRef.current?.dispose();
     };
-    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow]);
+  }, [
+    autocomplete,
+    bannerEnabled,
+    bannerPreferenceLoaded,
+    getDir,
+    handleInput,
+    opfsSupported,
+    prompt,
+    readFile,
+    updateOverflow,
+    writeLine,
+  ]);
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();
@@ -457,6 +507,16 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               <span className="text-green-400">script.sh</span>{' '}
               <span className="text-gray-300">README.md</span>
             </pre>
+            <label className="flex items-center gap-2 text-white text-sm">
+              <input
+                type="checkbox"
+                className="h-4 w-4"
+                checked={bannerEnabled}
+                disabled={!bannerPreferenceLoaded}
+                onChange={(event) => setBannerEnabled(event.target.checked)}
+              />
+              <span>Show welcome banner on start</span>
+            </label>
             <div className="flex justify-end gap-2">
               <button
                 className="px-2 py-1 bg-gray-700 rounded"
