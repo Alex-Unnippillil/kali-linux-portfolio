@@ -14,7 +14,18 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  telemetry: false,
+  diagnostics: true,
 };
+
+function safeLocalStorage() {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
 
 export async function getAccent() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.accent;
@@ -123,6 +134,32 @@ export async function setAllowNetwork(value) {
   window.localStorage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getTelemetryEnabled() {
+  const storage = safeLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.telemetry;
+  const stored = storage.getItem('telemetry-enabled');
+  return stored === null ? DEFAULT_SETTINGS.telemetry : stored === 'true';
+}
+
+export async function setTelemetryEnabled(value) {
+  const storage = safeLocalStorage();
+  if (!storage) return;
+  storage.setItem('telemetry-enabled', value ? 'true' : 'false');
+}
+
+export async function getDiagnosticsEnabled() {
+  const storage = safeLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.diagnostics;
+  const stored = storage.getItem('diagnostics-enabled');
+  return stored === null ? DEFAULT_SETTINGS.diagnostics : stored === 'true';
+}
+
+export async function setDiagnosticsEnabled(value) {
+  const storage = safeLocalStorage();
+  if (!storage) return;
+  storage.setItem('diagnostics-enabled', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -137,6 +174,8 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('telemetry-enabled');
+  window.localStorage.removeItem('diagnostics-enabled');
 }
 
 export async function exportSettings() {
@@ -151,6 +190,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    telemetry,
+    diagnostics,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +203,8 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getTelemetryEnabled(),
+    getDiagnosticsEnabled(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +218,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    telemetry,
+    diagnostics,
     theme,
   });
 }
@@ -199,6 +244,8 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    telemetry,
+    diagnostics,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +258,8 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (telemetry !== undefined) await setTelemetryEnabled(telemetry);
+  if (diagnostics !== undefined) await setDiagnosticsEnabled(diagnostics);
   if (theme !== undefined) setTheme(theme);
 }
 

@@ -4,9 +4,10 @@ import TerminalOutput from './TerminalOutput';
 interface BuilderProps {
   doc: string;
   build: (params: Record<string, string>) => string;
+  canCopy?: boolean;
 }
 
-export default function CommandBuilder({ doc, build }: BuilderProps) {
+export default function CommandBuilder({ doc, build, canCopy = true }: BuilderProps) {
   const [params, setParams] = useState<Record<string, string>>({});
   const update = (key: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setParams({ ...params, [key]: e.target.value });
@@ -36,7 +37,7 @@ export default function CommandBuilder({ doc, build }: BuilderProps) {
         />
       </label>
       <div className="mt-2">
-        <TerminalOutput text={command} ariaLabel="command output" />
+        <TerminalOutput text={command} ariaLabel="command output" canCopy={canCopy} />
       </div>
     </form>
   );
