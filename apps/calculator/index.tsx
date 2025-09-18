@@ -30,6 +30,7 @@ export default function Calculator() {
     let memoryAdd: any;
     let memorySubtract: any;
     let memoryRecall: any;
+    let memoryClear: any;
     let formatBase: any;
     let getLastResult: any;
     let setBase: any;
@@ -49,6 +50,7 @@ export default function Calculator() {
       memoryAdd = mod.memoryAdd;
       memorySubtract = mod.memorySubtract;
       memoryRecall = mod.memoryRecall;
+      memoryClear = mod.memoryClear;
       formatBase = mod.formatBase;
       getLastResult = mod.getLastResult;
       setBase = mod.setBase;
@@ -121,6 +123,11 @@ export default function Calculator() {
 
           if (action === 'mr') {
             display.value = formatBase(memoryRecall());
+            return;
+          }
+
+          if (action === 'mc') {
+            memoryClear();
             return;
           }
 
@@ -197,10 +204,11 @@ export default function Calculator() {
       <button id="toggle-programmer" className="toggle h-12" aria-pressed="false" aria-label="toggle programmer mode">Programmer</button>
       <button id="toggle-history" className="toggle h-12" aria-pressed="false" aria-label="toggle history">History</button>
       <button id="toggle-formulas" className="toggle h-12" aria-pressed="false" aria-label="toggle formulas">Formulas</button>
-      <div className="memory-grid grid grid-cols-3" aria-label="memory functions">
+      <div className="memory-grid grid grid-cols-4" aria-label="memory functions">
         <button className={btnCls} data-action="mplus" aria-label="add to memory">M+</button>
         <button className={btnCls} data-action="mminus" aria-label="subtract from memory">M&minus;</button>
         <button className={btnCls} data-action="mr" aria-label="recall memory">MR</button>
+        <button className={btnCls} data-action="mc" aria-label="clear memory">MC</button>
       </div>
       <MemorySlots />
       <div className="button-grid grid grid-cols-4 font-mono" aria-label="calculator keypad">

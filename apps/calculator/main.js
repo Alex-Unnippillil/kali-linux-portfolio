@@ -1,11 +1,56 @@
 // Shunting-yard evaluator and tokenizer for the calculator
 // Exposes pure functions without DOM dependencies
 
+const Decimal = require('decimal.js');
+const { dispatchStatusToast } = require('../../utils/statusToast');
+
 let preciseMode = false;
 let programmerMode = false;
 let currentBase = 10;
 let lastResult = 0;
-let memory = 0;
+let memory = new Decimal(0);
+
+function notifyMemory(message) {
+  if (typeof dispatchStatusToast === 'function' && message) {
+    dispatchStatusToast(message);
+  }
+}
+
+function currentMemoryString() {
+  try {
+    return memory.toString();
+  } catch {
+    return '0';
+  }
+}
+
+function parseMemoryOperand(value) {
+  if (programmerMode) {
+    const num = parseInt(String(value), currentBase);
+    if (Number.isNaN(num)) return null;
+    return new Decimal(num);
+  }
+  try {
+    return new Decimal(value);
+  } catch {
+    return null;
+  }
+}
+
+function applyMemoryOperation(expr, operation) {
+  let evaluated;
+  try {
+    evaluated = evaluate(expr);
+  } catch {
+    return currentMemoryString();
+  }
+  const operand = parseMemoryOperand(evaluated);
+  if (!operand) return currentMemoryString();
+  memory = operation === 'add' ? memory.add(operand) : memory.sub(operand);
+  const stored = currentMemoryString();
+  notifyMemory(`Memory updated: ${stored}`);
+  return stored;
+}
 
 function setPreciseMode(on) {
   preciseMode = on;
@@ -14,10 +59,8 @@ function setPreciseMode(on) {
       preciseMode ? { number: 'BigNumber', precision: 64 } : { number: 'number' }
     );
     if (preciseMode) {
-      memory = math.bignumber(memory);
       lastResult = math.bignumber(lastResult);
     } else {
-      memory = math.number(memory);
       lastResult = math.number(lastResult);
     }
   }
@@ -263,29 +306,21 @@ function evaluate(expression, vars = {}) {
 }
 
 function memoryAdd(expr) {
-  const val = evaluate(expr);
-  const num = programmerMode
-    ? parseInt(val, currentBase)
-    : preciseMode
-      ? math.bignumber(val)
-      : parseFloat(val);
-  memory = preciseMode ? math.add(memory, num) : memory + num;
-  return memory;
+  return applyMemoryOperation(expr, 'add');
 }
 
 function memorySubtract(expr) {
-  const val = evaluate(expr);
-  const num = programmerMode
-    ? parseInt(val, currentBase)
-    : preciseMode
-      ? math.bignumber(val)
-      : parseFloat(val);
-  memory = preciseMode ? math.subtract(memory, num) : memory - num;
-  return memory;
+  return applyMemoryOperation(expr, 'subtract');
 }
 
 function memoryRecall() {
-  return preciseMode ? memory.toString() : memory;
+  return currentMemoryString();
+}
+
+function memoryClear() {
+  memory = new Decimal(0);
+  notifyMemory('Memory cleared');
+  return currentMemoryString();
 }
 
 function getLastResult() {
@@ -305,5 +340,6 @@ module.exports = {
   memoryAdd,
   memorySubtract,
   memoryRecall,
+  memoryClear,
   getLastResult,
 };
