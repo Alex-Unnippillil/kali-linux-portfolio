@@ -27,7 +27,7 @@ type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
-  '#1793d1', // kali blue (default)
+  '#367bf0', // kali blue (default)
   '#e53e3e', // red
   '#d97706', // orange
   '#38a169', // green
@@ -136,15 +136,21 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [theme]);
 
   useEffect(() => {
-    const border = shadeColor(accent, -0.2);
+    const darker = shadeColor(accent, -0.2);
+    const muted = shadeColor(accent, 0.12);
+    const selection = shadeColor(accent, 0.25);
     const vars: Record<string, string> = {
-      '--color-ub-orange': accent,
-      '--color-ub-border-orange': border,
       '--color-primary': accent,
+      '--color-primary-strong': darker,
+      '--color-primary-muted': muted,
       '--color-accent': accent,
       '--color-focus-ring': accent,
-      '--color-selection': accent,
+      '--color-selection': selection,
       '--color-control-accent': accent,
+      '--color-kali-primary-600': darker,
+      '--color-kali-primary-500': accent,
+      '--color-kali-primary-400': muted,
+      '--color-kali-primary-300': selection,
     };
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);

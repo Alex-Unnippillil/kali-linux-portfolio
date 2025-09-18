@@ -526,7 +526,9 @@ textarea:focus-visible {
 }
 
 /* High contrast overrides */
-.high-contrast .bg-ub-orange {
+.high-contrast .bg-ub-orange,
+.high-contrast .bg-accent,
+.high-contrast .bg-kali-primary-500 {
     color: #000 !important;
 }
 

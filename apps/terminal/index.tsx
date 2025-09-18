@@ -303,6 +303,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       ]);
       await import('@xterm/xterm/css/xterm.css');
       if (disposed) return;
+      const rootStyles = getComputedStyle(document.documentElement);
+      const getVar = (name: string, fallback: string) =>
+        (rootStyles.getPropertyValue(name) || fallback).trim() || fallback;
       const term = new XTerm({
         cursorBlink: true,
         scrollback: 1000,
@@ -310,9 +313,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         rows: 24,
         fontFamily: '"Fira Code", monospace',
         theme: {
-          background: '#0f1317',
-          foreground: '#f5f5f5',
-          cursor: '#1793d1',
+          background: getVar('--color-bg', '#0f1317'),
+          foreground: getVar('--color-text', '#f5f5f5'),
+          cursor: getVar('--color-primary', '#367bf0'),
         },
       });
       const fit = new FitAddon();
