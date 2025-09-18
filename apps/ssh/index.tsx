@@ -2,8 +2,16 @@
 
 import React, { useRef, useState } from 'react';
 import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
+import PortForwardPanel from './components/PortForwardPanel';
 
-const SSHBuilder: React.FC = () => {
+const createProfileId = () =>
+  `ssh-session-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+interface SSHBuilderProps {
+  profileId: string;
+}
+
+const SSHBuilder: React.FC<SSHBuilderProps> = ({ profileId }) => {
   const [user, setUser] = useState('');
   const [host, setHost] = useState('');
   const [port, setPort] = useState('');
@@ -68,6 +76,7 @@ const SSHBuilder: React.FC = () => {
           {command || '# Fill in the form to generate a command'}
         </pre>
       </div>
+      <PortForwardPanel profileId={profileId} />
     </div>
   );
 };
@@ -76,8 +85,8 @@ const SSHPreview: React.FC = () => {
   const countRef = useRef(1);
 
   const createTab = (): TabDefinition => {
-    const id = Date.now().toString();
-    return { id, title: `Session ${countRef.current++}`, content: <SSHBuilder /> };
+    const id = createProfileId();
+    return { id, title: `Session ${countRef.current++}`, content: <SSHBuilder profileId={id} /> };
   };
 
   return (

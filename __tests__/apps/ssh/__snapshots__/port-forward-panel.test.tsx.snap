@@ -1,0 +1,111 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`PortForwardPanel matches the snapshot for an empty profile 1`] = `
+<DocumentFragment>
+  <section
+    class="mt-6 rounded border border-gray-700 bg-gray-900 p-4"
+  >
+    <div
+      class="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
+    >
+      <div>
+        <h2
+          class="text-lg font-semibold text-white"
+        >
+          Port Forwarding
+        </h2>
+        <p
+          class="text-sm text-gray-300"
+        >
+          Define local and remote forwards. This panel simulates SSH listeners and does not open real sockets.
+        </p>
+      </div>
+    </div>
+    <form
+      class="mb-4 grid gap-4 md:grid-cols-[auto,1fr,1fr,auto] md:items-end"
+    >
+      <div
+        class="flex flex-col"
+      >
+        <span
+          class="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400"
+        >
+          Type
+        </span>
+        <button
+          aria-label="Toggle forward direction"
+          class="rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white hover:border-gray-400"
+          type="button"
+        >
+          Local → Remote
+        </button>
+      </div>
+      <label
+        class="flex flex-col"
+        for="«r0»-source-port"
+      >
+        <span
+          class="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400"
+        >
+          Source port
+        </span>
+        <input
+          class="rounded border border-gray-600 bg-gray-800 p-2 text-white focus:border-blue-500 focus:outline-none"
+          id="«r0»-source-port"
+          min="1"
+          type="number"
+          value="8080"
+        />
+      </label>
+      <label
+        class="flex flex-col"
+        for="«r0»-destination-host"
+      >
+        <span
+          class="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400"
+        >
+          Destination host
+        </span>
+        <input
+          class="rounded border border-gray-600 bg-gray-800 p-2 text-white focus:border-blue-500 focus:outline-none"
+          id="«r0»-destination-host"
+          type="text"
+          value="127.0.0.1"
+        />
+      </label>
+      <label
+        class="flex flex-col"
+        for="«r0»-destination-port"
+      >
+        <span
+          class="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400"
+        >
+          Destination port
+        </span>
+        <div
+          class="flex gap-2"
+        >
+          <input
+            class="w-full rounded border border-gray-600 bg-gray-800 p-2 text-white focus:border-blue-500 focus:outline-none"
+            id="«r0»-destination-port"
+            min="1"
+            type="number"
+            value="80"
+          />
+          <button
+            class="whitespace-nowrap rounded bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500"
+            type="submit"
+          >
+            Add Forward
+          </button>
+        </div>
+      </label>
+    </form>
+    <p
+      class="text-sm text-gray-400"
+    >
+      No forwards defined yet. Add one above to start listening.
+    </p>
+  </section>
+</DocumentFragment>
+`;
