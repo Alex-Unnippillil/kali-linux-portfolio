@@ -109,6 +109,7 @@ const OpenVASApp = createDynamicApp('openvas', 'OpenVAS');
 const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
 const SecurityToolsApp = createDynamicApp('security-tools', 'Security Tools');
 const SSHApp = createDynamicApp('ssh', 'SSH Command Builder');
+const SshManagerApp = createDynamicApp('ssh-manager', 'SSH Key Manager');
 const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
 const HtmlRewriteApp = createDynamicApp('html-rewriter', 'HTML Rewriter');
 const ContactApp = createDynamicApp('contact', 'Contact');
@@ -194,6 +195,7 @@ const displayOpenVAS = createDisplay(OpenVASApp);
 const displayReconNG = createDisplay(ReconNGApp);
 const displaySecurityTools = createDisplay(SecurityToolsApp);
 const displaySSH = createDisplay(SSHApp);
+const displaySshManager = createDisplay(SshManagerApp);
 const displayHTTP = createDisplay(HTTPApp);
 const displayHtmlRewrite = createDisplay(HtmlRewriteApp);
 const displayContact = createDisplay(ContactApp);
@@ -888,6 +890,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displaySSH,
+  },
+  {
+    id: 'ssh-manager',
+    title: 'SSH Key Manager',
+    icon: '/themes/Yaru/apps/ssh.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySshManager,
   },
   {
     id: 'http',
