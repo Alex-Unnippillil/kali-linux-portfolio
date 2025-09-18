@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import GameShell from '../../components/games/GameShell';
 import { toPng } from 'html-to-image';
 import useOPFSLeaderboard from '../../hooks/useOPFSLeaderboard';
@@ -14,9 +14,11 @@ import {
   moveUp,
   moveDown,
   boardsEqual,
+  cloneBoard,
 } from '../../apps/games/_2048/logic';
 import { reset, serialize, deserialize } from '../../apps/games/rng';
-import { startRecording, recordMove, downloadReplay } from './replay';
+import Modal from '../../components/base/Modal';
+import { startRecording, recordMove, undoRecord, downloadReplay } from './replay';
 
 // limit of undo operations per game
 const UNDO_LIMIT = 5;
@@ -51,15 +53,39 @@ const SKINS: Record<string, Record<number, string>> = {
   },
 };
 
-type HistoryEntry = { board: Board; rng: string; score: number };
+type Direction = 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown';
+type UndoState = { board: Board; rng: string; score: number } | null;
+type ReplaySession = {
+  seed: string;
+  size: number;
+  start: { board: Board; rng: string };
+  moves: Direction[];
+};
+type GameHistoryEntry = ReplaySession & {
+  undo: UndoState;
+  completed: boolean;
+};
 
 const emptyBoard = (): Board => Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+
+const createSeed = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const values = new Uint32Array(1);
+    crypto.getRandomValues(values);
+    return values[0].toString(16);
+  }
+  return Math.random().toString(36).slice(2);
+};
 
 const highestTile = (b: Board) => Math.max(...b.flat());
 
 const Game2048 = () => {
   const [board, setBoard] = useState<Board>(emptyBoard());
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [history, setHistory] = useState<GameHistoryEntry[]>([]);
+  const [replayOpen, setReplayOpen] = useState(false);
+  const [activeReplay, setActiveReplay] = useState<ReplaySession | null>(null);
+  const [replayBoard, setReplayBoard] = useState<Board>(emptyBoard());
+  const [replayStep, setReplayStep] = useState(0);
   const [undosLeft, setUndosLeft] = useState(UNDO_LIMIT);
   const [skin, setSkin] = useState<keyof typeof SKINS>('classic');
   const [score, setScore] = useState(0);
@@ -72,6 +98,7 @@ const Game2048 = () => {
   const [submitted, setSubmitted] = useState(false);
   const boardRef = useRef<HTMLDivElement>(null);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const replayTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { scores, addScore } = useOPFSLeaderboard('game_2048');
 
   // load best score from localStorage
@@ -94,24 +121,76 @@ const Game2048 = () => {
   }, [best]);
 
   const init = useCallback(() => {
-    reset();
+    const seed = createSeed();
+    reset(seed);
     setSize(boardSize);
-    const b = emptyBoard();
-    addRandomTile(b);
-    addRandomTile(b);
-    setBoard(b);
-    setHistory([]);
+    const base = emptyBoard();
+    addRandomTile(base);
+    addRandomTile(base);
+    const initialBoard = cloneBoard(base);
+    const rngState = serialize();
+    setBoard(initialBoard);
     setScore(0);
     setUndosLeft(UNDO_LIMIT);
     setWon(false);
     setLost(false);
     setMerged([]);
-    startRecording(b);
+    setReplayOpen(false);
+    setActiveReplay(null);
+    setReplayBoard(emptyBoard());
+    setReplayStep(0);
+    setHistory((prev) => {
+      if (!prev.length) {
+        return [
+          {
+            seed,
+            size: boardSize,
+            start: { board: cloneBoard(initialBoard), rng: rngState },
+            moves: [],
+            undo: null,
+            completed: false,
+          },
+        ];
+      }
+      const previous = prev[prev.length - 1];
+      const completedPrev =
+        previous && !previous.completed
+          ? [
+              ...prev.slice(0, -1),
+              { ...previous, completed: true },
+            ]
+          : prev;
+      return [
+        ...completedPrev,
+        {
+          seed,
+          size: boardSize,
+          start: { board: cloneBoard(initialBoard), rng: rngState },
+          moves: [],
+          undo: null,
+          completed: false,
+        },
+      ];
+    });
+    startRecording(initialBoard, rngState, seed);
   }, [boardSize]);
 
   useEffect(() => {
     init();
   }, [init]);
+
+  useEffect(() => {
+    if (!won && !lost) return;
+    setHistory((h) => {
+      if (!h.length) return h;
+      const idx = h.length - 1;
+      const entry = h[idx];
+      if (!entry || entry.completed) return h;
+      const next = [...h];
+      next[idx] = { ...entry, completed: true };
+      return next;
+    });
+  }, [won, lost]);
   // check if moves available
   const hMoves = (b: Board) => {
     for (let r = 0; r < SIZE; r++) {
@@ -125,7 +204,7 @@ const Game2048 = () => {
   };
 
   const move = useCallback(
-    (dir: 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown') => {
+    (dir: Direction) => {
       if (won || lost || paused) return;
       const fn =
         dir === 'ArrowLeft'
@@ -139,10 +218,20 @@ const Game2048 = () => {
         board.map((row) => [...row])
       );
       if (boardsEqual(board, moved)) return;
-      setHistory((h) => [
-        ...h,
-        { board: board.map((row) => [...row]), rng: serialize(), score },
-      ]);
+      const previousBoard = cloneBoard(board);
+      const rngState = serialize();
+      setHistory((h) => {
+        if (!h.length) return h;
+        const next = [...h];
+        const current = next[next.length - 1];
+        if (!current) return h;
+        next[next.length - 1] = {
+          ...current,
+          undo: { board: previousBoard, rng: rngState, score },
+          moves: [...current.moves, dir],
+        };
+        return next;
+      });
       recordMove(dir);
       addRandomTile(moved);
       const hi = highestTile(moved);
@@ -160,16 +249,31 @@ const Game2048 = () => {
   );
 
   const undo = useCallback(() => {
-    if (!history.length || undosLeft === 0 || paused) return;
-    const last = history[history.length - 1];
-    deserialize(last.rng);
-    setBoard(last.board.map((row) => [...row]));
-    setHistory((h) => h.slice(0, -1));
+    if (paused || undosLeft === 0) return;
+    const current = history[history.length - 1];
+    if (!current?.undo) return;
+    const { board: prevBoard, rng, score: prevScore } = current.undo;
+    deserialize(rng);
+    setBoard(cloneBoard(prevBoard));
+    setHistory((h) => {
+      if (!h.length) return h;
+      const next = [...h];
+      const entry = next[next.length - 1];
+      if (!entry?.undo) return h;
+      next[next.length - 1] = {
+        ...entry,
+        undo: null,
+        moves: entry.moves.slice(0, -1),
+      };
+      return next;
+    });
+    undoRecord();
     setUndosLeft((u) => u - 1);
-    setScore(last.score);
+    setScore(prevScore);
+    setMerged([]);
     setWon(false);
     setLost(false);
-    }, [history, undosLeft, paused]);
+  }, [history, undosLeft, paused]);
 
   // keyboard controls
   useEffect(() => {
@@ -243,6 +347,92 @@ const Game2048 = () => {
 
   const currentSkin = SKINS[skin];
 
+  const lastReplayableGame = useMemo(() => {
+    for (let i = history.length - 1; i >= 0; i -= 1) {
+      const entry = history[i];
+      if (!entry) continue;
+      if (entry.moves.length === 0) continue;
+      if (entry.completed || i < history.length - 1) return entry;
+    }
+    return null;
+  }, [history]);
+
+  const canUndo = !!history[history.length - 1]?.undo && undosLeft > 0;
+
+  useEffect(() => {
+    if (!replayOpen || !activeReplay) return;
+    let cancelled = false;
+    const prevSize = SIZE;
+    const prevRngState = serialize();
+    setSize(activeReplay.size);
+    deserialize(activeReplay.start.rng);
+    let boardState = cloneBoard(activeReplay.start.board);
+    setReplayBoard(cloneBoard(activeReplay.start.board));
+    setReplayStep(0);
+
+    const schedule = (index: number) => {
+      if (cancelled || index >= activeReplay.moves.length) {
+        setReplayStep((step) => Math.max(step, activeReplay.moves.length));
+        return;
+      }
+      replayTimer.current = window.setTimeout(() => {
+        if (cancelled) return;
+        const dir = activeReplay.moves[index];
+        const fn =
+          dir === 'ArrowLeft'
+            ? moveLeft
+            : dir === 'ArrowRight'
+            ? moveRight
+            : dir === 'ArrowUp'
+            ? moveUp
+            : moveDown;
+        const { board: moved } = fn(cloneBoard(boardState));
+        if (!boardsEqual(boardState, moved)) {
+          boardState = moved;
+          addRandomTile(boardState);
+        }
+        const nextIndex = index + 1;
+        setReplayBoard(cloneBoard(boardState));
+        setReplayStep(nextIndex);
+        schedule(nextIndex);
+      }, 400);
+    };
+
+    schedule(0);
+
+    return () => {
+      cancelled = true;
+      if (replayTimer.current) {
+        clearTimeout(replayTimer.current);
+        replayTimer.current = null;
+      }
+      deserialize(prevRngState);
+      setSize(prevSize);
+    };
+  }, [replayOpen, activeReplay]);
+
+  const openReplay = useCallback(() => {
+    if (!lastReplayableGame) return;
+    setActiveReplay({
+      seed: lastReplayableGame.seed,
+      size: lastReplayableGame.size,
+      start: {
+        board: cloneBoard(lastReplayableGame.start.board),
+        rng: lastReplayableGame.start.rng,
+      },
+      moves: [...lastReplayableGame.moves],
+    });
+    setReplayBoard(cloneBoard(lastReplayableGame.start.board));
+    setReplayStep(0);
+    setReplayOpen(true);
+  }, [lastReplayableGame]);
+
+  const closeReplay = useCallback(() => {
+    setReplayOpen(false);
+    setActiveReplay(null);
+    setReplayStep(0);
+  }, []);
+
   useEffect(() => {
     if (merged.length) {
       const t = setTimeout(() => setMerged([]), 150);
@@ -267,110 +457,167 @@ const Game2048 = () => {
   );
 
   return (
-    <GameShell
-      game="2048"
-      settings={settings}
-      onPause={() => setPaused(true)}
-      onResume={() => setPaused(false)}
-    >
-      <div
-        ref={boardRef}
-        className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4"
+    <>
+      <GameShell
+        game="2048"
+        settings={settings}
+        onPause={() => setPaused(true)}
+        onResume={() => setPaused(false)}
       >
-        <div className="flex space-x-2 items-center">
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={init}
-          >
-            Restart
-          </button>
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={undo}
-            disabled={!history.length || undosLeft === 0}
-          >
-            Undo ({undosLeft})
-          </button>
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={downloadReplay}
-          >
-            Download
-          </button>
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={shareCard}
-          >
-            Share Card
-          </button>
-          <select
-            className="text-black px-1 rounded"
-            value={skin}
-            onChange={(e) => setSkin(e.target.value as any)}
-          >
-            {Object.keys(SKINS).map((k) => (
-              <option key={k} value={k}>
-                {k}
-              </option>
-            ))}
-          </select>
-          <div className="ml-auto flex space-x-2">
-            <div className="bg-gray-800 text-white px-2 py-1 rounded text-sm">
-              Score: {score}
-            </div>
-            <div className="bg-gray-800 text-white px-2 py-1 rounded text-sm">
-              Best: {best}
+        <div
+          ref={boardRef}
+          className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4"
+        >
+          <div className="flex space-x-2 items-center">
+            <button
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+              onClick={init}
+            >
+              Restart
+            </button>
+            <button
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+              onClick={undo}
+              disabled={!canUndo}
+            >
+              Undo ({undosLeft})
+            </button>
+            <button
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+              onClick={downloadReplay}
+            >
+              Download
+            </button>
+            <button
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+              onClick={openReplay}
+              disabled={!lastReplayableGame}
+            >
+              Replay
+            </button>
+            <button
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+              onClick={shareCard}
+            >
+              Share Card
+            </button>
+            <select
+              className="text-black px-1 rounded"
+              value={skin}
+              onChange={(e) => setSkin(e.target.value as any)}
+            >
+              {Object.keys(SKINS).map((k) => (
+                <option key={k} value={k}>
+                  {k}
+                </option>
+              ))}
+            </select>
+            <div className="ml-auto flex space-x-2">
+              <div className="bg-gray-800 text-white px-2 py-1 rounded text-sm">
+                Score: {score}
+              </div>
+              <div className="bg-gray-800 text-white px-2 py-1 rounded text-sm">
+                Best: {best}
+              </div>
             </div>
           </div>
-        </div>
-        <div
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-          className={`grid w-full max-w-sm ${
-            boardSize === 5 ? 'grid-cols-5' : 'grid-cols-4'
-          } gap-1.5`}
-        >
-          {board.map((row, rIdx) =>
-            row.map((cell, cIdx) => (
-              <div
-                key={`${rIdx}-${cIdx}`}
-                className="w-full aspect-square transition-transform duration-[120ms]"
-              >
+          <div
+            data-testid="game-board"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            className={`grid w-full max-w-sm ${
+              boardSize === 5 ? 'grid-cols-5' : 'grid-cols-4'
+            } gap-1.5`}
+          >
+            {board.map((row, rIdx) =>
+              row.map((cell, cIdx) => (
                 <div
-                  className={`h-full w-full flex items-center justify-center text-2xl font-bold rounded transition-transform duration-[150ms] ${
-                    cell ? currentSkin[cell] || 'bg-gray-700' : 'bg-gray-800'
-                  } ${
-                    merged.some(([r, c]) => r === rIdx && c === cIdx)
-                      ? 'scale-125'
-                      : ''
-                  }`}
+                  key={`${rIdx}-${cIdx}`}
+                  className="w-full aspect-square transition-transform duration-[120ms]"
                 >
-                  {cell || ''}
+                  <div
+                    className={`h-full w-full flex items-center justify-center text-2xl font-bold rounded transition-transform duration-[150ms] ${
+                      cell ? currentSkin[cell] || 'bg-gray-700' : 'bg-gray-800'
+                    } ${
+                      merged.some(([r, c]) => r === rIdx && c === cIdx)
+                        ? 'scale-125'
+                        : ''
+                    }`}
+                  >
+                    {cell || ''}
+                  </div>
                 </div>
-              </div>
-            ))
+              ))
+            )}
+          </div>
+          {(won || lost) && (
+            <div className="mt-4 text-xl">{won ? 'You win!' : 'Game over'}</div>
+          )}
+          <div className="text-sm text-gray-400">
+            Use arrow keys or swipe. U=Undo, R=Restart, Esc=Pause.
+          </div>
+          {scores.length > 0 && (
+            <div className="mt-4 text-sm">
+              <div className="font-bold">Leaderboard</div>
+              <ol className="list-decimal list-inside space-y-1">
+                {scores.map((s, i) => (
+                  <li key={i}>
+                    {new Date(s.date).toLocaleDateString()}: {s.score}
+                  </li>
+                ))}
+              </ol>
+            </div>
           )}
         </div>
-        {(won || lost) && (
-          <div className="mt-4 text-xl">{won ? 'You win!' : 'Game over'}</div>
-        )}
-        <div className="text-sm text-gray-400">
-          Use arrow keys or swipe. U=Undo, R=Restart, Esc=Pause.
-        </div>
-        {scores.length > 0 && (
-          <div className="mt-4 text-sm">
-            <div className="font-bold">Leaderboard</div>
-            <ol className="list-decimal list-inside space-y-1">
-              {scores.map((s, i) => (
-                <li key={i}>
-                  {new Date(s.date).toLocaleDateString()}: {s.score}
-                </li>
-              ))}
-            </ol>
+      </GameShell>
+      <Modal isOpen={replayOpen} onClose={closeReplay}>
+        <div className="bg-gray-900 text-white p-4 rounded space-y-4 w-[min(90vw,22rem)]">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Last Game Replay</h2>
+            <button
+              className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+              onClick={closeReplay}
+            >
+              Close
+            </button>
           </div>
-        )}
-      </div>
-    </GameShell>
+          {activeReplay ? (
+            <>
+              <div
+                data-testid="replay-board"
+                className={`grid ${
+                  activeReplay.size === 5 ? 'grid-cols-5' : 'grid-cols-4'
+                } gap-1.5`}
+              >
+                {replayBoard.map((row, rIdx) =>
+                  row.map((cell, cIdx) => (
+                    <div key={`replay-${rIdx}-${cIdx}`} className="w-full aspect-square">
+                      <div
+                        className={`h-full w-full flex items-center justify-center text-xl font-bold rounded ${
+                          cell ? currentSkin[cell] || 'bg-gray-700' : 'bg-gray-800'
+                        }`}
+                      >
+                        {cell || ''}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="text-sm text-gray-400">
+                Seed:{' '}
+                <code className="break-all text-xs">{activeReplay.seed}</code>
+              </div>
+              <div className="text-sm text-gray-400">
+                Move {Math.min(replayStep, activeReplay.moves.length)} /{' '}
+                {activeReplay.moves.length}
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-gray-400">No replay available.</p>
+          )}
+        </div>
+      </Modal>
+    </>
   );
 };
 

@@ -18,6 +18,10 @@ export class Replay<T = any> {
     this.events.push({ t: t <= last ? last + 1 : t, data });
   }
 
+  rewind(): void {
+    this.events.pop();
+  }
+
   getEvents(): InputEvent<T>[] {
     return this.events;
   }
