@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import PayloadBuilder from '../../../apps/beef/components/PayloadBuilder';
+import ModuleGallery from './ModuleGallery';
 
 export default function Beef() {
   const targetPage = `\n<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="utf-8"/>\n  <title>Sandboxed Target</title>\n</head>\n<body>\n  <h1>Sandboxed Target Page</h1>\n  <p>This page is isolated and cannot make network requests.</p>\n  <script>document.body.append(' - loaded');<\/script>\n</body>\n</html>`;
@@ -30,11 +31,10 @@ export default function Beef() {
       action: 'Next',
     },
     {
-      title: 'Run Demo Module',
-      body: 'A deterministic module runs and prints output below.',
-      render: (
-        <pre className="bg-black text-white p-2 text-xs rounded">{`Demo module executed\nResult: success`}</pre>
-      ),
+      title: 'Module Gallery',
+      body:
+        'Browse grouped BeEF modules and trigger sandboxed demos. The animations below stream deterministic output representing each module’s effect.',
+      render: <ModuleGallery />,
       action: 'Next',
     },
     {
