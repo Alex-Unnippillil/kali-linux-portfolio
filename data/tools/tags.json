@@ -1,0 +1,16 @@
+{
+  "tags": [
+    "collection/artifacts",
+    "collection/credentials",
+    "escalation/privilege",
+    "execution/persistence",
+    "forensics/logs",
+    "forensics/memory",
+    "lateral-movement",
+    "post-exploitation",
+    "recon/network",
+    "recon/web",
+    "reporting",
+    "triage"
+  ]
+}
