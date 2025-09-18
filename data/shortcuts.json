@@ -1,0 +1,60 @@
+{
+  "shortcuts": [
+    {
+      "id": "toggle-menu",
+      "category": "System",
+      "keys": "Super",
+      "description": "Open the application menu"
+    },
+    {
+      "id": "toggle-shortcut-overlay",
+      "category": "System",
+      "keys": "Super+/",
+      "description": "Show keyboard shortcut overlay"
+    },
+    {
+      "id": "switch-apps",
+      "category": "Window Management",
+      "keys": "Alt+Tab",
+      "description": "Switch between running applications",
+      "note": "Hold Shift to reverse the direction."
+    },
+    {
+      "id": "cycle-app-windows",
+      "category": "Window Management",
+      "keys": "Alt+`",
+      "description": "Cycle windows of the focused application",
+      "note": "Hold Shift to reverse the direction."
+    },
+    {
+      "id": "snap-left",
+      "category": "Window Management",
+      "keys": "Super+Arrow Left",
+      "description": "Snap window to the left half of the screen"
+    },
+    {
+      "id": "snap-right",
+      "category": "Window Management",
+      "keys": "Super+Arrow Right",
+      "description": "Snap window to the right half of the screen"
+    },
+    {
+      "id": "maximize-window",
+      "category": "Window Management",
+      "keys": "Super+Arrow Up",
+      "description": "Maximize the active window"
+    },
+    {
+      "id": "restore-window",
+      "category": "Window Management",
+      "keys": "Super+Arrow Down",
+      "description": "Restore or unsnap the active window"
+    },
+    {
+      "id": "clipboard-manager",
+      "category": "Utilities",
+      "keys": "Ctrl+Shift+V",
+      "description": "Open the clipboard manager"
+    }
+  ]
+}

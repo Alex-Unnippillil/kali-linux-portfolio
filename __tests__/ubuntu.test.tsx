@@ -1,5 +1,5 @@
 import React, { act } from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import Ubuntu from '../components/ubuntu';
 
 jest.mock('../components/screen/desktop', () => function DesktopMock() {
@@ -56,5 +56,23 @@ describe('Ubuntu component', () => {
       instance!.shutDown();
     });
     expect(instance!.state.shutDownScreen).toBe(true);
+  });
+
+  it('toggles shortcut overlay with Super+/', () => {
+    let instance: Ubuntu | null = null;
+    render(<Ubuntu ref={(c) => (instance = c)} />);
+    expect(instance).not.toBeNull();
+
+    act(() => {
+      fireEvent.keyDown(window, { key: '/', code: 'Slash', metaKey: true });
+    });
+
+    expect(instance!.state.showShortcutOverlay).toBe(true);
+
+    act(() => {
+      fireEvent.keyDown(window, { key: 'Escape' });
+    });
+
+    expect(instance!.state.showShortcutOverlay).toBe(false);
   });
 });
