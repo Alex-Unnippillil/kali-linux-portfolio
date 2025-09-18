@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import useWatchLater, {
   Video as WatchLaterVideo,
 } from '../../../apps/youtube/state/watchLater';
+import { FormField, FormInput } from '../../forms';
 
 type Video = WatchLaterVideo;
 
@@ -540,13 +541,19 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
     <div className="flex h-full flex-1 bg-ub-dark-grey font-sans text-ubt-cool-grey">
       <div className="flex flex-1 flex-col">
         <form onSubmit={handleSearch} className="p-4">
-          <input
-            ref={searchRef}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search YouTube"
-            className="w-full rounded bg-ub-cool-grey p-2 text-ubt-cool-grey"
-          />
+          <FormField
+            id="youtube-search"
+            label="Search YouTube"
+            labelHidden
+            className="w-full"
+          >
+            <FormInput
+              ref={searchRef}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search YouTube"
+            />
+          </FormField>
         </form>
         {current && (
           <div className="relative mx-4 mb-4 bg-black">

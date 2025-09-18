@@ -11,6 +11,11 @@ import DOMPurify from 'dompurify';
 import Script from 'next/script';
 import usePersistentState from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
+import {
+  FormField,
+  FormInput,
+  FormTextarea,
+} from '../../components/forms';
 import useScheduledTweets, {
   ScheduledTweet,
 } from './state/scheduled';
@@ -325,19 +330,26 @@ export default function XTimeline() {
         </header>
         <div className="p-1.5 space-y-4 flex-1 overflow-auto">
         <form onSubmit={handleScheduleTweet} className="space-y-2">
-          <textarea
-            value={tweetText}
-            onChange={(e) => setTweetText(e.target.value)}
-            placeholder="Tweet text"
-            className="w-full p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-          />
-          <div className="flex gap-2 items-center">
-            <input
-              type="datetime-local"
-              value={tweetTime}
-              onChange={(e) => setTweetTime(e.target.value)}
-              className="flex-1 p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+          <FormField id="x-schedule-text" label="Tweet text" labelHidden>
+            <FormTextarea
+              value={tweetText}
+              onChange={(e) => setTweetText(e.target.value)}
+              placeholder="Tweet text"
+              rows={3}
             />
+          </FormField>
+          <div className="flex gap-2 items-center">
+            <FormField
+              id="x-schedule-time"
+              label="Schedule time"
+              className="flex-1"
+            >
+              <FormInput
+                type="datetime-local"
+                value={tweetTime}
+                onChange={(e) => setTweetTime(e.target.value)}
+              />
+            </FormField>
             <button
               type="submit"
               className="px-3 py-1 rounded text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
@@ -403,16 +415,26 @@ export default function XTimeline() {
           </button>
         </div>
         <form onSubmit={handleAddPreset} className="flex gap-2">
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={
+          <FormField
+            id="x-add-preset"
+            label={
               timelineType === 'profile'
                 ? 'Add screen name'
                 : 'Add list (owner/slug or id)'
             }
-            className="flex-1 p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-          />
+            className="flex-1"
+            labelHidden
+          >
+            <FormInput
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={
+                timelineType === 'profile'
+                  ? 'Add screen name'
+                  : 'Add list (owner/slug or id)'
+              }
+            />
+          </FormField>
           <button
             type="submit"
             className="px-3 py-1 rounded text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"

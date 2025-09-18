@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from 'react';
 import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
+import { FormField, FormInput } from '../../components/forms';
 
 const SSHBuilder: React.FC = () => {
   const [user, setUser] = useState('');
@@ -25,42 +26,27 @@ const SSHBuilder: React.FC = () => {
         .
       </p>
       <form onSubmit={(e) => e.preventDefault()} className="mb-4 space-y-4">
-        <div>
-          <label htmlFor="ssh-user" className="mb-1 block text-sm font-medium">
-            Username
-          </label>
-          <input
-            id="ssh-user"
-            type="text"
-            className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
+        <FormField id="ssh-user" label="Username">
+          <FormInput
             value={user}
             onChange={(e) => setUser(e.target.value)}
+            autoComplete="username"
           />
-        </div>
-        <div>
-          <label htmlFor="ssh-host" className="mb-1 block text-sm font-medium">
-            Host
-          </label>
-          <input
-            id="ssh-host"
-            type="text"
-            className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
+        </FormField>
+        <FormField id="ssh-host" label="Host">
+          <FormInput
             value={host}
             onChange={(e) => setHost(e.target.value)}
           />
-        </div>
-        <div>
-          <label htmlFor="ssh-port" className="mb-1 block text-sm font-medium">
-            Port (optional)
-          </label>
-          <input
-            id="ssh-port"
+        </FormField>
+        <FormField id="ssh-port" label="Port (optional)">
+          <FormInput
             type="number"
-            className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
             value={port}
             onChange={(e) => setPort(e.target.value)}
+            inputMode="numeric"
           />
-        </div>
+        </FormField>
       </form>
       <div>
         <h2 className="mb-2 text-lg">Command Preview</h2>

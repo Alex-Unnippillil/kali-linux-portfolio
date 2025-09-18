@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import modulesData from '../data/module-index.json';
 import versionInfo from '../data/module-version.json';
+import { FormField, FormInput } from './forms';
 
 interface Module {
   id: string;
@@ -252,18 +253,18 @@ const PopularModules: React.FC = () => {
         <div className="space-y-2">
           <form className="space-y-2">
             {selected.options.map((o) => (
-              <label key={o.name} className="block text-sm">
-                {o.label}
-                <input
-                  aria-label={o.label}
-                  type="text"
+              <FormField
+                key={o.name}
+                id={`module-option-${o.name}`}
+                label={o.label}
+              >
+                <FormInput
                   value={options[o.name]}
                   onChange={(e) =>
                     setOptions({ ...options, [o.name]: e.target.value })
                   }
-                  className="w-full p-1 mt-1 text-black rounded"
                 />
-              </label>
+              </FormField>
             ))}
           </form>
           <div className="flex items-start gap-2">
@@ -282,16 +283,13 @@ const PopularModules: React.FC = () => {
             </button>
           </div>
           <div className="space-y-1">
-            <label className="block text-sm">
-              Filter logs
-              <input
+            <FormField id="module-log-filter" label="Filter logs">
+              <FormInput
                 placeholder="Filter logs"
-                type="text"
                 value={logFilter}
                 onChange={(e) => setLogFilter(e.target.value)}
-                className="w-full p-1 mt-1 text-black rounded"
               />
-            </label>
+            </FormField>
             <button
               type="button"
               onClick={copyLogs}

@@ -1,0 +1,187 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--color-text);
+}
+
+.label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-family-base);
+  font-size: calc(var(--font-multiplier) * 0.9rem);
+  font-weight: 600;
+  color: var(--color-ubt-grey);
+}
+
+.required {
+  color: var(--game-color-danger);
+  font-weight: 700;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.description {
+  margin: 0;
+  font-size: calc(var(--font-multiplier) * 0.85rem);
+  color: var(--color-ubt-warm-grey);
+}
+
+.helper {
+  margin: 0;
+  font-size: calc(var(--font-multiplier) * 0.8rem);
+  color: var(--color-ubt-warm-grey);
+}
+
+.control {
+  width: 100%;
+  min-height: var(--hit-area);
+  padding: calc(var(--space-2) + 2px) calc(var(--space-3) + 2px);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-ubt-warm-grey);
+  background-color: var(--color-ub-lite-abrgn);
+  color: var(--color-text);
+  font-family: var(--font-family-base);
+  font-size: calc(var(--font-multiplier) * 1rem);
+  line-height: 1.4;
+  transition: border-color var(--motion-fast) ease, box-shadow var(--motion-fast) ease,
+    background-color var(--motion-fast) ease;
+  caret-color: var(--focus-outline-color);
+}
+
+.control::placeholder {
+  color: var(--color-ubt-warm-grey);
+  opacity: 0.8;
+}
+
+.control:focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-outline-color);
+  outline-offset: 2px;
+  border-color: var(--focus-outline-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-outline-color) 30%, transparent);
+}
+
+.control:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.control[data-invalid='true'],
+.control[aria-invalid='true'] {
+  border-color: var(--game-color-danger);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--game-color-danger) 30%, transparent);
+}
+
+.controlContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.adornment {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  color: var(--color-ubt-warm-grey);
+}
+
+.adornmentStart {
+  left: calc(var(--space-3));
+}
+
+.adornmentEnd {
+  right: calc(var(--space-3));
+}
+
+.withStartAdornment {
+  padding-left: calc(var(--space-3) * 3.2);
+}
+
+.withEndAdornment {
+  padding-right: calc(var(--space-3) * 3.2);
+}
+
+.textarea {
+  min-height: calc(var(--hit-area) * 2);
+  resize: vertical;
+}
+
+.select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--color-ubt-grey) 50%),
+    linear-gradient(135deg, var(--color-ubt-grey) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position: calc(100% - 16px) calc(50% - 6px), calc(100% - 11px) calc(50% - 6px),
+    calc(100% - 2.5rem) 0.5rem;
+  background-size: 6px 6px, 6px 6px, 1px 75%;
+  background-repeat: no-repeat;
+}
+
+.checkboxField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.checkboxLabel {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  cursor: pointer;
+  font-size: calc(var(--font-multiplier) * 0.95rem);
+  color: var(--color-text);
+}
+
+.checkboxInput {
+  width: var(--hit-area);
+  height: var(--hit-area);
+  min-width: var(--hit-area);
+  min-height: var(--hit-area);
+  margin-top: calc(var(--space-1) / 2);
+  accent-color: var(--focus-outline-color);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-ubt-warm-grey);
+  background-color: var(--color-ub-lite-abrgn);
+}
+
+.checkboxCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.error {
+  margin: 0;
+  font-size: calc(var(--font-multiplier) * 0.85rem);
+  color: var(--game-color-danger);
+}
+
+.field[data-invalid='true'] .label {
+  color: var(--game-color-danger);
+}
+
+.fieldset {
+  border: 1px solid var(--color-ubt-warm-grey);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  margin: 0;
+}
+
+.legend {
+  padding: 0 var(--space-2);
+  font-size: calc(var(--font-multiplier) * 0.95rem);
+  font-weight: 600;
+}

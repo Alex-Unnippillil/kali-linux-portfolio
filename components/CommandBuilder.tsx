@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import TerminalOutput from './TerminalOutput';
+import { FormField, FormInput } from './forms';
 
 interface BuilderProps {
   doc: string;
@@ -17,24 +18,20 @@ export default function CommandBuilder({ doc, build }: BuilderProps) {
   return (
     <form className="text-xs" onSubmit={(e) => e.preventDefault()} aria-label="command builder">
       <p className="mb-2" aria-label="inline docs">{doc}</p>
-      <label className="block mb-1">
-        <span className="mr-1">Target</span>
-        <input
-          aria-label="target"
+      <FormField id="command-builder-target" label="Target">
+        <FormInput
           value={params.target || ''}
           onChange={update('target')}
-          className="border p-1 text-black w-full"
+          aria-label="target"
         />
-      </label>
-      <label className="block mb-1">
-        <span className="mr-1">Options</span>
-        <input
-          aria-label="options"
+      </FormField>
+      <FormField id="command-builder-options" label="Options">
+        <FormInput
           value={params.opts || ''}
           onChange={update('opts')}
-          className="border p-1 text-black w-full"
+          aria-label="options"
         />
-      </label>
+      </FormField>
       <div className="mt-2">
         <TerminalOutput text={command} ariaLabel="command output" />
       </div>
