@@ -102,6 +102,8 @@ export default function FileExplorer() {
   const [content, setContent] = useState('');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+  const [draggingEntry, setDraggingEntry] = useState(null);
+  const [activeDropTarget, setActiveDropTarget] = useState(null);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
 
@@ -257,6 +259,46 @@ export default function FileExplorer() {
     }
   };
 
+  const handleItemDragStart = (type, name) => (event) => {
+    setDraggingEntry({ type, name });
+    if (event?.dataTransfer) {
+      try {
+        event.dataTransfer.setData('text/plain', name);
+      } catch {}
+      event.dataTransfer.effectAllowed = 'move';
+    }
+  };
+
+  const handleItemDragEnd = () => {
+    setDraggingEntry(null);
+    setActiveDropTarget(null);
+  };
+
+  const handleDropEnter = (key, target) => (event) => {
+    if (!draggingEntry) return;
+    if (target?.type && target?.name && draggingEntry.type === target.type && draggingEntry.name === target.name) return;
+    event.preventDefault();
+    setActiveDropTarget(key);
+  };
+
+  const handleDropLeave = (key) => (event) => {
+    if (!draggingEntry) return;
+    if (event?.currentTarget && event.relatedTarget && event.currentTarget.contains(event.relatedTarget)) return;
+    setActiveDropTarget((current) => (current === key ? null : current));
+  };
+
+  const handleDropOver = (event) => {
+    if (draggingEntry) event.preventDefault();
+  };
+
+  const handleDrop = (event) => {
+    if (!draggingEntry) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setActiveDropTarget(null);
+    setDraggingEntry(null);
+  };
+
   useEffect(() => () => workerRef.current?.terminate(), []);
 
   if (!supported) {
@@ -320,31 +362,72 @@ export default function FileExplorer() {
             <div
               key={i}
               className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openRecent(r)}
+              onClick={() => {
+                if (draggingEntry) return;
+                openRecent(r);
+              }}
             >
               {r.name}
             </div>
           ))}
           <div className="p-2 font-bold">Directories</div>
-          {dirs.map((d, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openDir(d)}
-            >
-              {d.name}
-            </div>
-          ))}
+          {dirs.map((d, i) => {
+            const key = `dir-${d.name}-${i}`;
+            const isDragging = draggingEntry?.type === 'directory' && draggingEntry.name === d.name;
+            const canDrop = !!draggingEntry && !(draggingEntry.type === 'directory' && draggingEntry.name === d.name);
+            const isActiveDrop = activeDropTarget === key;
+            const dirClasses = [
+              'px-2 cursor-pointer cursor-grab active:cursor-grabbing hover:bg-black hover:bg-opacity-30 drag-animate',
+            ];
+            if (isDragging) dirClasses.push('drag-animate-active');
+            if (canDrop) dirClasses.push('drop-target-ready');
+            if (isActiveDrop) dirClasses.push('drop-target-active');
+            return (
+              <div
+                key={key}
+                draggable
+                aria-grabbed={isDragging}
+                onDragStart={handleItemDragStart('directory', d.name)}
+                onDragEnd={handleItemDragEnd}
+                onDragEnter={handleDropEnter(key, { type: 'directory', name: d.name })}
+                onDragLeave={handleDropLeave(key)}
+                onDragOver={handleDropOver}
+                onDrop={handleDrop}
+                className={dirClasses.join(' ')}
+                onClick={() => {
+                  if (draggingEntry) return;
+                  openDir(d);
+                }}
+              >
+                {d.name}
+              </div>
+            );
+          })}
           <div className="p-2 font-bold">Files</div>
-          {files.map((f, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openFile(f)}
-            >
-              {f.name}
-            </div>
-          ))}
+          {files.map((f, i) => {
+            const key = `file-${f.name}-${i}`;
+            const isDragging = draggingEntry?.type === 'file' && draggingEntry.name === f.name;
+            const fileClasses = [
+              'px-2 cursor-pointer cursor-grab active:cursor-grabbing hover:bg-black hover:bg-opacity-30 drag-animate',
+            ];
+            if (isDragging) fileClasses.push('drag-animate-active');
+            return (
+              <div
+                key={key}
+                draggable
+                aria-grabbed={isDragging}
+                onDragStart={handleItemDragStart('file', f.name)}
+                onDragEnd={handleItemDragEnd}
+                className={fileClasses.join(' ')}
+                onClick={() => {
+                  if (draggingEntry) return;
+                  openFile(f);
+                }}
+              >
+                {f.name}
+              </div>
+            );
+          })}
         </div>
         <div className="flex-1 flex flex-col">
           {currentFile && (

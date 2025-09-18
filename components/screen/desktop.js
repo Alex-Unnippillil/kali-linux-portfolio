@@ -41,6 +41,8 @@ export class Desktop extends Component {
             minimized_windows: {},
             window_positions: {},
             desktop_apps: [],
+            draggingShortcut: null,
+            activeDropTarget: null,
             context_menus: {
                 desktop: false,
                 default: false,
@@ -444,6 +446,19 @@ export class Desktop extends Component {
                     openApp: this.openApp,
                     disabled: this.state.disabled_apps[app.id],
                     prefetch: app.screen?.prefetch,
+                    onDragStart: this.handleDesktopIconDragStart,
+                    onDragEnd: this.handleDesktopIconDragEnd,
+                }
+
+                if (app.id === 'trash') {
+                    Object.assign(props, {
+                        dropTargetReady: !!this.state.draggingShortcut && this.state.draggingShortcut !== app.id,
+                        dropTargetActive: this.state.activeDropTarget === app.id,
+                        onDragEnter: this.handleDesktopDropTargetEnter,
+                        onDragLeave: this.handleDesktopDropTargetLeave,
+                        onDrop: this.handleDesktopDropTargetDrop,
+                        onDragOver: this.handleDesktopDropTargetOver,
+                    });
                 }
 
                 appsJsx.push(
@@ -581,6 +596,41 @@ export class Desktop extends Component {
         if (id) {
             this.openApp(id);
         }
+    }
+
+    handleDesktopIconDragStart = (id) => {
+        if (!id) return;
+        this.setState({ draggingShortcut: id });
+    }
+
+    handleDesktopIconDragEnd = () => {
+        if (!this.state.draggingShortcut && !this.state.activeDropTarget) return;
+        this.setState({ draggingShortcut: null, activeDropTarget: null });
+    }
+
+    handleDesktopDropTargetEnter = (id) => {
+        if (!this.state.draggingShortcut || !id || id === this.state.draggingShortcut) return;
+        this.setState({ activeDropTarget: id });
+    }
+
+    handleDesktopDropTargetLeave = (id, event) => {
+        if (!this.state.draggingShortcut) return;
+        if (event?.currentTarget && event.relatedTarget && event.currentTarget.contains(event.relatedTarget)) return;
+        this.setState((prev) => (prev.activeDropTarget === id ? { activeDropTarget: null } : null));
+    }
+
+    handleDesktopDropTargetDrop = (id, event) => {
+        if (!this.state.draggingShortcut) return;
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        this.handleDesktopIconDragEnd();
+    }
+
+    handleDesktopDropTargetOver = (id, event) => {
+        if (!this.state.draggingShortcut || id === this.state.draggingShortcut) return;
+        event?.preventDefault();
     }
 
     openApp = (objId) => {
@@ -864,8 +914,16 @@ export class Desktop extends Component {
     }
 
     render() {
+        const mainClasses = [
+            "h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent",
+        ];
+
+        if (this.state.draggingShortcut) {
+            mainClasses.push("desktop-dragging");
+        }
+
         return (
-            <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+            <main id="desktop" role="main" className={mainClasses.join(' ')}>
 
                 {/* Window Area */}
                 <div
