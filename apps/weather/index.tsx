@@ -4,11 +4,14 @@ import { useEffect, useRef, useState } from 'react';
 import useWeatherState, {
   City,
   ForecastDay,
+  WeatherUnits,
   useWeatherGroups,
   useCurrentGroup,
+  useWeatherUnits,
 } from './state';
 import Forecast from './components/Forecast';
 import CityDetail from './components/CityDetail';
+import { formatTemperature } from './utils';
 
 interface ReadingUpdate {
   temp: number;
@@ -16,16 +19,20 @@ interface ReadingUpdate {
   time: number;
 }
 
-function CityTile({ city }: { city: City }) {
+function CityTile({ city, units }: { city: City; units: WeatherUnits }) {
   return (
     <div>
       <div className="font-bold mb-1.5">{city.name}</div>
       {city.lastReading ? (
-        <div className="mb-1.5">{Math.round(city.lastReading.temp)}°C</div>
+        <div className="mb-1.5">
+          {formatTemperature(city.lastReading.temp, units)}
+        </div>
       ) : (
         <div className="opacity-70 mb-1.5">No data</div>
       )}
-      {city.forecast && <Forecast days={city.forecast.slice(0, 5)} />}
+      {city.forecast && (
+        <Forecast days={city.forecast.slice(0, 5)} units={units} />
+      )}
     </div>
   );
 }
@@ -34,6 +41,7 @@ export default function WeatherApp() {
   const [cities, setCities] = useWeatherState();
   const [groups, setGroups] = useWeatherGroups();
   const [currentGroup, setCurrentGroup] = useCurrentGroup();
+  const [units, setUnits] = useWeatherUnits();
   const [name, setName] = useState('');
   const [lat, setLat] = useState('');
   const [lon, setLon] = useState('');
@@ -166,6 +174,25 @@ export default function WeatherApp() {
           </button>
         ))}
       </div>
+      <div className="flex items-center gap-1.5 mb-4">
+        <span className="text-sm opacity-80">Units</span>
+        <button
+          className={`px-2 rounded ${
+            units === 'metric' ? 'bg-blue-600' : 'bg-white/20'
+          }`}
+          onClick={() => setUnits('metric')}
+        >
+          °C
+        </button>
+        <button
+          className={`px-2 rounded ${
+            units === 'imperial' ? 'bg-blue-600' : 'bg-white/20'
+          }`}
+          onClick={() => setUnits('imperial')}
+        >
+          °F
+        </button>
+      </div>
       <div className="flex gap-2 mb-4">
         <input
           className="text-black px-1"
@@ -200,7 +227,7 @@ export default function WeatherApp() {
             onClick={() => setSelected(city)}
             className="bg-white/10 p-4 rounded cursor-pointer"
           >
-            <CityTile city={city} />
+            <CityTile city={city} units={units} />
           </div>
         ))}
       </div>

@@ -14,6 +14,8 @@ export interface ForecastDay {
   condition: number;
 }
 
+export type WeatherUnits = 'metric' | 'imperial';
+
 export interface City {
   id: string;
   name: string;
@@ -66,5 +68,12 @@ const isStringOrNull = (v: unknown): v is string | null =>
 
 export function useCurrentGroup() {
   return usePersistentState<string | null>('weather-current-group', null, isStringOrNull);
+}
+
+const isWeatherUnits = (value: unknown): value is WeatherUnits =>
+  value === 'metric' || value === 'imperial';
+
+export function useWeatherUnits() {
+  return usePersistentState<WeatherUnits>('weather-units', 'metric', isWeatherUnits);
 }
 
