@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/router";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -12,6 +13,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import { getSettingsSectionFromQuery } from "../../utils/navigation";
 
 export default function Settings() {
   const {
@@ -41,6 +43,27 @@ export default function Settings() {
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const section = getSettingsSectionFromQuery(router.query);
+    if (section && section !== activeTab) {
+      setActiveTab(section as TabId);
+    }
+  }, [router.isReady, router.query, activeTab]);
+
+  const handleTabChange = (id: TabId) => {
+    setActiveTab(id);
+    if (!router.isReady) return;
+    const current = router.query.tab;
+    const currentId = Array.isArray(current) ? current[0] : current;
+    if (currentId === id) return;
+    const nextQuery = { ...router.query, tab: id };
+    router.replace({ pathname: router.pathname, query: nextQuery }, undefined, {
+      shallow: true,
+    });
+  };
 
   const wallpapers = [
     "wall-1",
@@ -108,7 +131,7 @@ export default function Settings() {
   return (
     <div className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey">
       <div className="flex justify-center border-b border-gray-900">
-        <Tabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
+        <Tabs tabs={tabs} active={activeTab} onChange={handleTabChange} />
       </div>
       {activeTab === "appearance" && (
         <>

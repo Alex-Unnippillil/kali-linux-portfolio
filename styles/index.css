@@ -1,5 +1,10 @@
 @import './globals.css';
 
+:root {
+    --quick-settings-brightness: 1;
+    --quick-settings-volume: 0.7;
+}
+
 html {
     font-size: clamp(12px, calc(16px * var(--font-multiplier)), 24px);
 }
@@ -9,6 +14,8 @@ body{
     font-display: swap;
     background-color: var(--color-bg);
     color: var(--color-text);
+    filter: brightness(var(--quick-settings-brightness, 1));
+    transition: filter calc(var(--motion-fast, 150ms) * 0.9) ease;
 }
 
 button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .hit-area {

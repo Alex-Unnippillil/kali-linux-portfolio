@@ -31,6 +31,9 @@ export default class Navbar extends Component {
                                         type="button"
                                         id="status-bar"
                                         aria-label="System status"
+                                        aria-haspopup="dialog"
+                                        aria-controls="quick-settings-panel"
+                                        aria-expanded={this.state.status_card}
                                         onClick={() => {
                                                 this.setState({ status_card: !this.state.status_card });
                                         }}
@@ -39,8 +42,8 @@ export default class Navbar extends Component {
                                         }
                                 >
                                         <Status />
-                                        <QuickSettings open={this.state.status_card} />
                                 </button>
+                                <QuickSettings open={this.state.status_card} />
 			</div>
 		);
 	}
