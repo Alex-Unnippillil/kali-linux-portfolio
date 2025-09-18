@@ -40,6 +40,9 @@
   --space-4: 1rem;
   --space-5: 1.5rem;
   --space-6: 2rem;
+  /* Kali panel measurements: 12px outer padding, 4px inter-item gap */
+  --panel-padding: 0.75rem;
+  --panel-gap: 0.25rem;
 
   /* Radius */
   --radius-sm: 2px;
@@ -60,6 +63,19 @@
   /* Focus outline */
   --focus-outline-color: var(--color-ubt-blue);
   --focus-outline-width: 2px;
+}
+
+@media (max-width: 768px) {
+  :root {
+    --panel-padding: 0.625rem;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --panel-padding: 0.5rem;
+    --panel-gap: 0.1875rem;
+  }
 }
 
 /* High contrast theme */

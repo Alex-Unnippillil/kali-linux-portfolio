@@ -15,14 +15,14 @@ export default class Navbar extends Component {
 
 	render() {
 		return (
-                        <div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50">
-                                <div className="pl-3 pr-1">
+                        <div className="main-navbar-vp absolute top-0 right-0 w-screen shadow-md flex flex-nowrap justify-between items-center bg-ub-grey text-ubt-grey text-sm select-none z-50 px-[var(--panel-padding)]">
+                                <div className="pr-[var(--panel-gap)]">
                                         <Image src="/themes/Yaru/status/network-wireless-signal-good-symbolic.svg" alt="network icon" width={16} height={16} className="w-4 h-4" />
                                 </div>
                                 <WhiskerMenu />
                                 <div
                                         className={
-                                                'pl-2 pr-2 text-xs md:text-sm outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1'
+                                                'px-[calc(var(--panel-gap)*2)] text-xs md:text-sm outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1'
                                         }
                                 >
                                         <Clock />
@@ -35,7 +35,7 @@ export default class Navbar extends Component {
                                                 this.setState({ status_card: !this.state.status_card });
                                         }}
                                         className={
-                                                'relative pr-3 pl-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent focus:border-ubb-orange py-1 '
+                                                'relative px-[calc(var(--panel-gap)*3)] outline-none transition duration-100 ease-in-out border-b-2 border-transparent focus:border-ubb-orange py-1 '
                                         }
                                 >
                                         <Status />

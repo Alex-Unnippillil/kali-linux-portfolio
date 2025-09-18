@@ -1,9 +1,11 @@
 .windowYBorder {
-  height: calc(100% - 10px);
-  width: calc(100% + 10px);
+  --window-chrome-offset: calc(var(--panel-gap) * 2.5);
+  height: calc(100% - var(--window-chrome-offset));
+  width: calc(100% + var(--window-chrome-offset));
 }
 
 .windowXBorder {
-  height: calc(100% + 10px);
-  width: calc(100% - 10px);
+  --window-chrome-offset: calc(var(--panel-gap) * 2.5);
+  height: calc(100% + var(--window-chrome-offset));
+  width: calc(100% - var(--window-chrome-offset));
 }
