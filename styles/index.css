@@ -97,6 +97,11 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     filter: brightness(90%);
 }
 
+.main-window[data-focused="true"] {
+    outline: var(--focus-outline-width) solid var(--focus-outline-color);
+    outline-offset: 0;
+}
+
 .root,
 #root,
 #docs-root {
