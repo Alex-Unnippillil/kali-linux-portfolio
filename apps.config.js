@@ -26,6 +26,7 @@ const VsCodeApp = createDynamicApp('vscode', 'VsCode');
 const YouTubeApp = createDynamicApp('youtube', 'YouTube');
 const CalculatorApp = createDynamicApp('calculator', 'Calculator');
 const ConverterApp = createDynamicApp('converter', 'Converter');
+const DataConverterApp = createDynamicApp('data-converter', 'Data Converter');
 const TicTacToeApp = createDynamicApp('tictactoe', 'Tic Tac Toe');
 const ChessApp = createDynamicApp('chess', 'Chess');
 // Classic four-in-a-row game
@@ -120,6 +121,7 @@ const displayVsCode = createDisplay(VsCodeApp);
 const displayYouTube = createDisplay(YouTubeApp);
 const displayCalculator = createDisplay(CalculatorApp);
 const displayConverter = createDisplay(ConverterApp);
+const displayDataConverter = createDisplay(DataConverterApp);
 const displayTicTacToe = createDisplay(TicTacToeApp);
 const displayChess = createDisplay(ChessApp);
 const displayConnectFour = createDisplay(ConnectFourApp);
@@ -230,6 +232,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayClipboardManager,
+  },
+  {
+    id: 'data-converter',
+    title: 'Data Converter',
+    icon: '/themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayDataConverter,
   },
   {
     id: 'figlet',
@@ -799,6 +810,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayConverter,
+  },
+  {
+    id: 'data-converter',
+    title: 'Data Converter',
+    icon: '/themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayDataConverter,
   },
   {
     id: 'kismet',
