@@ -7,6 +7,7 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import { clampDuration, getMotionDuration, shouldReduceMotion } from '../../utils/motion';
 
 export class Window extends Component {
     constructor(props) {
@@ -22,7 +23,6 @@ export class Window extends Component {
             cursorType: "cursor-default",
             width: props.defaultWidth || (isPortrait ? 90 : 60),
             height: props.defaultHeight || 85,
-            closed: false,
             maximized: false,
             parentSize: {
                 height: 100,
@@ -37,6 +37,13 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._hasAnimatedIn = false;
+        this._openAnimation = null;
+        this._closeAnimation = null;
+        this._openAnimationRequest = null;
+        this._openAnimationTimeout = null;
+        this._originWaitAttempts = 0;
+        this._closing = false;
     }
 
     componentDidMount() {
@@ -56,6 +63,13 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        this.scheduleOpenAnimation();
+    }
+
+    componentDidUpdate(prevProps) {
+        if (!this._hasAnimatedIn && this.props.taskbarOrigin !== prevProps.taskbarOrigin) {
+            this.scheduleOpenAnimation();
+        }
     }
 
     componentWillUnmount() {
@@ -69,6 +83,22 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        if (this._openAnimation && typeof this._openAnimation.cancel === 'function') {
+            this._openAnimation.cancel();
+        }
+        if (this._closeAnimation && typeof this._closeAnimation.cancel === 'function') {
+            this._closeAnimation.cancel();
+        }
+        if (typeof window !== 'undefined' && this._openAnimationRequest !== null && typeof window.cancelAnimationFrame === 'function') {
+            window.cancelAnimationFrame(this._openAnimationRequest);
+        }
+        if (this._openAnimationTimeout !== null) {
+            clearTimeout(this._openAnimationTimeout);
+        }
+        this._openAnimation = null;
+        this._closeAnimation = null;
+        this._openAnimationRequest = null;
+        this._openAnimationTimeout = null;
     }
 
     setDefaultWindowDimenstion = () => {
@@ -131,6 +161,154 @@ export class Window extends Component {
                 this.optimizeWindow();
             }
         }, 200);
+    }
+
+    scheduleOpenAnimation = () => {
+        if (this._hasAnimatedIn) return;
+        if (typeof window === 'undefined') {
+            this.runOpenAnimation();
+            return;
+        }
+        if (this._openAnimationRequest !== null || this._openAnimationTimeout !== null) {
+            return;
+        }
+        if (typeof window.requestAnimationFrame === 'function') {
+            this._openAnimationRequest = window.requestAnimationFrame(() => {
+                this._openAnimationRequest = null;
+                this.runOpenAnimation();
+            });
+        } else {
+            this._openAnimationTimeout = window.setTimeout(() => {
+                this._openAnimationTimeout = null;
+                this.runOpenAnimation();
+            }, 16);
+        }
+    }
+
+    applyTransformOrigin = (node) => {
+        if (!node) return;
+        const origin = this.props.taskbarOrigin;
+        if (typeof document === 'undefined') {
+            node.style.transformOrigin = '50% 100%';
+            return;
+        }
+        const area = document.getElementById('window-area');
+        if (!origin || !area) {
+            node.style.transformOrigin = '50% 100%';
+            return;
+        }
+        const areaRect = area.getBoundingClientRect();
+        const rect = node.getBoundingClientRect();
+        const originX = origin.x - (rect.left - areaRect.left);
+        const originY = origin.y - (rect.top - areaRect.top);
+        if (Number.isFinite(originX) && Number.isFinite(originY)) {
+            node.style.transformOrigin = `${originX}px ${originY}px`;
+        } else {
+            node.style.transformOrigin = '50% 100%';
+        }
+    }
+
+    getBaseTransform = (node) => {
+        if (!node) return 'translate(0px, 0px)';
+        const inline = node.style.transform;
+        if (inline && inline !== 'none') {
+            return inline;
+        }
+        if (typeof window !== 'undefined' && typeof window.getComputedStyle === 'function') {
+            const computed = window.getComputedStyle(node).transform;
+            if (computed && computed !== 'none') {
+                return computed;
+            }
+        }
+        return 'translate(0px, 0px)';
+    }
+
+    recordAnimationStart = (phase) => {
+        if (typeof performance === 'undefined' || typeof performance.mark !== 'function') return;
+        try {
+            performance.mark(`window-${phase}-start:${this.id}`);
+        } catch (e) {
+            // ignore unsupported performance marks
+        }
+    }
+
+    recordAnimationEnd = (phase) => {
+        if (typeof performance === 'undefined' || typeof performance.mark !== 'function' || typeof performance.measure !== 'function') {
+            return;
+        }
+        const start = `window-${phase}-start:${this.id}`;
+        const end = `window-${phase}-end:${this.id}`;
+        const measure = `window-${phase}:${this.id}`;
+        try {
+            performance.mark(end);
+            if (typeof performance.clearMeasures === 'function') {
+                performance.clearMeasures(measure);
+            }
+            performance.measure(measure, start, end);
+            if (typeof performance.getEntriesByName === 'function') {
+                const entries = performance.getEntriesByName(measure);
+                const entry = entries && entries.length ? entries[entries.length - 1] : null;
+                if (entry && entry.duration > 180 && typeof console !== 'undefined' && typeof console.warn === 'function') {
+                    console.warn(`Window ${phase} animation exceeded 180ms for ${this.id}: ${entry.duration.toFixed(1)}ms`);
+                }
+            }
+        } catch (e) {
+            // ignore measure errors (likely missing marks)
+        } finally {
+            if (typeof performance.clearMarks === 'function') {
+                performance.clearMarks(start);
+                performance.clearMarks(end);
+            }
+        }
+    }
+
+    runOpenAnimation = () => {
+        if (this._hasAnimatedIn) return;
+        const node = document.getElementById(this.id);
+        if (!node) return;
+        if (!this.props.taskbarOrigin && this._originWaitAttempts < 2) {
+            this._originWaitAttempts += 1;
+            this.scheduleOpenAnimation();
+            return;
+        }
+        this._originWaitAttempts = 0;
+        this._hasAnimatedIn = true;
+        this.applyTransformOrigin(node);
+        const duration = clampDuration(getMotionDuration('fast'), 180);
+        this.recordAnimationStart('open');
+        if (duration === 0 || shouldReduceMotion() || typeof node.animate !== 'function') {
+            node.style.opacity = '1';
+            this.recordAnimationEnd('open');
+            return;
+        }
+        const baseTransform = this.getBaseTransform(node);
+        node.style.opacity = '0';
+        node.style.willChange = 'transform, opacity';
+        const animation = node.animate(
+            [
+                { transform: `${baseTransform} scale(0.86)`, opacity: 0 },
+                { transform: baseTransform, opacity: 1 }
+            ],
+            {
+                duration,
+                easing: 'cubic-bezier(0.2, 0, 0.2, 1)',
+                fill: 'forwards'
+            }
+        );
+        this._openAnimation = animation;
+        animation.onfinish = () => {
+            node.style.opacity = '1';
+            node.style.transform = baseTransform;
+            node.style.willChange = '';
+            this._openAnimation = null;
+            this.recordAnimationEnd('open');
+        };
+        animation.oncancel = () => {
+            node.style.opacity = '1';
+            node.style.willChange = '';
+            this._openAnimation = null;
+            this.recordAnimationEnd('open');
+        };
     }
 
     optimizeWindow = () => {
@@ -391,9 +569,7 @@ export class Window extends Component {
 
         const node = document.querySelector("#" + this.id);
         const endTransform = `translate(${posx}px,${sidebBarApp.y.toFixed(1) - 240}px) scale(0.2)`;
-        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-        if (prefersReducedMotion) {
+        if (shouldReduceMotion()) {
             node.style.transform = endTransform;
             this.props.hasMinimised(this.id);
             return;
@@ -419,9 +595,7 @@ export class Window extends Component {
         let posy = node.style.getPropertyValue("--window-transform-y");
         const startTransform = node.style.transform;
         const endTransform = `translate(${posx},${posy})`;
-        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-        if (prefersReducedMotion) {
+        if (shouldReduceMotion()) {
             node.style.transform = endTransform;
             this.setState({ maximized: false });
             this.checkOverlap();
@@ -467,14 +641,54 @@ export class Window extends Component {
     }
 
     closeWindow = () => {
+        if (this._closing) return;
+        this._closing = true;
         this.setWinowsPosition();
-        this.setState({ closed: true }, () => {
-            this.deactivateOverlay();
-            this.props.hideSideBar(this.id, false);
-            setTimeout(() => {
-                this.props.closed(this.id)
-            }, 300) // after 300ms this window will be unmounted from parent (Desktop)
-        });
+        const node = document.getElementById(this.id);
+        this.deactivateOverlay();
+        this.props.hideSideBar(this.id, false);
+        const duration = clampDuration(getMotionDuration('fast'), 180);
+        this.recordAnimationStart('close');
+        const complete = () => {
+            this.recordAnimationEnd('close');
+            this.props.closed(this.id);
+            this._closing = false;
+        };
+        if (!node || duration === 0 || shouldReduceMotion() || typeof node.animate !== 'function') {
+            complete();
+            return;
+        }
+        this.applyTransformOrigin(node);
+        const baseTransform = this.getBaseTransform(node);
+        node.style.willChange = 'transform, opacity';
+        const animation = node.animate(
+            [
+                { transform: baseTransform, opacity: 1 },
+                { transform: `${baseTransform} scale(0.86)`, opacity: 0 }
+            ],
+            {
+                duration,
+                easing: 'cubic-bezier(0.4, 0, 1, 1)',
+                fill: 'forwards'
+            }
+        );
+        this._closeAnimation = animation;
+        let finished = false;
+        const finalize = () => {
+            if (finished) return;
+            finished = true;
+            node.style.transform = baseTransform;
+            node.style.opacity = '0';
+            node.style.willChange = '';
+            this._closeAnimation = null;
+            complete();
+        };
+        animation.onfinish = finalize;
+        animation.oncancel = () => {
+            node.style.willChange = '';
+            this._closeAnimation = null;
+            finalize();
+        };
     }
 
     handleTitleBarKeyDown = (e) => {
@@ -635,7 +849,7 @@ export class Window extends Component {
                 >
                     <div
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        className={this.state.cursorType + " " + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.state.grabbed ? " opacity-70 " : "") + (this.state.snapPreview ? " ring-2 ring-blue-400 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
