@@ -1,0 +1,8 @@
+{
+  "defaultMaxSizeKb": 440,
+  "overrides": {
+    "/_app": 820,
+    "/notes": 470,
+    "/qr": 820
+  }
+}
