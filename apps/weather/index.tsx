@@ -1,20 +1,79 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useWeatherState, {
   City,
-  ForecastDay,
   useWeatherGroups,
   useCurrentGroup,
+  useWeatherProviderSetting,
 } from './state';
 import Forecast from './components/Forecast';
 import CityDetail from './components/CityDetail';
+import { getProvider, providerOptions } from './providers';
+import type { WeatherResponse } from './providers/types';
 
-interface ReadingUpdate {
-  temp: number;
-  condition: number;
-  time: number;
-}
+const WEATHER_CACHE = 'weather';
+
+const cacheKeyForCity = (providerId: string, city: City) =>
+  `${providerId}:${city.lat}:${city.lon}`;
+
+const createCacheResponse = (data: WeatherResponse): Response => {
+  if (typeof Response !== 'undefined') {
+    return new Response(JSON.stringify(data), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const serialized = JSON.stringify(data);
+  return {
+    async json() {
+      return JSON.parse(serialized) as WeatherResponse;
+    },
+    clone() {
+      return createCacheResponse(JSON.parse(serialized) as WeatherResponse);
+    },
+  } as unknown as Response;
+};
+
+const readCachedWeather = async (key: string): Promise<WeatherResponse | null> => {
+  if (typeof caches === 'undefined') return null;
+  try {
+    const cache = await caches.open(WEATHER_CACHE);
+    const cached = await cache.match(key);
+    if (!cached) return null;
+    return (await cached.json()) as WeatherResponse;
+  } catch {
+    return null;
+  }
+};
+
+const writeCachedWeather = async (key: string, data: WeatherResponse) => {
+  if (typeof caches === 'undefined') return;
+  try {
+    const cache = await caches.open(WEATHER_CACHE);
+    await cache.put(key, createCacheResponse(data));
+  } catch {
+    // Ignore cache errors so the UI can still update
+  }
+};
+
+const readingsEqual = (a?: WeatherResponse['reading'], b?: WeatherResponse['reading']) => {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  return a.temp === b.temp && a.condition === b.condition && a.time === b.time;
+};
+
+const forecastsEqual = (a?: WeatherResponse['forecast'], b?: WeatherResponse['forecast']) => {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  return a.every(
+    (day, idx) =>
+      day.date === b[idx].date &&
+      day.temp === b[idx].temp &&
+      day.condition === b[idx].condition,
+  );
+};
 
 function CityTile({ city }: { city: City }) {
   return (
@@ -34,6 +93,7 @@ export default function WeatherApp() {
   const [cities, setCities] = useWeatherState();
   const [groups, setGroups] = useWeatherGroups();
   const [currentGroup, setCurrentGroup] = useCurrentGroup();
+  const [providerId, setProviderId] = useWeatherProviderSetting();
   const [name, setName] = useState('');
   const [lat, setLat] = useState('');
   const [lon, setLon] = useState('');
@@ -43,12 +103,19 @@ export default function WeatherApp() {
   );
   const [selected, setSelected] = useState<City | null>(null);
   const dragSrc = useRef<number | null>(null);
+  const provider = useMemo(() => getProvider(providerId), [providerId]);
 
   useEffect(() => {
     if (!currentGroup) return;
     const group = groups.find((g) => g.name === currentGroup);
     if (group) setCities(group.cities);
   }, [currentGroup, groups, setCities]);
+
+  useEffect(() => {
+    if (provider.id !== providerId) {
+      setProviderId(provider.id);
+    }
+  }, [provider, providerId, setProviderId]);
 
   useEffect(() => {
     const onOnline = () => setOffline(false);
@@ -61,38 +128,56 @@ export default function WeatherApp() {
     };
   }, []);
 
+  const updateCityWeather = useCallback(
+    (cityId: string, data: WeatherResponse) => {
+      setCities((prev) => {
+        const idx = prev.findIndex((c) => c.id === cityId);
+        if (idx < 0) return prev;
+        const city = prev[idx];
+        if (readingsEqual(city.lastReading, data.reading) && forecastsEqual(city.forecast, data.forecast)) {
+          return prev;
+        }
+        const next = [...prev];
+        next[idx] = {
+          ...city,
+          lastReading: data.reading,
+          forecast: data.forecast,
+        };
+        return next;
+      });
+    },
+    [setCities],
+  );
+
   useEffect(() => {
-    if (offline) return;
-    cities.forEach((city, i) => {
-      fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current_weather=true&daily=weathercode,temperature_2m_max&forecast_days=5&timezone=auto`,
-      )
-        .then((res) => res.json())
-        .then((data) => {
-          const reading: ReadingUpdate = {
-            temp: data.current_weather.temperature,
-            condition: data.current_weather.weathercode,
-            time: Date.now(),
-          };
-          const forecast: ForecastDay[] = data.daily.time.map(
-            (date: string, idx: number) => ({
-              date,
-              temp: data.daily.temperature_2m_max[idx],
-              condition: data.daily.weathercode[idx],
-            }),
-          );
-          setCities((prev) => {
-            const next = [...prev];
-            if (!next[i]) return prev;
-            next[i] = { ...next[i], lastReading: reading, forecast };
-            return next;
-          });
-        })
-        .catch(() => {
-          // ignore fetch errors
-        });
+    let cancelled = false;
+
+    const loadCity = async (city: City) => {
+      const key = cacheKeyForCity(provider.id, city);
+      const cached = await readCachedWeather(key);
+      if (!cancelled && cached) {
+        updateCityWeather(city.id, cached);
+      }
+      if (offline) return;
+      try {
+        const fresh = await provider.fetch(city);
+        if (!cancelled) {
+          updateCityWeather(city.id, fresh);
+        }
+        void writeCachedWeather(key, fresh);
+      } catch {
+        // Ignore fetch errors so the UI stays responsive
+      }
+    };
+
+    cities.forEach((city) => {
+      void loadCity(city);
     });
-    }, [offline, cities, setCities]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cities, offline, provider, updateCityWeather]);
 
   const addCity = () => {
     const latNum = parseFloat(lat);
@@ -144,6 +229,23 @@ export default function WeatherApp() {
 
   return (
     <div className="p-4 text-white">
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <label htmlFor="weather-provider-select" className="flex items-center gap-2">
+          <span>Provider</span>
+          <select
+            id="weather-provider-select"
+            className="text-black px-1"
+            value={provider.id}
+            onChange={(e) => setProviderId(e.target.value)}
+          >
+            {providerOptions.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
       <div className="flex gap-2 mb-4">
         <input
           className="text-black px-1"
@@ -213,4 +315,3 @@ export default function WeatherApp() {
     </div>
   );
 }
-
