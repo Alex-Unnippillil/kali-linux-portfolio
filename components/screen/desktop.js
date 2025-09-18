@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Component } from 'react';
+import React, { Component, createRef } from 'react';
 import dynamic from 'next/dynamic';
 
 const BackgroundImage = dynamic(
@@ -23,11 +23,13 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { computeWindowLayout } from '../../utils/windowLayout';
 
 export class Desktop extends Component {
     constructor() {
         super();
         this.app_stack = [];
+        this.windowRefs = {};
         this.initFavourite = {};
         this.allWindowClosed = false;
         this.state = {
@@ -459,6 +461,11 @@ export class Desktop extends Component {
         apps.forEach((app, index) => {
             if (this.state.closed_windows[app.id] === false) {
 
+                if (!this.windowRefs[app.id]) {
+                    this.windowRefs[app.id] = createRef();
+                }
+
+                const ref = this.windowRefs[app.id];
                 const pos = this.state.window_positions[app.id];
                 const props = {
                     title: app.title,
@@ -483,11 +490,100 @@ export class Desktop extends Component {
                 }
 
                 windowsJsx.push(
-                    <Window key={app.id} {...props} />
+                    <Window ref={ref} key={app.id} {...props} />
                 )
             }
         });
         return windowsJsx;
+    }
+
+    tileWindows = (direction, options = {}) => {
+        if (typeof window === 'undefined') return;
+
+        const openWindows = this.app_stack.filter(id =>
+            this.state.closed_windows[id] === false && !this.state.minimized_windows[id]
+        );
+
+        if (!openWindows.length) return;
+
+        const area = document.getElementById('window-area');
+        if (!area) return;
+
+        const areaRect = area.getBoundingClientRect();
+        const areaWidth = area.clientWidth || areaRect.width;
+        const areaHeight = area.clientHeight || areaRect.height;
+
+        if (!areaWidth || !areaHeight) return;
+
+        const layout = computeWindowLayout(openWindows, direction, options);
+
+        const clampValue = (value, min, max) => {
+            if (value < min) return min;
+            if (value > max) return max;
+            return value;
+        };
+
+        const snapValue = (value, max) => {
+            const clamped = clampValue(value, 0, max);
+            if (!this.props.snapEnabled) {
+                return clamped;
+            }
+            const step = 8;
+            const snapped = Math.round(clamped / step) * step;
+            if (snapped > max) {
+                return Math.max(0, Math.floor(max / step) * step);
+            }
+            return Math.max(0, snapped);
+        };
+
+        const nextPositions = {};
+
+        openWindows.forEach(id => {
+            const rect = layout[id];
+            if (!rect) return;
+
+            const node = document.getElementById(id);
+            if (!node) return;
+
+            const widthPx = clampValue(rect.width * areaWidth, 0, areaWidth);
+            const heightPx = clampValue(rect.height * areaHeight, 0, areaHeight);
+            const maxX = Math.max(areaWidth - widthPx, 0);
+            const maxY = Math.max(areaHeight - heightPx, 0);
+
+            const xPx = snapValue(rect.x * areaWidth, maxX);
+            const yPx = snapValue(rect.y * areaHeight, maxY);
+
+            const widthPercent = areaWidth === 0 ? 0 : clampValue((widthPx / areaWidth) * 100, 0, 100);
+            const heightPercent = areaHeight === 0 ? 0 : clampValue((heightPx / areaHeight) * 100, 0, 100);
+
+            node.style.width = `${widthPercent}%`;
+            node.style.height = `${heightPercent}%`;
+            node.style.transform = `translate(${xPx}px, ${yPx}px)`;
+            node.style.setProperty('--window-transform-x', `${xPx}px`);
+            node.style.setProperty('--window-transform-y', `${yPx}px`);
+
+            const ref = this.windowRefs[id];
+            if (ref && ref.current) {
+                ref.current.setState({
+                    width: widthPercent,
+                    height: heightPercent,
+                    maximized: false,
+                    snapped: null,
+                    snapPreview: null,
+                    snapPosition: null,
+                }, () => {
+                    ref.current?.resizeBoundries();
+                });
+            }
+
+            nextPositions[id] = { x: xPx, y: yPx };
+        });
+
+        if (Object.keys(nextPositions).length) {
+            this.setState(prev => ({
+                window_positions: { ...prev.window_positions, ...nextPositions }
+            }), this.saveSession);
+        }
     }
 
     updateWindowPosition = (id, x, y) => {
