@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Taskbar from '../components/screen/taskbar';
+import { TooltipProvider } from '../components/ui/TooltipProvider';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 
@@ -11,14 +12,16 @@ describe('Taskbar', () => {
     const openApp = jest.fn();
     const minimize = jest.fn();
     render(
-      <Taskbar
-        apps={apps}
-        closed_windows={{ app1: false }}
-        minimized_windows={{ app1: false }}
-        focused_windows={{ app1: true }}
-        openApp={openApp}
-        minimize={minimize}
-      />
+      <TooltipProvider>
+        <Taskbar
+          apps={apps}
+          closed_windows={{ app1: false }}
+          minimized_windows={{ app1: false }}
+          focused_windows={{ app1: true }}
+          openApp={openApp}
+          minimize={minimize}
+        />
+      </TooltipProvider>
     );
     const button = screen.getByRole('button', { name: /app one/i });
     fireEvent.click(button);
@@ -30,14 +33,16 @@ describe('Taskbar', () => {
     const openApp = jest.fn();
     const minimize = jest.fn();
     render(
-      <Taskbar
-        apps={apps}
-        closed_windows={{ app1: false }}
-        minimized_windows={{ app1: true }}
-        focused_windows={{ app1: false }}
-        openApp={openApp}
-        minimize={minimize}
-      />
+      <TooltipProvider>
+        <Taskbar
+          apps={apps}
+          closed_windows={{ app1: false }}
+          minimized_windows={{ app1: true }}
+          focused_windows={{ app1: false }}
+          openApp={openApp}
+          minimize={minimize}
+        />
+      </TooltipProvider>
     );
     const button = screen.getByRole('button', { name: /app one/i });
     fireEvent.click(button);

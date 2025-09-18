@@ -36,13 +36,16 @@ import React, { createRef, act } from 'react';
 import { render, fireEvent } from '@testing-library/react';
 import Terminal from '../apps/terminal';
 import TerminalTabs from '../apps/terminal/tabs';
+import { TooltipProvider } from '../components/ui/TooltipProvider';
+
+const renderWithTooltip = (ui: React.ReactElement) => render(<TooltipProvider>{ui}</TooltipProvider>);
 
 describe('Terminal component', () => {
   const openApp = jest.fn();
 
   it('renders container and exposes runCommand', async () => {
     const ref = createRef<any>();
-    render(<Terminal ref={ref} openApp={openApp} />);
+    renderWithTooltip(<Terminal ref={ref} openApp={openApp} />);
     await act(async () => {});
     expect(ref.current).toBeTruthy();
     act(() => {
@@ -53,7 +56,7 @@ describe('Terminal component', () => {
 
   it('invokes openApp for open command', async () => {
     const ref = createRef<any>();
-    render(<Terminal ref={ref} openApp={openApp} />);
+    renderWithTooltip(<Terminal ref={ref} openApp={openApp} />);
     await act(async () => {});
     act(() => {
       ref.current.runCommand('open calculator');
@@ -62,7 +65,7 @@ describe('Terminal component', () => {
   });
 
   it('supports tab management shortcuts', async () => {
-    const { container } = render(<TerminalTabs openApp={openApp} />);
+    const { container } = renderWithTooltip(<TerminalTabs openApp={openApp} />);
     await act(async () => {});
     const root = container.firstChild as HTMLElement;
     root.focus();

@@ -26,6 +26,10 @@
   --color-bg: #0f1317;
   --color-text: #F5F5F5;
   --kali-bg: rgba(15, 19, 23, 0.85);
+  --tooltip-bg: color-mix(in srgb, var(--color-bg), black 25%);
+  --tooltip-text: var(--color-text);
+  --tooltip-border: color-mix(in srgb, var(--color-text), transparent 65%);
+  --tooltip-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
 
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
@@ -73,6 +77,10 @@
   --color-ub-orange: #ffff00;
   --color-ub-lite-abrgn: #00ffff;
   --color-ub-border-orange: #ffff00;
+  --tooltip-bg: #000000;
+  --tooltip-text: #ffffff;
+  --tooltip-border: #ffffff;
+  --tooltip-shadow: 0 0 0 1px #ffffff;
   --game-color-secondary: #ffff00;
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
@@ -116,5 +124,9 @@
     --color-ub-orange: #ffff00;
     --color-ub-lite-abrgn: #00ffff;
     --color-ub-border-orange: #ffff00;
+    --tooltip-bg: #000000;
+    --tooltip-text: #ffffff;
+    --tooltip-border: #ffffff;
+    --tooltip-shadow: 0 0 0 1px #ffffff;
   }
 }

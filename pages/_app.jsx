@@ -16,6 +16,7 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { TooltipProvider } from '../components/ui/TooltipProvider';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -157,7 +158,8 @@ function MyApp(props) {
           Skip to app grid
         </a>
         <SettingsProvider>
-          <PipPortalProvider>
+          <TooltipProvider>
+            <PipPortalProvider>
             <div aria-live="polite" id="live-region" />
             <Component {...pageProps} />
             <ShortcutOverlay />
@@ -171,7 +173,8 @@ function MyApp(props) {
             />
 
             {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
-          </PipPortalProvider>
+            </PipPortalProvider>
+          </TooltipProvider>
         </SettingsProvider>
       </div>
     </ErrorBoundary>
