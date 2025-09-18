@@ -1,0 +1,47 @@
+{
+  "tabs": {
+    "appearance": "Appearance",
+    "accessibility": "Accessibility",
+    "privacy": "Privacy"
+  },
+  "language": {
+    "label": "Language"
+  },
+  "appearance": {
+    "themeLabel": "Theme",
+    "themes": {
+      "default": "Default",
+      "dark": "Dark",
+      "neon": "Neon",
+      "matrix": "Matrix"
+    },
+    "accentLabel": "Accent",
+    "wallpaperLabel": "Wallpaper",
+    "wallpaperAria": "Wallpaper selection",
+    "reset": "Reset Desktop"
+  },
+  "accessibility": {
+    "iconSize": "Icon Size",
+    "density": "Density",
+    "densityOptions": {
+      "regular": "Regular",
+      "compact": "Compact"
+    },
+    "reducedMotion": "Reduced Motion",
+    "highContrast": "High Contrast",
+    "haptics": "Haptics",
+    "editShortcuts": "Edit Shortcuts"
+  },
+  "privacy": {
+    "export": "Export Settings",
+    "import": "Import Settings"
+  },
+  "reset": {
+    "confirm": "Reset desktop to default settings? This will clear all saved data."
+  },
+  "slideshow": {
+    "intervalLabel": "Interval (s)",
+    "start": "Start",
+    "pause": "Pause"
+  }
+}

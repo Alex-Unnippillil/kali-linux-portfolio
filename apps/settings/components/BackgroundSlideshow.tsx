@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import { useSettings } from '../../../hooks/useSettings';
+import { useTranslation } from 'next-i18next';
 
 export default function BackgroundSlideshow() {
   const { setWallpaper } = useSettings();
@@ -19,6 +20,7 @@ export default function BackgroundSlideshow() {
   const [playing, setPlaying] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const indexRef = useRef(0);
+  const { t } = useTranslation('settings');
 
   useEffect(() => {
     fetch('/api/wallpapers')
@@ -75,7 +77,7 @@ export default function BackgroundSlideshow() {
         ))}
       </div>
       <div className="flex items-center space-x-2">
-        <label htmlFor="interval">Interval (s):</label>
+        <label htmlFor="interval">{t('slideshow.intervalLabel')}:</label>
         <input
           id="interval"
           type="number"
@@ -90,7 +92,7 @@ export default function BackgroundSlideshow() {
         disabled={selected.length === 0}
         className="px-4 py-2 rounded bg-ub-cool-grey border border-ubt-cool-grey hover:bg-ubt-cool-grey disabled:opacity-50"
       >
-        {playing ? 'Pause' : 'Start'}
+        {playing ? t('slideshow.pause') : t('slideshow.start')}
       </button>
     </div>
   );

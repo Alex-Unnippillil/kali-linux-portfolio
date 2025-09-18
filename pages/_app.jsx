@@ -16,6 +16,8 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { appWithTranslation, useTranslation } from 'next-i18next';
+import nextI18NextConfig from '../next-i18next.config';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -27,6 +29,7 @@ const ubuntu = Ubuntu({
 
 function MyApp(props) {
   const { Component, pageProps } = props;
+  const { t, i18n } = useTranslation('common');
 
 
   useEffect(() => {
@@ -91,9 +94,13 @@ function MyApp(props) {
       }, 100);
     };
 
-    const handleCopy = () => update('Copied to clipboard');
-    const handleCut = () => update('Cut to clipboard');
-    const handlePaste = () => update('Pasted from clipboard');
+    const copyMessage = t('clipboard.copied');
+    const cutMessage = t('clipboard.cut');
+    const pasteMessage = t('clipboard.pasted');
+
+    const handleCopy = () => update(copyMessage);
+    const handleCut = () => update(cutMessage);
+    const handlePaste = () => update(pasteMessage);
 
     window.addEventListener('copy', handleCopy);
     window.addEventListener('cut', handleCut);
@@ -104,14 +111,14 @@ function MyApp(props) {
     const originalRead = clipboard?.readText?.bind(clipboard);
     if (originalWrite) {
       clipboard.writeText = async (text) => {
-        update('Copied to clipboard');
+        update(copyMessage);
         return originalWrite(text);
       };
     }
     if (originalRead) {
       clipboard.readText = async () => {
         const text = await originalRead();
-        update('Pasted from clipboard');
+        update(pasteMessage);
         return text;
       };
     }
@@ -144,7 +151,7 @@ function MyApp(props) {
         window.Notification = OriginalNotification;
       }
     };
-  }, []);
+  }, [t, i18n.language]);
 
   return (
     <ErrorBoundary>
@@ -154,7 +161,7 @@ function MyApp(props) {
           href="#app-grid"
           className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"
         >
-          Skip to app grid
+          {t('skipToAppGrid')}
         </a>
         <SettingsProvider>
           <PipPortalProvider>
@@ -180,7 +187,7 @@ function MyApp(props) {
   );
 }
 
-export default MyApp;
+export default appWithTranslation(MyApp, nextI18NextConfig);
 
 export { reportWebVitalsUtil as reportWebVitals };
 

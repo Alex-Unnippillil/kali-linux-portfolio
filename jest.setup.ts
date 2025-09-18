@@ -108,21 +108,23 @@ if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
 }
 
 // Simple localStorage mock for environments without it
-if (typeof window !== 'undefined' && !window.localStorage) {
+if (typeof window !== 'undefined') {
   const store: Record<string, string> = {};
-  // @ts-ignore
-  window.localStorage = {
-    getItem: (key: string) => (key in store ? store[key] : null),
-    setItem: (key: string, value: string) => {
-      store[key] = String(value);
+  Object.defineProperty(window, 'localStorage', {
+    value: {
+      getItem: (key: string) => (key in store ? store[key] : null),
+      setItem: (key: string, value: string) => {
+        store[key] = String(value);
+      },
+      removeItem: (key: string) => {
+        delete store[key];
+      },
+      clear: () => {
+        for (const k in store) delete store[k];
+      },
     },
-    removeItem: (key: string) => {
-      delete store[key];
-    },
-    clear: () => {
-      for (const k in store) delete store[k];
-    },
-  } as Storage;
+    configurable: true,
+  });
 }
 
 // Minimal Worker mock for tests
@@ -180,3 +182,4 @@ jest.mock(
   }),
   { virtual: true }
 );
+

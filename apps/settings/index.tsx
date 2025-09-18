@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -12,6 +12,8 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import { useTranslation } from "next-i18next";
+import { LOCALE_DEFINITIONS } from "../../utils/i18n";
 
 export default function Settings() {
   const {
@@ -31,15 +33,24 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    locale,
+    setLocale,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { t } = useTranslation("settings");
 
-  const tabs = [
-    { id: "appearance", label: "Appearance" },
-    { id: "accessibility", label: "Accessibility" },
-    { id: "privacy", label: "Privacy" },
-  ] as const;
-  type TabId = (typeof tabs)[number]["id"];
+  type TabId = "appearance" | "accessibility" | "privacy";
+
+  const tabs = useMemo(
+    () =>
+      [
+        { id: "appearance", label: t("tabs.appearance") },
+        { id: "accessibility", label: t("tabs.accessibility") },
+        { id: "privacy", label: t("tabs.privacy") },
+      ] as const,
+    [t]
+  );
+
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
 
   const wallpapers = [
@@ -80,6 +91,7 @@ export default function Settings() {
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
+      if (parsed.locale !== undefined) setLocale(parsed.locale);
     } catch (err) {
       console.error("Invalid settings", err);
     }
@@ -88,12 +100,16 @@ export default function Settings() {
   const handleReset = async () => {
     if (
       !window.confirm(
-        "Reset desktop to default settings? This will clear all saved data."
+        t("reset.confirm")
       )
     )
       return;
     await resetSettings();
-    window.localStorage.clear();
+    try {
+      window.localStorage?.clear?.();
+    } catch (error) {
+      console.warn('Unable to clear stored settings', error);
+    }
     setAccent(defaults.accent);
     setWallpaper(defaults.wallpaper);
     setDensity(defaults.density as any);
@@ -101,6 +117,7 @@ export default function Settings() {
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
     setTheme("default");
+    setLocale(defaults.locale);
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
@@ -122,20 +139,42 @@ export default function Settings() {
             }}
           ></div>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey">Theme:</label>
+            <label className="mr-2 text-ubt-grey" htmlFor="language-select">
+              {t("language.label")}:
+            </label>
             <select
+              id="language-select"
+              value={locale}
+              onChange={(e) => setLocale(e.target.value)}
+              className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+            >
+              {LOCALE_DEFINITIONS.map((definition) => (
+                <option key={definition.code} value={definition.code}>
+                  {definition.nativeName}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex justify-center my-4">
+            <label className="mr-2 text-ubt-grey" htmlFor="theme-select">
+              {t("appearance.themeLabel")}:
+            </label>
+            <select
+              id="theme-select"
               value={theme}
               onChange={(e) => setTheme(e.target.value)}
               className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
             >
-              <option value="default">Default</option>
-              <option value="dark">Dark</option>
-              <option value="neon">Neon</option>
-              <option value="matrix">Matrix</option>
+              <option value="default">{t("appearance.themes.default")}</option>
+              <option value="dark">{t("appearance.themes.dark")}</option>
+              <option value="neon">{t("appearance.themes.neon")}</option>
+              <option value="matrix">{t("appearance.themes.matrix")}</option>
             </select>
           </div>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey">Accent:</label>
+            <label className="mr-2 text-ubt-grey">
+              {t("appearance.accentLabel")}:
+            </label>
             <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
               {ACCENT_OPTIONS.map((c) => (
                 <button
@@ -151,7 +190,9 @@ export default function Settings() {
             </div>
           </div>
           <div className="flex justify-center my-4">
-            <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">Wallpaper:</label>
+            <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">
+              {t("appearance.wallpaperLabel")}:
+            </label>
             <input
               id="wallpaper-slider"
               type="range"
@@ -163,7 +204,7 @@ export default function Settings() {
                 changeBackground(wallpapers[parseInt(e.target.value, 10)])
               }
               className="ubuntu-slider"
-              aria-label="Wallpaper"
+              aria-label={t("appearance.wallpaperAria")}
             />
           </div>
           <div className="flex justify-center my-4">
@@ -204,7 +245,7 @@ export default function Settings() {
               onClick={handleReset}
               className="px-4 py-2 rounded bg-ub-orange text-white"
             >
-              Reset Desktop
+              {t("appearance.reset")}
             </button>
           </div>
         </>
@@ -212,7 +253,9 @@ export default function Settings() {
       {activeTab === "accessibility" && (
         <>
           <div className="flex justify-center my-4">
-            <label htmlFor="font-scale" className="mr-2 text-ubt-grey">Icon Size:</label>
+            <label htmlFor="font-scale" className="mr-2 text-ubt-grey">
+              {t("accessibility.iconSize")}:
+            </label>
             <input
               id="font-scale"
               type="range"
@@ -222,42 +265,45 @@ export default function Settings() {
               value={fontScale}
               onChange={(e) => setFontScale(parseFloat(e.target.value))}
               className="ubuntu-slider"
-              aria-label="Icon size"
+              aria-label={t("accessibility.iconSize")}
             />
           </div>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey">Density:</label>
+            <label className="mr-2 text-ubt-grey" htmlFor="density-select">
+              {t("accessibility.density")}:
+            </label>
             <select
+              id="density-select"
               value={density}
               onChange={(e) => setDensity(e.target.value as any)}
               className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
             >
-              <option value="regular">Regular</option>
-              <option value="compact">Compact</option>
+              <option value="regular">{t("accessibility.densityOptions.regular")}</option>
+              <option value="compact">{t("accessibility.densityOptions.compact")}</option>
             </select>
           </div>
           <div className="flex justify-center my-4 items-center">
-            <span className="mr-2 text-ubt-grey">Reduced Motion:</span>
+            <span className="mr-2 text-ubt-grey">{t("accessibility.reducedMotion")}:</span>
             <ToggleSwitch
               checked={reducedMotion}
               onChange={setReducedMotion}
-              ariaLabel="Reduced Motion"
+              ariaLabel={t("accessibility.reducedMotion")}
             />
           </div>
           <div className="flex justify-center my-4 items-center">
-            <span className="mr-2 text-ubt-grey">High Contrast:</span>
+            <span className="mr-2 text-ubt-grey">{t("accessibility.highContrast")}:</span>
             <ToggleSwitch
               checked={highContrast}
               onChange={setHighContrast}
-              ariaLabel="High Contrast"
+              ariaLabel={t("accessibility.highContrast")}
             />
           </div>
           <div className="flex justify-center my-4 items-center">
-            <span className="mr-2 text-ubt-grey">Haptics:</span>
+            <span className="mr-2 text-ubt-grey">{t("accessibility.haptics")}:</span>
             <ToggleSwitch
               checked={haptics}
               onChange={setHaptics}
-              ariaLabel="Haptics"
+              ariaLabel={t("accessibility.haptics")}
             />
           </div>
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
@@ -265,7 +311,7 @@ export default function Settings() {
               onClick={() => setShowKeymap(true)}
               className="px-4 py-2 rounded bg-ub-orange text-white"
             >
-              Edit Shortcuts
+              {t("accessibility.editShortcuts")}
             </button>
           </div>
         </>
@@ -277,13 +323,13 @@ export default function Settings() {
               onClick={handleExport}
               className="px-4 py-2 rounded bg-ub-orange text-white"
             >
-              Export Settings
+              {t("privacy.export")}
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}
               className="px-4 py-2 rounded bg-ub-orange text-white"
             >
-              Import Settings
+              {t("privacy.import")}
             </button>
           </div>
         </>
