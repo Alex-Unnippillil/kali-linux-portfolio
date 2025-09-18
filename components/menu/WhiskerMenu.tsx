@@ -114,22 +114,29 @@ const WhiskerMenu: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [open]);
 
+  const panelButtonStyle: React.CSSProperties = {
+    paddingInline: 'var(--panel-padding)',
+    paddingBlock: 'calc(var(--panel-padding) / 2)',
+    gap: 'var(--panel-gap)'
+  };
+
   return (
     <div className="relative">
       <button
         ref={buttonRef}
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        className="flex items-center outline-none transition duration-100 ease-in-out border-b-2 border-transparent"
+        style={panelButtonStyle}
       >
         <Image
           src="/themes/Yaru/status/decompiler-symbolic.svg"
           alt="Menu"
           width={16}
           height={16}
-          className="inline mr-1"
+          className="h-4 w-4"
         />
-        Applications
+        <span className="whitespace-nowrap">Applications</span>
       </button>
       {open && (
         <div

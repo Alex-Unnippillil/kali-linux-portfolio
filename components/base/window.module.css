@@ -1,9 +1,11 @@
 .windowYBorder {
-  height: calc(100% - 10px);
-  width: calc(100% + 10px);
+  --window-handle-offset: calc(var(--panel-padding) + (var(--panel-gap) / 2));
+  height: calc(100% - var(--window-handle-offset));
+  width: calc(100% + var(--window-handle-offset));
 }
 
 .windowXBorder {
-  height: calc(100% + 10px);
-  width: calc(100% - 10px);
+  --window-handle-offset: calc(var(--panel-padding) + (var(--panel-gap) / 2));
+  height: calc(100% + var(--window-handle-offset));
+  width: calc(100% - var(--window-handle-offset));
 }
