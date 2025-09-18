@@ -1,10 +1,48 @@
 {
   "executive": {
     "name": "Executive Summary",
-    "template": "Executive Summary\n\nFindings:\n{{#findings}}- {{title}} ({{severity}})\n{{/findings}}"
+    "template": "# Executive Summary Report\n\n{{#section executiveOverview}}## Executive Overview\nThis section highlights the most critical insights discovered during the assessment.\n{{/section}}\n\n## Findings Overview\n{{#findings}}- **{{title}}** ({{severity}})\n{{/findings}}\n\n{{#section appendix}}## Appendix\n![Figure: Attack Surface Overview](figures/attack-surface.png)\nAdditional diagrams and references are included for context.\n{{/section}}\n",
+    "config": {
+      "includeTableOfContents": true,
+      "figureNumbering": {
+        "default": "roman",
+        "options": ["arabic", "roman"]
+      },
+      "optionalSections": [
+        {
+          "id": "executiveOverview",
+          "label": "Include executive overview",
+          "defaultIncluded": true
+        },
+        {
+          "id": "appendix",
+          "label": "Include appendix with figure",
+          "defaultIncluded": false
+        }
+      ]
+    }
   },
   "detailed": {
     "name": "Detailed Report",
-    "template": "Detailed Report\n\n{{#findings}}{{index}}. {{title}}\nSeverity: {{severity}}\n{{description}}\n\n{{/findings}}"
+    "template": "# Detailed Assessment\n\n{{#section summary}}## Summary\nProvide contextual information for stakeholders and outline engagement scope.\n{{/section}}\n\n## Findings\n{{#findings}}### Finding {{index}}: {{title}}\n**Severity:** {{severity}}\n{{description}}\n\n{{/findings}}\n{{#section visuals}}## Visuals\n![Figure: Sample Attack Path](figures/sample-attack-path.png)\nSupporting imagery for walkthroughs and remediation planning.\n{{/section}}\n",
+    "config": {
+      "includeTableOfContents": true,
+      "figureNumbering": {
+        "default": "arabic",
+        "options": ["arabic", "roman", "alphabetic"]
+      },
+      "optionalSections": [
+        {
+          "id": "summary",
+          "label": "Include executive summary section",
+          "defaultIncluded": true
+        },
+        {
+          "id": "visuals",
+          "label": "Include visuals section",
+          "defaultIncluded": true
+        }
+      ]
+    }
   }
 }
