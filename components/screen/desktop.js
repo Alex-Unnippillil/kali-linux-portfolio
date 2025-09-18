@@ -24,6 +24,9 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 
+const WORKSPACES_STORAGE_KEY = 'desktop-workspaces';
+const CURRENT_WORKSPACE_KEY = 'desktop-current-workspace';
+
 export class Desktop extends Component {
     constructor() {
         super();
@@ -52,6 +55,8 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            workspaces: [],
+            currentWorkspaceId: '',
         }
     }
 
@@ -86,6 +91,7 @@ export class Desktop extends Component {
         this.checkForNewFolders();
         this.checkForAppShortcuts();
         this.updateTrashIcon();
+        this.initializeWorkspaces();
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
@@ -164,6 +170,10 @@ export class Desktop extends Component {
             e.preventDefault();
             this.cycleAppWindows(e.shiftKey ? -1 : 1);
         }
+        else if (e.ctrlKey && e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+            e.preventDefault();
+            this.switchWorkspaceByOffset(e.key === 'ArrowRight' ? 1 : -1);
+        }
         else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
             e.preventDefault();
             const id = this.getFocusedWindowId();
@@ -172,6 +182,197 @@ export class Desktop extends Component {
                 document.getElementById(id)?.dispatchEvent(event);
             }
         }
+    }
+
+    initializeWorkspaces = () => {
+        let storedWorkspaces = [];
+        const stored = safeLocalStorage?.getItem(WORKSPACES_STORAGE_KEY);
+        if (stored) {
+            try {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed)) {
+                    storedWorkspaces = parsed.filter(workspace => workspace && typeof workspace.id === 'string' && typeof workspace.name === 'string');
+                }
+            } catch (error) {
+                storedWorkspaces = [];
+            }
+        }
+
+        if (!storedWorkspaces.length) {
+            storedWorkspaces = [this.buildWorkspaceProfile('Workspace 1')];
+        }
+
+        const storedCurrent = safeLocalStorage?.getItem(CURRENT_WORKSPACE_KEY);
+        const currentWorkspaceId = storedWorkspaces.some(workspace => workspace.id === storedCurrent)
+            ? storedCurrent
+            : (storedWorkspaces[0] ? storedWorkspaces[0].id : '');
+
+        this.setState({ workspaces: storedWorkspaces, currentWorkspaceId }, () => {
+            this.persistWorkspaceState();
+        });
+    }
+
+    persistWorkspaceState = () => {
+        if (!safeLocalStorage) {
+            return;
+        }
+        try {
+            safeLocalStorage.setItem(WORKSPACES_STORAGE_KEY, JSON.stringify(this.state.workspaces));
+        } catch (error) {
+            // ignore persistence errors
+        }
+        try {
+            if (this.state.currentWorkspaceId) {
+                safeLocalStorage.setItem(CURRENT_WORKSPACE_KEY, this.state.currentWorkspaceId);
+            } else {
+                safeLocalStorage.removeItem(CURRENT_WORKSPACE_KEY);
+            }
+        } catch (error) {
+            // ignore persistence errors
+        }
+    }
+
+    buildWorkspaceProfile = (name) => ({
+        id: `workspace-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name,
+    })
+
+    generateWorkspaceName = (workspaces) => {
+        const existing = new Set(workspaces.map(workspace => workspace.name?.toLowerCase?.() ?? ''));
+        let index = workspaces.length + 1;
+        let candidate = `Workspace ${index}`;
+        while (existing.has(candidate.toLowerCase())) {
+            index += 1;
+            candidate = `Workspace ${index}`;
+        }
+        return candidate;
+    }
+
+    ensureUniqueWorkspaceName = (baseName, workspaces) => {
+        const existing = new Set(workspaces.map(workspace => workspace.name?.toLowerCase?.() ?? ''));
+        if (!existing.has(baseName.toLowerCase())) {
+            return baseName;
+        }
+        let suffix = 2;
+        let candidate = `${baseName} ${suffix}`;
+        while (existing.has(candidate.toLowerCase())) {
+            suffix += 1;
+            candidate = `${baseName} ${suffix}`;
+        }
+        return candidate;
+    }
+
+    updateWorkspaceState = (updater, callback) => {
+        this.setState((prevState) => {
+            const updated = updater(prevState);
+            if (!updated) {
+                return null;
+            }
+            return updated;
+        }, () => {
+            this.persistWorkspaceState();
+            if (typeof callback === 'function') {
+                callback();
+            }
+        });
+    }
+
+    createWorkspaceProfile = (name) => {
+        this.updateWorkspaceState((prevState) => {
+            const workspaces = Array.isArray(prevState.workspaces) ? [...prevState.workspaces] : [];
+            const workspaceName = name && typeof name === 'string' && name.trim() ? name.trim() : this.generateWorkspaceName(workspaces);
+            const newWorkspace = this.buildWorkspaceProfile(workspaceName);
+            return {
+                workspaces: [...workspaces, newWorkspace],
+                currentWorkspaceId: newWorkspace.id,
+            };
+        });
+    }
+
+    renameWorkspaceProfile = (id, name) => {
+        const trimmed = typeof name === 'string' ? name.trim() : '';
+        if (!trimmed) {
+            return;
+        }
+        this.updateWorkspaceState((prevState) => {
+            const workspaces = Array.isArray(prevState.workspaces) ? prevState.workspaces : [];
+            if (!workspaces.length) {
+                return null;
+            }
+            let hasChanged = false;
+            const updated = workspaces.map((workspace) => {
+                if (workspace.id === id) {
+                    if (workspace.name === trimmed) {
+                        return workspace;
+                    }
+                    hasChanged = true;
+                    return { ...workspace, name: trimmed };
+                }
+                return workspace;
+            });
+            if (!hasChanged) {
+                return null;
+            }
+            return { workspaces: updated };
+        });
+    }
+
+    duplicateWorkspaceProfile = (id) => {
+        this.updateWorkspaceState((prevState) => {
+            const workspaces = Array.isArray(prevState.workspaces) ? [...prevState.workspaces] : [];
+            if (!workspaces.length) {
+                return null;
+            }
+            const source = workspaces.find((workspace) => workspace.id === id);
+            if (!source) {
+                return null;
+            }
+            const duplicateName = this.ensureUniqueWorkspaceName(`${source.name} Copy`, workspaces);
+            const newWorkspace = this.buildWorkspaceProfile(duplicateName);
+            return {
+                workspaces: [...workspaces, newWorkspace],
+                currentWorkspaceId: newWorkspace.id,
+            };
+        });
+    }
+
+    switchWorkspaceProfile = (id) => {
+        if (!id) {
+            return;
+        }
+        this.updateWorkspaceState((prevState) => {
+            const workspaces = Array.isArray(prevState.workspaces) ? prevState.workspaces : [];
+            if (!workspaces.length) {
+                return null;
+            }
+            if (!workspaces.some((workspace) => workspace.id === id)) {
+                return null;
+            }
+            if (prevState.currentWorkspaceId === id) {
+                return null;
+            }
+            return { currentWorkspaceId: id };
+        });
+    }
+
+    switchWorkspaceByOffset = (offset) => {
+        if (!offset) {
+            return;
+        }
+        this.updateWorkspaceState((prevState) => {
+            const workspaces = Array.isArray(prevState.workspaces) ? prevState.workspaces : [];
+            if (!workspaces.length) {
+                return null;
+            }
+            const currentIndex = workspaces.findIndex((workspace) => workspace.id === prevState.currentWorkspaceId);
+            const baseIndex = currentIndex === -1 ? 0 : currentIndex;
+            const nextIndex = (baseIndex + offset + workspaces.length) % workspaces.length;
+            const nextId = workspaces[nextIndex].id;
+            if (nextId === prevState.currentWorkspaceId) {
+                return null;
+            }
+            return { currentWorkspaceId: nextId };
+        });
     }
 
     getFocusedWindowId = () => {
@@ -900,6 +1101,12 @@ export class Desktop extends Component {
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    workspaces={this.state.workspaces}
+                    currentWorkspaceId={this.state.currentWorkspaceId}
+                    onCreateWorkspace={this.createWorkspaceProfile}
+                    onRenameWorkspace={this.renameWorkspaceProfile}
+                    onDuplicateWorkspace={this.duplicateWorkspaceProfile}
+                    onSwitchWorkspace={this.switchWorkspaceProfile}
                 />
 
                 {/* Desktop Apps */}
