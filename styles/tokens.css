@@ -77,6 +77,8 @@
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
   --game-color-danger: #ff0000;
+  --interactive-hover: color-mix(in srgb, var(--color-ub-border-orange) 40%, transparent);
+  --interactive-active: color-mix(in srgb, var(--color-ub-border-orange) 60%, transparent);
 }
 
 /* Dyslexia-friendly fonts */
