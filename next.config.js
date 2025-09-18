@@ -2,6 +2,10 @@
 // Allows external badges and same-origin PDF embedding.
 // Update README (section "CSP External Domains") when editing domains below.
 
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+
 const { validateServerEnv: validateEnv } = require('./lib/validate.js');
 
 const ContentSecurityPolicy = [
@@ -61,26 +65,135 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 });
 
+const isDev = process.env.NODE_ENV === 'development';
+
+function computeAppRegistryVersion() {
+  const registryPath = path.join(__dirname, 'apps.config.js');
+  try {
+    const contents = fs.readFileSync(registryPath, 'utf8');
+    return crypto.createHash('sha256').update(contents).digest('hex').slice(0, 12);
+  } catch (error) {
+    console.warn('Unable to derive app registry version, falling back to timestamp', error);
+    return `${Date.now()}`;
+  }
+}
+
+const appRegistryVersion = computeAppRegistryVersion();
+
+const offlineRoutes = [
+  '/',
+  '/feeds',
+  '/about',
+  '/projects',
+  '/projects.json',
+  '/apps',
+  '/apps/weather',
+  '/apps/terminal',
+  '/apps/checkers',
+  '/offline.html',
+  '/manifest.webmanifest',
+];
+
+const additionalManifestEntries = offlineRoutes.map((url) => ({
+  url,
+  revision: url.startsWith('/apps') ? appRegistryVersion : null,
+}));
+
+const precacheAllowListPattern = /\.(?:js|css|html|ico|json|wasm|png|jpg|jpeg|svg|gif|webp|avif|mp3|ogg|mp4|webm|wav)$/;
+const precacheAllowListExact = new Set(['/offline.html']);
+
+const filterPrecacheEntries = (entries) => ({
+  manifest: entries.filter(({ url }) =>
+    precacheAllowListExact.has(url) || precacheAllowListPattern.test(url)
+  ),
+  warnings: [],
+});
+
+const runtimeCaching = [
+  {
+    urlPattern: ({ request }) => request.destination === 'image',
+    handler: 'StaleWhileRevalidate',
+    method: 'GET',
+    options: {
+      cacheName: 'images-cache',
+      expiration: {
+        maxEntries: 150,
+        maxAgeSeconds: 30 * 24 * 60 * 60,
+      },
+      cacheableResponse: {
+        statuses: [0, 200],
+      },
+    },
+  },
+  {
+    urlPattern: ({ request }) => request.destination === 'font',
+    handler: 'CacheFirst',
+    method: 'GET',
+    options: {
+      cacheName: 'fonts-cache',
+      expiration: {
+        maxEntries: 50,
+        maxAgeSeconds: 365 * 24 * 60 * 60,
+      },
+      cacheableResponse: {
+        statuses: [0, 200],
+      },
+    },
+  },
+  {
+    urlPattern: ({ request, url }) =>
+      request.destination === 'webassembly' || url.pathname.endsWith('.wasm'),
+    handler: 'CacheFirst',
+    method: 'GET',
+    options: {
+      cacheName: 'wasm-cache',
+      expiration: {
+        maxEntries: 30,
+        maxAgeSeconds: 30 * 24 * 60 * 60,
+      },
+      cacheableResponse: {
+        statuses: [0, 200],
+      },
+    },
+  },
+  {
+    urlPattern: ({ url }) => url.pathname.endsWith('.json'),
+    handler: 'NetworkFirst',
+    method: 'GET',
+    options: {
+      cacheName: 'json-cache',
+      networkTimeoutSeconds: 3,
+      expiration: {
+        maxEntries: 80,
+        maxAgeSeconds: 24 * 60 * 60,
+      },
+      cacheableResponse: {
+        statuses: [0, 200],
+      },
+    },
+  },
+];
+
 const withPWA = require('@ducanh2912/next-pwa').default({
   dest: 'public',
   sw: 'sw.js',
-  disable: process.env.NODE_ENV === 'development',
-  buildExcludes: [/dynamic-css-manifest\.json$/],
+  disable: isDev,
+  buildExcludes: [
+    /dynamic-css-manifest\.json$/,
+    /app-build-manifest\.json$/,
+    /react-loadable-manifest\.json$/,
+    /middleware-manifest\.json$/,
+    /middleware-build-manifest\.json$/,
+    /server\/middleware-manifest\.json$/,
+    /_buildManifest\.js$/,
+    /_ssgManifest\.js$/,
+    /static\/.*\.map$/,
+  ],
   workboxOptions: {
     navigateFallback: '/offline.html',
-    additionalManifestEntries: [
-      { url: '/', revision: null },
-      { url: '/feeds', revision: null },
-      { url: '/about', revision: null },
-      { url: '/projects', revision: null },
-      { url: '/projects.json', revision: null },
-      { url: '/apps', revision: null },
-      { url: '/apps/weather', revision: null },
-      { url: '/apps/terminal', revision: null },
-      { url: '/apps/checkers', revision: null },
-      { url: '/offline.html', revision: null },
-      { url: '/manifest.webmanifest', revision: null },
-    ],
+    additionalManifestEntries,
+    runtimeCaching,
+    manifestTransforms: [filterPrecacheEntries],
   },
 });
 
@@ -103,7 +216,7 @@ function configureWebpack(config, { isServer }) {
   };
   config.resolve.alias = {
     ...(config.resolve.alias || {}),
-    'react-dom$': require('path').resolve(__dirname, 'lib/react-dom-shim.js'),
+    'react-dom$': path.resolve(__dirname, 'lib/react-dom-shim.js'),
   };
   if (isProd) {
     config.optimization = {
