@@ -1,0 +1,145 @@
+{
+  "id": "incident-response",
+  "name": "Incident Response After Action Report",
+  "description": "Chronological review of an incident response engagement with lessons learned and remediation tasks.",
+  "layout": {
+    "format": "US-Letter",
+    "orientation": "portrait",
+    "columns": 1,
+    "theme": "amber-on-charcoal",
+    "margin": "0.75in"
+  },
+  "cover": [
+    { "field": "title", "label": "Report Title", "type": "string", "required": true },
+    { "field": "incidentName", "label": "Incident Name", "type": "string", "required": true },
+    { "field": "client", "label": "Client", "type": "string", "required": true },
+    { "field": "preparedBy", "label": "Prepared By", "type": "string", "required": true },
+    { "field": "responseLead", "label": "Response Lead", "type": "string", "required": true },
+    { "field": "reportDate", "label": "Report Date", "type": "date", "required": true },
+    { "field": "version", "label": "Version", "type": "string", "required": false },
+    { "field": "classification", "label": "Classification", "type": "string", "required": false }
+  ],
+  "sections": [
+    {
+      "slug": "executive-summary",
+      "title": "Executive Summary",
+      "description": "Concise overview of the incident, impact, and overall response effectiveness.",
+      "required": true,
+      "variables": [
+        {
+          "key": "executiveSummary",
+          "type": "markdown",
+          "required": true,
+          "description": "Narrative accessible to leadership on what occurred, why it matters, and how the team responded."
+        }
+      ]
+    },
+    {
+      "slug": "timeline",
+      "title": "Incident Timeline",
+      "description": "Minute-by-minute account of detection, triage, containment, and recovery activities.",
+      "required": true,
+      "variables": [
+        {
+          "key": "timeline",
+          "type": "collection",
+          "required": true,
+          "description": "Chronological entries representing major milestones and decisions.",
+          "itemFields": [
+            { "field": "timestamp", "type": "string", "required": true },
+            { "field": "description", "type": "markdown", "required": true },
+            { "field": "owner", "type": "string", "required": false },
+            { "field": "notes", "type": "markdown", "required": false }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "impact",
+      "title": "Impact Assessment",
+      "description": "Business and technical impact of the incident across availability, integrity, and confidentiality.",
+      "required": true,
+      "variables": [
+        {
+          "key": "impactAssessment",
+          "type": "markdown",
+          "required": true,
+          "description": "Summary of affected services, data exposure, and downstream effects."
+        }
+      ]
+    },
+    {
+      "slug": "containment",
+      "title": "Containment and Eradication",
+      "description": "Steps taken to halt attacker activity and remove persistence.",
+      "required": true,
+      "variables": [
+        {
+          "key": "containment",
+          "type": "markdown",
+          "required": true,
+          "description": "Detail actions, tooling, and decision points executed during containment."
+        }
+      ]
+    },
+    {
+      "slug": "recovery",
+      "title": "Recovery Status",
+      "description": "System restoration progress and validation testing.",
+      "required": true,
+      "variables": [
+        {
+          "key": "recoveryStatus",
+          "type": "markdown",
+          "required": true,
+          "description": "Outline of service restoration, validation steps, and outstanding risks."
+        }
+      ]
+    },
+    {
+      "slug": "lessons-learned",
+      "title": "Lessons Learned",
+      "description": "Process, tooling, and communication improvements identified during the response.",
+      "required": true,
+      "variables": [
+        {
+          "key": "lessonsLearned",
+          "type": "markdown",
+          "required": true,
+          "description": "Insights on what worked, what needs refinement, and how to reinforce readiness."
+        }
+      ]
+    },
+    {
+      "slug": "follow-up",
+      "title": "Follow-up Actions",
+      "description": "Trackable remediation tasks, owners, and timelines.",
+      "required": true,
+      "variables": [
+        {
+          "key": "followUpActions",
+          "type": "markdown",
+          "required": true,
+          "description": "List of tasks assigned to teams with due dates or milestones."
+        }
+      ]
+    },
+    {
+      "slug": "evidence",
+      "title": "Evidence Log",
+      "description": "Reference to collected logs, forensics images, and communication transcripts.",
+      "required": false,
+      "variables": [
+        {
+          "key": "evidenceLog",
+          "type": "markdown",
+          "required": false,
+          "description": "Bulleted appendix capturing artifacts retained for compliance."
+        }
+      ]
+    }
+  ],
+  "preview": {
+    "thumbnail": "/images/report-templates/incident-response.svg"
+  }
+}
