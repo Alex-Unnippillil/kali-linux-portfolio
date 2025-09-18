@@ -48,9 +48,9 @@ const TriageFilters: React.FC = () => {
           <label key={sev} className="flex items-center space-x-1">
             <input
               type="checkbox"
-              className="accent-blue-500"
               checked={activeFilters.includes(sev)}
               onChange={() => toggleFilter(sev)}
+              style={{ accentColor: 'var(--color-control-accent)' }}
             />
             <span className="capitalize">{sev}</span>
           </label>

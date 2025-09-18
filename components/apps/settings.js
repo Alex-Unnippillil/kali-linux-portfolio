@@ -75,15 +75,15 @@ export function Settings() {
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Accent:</label>
                 <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
-                    {ACCENT_OPTIONS.map((c) => (
+                    {ACCENT_OPTIONS.map((option) => (
                         <button
-                            key={c}
-                            aria-label={`select-accent-${c}`}
+                            key={option.id}
+                            aria-label={`select-accent-${option.id}`}
                             role="radio"
-                            aria-checked={accent === c}
-                            onClick={() => setAccent(c)}
-                            className={`w-8 h-8 rounded-full border-2 ${accent === c ? 'border-white' : 'border-transparent'}`}
-                            style={{ backgroundColor: c }}
+                            aria-checked={accent === option.value}
+                            onClick={() => setAccent(option.value)}
+                            className={`w-8 h-8 rounded-full border-2 ${accent === option.value ? 'border-white' : 'border-transparent'}`}
+                            style={{ backgroundColor: option.value }}
                         />
                     ))}
                 </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
+import { useSettings } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
   resetSettings,
@@ -9,9 +9,11 @@ import {
   exportSettings as exportSettingsData,
   importSettings as importSettingsData,
 } from "../../utils/settingsStore";
+import { getAccessibleTextColor } from "../../utils/color";
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import AccentPicker from "./components/AccentPicker";
 
 export default function Settings() {
   const {
@@ -134,20 +136,23 @@ export default function Settings() {
               <option value="matrix">Matrix</option>
             </select>
           </div>
-          <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey">Accent:</label>
-            <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
-              {ACCENT_OPTIONS.map((c) => (
+          <div className="flex justify-center my-4 px-4">
+            <AccentPicker value={accent} onChange={setAccent} />
+          </div>
+          <div className="flex justify-center my-4 px-4">
+            <div className="w-full max-w-md rounded-lg border border-[var(--color-border)] bg-[var(--color-ub-lite-abrgn)] p-4 text-center text-ubt-grey shadow" role="presentation">
+              <p className="text-sm font-semibold uppercase tracking-wide">Accent preview</p>
+              <div className="mt-3 flex flex-col items-center gap-2">
                 <button
-                  key={c}
-                  aria-label={`select-accent-${c}`}
-                  role="radio"
-                  aria-checked={accent === c}
-                  onClick={() => setAccent(c)}
-                  className={`w-8 h-8 rounded-full border-2 ${accent === c ? 'border-white' : 'border-transparent'}`}
-                  style={{ backgroundColor: c }}
-                />
-              ))}
+                  className="rounded-md px-4 py-2 font-medium shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+                  style={{ backgroundColor: accent, color: getAccessibleTextColor(accent) }}
+                >
+                  Accent button
+                </button>
+                <span className="text-xs text-ubt-grey">
+                  Buttons, sliders, and focus rings use this color.
+                </span>
+              </div>
             </div>
           </div>
           <div className="flex justify-center my-4">
