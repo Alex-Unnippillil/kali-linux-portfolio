@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Component } from 'react';
+import React, { Component, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 
 const BackgroundImage = dynamic(
@@ -19,10 +19,12 @@ import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import Taskbar from './taskbar';
 import TaskbarMenu from '../context-menus/taskbar-menu';
+import EvidencePanel from '../evidence/EvidencePanel';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import useWorkspaces from '../../hooks/useWorkspaces';
 
 export class Desktop extends Component {
     constructor() {
@@ -147,10 +149,22 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcut = (e) => {
+        const target = e.target;
+        const isTypingTarget =
+            target instanceof HTMLElement &&
+            (target.isContentEditable ||
+                ['input', 'textarea', 'select'].includes(target.tagName.toLowerCase()));
+
         if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
             if (!this.state.showWindowSwitcher) {
                 this.openWindowSwitcher();
+            }
+        } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'e') {
+            if (isTypingTarget) return;
+            e.preventDefault();
+            if (this.props.onToggleEvidencePanel) {
+                this.props.onToggleEvidencePanel();
             }
         } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
             e.preventDefault();
@@ -181,6 +195,60 @@ export class Desktop extends Component {
             }
         }
         return null;
+    }
+
+    getActiveWorkspaceId = () => this.props.workspaceId || 'default';
+
+    handleEvidencePanelClose = () => {
+        if (this.props.onCloseEvidencePanel) {
+            this.props.onCloseEvidencePanel();
+        }
+    }
+
+    captureDesktopEvidence = async () => {
+        const container = document.getElementById('window-area');
+        if (!container) {
+            throw new Error('Desktop is not ready for capture.');
+        }
+        try {
+            const dataUrl = await toPng(container);
+            this.downloadEvidenceImage(
+                dataUrl,
+                `${this.getActiveWorkspaceId()}-desktop.png`,
+            );
+        } catch (error) {
+            console.error('Failed to capture desktop evidence', error);
+            throw new Error('Unable to capture the desktop right now.');
+        }
+    }
+
+    captureFocusedWindowEvidence = async () => {
+        const windowId = this.getFocusedWindowId();
+        if (!windowId) {
+            throw new Error('No focused window available to capture.');
+        }
+        const node = document.getElementById(windowId);
+        if (!node) {
+            throw new Error('Unable to locate the focused window.');
+        }
+        try {
+            const dataUrl = await toPng(node);
+            this.downloadEvidenceImage(dataUrl, `${windowId}.png`);
+        } catch (error) {
+            console.error('Failed to capture window evidence', error);
+            throw new Error('Unable to capture the active window.');
+        }
+    }
+
+    downloadEvidenceImage = (dataUrl, filename) => {
+        if (typeof window === 'undefined') return;
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = filename;
+        link.rel = 'noopener';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 
     cycleApps = (direction) => {
@@ -967,6 +1035,14 @@ export class Desktop extends Component {
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
 
+                <EvidencePanel
+                    open={!!this.props.evidencePanelOpen}
+                    workspaceId={this.getActiveWorkspaceId()}
+                    onClose={this.handleEvidencePanelClose}
+                    onCaptureDesktop={this.captureDesktopEvidence}
+                    onCaptureWindow={this.captureFocusedWindowEvidence}
+                />
+
             </main>
         )
     }
@@ -974,5 +1050,42 @@ export class Desktop extends Component {
 
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
-    return <Desktop {...props} snapEnabled={snapEnabled} />;
+    const { activeWorkspace, getWorkspacePreferences, updateWorkspacePreferences } = useWorkspaces();
+
+    const toggleEvidencePanel = useCallback(() => {
+        updateWorkspacePreferences(activeWorkspace, (previous) => {
+            const next = { ...previous };
+            if (next.evidencePanelOpen) {
+                delete next.evidencePanelOpen;
+            } else {
+                next.evidencePanelOpen = true;
+            }
+            return Object.keys(next).length > 0 ? next : null;
+        });
+    }, [activeWorkspace, updateWorkspacePreferences]);
+
+    const closeEvidencePanel = useCallback(() => {
+        updateWorkspacePreferences(activeWorkspace, (previous) => {
+            if (!previous.evidencePanelOpen) {
+                return previous;
+            }
+            const next = { ...previous };
+            delete next.evidencePanelOpen;
+            return Object.keys(next).length > 0 ? next : null;
+        });
+    }, [activeWorkspace, updateWorkspacePreferences]);
+
+    const preferences = getWorkspacePreferences(activeWorkspace);
+    const evidencePanelOpen = !!preferences.evidencePanelOpen;
+
+    return (
+        <Desktop
+            {...props}
+            snapEnabled={snapEnabled}
+            workspaceId={activeWorkspace}
+            evidencePanelOpen={evidencePanelOpen}
+            onToggleEvidencePanel={toggleEvidencePanel}
+            onCloseEvidencePanel={closeEvidencePanel}
+        />
+    );
 }
