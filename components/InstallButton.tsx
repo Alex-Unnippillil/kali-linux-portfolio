@@ -26,7 +26,7 @@ const InstallButton: React.FC = () => {
   return (
     <button
       onClick={handleInstall}
-      className="fixed bottom-4 right-4 bg-ubt-blue text-white px-3 py-1 rounded"
+      className="fixed bottom-4 right-4 bg-ubt-blue text-[var(--color-on-brand)] px-3 py-1 rounded"
     >
       Install
     </button>

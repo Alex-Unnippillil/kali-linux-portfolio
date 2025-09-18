@@ -250,7 +250,9 @@ const Certs = () => {
             key={cat}
             type="button"
             className={`m-1 px-2 py-1 rounded text-sm ${
-              category === cat ? 'bg-ubt-blue text-white' : 'bg-gray-700'
+              category === cat
+                ? 'bg-ubt-blue text-[var(--color-on-brand)]'
+                : 'bg-gray-700'
             }`}
             onClick={() => setCategory(cat)}
           >

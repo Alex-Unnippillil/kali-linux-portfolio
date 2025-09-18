@@ -292,7 +292,7 @@ const MetasploitApp = ({
         />
         <button
           onClick={runCommand}
-          className="ml-2 px-2 py-1 bg-ub-orange rounded"
+          className="ml-2 px-2 py-1 bg-ub-orange rounded text-[var(--color-on-accent)]"
         >
           Run
         </button>
@@ -461,7 +461,7 @@ const MetasploitApp = ({
           <div className="mt-4">
             <button
               onClick={startReplay}
-              className="px-2 py-1 bg-ub-orange rounded text-black"
+              className="px-2 py-1 bg-ub-orange rounded text-[var(--color-on-accent)]"
             >
               Replay Mock Exploit
             </button>

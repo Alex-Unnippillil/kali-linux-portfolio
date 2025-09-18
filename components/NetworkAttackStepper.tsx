@@ -125,7 +125,7 @@ const NetworkAttackStepper: React.FC = () => {
         <button
           onClick={() => setStep((s) => Math.min(steps.length - 1, s + 1))}
           disabled={step === steps.length - 1}
-          className="px-4 py-2 bg-ubt-blue text-white rounded disabled:opacity-50"
+          className="px-4 py-2 bg-ubt-blue text-[var(--color-on-brand)] rounded disabled:opacity-50"
         >
           Next
         </button>

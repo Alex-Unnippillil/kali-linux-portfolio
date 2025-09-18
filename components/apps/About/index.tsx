@@ -373,7 +373,10 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
           <div className="bg-ub-cool-grey p-4 rounded max-w-xs" onClick={(e) => e.stopPropagation()}>
             <div className="font-bold mb-2 text-center">{selected.alt}</div>
             <p className="text-sm text-center">{selected.description}</p>
-            <button className="mt-2 px-2 py-1 bg-ubt-blue rounded" onClick={() => setSelected(null)}>
+            <button
+              className="mt-2 px-2 py-1 bg-ubt-blue text-[var(--color-on-brand)] rounded"
+              onClick={() => setSelected(null)}
+            >
               Close
             </button>
           </div>

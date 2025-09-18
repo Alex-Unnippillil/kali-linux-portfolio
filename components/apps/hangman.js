@@ -476,7 +476,7 @@ const Hangman = () => {
         </select>
         <button
           onClick={() => reset(undefined, pendingDict)}
-          className="px-2 py-1 bg-ubt-blue text-black rounded"
+          className="px-2 py-1 bg-ubt-blue text-[var(--color-on-brand)] rounded"
         >
           Start Game
         </button>
@@ -500,22 +500,26 @@ const Hangman = () => {
         <button
           onClick={handleHint}
           disabled={hintCoins <= 0 || paused}
-          className="px-2 py-0.5 bg-ub-orange text-black rounded-full text-xs shadow" 
+          className="px-2 py-0.5 bg-ub-orange text-[var(--color-on-accent)] rounded-full text-xs shadow"
         >
           Hint ({hintCoins})
         </button>
         <button
           onClick={() => setHardMode((m) => !m)}
-          className={`px-2 py-1 rounded text-black ${
-            hardMode ? 'bg-red-600' : 'bg-ubt-blue'
+          className={`px-2 py-1 rounded ${
+            hardMode
+              ? 'bg-red-600 text-white'
+              : 'bg-ubt-blue text-[var(--color-on-brand)]'
           }`}
         >
           {hardMode ? 'Hard On' : 'Hard Off'}
         </button>
         <button
           onClick={() => setFilterCommonLetters((v) => !v)}
-          className={`px-2 py-1 rounded text-black ${
-            filterCommonLetters ? 'bg-purple-600' : 'bg-ubt-blue'
+          className={`px-2 py-1 rounded ${
+            filterCommonLetters
+              ? 'bg-purple-600 text-white'
+              : 'bg-ubt-blue text-[var(--color-on-brand)]'
           }`}
         >
           {filterCommonLetters ? 'No Common On' : 'No Common Off'}
@@ -528,7 +532,7 @@ const Hangman = () => {
         </button>
         <button
           onClick={shareImage}
-          className="px-2 py-1 bg-ubt-blue text-black rounded"
+          className="px-2 py-1 bg-ubt-blue text-[var(--color-on-brand)] rounded"
         >
           Share Image
         </button>

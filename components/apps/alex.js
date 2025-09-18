@@ -332,7 +332,7 @@ const SkillSection = ({ title, badges }) => {
             <div className="font-bold mb-2 text-center">{selected.alt}</div>
             <p className="text-sm text-center">{selected.description}</p>
             <button
-              className="mt-2 px-2 py-1 bg-ubt-blue rounded"
+              className="mt-2 px-2 py-1 bg-ubt-blue text-[var(--color-on-brand)] rounded"
               onClick={() => setSelected(null)}
             >
               Close
@@ -579,7 +579,11 @@ function Resume({ data: resume }) {
                     <div className="flex flex-wrap my-2">
                         <button
                             onClick={() => setFilter('all')}
-                            className={(filter === 'all' ? 'bg-ubt-blue' : 'bg-ub-gedit-light') + ' text-xs px-2 py-1 rounded m-1'}
+                            className={`text-xs px-2 py-1 rounded m-1 ${
+                              filter === 'all'
+                                ? 'bg-ubt-blue text-[var(--color-on-brand)]'
+                                : 'bg-ub-gedit-light'
+                            }`}
                         >
                             All
                         </button>
@@ -587,7 +591,11 @@ function Resume({ data: resume }) {
                             <button
                                 key={tag}
                                 onClick={() => setFilter(tag)}
-                                className={(filter === tag ? 'bg-ubt-blue' : 'bg-ub-gedit-light') + ' text-xs px-2 py-1 rounded m-1'}
+                                className={`text-xs px-2 py-1 rounded m-1 ${
+                                  filter === tag
+                                    ? 'bg-ubt-blue text-[var(--color-on-brand)]'
+                                    : 'bg-ub-gedit-light'
+                                }`}
                             >
                                 {tag}
                             </button>

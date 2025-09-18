@@ -114,7 +114,7 @@ const ModuleWorkspace: React.FC = () => {
           />
           <button
             onClick={addWorkspace}
-            className="px-2 py-1 bg-ub-orange rounded text-black"
+            className="px-2 py-1 bg-ub-orange rounded text-[var(--color-on-accent)]"
           >
             Create
           </button>
