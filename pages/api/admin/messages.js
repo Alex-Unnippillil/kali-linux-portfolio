@@ -5,7 +5,13 @@ export default async function handler(
   req,
   res
 ) {
-  const logger = createLogger(req.headers['x-correlation-id']);
+  const correlationIdHeader = req.headers['x-correlation-id'];
+  const logger = createLogger({
+    correlationId: Array.isArray(correlationIdHeader)
+      ? correlationIdHeader[0]
+      : correlationIdHeader,
+    appId: 'api/admin/messages',
+  });
   if (req.method !== 'GET') {
     logger.warn('method not allowed', { method: req.method });
     res.status(405).json({ error: 'Method not allowed' });

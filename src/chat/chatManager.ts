@@ -4,7 +4,7 @@ export interface Chat {
   id: string;
 }
 
-export function getChatId(chat?: Chat, logger: Logger = createLogger()) {
+export function getChatId(chat?: Chat, logger: Logger = createLogger({ appId: 'chat' })) {
   if (!chat) {
     logger.error('chat is required');
     throw new Error('chat is required');
