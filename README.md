@@ -100,6 +100,11 @@ See `.env.local.example` for the full list.
 - Run `yarn lint` and `yarn test` before committing changes.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
 
+## Print Support
+
+- The About Alex desktop app ships with a dedicated print stylesheet (`styles/about/print.css`).
+- When a print job is triggered, the layout collapses to a single column, navigation chrome is hidden, and wider page margins keep the resume-style copy readable.
+
 ---
 
 ## Speed Insights
