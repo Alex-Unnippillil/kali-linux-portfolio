@@ -34,6 +34,19 @@ const FlowGraph: React.FC<FlowGraphProps> = ({ packets }) => {
   const cyRef = useRef<cytoscape.Core | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    return () => {
+      if (cyRef.current) {
+        try {
+          cyRef.current.destroy();
+        } catch {
+          // ignore teardown errors
+        }
+        cyRef.current = null;
+      }
+    };
+  }, []);
+
   const { elements, stats } = useMemo(() => {
     const nodes: Record<string, any> = {};
     const edges: Record<string, any> = {};
