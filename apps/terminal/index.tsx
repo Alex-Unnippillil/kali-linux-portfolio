@@ -11,6 +11,7 @@ import React, {
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
+import { requestAutofill } from '../../utils/passClient';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -345,6 +346,24 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       prompt();
       term.onData((d: string) => handleInput(d));
       term.onKey(({ domEvent }: any) => {
+        if (domEvent.ctrlKey && domEvent.shiftKey) {
+          const key = String(domEvent.key).toLowerCase();
+          if (key === 'p' || key === 'u') {
+            domEvent.preventDefault();
+            const secretField = key === 'p' ? 'password' : 'username';
+            requestAutofill({
+              targetAppId: 'terminal',
+              targetField: 'command-line',
+              targetLabel: 'Terminal prompt',
+              secretField,
+              onFill: (value) => {
+                commandRef.current += value;
+                termRef.current?.write(value);
+              },
+            });
+            return;
+          }
+        }
         if (domEvent.key === 'Tab') {
           domEvent.preventDefault();
           autocomplete();

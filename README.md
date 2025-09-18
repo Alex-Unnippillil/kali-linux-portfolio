@@ -100,6 +100,17 @@ See `.env.local.example` for the full list.
 - Run `yarn lint` and `yarn test` before committing changes.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
 
+## Credential Autofill Simulation
+
+The desktop now includes a lightweight simulation of `pass`-style credential storage and audit logging.
+
+- Press **Ctrl + Shift + U** or **Ctrl + Shift + P** while focused in the Browser or Terminal apps to request
+  a stored username or password. A confirmation modal lists available secrets.
+- Approving a request fills the current field and records an entry in the local audit log that captures the
+  selected item, field, and destination app.
+- Open the new **Privacy Dashboard** app to review or clear the audit trail. Logs are saved in `localStorage`
+  and never leave the browser.
+
 ---
 
 ## Speed Insights

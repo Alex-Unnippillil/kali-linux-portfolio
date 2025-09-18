@@ -112,6 +112,7 @@ const SSHApp = createDynamicApp('ssh', 'SSH Command Builder');
 const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
 const HtmlRewriteApp = createDynamicApp('html-rewriter', 'HTML Rewriter');
 const ContactApp = createDynamicApp('contact', 'Contact');
+const PrivacyDashboardApp = createDynamicApp('privacy-dashboard', 'Privacy Dashboard');
 
 
 
@@ -197,6 +198,7 @@ const displaySSH = createDisplay(SSHApp);
 const displayHTTP = createDisplay(HTTPApp);
 const displayHtmlRewrite = createDisplay(HtmlRewriteApp);
 const displayContact = createDisplay(ContactApp);
+const displayPrivacyDashboard = createDisplay(PrivacyDashboardApp);
 
 const displayHashcat = createDisplay(HashcatApp);
 
@@ -709,6 +711,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayResourceMonitor,
+  },
+  {
+    id: 'privacy-dashboard',
+    title: 'Privacy Dashboard',
+    icon: '/themes/Yaru/apps/gnome-control-center.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPrivacyDashboard,
   },
   {
     id: 'screen-recorder',

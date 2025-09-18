@@ -10,6 +10,7 @@ import { Readability } from '@mozilla/readability';
 import DOMPurify from 'dompurify';
 import AddressBar from './AddressBar';
 import { getCachedFavicon, cacheFavicon } from './bookmarks';
+import { requestAutofill } from '../../../utils/passClient';
 
 interface Tile {
   title: string;
@@ -63,6 +64,13 @@ const saveTabs = (tabs: TabData[], active: number) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ tabs, active }));
 };
 
+const isWritableElement = (
+  element: Element | null,
+): element is HTMLInputElement | HTMLTextAreaElement =>
+  !!element &&
+  ((element instanceof HTMLInputElement && !element.readOnly && !element.disabled) ||
+    (element instanceof HTMLTextAreaElement && !element.readOnly && !element.disabled));
+
 const Chrome: React.FC = () => {
   const { tabs: storedTabs, active: storedActive } = readTabs();
   const sessionUrl =
@@ -99,6 +107,7 @@ const Chrome: React.FC = () => {
   const [newTitle, setNewTitle] = useState('');
   const [newUrl, setNewUrl] = useState('');
   const tileFileInput = useRef<HTMLInputElement | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -191,6 +200,50 @@ const Chrome: React.FC = () => {
   useEffect(() => {
     DEMO_ORIGINS.forEach((url) => updateFavicon(url));
   }, [updateFavicon]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!event.ctrlKey || !event.shiftKey) return;
+      const key = event.key.toLowerCase();
+      if (key !== 'p' && key !== 'u') return;
+      const container = rootRef.current;
+      if (!container) return;
+      const active = document.activeElement;
+      if (!active || !container.contains(active)) return;
+      if (!isWritableElement(active)) return;
+
+      event.preventDefault();
+      const target = active as HTMLInputElement | HTMLTextAreaElement;
+      const secretField = key === 'p' ? 'password' : 'username';
+      const label =
+        target.getAttribute('aria-label') ||
+        target.getAttribute('placeholder') ||
+        target.getAttribute('name') ||
+        target.id ||
+        'Focused field';
+      const targetField =
+        target.getAttribute('name') ||
+        target.id ||
+        target.getAttribute('data-field') ||
+        'value';
+
+      requestAutofill({
+        targetAppId: 'browser',
+        targetField,
+        targetLabel: label,
+        secretField,
+        onFill: (value) => {
+          if (!target.isConnected) return;
+          target.value = value;
+          target.dispatchEvent(new Event('input', { bubbles: true }));
+          target.dispatchEvent(new Event('change', { bubbles: true }));
+        },
+      });
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     const el = tabStripRef.current;
@@ -668,7 +721,7 @@ const Chrome: React.FC = () => {
   );
 
   return (
-    <div className="flex flex-col w-full h-full bg-ub-cool-grey text-white">
+    <div ref={rootRef} className="flex flex-col w-full h-full bg-ub-cool-grey text-white">
       <div className="flex items-center bg-gray-800 text-sm p-1 space-x-1">
         <button onClick={goBack} aria-label="Back" className="px-2">◀</button>
         <button onClick={goForward} aria-label="Forward" className="px-2">▶</button>
