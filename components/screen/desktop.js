@@ -30,6 +30,8 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.draggedDesktopElement = null;
+        this.desktopDragActive = false;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -89,6 +91,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        this.setupDesktopDragAnimations();
     }
 
     componentWillUnmount() {
@@ -96,6 +99,7 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        this.teardownDesktopDragAnimations();
     }
 
     checkForNewFolders = () => {
@@ -130,6 +134,63 @@ export class Desktop extends Component {
                 this.openApp("settings");
             });
         }
+    }
+
+    setupDesktopDragAnimations = () => {
+        if (typeof document === 'undefined') return;
+        document.addEventListener('dragstart', this.handleDesktopDragStart, true);
+        document.addEventListener('dragend', this.handleDesktopDragEnd, true);
+        document.addEventListener('drop', this.handleDesktopDrop, true);
+    }
+
+    teardownDesktopDragAnimations = () => {
+        if (typeof document === 'undefined') return;
+        document.removeEventListener('dragstart', this.handleDesktopDragStart, true);
+        document.removeEventListener('dragend', this.handleDesktopDragEnd, true);
+        document.removeEventListener('drop', this.handleDesktopDrop, true);
+        if (this.draggedDesktopElement?.classList) {
+            this.draggedDesktopElement.classList.remove('drag-animate--active');
+        }
+        this.toggleDesktopDropTargets(false);
+        this.draggedDesktopElement = null;
+        this.desktopDragActive = false;
+    }
+
+    toggleDesktopDropTargets = (active) => {
+        if (typeof document === 'undefined') return;
+        const targets = document.querySelectorAll('[data-desktop-drop-target]');
+        targets.forEach(target => {
+            target.classList.toggle('drop-target-ready', active);
+            target.classList.toggle('drop-target--active', active);
+        });
+    }
+
+    handleDesktopDragStart = (event) => {
+        if (!event?.target || !(event.target instanceof Element)) return;
+        const draggable = event.target.closest('[data-desktop-draggable]');
+        if (!draggable) return;
+        this.draggedDesktopElement = draggable;
+        this.desktopDragActive = true;
+        draggable.classList.add('drag-animate--active');
+        this.toggleDesktopDropTargets(true);
+    }
+
+    finishDesktopDrag = () => {
+        if (!this.desktopDragActive) return;
+        if (this.draggedDesktopElement?.classList) {
+            this.draggedDesktopElement.classList.remove('drag-animate--active');
+        }
+        this.draggedDesktopElement = null;
+        this.desktopDragActive = false;
+        this.toggleDesktopDropTargets(false);
+    }
+
+    handleDesktopDragEnd = () => {
+        this.finishDesktopDrag();
+    }
+
+    handleDesktopDrop = () => {
+        this.finishDesktopDrag();
     }
 
     setContextListeners = () => {
@@ -865,7 +926,12 @@ export class Desktop extends Component {
 
     render() {
         return (
-            <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+            <main
+                id="desktop"
+                role="main"
+                data-desktop-drop-target="true"
+                className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent drop-target"}
+            >
 
                 {/* Window Area */}
                 <div

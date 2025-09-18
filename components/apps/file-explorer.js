@@ -104,9 +104,11 @@ export default function FileExplorer() {
   const [results, setResults] = useState([]);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
+  const sidebarRef = useRef(null);
+  const draggingFileRef = useRef(null);
 
   const hasWorker = typeof Worker !== 'undefined';
-  const {
+  const { 
     supported: opfsSupported,
     root,
     getDir,
@@ -115,6 +117,69 @@ export default function FileExplorer() {
     deleteFile: opfsDelete,
   } = useOPFS();
   const [unsavedDir, setUnsavedDir] = useState(null);
+
+  const setDropTargetsReady = (ready) => {
+    if (!sidebarRef.current) return;
+    sidebarRef.current
+      .querySelectorAll('[data-explorer-drop-target]')
+      .forEach((el) => el.classList.toggle('drop-target-ready', ready));
+  };
+
+  const clearDropHighlights = () => {
+    if (!sidebarRef.current) return;
+    sidebarRef.current
+      .querySelectorAll('[data-explorer-drop-target]')
+      .forEach((el) => {
+        el.classList.remove('drop-target-ready');
+        el.classList.remove('drop-target--active');
+      });
+  };
+
+  const handleFileDragStart = (event, file) => {
+    if (!event?.dataTransfer) return;
+    draggingFileRef.current = file;
+    event.dataTransfer.effectAllowed = 'copyMove';
+    try {
+      event.dataTransfer.setData('text/plain', file.name);
+    } catch (e) {
+      // Ignore dataTransfer failures (e.g. unsupported formats)
+    }
+    event.currentTarget.classList.add('drag-animate--active');
+    setDropTargetsReady(true);
+  };
+
+  const handleFileDragEnd = (event) => {
+    if (event?.currentTarget?.classList) {
+      event.currentTarget.classList.remove('drag-animate--active');
+    }
+    draggingFileRef.current = null;
+    clearDropHighlights();
+  };
+
+  const handleDirectoryDragEnter = (event) => {
+    if (!draggingFileRef.current) return;
+    event.preventDefault();
+    event.currentTarget.classList.add('drop-target--active');
+  };
+
+  const handleDirectoryDragOver = (event) => {
+    if (!draggingFileRef.current) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDirectoryDragLeave = (event) => {
+    if (!draggingFileRef.current) return;
+    event.currentTarget.classList.remove('drop-target--active');
+  };
+
+  const handleDirectoryDrop = (event) => {
+    if (!draggingFileRef.current) return;
+    event.preventDefault();
+    event.currentTarget.classList.remove('drop-target--active');
+    draggingFileRef.current = null;
+    clearDropHighlights();
+  };
 
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
@@ -314,7 +379,7 @@ export default function FileExplorer() {
         )}
       </div>
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-40 overflow-auto border-r border-gray-600">
+        <div ref={sidebarRef} className="w-40 overflow-auto border-r border-gray-600">
           <div className="p-2 font-bold">Recent</div>
           {recent.map((r, i) => (
             <div
@@ -329,8 +394,13 @@ export default function FileExplorer() {
           {dirs.map((d, i) => (
             <div
               key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+              data-explorer-drop-target="true"
+              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30 drop-target"
               onClick={() => openDir(d)}
+              onDragEnter={handleDirectoryDragEnter}
+              onDragOver={handleDirectoryDragOver}
+              onDragLeave={handleDirectoryDragLeave}
+              onDrop={handleDirectoryDrop}
             >
               {d.name}
             </div>
@@ -339,7 +409,10 @@ export default function FileExplorer() {
           {files.map((f, i) => (
             <div
               key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30 drag-animate"
+              draggable
+              onDragStart={(event) => handleFileDragStart(event, f)}
+              onDragEnd={handleFileDragEnd}
               onClick={() => openFile(f)}
             >
               {f.name}
