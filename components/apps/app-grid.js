@@ -3,6 +3,10 @@ import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { Grid } from 'react-window';
+import {
+  getAppRegistryEntry,
+  getHeavyAppEntries,
+} from '../../lib/appRegistry';
 
 function fuzzyHighlight(text, query) {
   const q = query.toLowerCase();
@@ -25,6 +29,10 @@ export default function AppGrid({ openApp }) {
   const gridRef = useRef(null);
   const columnCountRef = useRef(1);
   const [focusedIndex, setFocusedIndex] = useState(0);
+  const hoverTimeoutRef = useRef(null);
+  const hoverTargetRef = useRef(null);
+  const prefetchedAppsRef = useRef(new Set());
+  const idleHandleRef = useRef(null);
 
   const filtered = useMemo(() => {
     if (!query) return apps.map((app) => ({ ...app, nodes: app.title }));
@@ -41,6 +49,114 @@ export default function AppGrid({ openApp }) {
       setFocusedIndex(0);
     }
   }, [filtered, focusedIndex]);
+
+  const prefetchApp = useCallback((appId) => {
+    if (!appId || prefetchedAppsRef.current.has(appId)) return;
+    const entry = getAppRegistryEntry(appId);
+    if (!entry?.importer) return;
+    prefetchedAppsRef.current.add(appId);
+    entry
+      .importer()
+      .catch(() => {
+        prefetchedAppsRef.current.delete(appId);
+      });
+  }, []);
+
+  const scheduleHoverPrefetch = useCallback(
+    (appId) => {
+      if (!appId || prefetchedAppsRef.current.has(appId)) return;
+      if (typeof window === 'undefined') return;
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+      hoverTargetRef.current = appId;
+      hoverTimeoutRef.current = window.setTimeout(() => {
+        hoverTimeoutRef.current = null;
+        prefetchApp(appId);
+      }, 200);
+    },
+    [prefetchApp]
+  );
+
+  const cancelHoverPrefetch = useCallback((appId) => {
+    if (
+      hoverTimeoutRef.current &&
+      (appId === undefined || hoverTargetRef.current === appId)
+    ) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+      hoverTargetRef.current = null;
+    }
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const heavyEntries = getHeavyAppEntries();
+    if (!heavyEntries.length) return undefined;
+
+    const nextHeavy = heavyEntries.find(
+      (entry) => !prefetchedAppsRef.current.has(entry.id)
+    );
+
+    if (!nextHeavy) return undefined;
+
+    const runPrefetch = () => {
+      idleHandleRef.current = null;
+      if (document.visibilityState !== 'visible') return;
+      prefetchApp(nextHeavy.id);
+    };
+
+    const scheduleIdle = () => {
+      if (idleHandleRef.current !== null) return;
+      if (document.visibilityState !== 'visible') return;
+      if (typeof window.requestIdleCallback === 'function') {
+        idleHandleRef.current = window.requestIdleCallback(runPrefetch, {
+          timeout: 2000,
+        });
+      } else {
+        idleHandleRef.current = window.setTimeout(runPrefetch, 500);
+      }
+    };
+
+    const cancelIdle = () => {
+      if (idleHandleRef.current === null) return;
+      if (typeof window.cancelIdleCallback === 'function') {
+        window.cancelIdleCallback(idleHandleRef.current);
+      } else {
+        clearTimeout(idleHandleRef.current);
+      }
+      idleHandleRef.current = null;
+    };
+
+    scheduleIdle();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        if (!prefetchedAppsRef.current.has(nextHeavy.id)) {
+          scheduleIdle();
+        }
+      } else {
+        cancelIdle();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      cancelIdle();
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [prefetchApp]);
 
   const getColumnCount = (width) => {
     if (width >= 1024) return 8;
@@ -76,7 +192,13 @@ export default function AppGrid({ openApp }) {
     if (index >= data.items.length) return null;
     const app = data.items[index];
     return (
-      <div style={{ ...style, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 12 }}>
+      <div
+        style={{ ...style, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 12 }}
+        onMouseEnter={() => scheduleHoverPrefetch(app.id)}
+        onMouseLeave={() => cancelHoverPrefetch(app.id)}
+        onFocus={() => scheduleHoverPrefetch(app.id)}
+        onBlur={() => cancelHoverPrefetch(app.id)}
+      >
         <UbuntuApp
           id={app.id}
           icon={app.icon}
@@ -95,6 +217,7 @@ export default function AppGrid({ openApp }) {
         placeholder="Search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
+        aria-label="Search applications"
       />
       <div className="w-full flex-1 h-[70vh] outline-none" onKeyDown={handleKeyDown}>
         <AutoSizer>
