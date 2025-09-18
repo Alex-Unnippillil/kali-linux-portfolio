@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { startTransition, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Waterfall from './Waterfall';
 import BurstChart from './BurstChart';
@@ -129,9 +129,11 @@ const WiresharkApp = ({ initialPackets = [] }) => {
   const handleFile = async (file) => {
     try {
       const buffer = await file.arrayBuffer();
-      const parsed = parsePcap(buffer);
-      setPackets(parsed);
-      setTimeline(parsed);
+      const parsed = await parsePcap(buffer);
+      startTransition(() => {
+        setPackets(parsed);
+        setTimeline(parsed);
+      });
       setError('');
     } catch (err) {
       setError(err.message || 'Unsupported file');

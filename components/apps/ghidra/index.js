@@ -1,18 +1,18 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, {
+  startTransition,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import PseudoDisasmViewer from './PseudoDisasmViewer';
 import FunctionTree from './FunctionTree';
 import CallGraph from './CallGraph';
 import ImportAnnotate from './ImportAnnotate';
-import { Capstone, Const, loadCapstone } from 'capstone-wasm';
+import { disassembleWithCapstone, warmCapstone } from '../../utils/capstone';
 
 // Applies S1–S8 guidelines for responsive and accessible binary analysis UI
 const DEFAULT_WASM = '/wasm/ghidra.wasm';
-
-async function loadCapstoneModule() {
-  if (typeof window === 'undefined') return null;
-  await loadCapstone();
-  return { Capstone, Const };
-}
 
 // Disassembly data is now loaded from pre-generated JSON
 
@@ -87,61 +87,46 @@ export default function GhidraApp() {
   const [stringNotes, setStringNotes] = useState({});
   const [stringQuery, setStringQuery] = useState('');
   const [lineNotes, setLineNotes] = useState({});
-  const capstoneRef = useRef(null);
   const [instructions, setInstructions] = useState([]);
   const [arch, setArch] = useState('x86');
   // S1: Detect GHIDRA web support and fall back to Capstone
-  const ensureCapstone = useCallback(async () => {
-    if (capstoneRef.current) return capstoneRef.current;
-    const mod = await loadCapstoneModule();
-    capstoneRef.current = mod;
-    return mod;
-  }, []);
-
   useEffect(() => {
     const wasmUrl = process.env.NEXT_PUBLIC_GHIDRA_WASM || DEFAULT_WASM;
     if (typeof WebAssembly === 'undefined') {
       setEngine('capstone');
-      ensureCapstone();
+      warmCapstone().catch(() => {});
       return;
     }
     WebAssembly.instantiateStreaming(fetch(wasmUrl), {}).catch(() => {
       setEngine('capstone');
-      ensureCapstone();
+      warmCapstone().catch(() => {});
     });
-  }, [ensureCapstone]);
+  }, []);
 
   const handleDrop = useCallback(
     async (e) => {
       e.preventDefault();
       const file = e.dataTransfer.files[0];
       if (!file) return;
-      const buf = await file.arrayBuffer();
-      const bytes = new Uint8Array(buf);
-      const { Capstone, Const } = await ensureCapstone();
-      const [archConst, modeConst] =
-        arch === 'arm'
-          ? [Const.ARCH_ARM, Const.MODE_ARM]
-          : [Const.ARCH_X86, Const.MODE_32];
-      const cs = new Capstone(archConst, modeConst);
-      const start = performance.now();
-      const insns = cs.disasm(bytes, { address: 0x1000 });
-      cs.close();
-      const end = performance.now();
-      if (end - start <= 100) {
-        setInstructions(insns);
-      } else {
-        setInstructions(insns);
+      try {
+        const buffer = await file.arrayBuffer();
+        const insns = await disassembleWithCapstone(buffer, arch);
+        startTransition(() => {
+          setInstructions(insns);
+        });
+        setLiveMessage(`Disassembled ${insns.length} instructions`);
+      } catch (error) {
+        setLiveMessage('Failed to disassemble binary');
       }
     },
-    [arch, ensureCapstone]
+    [arch]
   );
 
   const switchEngine = async () => {
     const next = engine === 'ghidra' ? 'capstone' : 'ghidra';
     setEngine(next);
     if (next === 'capstone') {
-      await ensureCapstone();
+      await warmCapstone();
     }
   };
 
