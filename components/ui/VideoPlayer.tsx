@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import usePersistentState from "../../hooks/usePersistentState";
 import PipPortalProvider, { usePipPortal } from "../common/PipPortal";
 
 interface VideoPlayerProps {
@@ -19,6 +20,12 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
   const [pipSupported, setPipSupported] = useState(false);
   const [docPipSupported, setDocPipSupported] = useState(false);
   const [isPip, setIsPip] = useState(false);
+  const [theaterMode, setTheaterMode] = usePersistentState<boolean>(
+    "video-player:theater-mode",
+    false,
+    (value): value is boolean => typeof value === "boolean"
+  );
+  const [stats, setStats] = useState({ resolution: "0×0", droppedFrames: 0 });
 
   useEffect(() => {
     const video = videoRef.current;
@@ -127,9 +134,108 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
     await open(<DocPipControls initialVolume={initialVolume} />);
   };
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const updateStats = () => {
+      const video = videoRef.current;
+      if (!video) return;
+
+      const resolution =
+        video.videoWidth && video.videoHeight
+          ? `${video.videoWidth}×${video.videoHeight}`
+          : "0×0";
+
+      let droppedFrames = 0;
+      const quality =
+        typeof (video as any).getVideoPlaybackQuality === "function"
+          ? (video as any).getVideoPlaybackQuality()
+          : null;
+      if (quality && typeof quality.droppedVideoFrames === "number") {
+        droppedFrames = quality.droppedVideoFrames;
+      } else {
+        const fallback = (video as any).webkitDroppedFrameCount;
+        if (typeof fallback === "number") {
+          droppedFrames = fallback;
+        }
+      }
+
+      setStats((prev) =>
+        prev.resolution === resolution && prev.droppedFrames === droppedFrames
+          ? prev
+          : { resolution, droppedFrames }
+      );
+    };
+
+    updateStats();
+    const id = window.setInterval(updateStats, 1000);
+    const video = videoRef.current;
+    video?.addEventListener("loadedmetadata", updateStats);
+
+    return () => {
+      window.clearInterval(id);
+      video?.removeEventListener("loadedmetadata", updateStats);
+    };
+  }, []);
+
+  const toggleTheater = () => setTheaterMode((mode) => !mode);
+
+  const containerClassName = [
+    "relative",
+    "transition-all",
+    "duration-200",
+    theaterMode
+      ? "mx-auto w-full max-w-5xl rounded-lg bg-black/90 p-2 shadow-lg sm:p-4"
+      : "",
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const videoClassName = [
+    "w-full",
+    "h-auto",
+    theaterMode ? "max-h-[80vh]" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const overlayButtonClass =
+    "rounded bg-black/70 px-2 py-1 text-xs text-white backdrop-blur transition hover:bg-black/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70";
+
   return (
-    <div className={`relative ${className}`.trim()}>
-      <video ref={videoRef} src={src} poster={poster} controls className="w-full h-auto" />
+    <div
+      className={containerClassName.trim()}
+      data-testid="video-player-frame"
+      data-theater-mode={theaterMode ? "on" : "off"}
+    >
+      <video
+        ref={videoRef}
+        src={src}
+        poster={poster}
+        controls
+        className={videoClassName.trim()}
+      />
+      <div
+        className="pointer-events-none absolute left-2 top-2 z-10 rounded bg-black/70 px-2 py-1 text-xs text-white backdrop-blur"
+        data-testid="video-stats-overlay"
+        role="status"
+        aria-live="polite"
+      >
+        <div>Resolution: {stats.resolution}</div>
+        <div>Dropped frames: {stats.droppedFrames}</div>
+      </div>
+      <div className="absolute right-2 top-2 z-10 flex gap-2">
+        <button
+          type="button"
+          onClick={toggleTheater}
+          aria-pressed={theaterMode}
+          aria-label="Toggle theater mode"
+          className={overlayButtonClass}
+        >
+          {theaterMode ? "Exit theater" : "Theater mode"}
+        </button>
+      </div>
       {pipSupported && (
         <button
           type="button"
