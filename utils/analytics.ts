@@ -28,3 +28,13 @@ export const logGameEnd = (game: string, label?: string): void => {
 export const logGameError = (game: string, message?: string): void => {
   logEvent({ category: game, action: 'error', label: message });
 };
+
+type UpdateAction = 'update_start' | 'update_success' | 'update_retry';
+
+export const logUpdateEvent = (
+  action: UpdateAction,
+  label?: string,
+  value?: number,
+): void => {
+  logEvent({ category: 'update_center', action, label, value });
+};

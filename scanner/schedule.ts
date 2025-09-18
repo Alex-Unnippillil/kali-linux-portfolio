@@ -45,9 +45,14 @@ export const scheduleScan = (
   schedule: string,
   callback: () => void,
 ): ScheduledScan => {
-  const jobs = loadScheduledScans();
+  const jobs = loadScheduledScans().filter((job) => job.id !== id);
   jobs.push({ id, schedule });
   persistSchedules(jobs);
+  const existingIndex = runningScans.findIndex((job) => job.id === id);
+  if (existingIndex >= 0) {
+    clearInterval(runningScans[existingIndex].timer);
+    runningScans.splice(existingIndex, 1);
+  }
   const interval = cronToInterval(schedule);
   const timer = setInterval(callback, interval);
   runningScans.push({ id, schedule, timer, callback });
@@ -64,4 +69,17 @@ export const clearSchedules = () => {
   runningScans.forEach((j) => clearInterval(j.timer));
   runningScans.length = 0;
   persistSchedules([]);
+};
+
+export const cancelSchedule = (id: string): void => {
+  const index = runningScans.findIndex((job) => job.id === id);
+  if (index >= 0) {
+    clearInterval(runningScans[index].timer);
+    runningScans.splice(index, 1);
+  }
+  const stored = loadScheduledScans();
+  const filtered = stored.filter((job) => job.id !== id);
+  if (filtered.length !== stored.length) {
+    persistSchedules(filtered);
+  }
 };

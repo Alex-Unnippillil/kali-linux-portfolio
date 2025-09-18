@@ -3,6 +3,7 @@ import {
   scheduleScan,
   loadScheduledScans,
   clearSchedules,
+  cancelSchedule,
 } from '../scanner/schedule';
 
 describe('scan scheduler', () => {
@@ -31,5 +32,15 @@ describe('scan scheduler', () => {
     expect(fn).toHaveBeenCalledTimes(1);
     jest.advanceTimersByTime(2000);
     expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  test('cancelSchedule clears timers and storage', () => {
+    const fn = jest.fn();
+    scheduleScan('1', '*/2 * * * * *', fn);
+    expect(loadScheduledScans()).toEqual([{ id: '1', schedule: '*/2 * * * * *' }]);
+    cancelSchedule('1');
+    expect(loadScheduledScans()).toEqual([]);
+    jest.advanceTimersByTime(4000);
+    expect(fn).not.toHaveBeenCalled();
   });
 });
