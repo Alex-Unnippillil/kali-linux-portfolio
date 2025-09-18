@@ -9,9 +9,24 @@ jest.mock('react-draggable', () => ({
 }));
 jest.mock('../components/apps/terminal', () => ({ displayTerminal: jest.fn() }));
 
+const flushAnimationFrame = () => {
+  act(() => {
+    jest.runOnlyPendingTimers();
+  });
+};
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.clearAllMocks();
+  jest.clearAllTimers();
+  jest.useRealTimers();
+});
+
 describe('Window lifecycle', () => {
   it('invokes callbacks on close', () => {
-    jest.useFakeTimers();
     const closed = jest.fn();
     const hideSideBar = jest.fn();
 
@@ -38,7 +53,6 @@ describe('Window lifecycle', () => {
     });
 
     expect(closed).toHaveBeenCalledWith('test-window');
-    jest.useRealTimers();
   });
 });
 
@@ -77,6 +91,8 @@ describe('Window snapping preview', () => {
       ref.current!.handleDrag();
     });
 
+    flushAnimationFrame();
+
     expect(screen.getByTestId('snap-preview')).toBeInTheDocument();
   });
 
@@ -113,6 +129,8 @@ describe('Window snapping preview', () => {
     act(() => {
       ref.current!.handleDrag();
     });
+
+    flushAnimationFrame();
 
     expect(screen.queryByTestId('snap-preview')).toBeNull();
   });
@@ -155,6 +173,8 @@ describe('Window snapping finalize and release', () => {
       ref.current!.handleStop();
     });
 
+    flushAnimationFrame();
+
     expect(ref.current!.state.snapped).toBe('left');
     expect(ref.current!.state.width).toBe(50);
     expect(ref.current!.state.height).toBe(96.3);
@@ -196,10 +216,17 @@ describe('Window snapping finalize and release', () => {
       ref.current!.handleStop();
     });
 
+    flushAnimationFrame();
+
     expect(ref.current!.state.snapped).toBe('left');
 
     act(() => {
-      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+      } as any);
     });
 
     expect(ref.current!.state.snapped).toBeNull();
@@ -242,6 +269,8 @@ describe('Window snapping finalize and release', () => {
     act(() => {
       ref.current!.handleStop();
     });
+
+    flushAnimationFrame();
 
     expect(ref.current!.state.snapped).toBe('left');
 
@@ -318,7 +347,48 @@ describe('Edge resistance', () => {
       ref.current!.handleDrag({}, { node: winEl, x: -100, y: -50 } as any);
     });
 
+    flushAnimationFrame();
+
     expect(winEl.style.transform).toBe('translate(0px, 0px)');
+  });
+});
+
+describe('Window drag performance', () => {
+  it('coalesces rapid drag events into a single frame update', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const instance = ref.current!;
+    const winEl = document.getElementById('test-window')!;
+    const overlapSpy = jest.spyOn(instance, 'checkOverlap');
+    const snapSpy = jest.spyOn(instance, 'checkSnapPreview');
+
+    act(() => {
+      instance.handleDrag({}, { node: winEl, x: 10, y: 10 } as any);
+      instance.handleDrag({}, { node: winEl, x: 20, y: 20 } as any);
+      instance.handleDrag({}, { node: winEl, x: 30, y: 40 } as any);
+    });
+
+    expect(overlapSpy).not.toHaveBeenCalled();
+    expect(snapSpy).not.toHaveBeenCalled();
+
+    flushAnimationFrame();
+
+    expect(overlapSpy).toHaveBeenCalledTimes(1);
+    expect(snapSpy).toHaveBeenCalledTimes(1);
+    expect(winEl.style.transform).toBe('translate(30px, 40px)');
   });
 });
 
