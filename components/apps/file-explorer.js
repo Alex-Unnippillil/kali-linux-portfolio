@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
@@ -102,6 +102,7 @@ export default function FileExplorer() {
   const [content, setContent] = useState('');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+  const [selectionState, setSelectionState] = useState({});
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
 
@@ -198,6 +199,82 @@ export default function FileExplorer() {
     setDirs(ds);
     setFiles(fs);
   };
+
+  const currentPathKey = useMemo(() => {
+    if (!path.length) return '/';
+    return path.map((segment) => segment?.name || '').join('/') || '/';
+  }, [path]);
+
+  const fileKeys = useMemo(
+    () => files.map((file) => `${currentPathKey}::${file.name}`),
+    [files, currentPathKey]
+  );
+
+  useEffect(() => {
+    setSelectionState((prev) => {
+      const current = prev[currentPathKey];
+      if (!current) return prev;
+      const validKeys = new Set(fileKeys);
+      const filteredKeys = current.keys?.filter((key) => validKeys.has(key)) || [];
+      if (filteredKeys.length === (current.keys?.length || 0)) {
+        return prev;
+      }
+      return {
+        ...prev,
+        [currentPathKey]: {
+          ...current,
+          keys: filteredKeys,
+        },
+      };
+    });
+  }, [fileKeys, currentPathKey]);
+
+  const selectedSet = useMemo(() => {
+    const current = selectionState[currentPathKey];
+    if (!current || !current.keys) return new Set();
+    return new Set(current.keys);
+  }, [selectionState, currentPathKey]);
+
+  const handleSelection = useCallback(
+    (event, index, explicitValue) => {
+      if (index < 0 || index >= fileKeys.length) return;
+      setSelectionState((prev) => {
+        const current = prev[currentPathKey] || { keys: [], lastIndex: null };
+        const set = new Set(current.keys || []);
+        const key = fileKeys[index];
+        const isSelected = set.has(key);
+        let shouldSelect =
+          typeof explicitValue === 'boolean' ? explicitValue : !isSelected;
+
+        const hasRange =
+          event?.shiftKey &&
+          current.lastIndex !== null &&
+          current.lastIndex !== undefined &&
+          fileKeys.length > 0;
+
+        if (hasRange) {
+          const anchor = Math.max(0, Math.min(fileKeys.length - 1, current.lastIndex));
+          const start = Math.min(anchor, index);
+          const end = Math.max(anchor, index);
+          const rangeKeys = fileKeys.slice(start, end + 1);
+          if (shouldSelect) rangeKeys.forEach((k) => set.add(k));
+          else rangeKeys.forEach((k) => set.delete(k));
+        } else {
+          if (shouldSelect) set.add(key);
+          else set.delete(key);
+        }
+
+        return {
+          ...prev,
+          [currentPathKey]: {
+            keys: Array.from(set),
+            lastIndex: index,
+          },
+        };
+      });
+    },
+    [fileKeys, currentPathKey]
+  );
 
   const openDir = async (dir) => {
     setDirHandle(dir.handle);
@@ -336,15 +413,63 @@ export default function FileExplorer() {
             </div>
           ))}
           <div className="p-2 font-bold">Files</div>
-          {files.map((f, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openFile(f)}
-            >
-              {f.name}
-            </div>
-          ))}
+          <div role="listbox" aria-label="Files" className="flex flex-col">
+            {files.map((f, i) => {
+              const key = fileKeys[i];
+              const rowKey = key || `${f.name}-${i}`;
+              const isSelected = key ? selectedSet.has(key) : false;
+              return (
+                <div
+                  key={rowKey}
+                  role="option"
+                  aria-selected={isSelected}
+                  tabIndex={0}
+                  className={`group flex items-center gap-2 px-2 py-1 cursor-pointer focus:outline-none ${
+                    isSelected
+                      ? 'bg-black bg-opacity-60'
+                      : 'hover:bg-black hover:bg-opacity-30 focus:bg-black focus:bg-opacity-30'
+                  }`}
+                  onClick={(event) => {
+                    if (event.target instanceof HTMLInputElement) return;
+                    if (event.shiftKey) {
+                      event.preventDefault();
+                      handleSelection(event, i, true);
+                      return;
+                    }
+                    openFile(f);
+                  }}
+                  onDoubleClick={() => openFile(f)}
+                  onKeyDown={(event) => {
+                    if (event.key === ' ' || event.key === 'Spacebar') {
+                      event.preventDefault();
+                      handleSelection(event, i, !isSelected);
+                    } else if (event.key === 'Enter') {
+                      event.preventDefault();
+                      openFile(f);
+                    }
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    aria-label={`Select ${f.name}`}
+                    tabIndex={-1}
+                    checked={isSelected}
+                    onChange={() => {}}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleSelection(event, i, event.currentTarget.checked);
+                    }}
+                    className={`accent-ubt-green h-4 w-4 rounded border border-white/40 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-ubt-green ${
+                      isSelected
+                        ? 'opacity-100'
+                        : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
+                    }`}
+                  />
+                  <span className="flex-1 truncate">{f.name}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
         <div className="flex-1 flex flex-col">
           {currentFile && (
