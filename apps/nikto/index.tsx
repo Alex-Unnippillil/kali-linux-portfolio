@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { mockNiktoResolver, validateNiktoTarget } from '../../components/apps/nikto/validation';
+import type { NormalizedTarget } from '../../components/apps/nikto/validation';
 import HeaderLab from './components/HeaderLab';
 
 interface NiktoFinding {
@@ -11,6 +13,14 @@ interface NiktoFinding {
   details: string;
 }
 
+const REQUIRED_TARGET_MESSAGE = 'Enter a hostname or URL before running the simulation.';
+
+type ValidationState =
+  | { status: 'idle' }
+  | { status: 'checking' }
+  | { status: 'valid'; normalized: NormalizedTarget }
+  | { status: 'invalid'; message: string };
+
 const NiktoPage: React.FC = () => {
   const [host, setHost] = useState('');
   const [port, setPort] = useState('');
@@ -18,6 +28,11 @@ const NiktoPage: React.FC = () => {
   const [findings, setFindings] = useState<NiktoFinding[]>([]);
   const [rawLog, setRawLog] = useState('');
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  const [hostDirty, setHostDirty] = useState(false);
+  const [validation, setValidation] = useState<ValidationState>({ status: 'idle' });
+
+  const trimmedHost = host.trim();
+  const trimmedPort = port.trim();
 
   useEffect(() => {
     const load = async () => {
@@ -38,7 +53,9 @@ const NiktoPage: React.FC = () => {
     load();
   }, []);
 
-  const command = `nikto -h ${host || 'TARGET'}${port ? ` -p ${port}` : ''}${ssl ? ' -ssl' : ''}`;
+  const command = `nikto -h ${trimmedHost || 'TARGET'}${trimmedPort ? ` -p ${trimmedPort}` : ''}${
+    ssl ? ' -ssl' : ''
+  }`;
 
   const grouped = useMemo(() => {
     return findings.reduce<Record<string, NiktoFinding[]>>((acc, f) => {
@@ -60,10 +77,97 @@ const NiktoPage: React.FC = () => {
   }, [rawLog]);
 
   const url = useMemo(() => {
-    if (!host) return 'http://target';
+    if (!trimmedHost) return 'http://target';
     const proto = ssl ? 'https://' : 'http://';
-    return `${proto}${host}${port ? `:${port}` : ''}`;
-  }, [host, port, ssl]);
+    return `${proto}${trimmedHost}${trimmedPort ? `:${trimmedPort}` : ''}`;
+  }, [trimmedHost, trimmedPort, ssl]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!trimmedHost) {
+      if (hostDirty || Boolean(trimmedPort)) {
+        setValidation((current) => {
+          if (current.status === 'invalid' && current.message === REQUIRED_TARGET_MESSAGE) {
+            return current;
+          }
+          return {
+            status: 'invalid',
+            message: REQUIRED_TARGET_MESSAGE,
+          };
+        });
+      } else {
+        setValidation((current) => (current.status === 'idle' ? current : { status: 'idle' }));
+      }
+      return;
+    }
+
+    setValidation((current) => (current.status === 'checking' ? current : { status: 'checking' }));
+
+    validateNiktoTarget(trimmedHost, {
+      port: trimmedPort,
+      resolver: mockNiktoResolver,
+    })
+      .then((result) => {
+        if (cancelled) return;
+        if (result.ok) {
+          setValidation({ status: 'valid', normalized: result.normalized });
+        } else {
+          setValidation({ status: 'invalid', message: result.error });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setValidation({
+            status: 'invalid',
+            message: 'Unable to validate target. Please try again.',
+          });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [trimmedHost, trimmedPort, hostDirty]);
+
+  const showValidation =
+    validation.status !== 'idle' && (hostDirty || Boolean(trimmedPort));
+
+  const validationMessage = (() => {
+    if (!showValidation) {
+      return undefined;
+    }
+    if (validation.status === 'invalid') {
+      return validation.message;
+    }
+    if (validation.status === 'checking') {
+      return 'Validating target…';
+    }
+    if (validation.status === 'valid') {
+      const { hostLabel, port: resolvedPort, address } = validation.normalized;
+      const displayTarget = resolvedPort ? `${hostLabel}:${resolvedPort}` : hostLabel;
+      const addressLabel = address ? ` (${address})` : '';
+      return `Target resolves to ${displayTarget}${addressLabel}. Simulation ready.`;
+    }
+    return undefined;
+  })();
+
+  const messageClass = (() => {
+    if (!showValidation || !validationMessage) {
+      return '';
+    }
+    if (validation.status === 'invalid') {
+      return 'text-red-400';
+    }
+    if (validation.status === 'valid') {
+      return 'text-green-300';
+    }
+    return 'text-yellow-300';
+  })();
+
+  const messageId = showValidation && validationMessage ? 'nikto-target-validation' : undefined;
+  const scanDisabled = validation.status !== 'valid';
+  const buttonLabel = validation.status === 'checking' ? 'Validating…' : 'Simulate Scan';
 
   const copySection = async (list: NiktoFinding[]) => {
     try {
@@ -117,7 +221,13 @@ const NiktoPage: React.FC = () => {
       <p className="text-sm text-yellow-300 mb-4">
         Build a nikto command without running any scans. Data and reports are static and for learning only.
       </p>
-      <form onSubmit={(e) => e.preventDefault()} className="grid gap-4 md:grid-cols-3">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          setHostDirty(true);
+        }}
+        className="grid gap-4 md:grid-cols-4 items-end"
+      >
         <div>
           <label htmlFor="nikto-host" className="block text-sm mb-1">
             Host
@@ -126,8 +236,26 @@ const NiktoPage: React.FC = () => {
             id="nikto-host"
             className="w-full p-2 rounded text-black"
             value={host}
-            onChange={(e) => setHost(e.target.value)}
+            onChange={(e) => {
+              setHost(e.target.value);
+              if (!hostDirty) {
+                setHostDirty(true);
+              }
+            }}
+            onBlur={() => setHostDirty(true)}
+            aria-invalid={validation.status === 'invalid'}
+            aria-describedby={messageId}
           />
+          {validationMessage && (
+            <p
+              id={messageId}
+              className={`mt-2 text-sm ${messageClass}`}
+              role={validation.status === 'invalid' ? 'alert' : undefined}
+              aria-live="polite"
+            >
+              {validationMessage}
+            </p>
+          )}
         </div>
         <div>
           <label htmlFor="nikto-port" className="block text-sm mb-1">
@@ -139,9 +267,11 @@ const NiktoPage: React.FC = () => {
             className="w-full p-2 rounded text-black"
             value={port}
             onChange={(e) => setPort(e.target.value)}
+            min={1}
+            max={65535}
           />
         </div>
-        <div className="flex items-center mt-2">
+        <div className="flex items-center mt-2 md:mt-0">
           <input
             id="nikto-ssl"
             type="checkbox"
@@ -152,6 +282,15 @@ const NiktoPage: React.FC = () => {
           <label htmlFor="nikto-ssl" className="text-sm">
             SSL
           </label>
+        </div>
+        <div className="flex items-center">
+          <button
+            type="submit"
+            className="w-full md:w-auto px-4 py-2 bg-blue-600 rounded text-sm font-semibold disabled:bg-gray-600 disabled:text-gray-300 disabled:cursor-not-allowed"
+            disabled={scanDisabled}
+          >
+            {buttonLabel}
+          </button>
         </div>
       </form>
       <div>
