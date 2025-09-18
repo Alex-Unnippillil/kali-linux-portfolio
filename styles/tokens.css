@@ -1,34 +1,82 @@
 /* Design tokens */
 
 :root {
-  /* Theme colors */
-  --color-ub-grey: #0f1317;
-  --color-ub-warm-grey: #7d7f83;
-  --color-ub-cool-grey: #1a1f26;
-  --color-ub-orange: #1793d1;
-  --color-ub-lite-abrgn: #22262c;
-  --color-ub-med-abrgn: #1b1f24;
-  --color-ub-drk-abrgn: #13171b;
-  --color-ub-window-title: #0c0f12;
-  --color-ub-gedit-dark: #021B33;
-  --color-ub-gedit-light: #003B70;
-  --color-ub-gedit-darker: #010D1A;
-  --color-ubt-grey: #F6F6F5;
-  --color-ubt-warm-grey: #AEA79F;
-  --color-ubt-cool-grey: #333333;
-  --color-ubt-blue: #62A0EA;
-  --color-ubt-green: #73D216;
-  --color-ubt-gedit-orange: #F39A21;
-  --color-ubt-gedit-blue: #50B6C6;
-  --color-ubt-gedit-dark: #003B70;
-  --color-ub-border-orange: #1793d1;
-  --color-ub-dark-grey: #2a2e36;
-  --color-bg: #0f1317;
-  --color-text: #F5F5F5;
-  --kali-bg: rgba(15, 19, 23, 0.85);
+  /* Kali brand palette */
+  --kali-primary-50: #dceff8;
+  --kali-primary-100: #b9dff1;
+  --kali-primary-200: #8bc9e8;
+  --kali-primary-300: #68b9e1;
+  --kali-primary-400: #45a9da;
+  --kali-primary-500: #1793d1;
+  --kali-primary-600: #1276a7;
+  --kali-primary-700: #0f6088;
+  --kali-primary-800: #0a425e;
+  --kali-primary-900: #072c3f;
+  --kali-primary-950: #03161f;
+
+  --kali-secondary-50: #e5f4f6;
+  --kali-secondary-100: #cae9ee;
+  --kali-secondary-200: #a8dae2;
+  --kali-secondary-300: #8dd0da;
+  --kali-secondary-400: #73c5d1;
+  --kali-secondary-500: #50b6c6;
+  --kali-secondary-600: #40929e;
+  --kali-secondary-700: #347681;
+  --kali-secondary-800: #245259;
+  --kali-secondary-900: #18373b;
+  --kali-secondary-950: #0c1b1e;
+
+  --kali-neutral-50: #f5f6f7;
+  --kali-neutral-100: #dfe3e6;
+  --kali-neutral-200: #c0c4c9;
+  --kali-neutral-300: #a0a4ab;
+  --kali-neutral-400: #7d7f83;
+  --kali-neutral-500: #5a5f66;
+  --kali-neutral-600: #2a2e36;
+  --kali-neutral-700: #22262c;
+  --kali-neutral-800: #1a1f26;
+  --kali-neutral-900: #0f1317;
+  --kali-neutral-950: #080a0d;
+
+  --kali-orange-300: #f5ae4d;
+  --kali-orange-400: #f39a21;
+  --kali-orange-500: #b67419;
+
+  --kali-indigo-300: #406c94;
+  --kali-indigo-400: #265885;
+  --kali-indigo-500: #003b70;
+  --kali-indigo-600: #021b33;
+  --kali-indigo-700: #010d1a;
+
+  --kali-overlay: rgba(12, 17, 22, 0.85);
+
+  /* Semantic colors */
+  --color-bg: var(--kali-neutral-900);
+  --color-surface: var(--kali-neutral-800);
+  --color-elevated: var(--kali-neutral-700);
+  --color-border: var(--kali-neutral-700);
+  --color-muted: var(--kali-neutral-500);
+  --color-dark: var(--kali-neutral-950);
+  --color-text: var(--kali-neutral-50);
+  --color-text-muted: var(--kali-neutral-300);
+  --color-inverse: #000000;
+  --color-primary: var(--kali-primary-500);
+  --color-primary-soft: var(--kali-primary-400);
+  --color-primary-strong: var(--kali-primary-600);
+  --color-secondary: var(--kali-secondary-500);
+  --color-secondary-soft: var(--kali-secondary-400);
+  --color-secondary-strong: var(--kali-secondary-600);
+  --color-accent: var(--color-primary);
+  --color-focus-ring: var(--color-primary);
+  --color-selection: var(--color-primary-soft);
+  --color-control-accent: var(--color-primary);
+  --color-terminal: #00ff00;
+
+  --kali-panel: var(--color-surface);
+  --kali-bg: var(--kali-overlay);
 
   /* Game palette tokens */
-  --game-color-secondary: #1d4ed8;
+  --game-color-secondary: var(--color-secondary);
   --game-color-success: #15803d;
   --game-color-warning: #d97706;
   --game-color-danger: #b91c1c;
@@ -58,21 +106,53 @@
   /* Minimum interactive target size */
   --hit-area: 32px;
   /* Focus outline */
-  --focus-outline-color: var(--color-ubt-blue);
+  --focus-outline-color: var(--color-focus-ring);
   --focus-outline-width: 2px;
+
+  /* Legacy aliases (Ubuntu naming) */
+  --color-ub-grey: var(--kali-neutral-900);
+  --color-ub-warm-grey: var(--kali-neutral-400);
+  --color-ub-cool-grey: var(--kali-neutral-800);
+  --color-ub-orange: var(--color-primary);
+  --color-ub-lite-abrgn: var(--kali-neutral-700);
+  --color-ub-med-abrgn: var(--kali-neutral-800);
+  --color-ub-drk-abrgn: var(--kali-neutral-900);
+  --color-ub-window-title: var(--kali-neutral-950);
+  --color-ub-gedit-dark: var(--kali-indigo-600);
+  --color-ub-gedit-light: var(--kali-indigo-500);
+  --color-ub-gedit-darker: var(--kali-indigo-700);
+  --color-ubt-grey: var(--kali-neutral-50);
+  --color-ubt-warm-grey: var(--kali-neutral-200);
+  --color-ubt-cool-grey: var(--kali-neutral-600);
+  --color-ubt-blue: var(--kali-primary-300);
+  --color-ubt-green: var(--game-color-success);
+  --color-ubt-gedit-orange: var(--kali-orange-400);
+  --color-ubt-gedit-blue: var(--kali-secondary-500);
+  --color-ubt-gedit-dark: var(--kali-indigo-500);
+  --color-ub-border-orange: var(--color-primary-strong);
+  --color-ub-dark-grey: var(--kali-neutral-600);
 }
 
 /* High contrast theme */
 .high-contrast {
   --color-bg: #000000;
+  --color-surface: #000000;
+  --color-elevated: #000000;
+  --color-border: #ffffff;
+  --color-muted: #b3b3b3;
   --color-text: #ffffff;
-  --color-ub-grey: #000000;
-  --color-ub-cool-grey: #000000;
-  --color-ubt-grey: #ffffff;
-  --color-ubt-cool-grey: #ffffff;
-  --color-ub-orange: #ffff00;
-  --color-ub-lite-abrgn: #00ffff;
-  --color-ub-border-orange: #ffff00;
+  --color-text-muted: #e5e5e5;
+  --color-primary: #ffff00;
+  --color-primary-soft: #ffff66;
+  --color-primary-strong: #ffcc00;
+  --color-secondary: #00ffff;
+  --color-secondary-soft: #66ffff;
+  --color-secondary-strong: #00bebe;
+  --color-accent: #ffff00;
+  --color-focus-ring: #ffff00;
+  --color-selection: #ff00ff;
+  --color-control-accent: #ffff00;
+  --color-dark: #000000;
   --game-color-secondary: #ffff00;
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
@@ -108,13 +188,21 @@
 @media (prefers-contrast: more) {
   :root {
     --color-bg: #000000;
+    --color-surface: #000000;
+    --color-elevated: #000000;
+    --color-border: #ffffff;
+    --color-muted: #b3b3b3;
     --color-text: #ffffff;
-    --color-ub-grey: #000000;
-    --color-ub-cool-grey: #000000;
-    --color-ubt-grey: #ffffff;
-    --color-ubt-cool-grey: #ffffff;
-    --color-ub-orange: #ffff00;
-    --color-ub-lite-abrgn: #00ffff;
-    --color-ub-border-orange: #ffff00;
+    --color-text-muted: #e5e5e5;
+    --color-primary: #ffff00;
+    --color-primary-soft: #ffff66;
+    --color-primary-strong: #ffcc00;
+    --color-secondary: #00ffff;
+    --color-secondary-soft: #66ffff;
+    --color-secondary-strong: #00bebe;
+    --color-focus-ring: #ffff00;
+    --color-selection: #ff00ff;
+    --color-control-accent: #ffff00;
+    --color-dark: #000000;
   }
 }

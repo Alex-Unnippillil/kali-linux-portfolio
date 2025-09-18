@@ -180,7 +180,7 @@ export function Settings() {
             <div className="flex justify-center my-4">
                 <div
                     className="p-4 rounded transition-colors duration-300 motion-reduce:transition-none"
-                    style={{ backgroundColor: '#0f1317', color: '#ffffff' }}
+                    style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)' }}
                 >
                     <p className="mb-2 text-center">Preview</p>
                     <button

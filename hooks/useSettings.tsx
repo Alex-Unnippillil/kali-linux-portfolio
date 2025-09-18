@@ -136,14 +136,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [theme]);
 
   useEffect(() => {
-    const border = shadeColor(accent, -0.2);
+    const strong = shadeColor(accent, -0.2);
+    const soft = shadeColor(accent, 0.25);
+    const selection = shadeColor(accent, 0.4);
     const vars: Record<string, string> = {
-      '--color-ub-orange': accent,
-      '--color-ub-border-orange': border,
       '--color-primary': accent,
+      '--color-primary-soft': soft,
+      '--color-primary-strong': strong,
       '--color-accent': accent,
       '--color-focus-ring': accent,
-      '--color-selection': accent,
+      '--color-selection': selection,
       '--color-control-accent': accent,
     };
     Object.entries(vars).forEach(([key, value]) => {
