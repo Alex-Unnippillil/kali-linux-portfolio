@@ -8,6 +8,12 @@ import dynamic from 'next/dynamic';
 import usePersistentState from '../../../hooks/usePersistentState';
 import ReportTemplates from './components/ReportTemplates';
 import { useSettings } from '../../../hooks/useSettings';
+import copyToClipboard from '../../../utils/clipboard';
+import {
+  runProxyDiagnostics,
+  formatProxyDiagnostics,
+} from '../../../utils/proxyDiagnostics';
+import { logProxyDiagnostic } from '../../../lib/fetchProxy';
 
 const CytoscapeComponent = dynamic(
   async () => {
@@ -152,8 +158,25 @@ const ReconNG = () => {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [chainData, setChainData] = useState(null);
   const cyRef = useRef(null);
+  const copyTimeoutRef = useRef(null);
+  const isMountedRef = useRef(true);
+  const [diagnostics, setDiagnostics] = useState(null);
+  const [diagnosticsStatus, setDiagnosticsStatus] = useState('idle');
+  const [diagnosticsError, setDiagnosticsError] = useState('');
+  const [diagnosticsSummary, setDiagnosticsSummary] = useState('');
+  const [copyStatus, setCopyStatus] = useState('');
 
   const currentWorkspace = workspaces[activeWs];
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -266,6 +289,27 @@ const ReconNG = () => {
           padding: '10px',
           'background-opacity': 0.1,
           'border-color': '#555',
+        },
+      },
+      {
+        selector: 'node.status-pass',
+        style: {
+          'border-width': 3,
+          'border-color': '#22c55e',
+        },
+      },
+      {
+        selector: 'node.status-fail',
+        style: {
+          'border-width': 3,
+          'border-color': '#ef4444',
+        },
+      },
+      {
+        selector: 'node.status-running',
+        style: {
+          'border-width': 3,
+          'border-color': '#facc15',
         },
       },
     ],
@@ -382,6 +426,108 @@ const ReconNG = () => {
     setOutput(texts.join('\n\n'));
     setView('run');
   };
+
+  const runDiagnostics = async () => {
+    if (!chainData) return;
+    const hops = chainData.chain.nodes.map((node) => ({
+      id: node.data.id,
+      label: node.data.label,
+    }));
+    if (hops.length === 0) return;
+    const chainLabels = hops.map((hop) => hop.label);
+    const startedAt = Date.now();
+    setDiagnostics(null);
+    setDiagnosticsStatus('running');
+    setDiagnosticsError('');
+    setDiagnosticsSummary('');
+    setCopyStatus('');
+    if (copyTimeoutRef.current) {
+      clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = null;
+    }
+    try {
+      const result = await runProxyDiagnostics(hops);
+      const summary = formatProxyDiagnostics(result, {
+        chain: chainLabels,
+        target,
+      });
+      logProxyDiagnostic({
+        chain: chainLabels,
+        startedAt: result.startedAt,
+        completedAt: result.completedAt,
+        totalLatency: result.totalLatency,
+        success: result.success,
+        hops: result.hops,
+      });
+      if (!isMountedRef.current) return;
+      setDiagnostics(result);
+      setDiagnosticsStatus('done');
+      setDiagnosticsSummary(summary);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Diagnostics failed';
+      logProxyDiagnostic({
+        chain: chainLabels,
+        startedAt,
+        completedAt: Date.now(),
+        totalLatency: 0,
+        success: false,
+        hops: [],
+        error: message,
+      });
+      if (!isMountedRef.current) return;
+      setDiagnosticsStatus('error');
+      setDiagnosticsError(message);
+    }
+  };
+
+  const handleCopyDiagnostics = async () => {
+    if (!diagnosticsSummary) return;
+    const copied = await copyToClipboard(diagnosticsSummary);
+    if (!isMountedRef.current) return;
+    setCopyStatus(copied ? 'Copied!' : 'Copy failed');
+    if (copyTimeoutRef.current) {
+      clearTimeout(copyTimeoutRef.current);
+    }
+    copyTimeoutRef.current = setTimeout(() => {
+      setCopyStatus('');
+      copyTimeoutRef.current = null;
+    }, 2000);
+  };
+
+  useEffect(() => {
+    setDiagnostics(null);
+    setDiagnosticsStatus('idle');
+    setDiagnosticsError('');
+    setDiagnosticsSummary('');
+    setCopyStatus('');
+  }, [target]);
+
+  const nodeStatus = useMemo(() => {
+    if (diagnosticsStatus === 'running' && chainData) {
+      return chainData.chain.nodes.reduce((acc, node) => {
+        acc[node.data.id] = 'running';
+        return acc;
+      }, {});
+    }
+    if (diagnostics?.hops) {
+      return diagnostics.hops.reduce((acc, hop) => {
+        acc[hop.id] = hop.passed ? 'pass' : 'fail';
+        return acc;
+      }, {});
+    }
+    return {};
+  }, [diagnosticsStatus, chainData, diagnostics]);
+
+  const chainElements = useMemo(() => {
+    if (!chainData) return [];
+    const nodes = chainData.chain.nodes.map((node) => {
+      const status = nodeStatus[node.data.id];
+      if (!status) return node;
+      const classes = node.classes ? `${node.classes} status-${status}` : `status-${status}`;
+      return { ...node, classes };
+    });
+    return [...nodes, ...chainData.chain.edges];
+  }, [chainData, nodeStatus]);
 
   const handleKeyDown = (e) => {
     if (!cyRef.current) return;
@@ -581,16 +727,86 @@ const ReconNG = () => {
       )}
       {view === 'builder' && chainData && (
         <>
-          <button
-            type="button"
-            onClick={runChain}
-            className="mb-2 bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded"
-          >
-            Run Chain
-          </button>
+          <div className="flex flex-wrap gap-2 mb-2 items-center">
+            <button
+              type="button"
+              onClick={runChain}
+              className="bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded"
+            >
+              Run Chain
+            </button>
+            <button
+              type="button"
+              onClick={runDiagnostics}
+              disabled={diagnosticsStatus === 'running'}
+              className={`px-3 py-1 rounded bg-purple-600 hover:bg-purple-500 disabled:opacity-60 disabled:cursor-not-allowed`}
+            >
+              {diagnosticsStatus === 'running' ? 'Running Diagnostics...' : 'Run Diagnostics'}
+            </button>
+            {diagnosticsStatus === 'error' && (
+              <span className="text-sm text-red-400">{diagnosticsError}</span>
+            )}
+          </div>
+          {diagnostics && (
+            <div className="mb-3 bg-gray-900/70 border border-gray-700 rounded p-3 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={`text-xs px-2 py-0.5 rounded ${
+                    diagnostics.success ? 'bg-green-700' : 'bg-red-700'
+                  }`}
+                >
+                  {diagnostics.success ? 'PASS' : 'FAIL'}
+                </span>
+                <span className="text-xs text-gray-300">
+                  Total latency: {Math.round(diagnostics.totalLatency)} ms
+                </span>
+                <button
+                  type="button"
+                  onClick={handleCopyDiagnostics}
+                  className="text-xs px-2 py-1 bg-gray-800 rounded hover:bg-gray-700"
+                >
+                  Copy report
+                </button>
+                {copyStatus && <span className="text-xs text-gray-400">{copyStatus}</span>}
+              </div>
+              <ul className="mt-2 space-y-1">
+                {diagnostics.hops.map((hop, index) => (
+                  <li
+                    key={hop.id}
+                    className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 bg-gray-800 rounded px-2 py-1"
+                  >
+                    <div className="flex items-center gap-2 text-xs sm:text-sm">
+                      <span
+                        className={`text-[10px] px-1 py-0.5 rounded ${
+                          hop.passed ? 'bg-green-700' : 'bg-red-700'
+                        }`}
+                      >
+                        {hop.passed ? 'PASS' : 'FAIL'}
+                      </span>
+                      <span>
+                        {index + 1}. {hop.label}
+                      </span>
+                      <span className="font-mono text-gray-400">{hop.ip}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs sm:text-sm">
+                      <span>{Math.round(hop.latency)} ms</span>
+                      {hop.message && (
+                        <span className="text-[10px] text-gray-400 italic">{hop.message}</span>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              {diagnosticsSummary && (
+                <pre className="mt-3 bg-black text-green-300 font-mono text-xs whitespace-pre-wrap rounded p-2">
+                  {diagnosticsSummary}
+                </pre>
+              )}
+            </div>
+          )}
           <div className="bg-black p-2" style={{ height: '300px' }}>
             <CytoscapeComponent
-              elements={[...chainData.chain.nodes, ...chainData.chain.edges]}
+              elements={chainElements}
               stylesheet={stylesheet}
               style={{ width: '100%', height: '100%' }}
             />
