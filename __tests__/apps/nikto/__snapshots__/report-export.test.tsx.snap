@@ -1,0 +1,162 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`Nikto report export service creates a JSON export with metadata and totals 1`] = `
+"{
+  "metadata": {
+    "target": {
+      "host": "example.com",
+      "port": "443",
+      "ssl": true,
+      "url": "https://example.com:443"
+    },
+    "command": "nikto -h example.com -p 443 -ssl",
+    "generatedAt": "2023-10-31T10:00:00.000Z"
+  },
+  "totals": {
+    "High": 1,
+    "Medium": 1,
+    "Info": 1
+  },
+  "findings": [
+    {
+      "path": "/admin",
+      "finding": "Administrative interface exposed.",
+      "references": [
+        "OSVDB-1234"
+      ],
+      "severity": "High",
+      "details": "The /admin panel should be access controlled."
+    },
+    {
+      "path": "/cgi-bin/test",
+      "finding": "Outdated CGI script detected.",
+      "references": [
+        "CVE-2012-1823"
+      ],
+      "severity": "Medium",
+      "details": "Review and patch legacy CGI handlers."
+    },
+    {
+      "path": "/",
+      "finding": "Informational header returned.",
+      "references": [],
+      "severity": "Info",
+      "details": "ETag present in response."
+    }
+  ]
+}
+"
+`;
+
+exports[`Nikto report export service creates an HTML document with collapsible sections and legend 1`] = `
+"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Nikto Simulation Report for example.com</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 32px; }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    h2 { font-size: 20px; margin: 32px 0 12px; }
+    h4 { margin: 0; font-size: 16px; }
+    code { background: rgba(15, 23, 42, 0.6); padding: 4px 6px; border-radius: 4px; font-size: 14px; color: #f97316; }
+    .report-header { background: rgba(15, 23, 42, 0.85); border: 1px solid #1e293b; border-radius: 12px; padding: 24px; box-shadow: 0 12px 32px rgba(15, 23, 42, 0.45); }
+    .metadata-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 16px; font-size: 14px; }
+    .label { font-weight: 600; color: #cbd5f5; margin-right: 6px; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; }
+    .legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; list-style: none; padding: 0; margin: 12px 0 0; }
+    .legend-item { display: flex; flex-direction: column; padding: 12px; border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.3); background: rgba(30, 41, 59, 0.6); }
+    .swatch { width: 100%; height: 4px; border-radius: 999px; margin-bottom: 8px; display: block; }
+    .legend-label { font-weight: 600; font-size: 14px; }
+    .legend-description { font-size: 12px; opacity: 0.8; margin-top: 4px; }
+    .results { margin-top: 24px; display: grid; gap: 16px; }
+    details.severity-group { border-radius: 10px; border: 1px solid #1e293b; background: rgba(30, 41, 59, 0.6); overflow: hidden; }
+    details summary { cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; font-weight: 600; font-size: 16px; }
+    details summary::-webkit-details-marker { display: none; }
+    .summary-count { background: rgba(148, 163, 184, 0.2); padding: 4px 8px; border-radius: 999px; font-size: 12px; }
+    .finding-list { margin: 0; padding: 16px; list-style: none; display: grid; gap: 16px; }
+    .finding { border-radius: 10px; padding: 16px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(148, 163, 184, 0.2); }
+    .finding-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; }
+    .badge { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; padding: 4px 10px; border-radius: 999px; background: rgba(148, 163, 184, 0.25); }
+    .finding-summary { margin: 0 0 8px; font-size: 14px; }
+    .finding-details { font-size: 13px; opacity: 0.85; margin-bottom: 8px; }
+    .finding-references { margin: 0; padding-left: 20px; font-size: 12px; }
+    .finding-references li { margin-bottom: 4px; }
+    .empty { font-style: italic; opacity: 0.7; }
+    .severity-critical .badge, .severity-critical .swatch { background: #ef4444; }
+    .severity-high .badge, .severity-high .swatch { background: #f97316; }
+    .severity-medium .badge, .severity-medium .swatch { background: #facc15; color: #1f2937; }
+    .severity-low .badge, .severity-low .swatch { background: #2dd4bf; color: #0f172a; }
+    .severity-info .badge, .severity-info .swatch { background: #60a5fa; }
+    .severity-other .badge, .severity-other .swatch { background: #94a3b8; }
+    footer { margin-top: 32px; font-size: 12px; opacity: 0.7; }
+  </style>
+</head>
+<body>
+  <header class="report-header">
+    <h1>Nikto Simulation Report</h1>
+    <p>This export is generated from static lab data. It does not represent a live penetration test.</p>
+    <div class="metadata-grid">
+      <div><span class="label">Generated</span> <time datetime="2023-10-31T10:00:00.000Z">2023-10-31T10:00:00.000Z</time></div>
+      <div><span class="label">Target URL</span> https://example.com:443</div>
+      <div><span class="label">Host</span> example.com</div>
+      <div><span class="label">Port:</span> 443</div>
+      <div><span class="label">SSL</span> Enabled</div>
+      <div><span class="label">Command</span> <code>nikto -h example.com -p 443 -ssl</code></div>
+      <div><span class="label">Total Findings</span> 3</div>
+    </div>
+  </header>
+  <section>
+    <h2>Legend</h2>
+    <ul class="legend"><li class="legend-item"><span class="swatch severity-critical"></span><span class="legend-label">Critical</span><span class="legend-description">Immediate remediation required. Exploitation is likely or underway.</span></li><li class="legend-item"><span class="swatch severity-high"></span><span class="legend-label">High</span><span class="legend-description">Significant risk. Prioritize mitigation in the next maintenance window.</span></li><li class="legend-item"><span class="swatch severity-medium"></span><span class="legend-label">Medium</span><span class="legend-description">Review and remediate. Conditions may be required to exploit.</span></li><li class="legend-item"><span class="swatch severity-low"></span><span class="legend-label">Low</span><span class="legend-description">Minor exposure. Track for later remediation or compensating controls.</span></li><li class="legend-item"><span class="swatch severity-info"></span><span class="legend-label">Informational</span><span class="legend-description">General information about the host or configuration.</span></li><li class="legend-item"><span class="swatch severity-other"></span><span class="legend-label">Other</span><span class="legend-description">Findings that do not map to a standard Nikto severity.</span></li></ul>
+  </section>
+  <section class="results">
+    <h2>Findings</h2>
+    <details class="severity-group severity-high" open>
+    <summary>
+      <span class="summary-label">High</span>
+      <span class="summary-count">1 finding</span>
+    </summary>
+    <ul class="finding-list"><li class="finding severity-high">
+    <div class="finding-header">
+      <h4>/admin</h4>
+      <span class="badge">High</span>
+    </div>
+    <p class="finding-summary">Administrative interface exposed.</p>
+    <div class="finding-details">The /admin panel should be access controlled.</div>
+    <ul class="finding-references"><li>OSVDB-1234</li></ul>
+  </li></ul>
+  </details><details class="severity-group severity-medium">
+    <summary>
+      <span class="summary-label">Medium</span>
+      <span class="summary-count">1 finding</span>
+    </summary>
+    <ul class="finding-list"><li class="finding severity-medium">
+    <div class="finding-header">
+      <h4>/cgi-bin/test</h4>
+      <span class="badge">Medium</span>
+    </div>
+    <p class="finding-summary">Outdated CGI script detected.</p>
+    <div class="finding-details">Review and patch legacy CGI handlers.</div>
+    <ul class="finding-references"><li>CVE-2012-1823</li></ul>
+  </li></ul>
+  </details><details class="severity-group severity-info">
+    <summary>
+      <span class="summary-label">Informational</span>
+      <span class="summary-count">1 finding</span>
+    </summary>
+    <ul class="finding-list"><li class="finding severity-info">
+    <div class="finding-header">
+      <h4>/</h4>
+      <span class="badge">Info</span>
+    </div>
+    <p class="finding-summary">Informational header returned.</p>
+    <div class="finding-details">ETag present in response.</div>
+    <p class="finding-references">No references provided.</p>
+  </li></ul>
+  </details>
+  </section>
+  <footer>Report generated for simulation and training purposes only.</footer>
+</body>
+</html>"
+`;
