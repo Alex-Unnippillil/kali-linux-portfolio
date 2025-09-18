@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState, createContext, useContext } from 'react';
+import TabBar from './TabBar';
 
 function middleEllipsis(text: string, max = 30) {
   if (text.length <= max) return text;
@@ -41,8 +42,6 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   const [tabs, setTabs] = useState<TabDefinition[]>(initialTabs);
   const [activeId, setActiveId] = useState<string>(initialTabs[0]?.id || '');
   const prevActive = useRef<string>('');
-  const dragSrc = useRef<number | null>(null);
-
   useEffect(() => {
     if (prevActive.current !== activeId) {
       const prev = tabs.find((t) => t.id === prevActive.current);
@@ -65,20 +64,21 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   );
 
   const setActive = useCallback(
-    (id: string) => {
-      setActiveId(id);
+    (id: string | number) => {
+      setActiveId(String(id));
     },
     [],
   );
 
   const closeTab = useCallback(
-    (id: string) => {
+    (id: string | number) => {
+      const tabId = String(id);
       updateTabs((prev) => {
-        const idx = prev.findIndex((t) => t.id === id);
+        const idx = prev.findIndex((t) => t.id === tabId);
         const removed = prev[idx];
-        const next = prev.filter((t) => t.id !== id);
+        const next = prev.filter((t) => t.id !== tabId);
         if (removed && removed.onClose) removed.onClose();
-        if (id === activeId && next.length > 0) {
+        if (tabId === activeId && next.length > 0) {
           const fallback = next[idx] || next[idx - 1];
           setActiveId(fallback.id);
         } else if (next.length === 0 && onNewTab) {
@@ -98,28 +98,6 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     updateTabs((prev) => [...prev, tab]);
     setActiveId(tab.id);
   }, [onNewTab, updateTabs]);
-
-  const handleDragStart = (index: number) => (e: React.DragEvent) => {
-    dragSrc.current = index;
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDragOver = (index: number) => (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDrop = (index: number) => (e: React.DragEvent) => {
-    e.preventDefault();
-    const src = dragSrc.current;
-    if (src === null || src === index) return;
-    updateTabs((prev) => {
-      const next = [...prev];
-      const [moved] = next.splice(src, 1);
-      next.splice(index, 0, moved);
-      return next;
-    });
-  };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.ctrlKey && e.key.toLowerCase() === 'w') {
@@ -162,43 +140,46 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     }
   };
 
+  const handleReorder = useCallback(
+    (sourceId: string | number, targetId: string | number) => {
+      updateTabs((prev) => {
+        const fromIndex = prev.findIndex((t) => t.id === sourceId);
+        const toIndex = prev.findIndex((t) => t.id === targetId);
+        if (fromIndex === -1 || toIndex === -1) return prev;
+        const next = [...prev];
+        const [moved] = next.splice(fromIndex, 1);
+        next.splice(toIndex, 0, moved);
+        return next;
+      });
+    },
+    [updateTabs],
+  );
+
   return (
     <div
       className={`flex flex-col w-full h-full ${className}`.trim()}
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
-      <div className="flex flex-shrink-0 bg-gray-800 text-white text-sm overflow-x-auto">
-        {tabs.map((t, i) => (
-          <div
-            key={t.id}
-            className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none ${
-              t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
-            }`}
-            draggable
-            onDragStart={handleDragStart(i)}
-            onDragOver={handleDragOver(i)}
-            onDrop={handleDrop(i)}
-            onClick={() => setActive(t.id)}
-          >
-            <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
-            {t.closable !== false && tabs.length > 1 && (
-              <button
-                className="p-0.5"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  closeTab(t.id);
-                }}
-                aria-label="Close Tab"
-              >
-                ×
-              </button>
-            )}
-          </div>
-        ))}
+      <div className="flex flex-shrink-0 items-stretch bg-gray-800 text-white text-sm">
+        <TabBar
+          focusable={false}
+          keyboardNavigation={false}
+          className="flex-1 bg-transparent"
+          tabs={tabs.map((t) => ({
+            id: t.id,
+            label: <span className="max-w-[150px] truncate">{middleEllipsis(t.title)}</span>,
+            closable: t.closable !== false && tabs.length > 1,
+            closeLabel: 'Close tab',
+          }))}
+          activeId={activeId}
+          onSelect={setActive}
+          onClose={closeTab}
+          onReorder={handleReorder}
+        />
         {onNewTab && (
           <button
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700"
+            className="ml-px px-2 py-1 bg-gray-800 hover:bg-gray-700"
             onClick={addTab}
             aria-label="New Tab"
           >
