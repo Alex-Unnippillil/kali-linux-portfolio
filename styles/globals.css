@@ -2,23 +2,18 @@
 
 /* Accessible theme color palette meeting WCAG AA contrast ratios */
 :root {
-  /* Base colors */
-  --color-bg: #0f1317; /* kali background */
-  --color-text: #f5f5f5; /* text on dark backgrounds */
-  /* Brand accents */
-  --color-primary: #1793d1; /* kali blue accent */
-  --color-secondary: #1a1f26; /* complementary dark */
-  --color-accent: #1793d1; /* accent matches primary */
-  /* Utility colors */
-  --color-muted: #2a2e36; /* muted surfaces */
-  --color-surface: #1a1f26; /* panel surfaces */
-  --color-inverse: #000000; /* inverse of text */
-  --color-border: #2a2e36; /* subtle borders */
-  --color-terminal: #00ff00; /* terminal green */
-  --color-dark: #0c0f12; /* card back */
-  --color-focus-ring: var(--color-accent);
-  --color-selection: var(--color-accent);
-  --color-control-accent: var(--color-accent);
+  /* Derived aliases */
+  --color-secondary: var(--color-surface);
+  --color-accent: var(--color-primary);
+  --color-muted: color-mix(in srgb, var(--color-border) 70%, transparent);
+  --color-inverse: #000000;
+  --color-terminal: #00ff00;
+  --color-dark: var(--color-window-chrome);
+  --color-on-surface: var(--color-surface-text);
+  --color-on-window: var(--color-window-chrome-text);
+  --color-focus-ring: var(--color-primary);
+  --color-selection: var(--color-primary);
+  --color-control-accent: var(--color-primary);
   accent-color: var(--color-control-accent);
 }
 
@@ -27,14 +22,29 @@ html[data-theme='dark'] {
   --color-bg: #000000;
   --color-text: #e5e5e5;
   --color-primary: #1e88e5;
+  --color-primary-hover: #1976d2;
+  --color-on-primary: #04111a;
+  --color-button-primary: var(--color-primary);
+  --color-button-primary-hover: var(--color-primary-hover);
+  --color-on-button-primary: var(--color-on-primary);
   --color-secondary: #121212;
-  --color-accent: #bb86fc;
+  --color-accent: var(--color-primary);
   --color-muted: #1f1f1f;
   --color-surface: #121212;
+  --color-surface-text: #f5f5f5;
   --color-inverse: #ffffff;
   --color-border: #333333;
+  --color-window-chrome: #0a0a0a;
+  --color-window-chrome-text: #f5f5f5;
   --color-terminal: #00ff00;
-  --color-dark: #0a0a0a;
+  --color-status-success: #2f9e44;
+  --color-on-status-success: #ffffff;
+  --color-status-info: #5390d9;
+  --color-on-status-info: #04111a;
+  --color-status-warning: #f59f00;
+  --color-on-status-warning: #111827;
+  --color-status-danger: #d32f2f;
+  --color-on-status-danger: #ffffff;
 }
 
 /* Neon theme */
@@ -42,14 +52,29 @@ html[data-theme='neon'] {
   --color-bg: #000000;
   --color-text: #ffffff;
   --color-primary: #39ff14;
+  --color-primary-hover: #32d812;
+  --color-on-primary: #04111a;
+  --color-button-primary: var(--color-primary);
+  --color-button-primary-hover: var(--color-primary-hover);
+  --color-on-button-primary: var(--color-on-primary);
   --color-secondary: #1a1a1a;
   --color-accent: #ff00ff;
   --color-muted: #222222;
   --color-surface: #111111;
+  --color-surface-text: #f5f5f5;
   --color-inverse: #ffffff;
   --color-border: #333333;
+  --color-window-chrome: #000000;
+  --color-window-chrome-text: #ff00ff;
   --color-terminal: #39ff14;
-  --color-dark: #000000;
+  --color-status-success: #39ff14;
+  --color-on-status-success: #04111a;
+  --color-status-info: #0ea5e9;
+  --color-on-status-info: #04111a;
+  --color-status-warning: #f97316;
+  --color-on-status-warning: #111827;
+  --color-status-danger: #f43f5e;
+  --color-on-status-danger: #ffffff;
 }
 
 /* Matrix theme */
@@ -61,6 +86,7 @@ html[data-theme='matrix'] {
   --color-accent: #00ff00;
   --color-muted: #003300;
   --color-surface: #001100;
+  --color-surface-text: #00ff00;
   --color-inverse: #ffffff;
   --color-border: #003300;
   --color-terminal: #00ff00;

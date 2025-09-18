@@ -24,7 +24,26 @@
   --color-ub-border-orange: #1793d1;
   --color-ub-dark-grey: #2a2e36;
   --color-bg: #0f1317;
-  --color-text: #F5F5F5;
+  --color-text: #f5f5f5;
+  --color-surface: #1a1f26;
+  --color-surface-text: #f8fafc;
+  --color-border: #27313d;
+  --color-window-chrome: #0c0f12;
+  --color-window-chrome-text: #f5f5f5;
+  --color-primary: #1793d1;
+  --color-primary-hover: #1b8ec5;
+  --color-on-primary: #04111a;
+  --color-button-primary: var(--color-primary);
+  --color-on-button-primary: var(--color-on-primary);
+  --color-button-primary-hover: var(--color-primary-hover);
+  --color-status-success: #15803d;
+  --color-on-status-success: #ffffff;
+  --color-status-info: #1d4ed8;
+  --color-on-status-info: #ffffff;
+  --color-status-warning: #d97706;
+  --color-on-status-warning: #111827;
+  --color-status-danger: #b91c1c;
+  --color-on-status-danger: #ffffff;
   --kali-bg: rgba(15, 19, 23, 0.85);
 
   /* Game palette tokens */
@@ -73,10 +92,29 @@
   --color-ub-orange: #ffff00;
   --color-ub-lite-abrgn: #00ffff;
   --color-ub-border-orange: #ffff00;
+  --color-surface: #000000;
+  --color-surface-text: #ffffff;
+  --color-border: #ffffff;
+  --color-window-chrome: #000000;
+  --color-window-chrome-text: #ffff00;
+  --color-primary: #ffff00;
+  --color-primary-hover: #ffff00;
+  --color-on-primary: #000000;
+  --color-button-primary: #ffff00;
+  --color-on-button-primary: #000000;
+  --color-button-primary-hover: #ffff00;
   --game-color-secondary: #ffff00;
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
   --game-color-danger: #ff0000;
+  --color-status-success: #00ffff;
+  --color-on-status-success: #000000;
+  --color-status-info: #ffff00;
+  --color-on-status-info: #000000;
+  --color-status-warning: #ff00ff;
+  --color-on-status-warning: #000000;
+  --color-status-danger: #ff0000;
+  --color-on-status-danger: #ffffff;
 }
 
 /* Dyslexia-friendly fonts */
@@ -116,5 +154,24 @@
     --color-ub-orange: #ffff00;
     --color-ub-lite-abrgn: #00ffff;
     --color-ub-border-orange: #ffff00;
+    --color-surface: #000000;
+    --color-surface-text: #ffffff;
+    --color-border: #ffffff;
+    --color-window-chrome: #000000;
+    --color-window-chrome-text: #ffff00;
+    --color-primary: #ffff00;
+    --color-primary-hover: #ffff00;
+    --color-on-primary: #000000;
+    --color-button-primary: #ffff00;
+    --color-on-button-primary: #000000;
+    --color-button-primary-hover: #ffff00;
+    --color-status-success: #00ffff;
+    --color-on-status-success: #000000;
+    --color-status-info: #ffff00;
+    --color-on-status-info: #000000;
+    --color-status-warning: #ff00ff;
+    --color-on-status-warning: #000000;
+    --color-status-danger: #ff0000;
+    --color-on-status-danger: #ffffff;
   }
 }
