@@ -111,6 +111,7 @@ const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
 const SecurityToolsApp = createDynamicApp('security-tools', 'Security Tools');
 const SSHApp = createDynamicApp('ssh', 'SSH Command Builder');
 const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
+const CspBuilderApp = createDynamicApp('csp-builder', 'CSP Builder');
 const HtmlRewriteApp = createDynamicApp('html-rewriter', 'HTML Rewriter');
 const ContactApp = createDynamicApp('contact', 'Contact');
 
@@ -202,6 +203,8 @@ const displayContact = createDisplay(ContactApp);
 
 const displayHashcat = createDisplay(HashcatApp);
 
+const displayCspBuilder = createDisplay(CspBuilderApp);
+
 const displayKismet = createDisplay(KismetApp);
 
 // Utilities list used for the "Utilities" folder on the desktop
@@ -259,6 +262,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayProjectGallery,
+  },
+  {
+    id: 'csp-builder',
+    title: 'CSP Builder',
+    icon: '/themes/Yaru/apps/gnome-control-center.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCspBuilder,
   },
   {
     id: 'input-lab',
