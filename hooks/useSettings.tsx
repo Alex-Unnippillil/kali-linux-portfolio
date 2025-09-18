@@ -51,6 +51,55 @@ const shadeColor = (color: string, percent: number): string => {
     .slice(1)}`;
 };
 
+const hexToRgb = (color: string): [number, number, number] => {
+  let hex = color.replace('#', '').trim();
+  if (hex.length === 3) {
+    hex = hex
+      .split('')
+      .map((char) => char + char)
+      .join('');
+  }
+  if (hex.length !== 6 || Number.isNaN(parseInt(hex, 16))) {
+    return [0, 0, 0];
+  }
+  const intValue = parseInt(hex, 16);
+  return [(intValue >> 16) & 255, (intValue >> 8) & 255, intValue & 255];
+};
+
+const getRelativeLuminance = (color: string): number => {
+  const [r, g, b] = hexToRgb(color);
+  const transform = (value: number) => {
+    const channel = value / 255;
+    return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  };
+  const [sr, sg, sb] = [transform(r), transform(g), transform(b)];
+  return 0.2126 * sr + 0.7152 * sg + 0.0722 * sb;
+};
+
+const getContrastRatio = (foreground: string, background: string): number => {
+  const lumForeground = getRelativeLuminance(foreground);
+  const lumBackground = getRelativeLuminance(background);
+  const lighter = Math.max(lumForeground, lumBackground);
+  const darker = Math.min(lumForeground, lumBackground);
+  return (lighter + 0.05) / (darker + 0.05);
+};
+
+const getOnAccentColor = (accent: string): string => {
+  const normalized = accent.startsWith('#') ? accent : `#${accent}`;
+  const blackContrast = getContrastRatio(normalized, '#000000');
+  const whiteContrast = getContrastRatio(normalized, '#ffffff');
+
+  if (blackContrast >= 4.5 && blackContrast >= whiteContrast) {
+    return '#000000';
+  }
+
+  if (whiteContrast >= 4.5 && whiteContrast >= blackContrast) {
+    return '#ffffff';
+  }
+
+  return blackContrast >= whiteContrast ? '#000000' : '#ffffff';
+};
+
 interface SettingsContextValue {
   accent: string;
   wallpaper: string;
@@ -137,6 +186,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const border = shadeColor(accent, -0.2);
+    const onAccent = getOnAccentColor(accent);
     const vars: Record<string, string> = {
       '--color-ub-orange': accent,
       '--color-ub-border-orange': border,
@@ -145,6 +195,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       '--color-focus-ring': accent,
       '--color-selection': accent,
       '--color-control-accent': accent,
+      '--color-on-accent': onAccent,
     };
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);

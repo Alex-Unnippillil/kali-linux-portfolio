@@ -53,7 +53,7 @@ function KeywordSearchPanel({ keyword, setKeyword, artifacts, onSelect }) {
         />
         <button
           onClick={exportHits}
-          className="bg-ub-orange px-2 py-1 rounded text-sm text-black"
+          className="bg-ub-orange px-2 py-1 rounded text-sm text-[var(--color-on-accent)]"
         >
           Export Hits
         </button>

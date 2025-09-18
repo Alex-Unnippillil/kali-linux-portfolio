@@ -60,7 +60,7 @@ const ReportExport: React.FC<ReportExportProps> = ({ caseName = 'case', artifact
       </button>
       <button
         onClick={exportReport}
-        className="bg-ub-orange px-3 py-1 rounded text-sm text-black"
+        className="bg-ub-orange px-3 py-1 rounded text-sm text-[var(--color-on-accent)]"
       >
         Download HTML Report
       </button>

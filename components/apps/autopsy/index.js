@@ -245,14 +245,14 @@ function Timeline({ events, onSelect }) {
       <div className="flex space-x-2 mb-1">
         <button
           onClick={() => setZoom((z) => Math.min(z * 2, MAX_ZOOM))}
-          className="bg-ub-orange text-black px-2 py-1 rounded"
+          className="bg-ub-orange text-[var(--color-on-accent)] px-2 py-1 rounded"
           aria-label="Zoom in"
         >
           +
         </button>
         <button
           onClick={() => setZoom((z) => Math.max(z / 2, MIN_ZOOM))}
-          className="bg-ub-orange text-black px-2 py-1 rounded"
+          className="bg-ub-orange text-[var(--color-on-accent)] px-2 py-1 rounded"
           aria-label="Zoom out"
         >
           -
@@ -602,7 +602,7 @@ function Autopsy({ initialArtifacts = null }) {
         />
         <button
           onClick={createCase}
-          className="bg-ub-orange px-3 py-1 rounded"
+          className="bg-ub-orange px-3 py-1 rounded text-[var(--color-on-accent)]"
         >
           Create Case
         </button>
@@ -732,7 +732,7 @@ function Autopsy({ initialArtifacts = null }) {
                     <button
                       className={`${
                         previewTab === 'hex'
-                          ? 'bg-ub-orange text-black'
+                          ? 'bg-ub-orange text-[var(--color-on-accent)]'
                           : 'bg-ub-cool-grey'
                       } px-2 py-1 rounded`}
                       onClick={() => setPreviewTab('hex')}
@@ -742,7 +742,7 @@ function Autopsy({ initialArtifacts = null }) {
                     <button
                       className={`${
                         previewTab === 'text'
-                          ? 'bg-ub-orange text-black'
+                          ? 'bg-ub-orange text-[var(--color-on-accent)]'
                           : 'bg-ub-cool-grey'
                       } px-2 py-1 rounded`}
                       onClick={() => setPreviewTab('text')}
@@ -753,7 +753,7 @@ function Autopsy({ initialArtifacts = null }) {
                       <button
                         className={`${
                           previewTab === 'image'
-                            ? 'bg-ub-orange text-black'
+                            ? 'bg-ub-orange text-[var(--color-on-accent)]'
                             : 'bg-ub-cool-grey'
                         } px-2 py-1 rounded`}
                         onClick={() => setPreviewTab('image')}

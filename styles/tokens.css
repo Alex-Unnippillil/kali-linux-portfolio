@@ -1,31 +1,38 @@
 /* Design tokens */
 
 :root {
-  /* Theme colors */
-  --color-ub-grey: #0f1317;
-  --color-ub-warm-grey: #7d7f83;
-  --color-ub-cool-grey: #1a1f26;
-  --color-ub-orange: #1793d1;
-  --color-ub-lite-abrgn: #22262c;
-  --color-ub-med-abrgn: #1b1f24;
-  --color-ub-drk-abrgn: #13171b;
-  --color-ub-window-title: #0c0f12;
-  --color-ub-gedit-dark: #021B33;
-  --color-ub-gedit-light: #003B70;
-  --color-ub-gedit-darker: #010D1A;
-  --color-ubt-grey: #F6F6F5;
-  --color-ubt-warm-grey: #AEA79F;
-  --color-ubt-cool-grey: #333333;
-  --color-ubt-blue: #62A0EA;
-  --color-ubt-green: #73D216;
-  --color-ubt-gedit-orange: #F39A21;
-  --color-ubt-gedit-blue: #50B6C6;
-  --color-ubt-gedit-dark: #003B70;
-  --color-ub-border-orange: #1793d1;
-  --color-ub-dark-grey: #2a2e36;
-  --color-bg: #0f1317;
-  --color-text: #F5F5F5;
-  --kali-bg: rgba(15, 19, 23, 0.85);
+  /* Theme colors aligned with Kali's reference palette */
+  --color-ub-grey: #0b141b;
+  --color-ub-warm-grey: #9aa3af;
+  --color-ub-cool-grey: #121b26;
+  --color-ub-orange: #2777ff;
+  --color-ub-lite-abrgn: #15202b;
+  --color-ub-med-abrgn: #101823;
+  --color-ub-drk-abrgn: #070c12;
+  --color-ub-window-title: #0a1420;
+  --color-ub-gedit-dark: #02213b;
+  --color-ub-gedit-light: #004680;
+  --color-ub-gedit-darker: #01182b;
+  --color-ubt-grey: #f7f9fb;
+  --color-ubt-warm-grey: #cfd5dc;
+  --color-ubt-cool-grey: #2b3440;
+  --color-ubt-blue: #62a0ea;
+  --color-ubt-green: #73d216;
+  --color-ubt-gedit-orange: #f39a21;
+  --color-ubt-gedit-blue: #50b6c6;
+  --color-ubt-gedit-dark: #003b70;
+  --color-ub-border-orange: #1f5fde;
+  --color-ub-dark-grey: #1f2733;
+  --color-bg: var(--color-ub-grey);
+  --color-text: var(--color-ubt-grey);
+  --kali-bg: rgba(11, 20, 27, 0.92);
+  --color-navbar-bg: #0d1724;
+  --color-navbar-text: var(--color-ubt-grey);
+  --color-terminal-bg: #050b11;
+  --color-terminal-text: #e6f1ff;
+  --color-terminal-border: #1c2a3d;
+  --color-on-accent: #000000;
+  --color-on-brand: var(--color-bg);
 
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
@@ -73,6 +80,13 @@
   --color-ub-orange: #ffff00;
   --color-ub-lite-abrgn: #00ffff;
   --color-ub-border-orange: #ffff00;
+  --color-navbar-bg: #000000;
+  --color-navbar-text: #ffffff;
+  --color-terminal-bg: #000000;
+  --color-terminal-text: #ffffff;
+  --color-terminal-border: #ffffff;
+  --color-on-accent: #000000;
+  --color-on-brand: #000000;
   --game-color-secondary: #ffff00;
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
@@ -116,5 +130,12 @@
     --color-ub-orange: #ffff00;
     --color-ub-lite-abrgn: #00ffff;
     --color-ub-border-orange: #ffff00;
+    --color-navbar-bg: #000000;
+    --color-navbar-text: #ffffff;
+    --color-terminal-bg: #000000;
+    --color-terminal-text: #ffffff;
+    --color-terminal-border: #ffffff;
+    --color-on-accent: #000000;
+    --color-on-brand: #000000;
   }
 }

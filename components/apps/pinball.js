@@ -436,14 +436,20 @@ const Pinball = () => {
             </option>
           ))}
         </select>
-        <button className="px-2 bg-ub-orange text-black" onClick={() => setEditing(!editing)}>
+        <button
+          className="px-2 bg-ub-orange text-[var(--color-on-accent)]"
+          onClick={() => setEditing(!editing)}
+        >
           {editing ? 'Play' : 'Edit'}
         </button>
-        <button className="px-2 bg-ub-orange text-black" onClick={saveShare}>
+        <button
+          className="px-2 bg-ub-orange text-[var(--color-on-accent)]"
+          onClick={saveShare}
+        >
           Save/Share
         </button>
         <button
-          className="px-2 bg-ub-orange text-black"
+          className="px-2 bg-ub-orange text-[var(--color-on-accent)]"
           onClick={() => setLightsEnabled(!lightsEnabled)}
           aria-pressed={lightsEnabled}
         >

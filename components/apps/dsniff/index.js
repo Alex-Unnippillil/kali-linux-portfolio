@@ -479,10 +479,38 @@ const Dsniff = () => {
                     : 'bg-ub-grey'
                 }`}
               >
-                <td className="pr-2 text-white">{pkt.src}</td>
-                <td className="pr-2 text-white">{pkt.dst}</td>
-                <td className="pr-2 text-green-400">{pkt.protocol}</td>
-                <td className="text-green-400">{pkt.info}</td>
+                <td
+                  className={`pr-2 ${
+                    selectedPacket === i ? 'text-[var(--color-on-brand)]' : 'text-white'
+                  }`}
+                >
+                  {pkt.src}
+                </td>
+                <td
+                  className={`pr-2 ${
+                    selectedPacket === i ? 'text-[var(--color-on-brand)]' : 'text-white'
+                  }`}
+                >
+                  {pkt.dst}
+                </td>
+                <td
+                  className={`pr-2 ${
+                    selectedPacket === i
+                      ? 'text-[var(--color-on-brand)]'
+                      : 'text-green-400'
+                  }`}
+                >
+                  {pkt.protocol}
+                </td>
+                <td
+                  className={
+                    selectedPacket === i
+                      ? 'text-[var(--color-on-brand)]'
+                      : 'text-green-400'
+                  }
+                >
+                  {pkt.info}
+                </td>
               </tr>
             ))}
           </tbody>
