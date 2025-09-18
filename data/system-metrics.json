@@ -1,0 +1,143 @@
+{
+  "cpu": {
+    "model": "Intel Core i7-9750H",
+    "cores": 6,
+    "threads": 12,
+    "baseClockGHz": 2.6,
+    "boostClockGHz": 4.5
+  },
+  "memory": {
+    "totalGb": 16,
+    "type": "DDR4-2666"
+  },
+  "samples": [
+    {
+      "timestamp": "2024-06-01T10:00:00Z",
+      "cpuTotal": 18,
+      "cpuFrequencyGHz": 3.1,
+      "perCore": [16, 24, 15, 19, 22, 13],
+      "memoryUsedGb": 6.2,
+      "memoryCachedGb": 1.1
+    },
+    {
+      "timestamp": "2024-06-01T10:00:05Z",
+      "cpuTotal": 26,
+      "cpuFrequencyGHz": 3.4,
+      "perCore": [24, 32, 19, 27, 28, 21],
+      "memoryUsedGb": 6.5,
+      "memoryCachedGb": 1.2
+    },
+    {
+      "timestamp": "2024-06-01T10:00:10Z",
+      "cpuTotal": 35,
+      "cpuFrequencyGHz": 3.6,
+      "perCore": [31, 42, 28, 33, 38, 30],
+      "memoryUsedGb": 6.8,
+      "memoryCachedGb": 1.3
+    },
+    {
+      "timestamp": "2024-06-01T10:00:15Z",
+      "cpuTotal": 41,
+      "cpuFrequencyGHz": 3.7,
+      "perCore": [38, 47, 34, 40, 44, 36],
+      "memoryUsedGb": 7.1,
+      "memoryCachedGb": 1.4
+    },
+    {
+      "timestamp": "2024-06-01T10:00:20Z",
+      "cpuTotal": 53,
+      "cpuFrequencyGHz": 3.9,
+      "perCore": [52, 58, 44, 51, 55, 49],
+      "memoryUsedGb": 7.6,
+      "memoryCachedGb": 1.6
+    },
+    {
+      "timestamp": "2024-06-01T10:00:25Z",
+      "cpuTotal": 64,
+      "cpuFrequencyGHz": 4.1,
+      "perCore": [63, 69, 58, 60, 66, 61],
+      "memoryUsedGb": 8.1,
+      "memoryCachedGb": 1.8
+    },
+    {
+      "timestamp": "2024-06-01T10:00:30Z",
+      "cpuTotal": 71,
+      "cpuFrequencyGHz": 4.2,
+      "perCore": [70, 77, 64, 69, 72, 66],
+      "memoryUsedGb": 8.6,
+      "memoryCachedGb": 1.9
+    },
+    {
+      "timestamp": "2024-06-01T10:00:35Z",
+      "cpuTotal": 62,
+      "cpuFrequencyGHz": 4.0,
+      "perCore": [58, 65, 55, 59, 63, 51],
+      "memoryUsedGb": 8.4,
+      "memoryCachedGb": 2.0
+    },
+    {
+      "timestamp": "2024-06-01T10:00:40Z",
+      "cpuTotal": 48,
+      "cpuFrequencyGHz": 3.7,
+      "perCore": [45, 53, 40, 46, 48, 37],
+      "memoryUsedGb": 7.9,
+      "memoryCachedGb": 1.9
+    },
+    {
+      "timestamp": "2024-06-01T10:00:45Z",
+      "cpuTotal": 39,
+      "cpuFrequencyGHz": 3.5,
+      "perCore": [36, 44, 33, 39, 41, 31],
+      "memoryUsedGb": 7.4,
+      "memoryCachedGb": 1.8
+    },
+    {
+      "timestamp": "2024-06-01T10:00:50Z",
+      "cpuTotal": 28,
+      "cpuFrequencyGHz": 3.2,
+      "perCore": [24, 34, 21, 28, 30, 22],
+      "memoryUsedGb": 7.0,
+      "memoryCachedGb": 1.6
+    },
+    {
+      "timestamp": "2024-06-01T10:00:55Z",
+      "cpuTotal": 22,
+      "cpuFrequencyGHz": 3.0,
+      "perCore": [19, 27, 17, 23, 24, 16],
+      "memoryUsedGb": 6.6,
+      "memoryCachedGb": 1.5
+    },
+    {
+      "timestamp": "2024-06-01T10:01:00Z",
+      "cpuTotal": 31,
+      "cpuFrequencyGHz": 3.4,
+      "perCore": [28, 36, 25, 30, 33, 27],
+      "memoryUsedGb": 6.9,
+      "memoryCachedGb": 1.6
+    },
+    {
+      "timestamp": "2024-06-01T10:01:05Z",
+      "cpuTotal": 45,
+      "cpuFrequencyGHz": 3.8,
+      "perCore": [41, 50, 39, 44, 47, 40],
+      "memoryUsedGb": 7.5,
+      "memoryCachedGb": 1.7
+    },
+    {
+      "timestamp": "2024-06-01T10:01:10Z",
+      "cpuTotal": 58,
+      "cpuFrequencyGHz": 4.0,
+      "perCore": [55, 62, 51, 57, 60, 53],
+      "memoryUsedGb": 8.2,
+      "memoryCachedGb": 1.9
+    },
+    {
+      "timestamp": "2024-06-01T10:01:15Z",
+      "cpuTotal": 67,
+      "cpuFrequencyGHz": 4.2,
+      "perCore": [64, 71, 60, 66, 69, 63],
+      "memoryUsedGb": 8.8,
+      "memoryCachedGb": 2.1
+    }
+  ]
+}

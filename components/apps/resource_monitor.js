@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import StatusBar from '../ui/StatusBar';
 
 // Number of samples to keep in the timeline
 const MAX_POINTS = 60;
@@ -186,6 +187,9 @@ const ResourceMonitor = () => {
           {stress ? 'Stop Stress' : 'Stress Test'}
         </button>
         <span className="ml-auto text-sm">FPS: {fps.toFixed(1)}</span>
+      </div>
+      <div className="px-4">
+        <StatusBar className="w-full max-w-4xl" />
       </div>
       <div className="flex flex-1 items-center justify-evenly gap-4 p-4">
         <canvas
