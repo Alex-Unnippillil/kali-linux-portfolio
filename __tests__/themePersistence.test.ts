@@ -32,6 +32,8 @@ describe('theme persistence and unlocking', () => {
     expect(document.documentElement.classList.contains('dark')).toBe(true);
     setTheme('matrix');
     expect(document.documentElement.classList.contains('dark')).toBe(true);
+    setTheme('redteam');
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
   });
 
   test('updates CSS variables without reload', () => {

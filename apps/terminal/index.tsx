@@ -11,6 +11,8 @@ import React, {
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
+import { useOptionalShellConfig, type WarningPayload } from '../../hooks/useShellConfig';
+import Modal from '../../components/base/Modal';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -68,12 +70,73 @@ export interface TerminalProps {
 }
 
 export interface TerminalHandle {
-  runCommand: (cmd: string) => void;
+  runCommand: (cmd: string, options?: RunCommandOptions) => Promise<boolean>;
   getContent: () => string;
 }
 
 const files: Record<string, string> = {
   'README.md': 'Welcome to the web terminal.\nThis is a fake file used for demos.',
+};
+
+interface RunCommandOptions {
+  bypassConfirmation?: boolean;
+}
+
+const SAFE_COMMANDS = new Set([
+  'help',
+  'ls',
+  'clear',
+  'open',
+  'date',
+  'about',
+  'history',
+  'alias',
+  'man',
+  'cat',
+  'grep',
+  'jq',
+]);
+
+interface CommandWarningRule {
+  test: (command: string) => boolean;
+  message: string;
+}
+
+const COMMAND_WARNING_RULES: CommandWarningRule[] = [
+  {
+    test: (command) => /\brm\s+-rf\b/i.test(command),
+    message: 'Recursive delete detected. This simulated command would wipe files in a real environment.',
+  },
+  {
+    test: (command) => /\bnmap\b/i.test(command),
+    message: 'Network scanning generates detailed telemetry. Ensure you have authorization before port sweeps.',
+  },
+  {
+    test: (command) => /\bhydra\b/i.test(command),
+    message: 'Password spraying and brute-force actions are logged for audit in red-team mode.',
+  },
+  {
+    test: (command) => /\bmsfconsole\b/i.test(command),
+    message: 'Metasploit workflows capture extensive evidence. Confirm before proceeding.',
+  },
+  {
+    test: (command) => /\bsudo\b/i.test(command),
+    message: 'Privilege escalation attempts trigger evidence capture and alerts.',
+  },
+];
+
+const shouldConfirmCommand = (command: string): boolean => {
+  if (!command) return false;
+  const [head] = command.split(/\s+/);
+  return !SAFE_COMMANDS.has(head);
+};
+
+const getCommandWarning = (command: string): string => {
+  const normalized = command.toLowerCase();
+  for (const rule of COMMAND_WARNING_RULES) {
+    if (rule.test(normalized)) return rule.message;
+  }
+  return `Command "${command}" will run inside the simulation and its transcript will be captured as evidence.`;
 };
 
 const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref) => {
@@ -98,6 +161,18 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     },
     runWorker: async () => {},
   });
+  const shellConfig = useOptionalShellConfig();
+  const redTeamMode = shellConfig?.redTeamMode ?? false;
+  const captureEvidence = shellConfig?.captureEvidence ?? (() => null);
+  const pushWarning =
+    shellConfig?.pushWarning ??
+    ((payload: WarningPayload) => ({
+      id: `noop-${Date.now()}`,
+      message: payload.message,
+      severity: payload.severity ?? 'info',
+      timestamp: payload.timestamp ?? Date.now(),
+      context: payload.context,
+    }));
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -105,6 +180,13 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
   const [overflow, setOverflow] = useState({ top: false, bottom: false });
+  const [confirmation, setConfirmation] = useState<
+    { command: string; message: string } | null
+  >(null);
+  const pendingExecutionRef = useRef<{
+    command: string;
+    resolve: (value: boolean) => void;
+  } | null>(null);
   const ansiColors = [
     '#000000',
     '#AA0000',
@@ -160,7 +242,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
-      handleInput(text);
+      await handleInput(text);
     } catch {}
   };
 
@@ -224,7 +306,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       date: () => writeLine(new Date().toString()),
       about: () => writeLine('This terminal is powered by xterm.js'),
     };
-    }, [openApp, opfsSupported, deleteFile, writeLine]);
+  }, [openApp, opfsSupported, deleteFile, writeLine]);
 
   useEffect(() => {
     if (typeof Worker === 'function') {
@@ -235,21 +317,76 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     return () => workerRef.current?.terminate();
   }, []);
 
-    const runCommand = useCallback(
-      async (cmd: string) => {
-        const [name, ...rest] = cmd.trim().split(/\s+/);
-        const expanded =
-          aliasesRef.current[name]
-            ? `${aliasesRef.current[name]} ${rest.join(' ')}`.trim()
-            : cmd;
-        const [cmdName, ...cmdRest] = expanded.split(/\s+/);
-        const handler = registryRef.current[cmdName];
-        historyRef.current.push(cmd);
-        if (handler) await handler(cmdRest.join(' '), contextRef.current);
-        else if (cmdName) await runWorker(expanded);
-      },
-      [runWorker],
-    );
+  const executeCommand = useCallback(
+    async (input: string) => {
+      const trimmed = input.trim();
+      if (!trimmed) return;
+      const [name, ...rest] = trimmed.split(/\s+/);
+      const expanded =
+        aliasesRef.current[name]
+          ? `${aliasesRef.current[name]} ${rest.join(' ')}`.trim()
+          : trimmed;
+      const [cmdName, ...cmdRest] = expanded.split(/\s+/);
+      historyRef.current.push(trimmed);
+      const handler = registryRef.current[cmdName];
+      if (handler) await handler(cmdRest.join(' '), contextRef.current);
+      else if (cmdName) await runWorker(expanded);
+      if (redTeamMode) {
+        captureEvidence({
+          source: 'terminal',
+          content: `Command executed: ${trimmed}`,
+          tags: ['terminal', cmdName || 'command'],
+          metadata: { command: trimmed, expanded },
+        });
+      }
+    },
+    [captureEvidence, redTeamMode, runWorker],
+  );
+
+  const runCommand = useCallback(
+    async (cmd: string, options?: RunCommandOptions): Promise<boolean> => {
+      const trimmed = cmd.trim();
+      if (!trimmed) return true;
+
+      if (!options?.bypassConfirmation && redTeamMode && shouldConfirmCommand(trimmed)) {
+        const warningMessage = getCommandWarning(trimmed);
+        pushWarning({
+          message: warningMessage,
+          severity: 'warning',
+          context: { command: trimmed },
+        });
+        return new Promise<boolean>((resolve) => {
+          pendingExecutionRef.current = { command: trimmed, resolve };
+          setConfirmation({ command: trimmed, message: warningMessage });
+        });
+      }
+
+      await executeCommand(trimmed);
+      return true;
+    },
+    [executeCommand, pushWarning, redTeamMode],
+  );
+
+  const confirmCommand = useCallback(async () => {
+    const pending = pendingExecutionRef.current;
+    if (!pending) return;
+    setConfirmation(null);
+    await executeCommand(pending.command);
+    pending.resolve(true);
+    pendingExecutionRef.current = null;
+    termRef.current?.focus();
+  }, [executeCommand]);
+
+  const cancelCommand = useCallback(() => {
+    const pending = pendingExecutionRef.current;
+    if (pending) {
+      writeLine('[red team] Command canceled.');
+      pending.resolve(false);
+      pendingExecutionRef.current = null;
+    }
+    setConfirmation(null);
+    termRef.current?.focus();
+  }, [writeLine]);
 
     const autocomplete = useCallback(() => {
       const current = commandRef.current;
@@ -267,13 +404,16 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     }, [prompt, writeLine]);
 
     const handleInput = useCallback(
-      (data: string) => {
+      async (data: string) => {
         for (const ch of data) {
           if (ch === '\r') {
             termRef.current?.writeln('');
-            runCommand(commandRef.current.trim());
+            const command = commandRef.current.trim();
             commandRef.current = '';
-            prompt();
+            const executed = await runCommand(command);
+            if (executed) {
+              prompt();
+            }
           } else if (ch === '\u007F') {
             if (commandRef.current.length > 0) {
               termRef.current?.write('\b \b');
@@ -285,11 +425,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           }
         }
       },
-      [runCommand, prompt],
+      [prompt, runCommand],
     );
 
   useImperativeHandle(ref, () => ({
-    runCommand: (c: string) => runCommand(c),
+    runCommand: (c: string, options?: RunCommandOptions) => runCommand(c, options),
     getContent: () => contentRef.current,
   }));
 
@@ -343,7 +483,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       writeLine('Welcome to the web terminal!');
       writeLine('Type "help" to see available commands.');
       prompt();
-      term.onData((d: string) => handleInput(d));
+      term.onData((d: string) => {
+        void handleInput(d);
+      });
       term.onKey(({ domEvent }: any) => {
         if (domEvent.key === 'Tab') {
           domEvent.preventDefault();
@@ -395,6 +537,15 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   }, []);
 
   useEffect(() => {
+    const term = termRef.current;
+    if (!term || typeof term.setOption !== 'function') return;
+    const theme = redTeamMode
+      ? { background: '#160404', foreground: '#ffeaea', cursor: '#f87171' }
+      : { background: '#0f1317', foreground: '#f5f5f5', cursor: '#1793d1' };
+    term.setOption('theme', theme);
+  }, [redTeamMode]);
+
+  useEffect(() => {
     const listener = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') {
         e.preventDefault();
@@ -412,6 +563,31 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
   return (
     <div className="relative h-full w-full">
+      <Modal isOpen={Boolean(confirmation)} onClose={cancelCommand}>
+        <div className="mx-auto mt-24 w-[min(90vw,28rem)] space-y-4 rounded-lg bg-gray-900 p-6 text-white shadow-2xl">
+          <h2 className="text-lg font-semibold text-red-300">Confirm command</h2>
+          <p className="text-sm text-red-100">{confirmation?.message}</p>
+          <pre className="max-h-40 overflow-y-auto rounded bg-black/60 p-3 text-xs text-red-200">
+            {confirmation?.command}
+          </pre>
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              className="rounded bg-gray-700 px-3 py-1 text-sm hover:bg-gray-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400"
+              onClick={cancelCommand}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="rounded bg-red-600 px-3 py-1 text-sm font-semibold uppercase tracking-wide hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-300"
+              onClick={confirmCommand}
+            >
+              Run anyway
+            </button>
+          </div>
+        </div>
+      </Modal>
       {paletteOpen && (
         <div className="absolute inset-0 bg-black bg-opacity-75 flex items-start justify-center z-10">
           <div className="mt-10 w-80 bg-gray-800 p-4 rounded">
@@ -420,9 +596,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               className="w-full mb-2 bg-black text-white p-2"
               value={paletteInput}
               onChange={(e) => setPaletteInput(e.target.value)}
-              onKeyDown={(e) => {
+              onKeyDown={async (e) => {
                 if (e.key === 'Enter') {
-                  runCommand(paletteInput);
+                  await runCommand(paletteInput);
                   setPaletteInput('');
                   setPaletteOpen(false);
                   termRef.current?.focus();

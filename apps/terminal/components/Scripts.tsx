@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import runScript, { ScriptController } from '../utils/scriptRunner';
+import Modal from '../../../components/base/Modal';
+import { useOptionalShellConfig, type WarningPayload } from '../../../hooks/useShellConfig';
 
 interface ScriptEntry {
   code: string;
@@ -15,7 +17,10 @@ const examplesHref = new URL(
 ).href;
 
 interface ScriptsProps {
-  runCommand: (cmd: string) => Promise<any> | any;
+  runCommand: (
+    cmd: string,
+    options?: { bypassConfirmation?: boolean },
+  ) => Promise<boolean>;
 }
 
 const Scripts = ({ runCommand }: ScriptsProps) => {
@@ -30,6 +35,28 @@ const Scripts = ({ runCommand }: ScriptsProps) => {
   const [selectedPresets, setSelectedPresets] = useState<Record<string, string>>(
     {},
   );
+  const shellConfig = useOptionalShellConfig();
+  const redTeamMode = shellConfig?.redTeamMode ?? false;
+  const captureEvidence = shellConfig?.captureEvidence ?? (() => null);
+  const pushWarning =
+    shellConfig?.pushWarning ??
+    ((payload: WarningPayload) => ({
+      id: `noop-${Date.now()}`,
+      message: payload.message,
+      severity: payload.severity ?? 'info',
+      timestamp: payload.timestamp ?? Date.now(),
+      context: payload.context,
+    }));
+  const [pendingScript, setPendingScript] = useState<
+    { name: string; code: string; args: string[] } | null
+  >(null);
+  const pendingPreview = useMemo(
+    () =>
+      pendingScript
+        ? pendingScript.code.split('\n').slice(0, 6).join('\n')
+        : '',
+    [pendingScript],
+  );
 
   const save = () => {
     const trimmed = name.trim();
@@ -40,6 +67,27 @@ const Scripts = ({ runCommand }: ScriptsProps) => {
     });
     setName('');
     setCode('');
+  };
+
+  const executeScript = (payload: { name: string; code: string; args: string[] }) => {
+    const ctrl = runScript(
+      payload.code,
+      (command) => runCommand(command, { bypassConfirmation: true }),
+      payload.args,
+    );
+    setController(ctrl);
+    ctrl.finished.finally(() => setController(null));
+    if (redTeamMode) {
+      captureEvidence({
+        source: 'terminal-script',
+        content: `Script "${payload.name}" executed`,
+        tags: ['terminal', 'script'],
+        metadata: {
+          args: payload.args,
+          preview: payload.code.slice(0, 200),
+        },
+      });
+    }
   };
 
   const run = (n: string) => {
@@ -55,9 +103,17 @@ const Scripts = ({ runCommand }: ScriptsProps) => {
       const input = window.prompt('Arguments (space-separated)?') || '';
       args = input.trim() ? input.trim().split(/\s+/) : [];
     }
-    const ctrl = runScript(data.code, runCommand, args);
-    setController(ctrl);
-    ctrl.finished.finally(() => setController(null));
+    const details = { name: n, code: data.code, args };
+    if (redTeamMode) {
+      pushWarning({
+        message: `Script "${n}" will run in red-team mode. Evidence capture enabled.`,
+        severity: 'warning',
+        context: { script: n },
+      });
+      setPendingScript(details);
+      return;
+    }
+    executeScript(details);
   };
 
   const addPreset = (n: string) => {
@@ -102,8 +158,55 @@ const Scripts = ({ runCommand }: ScriptsProps) => {
     });
   };
 
+  const confirmScriptRun = () => {
+    if (!pendingScript) return;
+    executeScript(pendingScript);
+    setPendingScript(null);
+  };
+
+  const cancelScriptRun = () => {
+    setPendingScript(null);
+  };
+
   return (
     <div className="p-2 space-y-2 text-sm">
+      <Modal isOpen={Boolean(pendingScript)} onClose={cancelScriptRun}>
+        <div className="mx-auto mt-24 w-[min(90vw,26rem)] space-y-4 rounded-lg bg-gray-900 p-6 text-white shadow-xl">
+          <h2 className="text-lg font-semibold text-red-300">Run automation script?</h2>
+          <p className="text-sm text-red-100">
+            Red-team mode will capture the script output and arguments as evidence.
+          </p>
+          <div className="space-y-2 text-xs">
+            <div>
+              <span className="font-semibold text-red-200">Script:</span>{' '}
+              {pendingScript?.name}
+            </div>
+            <div>
+              <span className="font-semibold text-red-200">Args:</span>{' '}
+              {pendingScript?.args.length ? pendingScript?.args.join(' ') : 'none'}
+            </div>
+          </div>
+          <pre className="max-h-40 overflow-y-auto rounded bg-black/60 p-3 text-xs text-red-200">
+            {pendingPreview}
+          </pre>
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              className="rounded bg-gray-700 px-3 py-1 text-sm hover:bg-gray-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400"
+              onClick={cancelScriptRun}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="rounded bg-red-600 px-3 py-1 text-sm font-semibold uppercase tracking-wide hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-300"
+              onClick={confirmScriptRun}
+            >
+              Run script
+            </button>
+          </div>
+        </div>
+      </Modal>
       <p className="text-xs">
         Need sample scripts?{' '}
         <a

@@ -15,6 +15,9 @@ import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
+import ModeBanner from '../components/core/ModeBanner';
+import { ShellConfigProvider, useShellConfig } from '../hooks/useShellConfig';
+import { startClipboardWatcher } from '../modules/system/clipboardWatcher';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 
 import { Ubuntu } from 'next/font/google';
@@ -80,71 +83,105 @@ function MyApp(props) {
     }
   }, []);
 
-  useEffect(() => {
-    const liveRegion = document.getElementById('live-region');
-    if (!liveRegion) return;
+  const ShellRuntime = ({ Component: RuntimeComponent, pageProps: runtimeProps }) => {
+    const { captureEvidence, redTeamMode, pushWarning } = useShellConfig();
 
-    const update = (message) => {
-      liveRegion.textContent = '';
-      setTimeout(() => {
-        liveRegion.textContent = message;
-      }, 100);
-    };
-
-    const handleCopy = () => update('Copied to clipboard');
-    const handleCut = () => update('Cut to clipboard');
-    const handlePaste = () => update('Pasted from clipboard');
-
-    window.addEventListener('copy', handleCopy);
-    window.addEventListener('cut', handleCut);
-    window.addEventListener('paste', handlePaste);
-
-    const { clipboard } = navigator;
-    const originalWrite = clipboard?.writeText?.bind(clipboard);
-    const originalRead = clipboard?.readText?.bind(clipboard);
-    if (originalWrite) {
-      clipboard.writeText = async (text) => {
-        update('Copied to clipboard');
-        return originalWrite(text);
+    useEffect(() => {
+      const liveRegion = document.getElementById('live-region');
+      const update = (message) => {
+        if (!liveRegion) return;
+        liveRegion.textContent = '';
+        window.setTimeout(() => {
+          if (liveRegion) liveRegion.textContent = message;
+        }, 100);
       };
-    }
-    if (originalRead) {
-      clipboard.readText = async () => {
-        const text = await originalRead();
-        update('Pasted from clipboard');
-        return text;
-      };
-    }
 
-    const OriginalNotification = window.Notification;
-    if (OriginalNotification) {
-      const WrappedNotification = function (title, options) {
-        update(`${title}${options?.body ? ' ' + options.body : ''}`);
-        return new OriginalNotification(title, options);
-      };
-      WrappedNotification.requestPermission = OriginalNotification.requestPermission.bind(
-        OriginalNotification,
-      );
-      Object.defineProperty(WrappedNotification, 'permission', {
-        get: () => OriginalNotification.permission,
+      const stopWatcher = startClipboardWatcher({
+        onCopy: ({ type }) => {
+          if (type === 'cut') update('Cut to clipboard');
+          else update('Copied to clipboard');
+        },
+        onWarn: (warning) => {
+          if (!redTeamMode) return;
+          pushWarning({
+            message: warning.description,
+            severity: 'critical',
+            context: {
+              matches: warning.matches,
+              type: warning.type,
+            },
+          });
+          captureEvidence({
+            source: 'clipboard',
+            content: warning.text,
+            tags: ['clipboard', warning.pattern],
+            metadata: {
+              matches: warning.matches,
+              type: warning.type,
+              description: warning.description,
+            },
+          });
+        },
       });
-      WrappedNotification.prototype = OriginalNotification.prototype;
-      window.Notification = WrappedNotification;
-    }
 
-    return () => {
-      window.removeEventListener('copy', handleCopy);
-      window.removeEventListener('cut', handleCut);
-      window.removeEventListener('paste', handlePaste);
-      if (clipboard) {
-        if (originalWrite) clipboard.writeText = originalWrite;
-        if (originalRead) clipboard.readText = originalRead;
+      const handlePaste = () => update('Pasted from clipboard');
+      window.addEventListener('paste', handlePaste);
+
+      const { clipboard } = navigator;
+      const originalRead = clipboard?.readText?.bind(clipboard);
+      if (originalRead) {
+        clipboard.readText = async () => {
+          const text = await originalRead();
+          update('Pasted from clipboard');
+          return text;
+        };
       }
+
+      const OriginalNotification = window.Notification;
       if (OriginalNotification) {
-        window.Notification = OriginalNotification;
+        const WrappedNotification = function (title, options) {
+          update(`${title}${options?.body ? ' ' + options.body : ''}`);
+          return new OriginalNotification(title, options);
+        };
+        WrappedNotification.requestPermission =
+          OriginalNotification.requestPermission.bind(OriginalNotification);
+        Object.defineProperty(WrappedNotification, 'permission', {
+          get: () => OriginalNotification.permission,
+        });
+        WrappedNotification.prototype = OriginalNotification.prototype;
+        window.Notification = WrappedNotification;
       }
-    };
-  }, []);
+
+      return () => {
+        stopWatcher();
+        window.removeEventListener('paste', handlePaste);
+        if (clipboard && originalRead) {
+          clipboard.readText = originalRead;
+        }
+        if (OriginalNotification) {
+          window.Notification = OriginalNotification;
+        }
+      };
+    }, [captureEvidence, pushWarning, redTeamMode]);
+
+    return (
+      <>
+        <ModeBanner />
+        <div aria-live="polite" id="live-region" />
+        <RuntimeComponent {...runtimeProps} />
+        <ShortcutOverlay />
+        <Analytics
+          beforeSend={(e) => {
+            if (e.url.includes('/admin') || e.url.includes('/private')) return null;
+            const evt = e;
+            if (evt.metadata?.email) delete evt.metadata.email;
+            return e;
+          }}
+        />
+        {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+      </>
+    );
+  };
 
   return (
     <ErrorBoundary>
@@ -157,21 +194,11 @@ function MyApp(props) {
           Skip to app grid
         </a>
         <SettingsProvider>
-          <PipPortalProvider>
-            <div aria-live="polite" id="live-region" />
-            <Component {...pageProps} />
-            <ShortcutOverlay />
-            <Analytics
-              beforeSend={(e) => {
-                if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-                const evt = e;
-                if (evt.metadata?.email) delete evt.metadata.email;
-                return e;
-              }}
-            />
-
-            {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
-          </PipPortalProvider>
+          <ShellConfigProvider>
+            <PipPortalProvider>
+              <ShellRuntime Component={Component} pageProps={pageProps} />
+            </PipPortalProvider>
+          </ShellConfigProvider>
         </SettingsProvider>
       </div>
     </ErrorBoundary>

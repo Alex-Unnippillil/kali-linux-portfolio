@@ -58,14 +58,18 @@ export function runScript(
             const idx = parseInt(n, 10) - 1;
             return args[idx] ?? '';
           });
-          await exec(command);
+          const result = await exec(command);
+          if (result === false) {
+            aborted = true;
+            break;
+          }
         } else {
           await new Promise<void>((res) => {
             timeout = setTimeout(res, step.ms);
           });
         }
       }
-      if (!aborted) resolve();
+      resolve();
     } catch (err) {
       reject(err);
     }
