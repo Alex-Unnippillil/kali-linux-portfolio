@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import GameLayout from "../../components/apps/GameLayout";
 import DpsCharts from "../games/tower-defense/components/DpsCharts";
 import RangeUpgradeTree from "../games/tower-defense/components/RangeUpgradeTree";
@@ -18,6 +18,23 @@ const CELL_SIZE = 40;
 const CANVAS_SIZE = GRID_SIZE * CELL_SIZE;
 
 type Vec = { x: number; y: number };
+
+declare global {
+  interface Window {
+    __towerDefenseTestApi?: {
+      setPath?: (cells: Vec[]) => void;
+      setWaves?: (waves: (keyof typeof ENEMY_TYPES)[][]) => void;
+      start?: () => void;
+      fastForward: (totalMs: number, stepMs?: number) => void;
+      getState: () => {
+        running: boolean;
+        wave: number;
+        countdown: number | null;
+        enemies: number;
+      };
+    };
+  }
+}
 
 const DIRS: Vec[] = [
   { x: 1, y: 0 },
@@ -113,6 +130,10 @@ const TowerDefense = () => {
   >([]);
   const damageTicksRef = useRef<{ x: number; y: number; life: number }[]>([]);
   const flowFieldRef = useRef<Vec[][] | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const towersRef = useRef<Tower[]>([]);
+  const pathRef = useRef(path);
+  const waveConfigRef = useRef(waveConfig);
 
   const [waveConfig, setWaveConfig] = useState<
     (keyof typeof ENEMY_TYPES)[][]
@@ -120,6 +141,15 @@ const TowerDefense = () => {
   const [waveJson, setWaveJson] = useState("");
   useEffect(() => {
     setWaveJson(JSON.stringify(waveConfig, null, 2));
+  }, [waveConfig]);
+  useEffect(() => {
+    towersRef.current = towers;
+  }, [towers]);
+  useEffect(() => {
+    pathRef.current = path;
+  }, [path]);
+  useEffect(() => {
+    waveConfigRef.current = waveConfig;
   }, [waveConfig]);
   const addWave = () => setWaveConfig((w) => [...w, []]);
   const addEnemyToWave = (
@@ -199,7 +229,7 @@ const TowerDefense = () => {
     }
   }, [path, towers]);
 
-  const draw = () => {
+  const draw = useCallback(() => {
     const ctx = canvasRef.current?.getContext("2d");
     if (!ctx) return;
     ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
@@ -277,18 +307,21 @@ const TowerDefense = () => {
         d.y * CELL_SIZE + CELL_SIZE / 2 - (1 - d.life) * 10,
       );
     });
-  };
+  }, [hovered, path, selected, towers]);
 
-  const spawnEnemyInstance = () => {
-    if (!path.length) return;
-    const wave = waveConfig[waveRef.current - 1] || [];
+  const spawnEnemyInstance = useCallback(() => {
+    const currentPath = pathRef.current;
+    if (!currentPath.length) return;
+    const wave = waveConfigRef.current[waveRef.current - 1] || [];
     const type = wave[enemiesSpawnedRef.current];
     if (!type) return;
     const spec = ENEMY_TYPES[type];
+    const startCell = currentPath[0];
+    if (!startCell) return;
     const enemy = spawnEnemy(enemyPool.current, {
       id: Date.now(),
-      x: path[0].x,
-      y: path[0].y,
+      x: startCell.x,
+      y: startCell.y,
       pathIndex: 0,
       progress: 0,
       health: spec.health,
@@ -299,89 +332,94 @@ const TowerDefense = () => {
       type,
     });
     if (enemy) enemiesRef.current.push(enemy as EnemyInstance);
-  };
+  }, []);
 
-  const update = (time: number) => {
-    const dt = (time - lastTime.current) / 1000;
-    lastTime.current = time;
+  const update = useCallback(
+    (time: number) => {
+      const dt = (time - lastTime.current) / 1000;
+      lastTime.current = time;
 
-    if (waveCountdownRef.current !== null) {
-      waveCountdownRef.current -= dt;
-      forceRerender((n) => n + 1);
-      if (waveCountdownRef.current <= 0) {
-        waveCountdownRef.current = null;
-        running.current = true;
-        spawnTimer.current = 0;
-        enemiesSpawnedRef.current = 0;
-      }
-    } else if (running.current) {
-      spawnTimer.current += dt;
-      const currentWave = waveConfig[waveRef.current - 1] || [];
-      if (
-        spawnTimer.current > 1 &&
-        enemiesSpawnedRef.current < currentWave.length
-      ) {
-        spawnTimer.current = 0;
-        spawnEnemyInstance();
-        enemiesSpawnedRef.current += 1;
-      }
-      enemiesRef.current.forEach((en) => {
-        const field = flowFieldRef.current;
-        if (!field) return;
-        const cellX = Math.floor(en.x);
-        const cellY = Math.floor(en.y);
-        const vec = field[cellX]?.[cellY];
-        if (!vec) return;
-        const step = (en.baseSpeed * dt) / CELL_SIZE;
-        en.x += vec.x * step;
-        en.y += vec.y * step;
-      });
-      enemiesRef.current = enemiesRef.current.filter((e) => {
-        const goal = path[path.length - 1];
-        const reached =
-          Math.floor(e.x) === goal?.x && Math.floor(e.y) === goal?.y;
-        return e.health > 0 && !reached;
-      });
-      towers.forEach((t) => {
-        (t as any).cool = (t as any).cool ? (t as any).cool - dt : 0;
-        if ((t as any).cool <= 0) {
-          const enemy = enemiesRef.current.find(
-            (e) => Math.hypot(e.x - t.x, e.y - t.y) <= t.range,
-          );
-          if (enemy) {
-            enemy.health -= t.damage;
-            damageNumbersRef.current.push({
-              x: enemy.x,
-              y: enemy.y,
-              value: t.damage,
-              life: 1,
-            });
-            damageTicksRef.current.push({
-              x: enemy.x,
-              y: enemy.y,
-              life: 1,
-            });
-            (t as any).cool = 1;
-          }
+      if (waveCountdownRef.current !== null) {
+        waveCountdownRef.current -= dt;
+        forceRerender((n) => n + 1);
+        if (waveCountdownRef.current <= 0) {
+          waveCountdownRef.current = null;
+          running.current = true;
+          spawnTimer.current = 0;
+          enemiesSpawnedRef.current = 0;
         }
-      });
-      damageNumbersRef.current.forEach((d) => {
-        d.y -= dt * 0.5;
-        d.life -= dt * 2;
-      });
-      damageNumbersRef.current = damageNumbersRef.current.filter(
-        (d) => d.life > 0,
-      );
-      damageTicksRef.current.forEach((t) => {
-        t.life -= dt * 2;
-      });
-      damageTicksRef.current = damageTicksRef.current.filter((t) => t.life > 0);
+      } else if (running.current) {
+        spawnTimer.current += dt;
+        const currentWave = waveConfigRef.current[waveRef.current - 1] || [];
+        if (
+          spawnTimer.current > 1 &&
+          enemiesSpawnedRef.current < currentWave.length
+        ) {
+          spawnTimer.current = 0;
+          spawnEnemyInstance();
+          enemiesSpawnedRef.current += 1;
+        }
+        enemiesRef.current.forEach((en) => {
+          const field = flowFieldRef.current;
+          if (!field) return;
+          const cellX = Math.floor(en.x);
+          const cellY = Math.floor(en.y);
+          const vec = field[cellX]?.[cellY];
+          if (!vec) return;
+          const step = (en.baseSpeed * dt) / CELL_SIZE;
+          en.x += vec.x * step;
+          en.y += vec.y * step;
+        });
+        enemiesRef.current = enemiesRef.current.filter((e) => {
+          const goal = pathRef.current[pathRef.current.length - 1];
+          if (!goal) return e.health > 0;
+          const reached =
+            Math.floor(e.x) === goal.x && Math.floor(e.y) === goal.y;
+          return e.health > 0 && !reached;
+        });
+        const towerList = towersRef.current;
+        towerList.forEach((t) => {
+          (t as any).cool = (t as any).cool ? (t as any).cool - dt : 0;
+          if ((t as any).cool <= 0) {
+            const enemy = enemiesRef.current.find(
+              (e) => Math.hypot(e.x - t.x, e.y - t.y) <= t.range,
+            );
+            if (enemy) {
+              enemy.health -= t.damage;
+              damageNumbersRef.current.push({
+                x: enemy.x,
+                y: enemy.y,
+                value: t.damage,
+                life: 1,
+              });
+              damageTicksRef.current.push({
+                x: enemy.x,
+                y: enemy.y,
+                life: 1,
+              });
+              (t as any).cool = 1;
+            }
+          }
+        });
+        damageNumbersRef.current.forEach((d) => {
+          d.y -= dt * 0.5;
+          d.life -= dt * 2;
+        });
+        damageNumbersRef.current = damageNumbersRef.current.filter(
+          (d) => d.life > 0,
+        );
+        damageTicksRef.current.forEach((t) => {
+          t.life -= dt * 2;
+        });
+        damageTicksRef.current = damageTicksRef.current.filter(
+          (t) => t.life > 0,
+        );
         if (
           enemiesSpawnedRef.current >= currentWave.length &&
           enemiesRef.current.length === 0
         ) {
           running.current = false;
-          if (waveRef.current < waveConfig.length) {
+          if (waveRef.current < waveConfigRef.current.length) {
             waveRef.current += 1;
             waveCountdownRef.current = 5;
           }
@@ -389,22 +427,118 @@ const TowerDefense = () => {
         }
       }
       draw();
-      requestAnimationFrame(update);
-    };
+    },
+    [draw, spawnEnemyInstance],
+  );
 
-  useEffect(() => {
-    lastTime.current = performance.now();
-    requestAnimationFrame(update);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const stopLoop = useCallback(() => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
   }, []);
 
-    const start = () => {
-      if (!path.length || !waveConfig.length) return;
-      setEditing(false);
-      waveRef.current = 1;
-      waveCountdownRef.current = 3;
-      forceRerender((n) => n + 1);
+  const loop = useCallback(
+    (time: number) => {
+      update(time);
+      rafRef.current = requestAnimationFrame(loop);
+    },
+    [update],
+  );
+
+  const resumeLoop = useCallback(() => {
+    if (rafRef.current !== null) return;
+    lastTime.current = performance.now();
+    rafRef.current = requestAnimationFrame(loop);
+  }, [loop]);
+
+  const fastForward = useCallback(
+    (totalMs: number, stepMs = 16) => {
+      if (totalMs <= 0) return;
+      stopLoop();
+      const step = Math.max(1, stepMs);
+      let simulated = lastTime.current;
+      const iterations = Math.ceil(totalMs / step);
+      for (let i = 0; i < iterations; i += 1) {
+        simulated += step;
+        update(simulated);
+      }
+      resumeLoop();
+    },
+    [resumeLoop, stopLoop, update],
+  );
+
+  const setPathFromTest = useCallback((cells: Vec[]) => {
+    const seen = new Set<string>();
+    const ordered: Vec[] = [];
+    cells.forEach((cell) => {
+      const clamped = {
+        x: Math.max(0, Math.min(GRID_SIZE - 1, cell.x)),
+        y: Math.max(0, Math.min(GRID_SIZE - 1, cell.y)),
+      };
+      const key = `${clamped.x},${clamped.y}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      ordered.push(clamped);
+    });
+    pathSetRef.current = new Set(ordered.map((c) => `${c.x},${c.y}`));
+    setPath(ordered);
+  }, []);
+
+  const setWavesFromTest = useCallback(
+    (waves: (keyof typeof ENEMY_TYPES)[][]) => {
+      setWaveConfig(waves);
+    },
+    [],
+  );
+
+  const getState = useCallback(
+    () => ({
+      running: running.current,
+      wave: waveRef.current,
+      countdown: waveCountdownRef.current,
+      enemies: enemiesRef.current.length,
+    }),
+    [],
+  );
+
+  useEffect(() => {
+    resumeLoop();
+    return () => {
+      stopLoop();
     };
+  }, [resumeLoop, stopLoop]);
+
+  const start = useCallback(() => {
+    if (!pathRef.current.length || !waveConfigRef.current.length) return;
+    setEditing(false);
+    waveRef.current = 1;
+    waveCountdownRef.current = 3;
+    running.current = false;
+    spawnTimer.current = 0;
+    enemiesSpawnedRef.current = 0;
+    enemiesRef.current = [];
+    damageNumbersRef.current = [];
+    damageTicksRef.current = [];
+    forceRerender((n) => n + 1);
+  }, [forceRerender, setEditing]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const api = {
+      setPath: setPathFromTest,
+      setWaves: setWavesFromTest,
+      start,
+      fastForward,
+      getState,
+    };
+    window.__towerDefenseTestApi = api;
+    return () => {
+      if (window.__towerDefenseTestApi === api) {
+        delete window.__towerDefenseTestApi;
+      }
+    };
+  }, [fastForward, getState, setPathFromTest, setWavesFromTest, start]);
 
   const upgrade = (type: "range" | "damage") => {
     if (selected === null) return;
