@@ -27,6 +27,8 @@ interface TabData {
 }
 
 const STORAGE_KEY = 'chrome-tabs';
+export const SAVE_INTERVAL_MS = 30_000;
+export const SAVE_DEBOUNCE_MS = 500;
 const HOME_URL = 'home://start';
 const SANDBOX_FLAGS = ['allow-scripts', 'allow-forms', 'allow-popups'] as const;
 const CSP = "default-src 'self'; script-src 'none'; connect-src 'none';";
@@ -99,6 +101,9 @@ const Chrome: React.FC = () => {
   const [newTitle, setNewTitle] = useState('');
   const [newUrl, setNewUrl] = useState('');
   const tileFileInput = useRef<HTMLInputElement | null>(null);
+  const tabsRef = useRef(tabs);
+  const activeIdRef = useRef(activeId);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -198,8 +203,40 @@ const Chrome: React.FC = () => {
   }, [tabs, tabQuery]);
 
   useEffect(() => {
-    saveTabs(tabs, activeId);
+    tabsRef.current = tabs;
+    activeIdRef.current = activeId;
+
+    const timeoutId = window.setTimeout(() => {
+      saveTabs(tabsRef.current, activeIdRef.current);
+      if (saveTimeoutRef.current === timeoutId) {
+        saveTimeoutRef.current = null;
+      }
+    }, SAVE_DEBOUNCE_MS);
+
+    saveTimeoutRef.current = timeoutId;
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (saveTimeoutRef.current === timeoutId) {
+        saveTimeoutRef.current = null;
+      }
+    };
   }, [tabs, activeId]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      saveTabs(tabsRef.current, activeIdRef.current);
+    }, SAVE_INTERVAL_MS);
+
+    return () => {
+      clearInterval(intervalId);
+      if (saveTimeoutRef.current !== null) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+      saveTabs(tabsRef.current, activeIdRef.current);
+    };
+  }, []);
 
   const filteredTabs = useMemo(
     () =>
