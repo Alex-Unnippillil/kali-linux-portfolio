@@ -30,6 +30,13 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.dragHoverTimeout = null;
+        this.draggingAppId = null;
+        this.dragHoverTargetId = null;
+        this.dragRaisedWindowId = null;
+        this.dragOriginWindowId = null;
+        this.dragOriginElement = null;
+        this.dragOriginAppId = null;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -41,6 +48,8 @@ export class Desktop extends Component {
             minimized_windows: {},
             window_positions: {},
             desktop_apps: [],
+            desktopDragActive: false,
+            dragRaisedWindow: null,
             context_menus: {
                 desktop: false,
                 default: false,
@@ -96,6 +105,10 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        if (this.dragHoverTimeout) {
+            clearTimeout(this.dragHoverTimeout);
+            this.dragHoverTimeout = null;
+        }
     }
 
     checkForNewFolders = () => {
@@ -144,6 +157,122 @@ export class Desktop extends Component {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
         document.removeEventListener('keydown', this.handleContextKey);
+    }
+
+    handleDesktopDragStart = (appId) => {
+        this.draggingAppId = appId;
+        this.dragOriginAppId = appId;
+        this.dragOriginWindowId = this.getFocusedWindowId();
+        this.dragOriginElement = document.getElementById(`app-${appId}`);
+        this.dragHoverTargetId = null;
+        this.dragRaisedWindowId = null;
+        this.setState({ desktopDragActive: true, dragRaisedWindow: null });
+    }
+
+    handleDesktopDragEnd = () => {
+        this.cancelTaskbarHover(true);
+        this.draggingAppId = null;
+        this.dragOriginAppId = null;
+        this.dragOriginWindowId = null;
+        this.dragOriginElement = null;
+        this.setState({ desktopDragActive: false });
+    }
+
+    getHoverDelay = () => {
+        if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+            try {
+                const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+                if (media && media.matches) {
+                    return 500;
+                }
+            } catch (e) {
+                // ignore media query errors
+            }
+        }
+        return 350;
+    }
+
+    handleTaskbarDragHover = (appId) => {
+        if (!this.draggingAppId) return;
+
+        if (this.dragHoverTargetId && this.dragHoverTargetId !== appId) {
+            this.cancelTaskbarHover(true);
+        } else if (this.dragHoverTimeout) {
+            clearTimeout(this.dragHoverTimeout);
+            this.dragHoverTimeout = null;
+        }
+
+        if (this.dragRaisedWindowId === appId) {
+            return;
+        }
+
+        this.dragHoverTargetId = appId;
+
+        this.dragHoverTimeout = setTimeout(() => {
+            if (!this.draggingAppId || this.dragHoverTargetId !== appId) {
+                return;
+            }
+            this.dragHoverTimeout = null;
+            this.focusWindowForDragHover(appId);
+            this.dragRaisedWindowId = appId;
+            if (this.state.dragRaisedWindow !== appId) {
+                this.setState({ dragRaisedWindow: appId });
+            }
+            this.announceWindowRaise(appId);
+        }, this.getHoverDelay());
+    }
+
+    handleTaskbarDragLeave = (appId) => {
+        if (!this.draggingAppId) return;
+        if (this.dragHoverTargetId !== appId) return;
+        this.cancelTaskbarHover(true);
+    }
+
+    cancelTaskbarHover = (restoreFocus = true) => {
+        if (this.dragHoverTimeout) {
+            clearTimeout(this.dragHoverTimeout);
+            this.dragHoverTimeout = null;
+        }
+        this.dragHoverTargetId = null;
+        if (restoreFocus && (this.dragRaisedWindowId || this.dragOriginWindowId || this.dragOriginElement)) {
+            this.restoreDragOriginFocus();
+        }
+        if (this.state.dragRaisedWindow !== null) {
+            this.setState({ dragRaisedWindow: null });
+        }
+        this.dragRaisedWindowId = null;
+    }
+
+    restoreDragOriginFocus = () => {
+        if (this.dragOriginWindowId && this.state.closed_windows[this.dragOriginWindowId] === false) {
+            this.focus(this.dragOriginWindowId);
+        }
+        if (this.dragOriginElement && typeof this.dragOriginElement.focus === 'function') {
+            try {
+                this.dragOriginElement.focus({ preventScroll: true });
+            } catch (e) {
+                this.dragOriginElement.focus();
+            }
+        }
+    }
+
+    focusWindowForDragHover = (appId) => {
+        if (this.state.closed_windows[appId]) {
+            return;
+        }
+        if (this.state.minimized_windows[appId]) {
+            this.restoreMinimizedWindow(appId);
+            return;
+        }
+        this.focus(appId);
+        this.saveSession();
+    }
+
+    announceWindowRaise = (appId) => {
+        if (typeof window === 'undefined') return;
+        const appMeta = apps.find(a => a.id === appId);
+        const title = appMeta?.title || appId;
+        window.dispatchEvent(new CustomEvent('live-region-announce', { detail: `${title} window raised for drop` }));
     }
 
     handleGlobalShortcut = (e) => {
@@ -444,6 +573,8 @@ export class Desktop extends Component {
                     openApp: this.openApp,
                     disabled: this.state.disabled_apps[app.id],
                     prefetch: app.screen?.prefetch,
+                    onDragStart: this.handleDesktopDragStart,
+                    onDragEnd: this.handleDesktopDragEnd,
                 }
 
                 appsJsx.push(
@@ -576,6 +707,19 @@ export class Desktop extends Component {
         return result;
     }
 
+    restoreMinimizedWindow = (objId, options = {}) => {
+        this.focus(objId);
+        const node = document.querySelector(`#${objId}`);
+        if (node) {
+            const posx = node.style.getPropertyValue("--window-transform-x");
+            const posy = node.style.getPropertyValue("--window-transform-y");
+            node.style.transform = `translate(${posx},${posy}) scale(1)`;
+        }
+        const minimized_windows = { ...this.state.minimized_windows, [objId]: false };
+        const callback = options && options.skipSave ? undefined : this.saveSession;
+        this.setState({ minimized_windows }, callback);
+    }
+
     handleOpenAppEvent = (e) => {
         const id = e.detail;
         if (id) {
@@ -596,14 +740,8 @@ export class Desktop extends Component {
 
         // if app is already open, focus it instead of spawning a new window
         if (this.state.closed_windows[objId] === false) {
-            // if it's minimised, restore its last position
             if (this.state.minimized_windows[objId]) {
-                this.focus(objId);
-                var r = document.querySelector("#" + objId);
-                r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
-                let minimized_windows = this.state.minimized_windows;
-                minimized_windows[objId] = false;
-                this.setState({ minimized_windows: minimized_windows }, this.saveSession);
+                this.restoreMinimizedWindow(objId);
             } else {
                 this.focus(objId);
                 this.saveSession();
@@ -900,6 +1038,10 @@ export class Desktop extends Component {
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    onDragHover={this.handleTaskbarDragHover}
+                    onDragLeave={this.handleTaskbarDragLeave}
+                    isDesktopDragActive={this.state.desktopDragActive}
+                    raisedWindowId={this.state.dragRaisedWindow}
                 />
 
                 {/* Desktop Apps */}

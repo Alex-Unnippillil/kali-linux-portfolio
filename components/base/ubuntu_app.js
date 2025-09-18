@@ -7,12 +7,18 @@ export class UbuntuApp extends Component {
         this.state = { launching: false, dragging: false, prefetched: false };
     }
 
-    handleDragStart = () => {
+    handleDragStart = (event) => {
         this.setState({ dragging: true });
+        if (typeof this.props.onDragStart === 'function') {
+            this.props.onDragStart(this.props.id, event);
+        }
     }
 
-    handleDragEnd = () => {
+    handleDragEnd = (event) => {
         this.setState({ dragging: false });
+        if (typeof this.props.onDragEnd === 'function') {
+            this.props.onDragEnd(this.props.id, event);
+        }
     }
 
     openApp = () => {
