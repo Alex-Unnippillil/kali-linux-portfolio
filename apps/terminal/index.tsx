@@ -9,6 +9,10 @@ import React, {
   useCallback,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
+import TerminalContextMenu, {
+  MENU_HEIGHT,
+  MENU_WIDTH,
+} from '../../components/context-menus/TerminalContextMenu';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
 
@@ -76,6 +80,14 @@ const files: Record<string, string> = {
   'README.md': 'Welcome to the web terminal.\nThis is a fake file used for demos.',
 };
 
+type ClipboardPermissionState = 'granted' | 'denied' | 'prompt';
+
+type ContextMenuState = {
+  visible: boolean;
+  x: number;
+  y: number;
+};
+
 const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<any>(null);
@@ -101,6 +113,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState>({
+    visible: false,
+    x: 0,
+    y: 0,
+  });
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
@@ -123,6 +140,30 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     '#55FFFF',
     '#FFFFFF',
   ];
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu((prev) =>
+      prev.visible ? { ...prev, visible: false } : prev,
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!contextMenu.visible) return;
+    const handleScroll = () => closeContextMenu();
+    document.addEventListener('scroll', handleScroll, true);
+    return () => {
+      document.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [contextMenu.visible, closeContextMenu]);
+
+  useEffect(() => {
+    if (!contextMenu.visible) return;
+    const handleResize = () => closeContextMenu();
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [contextMenu.visible, closeContextMenu]);
 
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
@@ -153,16 +194,112 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     termRef.current.write('\x1b[1;34m└─\x1b[0m$ ');
   }, []);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(contentRef.current).catch(() => {});
+  const requestClipboardPermission = useCallback(
+    async (name: 'clipboard-read' | 'clipboard-write') => {
+      try {
+        if (typeof navigator === 'undefined') {
+          return 'prompt' as ClipboardPermissionState;
+        }
+        const permissions = (navigator.permissions as any);
+        if (!permissions?.query) return 'prompt' as ClipboardPermissionState;
+        const status = await permissions.query({ name });
+        return status.state as ClipboardPermissionState;
+      } catch {
+        return 'prompt' as ClipboardPermissionState;
+      }
+    },
+    [],
+  );
+
+  const fallbackCopy = (text: string) => {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.top = '0';
+      textarea.style.left = '0';
+      textarea.style.opacity = '0';
+      textarea.style.pointerEvents = 'none';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    } catch {
+      // ignore copy fallback errors
+    }
   };
 
-  const handlePaste = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      handleInput(text);
-    } catch {}
-  };
+  const promptForPaste = () =>
+    typeof window !== 'undefined'
+      ? window.prompt('Paste text to send to the terminal:')
+      : null;
+
+  const handleCopy = useCallback(async () => {
+    const text = contentRef.current;
+    if (!text) return;
+
+    const clipboard =
+      typeof navigator !== 'undefined' ? navigator.clipboard : undefined;
+    if (clipboard?.writeText) {
+      const permission = await requestClipboardPermission('clipboard-write');
+      if (permission !== 'denied') {
+        try {
+          await clipboard.writeText(text);
+          return;
+        } catch {
+          // fall through to fallback
+        }
+      }
+    }
+
+    fallbackCopy(text);
+  }, [requestClipboardPermission]);
+
+  const handlePaste = useCallback(async () => {
+    const clipboard =
+      typeof navigator !== 'undefined' ? navigator.clipboard : undefined;
+    if (clipboard?.readText) {
+      const permission = await requestClipboardPermission('clipboard-read');
+      if (permission === 'denied') {
+        const fallback = promptForPaste();
+        if (fallback) handleInput(fallback);
+        return;
+      }
+      try {
+        const text = await clipboard.readText();
+        if (text) handleInput(text);
+        return;
+      } catch {
+        // fall through to fallback
+      }
+    }
+
+    const fallback = promptForPaste();
+    if (fallback) handleInput(fallback);
+  }, [handleInput, requestClipboardPermission]);
+
+  const handleOpenFileLocation = useCallback(() => {
+    writeLine('Simulated: Opening file location in Files...');
+    prompt();
+  }, [prompt, writeLine]);
+
+  const handleTerminalContextMenu = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      const target = event.currentTarget as HTMLElement;
+      const rect = target.getBoundingClientRect();
+      const offsetX = event.clientX - rect.left;
+      const offsetY = event.clientY - rect.top;
+      const maxX = Math.max(0, rect.width - MENU_WIDTH);
+      const maxY = Math.max(0, rect.height - MENU_HEIGHT);
+      const x = Math.min(Math.max(0, offsetX), maxX);
+      const y = Math.min(Math.max(0, offsetY), maxY);
+      setContextMenu({ visible: true, x, y });
+    },
+    [],
+  );
 
   const runWorker = useCallback(
     async (command: string) => {
@@ -482,10 +619,20 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       )}
       <div className="flex flex-col h-full">
         <div className="flex items-center gap-2 bg-gray-800 p-1">
-          <button onClick={handleCopy} aria-label="Copy">
+          <button
+            onClick={() => {
+              void handleCopy();
+            }}
+            aria-label="Copy"
+          >
             <CopyIcon />
           </button>
-          <button onClick={handlePaste} aria-label="Paste">
+          <button
+            onClick={() => {
+              void handlePaste();
+            }}
+            aria-label="Paste"
+          >
             <PasteIcon />
           </button>
           <button onClick={() => setSettingsOpen(true)} aria-label="Settings">
@@ -495,6 +642,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         <div className="relative">
           <TerminalContainer
             ref={containerRef}
+            onContextMenu={handleTerminalContextMenu}
             className="resize overflow-hidden font-mono"
             style={{
               width: '80ch',
@@ -509,6 +657,23 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           {overflow.bottom && (
             <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-black" />
           )}
+          <TerminalContextMenu
+            active={contextMenu.visible}
+            position={{ x: contextMenu.x, y: contextMenu.y }}
+            onClose={closeContextMenu}
+            onCopy={() => {
+              void handleCopy();
+              closeContextMenu();
+            }}
+            onPaste={() => {
+              void handlePaste();
+              closeContextMenu();
+            }}
+            onOpenFileLocation={() => {
+              handleOpenFileLocation();
+              closeContextMenu();
+            }}
+          />
         </div>
       </div>
     </div>
