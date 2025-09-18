@@ -39,15 +39,15 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
               role="radiogroup"
               className="flex gap-2 mt-1"
             >
-              {ACCENT_OPTIONS.map((c) => (
+              {ACCENT_OPTIONS.map((option) => (
                 <button
-                  key={c}
-                  aria-label={`select-accent-${c}`}
+                  key={option.id}
+                  aria-label={`select-accent-${option.id}`}
                   role="radio"
-                  aria-checked={accent === c}
-                  onClick={() => setAccent(c)}
-                  className={`w-6 h-6 rounded-full border-2 ${accent === c ? 'border-white' : 'border-transparent'}`}
-                  style={{ backgroundColor: c }}
+                  aria-checked={accent === option.value}
+                  onClick={() => setAccent(option.value)}
+                  className={`w-6 h-6 rounded-full border-2 ${accent === option.value ? 'border-white' : 'border-transparent'}`}
+                  style={{ backgroundColor: option.value }}
                 />
               ))}
             </div>

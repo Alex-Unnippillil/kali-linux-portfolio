@@ -66,17 +66,36 @@ button:focus-visible {
 input[type=range].ubuntu-slider {
     outline: none;
     -webkit-appearance: none;
+    appearance: none;
     background: linear-gradient(
         to right,
-        color-mix(in srgb, var(--color-text), transparent 70%) 0%,
-        color-mix(in srgb, var(--color-text), transparent 70%) 100%
+        color-mix(in srgb, var(--color-control-accent), transparent 40%) 0%,
+        color-mix(in srgb, var(--color-control-accent), transparent 40%) 100%
     );
     background-position: center;
-    background-size: 99% 3px;
+    background-size: 100% 4px;
     background-repeat: no-repeat;
-    /* width: 65%; */
     height: 6px;
-    border-radius: 50%;
+    border-radius: 9999px;
+    accent-color: var(--color-control-accent);
+}
+
+input[type=range].ubuntu-slider::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--color-control-accent), transparent 45%);
+}
+
+input[type=range].ubuntu-slider::-moz-range-track {
+    height: 4px;
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--color-control-accent), transparent 45%);
+}
+
+input[type=range].ubuntu-slider::-moz-range-progress {
+    height: 4px;
+    border-radius: 9999px;
+    background-color: var(--color-control-accent);
 }
 
 input[type=range].ubuntu-slider::-webkit-slider-thumb {
@@ -85,12 +104,22 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     -webkit-box-sizing: border-box;
     box-sizing: border-box;
     -webkit-appearance: none;
-    background-color: var(--color-surface);
+    background-color: var(--color-control-accent);
+    border: 2px solid color-mix(in srgb, var(--color-control-accent), transparent 35%);
     pointer-events: none;
     border-radius: 50%;
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
     position: relative;
+}
+
+input[type=range].ubuntu-slider::-moz-range-thumb {
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-inverse), transparent 80%);
+    background-color: var(--color-control-accent);
+    border: 2px solid color-mix(in srgb, var(--color-control-accent), transparent 35%);
+    border-radius: 50%;
+    width: 14px;
+    height: 14px;
 }
 
 .notFocused {

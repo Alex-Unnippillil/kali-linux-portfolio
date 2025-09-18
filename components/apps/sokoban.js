@@ -346,8 +346,9 @@ const move = ({ x, y }) => {
           max={historyRef.current.length - 1}
           value={historyIndex}
           onChange={handleRewind}
-          className="w-32 accent-blue-500 bg-gray-600"
+          className="w-32 bg-gray-600 ubuntu-slider"
           aria-label="Rewind moves"
+          style={{ accentColor: 'var(--color-control-accent)' }}
         />
         <div>Moves: {state.moves}</div>
         <div>Pushes: {state.pushes}</div>

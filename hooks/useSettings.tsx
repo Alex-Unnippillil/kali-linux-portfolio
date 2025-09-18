@@ -27,13 +27,15 @@ type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
-  '#1793d1', // kali blue (default)
-  '#e53e3e', // red
-  '#d97706', // orange
-  '#38a169', // green
-  '#805ad5', // purple
-  '#ed64a6', // pink
-];
+  { id: 'kali-blue', label: 'Kali blue', value: '#1793d1' },
+  { id: 'signal-red', label: 'Signal red', value: '#e53e3e' },
+  { id: 'amber', label: 'Amber', value: '#d97706' },
+  { id: 'emerald', label: 'Emerald', value: '#38a169' },
+  { id: 'violet', label: 'Violet', value: '#805ad5' },
+  { id: 'magenta', label: 'Magenta', value: '#ed64a6' },
+] as const;
+
+export type AccentOption = (typeof ACCENT_OPTIONS)[number];
 
 // Utility to lighten or darken a hex color by a percentage
 const shadeColor = (color: string, percent: number): string => {
@@ -145,6 +147,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       '--color-focus-ring': accent,
       '--color-selection': accent,
       '--color-control-accent': accent,
+      '--focus-outline-color': accent,
     };
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
