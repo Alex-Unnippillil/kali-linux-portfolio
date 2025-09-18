@@ -93,6 +93,7 @@ const PinballApp = createDynamicApp('pinball', 'Pinball');
 const VolatilityApp = createDynamicApp('volatility', 'Volatility');
 
 const KismetApp = createDynamicApp('kismet.jsx', 'Kismet');
+const WifiInsightsApp = createDynamicApp('wifi-insights', 'Wi-Fi Insights');
 
 const HashcatApp = createDynamicApp('hashcat', 'Hashcat');
 const MsfPostApp = createDynamicApp('msf-post', 'Metasploit Post');
@@ -201,6 +202,7 @@ const displayContact = createDisplay(ContactApp);
 const displayHashcat = createDisplay(HashcatApp);
 
 const displayKismet = createDisplay(KismetApp);
+const displayWifiInsights = createDisplay(WifiInsightsApp);
 
 // Utilities list used for the "Utilities" folder on the desktop
 const utilityList = [
@@ -808,6 +810,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayKismet,
+  },
+  {
+    id: 'wifi-insights',
+    title: 'Wi-Fi Insights',
+    icon: '/themes/Yaru/status/network-wireless-signal-good-symbolic.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayWifiInsights,
   },
   {
     id: 'nikto',
