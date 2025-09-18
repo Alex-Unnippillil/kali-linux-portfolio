@@ -32,9 +32,12 @@ export default function NetworkInsights() {
   }, [setHistory]);
 
   return (
-    <div className="p-2 text-xs text-white bg-[var(--kali-bg)]">
+    <div className="p-2 text-xs bg-[var(--kali-bg)] text-[var(--color-terminal-text)]">
       <h2 className="font-bold mb-1">Active Fetches</h2>
-      <ul className="mb-2 divide-y divide-gray-700 border border-gray-700 rounded bg-[var(--kali-panel)]">
+      <ul
+        className="mb-2 divide-y divide-gray-700 border rounded bg-[var(--kali-panel)]"
+        style={{ borderColor: 'var(--color-terminal-border)' }}
+      >
         {active.length === 0 && <li className="p-1 text-gray-400">None</li>}
         {active.map((f) => (
           <li key={f.id} className="p-1">
@@ -52,11 +55,18 @@ export default function NetworkInsights() {
         <button
           onClick={() => exportMetrics(history)}
           className="ml-auto px-2 py-1 rounded bg-[var(--kali-panel)]"
+          style={{
+            border: '1px solid var(--color-terminal-border)',
+            color: 'var(--color-terminal-text)',
+          }}
         >
           Export
         </button>
       </div>
-      <ul className="divide-y divide-gray-700 border border-gray-700 rounded bg-[var(--kali-panel)]">
+      <ul
+        className="divide-y divide-gray-700 border rounded bg-[var(--kali-panel)]"
+        style={{ borderColor: 'var(--color-terminal-border)' }}
+      >
         {history.length === 0 && <li className="p-1 text-gray-400">No requests</li>}
         {history.map((f) => (
           <li key={f.id} className="p-1">

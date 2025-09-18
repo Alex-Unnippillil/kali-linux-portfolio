@@ -15,7 +15,7 @@
   --color-ub-gedit-darker: #010D1A;
   --color-ubt-grey: #F6F6F5;
   --color-ubt-warm-grey: #AEA79F;
-  --color-ubt-cool-grey: #333333;
+  --color-ubt-cool-grey: #949ba6;
   --color-ubt-blue: #62A0EA;
   --color-ubt-green: #73D216;
   --color-ubt-gedit-orange: #F39A21;
@@ -25,7 +25,14 @@
   --color-ub-dark-grey: #2a2e36;
   --color-bg: #0f1317;
   --color-text: #F5F5F5;
-  --kali-bg: rgba(15, 19, 23, 0.85);
+  --kali-bg: rgba(11, 18, 26, 0.94);
+  --kali-panel: rgba(18, 27, 38, 0.95);
+  --color-terminal-bg: #0b1624;
+  --color-terminal-text: #f5faff;
+  --color-terminal-border: #1f2f3d;
+  --color-navbar-bg: #0b141d;
+  --color-navbar-text: #f5f7fa;
+  --color-navbar-border: #1c2834;
 
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
@@ -73,6 +80,14 @@
   --color-ub-orange: #ffff00;
   --color-ub-lite-abrgn: #00ffff;
   --color-ub-border-orange: #ffff00;
+  --kali-bg: rgba(0, 0, 0, 0.95);
+  --kali-panel: rgba(0, 0, 0, 0.95);
+  --color-terminal-bg: #000000;
+  --color-terminal-text: #ffffff;
+  --color-terminal-border: #ffffff;
+  --color-navbar-bg: #000000;
+  --color-navbar-text: #ffffff;
+  --color-navbar-border: #ffffff;
   --game-color-secondary: #ffff00;
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
@@ -116,5 +131,13 @@
     --color-ub-orange: #ffff00;
     --color-ub-lite-abrgn: #00ffff;
     --color-ub-border-orange: #ffff00;
+    --kali-bg: rgba(0, 0, 0, 0.95);
+    --kali-panel: rgba(0, 0, 0, 0.95);
+    --color-terminal-bg: #000000;
+    --color-terminal-text: #ffffff;
+    --color-terminal-border: #ffffff;
+    --color-navbar-bg: #000000;
+    --color-navbar-text: #ffffff;
+    --color-navbar-border: #ffffff;
   }
 }
