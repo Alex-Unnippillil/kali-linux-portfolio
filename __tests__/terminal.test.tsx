@@ -76,4 +76,33 @@ describe('Terminal component', () => {
     fireEvent.keyDown(root, { ctrlKey: true, key: 'w' });
     expect(container.querySelectorAll('.flex.items-center.cursor-pointer').length).toBe(1);
   });
+
+  it('cycles focus within the terminal toolbar', async () => {
+    const ref = createRef<any>();
+    const { getByLabelText } = render(<Terminal ref={ref} openApp={openApp} />);
+    await act(async () => {});
+
+    const copyButton = getByLabelText('Copy') as HTMLButtonElement;
+    const settingsButton = getByLabelText('Settings') as HTMLButtonElement;
+
+    await act(async () => {
+      settingsButton.focus();
+    });
+    expect(document.activeElement).toBe(settingsButton);
+
+    await act(async () => {
+      fireEvent.keyDown(document, { key: 'Tab' });
+    });
+    expect(document.activeElement).toBe(copyButton);
+
+    await act(async () => {
+      copyButton.focus();
+    });
+    expect(document.activeElement).toBe(copyButton);
+
+    await act(async () => {
+      fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+    });
+    expect(document.activeElement).toBe(settingsButton);
+  });
 });
