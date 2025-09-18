@@ -516,6 +516,106 @@ textarea:focus-visible {
     outline-offset: 2px;
 }
 
+/* Desktop notification center */
+.notification-center {
+    position: fixed;
+    inset-block-end: clamp(0.75rem, 2vw, 2rem);
+    inset-inline-end: clamp(0.75rem, 2vw, 2rem);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.75rem;
+    width: min(24rem, calc(100vw - 1.5rem));
+    pointer-events: none;
+    z-index: 60;
+    visibility: hidden;
+}
+
+.notification-center--visible {
+    pointer-events: auto;
+    visibility: visible;
+}
+
+.notification-toast {
+    width: 100%;
+    pointer-events: auto;
+}
+
+.notification-card {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    background: color-mix(in srgb, var(--color-surface), transparent 10%);
+    border: 1px solid color-mix(in srgb, var(--color-border), transparent 35%);
+    box-shadow: 0 10px 30px color-mix(in srgb, var(--color-inverse), transparent 80%);
+    color: var(--color-text);
+    max-width: 100%;
+    word-break: break-word;
+}
+
+.notification-app {
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--color-text), transparent 30%);
+}
+
+.notification-message {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.notification-enter {
+    opacity: 0;
+    transform: translate3d(35%, 15px, 0);
+}
+
+.notification-enter-active {
+    animation: notification-slide-in 300ms ease-out forwards;
+}
+
+.notification-exit {
+    opacity: 1;
+}
+
+.notification-exit-active {
+    animation: notification-slide-out 260ms ease-in forwards;
+}
+
+@keyframes notification-slide-in {
+    from {
+        opacity: 0;
+        transform: translate3d(35%, 25px, 0);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+@keyframes notification-slide-out {
+    from {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translate3d(35%, 25px, 0);
+    }
+}
+
+@media (max-width: 640px) {
+    .notification-center {
+        inset-inline-end: 0.75rem;
+        inset-block-end: 0.75rem;
+        align-items: stretch;
+    }
+}
+
 /* Enable scroll snapping for gallery containers */
 .gallery-container {
     scroll-snap-type: x mandatory;
