@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
+import { FocusModeContext } from '../../hooks/useFocusMode';
 
 interface ToastProps {
   message: string;
@@ -15,18 +16,39 @@ const Toast: React.FC<ToastProps> = ({
   onClose,
   duration = 6000,
 }) => {
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [visible, setVisible] = useState(false);
+  const focusMode = useContext(FocusModeContext);
+  const suppress = Boolean(
+    focusMode?.isFocusModeActive && focusMode?.settings.quietToasts
+  );
 
   useEffect(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    if (suppress) {
+      setVisible(false);
+      timeoutRef.current = setTimeout(() => {
+        onClose?.();
+      }, duration);
+      return () => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      };
+    }
     setVisible(true);
     timeoutRef.current = setTimeout(() => {
-      onClose && onClose();
+      onClose?.();
     }, duration);
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [duration, onClose]);
+  }, [duration, onClose, suppress]);
+
+  if (suppress) {
+    return null;
+  }
 
   return (
     <div
