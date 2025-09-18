@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  touchpadGestures: true,
 };
 
 export async function getAccent() {
@@ -102,6 +103,17 @@ export async function setHaptics(value) {
   window.localStorage.setItem('haptics', value ? 'true' : 'false');
 }
 
+export async function getTouchpadGestures() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.touchpadGestures;
+  const val = window.localStorage.getItem('touchpad-gestures');
+  return val === null ? DEFAULT_SETTINGS.touchpadGestures : val === 'true';
+}
+
+export async function setTouchpadGestures(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('touchpad-gestures', value ? 'true' : 'false');
+}
+
 export async function getPongSpin() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
   const val = window.localStorage.getItem('pong-spin');
@@ -137,6 +149,7 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('touchpad-gestures');
 }
 
 export async function exportSettings() {
@@ -151,6 +164,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    touchpadGestures,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +176,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getTouchpadGestures(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +190,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    touchpadGestures,
     theme,
   });
 }
@@ -199,6 +215,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    touchpadGestures,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +228,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (touchpadGestures !== undefined) await setTouchpadGestures(touchpadGestures);
   if (theme !== undefined) setTheme(theme);
 }
 
