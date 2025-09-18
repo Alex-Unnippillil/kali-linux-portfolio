@@ -352,6 +352,8 @@ Commands:
 yarn test
 yarn test:watch
 yarn lint
+# With the dev server running (yarn dev in another terminal):
+npx playwright test tests/wireshark.desktop.spec.js
 ```
 
 ---
