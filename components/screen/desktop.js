@@ -28,6 +28,7 @@ export class Desktop extends Component {
     constructor() {
         super();
         this.app_stack = [];
+        this.windowRefs = {};
         this.initFavourite = {};
         this.allWindowClosed = false;
         this.state = {
@@ -39,6 +40,7 @@ export class Desktop extends Component {
             favourite_apps: {},
             hideSideBar: false,
             minimized_windows: {},
+            minimized_window_states: {},
             window_positions: {},
             desktop_apps: [],
             context_menus: {
@@ -472,6 +474,7 @@ export class Desktop extends Component {
                     hideSideBar: this.hideSideBar,
                     hasMinimised: this.hasMinimised,
                     minimized: this.state.minimized_windows[app.id],
+                    minimizedState: this.state.minimized_window_states[app.id],
                     resizable: app.resizable,
                     allowMaximize: app.allowMaximize,
                     defaultWidth: app.defaultWidth,
@@ -482,8 +485,16 @@ export class Desktop extends Component {
                     snapEnabled: this.props.snapEnabled,
                 }
 
+                const setRef = (node) => {
+                    if (node) {
+                        this.windowRefs[app.id] = node;
+                    } else {
+                        delete this.windowRefs[app.id];
+                    }
+                };
+
                 windowsJsx.push(
-                    <Window key={app.id} {...props} />
+                    <Window key={app.id} ref={setRef} {...props} />
                 )
             }
         });
@@ -540,18 +551,28 @@ export class Desktop extends Component {
         this.setState({ hideSideBar: hide, overlapped_windows });
     }
 
-    hasMinimised = (objId) => {
-        let minimized_windows = this.state.minimized_windows;
-        var focused_windows = this.state.focused_windows;
+    hasMinimised = (objId, windowState) => {
+        this.setState((prev) => {
+            const minimized_windows = { ...prev.minimized_windows, [objId]: true };
+            const focused_windows = { ...prev.focused_windows, [objId]: false };
+            const minimized_window_states = { ...prev.minimized_window_states };
+            if (windowState) {
+                minimized_window_states[objId] = windowState;
+            }
+            return { minimized_windows, focused_windows, minimized_window_states };
+        }, () => {
+            this.hideSideBar(null, false);
+            this.giveFocusToLastApp();
+        });
+    }
 
-        // remove focus and minimise this window
-        minimized_windows[objId] = true;
-        focused_windows[objId] = false;
-        this.setState({ minimized_windows, focused_windows });
-
-        this.hideSideBar(null, false);
-
-        this.giveFocusToLastApp();
+    minimizeApp = (objId) => {
+        const ref = this.windowRefs[objId];
+        if (ref && typeof ref.minimizeWindow === 'function') {
+            ref.minimizeWindow();
+        } else {
+            this.hasMinimised(objId);
+        }
     }
 
     giveFocusToLastApp = () => {
@@ -599,11 +620,9 @@ export class Desktop extends Component {
             // if it's minimised, restore its last position
             if (this.state.minimized_windows[objId]) {
                 this.focus(objId);
-                var r = document.querySelector("#" + objId);
-                r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
-                let minimized_windows = this.state.minimized_windows;
-                minimized_windows[objId] = false;
-                this.setState({ minimized_windows: minimized_windows }, this.saveSession);
+                this.setState((prev) => ({
+                    minimized_windows: { ...prev.minimized_windows, [objId]: false }
+                }), this.saveSession);
             } else {
                 this.focus(objId);
                 this.saveSession();
@@ -701,7 +720,10 @@ export class Desktop extends Component {
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
-        this.setState({ closed_windows, favourite_apps }, this.saveSession);
+        const minimized_window_states = { ...this.state.minimized_window_states };
+        delete minimized_window_states[objId];
+
+        this.setState({ closed_windows, favourite_apps, minimized_window_states }, this.saveSession);
     }
 
     pinApp = (id) => {
@@ -899,7 +921,7 @@ export class Desktop extends Component {
                     minimized_windows={this.state.minimized_windows}
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
-                    minimize={this.hasMinimised}
+                    requestMinimize={this.minimizeApp}
                 />
 
                 {/* Desktop Apps */}
@@ -930,7 +952,7 @@ export class Desktop extends Component {
                         if (this.state.minimized_windows[id]) {
                             this.openApp(id);
                         } else {
-                            this.hasMinimised(id);
+                            this.minimizeApp(id);
                         }
                     }}
                     onClose={() => {
