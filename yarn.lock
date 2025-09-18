@@ -3624,6 +3624,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/punycode@npm:^2":
+  version: 2.1.4
+  resolution: "@types/punycode@npm:2.1.4"
+  checksum: 10c0/0472cc871783a22859ad83fe7cb62d23226ff78694b9807d2a3ec37571d46b05409ca9282c8ccedfb59e58e4a4561b27463623ce95bcfd6bd9c11ac1ef3cd0d1
+  languageName: node
+  linkType: hard
+
 "@types/qrcode@npm:^1.5.5":
   version: 1.5.5
   resolution: "@types/qrcode@npm:1.5.5"
@@ -13874,6 +13881,7 @@ __metadata:
     "@types/leaflet": "npm:^1"
     "@types/matter-js": "npm:0.20.0"
     "@types/node": "npm:20.16.0"
+    "@types/punycode": "npm:^2"
     "@types/qrcode": "npm:^1.5.5"
     "@types/react": "npm:19.1.12"
     "@types/react-cytoscapejs": "npm:^1.2.5"
@@ -13938,6 +13946,7 @@ __metadata:
     postcss: "npm:^8.5.6"
     prettier: "npm:^3.6.2"
     prop-types: "npm:^15.8.1"
+    punycode: "npm:^2.3.1"
     qrcode: "npm:^1.5.4"
     rc-virtual-list: "npm:3.19.1"
     react: "npm:19.1.1"

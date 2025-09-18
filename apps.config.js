@@ -72,6 +72,7 @@ const QuoteApp = createDynamicApp('quote', 'Quote');
 const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery');
 const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
 const InputLabApp = createDynamicApp('input-lab', 'Input Lab');
+const DnsToolkitApp = createDynamicApp('dns-toolkit', 'DNS Toolkit');
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 
 const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
@@ -165,6 +166,7 @@ const displayStickyNotes = createDisplay(StickyNotesApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);
 const displayWeatherWidget = createDisplay(WeatherWidgetApp);
 const displayInputLab = createDisplay(InputLabApp);
+const displayDnsToolkit = createDisplay(DnsToolkitApp);
 
 const displayGhidra = createDisplay(GhidraApp);
 
@@ -230,6 +232,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayClipboardManager,
+  },
+  {
+    id: 'dns-toolkit',
+    title: 'DNS Toolkit',
+    icon: '/themes/Yaru/apps/http.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayDnsToolkit,
   },
   {
     id: 'figlet',

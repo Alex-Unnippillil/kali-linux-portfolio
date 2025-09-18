@@ -1,0 +1,11 @@
+{
+  "id": "dns-toolkit",
+  "title": "DNS Toolkit",
+  "category": "Utilities",
+  "description": "Normalize domains and craft simulated DNS queries with punycode and safety checks.",
+  "keywords": ["dns", "network", "punycode", "lookup"],
+  "window": {
+    "defaultWidth": 42,
+    "defaultHeight": 48
+  }
+}
