@@ -2,9 +2,10 @@ jest.mock(
   '@xterm/xterm',
   () => ({
     Terminal: jest.fn().mockImplementation(() => ({
-      open: jest.fn(),
-      focus: jest.fn(),
-      loadAddon: jest.fn(),
+    open: jest.fn(),
+    focus: jest.fn(),
+    blur: jest.fn(),
+    loadAddon: jest.fn(),
       write: jest.fn(),
       writeln: jest.fn(),
       onData: jest.fn(),
@@ -33,9 +34,12 @@ jest.mock(
 jest.mock('@xterm/xterm/css/xterm.css', () => ({}), { virtual: true });
 
 import React, { createRef, act } from 'react';
-import { render, fireEvent } from '@testing-library/react';
+import { render, fireEvent, within } from '@testing-library/react';
 import Terminal from '../apps/terminal';
 import TerminalTabs from '../apps/terminal/tabs';
+import { TERMINAL_COMMANDS } from '../data/terminal-commands';
+
+const XTermCtor = jest.requireMock('@xterm/xterm').Terminal as jest.Mock;
 
 describe('Terminal component', () => {
   const openApp = jest.fn();
@@ -75,5 +79,35 @@ describe('Terminal component', () => {
 
     fireEvent.keyDown(root, { ctrlKey: true, key: 'w' });
     expect(container.querySelectorAll('.flex.items-center.cursor-pointer').length).toBe(1);
+  });
+
+  it('opens the command palette and inserts the selected snippet', async () => {
+    const ref = createRef<any>();
+    const { getByRole, queryByRole } = render(<Terminal ref={ref} openApp={openApp} />);
+    await act(async () => {});
+
+    act(() => {
+      fireEvent.keyDown(window, { key: 'P', ctrlKey: true, shiftKey: true });
+    });
+
+    const dialog = getByRole('dialog', { name: /command palette/i });
+    const input = within(dialog).getByRole('combobox');
+
+    act(() => {
+      fireEvent.change(input, { target: { value: 'help' } });
+    });
+
+    act(() => {
+      fireEvent.keyDown(input, { key: 'Enter' });
+    });
+
+    expect(queryByRole('dialog', { name: /command palette/i })).toBeNull();
+
+    const snippet = TERMINAL_COMMANDS.find((cmd) => cmd.id === 'help')?.snippet ?? 'help';
+    const terminalInstance =
+      XTermCtor.mock.results[XTermCtor.mock.results.length - 1]?.value;
+
+    expect(terminalInstance).toBeDefined();
+    expect(terminalInstance.write).toHaveBeenCalledWith(snippet);
   });
 });
