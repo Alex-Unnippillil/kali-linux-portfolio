@@ -1,0 +1,94 @@
+.header {
+  --window-header-padding: calc(var(--space-2) * 2);
+  --window-header-padding-sm: var(--space-2);
+  --window-header-min-height: calc(var(--hit-area) + var(--space-2));
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding-inline: var(--window-header-padding);
+  min-height: var(--window-header-min-height);
+  color: var(--color-text);
+  background-color: var(--color-ub-window-title);
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  user-select: none;
+  text-transform: none;
+  letter-spacing: 0.01em;
+}
+
+.title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  max-width: calc(100% - var(--hit-area));
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-inline: var(--space-2);
+}
+
+.controls {
+  position: absolute;
+  top: var(--window-controls-offset, var(--space-2));
+  right: var(--window-controls-offset, var(--space-2));
+  display: flex;
+  align-items: center;
+  gap: var(--window-controls-gap, var(--space-2));
+  user-select: none;
+}
+
+.controlButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--window-control-size, var(--hit-area));
+  height: var(--window-control-size, var(--hit-area));
+  border-radius: var(--window-control-radius, var(--radius-lg));
+  border: 1px solid transparent;
+  background-color: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  padding: 0;
+  cursor: pointer;
+  transition: background-color var(--motion-fast) ease, border-color var(--motion-fast) ease,
+    transform var(--motion-fast) ease;
+}
+
+.controlButton:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.controlButton:focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-outline-color);
+  outline-offset: 2px;
+}
+
+.controlButtonSecondary {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.controlButtonClose {
+  background-color: var(--color-ub-cool-grey);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.controlButtonClose:hover {
+  background-color: var(--color-ub-cool-grey);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+@media (max-width: 640px) {
+  .header {
+    padding-inline: var(--window-header-padding-sm);
+  }
+
+  .controlButton {
+    width: var(--window-control-size-sm, calc(var(--hit-area) - var(--space-2)));
+    height: var(--window-control-size-sm, calc(var(--hit-area) - var(--space-2)));
+  }
+}
