@@ -49,14 +49,14 @@ export default function FixturesLoader({ onData }: LoaderProps) {
   return (
     <div className="text-xs" aria-label="fixtures loader">
       <div className="mb-2 flex items-center">
-        <button onClick={loadSample} className="px-2 py-1 bg-ub-cool-grey text-white mr-2" type="button">
+        <button onClick={loadSample} className="btn btn--ghost btn--dense mr-2" type="button">
           Load Sample
         </button>
-        <label className="px-2 py-1 bg-ub-cool-grey text-white mr-2 cursor-pointer">
+        <label className="btn btn--primary btn--dense mr-2 cursor-pointer">
           Import
           <input type="file" onChange={onFile} className="hidden" aria-label="import fixture" />
         </label>
-        <button onClick={cancel} className="px-2 py-1 bg-ub-red text-white" type="button">
+        <button onClick={cancel} className="btn btn--danger btn--dense" type="button">
           Cancel
         </button>
       </div>

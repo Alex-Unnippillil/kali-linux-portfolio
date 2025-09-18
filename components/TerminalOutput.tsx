@@ -23,7 +23,8 @@ export default function TerminalOutput({ text, ariaLabel }: TerminalOutputProps)
         <div key={idx} className="flex items-start">
           <span className="flex-1 whitespace-pre-wrap">{line}</span>
           <button
-            className="ml-2 text-gray-400 hover:text-white"
+            type="button"
+            className="btn btn--ghost btn--icon ml-2"
             onClick={() => copyLine(line)}
             aria-label="copy line"
           >

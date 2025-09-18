@@ -13,7 +13,14 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
 
   return (
     <div>
-      <button aria-label="settings" onClick={() => setOpen(!open)}>
+      <button
+        type="button"
+        aria-label="settings"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+        className="btn btn--ghost btn--dense"
+      >
         Settings
       </button>
       {open && (

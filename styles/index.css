@@ -18,7 +18,7 @@ button, [role="button"], input[type="button"], input[type="submit"], input[type=
 
 a:focus-visible,
 button:focus-visible {
-    outline: var(--focus-outline-width) solid var(--focus-outline-color) !important;
+    outline: var(--focus-outline-width) solid var(--focus-outline-color);
     outline-offset: 2px;
 }
 

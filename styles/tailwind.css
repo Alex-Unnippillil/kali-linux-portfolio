@@ -11,9 +11,216 @@
   }
 }
 
+@layer components {
+  .btn {
+    --button-bg: var(--control-surface);
+    --button-bg-hover: var(--control-surface-hover);
+    --button-bg-active: var(--control-surface-active);
+    --button-border: var(--control-surface-border);
+    --button-border-hover: var(--control-surface-border-hover);
+    --button-border-active: var(--control-surface-border-active);
+    --button-border-width: 1px;
+    --button-fg: var(--control-surface-foreground);
+    --button-fg-hover: var(--control-surface-foreground);
+    --button-fg-active: var(--control-surface-foreground);
+    --button-shadow: var(--control-surface-shadow);
+    --button-shadow-hover: var(--control-surface-shadow-hover);
+    --button-shadow-active: var(--control-surface-shadow-active);
+    --button-shadow-focus: var(--control-surface-shadow-focus);
+    --button-bg-disabled: var(--control-disabled-surface);
+    --button-fg-disabled: var(--control-disabled-foreground);
+    --button-border-disabled: var(--control-disabled-border);
+    --button-disabled-opacity: var(--control-disabled-opacity);
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding-inline: var(--space-4);
+    padding-block: calc(var(--space-2) + 0.125rem);
+    min-height: var(--hit-area);
+    min-width: var(--hit-area);
+    border-radius: var(--radius-md);
+    border-style: solid;
+    border-width: var(--button-border-width);
+    background: var(--button-bg);
+    color: var(--button-fg);
+    border-color: var(--button-border);
+    box-shadow: var(--button-shadow);
+    font: inherit;
+    font-weight: 500;
+    line-height: 1.4;
+    text-decoration: none;
+    user-select: none;
+    cursor: pointer;
+    transition-property: background-color, color, border-color, box-shadow, transform;
+    transition-duration: var(--control-transition-duration);
+    transition-timing-function: var(--control-transition-easing);
+  }
+
+  .btn:hover:not(:disabled):not([aria-disabled="true"]) {
+    background: var(--button-bg-hover);
+    color: var(--button-fg-hover);
+    border-color: var(--button-border-hover);
+    box-shadow: var(--button-shadow-hover);
+  }
+
+  .btn:active:not(:disabled):not([aria-disabled="true"]) {
+    background: var(--button-bg-active);
+    color: var(--button-fg-active);
+    border-color: var(--button-border-active);
+    box-shadow: var(--button-shadow-active);
+    transform: var(--button-transform-active, var(--control-transform-active));
+  }
+
+  .btn:focus-visible {
+    outline: none;
+    box-shadow: var(--button-shadow-focus);
+  }
+
+  .btn:disabled,
+  .btn[aria-disabled="true"] {
+    background: var(--button-bg-disabled);
+    color: var(--button-fg-disabled);
+    border-color: var(--button-border-disabled);
+    box-shadow: none;
+    cursor: not-allowed;
+    opacity: var(--button-disabled-opacity);
+    transform: none;
+  }
+
+  .btn--primary {
+    --button-bg: var(--control-primary-surface);
+    --button-bg-hover: var(--control-primary-hover);
+    --button-bg-active: var(--control-primary-active);
+    --button-border: var(--control-primary-border);
+    --button-border-hover: var(--control-primary-border-hover);
+    --button-border-active: var(--control-primary-border-active);
+    --button-fg: var(--control-primary-foreground);
+    --button-fg-hover: var(--control-primary-foreground);
+    --button-fg-active: var(--control-primary-foreground);
+    --button-shadow: var(--control-primary-shadow);
+    --button-shadow-hover: var(--control-primary-shadow-hover);
+    --button-shadow-active: var(--control-primary-shadow-active);
+    --button-shadow-focus: var(--control-primary-shadow-hover),
+      0 0 0 var(--control-ring-width) var(--control-ring-color);
+  }
+
+  .btn--success {
+    --button-bg: var(--control-success-surface);
+    --button-bg-hover: var(--control-success-hover);
+    --button-bg-active: var(--control-success-active);
+    --button-border: var(--control-success-border);
+    --button-border-hover: var(--control-success-border-hover);
+    --button-border-active: var(--control-success-border-active);
+    --button-fg: var(--control-success-foreground);
+    --button-fg-hover: var(--control-success-foreground);
+    --button-fg-active: var(--control-success-foreground);
+    --button-shadow: var(--control-success-shadow);
+    --button-shadow-hover: var(--control-success-shadow-hover);
+    --button-shadow-active: var(--control-success-shadow-active);
+    --button-shadow-focus: var(--control-success-shadow-hover),
+      0 0 0 var(--control-ring-width) var(--control-ring-color);
+  }
+
+  .btn--warning {
+    --button-bg: var(--control-warning-surface);
+    --button-bg-hover: var(--control-warning-hover);
+    --button-bg-active: var(--control-warning-active);
+    --button-border: var(--control-warning-border);
+    --button-border-hover: var(--control-warning-border-hover);
+    --button-border-active: var(--control-warning-border-active);
+    --button-fg: var(--control-warning-foreground);
+    --button-fg-hover: var(--control-warning-foreground);
+    --button-fg-active: var(--control-warning-foreground);
+    --button-shadow: var(--control-warning-shadow);
+    --button-shadow-hover: var(--control-warning-shadow-hover);
+    --button-shadow-active: var(--control-warning-shadow-active);
+    --button-shadow-focus: var(--control-warning-shadow-hover),
+      0 0 0 var(--control-ring-width) var(--control-ring-color);
+  }
+
+  .btn--danger {
+    --button-bg: var(--control-danger-surface);
+    --button-bg-hover: var(--control-danger-hover);
+    --button-bg-active: var(--control-danger-active);
+    --button-border: var(--control-danger-border);
+    --button-border-hover: var(--control-danger-border-hover);
+    --button-border-active: var(--control-danger-border-active);
+    --button-fg: var(--control-danger-foreground);
+    --button-fg-hover: var(--control-danger-foreground);
+    --button-fg-active: var(--control-danger-foreground);
+    --button-shadow: var(--control-danger-shadow);
+    --button-shadow-hover: var(--control-danger-shadow-hover);
+    --button-shadow-active: var(--control-danger-shadow-active);
+    --button-shadow-focus: var(--control-danger-shadow-hover),
+      0 0 0 var(--control-ring-width) var(--control-ring-color);
+  }
+
+  .btn--ghost {
+    --button-bg: var(--control-ghost-surface);
+    --button-bg-hover: var(--control-ghost-hover);
+    --button-bg-active: var(--control-ghost-active);
+    --button-border: var(--control-ghost-border);
+    --button-border-hover: var(--control-ghost-border-hover);
+    --button-border-active: var(--control-ghost-border-active);
+    --button-shadow: var(--control-ghost-shadow);
+    --button-shadow-hover: var(--control-ghost-shadow);
+    --button-shadow-active: var(--control-ghost-shadow);
+    --button-shadow-focus: var(--control-ghost-focus);
+  }
+
+  .btn--ghost.is-active,
+  .btn--ghost[aria-pressed='true'],
+  .btn--ghost[aria-current='true'],
+  .btn--ghost[aria-current='page'] {
+    --button-bg: var(--control-ghost-active);
+    --button-border: var(--control-ghost-border-active);
+  }
+
+  .btn--dense {
+    padding-block: var(--space-2);
+    font-size: 0.8125rem;
+  }
+
+  .btn--icon {
+    padding-inline: var(--space-2);
+    padding-block: var(--space-2);
+    border-radius: var(--radius-round);
+    min-width: var(--hit-area);
+  }
+
+  .btn--toolbar {
+    --button-border-width: 0px;
+    padding-inline: calc(var(--space-3) + 0.25rem);
+    padding-block: var(--space-2);
+    font-weight: 600;
+    box-shadow: none;
+    --button-shadow-focus: 0 0 0 var(--control-ring-width) var(--control-ring-color);
+  }
+
+  .btn--toolbar:hover:not(:disabled):not([aria-disabled="true"]) {
+    box-shadow: inset 0 -2px 0 var(--color-accent);
+  }
+
+  .btn--toolbar[aria-expanded='true'],
+  .btn--toolbar.is-active {
+    --button-bg: var(--control-ghost-active);
+    --button-border-width: 0px;
+    box-shadow: inset 0 -2px 0 var(--color-accent);
+  }
+}
+
 @layer base {
   button {
-    @apply transition-hover transition-active;
+    font-family: inherit;
+    transition-property: background-color, color, border-color, box-shadow, transform;
+    transition-duration: var(--control-transition-duration);
+    transition-timing-function: var(--control-transition-easing);
+  }
+
+  button:disabled {
+    cursor: not-allowed;
   }
 }
 
