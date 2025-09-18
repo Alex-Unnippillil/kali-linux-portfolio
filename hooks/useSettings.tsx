@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, ReactNode, useRef } from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -23,6 +23,7 @@ import {
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import { getWallpaperById } from '../lib/wallpapers';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -103,7 +104,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [accent, setAccent] = useState<string>(defaults.accent);
-  const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
+  const [wallpaper, setWallpaperState] = useState<string>(defaults.wallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
@@ -118,7 +119,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     (async () => {
       setAccent(await loadAccent());
-      setWallpaper(await loadWallpaper());
+      const storedWallpaper = await loadWallpaper();
+      setWallpaperState(getWallpaperById(storedWallpaper).id);
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
       setFontScale(await loadFontScale());
@@ -151,6 +153,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
     saveAccent(accent);
   }, [accent]);
+
+  const setWallpaper = useCallback((value: string) => {
+    setWallpaperState(getWallpaperById(value).id);
+  }, []);
 
   useEffect(() => {
     saveWallpaper(wallpaper);
@@ -250,8 +256,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
-        setAccent,
-        setWallpaper,
+      setAccent,
+      setWallpaper,
         setDensity,
         setReducedMotion,
         setFontScale,

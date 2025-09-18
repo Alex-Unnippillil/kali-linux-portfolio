@@ -12,6 +12,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import { WALLPAPERS, getWallpaperById } from "../../lib/wallpapers";
 
 export default function Settings() {
   const {
@@ -42,18 +43,14 @@ export default function Settings() {
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
 
-  const wallpapers = [
-    "wall-1",
-    "wall-2",
-    "wall-3",
-    "wall-4",
-    "wall-5",
-    "wall-6",
-    "wall-7",
-    "wall-8",
-  ];
+  const wallpapers = WALLPAPERS;
+  const resolvedWallpaper = getWallpaperById(wallpaper);
+  const activeIndex = Math.max(
+    wallpapers.findIndex((option) => option.id === wallpaper),
+    0,
+  );
 
-  const changeBackground = (name: string) => setWallpaper(name);
+  const changeBackground = (id: string) => setWallpaper(id);
 
   const handleExport = async () => {
     const data = await exportSettingsData();
@@ -115,7 +112,7 @@ export default function Settings() {
           <div
             className="md:w-2/5 w-2/3 h-1/3 m-auto my-4"
             style={{
-              backgroundImage: `url(/wallpapers/${wallpaper}.webp)`,
+              backgroundImage: `url(${resolvedWallpaper?.src || ""})`,
               backgroundSize: "cover",
               backgroundRepeat: "no-repeat",
               backgroundPosition: "center center",
@@ -156,12 +153,16 @@ export default function Settings() {
               id="wallpaper-slider"
               type="range"
               min="0"
-              max={wallpapers.length - 1}
+              max={Math.max(wallpapers.length - 1, 0)}
               step="1"
-              value={wallpapers.indexOf(wallpaper)}
-              onChange={(e) =>
-                changeBackground(wallpapers[parseInt(e.target.value, 10)])
-              }
+              value={activeIndex}
+              onChange={(e) => {
+                const index = parseInt(e.target.value, 10);
+                const option = wallpapers[index];
+                if (option) {
+                  changeBackground(option.id);
+                }
+              }}
               className="ubuntu-slider"
               aria-label="Wallpaper"
             />
@@ -170,28 +171,28 @@ export default function Settings() {
             <BackgroundSlideshow />
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 justify-items-center border-t border-gray-900">
-            {wallpapers.map((name) => (
+            {wallpapers.map((option) => (
               <div
-                key={name}
+                key={option.id}
                 role="button"
-                aria-label={`Select ${name.replace("wall-", "wallpaper ")}`}
-                aria-pressed={name === wallpaper}
+                aria-label={`Select ${option.name ?? option.id}`}
+                aria-pressed={option.id === wallpaper}
                 tabIndex={0}
-                onClick={() => changeBackground(name)}
+                onClick={() => changeBackground(option.id)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    changeBackground(name);
+                    changeBackground(option.id);
                   }
                 }}
                 className={
-                  (name === wallpaper
+                  (option.id === wallpaper
                     ? " border-yellow-700 "
                     : " border-transparent ") +
                   " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"
                 }
                 style={{
-                  backgroundImage: `url(/wallpapers/${name}.webp)`,
+                  backgroundImage: `url(${option.src})`,
                   backgroundSize: "cover",
                   backgroundRepeat: "no-repeat",
                   backgroundPosition: "center center",

@@ -1,0 +1,31 @@
+[
+  {
+    "id": "kali-dragon",
+    "name": "Kali Dragon",
+    "description": "Official Kali Linux dragon emblem on a deep blue gradient.",
+    "src": "/assets/wallpapers/kali-dragon.png",
+    "credit": "OffSec",
+    "default": true
+  },
+  {
+    "id": "kali-dark",
+    "name": "Kali Dark",
+    "description": "Dark mode Kali wallpaper with subtle diagonal accents.",
+    "src": "/assets/wallpapers/kali-dark.png",
+    "credit": "OffSec"
+  },
+  {
+    "id": "kali-light",
+    "name": "Kali Light",
+    "description": "Light mode Kali wallpaper featuring the official logo.",
+    "src": "/assets/wallpapers/kali-light.png",
+    "credit": "OffSec"
+  },
+  {
+    "id": "kali-community",
+    "name": "Kali Community",
+    "description": "Community edition wallpaper celebrating the Kali dragon.",
+    "src": "/assets/wallpapers/kali-community.png",
+    "credit": "OffSec"
+  }
+]
