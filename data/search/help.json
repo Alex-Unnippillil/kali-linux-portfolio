@@ -1,0 +1,42 @@
+[
+  {
+    "id": "getting-started",
+    "title": "Getting started",
+    "description": "Step-by-step setup instructions for running the Kali Linux portfolio locally with yarn scripts.",
+    "url": "https://github.com/Alex-Unnippillil/kali-linux-portfolio/blob/main/docs/getting-started.md",
+    "keywords": ["setup", "installation", "environment"],
+    "boost": 3
+  },
+  {
+    "id": "architecture",
+    "title": "Architecture overview",
+    "description": "High-level tour of the window manager, desktop shell, and dynamic app loading pipeline.",
+    "url": "https://github.com/Alex-Unnippillil/kali-linux-portfolio/blob/main/docs/architecture.md",
+    "keywords": ["architecture", "desktop", "windows"],
+    "boost": 3
+  },
+  {
+    "id": "tasks",
+    "title": "Task backlog",
+    "description": "Curated list of polish tasks and roadmap items with references to relevant modules.",
+    "url": "https://github.com/Alex-Unnippillil/kali-linux-portfolio/blob/main/docs/tasks.md",
+    "keywords": ["tasks", "roadmap", "issues"],
+    "boost": 2
+  },
+  {
+    "id": "keyboard-testing",
+    "title": "Keyboard-only test plan",
+    "description": "Accessibility walkthrough describing how to exercise apps and menus without a pointing device.",
+    "url": "https://github.com/Alex-Unnippillil/kali-linux-portfolio/blob/main/docs/keyboard-only-test-plan.md",
+    "keywords": ["accessibility", "testing", "keyboard"],
+    "boost": 2
+  },
+  {
+    "id": "deauth-mitigation",
+    "title": "Deauth mitigation brief",
+    "description": "Explains how the simulated Wi-Fi stack models deauthentication attacks and defense strategies.",
+    "url": "https://github.com/Alex-Unnippillil/kali-linux-portfolio/blob/main/docs/deauth-mitigation.md",
+    "keywords": ["wifi", "mitigation", "simulation"],
+    "boost": 2
+  }
+]
