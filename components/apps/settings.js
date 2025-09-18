@@ -231,13 +231,13 @@ export function Settings() {
                         a.click();
                         URL.revokeObjectURL(url);
                     }}
-                    className="px-4 py-2 rounded bg-ub-orange text-white"
+                    className="px-4 py-2 rounded bg-ub-orange text-on-primary"
                 >
                     Export Settings
                 </button>
                 <button
                     onClick={() => fileInput.current && fileInput.current.click()}
-                    className="px-4 py-2 rounded bg-ub-orange text-white"
+                    className="px-4 py-2 rounded bg-ub-orange text-on-primary"
                 >
                     Import Settings
                 </button>
@@ -253,7 +253,7 @@ export function Settings() {
                         setHighContrast(defaults.highContrast);
                         setTheme('default');
                     }}
-                    className="px-4 py-2 rounded bg-ub-orange text-white"
+                    className="px-4 py-2 rounded bg-ub-orange text-on-primary"
                 >
                     Reset Desktop
                 </button>

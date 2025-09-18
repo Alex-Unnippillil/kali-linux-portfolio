@@ -83,7 +83,7 @@ export default function KeymapOverlay({ open, onClose }: KeymapOverlayProps) {
               <button
                 type="button"
                 onClick={() => setRebinding(s.description)}
-                className="px-2 py-1 bg-ub-orange text-white rounded text-sm"
+                className="px-2 py-1 bg-ub-orange text-on-primary rounded text-sm"
               >
                 {rebinding === s.description ? 'Press keys...' : 'Rebind'}
               </button>
