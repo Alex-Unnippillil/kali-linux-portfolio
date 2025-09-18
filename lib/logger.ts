@@ -40,24 +40,39 @@ class ConsoleLogger implements Logger {
   }
 }
 
+function toUuidString(bytes: Uint8Array): string {
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0'));
+  return [
+    hex.slice(0, 4).join(''),
+    hex.slice(4, 6).join(''),
+    hex.slice(6, 8).join(''),
+    hex.slice(8, 10).join(''),
+    hex.slice(10).join(''),
+  ].join('-');
+}
+
 function generateCorrelationId(): string {
-  if (typeof globalThis === 'object') {
-    const cryptoObj: any = (globalThis as any).crypto;
-    if (cryptoObj && typeof cryptoObj.randomUUID === 'function') {
-      return cryptoObj.randomUUID();
-    }
+  const cryptoObj: Crypto | undefined =
+    typeof globalThis === 'object' && globalThis
+      ? (globalThis as typeof globalThis & { crypto?: Crypto }).crypto
+      : undefined;
+
+  if (cryptoObj?.randomUUID) {
+    return cryptoObj.randomUUID();
   }
-  try {
-    const { randomUUID } = require('crypto');
-    return randomUUID();
-  } catch {
-    // Fallback for environments without crypto support
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-      const r = (Math.random() * 16) | 0;
-      const v = c === 'x' ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    });
+
+  if (cryptoObj?.getRandomValues) {
+    const bytes = cryptoObj.getRandomValues(new Uint8Array(16));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    return toUuidString(bytes);
   }
+
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
 }
 
 export function createLogger(correlationId: string = generateCorrelationId()): Logger {

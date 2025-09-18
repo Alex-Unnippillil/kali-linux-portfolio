@@ -18,10 +18,33 @@
     "types": [],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
-
-    }
+      "@/*": ["./*"],
+      "@apps/*": ["apps/*"],
+      "@components/*": ["components/*"],
+      "@data/*": ["data/*"],
+      "@hooks/*": ["hooks/*"],
+      "@lib/*": ["lib/*"],
+      "@modules/*": ["modules/*"],
+      "@pages/*": ["pages/*"],
+      "@src/*": ["src/*"],
+      "@styles/*": ["styles/*"],
+      "@types/*": ["types/*"],
+      "@utils/*": ["utils/*"]
+    },
+    "noEmit": true,
+    "plugins": [{ "name": "next" }]
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "types/**/*.d.ts"],
-  "exclude": ["node_modules", "__tests__", "components/apps/archive", "components/apps/kismet"]
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "next-env.d.ts",
+    "types/**/*.d.ts",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "__tests__",
+    "components/apps/archive",
+    "components/apps/kismet"
+  ]
 }
