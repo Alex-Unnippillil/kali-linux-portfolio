@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState, createContext, useContext } from 'react';
+import clsx from 'clsx';
+import styles from './TabbedWindow.module.css';
 
 function middleEllipsis(text: string, max = 30) {
   if (text.length <= max) return text;
@@ -162,43 +164,73 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     }
   };
 
+  const tabBarStyle: React.CSSProperties = {
+    '--tab-bar-gap': 'var(--space-2)',
+    '--tab-bar-padding-inline': 'calc(var(--space-2) * 2)',
+    '--tab-bar-padding-inline-sm': 'var(--space-2)',
+    '--tab-bar-padding-block': 'var(--space-2)',
+    '--tab-gap': 'var(--space-2)',
+    '--tab-height': 'var(--hit-area)',
+    '--tab-radius': 'var(--radius-lg)',
+    '--tab-padding-inline': 'calc(var(--space-2) * 2)',
+    '--tab-padding-inline-sm': 'var(--space-2)',
+    '--tab-close-size': 'calc(var(--hit-area) / 2)',
+    '--new-tab-size': 'var(--hit-area)',
+  };
+
   return (
     <div
-      className={`flex flex-col w-full h-full ${className}`.trim()}
+      className={clsx(styles.container, className)}
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
-      <div className="flex flex-shrink-0 bg-gray-800 text-white text-sm overflow-x-auto">
-        {tabs.map((t, i) => (
-          <div
-            key={t.id}
-            className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none ${
-              t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
-            }`}
-            draggable
-            onDragStart={handleDragStart(i)}
-            onDragOver={handleDragOver(i)}
-            onDrop={handleDrop(i)}
-            onClick={() => setActive(t.id)}
-          >
-            <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
-            {t.closable !== false && tabs.length > 1 && (
-              <button
-                className="p-0.5"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  closeTab(t.id);
-                }}
-                aria-label="Close Tab"
+      <div
+        className={styles.tabBar}
+        role="tablist"
+        aria-label="Window tabs"
+        style={tabBarStyle}
+      >
+        <div className={styles.tabsScroll}>
+          {tabs.map((t, i) => {
+            const tabId = `tab-${t.id}`;
+            const panelId = `tabpanel-${t.id}`;
+            return (
+              <div
+                key={t.id}
+                id={tabId}
+                className={clsx(styles.tab, t.id === activeId && styles.tabActive)}
+                role="tab"
+                aria-selected={t.id === activeId}
+                aria-controls={panelId}
+                tabIndex={t.id === activeId ? 0 : -1}
+                draggable
+                onDragStart={handleDragStart(i)}
+                onDragOver={handleDragOver(i)}
+                onDrop={handleDrop(i)}
+                onClick={() => setActive(t.id)}
               >
-                ×
-              </button>
-            )}
-          </div>
-        ))}
+                <span className={styles.tabLabel}>{middleEllipsis(t.title)}</span>
+                {t.closable !== false && tabs.length > 1 && (
+                  <button
+                    type="button"
+                    className={styles.tabCloseButton}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeTab(t.id);
+                    }}
+                    aria-label="Close Tab"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
         {onNewTab && (
           <button
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700"
+            type="button"
+            className={styles.newTabButton}
             onClick={addTab}
             aria-label="New Tab"
           >
@@ -206,21 +238,29 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
           </button>
         )}
       </div>
-      <div className="flex-grow relative overflow-hidden">
-        {tabs.map((t) => (
-          <TabContext.Provider
-            key={t.id}
-            value={{ id: t.id, active: t.id === activeId, close: () => closeTab(t.id) }}
-          >
-            <div
-              className={`absolute inset-0 w-full h-full ${
-                t.id === activeId ? 'block' : 'hidden'
-              }`}
+      <div className={styles.panelContainer}>
+        {tabs.map((t) => {
+          const tabId = `tab-${t.id}`;
+          const panelId = `tabpanel-${t.id}`;
+          return (
+            <TabContext.Provider
+              key={t.id}
+              value={{ id: t.id, active: t.id === activeId, close: () => closeTab(t.id) }}
             >
-              {t.content}
-            </div>
-          </TabContext.Provider>
-        ))}
+              <div
+                id={panelId}
+                role="tabpanel"
+                aria-labelledby={tabId}
+                className={clsx(
+                  styles.panel,
+                  t.id === activeId ? undefined : styles.panelHidden,
+                )}
+              >
+                {t.content}
+              </div>
+            </TabContext.Provider>
+          );
+        })}
       </div>
     </div>
   );

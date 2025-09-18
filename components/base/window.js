@@ -7,6 +7,8 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import WindowHeader from '../ubuntu/window/Header';
+import headerStyles from '../ubuntu/window/Header.module.css';
 
 export class Window extends Component {
     constructor(props) {
@@ -676,16 +678,12 @@ export default Window
 // Window's title bar
 export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
     return (
-        <div
-            className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 px-3 text-white w-full select-none rounded-b-none flex items-center h-11"}
-            tabIndex={0}
-            role="button"
-            aria-grabbed={grabbed}
+        <WindowHeader
+            title={title}
+            grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
-        >
-            <div className="flex justify-center w-full text-sm font-bold">{title}</div>
-        </div>
+        />
     )
 }
 
@@ -733,13 +731,22 @@ export class WindowXBorder extends Component {
 export function WindowEditButtons(props) {
     const { togglePin } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
+    const controlTokens = {
+        '--window-controls-offset': 'var(--space-2)',
+        '--window-controls-gap': 'var(--space-2)',
+        '--window-control-size': 'var(--hit-area)',
+        '--window-control-size-sm': 'calc(var(--hit-area) - var(--space-2))',
+        '--window-control-radius': 'var(--radius-lg)',
+    };
+    const secondaryButtonClass = `${headerStyles.controlButton} ${headerStyles.controlButtonSecondary}`;
+    const closeButtonClass = `${headerStyles.controlButton} ${headerStyles.controlButtonClose}`;
     return (
-        <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center h-11 min-w-[8.25rem]">
+        <div className={headerStyles.controls} style={controlTokens}>
             {pipSupported && props.pip && (
                 <button
                     type="button"
                     aria-label="Window pin"
-                    className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                    className={secondaryButtonClass}
                     onClick={togglePin}
                 >
                     <NextImage
@@ -755,7 +762,7 @@ export function WindowEditButtons(props) {
             <button
                 type="button"
                 aria-label="Window minimize"
-                className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                className={secondaryButtonClass}
                 onClick={props.minimize}
             >
                 <NextImage
@@ -773,7 +780,7 @@ export function WindowEditButtons(props) {
                         <button
                             type="button"
                             aria-label="Window restore"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                            className={secondaryButtonClass}
                             onClick={props.maximize}
                         >
                             <NextImage
@@ -789,7 +796,7 @@ export function WindowEditButtons(props) {
                         <button
                             type="button"
                             aria-label="Window maximize"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                            className={secondaryButtonClass}
                             onClick={props.maximize}
                         >
                             <NextImage
@@ -807,7 +814,7 @@ export function WindowEditButtons(props) {
                 type="button"
                 id={`close-${props.id}`}
                 aria-label="Window close"
-                className="mx-1 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6"
+                className={closeButtonClass}
                 onClick={props.close}
             >
                 <NextImage
