@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useRef,
+  useCallback,
+} from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -23,6 +31,12 @@ import {
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import {
+  ACCENT_MIN_CONTRAST,
+  getAccessibleTextColor,
+  isAccessibleAccent,
+  normalizeHex,
+} from '../utils/color';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -63,7 +77,7 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
-  setAccent: (accent: string) => void;
+  setAccent: (accent: string, options?: { allowUnsafe?: boolean }) => boolean;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
   setReducedMotion: (value: boolean) => void;
@@ -88,7 +102,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
-  setAccent: () => {},
+  setAccent: () => false,
   setWallpaper: () => {},
   setDensity: () => {},
   setReducedMotion: () => {},
@@ -102,7 +116,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [accent, setAccent] = useState<string>(defaults.accent);
+  const [accent, setAccentState] = useState<string>(defaults.accent);
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
@@ -115,9 +129,25 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
+  const applyAccent = useCallback(
+    (value: string, options: { allowUnsafe?: boolean } = {}) => {
+      const normalized = normalizeHex(value);
+      if (!normalized) return false;
+      if (!options.allowUnsafe && !isAccessibleAccent(normalized, ACCENT_MIN_CONTRAST)) {
+        return false;
+      }
+      setAccentState(normalized);
+      return true;
+    },
+    [],
+  );
+
   useEffect(() => {
     (async () => {
-      setAccent(await loadAccent());
+      const storedAccent = await loadAccent();
+      if (!applyAccent(storedAccent)) {
+        setAccentState(defaults.accent);
+      }
       setWallpaper(await loadWallpaper());
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
@@ -129,27 +159,30 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
     })();
-  }, []);
+  }, [applyAccent]);
 
   useEffect(() => {
     saveTheme(theme);
   }, [theme]);
 
   useEffect(() => {
-    const border = shadeColor(accent, -0.2);
+    const normalized = normalizeHex(accent) ?? defaults.accent;
+    const border = shadeColor(normalized, -0.2);
+    const textColor = getAccessibleTextColor(normalized);
     const vars: Record<string, string> = {
-      '--color-ub-orange': accent,
+      '--color-ub-orange': normalized,
       '--color-ub-border-orange': border,
-      '--color-primary': accent,
-      '--color-accent': accent,
-      '--color-focus-ring': accent,
-      '--color-selection': accent,
-      '--color-control-accent': accent,
+      '--color-primary': normalized,
+      '--color-accent': normalized,
+      '--color-focus-ring': normalized,
+      '--color-selection': normalized,
+      '--color-control-accent': normalized,
+      '--color-on-accent': textColor,
     };
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
-    saveAccent(accent);
+    saveAccent(normalized);
   }, [accent]);
 
   useEffect(() => {
@@ -250,7 +283,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
-        setAccent,
+        setAccent: applyAccent,
         setWallpaper,
         setDensity,
         setReducedMotion,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -12,6 +12,12 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import {
+  ACCENT_MIN_CONTRAST,
+  contrastRatio,
+  getAccessibleTextColor,
+  normalizeHex,
+} from "../../utils/color";
 
 export default function Settings() {
   const {
@@ -33,6 +39,12 @@ export default function Settings() {
     setTheme,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [customAccent, setCustomAccent] = useState(accent);
+  const [hasPendingCustom, setHasPendingCustom] = useState(false);
+  const [accentMessage, setAccentMessage] = useState("");
+  const [accentMessageTone, setAccentMessageTone] = useState<
+    "info" | "success" | "error" | null
+  >(null);
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
@@ -41,6 +53,53 @@ export default function Settings() {
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
+
+  useEffect(() => {
+    setCustomAccent(accent);
+    setHasPendingCustom(false);
+  }, [accent]);
+
+  const normalizedCustom = useMemo(
+    () => normalizeHex(customAccent),
+    [customAccent]
+  );
+  const previewColor = normalizedCustom ?? accent;
+  const previewText = useMemo(
+    () => getAccessibleTextColor(previewColor),
+    [previewColor]
+  );
+  const previewContrast = useMemo(
+    () => contrastRatio(previewColor, previewText),
+    [previewColor, previewText]
+  );
+  const customContrast = useMemo(() => {
+    if (!normalizedCustom) return null;
+    const text = getAccessibleTextColor(normalizedCustom);
+    return contrastRatio(normalizedCustom, text);
+  }, [normalizedCustom]);
+  const meetsContrast = (customContrast ?? 0) >= ACCENT_MIN_CONTRAST;
+  const canApplyCustom = Boolean(
+    normalizedCustom && normalizedCustom !== accent && meetsContrast,
+  );
+  const accentIsCustom = !ACCENT_OPTIONS.includes(accent);
+  const pendingTone = hasPendingCustom
+    ? meetsContrast
+      ? "info"
+      : "error"
+    : null;
+  const computedMessageTone = accentMessage ? accentMessageTone : pendingTone;
+  const accentMessageClass = computedMessageTone === "error"
+    ? "text-red-400"
+    : computedMessageTone === "success"
+      ? "text-green-400"
+      : "text-ubt-grey";
+  const accentHelperMessage =
+    accentMessage ||
+    (hasPendingCustom
+      ? meetsContrast
+        ? "Press \"Use custom color\" to apply this accent."
+        : `Adjust the color until it reaches ${ACCENT_MIN_CONTRAST.toFixed(1)}:1 contrast.`
+      : "");
 
   const wallpapers = [
     "wall-1",
@@ -54,6 +113,55 @@ export default function Settings() {
   ];
 
   const changeBackground = (name: string) => setWallpaper(name);
+
+  const handlePaletteAccent = (value: string) => {
+    const applied = setAccent(value);
+    if (applied) {
+      setAccentMessage(`Accent updated to ${value}`);
+      setAccentMessageTone("success");
+      setCustomAccent(value);
+      setHasPendingCustom(false);
+    } else {
+      setAccentMessage(
+        `Accent ${value} was skipped because it does not meet accessibility requirements.`,
+      );
+      setAccentMessageTone("error");
+    }
+  };
+
+  const handleCustomAccentChange = (value: string) => {
+    setCustomAccent(value);
+    setHasPendingCustom(true);
+    setAccentMessage("");
+    setAccentMessageTone(null);
+  };
+
+  const applyCustomAccent = () => {
+    if (!normalizedCustom) {
+      setAccentMessage("Select a color to apply.");
+      setAccentMessageTone("info");
+      return;
+    }
+    if (!meetsContrast) {
+      setAccentMessage(
+        `Accent ${normalizedCustom} needs at least ${ACCENT_MIN_CONTRAST.toFixed(1)}:1 contrast.`,
+      );
+      setAccentMessageTone("error");
+      return;
+    }
+    const applied = setAccent(normalizedCustom);
+    if (applied) {
+      setAccentMessage(`Accent updated to ${normalizedCustom}`);
+      setAccentMessageTone("success");
+      setHasPendingCustom(false);
+      setCustomAccent(normalizedCustom);
+    } else {
+      setAccentMessage(
+        `Accent ${normalizedCustom} was rejected because it does not meet accessibility requirements.`,
+      );
+      setAccentMessageTone("error");
+    }
+  };
 
   const handleExport = async () => {
     const data = await exportSettingsData();
@@ -71,7 +179,20 @@ export default function Settings() {
     await importSettingsData(text);
     try {
       const parsed = JSON.parse(text);
-      if (parsed.accent !== undefined) setAccent(parsed.accent);
+      if (parsed.accent !== undefined) {
+        const applied = setAccent(parsed.accent);
+        if (applied) {
+          setAccentMessage(`Accent imported as ${parsed.accent}`);
+          setAccentMessageTone("success");
+        } else {
+          setCustomAccent(parsed.accent);
+          setHasPendingCustom(true);
+          setAccentMessage(
+            `Imported accent ${parsed.accent} did not meet the ${ACCENT_MIN_CONTRAST.toFixed(1)}:1 contrast requirement and was not applied.`,
+          );
+          setAccentMessageTone("error");
+        }
+      }
       if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
       if (parsed.density !== undefined) setDensity(parsed.density);
       if (parsed.reducedMotion !== undefined)
@@ -94,7 +215,12 @@ export default function Settings() {
       return;
     await resetSettings();
     window.localStorage.clear();
-    setAccent(defaults.accent);
+    if (setAccent(defaults.accent)) {
+      setAccentMessage("Accent reset to default.");
+      setAccentMessageTone("info");
+    }
+    setHasPendingCustom(false);
+    setCustomAccent(defaults.accent);
     setWallpaper(defaults.wallpaper);
     setDensity(defaults.density as any);
     setReducedMotion(defaults.reducedMotion);
@@ -134,22 +260,104 @@ export default function Settings() {
               <option value="matrix">Matrix</option>
             </select>
           </div>
-          <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey">Accent:</label>
-            <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
-              {ACCENT_OPTIONS.map((c) => (
-                <button
-                  key={c}
-                  aria-label={`select-accent-${c}`}
-                  role="radio"
-                  aria-checked={accent === c}
-                  onClick={() => setAccent(c)}
-                  className={`w-8 h-8 rounded-full border-2 ${accent === c ? 'border-white' : 'border-transparent'}`}
-                  style={{ backgroundColor: c }}
-                />
-              ))}
+          <section className="w-full max-w-2xl px-4 mx-auto my-6">
+            <div className="flex flex-col gap-4 rounded border border-gray-900 bg-ub-grey bg-opacity-70 p-4 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <h2 className="text-base font-semibold text-ubt-grey">Accent</h2>
+                  <p className="text-xs text-ubt-grey">
+                    Accent tokens recolor focus rings, highlights, and window chrome while your wallpaper stays untouched.
+                  </p>
+                </div>
+                <span className="text-xs uppercase tracking-wide text-ubt-grey">
+                  {accentIsCustom ? "Custom color active" : "Preset color"}
+                </span>
+              </div>
+              <div
+                aria-label="Accent color palette"
+                role="radiogroup"
+                className="flex flex-wrap gap-2"
+              >
+                {ACCENT_OPTIONS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    aria-label={`select-accent-${c}`}
+                    role="radio"
+                    aria-checked={accent === c}
+                    onClick={() => handlePaletteAccent(c)}
+                    className={`h-8 w-8 rounded-full border-2 transition-transform focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+                      accent === c ? "scale-110 border-white" : "border-transparent"
+                    }`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </div>
+              <div className="flex flex-col gap-3 rounded border border-gray-800 bg-black/40 p-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <label htmlFor="custom-accent" className="text-ubt-grey">
+                    Custom accent
+                  </label>
+                  <input
+                    id="custom-accent"
+                    type="color"
+                    value={normalizedCustom ?? accent}
+                    onChange={(e) => handleCustomAccentChange(e.target.value)}
+                    aria-label="Custom accent color"
+                    className="h-9 w-12 cursor-pointer rounded border border-gray-700 bg-transparent p-1"
+                  />
+                  <span className="rounded bg-ub-dark px-2 py-1 font-mono text-xs text-ubt-grey">
+                    {normalizedCustom ?? customAccent}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={applyCustomAccent}
+                    disabled={!canApplyCustom}
+                    className={`rounded px-3 py-1 text-sm font-medium transition ${
+                      canApplyCustom
+                        ? "bg-ub-orange text-black hover:brightness-110 focus-visible:outline-none"
+                        : "cursor-not-allowed bg-gray-700 text-gray-400 opacity-70"
+                    }`}
+                  >
+                    Use custom color
+                  </button>
+                </div>
+                <div className="flex flex-wrap items-center gap-4">
+                  <div
+                    className="rounded px-3 py-2 text-sm shadow-inner"
+                    style={{ backgroundColor: previewColor, color: previewText }}
+                  >
+                    Preview
+                  </div>
+                  <p
+                    className={`text-sm ${
+                      normalizedCustom
+                        ? meetsContrast
+                          ? "text-green-400"
+                          : "text-red-400"
+                        : "text-ubt-grey"
+                    }`}
+                  >
+                    {normalizedCustom
+                      ? `Contrast ${previewContrast.toFixed(2)}:1 ${
+                          meetsContrast
+                            ? "Passes WCAG AA"
+                            : `Needs ${ACCENT_MIN_CONTRAST.toFixed(1)}:1 to save`
+                        }`
+                      : "Pick a color to preview contrast."}
+                  </p>
+                </div>
+                {accentHelperMessage && (
+                  <p className={`text-sm ${accentMessageClass}`} role="alert">
+                    {accentHelperMessage}
+                  </p>
+                )}
+                <span aria-live="polite" className="sr-only">
+                  {accentHelperMessage}
+                </span>
+              </div>
             </div>
-          </div>
+          </section>
           <div className="flex justify-center my-4">
             <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">Wallpaper:</label>
             <input

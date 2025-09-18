@@ -19,6 +19,7 @@
   --color-focus-ring: var(--color-accent);
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
+  --color-on-accent: #000000;
   accent-color: var(--color-control-accent);
 }
 
@@ -35,6 +36,7 @@ html[data-theme='dark'] {
   --color-border: #333333;
   --color-terminal: #00ff00;
   --color-dark: #0a0a0a;
+  --color-on-accent: #000000;
 }
 
 /* Neon theme */
@@ -50,6 +52,7 @@ html[data-theme='neon'] {
   --color-border: #333333;
   --color-terminal: #39ff14;
   --color-dark: #000000;
+  --color-on-accent: #000000;
 }
 
 /* Matrix theme */
@@ -65,7 +68,7 @@ html[data-theme='matrix'] {
   --color-border: #003300;
   --color-terminal: #00ff00;
   --color-dark: #000000;
-
+  --color-on-accent: #000000;
 }
 
 ::selection {
