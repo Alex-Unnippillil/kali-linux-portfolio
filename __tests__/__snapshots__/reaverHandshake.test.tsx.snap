@@ -1,0 +1,326 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`HandshakeDiagram component renders the participants and all handshake steps 1`] = `
+<svg
+  class="max-w-full"
+  height="496"
+  role="img"
+  viewBox="0 0 316 496"
+  width="100%"
+>
+  <title
+    id="handshake-diagram-title"
+  >
+    WPA2 4-Way Handshake
+  </title>
+  <desc
+    id="handshake-diagram-description"
+  >
+    WPA2 four-way handshake sequence diagram showing message direction and capture timing.
+  </desc>
+  <g>
+    <text
+      class="fill-slate-100 text-sm font-semibold"
+      text-anchor="middle"
+      x="48"
+      y="20"
+    >
+      Access Point
+    </text>
+    <line
+      data-testid="handshake-lifeline"
+      stroke="#475569"
+      stroke-dasharray="6 6"
+      stroke-width="1.5"
+      x1="48"
+      x2="48"
+      y1="54"
+      y2="472"
+    />
+  </g>
+  <g>
+    <text
+      class="fill-slate-100 text-sm font-semibold"
+      text-anchor="middle"
+      x="268"
+      y="20"
+    >
+      Client Station
+    </text>
+    <line
+      data-testid="handshake-lifeline"
+      stroke="#475569"
+      stroke-dasharray="6 6"
+      stroke-width="1.5"
+      x1="268"
+      x2="268"
+      y1="54"
+      y2="472"
+    />
+  </g>
+  <g>
+    <line
+      data-testid="handshake-arrow"
+      stroke="#60a5fa"
+      stroke-width="2.5"
+      x1="48"
+      x2="268"
+      y1="112"
+      y2="112"
+    />
+    <polygon
+      fill="#60a5fa"
+      points="268,112 261,107.625 261,116.375"
+    />
+    <circle
+      cx="48"
+      cy="112"
+      fill="#60a5fa"
+      opacity="0.7"
+      r="4"
+    />
+    <foreignobject
+      height="82"
+      width="200"
+      x="58"
+      y="66"
+    >
+      <div
+        class="rounded-md border border-slate-700 bg-slate-900/90 px-3 py-2 text-xs text-slate-100 shadow-lg backdrop-blur"
+        xmlns="http://www.w3.org/1999/xhtml"
+      >
+        <div
+          class="flex items-center justify-between gap-2"
+        >
+          <span
+            class="font-mono text-sm text-slate-100"
+          >
+            M1
+          </span>
+          <button
+            aria-label="Copy M1 label"
+            class="rounded bg-slate-800 px-2 py-1 text-[11px] uppercase tracking-wide text-slate-200 transition hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-200"
+            data-step="M1"
+            type="button"
+          >
+            Copy
+          </button>
+        </div>
+        <p
+          class="mt-1 text-[11px] leading-snug text-slate-200"
+        >
+          ANonce + RSN parameters
+        </p>
+        <p
+          class="mt-1 text-[10px] font-mono text-slate-400"
+        >
+          Δ 
+          0.000
+           
+          milliseconds
+           · frame 
+          12
+        </p>
+      </div>
+    </foreignobject>
+  </g>
+  <g>
+    <line
+      data-testid="handshake-arrow"
+      stroke="#34d399"
+      stroke-width="2.5"
+      x1="268"
+      x2="48"
+      y1="208"
+      y2="208"
+    />
+    <polygon
+      fill="#34d399"
+      points="48,208 55,203.625 55,212.375"
+    />
+    <circle
+      cx="268"
+      cy="208"
+      fill="#34d399"
+      opacity="0.7"
+      r="4"
+    />
+    <foreignobject
+      height="82"
+      width="200"
+      x="58"
+      y="162"
+    >
+      <div
+        class="rounded-md border border-slate-700 bg-slate-900/90 px-3 py-2 text-xs text-slate-100 shadow-lg backdrop-blur"
+        xmlns="http://www.w3.org/1999/xhtml"
+      >
+        <div
+          class="flex items-center justify-between gap-2"
+        >
+          <span
+            class="font-mono text-sm text-slate-100"
+          >
+            M2
+          </span>
+          <button
+            aria-label="Copy M2 label"
+            class="rounded bg-slate-800 px-2 py-1 text-[11px] uppercase tracking-wide text-slate-200 transition hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-200"
+            data-step="M2"
+            type="button"
+          >
+            Copy
+          </button>
+        </div>
+        <p
+          class="mt-1 text-[11px] leading-snug text-slate-200"
+        >
+          SNonce + MIC
+        </p>
+        <p
+          class="mt-1 text-[10px] font-mono text-slate-400"
+        >
+          Δ 
+          0.512
+           
+          milliseconds
+           · frame 
+          13
+        </p>
+      </div>
+    </foreignobject>
+  </g>
+  <g>
+    <line
+      data-testid="handshake-arrow"
+      stroke="#60a5fa"
+      stroke-width="2.5"
+      x1="48"
+      x2="268"
+      y1="304"
+      y2="304"
+    />
+    <polygon
+      fill="#60a5fa"
+      points="268,304 261,299.625 261,308.375"
+    />
+    <circle
+      cx="48"
+      cy="304"
+      fill="#60a5fa"
+      opacity="0.7"
+      r="4"
+    />
+    <foreignobject
+      height="82"
+      width="200"
+      x="58"
+      y="258"
+    >
+      <div
+        class="rounded-md border border-slate-700 bg-slate-900/90 px-3 py-2 text-xs text-slate-100 shadow-lg backdrop-blur"
+        xmlns="http://www.w3.org/1999/xhtml"
+      >
+        <div
+          class="flex items-center justify-between gap-2"
+        >
+          <span
+            class="font-mono text-sm text-slate-100"
+          >
+            M3
+          </span>
+          <button
+            aria-label="Copy M3 label"
+            class="rounded bg-slate-800 px-2 py-1 text-[11px] uppercase tracking-wide text-slate-200 transition hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-200"
+            data-step="M3"
+            type="button"
+          >
+            Copy
+          </button>
+        </div>
+        <p
+          class="mt-1 text-[11px] leading-snug text-slate-200"
+        >
+          Install PTK + GTK
+        </p>
+        <p
+          class="mt-1 text-[10px] font-mono text-slate-400"
+        >
+          Δ 
+          1.024
+           
+          milliseconds
+           · frame 
+          14
+        </p>
+      </div>
+    </foreignobject>
+  </g>
+  <g>
+    <line
+      data-testid="handshake-arrow"
+      stroke="#34d399"
+      stroke-width="2.5"
+      x1="268"
+      x2="48"
+      y1="400"
+      y2="400"
+    />
+    <polygon
+      fill="#34d399"
+      points="48,400 55,395.625 55,404.375"
+    />
+    <circle
+      cx="268"
+      cy="400"
+      fill="#34d399"
+      opacity="0.7"
+      r="4"
+    />
+    <foreignobject
+      height="82"
+      width="200"
+      x="58"
+      y="354"
+    >
+      <div
+        class="rounded-md border border-slate-700 bg-slate-900/90 px-3 py-2 text-xs text-slate-100 shadow-lg backdrop-blur"
+        xmlns="http://www.w3.org/1999/xhtml"
+      >
+        <div
+          class="flex items-center justify-between gap-2"
+        >
+          <span
+            class="font-mono text-sm text-slate-100"
+          >
+            M4
+          </span>
+          <button
+            aria-label="Copy M4 label"
+            class="rounded bg-slate-800 px-2 py-1 text-[11px] uppercase tracking-wide text-slate-200 transition hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-200"
+            data-step="M4"
+            type="button"
+          >
+            Copy
+          </button>
+        </div>
+        <p
+          class="mt-1 text-[11px] leading-snug text-slate-200"
+        >
+          PTK install ack
+        </p>
+        <p
+          class="mt-1 text-[10px] font-mono text-slate-400"
+        >
+          Δ 
+          1.488
+           
+          milliseconds
+           · frame 
+          15
+        </p>
+      </div>
+    </foreignobject>
+  </g>
+</svg>
+`;
