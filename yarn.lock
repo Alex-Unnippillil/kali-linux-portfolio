@@ -2630,6 +2630,22 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@percy/playwright@npm:^1.0.9":
+  version: 1.0.9
+  resolution: "@percy/playwright@npm:1.0.9"
+  peerDependencies:
+    playwright-core: ">=1"
+  checksum: 10c0/dccbf80fed9c03709ec79bc6ad717816badd1bf7096a4db25302fb554dc74770167658956a439f2e71d1dab2ae97b19d9e93f4ac0e4a98ed51743efe22547cf6
+  languageName: node
+  linkType: hard
+
+"@percy/sdk-utils@npm:^1.30.9":
+  version: 1.31.2
+  resolution: "@percy/sdk-utils@npm:1.31.2"
+  checksum: 10c0/4f0baaf3033c62abbcd342404ba04c55e7684177842bcfec3883f997dab0a47c3988e5e546ea6e91e546d9f0097165b45f68d2ca3e9776520e70fb25c5399602
+  languageName: node
+  linkType: hard
+
 "@pkgjs/parseargs@npm:^0.11.0":
   version: 0.11.0
   resolution: "@pkgjs/parseargs@npm:0.11.0"
@@ -13860,6 +13876,8 @@ __metadata:
     "@monaco-editor/react": "npm:^4.7.0"
     "@mozilla/readability": "npm:^0.6.0"
     "@next/bundle-analyzer": "npm:15.5.2"
+    "@percy/playwright": "npm:^1.0.9"
+    "@percy/sdk-utils": "npm:^1.30.9"
     "@playwright/test": "npm:^1.55.0"
     "@supabase/ssr": "npm:^0.7.0"
     "@supabase/supabase-js": "npm:^2.56.1"
