@@ -20,6 +20,12 @@
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
   accent-color: var(--color-control-accent);
+  --font-family-body: 'Ubuntu', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --font-family-code: 'Fira Code', 'Source Code Pro', 'Ubuntu Mono', 'Courier New', monospace;
+  --font-smoothing-webkit: auto;
+  --font-smoothing-moz: auto;
+  --font-smoothing-standard: auto;
+  --font-text-rendering: auto;
 }
 
 /* Dark theme */

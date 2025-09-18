@@ -14,6 +14,10 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  bodyFont: 'ubuntu',
+  codeFont: 'fira-code',
+  antialiasing: 'system',
+  hinting: 'auto',
 };
 
 export async function getAccent() {
@@ -81,6 +85,46 @@ export async function setHighContrast(value) {
   window.localStorage.setItem('high-contrast', value ? 'true' : 'false');
 }
 
+export async function getBodyFont() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.bodyFont;
+  return window.localStorage.getItem('font-body') || DEFAULT_SETTINGS.bodyFont;
+}
+
+export async function setBodyFont(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('font-body', value);
+}
+
+export async function getCodeFont() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.codeFont;
+  return window.localStorage.getItem('font-code') || DEFAULT_SETTINGS.codeFont;
+}
+
+export async function setCodeFont(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('font-code', value);
+}
+
+export async function getAntialiasing() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.antialiasing;
+  return window.localStorage.getItem('font-antialiasing') || DEFAULT_SETTINGS.antialiasing;
+}
+
+export async function setAntialiasing(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('font-antialiasing', value);
+}
+
+export async function getHinting() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.hinting;
+  return window.localStorage.getItem('font-hinting') || DEFAULT_SETTINGS.hinting;
+}
+
+export async function setHinting(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('font-hinting', value);
+}
+
 export async function getLargeHitAreas() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.largeHitAreas;
   return window.localStorage.getItem('large-hit-areas') === 'true';
@@ -137,6 +181,10 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('font-body');
+  window.localStorage.removeItem('font-code');
+  window.localStorage.removeItem('font-antialiasing');
+  window.localStorage.removeItem('font-hinting');
 }
 
 export async function exportSettings() {
@@ -151,6 +199,10 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    bodyFont,
+    codeFont,
+    antialiasing,
+    hinting,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +214,10 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getBodyFont(),
+    getCodeFont(),
+    getAntialiasing(),
+    getHinting(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -175,6 +231,10 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    bodyFont,
+    codeFont,
+    antialiasing,
+    hinting,
     theme,
   });
 }
@@ -199,6 +259,10 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    bodyFont,
+    codeFont,
+    antialiasing,
+    hinting,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -211,6 +275,10 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (bodyFont !== undefined) await setBodyFont(bodyFont);
+  if (codeFont !== undefined) await setCodeFont(codeFont);
+  if (antialiasing !== undefined) await setAntialiasing(antialiasing);
+  if (hinting !== undefined) await setHinting(hinting);
   if (theme !== undefined) setTheme(theme);
 }
 
