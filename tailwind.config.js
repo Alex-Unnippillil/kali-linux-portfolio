@@ -37,6 +37,17 @@ module.exports = {
         'ub-border-orange': 'var(--color-ub-border-orange)',
         'ub-dark-grey': 'var(--color-ub-dark-grey)',
       },
+      borderRadius: {
+        none: '0px',
+        sm: 'var(--radius-sm)',
+        DEFAULT: 'var(--radius-md)',
+        md: 'var(--radius-md)',
+        lg: 'var(--radius-lg)',
+        xl: 'calc(var(--radius-lg) + 4px)',
+        '2xl': 'calc(var(--radius-lg) + 8px)',
+        '3xl': 'calc(var(--radius-lg) + 12px)',
+        full: 'var(--radius-round)',
+      },
       fontFamily: {
         ubuntu: ['Ubuntu', 'sans-serif'],
       },

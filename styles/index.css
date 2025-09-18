@@ -144,7 +144,7 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 
 .windowMainScreen::-webkit-scrollbar-thumb {
     background-color: var(--color-border);
-    border-radius: 5px;
+    border-radius: var(--radius-sm);
 }
 
 /* SideBarApp Scale image onClick */
@@ -268,7 +268,7 @@ dialog {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 0.25rem;
+    border-radius: var(--radius-sm);
 }
 
 .card-front {
@@ -315,7 +315,7 @@ dialog {
 .chip {
     width: 2.5rem;
     height: 2.5rem;
-    border-radius: 9999px;
+    border-radius: var(--radius-round);
     display: flex;
     align-items: center;
     justify-content: center;
