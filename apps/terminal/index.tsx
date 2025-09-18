@@ -63,6 +63,67 @@ const SettingsIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+const KALI_ANSI = {
+  black: '#000000',
+  red: '#ff4b4b',
+  green: '#78ff9f',
+  yellow: '#fce566',
+  blue: '#4dabf7',
+  magenta: '#d684ff',
+  cyan: '#53fff4',
+  white: '#f8f8f2',
+  brightBlack: '#777b91',
+  brightRed: '#ff7b7b',
+  brightGreen: '#9affbc',
+  brightYellow: '#ffe69a',
+  brightBlue: '#7ab8ff',
+  brightMagenta: '#f19aff',
+  brightCyan: '#8dfff8',
+  brightWhite: '#ffffff',
+} as const;
+
+const ANSI_SWATCHES = [
+  KALI_ANSI.black,
+  KALI_ANSI.red,
+  KALI_ANSI.green,
+  KALI_ANSI.yellow,
+  KALI_ANSI.blue,
+  KALI_ANSI.magenta,
+  KALI_ANSI.cyan,
+  KALI_ANSI.white,
+  KALI_ANSI.brightBlack,
+  KALI_ANSI.brightRed,
+  KALI_ANSI.brightGreen,
+  KALI_ANSI.brightYellow,
+  KALI_ANSI.brightBlue,
+  KALI_ANSI.brightMagenta,
+  KALI_ANSI.brightCyan,
+  KALI_ANSI.brightWhite,
+] as const;
+
+const createKaliTheme = () => ({
+  background: '#000000',
+  foreground: '#f8f8f2',
+  cursor: '#1793d1',
+  selection: 'rgba(23, 147, 209, 0.45)',
+  black: KALI_ANSI.black,
+  red: KALI_ANSI.red,
+  green: KALI_ANSI.green,
+  yellow: KALI_ANSI.yellow,
+  blue: KALI_ANSI.blue,
+  magenta: KALI_ANSI.magenta,
+  cyan: KALI_ANSI.cyan,
+  white: KALI_ANSI.white,
+  brightBlack: KALI_ANSI.brightBlack,
+  brightRed: KALI_ANSI.brightRed,
+  brightGreen: KALI_ANSI.brightGreen,
+  brightYellow: KALI_ANSI.brightYellow,
+  brightBlue: KALI_ANSI.brightBlue,
+  brightMagenta: KALI_ANSI.brightMagenta,
+  brightCyan: KALI_ANSI.brightCyan,
+  brightWhite: KALI_ANSI.brightWhite,
+});
+
 export interface TerminalProps {
   openApp?: (id: string) => void;
 }
@@ -105,25 +166,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
   const [overflow, setOverflow] = useState({ top: false, bottom: false });
-  const ansiColors = [
-    '#000000',
-    '#AA0000',
-    '#00AA00',
-    '#AA5500',
-    '#0000AA',
-    '#AA00AA',
-    '#00AAAA',
-    '#AAAAAA',
-    '#555555',
-    '#FF5555',
-    '#55FF55',
-    '#FFFF55',
-    '#5555FF',
-    '#FF55FF',
-    '#55FFFF',
-    '#FFFFFF',
-  ];
-
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
     if (!term || !term.buffer) return;
@@ -309,11 +351,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         cols: 80,
         rows: 24,
         fontFamily: '"Fira Code", monospace',
-        theme: {
-          background: '#0f1317',
-          foreground: '#f5f5f5',
-          cursor: '#1793d1',
-        },
+        theme: createKaliTheme(),
       });
       const fit = new FitAddon();
       const search = new SearchAddon();
@@ -413,11 +451,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   return (
     <div className="relative h-full w-full">
       {paletteOpen && (
-        <div className="absolute inset-0 bg-black bg-opacity-75 flex items-start justify-center z-10">
-          <div className="mt-10 w-80 bg-gray-800 p-4 rounded">
+        <div className="absolute inset-0 bg-black/80 flex items-start justify-center z-10">
+          <div className="mt-10 w-80 rounded border border-blue-900/50 bg-black/95 p-4 text-[#f8f8f2] shadow-lg">
             <input
               autoFocus
-              className="w-full mb-2 bg-black text-white p-2"
+              className="w-full mb-2 bg-black text-[#f8f8f2] p-2 selection:bg-blue-600 selection:text-white"
               value={paletteInput}
               onChange={(e) => setPaletteInput(e.target.value)}
               onKeyDown={(e) => {
@@ -436,7 +474,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               {Object.keys(registryRef.current)
                 .filter((c) => c.startsWith(paletteInput))
                 .map((c) => (
-                  <li key={c} className="text-white">
+                  <li key={c} className="py-1 text-[#f8f8f2]">
                     {c}
                   </li>
                 ))}
@@ -445,21 +483,21 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         </div>
       )}
       {settingsOpen && (
-        <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-10">
-          <div className="bg-gray-900 p-4 rounded space-y-4">
+        <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-10">
+          <div className="space-y-4 rounded border border-blue-900/50 bg-black/95 p-4 text-[#f8f8f2] shadow-lg">
             <div className="grid grid-cols-8 gap-2">
-              {ansiColors.map((c, i) => (
+              {ANSI_SWATCHES.map((c, i) => (
                 <div key={i} className="h-4 w-4 rounded" style={{ backgroundColor: c }} />
               ))}
             </div>
             <pre className="text-sm leading-snug">
-              <span className="text-blue-400">bin</span>{' '}
-              <span className="text-green-400">script.sh</span>{' '}
-              <span className="text-gray-300">README.md</span>
+              <span style={{ color: KALI_ANSI.blue }}>bin</span>{' '}
+              <span style={{ color: KALI_ANSI.green }}>script.sh</span>{' '}
+              <span style={{ color: KALI_ANSI.white }}>README.md</span>
             </pre>
             <div className="flex justify-end gap-2">
               <button
-                className="px-2 py-1 bg-gray-700 rounded"
+                className="rounded px-2 py-1 bg-[#1f2933] text-[#f8f8f2] transition-colors hover:bg-blue-900/60"
                 onClick={() => {
                   setSettingsOpen(false);
                   termRef.current?.focus();
@@ -468,7 +506,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
                 Cancel
               </button>
               <button
-                className="px-2 py-1 bg-blue-600 rounded"
+                className="rounded px-2 py-1 bg-[#1793d1] text-white transition-colors hover:bg-[#0b72a5]"
                 onClick={() => {
                   setSettingsOpen(false);
                   termRef.current?.focus();
@@ -480,15 +518,27 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           </div>
         </div>
       )}
-      <div className="flex flex-col h-full">
-        <div className="flex items-center gap-2 bg-gray-800 p-1">
-          <button onClick={handleCopy} aria-label="Copy">
+      <div className="flex flex-col h-full text-[#f8f8f2]">
+        <div className="flex items-center gap-2 border-b border-blue-900/40 bg-black/80 p-1">
+          <button
+            className="rounded p-1 text-[#f8f8f2] transition-colors hover:text-[#7ab8ff]"
+            onClick={handleCopy}
+            aria-label="Copy"
+          >
             <CopyIcon />
           </button>
-          <button onClick={handlePaste} aria-label="Paste">
+          <button
+            className="rounded p-1 text-[#f8f8f2] transition-colors hover:text-[#7ab8ff]"
+            onClick={handlePaste}
+            aria-label="Paste"
+          >
             <PasteIcon />
           </button>
-          <button onClick={() => setSettingsOpen(true)} aria-label="Settings">
+          <button
+            className="rounded p-1 text-[#f8f8f2] transition-colors hover:text-[#7ab8ff]"
+            onClick={() => setSettingsOpen(true)}
+            aria-label="Settings"
+          >
             <SettingsIcon />
           </button>
         </div>
