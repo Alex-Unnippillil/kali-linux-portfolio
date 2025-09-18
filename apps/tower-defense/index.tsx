@@ -12,10 +12,23 @@ import {
   createEnemyPool,
   spawnEnemy,
 } from "../games/tower-defense";
+import {
+  createTelemetry,
+  telemetryToCsv,
+  type TowerDefenseTelemetry,
+} from "../games/tower-defense/telemetry";
 
 const GRID_SIZE = 10;
 const CELL_SIZE = 40;
 const CANVAS_SIZE = GRID_SIZE * CELL_SIZE;
+
+const STARTING_FUNDS = 100;
+const TOWER_BASE_COST = 15;
+const UPGRADE_COST = 10;
+const KILL_REWARD = 5;
+
+const getTowerCost = (tower: Tower) =>
+  TOWER_BASE_COST + Math.max(0, tower.level - 1) * UPGRADE_COST;
 
 type Vec = { x: number; y: number };
 
@@ -113,6 +126,10 @@ const TowerDefense = () => {
   >([]);
   const damageTicksRef = useRef<{ x: number; y: number; life: number }[]>([]);
   const flowFieldRef = useRef<Vec[][] | null>(null);
+  const telemetryRef = useRef<TowerDefenseTelemetry>(
+    createTelemetry(STARTING_FUNDS),
+  );
+  const startedRef = useRef(false);
 
   const [waveConfig, setWaveConfig] = useState<
     (keyof typeof ENEMY_TYPES)[][]
@@ -148,6 +165,18 @@ const TowerDefense = () => {
       .catch(() => {});
   };
 
+  const exportTelemetry = () => {
+    const snapshot = telemetryRef.current.getSnapshot();
+    const csv = telemetryToCsv(snapshot);
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "tower-defense-telemetry.csv";
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
+
   const togglePath = (x: number, y: number) => {
     const key = `${x},${y}`;
     setPath((p) => {
@@ -176,7 +205,12 @@ const TowerDefense = () => {
       return;
     }
     if (pathSetRef.current.has(key)) return;
-    setTowers((ts) => [...ts, { x, y, range: 1, damage: 1, level: 1 }]);
+    const newTower = { x, y, range: 1, damage: 1, level: 1 };
+    setTowers((ts) => [...ts, newTower]);
+    if (startedRef.current) {
+      telemetryRef.current.registerTower(newTower);
+      telemetryRef.current.recordSpend(TOWER_BASE_COST);
+    }
   };
 
   const handleCanvasMove = (e: React.MouseEvent) => {
@@ -304,6 +338,7 @@ const TowerDefense = () => {
   const update = (time: number) => {
     const dt = (time - lastTime.current) / 1000;
     lastTime.current = time;
+    let telemetryDirty = false;
 
     if (waveCountdownRef.current !== null) {
       waveCountdownRef.current -= dt;
@@ -340,16 +375,28 @@ const TowerDefense = () => {
         const goal = path[path.length - 1];
         const reached =
           Math.floor(e.x) === goal?.x && Math.floor(e.y) === goal?.y;
-        return e.health > 0 && !reached;
+        if (reached) {
+          telemetryRef.current.recordLeak(waveRef.current);
+          telemetryDirty = true;
+          return false;
+        }
+        if (e.health <= 0) {
+          telemetryRef.current.recordKill(waveRef.current, KILL_REWARD);
+          telemetryDirty = true;
+          return false;
+        }
+        return true;
       });
       towers.forEach((t) => {
         (t as any).cool = (t as any).cool ? (t as any).cool - dt : 0;
         if ((t as any).cool <= 0) {
           const enemy = enemiesRef.current.find(
-            (e) => Math.hypot(e.x - t.x, e.y - t.y) <= t.range,
+            (en) => Math.hypot(en.x - t.x, en.y - t.y) <= t.range,
           );
           if (enemy) {
             enemy.health -= t.damage;
+            telemetryRef.current.recordTowerDamage(t, t.damage);
+            telemetryDirty = true;
             damageNumbersRef.current.push({
               x: enemy.x,
               y: enemy.y,
@@ -376,21 +423,26 @@ const TowerDefense = () => {
         t.life -= dt * 2;
       });
       damageTicksRef.current = damageTicksRef.current.filter((t) => t.life > 0);
-        if (
-          enemiesSpawnedRef.current >= currentWave.length &&
-          enemiesRef.current.length === 0
-        ) {
-          running.current = false;
-          if (waveRef.current < waveConfig.length) {
-            waveRef.current += 1;
-            waveCountdownRef.current = 5;
-          }
-          forceRerender((n) => n + 1);
+      if (
+        enemiesSpawnedRef.current >= currentWave.length &&
+        enemiesRef.current.length === 0
+      ) {
+        running.current = false;
+        if (waveRef.current < waveConfig.length) {
+          waveRef.current += 1;
+          waveCountdownRef.current = 5;
+        } else {
+          startedRef.current = false;
         }
+        forceRerender((n) => n + 1);
       }
-      draw();
-      requestAnimationFrame(update);
-    };
+    }
+    if (telemetryDirty) {
+      forceRerender((n) => n + 1);
+    }
+    draw();
+    requestAnimationFrame(update);
+  };
 
   useEffect(() => {
     lastTime.current = performance.now();
@@ -398,13 +450,32 @@ const TowerDefense = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-    const start = () => {
-      if (!path.length || !waveConfig.length) return;
-      setEditing(false);
-      waveRef.current = 1;
-      waveCountdownRef.current = 3;
-      forceRerender((n) => n + 1);
-    };
+  const start = () => {
+    if (!path.length || !waveConfig.length) return;
+    setEditing(false);
+    startedRef.current = true;
+    enemiesRef.current = [];
+    enemiesSpawnedRef.current = 0;
+    spawnTimer.current = 0;
+    damageNumbersRef.current = [];
+    damageTicksRef.current = [];
+    running.current = false;
+    telemetryRef.current.reset();
+    waveConfig.forEach((wave, idx) => {
+      telemetryRef.current.setWaveSpawnCount(idx + 1, wave.length);
+    });
+    towers.forEach((tower) => {
+      telemetryRef.current.registerTower(tower);
+    });
+    const initialSpend = towers.reduce(
+      (total, tower) => total + getTowerCost(tower),
+      0,
+    );
+    if (initialSpend > 0) telemetryRef.current.recordSpend(initialSpend);
+    waveRef.current = 1;
+    waveCountdownRef.current = 3;
+    forceRerender((n) => n + 1);
+  };
 
   const upgrade = (type: "range" | "damage") => {
     if (selected === null) return;
@@ -413,9 +484,15 @@ const TowerDefense = () => {
       upgradeTower(t, type);
       const arr = [...ts];
       arr[selected] = t;
+      if (startedRef.current) {
+        telemetryRef.current.registerTower(t);
+        telemetryRef.current.recordSpend(UPGRADE_COST);
+      }
       return arr;
     });
   };
+
+  const telemetry = telemetryRef.current.getSnapshot();
 
   return (
     <GameLayout gameId="tower-defense">
@@ -514,6 +591,133 @@ const TowerDefense = () => {
           )}
         </div>
         {!editing && <DpsCharts towers={towers} />}
+        <section className="bg-gray-800 rounded p-2 space-y-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-200">
+              Telemetry
+            </h2>
+            <button
+              className="px-2 py-1 bg-gray-700 rounded text-xs"
+              onClick={exportTelemetry}
+              aria-label="Export telemetry as CSV"
+            >
+              Export CSV
+            </button>
+          </div>
+          <div className="grid gap-2 md:grid-cols-2">
+            <div>
+              <h3 className="text-xs font-semibold uppercase text-gray-300">
+                Waves
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-left text-gray-300">
+                      <th className="px-1 py-1">Wave</th>
+                      <th className="px-1 py-1">Spawned</th>
+                      <th className="px-1 py-1">Kills</th>
+                      <th className="px-1 py-1">Leaks</th>
+                      <th className="px-1 py-1">Earned</th>
+                      <th className="px-1 py-1">Spent</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {telemetry.waves.length ? (
+                      telemetry.waves.map((wave) => (
+                        <tr
+                          key={wave.wave}
+                          className="border-t border-gray-700"
+                        >
+                          <td className="px-1 py-1">{wave.wave}</td>
+                          <td className="px-1 py-1">{wave.spawned}</td>
+                          <td className="px-1 py-1">{wave.kills}</td>
+                          <td className="px-1 py-1">{wave.leaks}</td>
+                          <td className="px-1 py-1">{wave.earned}</td>
+                          <td className="px-1 py-1">{wave.spent}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan={6}
+                          className="px-1 py-2 text-center text-gray-400"
+                        >
+                          No wave data yet
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div>
+              <h3 className="text-xs font-semibold uppercase text-gray-300">
+                Tower Damage
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-left text-gray-300">
+                      <th className="px-1 py-1">Tower</th>
+                      <th className="px-1 py-1">X</th>
+                      <th className="px-1 py-1">Y</th>
+                      <th className="px-1 py-1 text-right">Damage</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {telemetry.towers.length ? (
+                      telemetry.towers.map((tower) => (
+                        <tr
+                          key={tower.id}
+                          className="border-t border-gray-700"
+                        >
+                          <td className="px-1 py-1">{tower.id}</td>
+                          <td className="px-1 py-1">{tower.x}</td>
+                          <td className="px-1 py-1">{tower.y}</td>
+                          <td className="px-1 py-1 text-right">
+                            {tower.damage}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan={4}
+                          className="px-1 py-2 text-center text-gray-400"
+                        >
+                          No tower activity yet
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div>
+            <h3 className="text-xs font-semibold uppercase text-gray-300">
+              Economy
+            </h3>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+              <div className="flex items-center justify-between">
+                <dt className="text-gray-400">Starting</dt>
+                <dd>{telemetry.economy.startingBalance}</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-gray-400">Earned</dt>
+                <dd>{telemetry.economy.earned}</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-gray-400">Spent</dt>
+                <dd>{telemetry.economy.spent}</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-gray-400">Balance</dt>
+                <dd>{telemetry.economy.balance}</dd>
+              </div>
+            </dl>
+          </div>
+        </section>
       </div>
     </GameLayout>
   );
