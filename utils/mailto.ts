@@ -1,3 +1,5 @@
+import { openLink } from '../modules/system/linkHandler';
+
 export const openMailto = (
   email: string,
   subject = '',
@@ -8,7 +10,12 @@ export const openMailto = (
   if (body) params.set('body', body);
   const query = params.toString();
   const href = `mailto:${email}${query ? `?${query}` : ''}`;
-  window.location.href = href;
+  if (typeof window === 'undefined') return;
+  void openLink({
+    url: href,
+    allowPrompt: true,
+    payload: { email, subject, body },
+  });
 };
 
 export default openMailto;

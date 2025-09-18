@@ -121,6 +121,38 @@ const Chrome: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ url?: string }>).detail;
+      if (!detail?.url) return;
+      const url = detail.url;
+      const newId = Date.now();
+      setTabs((prev) => [
+        ...prev,
+        {
+          id: newId,
+          url,
+          history: [url],
+          historyIndex: 0,
+          scroll: 0,
+          blocked: false,
+          muted: false,
+        },
+      ]);
+      setActiveId(newId);
+      setAddress(url);
+      try {
+        sessionStorage.setItem('chrome-last-url', url);
+      } catch {
+        /* ignore */
+      }
+    };
+    window.addEventListener('chrome:navigate', handler as EventListener);
+    return () => {
+      window.removeEventListener('chrome:navigate', handler as EventListener);
+    };
+  }, [setAddress, setTabs, setActiveId]);
+
+  useEffect(() => {
     (async () => {
       try {
         if (!(typeof navigator !== 'undefined' && navigator.storage?.getDirectory)) return;
