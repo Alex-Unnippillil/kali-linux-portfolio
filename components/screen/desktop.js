@@ -23,6 +23,15 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import {
+    serializeWorkspace,
+    saveWorkspace as persistWorkspace,
+    listWorkspaces,
+    loadWorkspace,
+    deleteWorkspace as removeWorkspaceRecord,
+    workspaceWindowsToLayoutMap,
+    workspaceWindowOrder,
+} from '../../utils/workspaces';
 
 export class Desktop extends Component {
     constructor() {
@@ -30,6 +39,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this._isMounted = false;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -52,10 +62,16 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            workspaces: [],
+            showWorkspaceManager: false,
+            workspaceNameInput: '',
+            workspaceError: '',
+            isSavingWorkspace: false,
         }
     }
 
     componentDidMount() {
+        this._isMounted = true;
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
@@ -71,8 +87,11 @@ export class Desktop extends Component {
             }
 
             if (session.windows && session.windows.length) {
-                session.windows.forEach(({ id, x, y }) => {
-                    positions[id] = { x, y };
+                session.windows.forEach(({ id, x, y, width, height }) => {
+                    const layout = { x, y };
+                    if (typeof width === 'number' && Number.isFinite(width)) layout.width = width;
+                    if (typeof height === 'number' && Number.isFinite(height)) layout.height = height;
+                    positions[id] = layout;
                 });
                 this.setState({ window_positions: positions }, () => {
                     session.windows.forEach(({ id }) => this.openApp(id));
@@ -89,9 +108,11 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        this.refreshWorkspaces();
     }
 
     componentWillUnmount() {
+        this._isMounted = false;
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
@@ -144,6 +165,173 @@ export class Desktop extends Component {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
         document.removeEventListener('keydown', this.handleContextKey);
+    }
+
+    refreshWorkspaces = async () => {
+        try {
+            const workspaces = await listWorkspaces();
+            if (!this._isMounted) return;
+            this.setState({ workspaces });
+        } catch (e) {
+            // ignore workspace refresh failures
+        }
+    }
+
+    openWorkspaceManager = () => {
+        this.refreshWorkspaces();
+        this.setState({ showWorkspaceManager: true, workspaceError: '', workspaceNameInput: '' });
+    }
+
+    closeWorkspaceManager = () => {
+        this.setState({ showWorkspaceManager: false, workspaceError: '', workspaceNameInput: '' });
+    }
+
+    handleWorkspaceNameChange = (e) => {
+        this.setState({ workspaceNameInput: e.target.value });
+    }
+
+    getDefaultWindowSize = (id) => {
+        const appMeta = apps.find(app => app.id === id) || {};
+        const widthRaw = typeof appMeta.defaultWidth === 'number'
+            ? appMeta.defaultWidth
+            : Number(appMeta.defaultWidth);
+        const heightRaw = typeof appMeta.defaultHeight === 'number'
+            ? appMeta.defaultHeight
+            : Number(appMeta.defaultHeight);
+        return {
+            width: Number.isFinite(widthRaw) ? widthRaw : 60,
+            height: Number.isFinite(heightRaw) ? heightRaw : 85,
+        };
+    }
+
+    getWindowSize = (id) => {
+        const layout = this.state.window_positions[id] || {};
+        const defaults = this.getDefaultWindowSize(id);
+        const fallbackWidth = typeof layout.width === 'number' ? layout.width : defaults.width;
+        const fallbackHeight = typeof layout.height === 'number' ? layout.height : defaults.height;
+        if (typeof window === 'undefined') return { width: fallbackWidth, height: fallbackHeight };
+        const node = document.getElementById(id);
+        if (!node) return { width: fallbackWidth, height: fallbackHeight };
+        const rect = node.getBoundingClientRect();
+        if (!rect.width || !rect.height) return { width: fallbackWidth, height: fallbackHeight };
+        const width = Math.min(Math.max((rect.width / window.innerWidth) * 100, 20), 100);
+        const height = Math.min(Math.max((rect.height / window.innerHeight) * 100, 20), 100);
+        return { width, height };
+    }
+
+    getOpenWindowsLayout = () => {
+        const openIds = Object.keys(this.state.closed_windows || {}).filter(id => this.state.closed_windows[id] === false);
+        const orderedIds = this.app_stack.filter(id => openIds.includes(id));
+        const remaining = openIds.filter(id => !orderedIds.includes(id));
+        const windowOrder = [...orderedIds, ...remaining];
+        return windowOrder.map((id, index) => {
+            const layout = this.state.window_positions[id] || {};
+            const defaults = this.getDefaultWindowSize(id);
+            return {
+                id,
+                x: typeof layout.x === 'number' ? layout.x : 60,
+                y: typeof layout.y === 'number' ? layout.y : 10,
+                width: typeof layout.width === 'number' ? layout.width : defaults.width,
+                height: typeof layout.height === 'number' ? layout.height : defaults.height,
+                order: index,
+            };
+        });
+    }
+
+    saveCurrentWorkspace = async () => {
+        if (this.state.isSavingWorkspace) return;
+        const name = this.state.workspaceNameInput.trim();
+        const windows = this.getOpenWindowsLayout();
+        if (!name) {
+            this.setState({ workspaceError: 'Enter a workspace name to save this layout.' });
+            return;
+        }
+        if (windows.length === 0) {
+            this.setState({ workspaceError: 'Open at least one app before saving a workspace.' });
+            return;
+        }
+        this.setState({ isSavingWorkspace: true, workspaceError: '' });
+        const existing = this.state.workspaces.find(ws => ws.name.toLowerCase() === name.toLowerCase());
+        const record = serializeWorkspace(name, windows, { id: existing ? existing.id : undefined });
+        await persistWorkspace(record);
+        if (!this._isMounted) return;
+        this.setState({ isSavingWorkspace: false, workspaceNameInput: '' });
+        this.refreshWorkspaces();
+    }
+
+    applyWorkspaceLayout = async (workspaceId) => {
+        const workspace = await loadWorkspace(workspaceId);
+        if (!workspace) {
+            if (this._isMounted) {
+                this.setState({ workspaceError: 'Unable to load the selected workspace.' });
+            }
+            return;
+        }
+        if (!workspace.windows.length) {
+            if (this._isMounted) {
+                this.setState({ workspaceError: 'The selected workspace has no windows saved.' });
+            }
+            return;
+        }
+        const layoutMap = workspaceWindowsToLayoutMap(workspace.windows);
+        const order = workspaceWindowOrder(workspace.windows);
+        this.setState(prev => {
+            const window_positions = { ...prev.window_positions };
+            const closed_windows = { ...prev.closed_windows };
+            const minimized_windows = { ...prev.minimized_windows };
+            const favourite_apps = { ...prev.favourite_apps };
+            const focused_windows = { ...prev.focused_windows };
+            Object.keys(closed_windows).forEach(id => {
+                if (!order.includes(id)) {
+                    closed_windows[id] = true;
+                    minimized_windows[id] = false;
+                    if (this.initFavourite[id] === false) {
+                        favourite_apps[id] = false;
+                    }
+                }
+            });
+            order.forEach(id => {
+                const layout = layoutMap[id];
+                if (layout) {
+                    window_positions[id] = {
+                        ...(window_positions[id] || {}),
+                        x: layout.x,
+                        y: layout.y,
+                        width: layout.width,
+                        height: layout.height,
+                    };
+                }
+                closed_windows[id] = false;
+                minimized_windows[id] = false;
+                favourite_apps[id] = true;
+            });
+            Object.keys(focused_windows).forEach(id => {
+                focused_windows[id] = false;
+            });
+            return {
+                window_positions,
+                closed_windows,
+                minimized_windows,
+                favourite_apps,
+                focused_windows,
+                showWorkspaceManager: false,
+                workspaceError: '',
+                allAppsView: false,
+                showWindowSwitcher: false,
+            };
+        }, () => {
+            this.app_stack = Array.from(new Set(order));
+            const last = this.app_stack[this.app_stack.length - 1];
+            if (last) {
+                this.focus(last);
+            }
+            this.saveSession();
+        });
+    }
+
+    deleteWorkspaceLayout = async (workspaceId) => {
+        await removeWorkspaceRecord(workspaceId);
+        this.refreshWorkspaces();
     }
 
     handleGlobalShortcut = (e) => {
@@ -460,6 +648,8 @@ export class Desktop extends Component {
             if (this.state.closed_windows[app.id] === false) {
 
                 const pos = this.state.window_positions[app.id];
+                const defaultWidth = pos && typeof pos.width === 'number' ? pos.width : app.defaultWidth;
+                const defaultHeight = pos && typeof pos.height === 'number' ? pos.height : app.defaultHeight;
                 const props = {
                     title: app.title,
                     id: app.id,
@@ -474,8 +664,8 @@ export class Desktop extends Component {
                     minimized: this.state.minimized_windows[app.id],
                     resizable: app.resizable,
                     allowMaximize: app.allowMaximize,
-                    defaultWidth: app.defaultWidth,
-                    defaultHeight: app.defaultHeight,
+                    defaultWidth,
+                    defaultHeight,
                     initialX: pos ? pos.x : undefined,
                     initialY: pos ? pos.y : undefined,
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
@@ -494,19 +684,36 @@ export class Desktop extends Component {
         const snap = this.props.snapEnabled
             ? (v) => Math.round(v / 8) * 8
             : (v) => v;
+        const snappedX = snap(x);
+        const snappedY = snap(y);
+        const size = this.getWindowSize(id);
         this.setState(prev => ({
-            window_positions: { ...prev.window_positions, [id]: { x: snap(x), y: snap(y) } }
+            window_positions: {
+                ...prev.window_positions,
+                [id]: {
+                    ...(prev.window_positions[id] || {}),
+                    x: snappedX,
+                    y: snappedY,
+                    width: size.width,
+                    height: size.height,
+                }
+            }
         }), this.saveSession);
     }
 
     saveSession = () => {
         if (!this.props.setSession) return;
         const openWindows = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
-        const windows = openWindows.map(id => ({
-            id,
-            x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
-            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10
-        }));
+        const windows = openWindows.map(id => {
+            const layout = this.state.window_positions[id] || {};
+            return {
+                id,
+                x: typeof layout.x === 'number' ? layout.x : 60,
+                y: typeof layout.y === 'number' ? layout.y : 10,
+                width: typeof layout.width === 'number' ? layout.width : undefined,
+                height: typeof layout.height === 'number' ? layout.height : undefined,
+            };
+        });
         const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
         this.props.setSession({ ...this.props.session, windows, dock });
     }
@@ -863,6 +1070,113 @@ export class Desktop extends Component {
         );
     }
 
+    renderWorkspaceManager = () => {
+        if (!this.state.showWorkspaceManager) return null;
+        const openWindows = this.getOpenWindowsLayout();
+        const trimmedName = this.state.workspaceNameInput.trim();
+        const canSave = Boolean(trimmedName) && openWindows.length > 0 && !this.state.isSavingWorkspace;
+        const handleSubmit = (e) => {
+            e.preventDefault();
+            this.saveCurrentWorkspace();
+        };
+        return (
+            <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="workspace-manager-title"
+                onClick={this.closeWorkspaceManager}
+            >
+                <div
+                    className="bg-ub-cool-grey border border-gray-900 rounded-lg shadow-2xl w-full max-w-md mx-4 text-white"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <header className="flex items-center justify-between px-4 py-3 border-b border-gray-900">
+                        <h2 id="workspace-manager-title" className="text-base font-semibold">Workspaces</h2>
+                        <button
+                            type="button"
+                            onClick={this.closeWorkspaceManager}
+                            aria-label="Close workspace manager"
+                            className="text-gray-300 hover:text-white focus:outline-none"
+                        >
+                            ×
+                        </button>
+                    </header>
+                    <div className="px-4 py-4 space-y-4 text-sm">
+                        <form onSubmit={handleSubmit} className="space-y-2">
+                            <label htmlFor="workspace-name" className="block text-xs uppercase tracking-wide text-gray-300">
+                                Save current layout
+                            </label>
+                            <div className="flex gap-2">
+                                <input
+                                    id="workspace-name"
+                                    type="text"
+                                    value={this.state.workspaceNameInput}
+                                    onChange={this.handleWorkspaceNameChange}
+                                    placeholder="Workspace name"
+                                    autoFocus
+                                    className="flex-grow rounded border border-gray-800 bg-black bg-opacity-20 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                                <button
+                                    type="submit"
+                                    className={`px-3 py-1 rounded border border-blue-500 transition ${canSave ? 'bg-blue-500 bg-opacity-20 hover:bg-opacity-40 focus:outline-none focus:ring-2 focus:ring-blue-400' : 'opacity-50 cursor-not-allowed'}`}
+                                    disabled={!canSave}
+                                >
+                                    {this.state.isSavingWorkspace ? 'Saving…' : 'Save'}
+                                </button>
+                            </div>
+                            <p className="text-xs text-gray-300">
+                                {openWindows.length ? `${openWindows.length} window${openWindows.length === 1 ? '' : 's'} detected.` : 'No open apps to save right now.'}
+                            </p>
+                            {this.state.workspaceError && (
+                                <p className="text-xs text-red-300">{this.state.workspaceError}</p>
+                            )}
+                        </form>
+                        <div>
+                            <p className="text-xs uppercase tracking-wide text-gray-300 mb-2">Saved workspaces</p>
+                            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                                {this.state.workspaces.length === 0 && (
+                                    <div className="rounded border border-gray-900 bg-ub-warm-grey bg-opacity-10 px-3 py-3 text-gray-300">
+                                        Saved workspaces will appear here. Create one to quickly reopen your favourite layout.
+                                    </div>
+                                )}
+                                {this.state.workspaces.map(workspace => (
+                                    <div
+                                        key={workspace.id}
+                                        className="flex items-center justify-between rounded border border-gray-900 bg-ub-warm-grey bg-opacity-10 px-3 py-2"
+                                    >
+                                        <div className="mr-3 overflow-hidden">
+                                            <p className="font-medium truncate" title={workspace.name}>{workspace.name}</p>
+                                            <p className="text-xs text-gray-300">
+                                                {workspace.savedAt ? new Date(workspace.savedAt).toLocaleString() : ''}
+                                            </p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => this.applyWorkspaceLayout(workspace.id)}
+                                                className="px-2 py-1 rounded border border-blue-500 bg-blue-500 bg-opacity-20 hover:bg-opacity-40 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                            >
+                                                Open
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => this.deleteWorkspaceLayout(workspace.id)}
+                                                className="px-2 py-1 rounded border border-red-500 bg-red-500 bg-opacity-10 hover:bg-opacity-30 focus:outline-none focus:ring-2 focus:ring-red-400"
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     render() {
         return (
             <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
@@ -911,6 +1225,7 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
+                    openWorkspaceManager={this.openWorkspaceManager}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
@@ -960,6 +1275,8 @@ export class Desktop extends Component {
                         games={games}
                         onSelect={this.addShortcutToDesktop}
                         onClose={() => this.setState({ showShortcutSelector: false })} /> : null}
+
+                { this.renderWorkspaceManager() }
 
                 { this.state.showWindowSwitcher ?
                     <WindowSwitcher

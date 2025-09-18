@@ -105,6 +105,7 @@ export class Window extends Component {
             if (this._uiExperiments) {
                 this.scheduleUsageCheck();
             }
+            this.setWinowsPosition();
         });
     }
 
@@ -371,7 +372,7 @@ export class Window extends Component {
         if (snapPos) {
             this.snapWindow(snapPos);
         } else {
-            this.setState({ snapPreview: null, snapPosition: null });
+            this.setState({ snapPreview: null, snapPosition: null }, this.setWinowsPosition);
         }
     }
 

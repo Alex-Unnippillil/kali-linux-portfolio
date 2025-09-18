@@ -120,6 +120,16 @@ function DesktopMenu(props) {
             </button>
             <Devider />
             <button
+                onClick={props.openWorkspaceManager}
+                type="button"
+                role="menuitem"
+                aria-label="Manage Workspaces"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
+                <span className="ml-5">Workspaces...</span>
+            </button>
+            <Devider />
+            <button
                 onClick={props.clearSession}
                 type="button"
                 role="menuitem"
