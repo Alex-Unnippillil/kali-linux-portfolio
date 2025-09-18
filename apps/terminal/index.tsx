@@ -7,10 +7,17 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useCallback,
+  useMemo,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
+import {
+  DEFAULT_TERMINAL_THEME_ID,
+  TERMINAL_THEMES,
+  getTerminalTheme,
+} from '../../components/apps/terminal/themes';
+import { safeLocalStorage } from '../../utils/safeStorage';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -76,6 +83,8 @@ const files: Record<string, string> = {
   'README.md': 'Welcome to the web terminal.\nThis is a fake file used for demos.',
 };
 
+const TERMINAL_THEME_STORAGE_KEY = 'terminal:theme';
+
 const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<any>(null);
@@ -101,28 +110,26 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [themeId, setThemeId] = useState<string>(() => {
+    const stored = safeLocalStorage?.getItem(TERMINAL_THEME_STORAGE_KEY);
+    return stored && TERMINAL_THEMES.some((theme) => theme.id === stored)
+      ? stored
+      : DEFAULT_TERMINAL_THEME_ID;
+  });
+  const activeTheme = useMemo(() => getTerminalTheme(themeId), [themeId]);
+  const themeRef = useRef(activeTheme.theme);
+  themeRef.current = activeTheme.theme;
+  const backgroundColor = activeTheme.theme.background ?? '#0f1317';
+  const foregroundColor = activeTheme.theme.foreground ?? '#f5f5f5';
+  const accentColor =
+    activeTheme.preview?.accent ??
+    activeTheme.theme.cursor ??
+    activeTheme.theme.selection ??
+    foregroundColor;
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
   const [overflow, setOverflow] = useState({ top: false, bottom: false });
-  const ansiColors = [
-    '#000000',
-    '#AA0000',
-    '#00AA00',
-    '#AA5500',
-    '#0000AA',
-    '#AA00AA',
-    '#00AAAA',
-    '#AAAAAA',
-    '#555555',
-    '#FF5555',
-    '#55FF55',
-    '#FFFF55',
-    '#5555FF',
-    '#FF55FF',
-    '#55FFFF',
-    '#FFFFFF',
-  ];
 
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
@@ -145,6 +152,22 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
   contextRef.current.writeLine = writeLine;
 
+  useEffect(() => {
+    if (!safeLocalStorage) return;
+    try {
+      safeLocalStorage.setItem(TERMINAL_THEME_STORAGE_KEY, activeTheme.id);
+    } catch (error) {
+      // Ignore write failures (private browsing, storage denied, etc.).
+    }
+  }, [activeTheme.id]);
+
+  useEffect(() => {
+    if (!termRef.current) return;
+    termRef.current.setOption?.('theme', activeTheme.theme);
+    const rows = termRef.current.rows ?? 0;
+    termRef.current.refresh?.(0, Math.max(0, rows - 1));
+  }, [activeTheme]);
+
   const prompt = useCallback(() => {
     if (!termRef.current) return;
     termRef.current.writeln(
@@ -163,6 +186,35 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       handleInput(text);
     } catch {}
   };
+
+  const handleOpenSettings = useCallback(() => {
+    setPaletteOpen(false);
+    setSettingsOpen(true);
+    termRef.current?.blur();
+  }, [setPaletteOpen, setSettingsOpen]);
+
+  const handleCloseSettings = useCallback(() => {
+    setSettingsOpen(false);
+    termRef.current?.focus();
+  }, [setSettingsOpen]);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        handleCloseSettings();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [settingsOpen, handleCloseSettings]);
+
+  useEffect(() => {
+    if (settingsOpen) {
+      termRef.current?.blur();
+    }
+  }, [settingsOpen]);
 
   const runWorker = useCallback(
     async (command: string) => {
@@ -309,11 +361,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         cols: 80,
         rows: 24,
         fontFamily: '"Fira Code", monospace',
-        theme: {
-          background: '#0f1317',
-          foreground: '#f5f5f5',
-          cursor: '#1793d1',
-        },
+        theme: themeRef.current,
       });
       const fit = new FitAddon();
       const search = new SearchAddon();
@@ -418,6 +466,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
             <input
               autoFocus
               className="w-full mb-2 bg-black text-white p-2"
+              aria-label="Command palette search"
               value={paletteInput}
               onChange={(e) => setPaletteInput(e.target.value)}
               onKeyDown={(e) => {
@@ -445,36 +494,89 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         </div>
       )}
       {settingsOpen && (
-        <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-10">
-          <div className="bg-gray-900 p-4 rounded space-y-4">
-            <div className="grid grid-cols-8 gap-2">
-              {ansiColors.map((c, i) => (
-                <div key={i} className="h-4 w-4 rounded" style={{ backgroundColor: c }} />
-              ))}
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/75">
+          <div
+            className="w-full max-w-md space-y-4 rounded-lg bg-gray-900 p-5 shadow-xl"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Terminal settings"
+          >
+            <div>
+              <h2 className="text-lg font-semibold text-white">Terminal settings</h2>
+              <p className="mt-1 text-sm text-gray-300">
+                Choose a theme. Changes are applied instantly and saved for next time.
+              </p>
             </div>
-            <pre className="text-sm leading-snug">
-              <span className="text-blue-400">bin</span>{' '}
-              <span className="text-green-400">script.sh</span>{' '}
-              <span className="text-gray-300">README.md</span>
-            </pre>
-            <div className="flex justify-end gap-2">
+            <div role="radiogroup" aria-label="Terminal theme" className="space-y-2">
+              {TERMINAL_THEMES.map((option) => {
+                const isActive = option.id === activeTheme.id;
+                const optionBackground =
+                  option.preview?.background ?? option.theme.background ?? '#000000';
+                const optionForeground =
+                  option.preview?.foreground ?? option.theme.foreground ?? '#ffffff';
+                const optionAccent =
+                  option.preview?.accent ??
+                  option.theme.cursor ??
+                  option.theme.selection ??
+                  optionForeground;
+                return (
+                  <label
+                    key={option.id}
+                    className={`flex cursor-pointer items-center justify-between gap-3 rounded border px-3 py-2 transition-colors ${
+                      isActive
+                        ? 'border-blue-500 bg-gray-800'
+                        : 'border-gray-700 hover:border-gray-500'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="radio"
+                        name="terminal-theme"
+                        value={option.id}
+                        checked={isActive}
+                        onChange={() => setThemeId(option.id)}
+                        aria-label={`${option.label} theme`}
+                        className="text-blue-500 focus:ring-blue-500"
+                        autoFocus={isActive}
+                      />
+                      <div>
+                        <div className="text-sm font-medium text-white">{option.label}</div>
+                        {option.description ? (
+                          <div className="text-xs text-gray-400">{option.description}</div>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1" aria-hidden="true">
+                      <span
+                        className="h-5 w-8 rounded border border-white/10"
+                        style={{ backgroundColor: optionBackground }}
+                      />
+                      <span
+                        className="h-5 w-8 rounded border border-white/10"
+                        style={{ backgroundColor: optionAccent }}
+                      />
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+            <div
+              className="rounded border border-gray-800 p-3"
+              style={{ backgroundColor, color: foregroundColor }}
+            >
+              <pre className="font-mono text-sm leading-snug">
+                <span style={{ color: accentColor }}>user@kali</span>
+                <span style={{ color: foregroundColor, opacity: 0.7 }}> ~/demo</span>
+                {' $ '}
+                <span style={{ color: accentColor }}>./run.sh</span>
+              </pre>
+            </div>
+            <div className="flex justify-end">
               <button
-                className="px-2 py-1 bg-gray-700 rounded"
-                onClick={() => {
-                  setSettingsOpen(false);
-                  termRef.current?.focus();
-                }}
+                className="rounded bg-gray-700 px-3 py-1 text-sm text-white transition-colors hover:bg-gray-600"
+                onClick={handleCloseSettings}
               >
-                Cancel
-              </button>
-              <button
-                className="px-2 py-1 bg-blue-600 rounded"
-                onClick={() => {
-                  setSettingsOpen(false);
-                  termRef.current?.focus();
-                }}
-              >
-                Apply
+                Close
               </button>
             </div>
           </div>
@@ -488,7 +590,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           <button onClick={handlePaste} aria-label="Paste">
             <PasteIcon />
           </button>
-          <button onClick={() => setSettingsOpen(true)} aria-label="Settings">
+          <button onClick={handleOpenSettings} aria-label="Settings">
             <SettingsIcon />
           </button>
         </div>
@@ -501,6 +603,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               height: '24em',
               fontSize: 'clamp(1rem, 0.6vw + 1rem, 1.1rem)',
               lineHeight: 1.4,
+              background: backgroundColor,
+              color: foregroundColor,
             }}
           />
           {overflow.top && (
