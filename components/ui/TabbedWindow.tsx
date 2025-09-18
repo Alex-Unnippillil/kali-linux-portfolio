@@ -1,4 +1,13 @@
-import React, { useCallback, useEffect, useRef, useState, createContext, useContext } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  createContext,
+  useContext,
+} from 'react';
 
 function middleEllipsis(text: string, max = 30) {
   if (text.length <= max) return text;
@@ -42,6 +51,9 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   const [activeId, setActiveId] = useState<string>(initialTabs[0]?.id || '');
   const prevActive = useRef<string>('');
   const dragSrc = useRef<number | null>(null);
+  const tabListRef = useRef<HTMLDivElement | null>(null);
+  const tabRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const tabOrderKey = useMemo(() => tabs.map((tab) => tab.id).join('|'), [tabs]);
 
   useEffect(() => {
     if (prevActive.current !== activeId) {
@@ -121,6 +133,21 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     });
   };
 
+  useLayoutEffect(() => {
+    const list = tabListRef.current;
+    const active = activeId ? tabRefs.current[activeId] : null;
+    if (!list || !active) return;
+
+    const listRect = list.getBoundingClientRect();
+    const activeRect = active.getBoundingClientRect();
+
+    if (activeRect.left < listRect.left) {
+      list.scrollLeft -= listRect.left - activeRect.left;
+    } else if (activeRect.right > listRect.right) {
+      list.scrollLeft += activeRect.right - listRect.right;
+    }
+  }, [activeId, tabOrderKey]);
+
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.ctrlKey && e.key.toLowerCase() === 'w') {
       e.preventDefault();
@@ -168,11 +195,29 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
-      <div className="flex flex-shrink-0 bg-gray-800 text-white text-sm overflow-x-auto">
+      <div
+        ref={tabListRef}
+        role="tablist"
+        aria-label="Application tabs"
+        className="flex flex-shrink-0 bg-gray-800 text-white text-sm overflow-x-auto"
+      >
         {tabs.map((t, i) => (
           <div
+            id={`tab-${t.id}`}
             key={t.id}
-            className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none ${
+            ref={(el) => {
+              if (el) {
+                tabRefs.current[t.id] = el;
+              } else {
+                delete tabRefs.current[t.id];
+              }
+            }}
+            role="tab"
+            aria-selected={t.id === activeId}
+            aria-controls={`tab-panel-${t.id}`}
+            tabIndex={t.id === activeId ? 0 : -1}
+            onFocus={() => setActive(t.id)}
+            className={`group flex min-w-[8rem] max-w-[16rem] flex-shrink-0 items-center gap-2 px-3 py-1.5 cursor-pointer select-none transition-colors ${
               t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
             }`}
             draggable
@@ -181,10 +226,13 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             onDrop={handleDrop(i)}
             onClick={() => setActive(t.id)}
           >
-            <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
+            <span className="flex-1 truncate" title={t.title}>
+              {middleEllipsis(t.title)}
+            </span>
             {t.closable !== false && tabs.length > 1 && (
               <button
-                className="p-0.5"
+                type="button"
+                className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded hover:bg-gray-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                 onClick={(e) => {
                   e.stopPropagation();
                   closeTab(t.id);
@@ -198,7 +246,8 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         ))}
         {onNewTab && (
           <button
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700"
+            type="button"
+            className="ml-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded bg-gray-800 hover:bg-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             onClick={addTab}
             aria-label="New Tab"
           >
@@ -213,6 +262,9 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             value={{ id: t.id, active: t.id === activeId, close: () => closeTab(t.id) }}
           >
             <div
+              id={`tab-panel-${t.id}`}
+              role="tabpanel"
+              aria-labelledby={`tab-${t.id}`}
               className={`absolute inset-0 w-full h-full ${
                 t.id === activeId ? 'block' : 'hidden'
               }`}
