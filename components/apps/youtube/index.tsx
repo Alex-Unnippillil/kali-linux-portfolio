@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import usePlaybackQueue from '../../../apps/youtube/state/queue';
 import useWatchLater, {
   Video as WatchLaterVideo,
 } from '../../../apps/youtube/state/watchLater';
@@ -88,22 +89,32 @@ function ChannelHovercard({ id, name }: { id: string; name: string }) {
   );
 }
 
-function Sidebar({
-  queue,
-  watchLater,
+function ListSection({
+  title,
+  items,
+  testId,
   onPlay,
   onReorder,
+  onRemove,
+  getDisplayTitle,
+  getKey,
+  removeLabel,
 }: {
-  queue: Video[];
-  watchLater: Video[];
+  title: string;
+  items: Video[];
+  testId: string;
   onPlay: (v: Video) => void;
   onReorder: (from: number, to: number) => void;
+  onRemove: (index: number) => void;
+  getDisplayTitle: (v: Video) => string;
+  getKey: (v: Video, index?: number) => string;
+  removeLabel: string;
 }) {
   const handleKey = (index: number, e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'ArrowUp' && index > 0) {
       e.preventDefault();
       onReorder(index, index - 1);
-    } else if (e.key === 'ArrowDown' && index < watchLater.length - 1) {
+    } else if (e.key === 'ArrowDown' && index < items.length - 1) {
       e.preventDefault();
       onReorder(index, index + 1);
     }
@@ -112,33 +123,23 @@ function Sidebar({
   const handleDrop = (index: number, e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const from = Number(e.dataTransfer.getData('text/plain'));
-    if (!Number.isNaN(from)) onReorder(from, index);
+    if (Number.isNaN(from) || from === index) return;
+    if (from < 0 || from >= items.length) return;
+    onReorder(from, index);
   };
 
   return (
-    <aside className="w-64 overflow-y-auto border-l border-ub-cool-grey bg-ub-cool-grey p-2 text-sm" role="complementary">
-      <h2 className="mb-[6px] text-lg font-semibold">Queue</h2>
-      <div data-testid="queue-list">
-        {queue.map((v) => (
+    <>
+      <h2 className="mb-[6px] text-lg font-semibold">{title}</h2>
+      <div data-testid={testId}>
+        {items.map((v, i) => (
           <div
-            key={v.id}
+            key={getKey(v, i)}
+            data-testid={`${testId}-item`}
+            data-index={i}
             className="mb-[6px] cursor-pointer"
             onClick={() => onPlay(v)}
-          >
-            <img src={v.thumbnail} alt="" className="h-24 w-full rounded object-cover" />
-            <div>{v.title}</div>
-          </div>
-        ))}
-        {!queue.length && <div className="text-ubt-grey">Empty</div>}
-      </div>
-      <h2 className="mb-[6px] mt-[24px] text-lg font-semibold">Watch Later</h2>
-      <div data-testid="watch-later-list">
-        {watchLater.map((v, i) => (
-          <div
-            key={`${v.id}-${v.start ?? 0}-${v.end ?? 0}`}
-            className="mb-[6px] cursor-pointer"
-            onClick={() => onPlay(v)}
-            draggable
+            draggable={items.length > 1}
             onDragStart={(e) => e.dataTransfer.setData('text/plain', String(i))}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => handleDrop(i, e)}
@@ -146,10 +147,70 @@ function Sidebar({
             onKeyDown={(e) => handleKey(i, e)}
           >
             <img src={v.thumbnail} alt="" className="h-24 w-full rounded object-cover" />
-            <div>{v.name || v.title}</div>
+            <div className="mt-[6px] flex items-start justify-between gap-[6px] text-xs">
+              <span className="flex-1 leading-snug">{getDisplayTitle(v)}</span>
+              <button
+                type="button"
+                className="text-ubt-grey hover:text-ubt-red"
+                aria-label={removeLabel}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onRemove(i);
+                }}
+              >
+                Remove
+              </button>
+            </div>
           </div>
         ))}
-        {!watchLater.length && <div className="text-ubt-grey">Empty</div>}
+        {!items.length && <div className="text-ubt-grey">Empty</div>}
+      </div>
+    </>
+  );
+}
+
+function Sidebar({
+  queue,
+  watchLater,
+  onPlay,
+  onReorderQueue,
+  onRemoveQueue,
+  onReorderWatchLater,
+  onRemoveWatchLater,
+}: {
+  queue: Video[];
+  watchLater: Video[];
+  onPlay: (v: Video) => void;
+  onReorderQueue: (from: number, to: number) => void;
+  onRemoveQueue: (index: number) => void;
+  onReorderWatchLater: (from: number, to: number) => void;
+  onRemoveWatchLater: (index: number) => void;
+}) {
+  return (
+    <aside className="w-64 overflow-y-auto border-l border-ub-cool-grey bg-ub-cool-grey p-2 text-sm" role="complementary">
+      <ListSection
+        title="Queue"
+        items={queue}
+        testId="queue-list"
+        onPlay={onPlay}
+        onReorder={onReorderQueue}
+        onRemove={onRemoveQueue}
+        getDisplayTitle={(v) => v.name || v.title}
+        getKey={(v, index) => `${v.id}-${index}`}
+        removeLabel="Remove from queue"
+      />
+      <div className="mt-[24px]">
+        <ListSection
+          title="Watch Later"
+          items={watchLater}
+          testId="watch-later-list"
+          onPlay={onPlay}
+          onReorder={onReorderWatchLater}
+          onRemove={onRemoveWatchLater}
+          getDisplayTitle={(v) => v.name || v.title}
+          getKey={(v) => `${v.id}-${v.start ?? 0}-${v.end ?? 0}`}
+          removeLabel="Remove from watch later"
+        />
       </div>
     </aside>
   );
@@ -258,7 +319,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Video[]>(initialResults);
   const [current, setCurrent] = useState<Video | null>(null);
-  const [queue, setQueue] = useState<Video[]>([]);
+  const [queue, setQueue] = usePlaybackQueue();
   const [watchLater, setWatchLater] = useWatchLater();
   const searchRef = useRef<HTMLInputElement>(null);
   const playerRef = useRef<any>(null);
@@ -437,7 +498,10 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
     void search();
   };
 
-  const addQueue = useCallback((v: Video) => setQueue((q) => [...q, v]), []);
+  const addQueue = useCallback(
+    (v: Video) => setQueue((q) => [...q, v]),
+    [setQueue],
+  );
   const addWatchLater = useCallback(
     (v: Video) =>
       setWatchLater((w) =>
@@ -447,6 +511,29 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
           ? w
           : [...w, v],
       ),
+    [setWatchLater],
+  );
+  const moveQueue = useCallback(
+    (from: number, to: number) => {
+      setQueue((list) => {
+        const next = [...list];
+        const [item] = next.splice(from, 1);
+        next.splice(to, 0, item);
+        return next;
+      });
+    },
+    [setQueue],
+  );
+  const removeQueue = useCallback(
+    (index: number) => {
+      setQueue((list) => list.filter((_, i) => i !== index));
+    },
+    [setQueue],
+  );
+  const removeWatchLater = useCallback(
+    (index: number) => {
+      setWatchLater((list) => list.filter((_, i) => i !== index));
+    },
     [setWatchLater],
   );
   const shareClip = useCallback(async () => {
@@ -497,7 +584,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
       }
       return q;
     });
-  }, [playVideo]);
+  }, [playVideo, setQueue]);
 
   useEffect(() => {
     const handleKeys = (e: KeyboardEvent) => {
@@ -666,7 +753,10 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
         queue={queue}
         watchLater={watchLater}
         onPlay={playVideo}
-        onReorder={moveWatchLater}
+        onReorderQueue={moveQueue}
+        onRemoveQueue={removeQueue}
+        onReorderWatchLater={moveWatchLater}
+        onRemoveWatchLater={removeWatchLater}
       />
     </div>
   );

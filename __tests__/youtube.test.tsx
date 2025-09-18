@@ -44,19 +44,37 @@ describe('YouTube search app', () => {
     expect(
       within(screen.getByTestId('queue-list')).getByText('Video A')
     ).toBeInTheDocument();
-    const stored = JSON.parse(
-      window.localStorage.getItem('youtube:watch-later') || '[]'
-    );
-    expect(stored).toHaveLength(1);
-    expect(stored[0].id).toBe('a');
+    await waitFor(() => {
+      const queueStored = JSON.parse(
+        window.localStorage.getItem('youtube:queue') || '[]'
+      );
+      expect(queueStored).toHaveLength(1);
+      expect(queueStored[0].id).toBe('a');
+    });
+    await waitFor(() => {
+      const laterStored = JSON.parse(
+        window.localStorage.getItem('youtube:watch-later') || '[]'
+      );
+      expect(laterStored).toHaveLength(1);
+      expect(laterStored[0].id).toBe('a');
+    });
   });
 
-  it('renders watch later playlist from storage', () => {
-    window.localStorage.setItem('youtube:watch-later', JSON.stringify(mockVideos));
+  it('renders playlists from storage', () => {
+    window.localStorage.setItem(
+      'youtube:watch-later',
+      JSON.stringify(mockVideos)
+    );
+    window.localStorage.setItem(
+      'youtube:queue',
+      JSON.stringify([mockVideos[1]])
+    );
     render(<YouTubeApp initialResults={[]} />);
-    const list = within(screen.getByTestId('watch-later-list'));
-    expect(list.getByText('Video A')).toBeInTheDocument();
-    expect(list.getByText('Video B')).toBeInTheDocument();
+    const watchLaterList = within(screen.getByTestId('watch-later-list'));
+    expect(watchLaterList.getByText('Video A')).toBeInTheDocument();
+    expect(watchLaterList.getByText('Video B')).toBeInTheDocument();
+    const queueList = within(screen.getByTestId('queue-list'));
+    expect(queueList.getByText('Video B')).toBeInTheDocument();
   });
 
   it('reorders watch later with keyboard', async () => {
@@ -67,12 +85,68 @@ describe('YouTube search app', () => {
     await user.click(laterButtons[1]);
 
     const list = screen.getByTestId('watch-later-list');
-    const first = within(list).getByText('Video A').parentElement as HTMLElement;
-    fireEvent.keyDown(first, { key: 'ArrowDown' });
+    const firstItem = within(list).getAllByTestId('watch-later-list-item')[0];
+    fireEvent.keyDown(firstItem, { key: 'ArrowDown' });
     await waitFor(() => {
-      const items = within(list).getAllByText(/Video/);
-      expect(items[0].textContent).toBe('Video B');
-      expect(items[1].textContent).toBe('Video A');
+      const items = within(list)
+        .getAllByTestId('watch-later-list-item')
+        .map((item) => within(item).getByText(/Video/).textContent);
+      expect(items[0]).toBe('Video B');
+      expect(items[1]).toBe('Video A');
+    });
+  });
+
+  it('reorders queue with keyboard', async () => {
+    const user = userEvent.setup();
+    render(<YouTubeApp initialResults={mockVideos} />);
+    const queueButtons = screen.getAllByRole('button', { name: 'Queue' });
+    await user.click(queueButtons[0]);
+    await user.click(queueButtons[1]);
+
+    const list = screen.getByTestId('queue-list');
+    const firstItem = within(list).getAllByTestId('queue-list-item')[0];
+    fireEvent.keyDown(firstItem, { key: 'ArrowDown' });
+    await waitFor(() => {
+      const items = within(list)
+        .getAllByTestId('queue-list-item')
+        .map((item) => within(item).getByText(/Video/).textContent);
+      expect(items[0]).toBe('Video B');
+      expect(items[1]).toBe('Video A');
+    });
+  });
+
+  it('removes items from queue and watch later', async () => {
+    const user = userEvent.setup();
+    render(<YouTubeApp initialResults={mockVideos} />);
+    const queueButtons = screen.getAllByRole('button', { name: 'Queue' });
+    const laterButtons = screen.getAllByRole('button', { name: 'Later' });
+    await user.click(queueButtons[0]);
+    await user.click(queueButtons[1]);
+    await user.click(laterButtons[0]);
+
+    const queueList = within(screen.getByTestId('queue-list'));
+    await user.click(
+      queueList.getAllByRole('button', { name: 'Remove from queue' })[0]
+    );
+    expect(queueList.queryByText('Video A')).not.toBeInTheDocument();
+    await waitFor(() => {
+      const stored = JSON.parse(
+        window.localStorage.getItem('youtube:queue') || '[]'
+      );
+      expect(stored).toHaveLength(1);
+      expect(stored[0].id).toBe('b');
+    });
+
+    const watchLaterList = within(screen.getByTestId('watch-later-list'));
+    await user.click(
+      watchLaterList.getByRole('button', { name: 'Remove from watch later' })
+    );
+    expect(watchLaterList.queryByText('Video A')).not.toBeInTheDocument();
+    await waitFor(() => {
+      const stored = JSON.parse(
+        window.localStorage.getItem('youtube:watch-later') || '[]'
+      );
+      expect(stored).toHaveLength(0);
     });
   });
 
