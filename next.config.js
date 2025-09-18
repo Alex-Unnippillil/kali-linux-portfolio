@@ -3,6 +3,7 @@
 // Update README (section "CSP External Domains") when editing domains below.
 
 const { validateServerEnv: validateEnv } = require('./lib/validate.js');
+const { i18n } = require('./next-i18next.config');
 
 const ContentSecurityPolicy = [
   "default-src 'self'",
@@ -122,6 +123,7 @@ try {
 
 module.exports = withBundleAnalyzer(
   withPWA({
+    i18n,
     ...(isStaticExport && { output: 'export' }),
     webpack: configureWebpack,
 

@@ -1,4 +1,13 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useRef,
+  useCallback,
+} from 'react';
+import { useTranslation } from 'next-i18next';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -20,9 +29,12 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getLocale as loadLocale,
+  setLocale as saveLocale,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import { getDirection, normalizeLocale } from '../utils/i18n';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -63,6 +75,7 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  locale: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +87,7 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setLocale: (value: string) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +102,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  locale: defaults.locale,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +114,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setLocale: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -113,7 +129,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [localeState, setLocaleState] = useState<string>(defaults.locale);
   const fetchRef = useRef<typeof fetch | null>(null);
+  const { i18n } = useTranslation('common');
+
+  const setLocale = useCallback((value: string) => {
+    setLocaleState(normalizeLocale(value));
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -128,6 +150,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
+      setLocaleState(normalizeLocale(await loadLocale()));
     })();
   }, []);
 
@@ -236,6 +259,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    const nextLocale = normalizeLocale(localeState);
+    if (i18n.language !== nextLocale) {
+      i18n.changeLanguage(nextLocale).catch((err) => {
+        console.error('Unable to change language', err);
+      });
+    }
+    saveLocale(nextLocale);
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = nextLocale;
+      document.documentElement.dir = getDirection(nextLocale);
+    }
+  }, [localeState, i18n]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -250,6 +287,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        locale: localeState,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +299,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setLocale,
       }}
     >
       {children}

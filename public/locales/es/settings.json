@@ -1,0 +1,47 @@
+{
+  "tabs": {
+    "appearance": "Apariencia",
+    "accessibility": "Accesibilidad",
+    "privacy": "Privacidad"
+  },
+  "language": {
+    "label": "Idioma"
+  },
+  "appearance": {
+    "themeLabel": "Tema",
+    "themes": {
+      "default": "Predeterminado",
+      "dark": "Oscuro",
+      "neon": "Neón",
+      "matrix": "Matrix"
+    },
+    "accentLabel": "Acento",
+    "wallpaperLabel": "Fondo de pantalla",
+    "wallpaperAria": "Selección de fondo de pantalla",
+    "reset": "Restablecer escritorio"
+  },
+  "accessibility": {
+    "iconSize": "Tamaño de icono",
+    "density": "Densidad",
+    "densityOptions": {
+      "regular": "Normal",
+      "compact": "Compacta"
+    },
+    "reducedMotion": "Movimiento reducido",
+    "highContrast": "Alto contraste",
+    "haptics": "Hápticos",
+    "editShortcuts": "Editar atajos"
+  },
+  "privacy": {
+    "export": "Exportar ajustes",
+    "import": "Importar ajustes"
+  },
+  "reset": {
+    "confirm": "¿Restablecer el escritorio a los ajustes predeterminados? Esto borrará todos los datos guardados."
+  },
+  "slideshow": {
+    "intervalLabel": "Intervalo (s)",
+    "start": "Iniciar",
+    "pause": "Pausar"
+  }
+}

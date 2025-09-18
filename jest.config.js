@@ -8,7 +8,7 @@ const customJestConfig = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
     '^@xterm/xterm/css/xterm.css$': '<rootDir>/__mocks__/styleMock.js',
-    '^@/(.*)$': '<rootDir>/$1',
+    'next-i18next': '<rootDir>/__mocks__/next-i18next.js',
   },
   testPathIgnorePatterns: [
     '<rootDir>/playwright/',
