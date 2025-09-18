@@ -63,6 +63,7 @@
     "html2canvas": "^1.4.1",
     "idb": "7.1.1",
     "idb-keyval": "^6.2.1",
+    "intl-messageformat": "^10.7.16",
     "jspdf": "^3.0.2",
     "kaitai-struct": "^0.10.0",
     "leaflet": "^1.9.4",
