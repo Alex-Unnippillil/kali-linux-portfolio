@@ -21,12 +21,13 @@ export default function Taskbar(props) {
                 <button
                     key={app.id}
                     type="button"
-                    aria-label={app.title}
+                    aria-label={`${app.title}. Long press for more options.`}
                     data-context="taskbar"
                     data-app-id={app.id}
                     onClick={() => handleClick(app)}
                     className={(props.focused_windows[app.id] && !props.minimized_windows[app.id] ? ' bg-white bg-opacity-20 ' : ' ') +
-                        'relative flex items-center mx-1 px-2 py-1 rounded hover:bg-white hover:bg-opacity-10'}
+                        'relative flex items-center mx-1 px-2 py-1 rounded hoverable-taskbar-item'}
+                    aria-describedby={props.longPressHintId || undefined}
                 >
                     <Image
                         width={24}

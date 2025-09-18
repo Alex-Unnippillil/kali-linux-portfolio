@@ -77,3 +77,51 @@ html[data-theme='matrix'] {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
+
+@media (hover: hover) {
+  .hoverable-app-icon:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .hoverable-taskbar-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .hoverable-menu-item:hover {
+    background-color: rgba(125, 127, 131, 0.2);
+  }
+}
+
+.long-press-indicator {
+  width: 48px;
+  height: 48px;
+  display: block;
+}
+
+.long-press-indicator__track {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.25);
+  stroke-width: 4;
+}
+
+.long-press-indicator__progress {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 125.6;
+  stroke-dashoffset: 125.6;
+  animation: long-press-indicator-progress var(--long-press-duration, 400ms) linear forwards;
+}
+
+@keyframes long-press-indicator-progress {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .long-press-indicator__progress {
+    animation-duration: 1ms;
+  }
+}

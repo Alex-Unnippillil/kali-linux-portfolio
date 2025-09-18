@@ -102,15 +102,15 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
         'cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm'}
     >
       {items.map((item, i) => (
-        <button
-          key={i}
-          role="menuitem"
-          tabIndex={-1}
-          onClick={() => {
-            item.onSelect();
-            setOpen(false);
-          }}
-          className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+          <button
+            key={i}
+            role="menuitem"
+            tabIndex={-1}
+            onClick={() => {
+              item.onSelect();
+              setOpen(false);
+            }}
+          className="w-full text-left cursor-default py-0.5 hoverable-menu-item mb-1.5"
         >
           {item.label}
         </button>
