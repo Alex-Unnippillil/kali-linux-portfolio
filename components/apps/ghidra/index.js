@@ -4,6 +4,7 @@ import FunctionTree from './FunctionTree';
 import CallGraph from './CallGraph';
 import ImportAnnotate from './ImportAnnotate';
 import { Capstone, Const, loadCapstone } from 'capstone-wasm';
+import { consumeDesktopDrag, isDesktopDragEvent } from '../../utils/desktopDrag.js';
 
 // Applies S1–S8 guidelines for responsive and accessible binary analysis UI
 const DEFAULT_WASM = '/wasm/ghidra.wasm';
@@ -90,6 +91,8 @@ export default function GhidraApp() {
   const capstoneRef = useRef(null);
   const [instructions, setInstructions] = useState([]);
   const [arch, setArch] = useState('x86');
+  const [dragActive, setDragActive] = useState(false);
+  const [dropError, setDropError] = useState('');
   // S1: Detect GHIDRA web support and fall back to Capstone
   const ensureCapstone = useCallback(async () => {
     if (capstoneRef.current) return capstoneRef.current;
@@ -111,27 +114,48 @@ export default function GhidraApp() {
     });
   }, [ensureCapstone]);
 
+  const supportsNativeFiles = (dataTransfer) => {
+    if (!dataTransfer?.types) return false;
+    return Array.from(dataTransfer.types).includes('Files');
+  };
+
   const handleDrop = useCallback(
     async (e) => {
       e.preventDefault();
-      const file = e.dataTransfer.files[0];
+      setDragActive(false);
+      setDropError('');
+      let file = e.dataTransfer.files?.[0] || null;
+      if (!file) {
+        const payload = consumeDesktopDrag(e.dataTransfer);
+        if (payload) {
+          if (payload.type === 'file') {
+            try {
+              file = await payload.getFile();
+            } catch (err) {
+              setDropError('Failed to read dropped file.');
+              return;
+            }
+          } else {
+            setDropError('Only binary files can be dropped here.');
+            return;
+          }
+        }
+      }
       if (!file) return;
-      const buf = await file.arrayBuffer();
-      const bytes = new Uint8Array(buf);
-      const { Capstone, Const } = await ensureCapstone();
-      const [archConst, modeConst] =
-        arch === 'arm'
-          ? [Const.ARCH_ARM, Const.MODE_ARM]
-          : [Const.ARCH_X86, Const.MODE_32];
-      const cs = new Capstone(archConst, modeConst);
-      const start = performance.now();
-      const insns = cs.disasm(bytes, { address: 0x1000 });
-      cs.close();
-      const end = performance.now();
-      if (end - start <= 100) {
+      try {
+        const buf = await file.arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        const { Capstone, Const } = await ensureCapstone();
+        const [archConst, modeConst] =
+          arch === 'arm'
+            ? [Const.ARCH_ARM, Const.MODE_ARM]
+            : [Const.ARCH_X86, Const.MODE_32];
+        const cs = new Capstone(archConst, modeConst);
+        const insns = cs.disasm(bytes, { address: 0x1000 });
+        cs.close();
         setInstructions(insns);
-      } else {
-        setInstructions(insns);
+      } catch (err) {
+        setDropError(err.message || 'Failed to disassemble file.');
       }
     },
     [arch, ensureCapstone]
@@ -244,8 +268,27 @@ export default function GhidraApp() {
   if (engine === 'capstone') {
     return (
       <div
-        className="w-full h-full flex flex-col bg-gray-900 text-gray-100"
-        onDragOver={(e) => e.preventDefault()}
+        className={`w-full h-full flex flex-col bg-gray-900 text-gray-100 transition-shadow ${
+          dragActive ? 'ring-4 ring-blue-400 ring-offset-2 ring-offset-gray-900' : ''
+        }`}
+        onDragEnter={(e) => {
+          if (isDesktopDragEvent(e.dataTransfer) || supportsNativeFiles(e.dataTransfer)) {
+            e.preventDefault();
+            setDragActive(true);
+          }
+        }}
+        onDragOver={(e) => {
+          if (isDesktopDragEvent(e.dataTransfer) || supportsNativeFiles(e.dataTransfer)) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+            if (!dragActive) setDragActive(true);
+          }
+        }}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget)) {
+            setDragActive(false);
+          }
+        }}
         onDrop={handleDrop}
       >
         <div className="p-2 flex space-x-2">
@@ -265,7 +308,11 @@ export default function GhidraApp() {
           </select>
         </div>
         {instructions.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center m-2 border-2 border-dashed border-gray-600">
+          <div
+            className={`flex-1 flex items-center justify-center m-2 border-2 border-dashed ${
+              dragActive ? 'border-blue-400 bg-blue-500 bg-opacity-10' : 'border-gray-600'
+            }`}
+          >
             Drop a binary file here
           </div>
         ) : (
@@ -279,6 +326,11 @@ export default function GhidraApp() {
               )
               .join('\n')}
           </pre>
+        )}
+        {dropError && (
+          <p className="px-2 pb-2 text-sm text-red-400" role="alert">
+            {dropError}
+          </p>
         )}
       </div>
     );

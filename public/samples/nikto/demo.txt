@@ -1,0 +1,4 @@
+Host: demo.local
+/login.php High
+/phpinfo.php Medium
+/admin/robots.txt Low

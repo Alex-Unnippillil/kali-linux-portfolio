@@ -1,17 +1,31 @@
 import React, { Component } from 'react'
 import Image from 'next/image'
+import { beginDesktopDrag, endDesktopDrag } from '../../utils/desktopDrag.js'
 
 export class UbuntuApp extends Component {
     constructor() {
         super();
         this.state = { launching: false, dragging: false, prefetched: false };
+        this.dragToken = null;
     }
 
-    handleDragStart = () => {
+    handleDragStart = (event) => {
         this.setState({ dragging: true });
+        if (this.dragToken) {
+            endDesktopDrag(this.dragToken);
+        }
+        this.dragToken = beginDesktopDrag(event, {
+            type: 'app',
+            appId: this.props.id,
+            title: this.props.displayName || this.props.name,
+        });
     }
 
     handleDragEnd = () => {
+        if (this.dragToken) {
+            endDesktopDrag(this.dragToken);
+            this.dragToken = null;
+        }
         this.setState({ dragging: false });
     }
 

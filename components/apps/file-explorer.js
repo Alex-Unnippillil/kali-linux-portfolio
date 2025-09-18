@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import { beginDesktopDrag, endDesktopDrag } from '../../utils/desktopDrag.js';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -104,6 +105,8 @@ export default function FileExplorer() {
   const [results, setResults] = useState([]);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
+  const dragTokenRef = useRef(null);
+  const demoCacheRef = useRef(new Map());
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -115,6 +118,39 @@ export default function FileExplorer() {
     deleteFile: opfsDelete,
   } = useOPFS();
   const [unsavedDir, setUnsavedDir] = useState(null);
+
+  const demoFiles = useMemo(
+    () => [
+      {
+        name: 'common.txt',
+        path: '/samples/common.txt',
+        type: 'text/plain',
+      },
+      {
+        name: 'nikto-demo.txt',
+        path: '/samples/nikto/demo.txt',
+        type: 'text/plain',
+      },
+      {
+        name: 'dns.pcap',
+        path: '/samples/wireshark/dns.pcap',
+        type: 'application/vnd.tcpdump.pcap',
+      },
+    ],
+    [],
+  );
+
+  const finishDrag = () => {
+    if (dragTokenRef.current) {
+      endDesktopDrag(dragTokenRef.current);
+      dragTokenRef.current = null;
+    }
+  };
+
+  const startDrag = (event, payload) => {
+    finishDrag();
+    dragTokenRef.current = beginDesktopDrag(event, payload, { effectAllowed: 'copy' });
+  };
 
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
@@ -259,6 +295,8 @@ export default function FileExplorer() {
 
   useEffect(() => () => workerRef.current?.terminate(), []);
 
+  useEffect(() => () => finishDrag(), []);
+
   if (!supported) {
     return (
       <div className="p-4 flex flex-col h-full">
@@ -340,11 +378,60 @@ export default function FileExplorer() {
             <div
               key={i}
               className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+              draggable
+              data-testid="file-explorer-item"
+              data-name={f.name}
               onClick={() => openFile(f)}
+              onDragStart={(event) =>
+                startDrag(event, {
+                  type: 'file',
+                  name: f.name,
+                  getFile: () => f.handle.getFile(),
+                })
+              }
+              onDragEnd={finishDrag}
             >
               {f.name}
             </div>
           ))}
+          {demoFiles.length > 0 && (
+            <>
+              <div className="p-2 font-bold">Demo Files</div>
+              {demoFiles.map((demo) => (
+                <div
+                  key={demo.name}
+                  className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+                  draggable
+                  data-testid="file-explorer-demo"
+                  data-name={demo.name}
+                  onDragStart={(event) =>
+                    startDrag(event, {
+                      type: 'file',
+                      name: demo.name,
+                      label: demo.name,
+                      getFile: async () => {
+                        if (!demoCacheRef.current.has(demo.name)) {
+                          const res = await fetch(demo.path);
+                          if (!res.ok) {
+                            throw new Error('Failed to load demo file');
+                          }
+                          const blob = await res.blob();
+                          const file = new File([blob], demo.name, {
+                            type: demo.type || blob.type || 'application/octet-stream',
+                          });
+                          demoCacheRef.current.set(demo.name, file);
+                        }
+                        return demoCacheRef.current.get(demo.name);
+                      },
+                    })
+                  }
+                  onDragEnd={finishDrag}
+                >
+                  {demo.name}
+                </div>
+              ))}
+            </>
+          )}
         </div>
         <div className="flex-1 flex flex-col">
           {currentFile && (
