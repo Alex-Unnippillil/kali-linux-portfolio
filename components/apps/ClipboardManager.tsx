@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { getDb } from '../../utils/safeIDB';
+import { consumeDesktopDrag, isDesktopDragEvent } from '../../utils/desktopDrag.js';
 
 interface ClipItem {
   id?: number;
@@ -31,6 +32,8 @@ function getDB() {
 
 const ClipboardManager: React.FC = () => {
   const [items, setItems] = useState<ClipItem[]>([]);
+  const [dragActive, setDragActive] = useState(false);
+  const [dropError, setDropError] = useState('');
 
   const loadItems = useCallback(async () => {
     try {
@@ -115,6 +118,48 @@ const ClipboardManager: React.FC = () => {
 
   return (
     <div className="p-4 space-y-2 text-white bg-ub-cool-grey h-full overflow-auto">
+      <div
+        data-testid="clipboard-dropzone"
+        className={`border-2 border-dashed rounded p-3 text-center transition-colors ${
+          dragActive ? 'border-blue-400 bg-blue-500 bg-opacity-10' : 'border-gray-500'
+        }`}
+        onDragEnter={(e) => {
+          if (isDesktopDragEvent(e.dataTransfer)) {
+            e.preventDefault();
+            setDragActive(true);
+          }
+        }}
+        onDragOver={(e) => {
+          if (isDesktopDragEvent(e.dataTransfer)) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+            if (!dragActive) setDragActive(true);
+          }
+        }}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+            setDragActive(false);
+          }
+        }}
+        onDrop={async (e) => {
+          e.preventDefault();
+          setDragActive(false);
+          const payload = consumeDesktopDrag(e.dataTransfer);
+          if (payload && payload.type === 'app') {
+            await addItem(`[App] ${payload.title} (${payload.appId})`);
+            setDropError('');
+          } else {
+            setDropError('Drop an app shortcut from the desktop to save a reference.');
+          }
+        }}
+      >
+        Drop an app icon here to save a quick reference
+      </div>
+      {dropError && (
+        <p className="text-red-300 text-sm" role="alert">
+          {dropError}
+        </p>
+      )}
       <button
         className="px-2 py-1 bg-gray-700 hover:bg-gray-600"
         onClick={clearHistory}

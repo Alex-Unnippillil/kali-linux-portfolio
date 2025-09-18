@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { consumeDesktopDrag, isDesktopDragEvent } from '../../../utils/desktopDrag.js';
 
 const suggestions = {
   '/admin': 'Restrict access to the admin portal or remove it from public view.',
@@ -18,6 +19,7 @@ const NiktoApp = () => {
   const [filterPath, setFilterPath] = useState('');
   const [filterSeverity, setFilterSeverity] = useState('All');
   const [error, setError] = useState('');
+  const [dragActive, setDragActive] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -108,28 +110,54 @@ const NiktoApp = () => {
     return data;
   };
 
-  const handleDrop = useCallback(async (e) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files && e.dataTransfer.files[0];
-    if (!file) return;
-    try {
-      const text = await file.text();
-      let data = [];
-      if (file.name.endsWith('.xml')) {
-        data = parseXml(text);
-      } else if (file.name.endsWith('.txt')) {
-        data = parseText(text);
-      } else {
-        throw new Error('Unsupported file type');
+  const supportsNativeFiles = (dataTransfer) => {
+    if (!dataTransfer?.types) return false;
+    return Array.from(dataTransfer.types).includes('Files');
+  };
+
+  const handleDrop = useCallback(
+    async (e) => {
+      e.preventDefault();
+      setDragActive(false);
+      let file = (e.dataTransfer.files && e.dataTransfer.files[0]) || null;
+      if (!file) {
+        const payload = consumeDesktopDrag(e.dataTransfer);
+        if (payload) {
+          if (payload.type === 'file') {
+            try {
+              file = await payload.getFile();
+            } catch (err) {
+              setEntries([]);
+              setError('Failed to read dropped file');
+              return;
+            }
+          } else {
+            setError('Only Nikto reports can be dropped here');
+            return;
+          }
+        }
       }
-      if (!data.length) throw new Error('No valid findings');
-      setEntries(data);
-      setError('');
-    } catch (err) {
-      setEntries([]);
-      setError(err.message || 'Failed to parse file');
-    }
-  }, []);
+      if (!file) return;
+      try {
+        const text = await file.text();
+        let data = [];
+        if (file.name.endsWith('.xml')) {
+          data = parseXml(text);
+        } else if (file.name.endsWith('.txt')) {
+          data = parseText(text);
+        } else {
+          throw new Error('Unsupported file type');
+        }
+        if (!data.length) throw new Error('No valid findings');
+        setEntries(data);
+        setError('');
+      } catch (err) {
+        setEntries([]);
+        setError(err.message || 'Failed to parse file');
+      }
+    },
+    [parseXml, parseText],
+  );
 
   const filtered = useMemo(() => {
     return entries.filter(
@@ -296,8 +324,27 @@ const NiktoApp = () => {
         <div
           data-testid="drop-zone"
           onDrop={handleDrop}
-          onDragOver={(e) => e.preventDefault()}
-          className="border-2 border-dashed border-gray-600 p-4 text-center mb-4"
+          onDragEnter={(e) => {
+            if (isDesktopDragEvent(e.dataTransfer) || supportsNativeFiles(e.dataTransfer)) {
+              e.preventDefault();
+              setDragActive(true);
+            }
+          }}
+          onDragOver={(e) => {
+            if (isDesktopDragEvent(e.dataTransfer) || supportsNativeFiles(e.dataTransfer)) {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'copy';
+              if (!dragActive) setDragActive(true);
+            }
+          }}
+          onDragLeave={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget)) {
+              setDragActive(false);
+            }
+          }}
+          className={`border-2 border-dashed p-4 text-center mb-4 transition-colors ${
+            dragActive ? 'border-blue-400 bg-blue-500 bg-opacity-20' : 'border-gray-600'
+          }`}
         >
           Drop Nikto text or XML report here
         </div>

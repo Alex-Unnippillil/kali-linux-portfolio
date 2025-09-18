@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Waterfall from './Waterfall';
 import BurstChart from './BurstChart';
@@ -8,6 +8,7 @@ import FlowGraph from '../../../apps/wireshark/components/FlowGraph';
 import FilterHelper from '../../../apps/wireshark/components/FilterHelper';
 import ColorRuleEditor from '../../../apps/wireshark/components/ColorRuleEditor';
 import { parsePcap } from '../../../utils/pcap';
+import { consumeDesktopDrag, isDesktopDragEvent } from '../../../utils/desktopDrag.js';
 
 const toHex = (bytes) =>
   Array.from(bytes, (b, i) =>
@@ -51,6 +52,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
   const [selectedPacket, setSelectedPacket] = useState(null);
   const [view, setView] = useState('packets');
   const [error, setError] = useState('');
+  const [dragActive, setDragActive] = useState(false);
   const workerRef = useRef(null);
   const pausedRef = useRef(false);
   const prefersReducedMotion = useRef(false);
@@ -126,7 +128,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
     }
   };
 
-  const handleFile = async (file) => {
+  const handleFile = useCallback(async (file) => {
     try {
       const buffer = await file.arrayBuffer();
       const parsed = parsePcap(buffer);
@@ -136,23 +138,67 @@ const WiresharkApp = ({ initialPackets = [] }) => {
     } catch (err) {
       setError(err.message || 'Unsupported file');
     }
+  }, []);
+
+  const supportsNativeFiles = (dataTransfer) => {
+    if (!dataTransfer?.types) return false;
+    return Array.from(dataTransfer.types).includes('Files');
   };
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files?.[0];
-    if (
-      file &&
-      (file.name.endsWith('.pcap') || file.name.endsWith('.pcapng'))
-    ) {
-      handleFile(file);
-    } else {
-      setError('Unsupported file format');
+  const handleDrop = useCallback(
+    async (e) => {
+      e.preventDefault();
+      setDragActive(false);
+      let file = e.dataTransfer.files?.[0] || null;
+      if (!file) {
+        const payload = consumeDesktopDrag(e.dataTransfer);
+        if (payload) {
+          if (payload.type === 'file') {
+            try {
+              file = await payload.getFile();
+            } catch (err) {
+              setError('Failed to read dropped file.');
+              return;
+            }
+          } else {
+            setError('Only packet captures can be dropped here.');
+            return;
+          }
+        }
+      }
+      if (!file) return;
+      if (
+        file.name.endsWith('.pcap') ||
+        file.name.endsWith('.pcapng') ||
+        file.type === 'application/vnd.tcpdump.pcap'
+      ) {
+        await handleFile(file);
+      } else {
+        setError('Unsupported file format');
+      }
+    },
+    [handleFile],
+  );
+
+  const handleDragOver = (e) => {
+    if (isDesktopDragEvent(e.dataTransfer) || supportsNativeFiles(e.dataTransfer)) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      if (!dragActive) setDragActive(true);
     }
   };
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
+  const handleDragEnter = (e) => {
+    if (isDesktopDragEvent(e.dataTransfer) || supportsNativeFiles(e.dataTransfer)) {
+      e.preventDefault();
+      setDragActive(true);
+    }
+  };
+
+  const handleDragLeave = (e) => {
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setDragActive(false);
+    }
   };
 
   const startCapture = () => {
@@ -208,9 +254,14 @@ const WiresharkApp = ({ initialPackets = [] }) => {
 
   return (
     <div
-      className="w-full h-full flex flex-col bg-black text-green-400 [container-type:inline-size]"
+      className={`w-full h-full flex flex-col bg-black text-green-400 [container-type:inline-size] transition-shadow ${
+        dragActive ? 'ring-4 ring-blue-400 ring-offset-2 ring-offset-black' : ''
+      }`}
+      data-testid="wireshark-app"
       onDrop={handleDrop}
+      onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
     >
       <p className="text-yellow-300 text-xs p-2 bg-gray-900">
         Bundled capture for lab use only. No live traffic.
