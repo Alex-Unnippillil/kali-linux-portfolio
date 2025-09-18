@@ -74,7 +74,8 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
             src={section.icon}
             width={16}
             height={16}
-            sizes="16px"
+            sizes="(max-width: 768px) 24px, 16px"
+            loading="lazy"
           />
           <span className=" ml-1 md:ml-2 text-gray-50 ">{section.label}</span>
         </div>
@@ -113,6 +114,8 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
       <main className="w-full h-full flex bg-ub-cool-grey text-white select-none relative">
         <Head>
           <title>About</title>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
           <script
             type="application/ld+json"
             nonce={nonce}
@@ -358,12 +361,16 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
       />
       <div className="flex flex-wrap justify-center items-start w-full mt-2">
         {filteredBadges.map((badge) => (
-          <img
+          <Image
             key={badge.alt}
-            className="m-1 cursor-pointer"
+            className="m-1 cursor-pointer h-10 w-auto"
             src={badge.src}
             alt={badge.alt}
             title={badge.description}
+            width={200}
+            height={60}
+            sizes="(max-width: 768px) 45vw, 200px"
+            loading="lazy"
             onClick={() => setSelected(badge)}
           />
         ))}

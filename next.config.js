@@ -139,6 +139,8 @@ module.exports = withBundleAnalyzer(
         'yt3.ggpht.com',
         'i.scdn.co',
         'www.google.com',
+        'img.shields.io',
+        'via.placeholder.com',
         'example.com',
         'developer.mozilla.org',
         'en.wikipedia.org',
