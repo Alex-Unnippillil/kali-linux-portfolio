@@ -37,6 +37,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._restoreState = null;
     }
 
     componentDidMount() {
@@ -68,6 +69,17 @@ export class Window extends Component {
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+    }
+
+    componentDidUpdate(prevProps) {
+        if (!prevProps.minimized && this.props.minimized) {
+            this.applyMinimizedVisibility();
+        } else if (prevProps.minimized && !this.props.minimized) {
+            this.restoreFromMinimized();
+        }
+        if (this.props.minimized && this.props.minimizedState) {
+            this._restoreState = this.props.minimizedState;
         }
     }
 
@@ -379,36 +391,99 @@ export class Window extends Component {
         this.props.focus(this.id);
     }
 
-    minimizeWindow = () => {
-        let posx = -310;
-        if (this.state.maximized) {
-            posx = -510;
+    captureWindowState = (node) => {
+        if (!node) return null;
+        const transformX = node.style.getPropertyValue('--window-transform-x');
+        const transformY = node.style.getPropertyValue('--window-transform-y');
+        return {
+            width: this.state.width,
+            height: this.state.height,
+            maximized: this.state.maximized,
+            snapped: this.state.snapped,
+            transform: node.style.transform,
+            transformX,
+            transformY,
+        };
+    }
+
+    applyMinimizedVisibility = () => {
+        const node = document.getElementById(this.id);
+        if (!node) return;
+        if (this._dockAnimation) {
+            this._dockAnimation.cancel();
+            this._dockAnimation = null;
         }
+        if (!this._restoreState) {
+            this._restoreState = this.captureWindowState(node);
+        }
+        node.style.display = 'none';
+        node.setAttribute('aria-hidden', 'true');
+    }
+
+    restoreFromMinimized = () => {
+        const node = document.getElementById(this.id);
+        if (!node) return;
+        node.style.display = '';
+        node.removeAttribute('aria-hidden');
+        node.style.opacity = '';
+        node.style.visibility = '';
+
+        const restoreState = this.props.minimizedState || this._restoreState;
+        if (restoreState) {
+            this._restoreState = restoreState;
+        }
+        if (restoreState) {
+            if (restoreState.transformX) {
+                node.style.setProperty('--window-transform-x', restoreState.transformX);
+            }
+            if (restoreState.transformY) {
+                node.style.setProperty('--window-transform-y', restoreState.transformY);
+            }
+            if (restoreState.transform) {
+                node.style.transform = restoreState.transform;
+            } else if (restoreState.transformX || restoreState.transformY) {
+                const x = restoreState.transformX || '0px';
+                const y = restoreState.transformY || '0px';
+                node.style.transform = `translate(${x},${y})`;
+            }
+            const updates = {};
+            if (typeof restoreState.width === 'number') {
+                updates.width = restoreState.width;
+            }
+            if (typeof restoreState.height === 'number') {
+                updates.height = restoreState.height;
+            }
+            if (Object.prototype.hasOwnProperty.call(restoreState, 'maximized')) {
+                updates.maximized = restoreState.maximized;
+            }
+            if (Object.prototype.hasOwnProperty.call(restoreState, 'snapped')) {
+                updates.snapped = restoreState.snapped;
+            }
+            if (Object.keys(updates).length) {
+                this.setState(updates, () => {
+                    this.resizeBoundries();
+                    this.checkOverlap();
+                });
+                return;
+            }
+        }
+        this.resizeBoundries();
+        this.checkOverlap();
+    }
+
+    minimizeWindow = () => {
+        if (this.props.minimized) return;
         this.setWinowsPosition();
-        // get corrosponding sidebar app's position
-        var r = document.querySelector("#sidebar-" + this.id);
-        var sidebBarApp = r.getBoundingClientRect();
-
         const node = document.querySelector("#" + this.id);
-        const endTransform = `translate(${posx}px,${sidebBarApp.y.toFixed(1) - 240}px) scale(0.2)`;
-        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-        if (prefersReducedMotion) {
-            node.style.transform = endTransform;
+        if (!node) {
             this.props.hasMinimised(this.id);
             return;
         }
 
-        const startTransform = node.style.transform;
-        this._dockAnimation = node.animate(
-            [{ transform: startTransform }, { transform: endTransform }],
-            { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
-        );
-        this._dockAnimation.onfinish = () => {
-            node.style.transform = endTransform;
-            this.props.hasMinimised(this.id);
-            this._dockAnimation.onfinish = null;
-        };
+        const restoreState = this.captureWindowState(node);
+        this._restoreState = restoreState;
+        this.applyMinimizedVisibility();
+        this.props.hasMinimised(this.id, restoreState);
     }
 
     restoreWindow = () => {
