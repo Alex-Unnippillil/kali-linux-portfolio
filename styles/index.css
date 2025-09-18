@@ -516,6 +516,77 @@ textarea:focus-visible {
     outline-offset: 2px;
 }
 
+/* Settings navigation and controls */
+.settings-sidebar {
+    background-color: color-mix(in srgb, var(--color-bg), transparent 20%);
+}
+
+.settings-tree-trigger,
+.settings-tree-link {
+    display: block;
+    width: 100%;
+    text-align: start;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    color: inherit;
+    background: transparent;
+    border: none;
+}
+
+.settings-tree-trigger--active,
+.settings-tree-link--active {
+    background-color: color-mix(in srgb, var(--color-control-accent), transparent 75%);
+}
+
+.settings-tree-link--active {
+    border-inline-start: 3px solid var(--color-control-accent);
+    padding-inline-start: calc(0.75rem + 3px);
+}
+
+.settings-tree-trigger:focus-visible,
+.settings-tree-link:focus-visible,
+.settings-control:focus-visible {
+    outline: var(--focus-outline-width) solid var(--focus-outline-color);
+    outline-offset: 2px;
+}
+
+.settings-accent-option {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 9999px;
+    border: 2px solid transparent;
+}
+
+.settings-accent-option--active {
+    border-color: var(--focus-outline-color);
+}
+
+.settings-wallpaper-option {
+    width: 7rem;
+    height: 5rem;
+    border-radius: 0.5rem;
+    border: 4px solid transparent;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+@media (min-width: 768px) {
+    .settings-wallpaper-option {
+        width: 9rem;
+        height: 6rem;
+    }
+}
+
+.settings-wallpaper-option--active {
+    border-color: var(--color-control-accent);
+}
+
+.settings-wallpaper-option:focus-visible {
+    outline: var(--focus-outline-width) solid var(--focus-outline-color);
+    outline-offset: 2px;
+}
+
 /* Enable scroll snapping for gallery containers */
 .gallery-container {
     scroll-snap-type: x mandatory;
