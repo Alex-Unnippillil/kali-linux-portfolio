@@ -17,9 +17,22 @@ button, [role="button"], input[type="button"], input[type="submit"], input[type=
 }
 
 a:focus-visible,
-button:focus-visible {
-    outline: var(--focus-outline-width) solid var(--focus-outline-color) !important;
-    outline-offset: 2px;
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+    box-shadow: var(--focus-ring-shadow);
+    transition: var(--focus-ring-transition);
+}
+
+.focus-visible-ring:focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+    box-shadow: var(--focus-ring-shadow);
+    transition: var(--focus-ring-transition);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -64,7 +77,6 @@ button:focus-visible {
 }
 
 input[type=range].ubuntu-slider {
-    outline: none;
     -webkit-appearance: none;
     background: linear-gradient(
         to right,

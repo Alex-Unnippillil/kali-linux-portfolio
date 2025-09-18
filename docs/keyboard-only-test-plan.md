@@ -21,3 +21,8 @@
 1. After resizing or snapping, press **Tab** to move focus inside the window.
 2. Continue pressing **Tab** to confirm focus can leave the window and is not trapped.
 3. Shift+Tab moves focus backward as expected.
+
+## Focus indicators and exceptions
+- All taskbar icons, launcher tiles, and global menus now share the accent-colored focus ring token. Verify the outline appears on focus-visible states in both default and high-contrast themes.
+- The boot screen power control supports **Enter** and **Space**. Focus it with **Tab** to confirm the blue/yellow ring renders before activating the desktop.
+- The window switcher exposes its results list as a focusable listbox. After the search field, press **Tab** to step through window thumbnails and use **Enter**/**Space** to activate the highlighted entry. Arrow keys continue to work for cycling without moving focus.

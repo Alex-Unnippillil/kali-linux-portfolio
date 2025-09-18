@@ -10,7 +10,9 @@ export default function StickyNotes() {
 
   return (
     <div>
-      <button id="add-note">Add Note</button>
+      <button id="add-note" type="button" className="focus-visible-ring">
+        Add Note
+      </button>
       <div id="notes" />
     </div>
   );
