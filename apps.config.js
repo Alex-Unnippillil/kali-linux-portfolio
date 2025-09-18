@@ -97,6 +97,7 @@ const KismetApp = createDynamicApp('kismet.jsx', 'Kismet');
 const HashcatApp = createDynamicApp('hashcat', 'Hashcat');
 const MsfPostApp = createDynamicApp('msf-post', 'Metasploit Post');
 const EvidenceVaultApp = createDynamicApp('evidence-vault', 'Evidence Vault');
+const CredentialsVaultApp = createDynamicApp('credentials-vault', 'Credentials Vault');
 const MimikatzApp = createDynamicApp('mimikatz', 'Mimikatz');
 const MimikatzOfflineApp = createDynamicApp('mimikatz/offline', 'Mimikatz Offline');
 const EttercapApp = createDynamicApp('ettercap', 'Ettercap');
@@ -182,6 +183,7 @@ const displayVolatility = createDisplay(VolatilityApp);
 
 const displayMsfPost = createDisplay(MsfPostApp);
 const displayEvidenceVault = createDisplay(EvidenceVaultApp);
+const displayCredentialsVault = createDisplay(CredentialsVaultApp);
 const displayMimikatz = createDisplay(MimikatzApp);
 const displayMimikatzOffline = createDisplay(MimikatzOfflineApp);
 const displayEttercap = createDisplay(EttercapApp);
@@ -230,6 +232,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayClipboardManager,
+  },
+  {
+    id: 'credentials-vault',
+    title: 'Credentials Vault',
+    icon: '/themes/Yaru/apps/credentials-vault.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCredentialsVault,
   },
   {
     id: 'figlet',

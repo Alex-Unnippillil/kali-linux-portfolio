@@ -54,6 +54,9 @@ Tools to cover: **BeEF, Ettercap, Metasploit, Wireshark, Kismet, Nikto, Autopsy,
 ### About Alex
 - Replace static content with resume widget loaded from JSON; show skills as chips and project links.
 
+### Credentials Vault
+- Maintain encrypted IndexedDB credential store with passphrase unlock workflow, expiry warnings, and clipboard auto-wipe instrumentation.
+
 ### Settings
 - Add theme picker, wallpaper selector, and "reset desktop" clearing `localStorage` in `settingsStore.js`.
 
