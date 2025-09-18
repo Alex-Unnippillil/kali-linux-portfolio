@@ -2,7 +2,7 @@ import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
 
 import { displayX } from './components/apps/x';
 import { displaySpotify } from './components/apps/spotify';
-import { displaySettings } from './components/apps/settings';
+import { displaySettings } from './apps/settings';
 import { displayChrome } from './components/apps/chrome';
 import { displayGedit } from './components/apps/gedit';
 import { displayTodoist } from './components/apps/todoist';
@@ -690,6 +690,8 @@ const apps = [
     disabled: false,
     favourite: true,
     desktop_shortcut: false,
+    shortcutAction: 'Open settings',
+    shortcutEvent: 'dblclick',
     screen: displaySettings,
   },
   {

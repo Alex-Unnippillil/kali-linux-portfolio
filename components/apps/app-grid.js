@@ -83,6 +83,8 @@ export default function AppGrid({ openApp }) {
           name={app.title}
           displayName={<>{app.nodes}</>}
           openApp={() => openApp && openApp(app.id)}
+          shortcutAction={app.shortcutAction}
+          shortcutEvent={app.shortcutEvent}
         />
       </div>
     );

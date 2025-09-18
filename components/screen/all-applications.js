@@ -49,6 +49,8 @@ class AllApplications extends React.Component {
                 openApp={() => this.openApp(app.id)}
                 disabled={app.disabled}
                 prefetch={app.screen?.prefetch}
+                shortcutAction={app.shortcutAction}
+                shortcutEvent={app.shortcutEvent}
             />
         ));
     };

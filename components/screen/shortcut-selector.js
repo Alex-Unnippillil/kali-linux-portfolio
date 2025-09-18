@@ -49,6 +49,8 @@ class ShortcutSelector extends React.Component {
                 openApp={() => this.selectApp(app.id)}
                 disabled={app.disabled}
                 prefetch={app.screen?.prefetch}
+                shortcutAction={app.shortcutAction}
+                shortcutEvent={app.shortcutEvent}
             />
         ));
     };

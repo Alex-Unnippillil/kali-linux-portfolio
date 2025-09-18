@@ -10,6 +10,8 @@ type AppMeta = {
   icon: string;
   disabled?: boolean;
   favourite?: boolean;
+  shortcutAction?: string;
+  shortcutEvent?: 'click' | 'dblclick';
 };
 
 const CATEGORIES = [
@@ -170,6 +172,8 @@ const WhiskerMenu: React.FC = () => {
                     name={app.title}
                     openApp={() => openSelectedApp(app.id)}
                     disabled={app.disabled}
+                    shortcutAction={app.shortcutAction}
+                    shortcutEvent={app.shortcutEvent}
                   />
                 </div>
               ))}

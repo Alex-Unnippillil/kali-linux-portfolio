@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import useKeymap from '../../apps/settings/keymapRegistry';
+import { useShortcutTelemetry } from '../../hooks/useShortcutTelemetry';
 
 const formatEvent = (e: KeyboardEvent) => {
   const parts = [
@@ -17,6 +18,7 @@ const formatEvent = (e: KeyboardEvent) => {
 const ShortcutOverlay: React.FC = () => {
   const [open, setOpen] = useState(false);
   const { shortcuts } = useKeymap();
+  const { registerKeyboardAction } = useShortcutTelemetry();
 
   const toggle = useCallback(() => setOpen((o) => !o), []);
 
@@ -34,6 +36,7 @@ const ShortcutOverlay: React.FC = () => {
       if (formatEvent(e) === show) {
         e.preventDefault();
         toggle();
+        registerKeyboardAction('Show keyboard shortcuts');
       } else if (e.key === 'Escape' && open) {
         e.preventDefault();
         setOpen(false);
@@ -41,7 +44,7 @@ const ShortcutOverlay: React.FC = () => {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [open, toggle, shortcuts]);
+  }, [open, toggle, shortcuts, registerKeyboardAction]);
 
   const handleExport = () => {
     const data = JSON.stringify(shortcuts, null, 2);
