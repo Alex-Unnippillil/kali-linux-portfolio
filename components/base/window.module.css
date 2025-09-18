@@ -7,3 +7,29 @@
   height: calc(100% + 10px);
   width: calc(100% - 10px);
 }
+
+.edgeFeedback::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  border: 2px solid rgba(112, 202, 255, 0.55);
+  box-shadow: inset 0 0 12px rgba(112, 202, 255, 0.35);
+  opacity: 0;
+  animation: edgeFeedbackPulse 200ms ease-out;
+}
+
+@keyframes edgeFeedbackPulse {
+  0% {
+    opacity: 0;
+  }
+
+  35% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}

@@ -8,6 +8,9 @@ import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
 
+const EDGE_FEEDBACK_DURATION = 200;
+const EDGE_TOLERANCE = 2;
+
 export class Window extends Component {
     constructor(props) {
         super(props);
@@ -37,6 +40,8 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._edgeFeedbackTimeout = null;
+        this._lastDragPosition = null;
     }
 
     componentDidMount() {
@@ -66,8 +71,12 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = document.getElementById(this.id);
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        root?.classList.remove(styles.edgeFeedback);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+        if (this._edgeFeedbackTimeout) {
+            clearTimeout(this._edgeFeedbackTimeout);
         }
     }
 
@@ -200,6 +209,70 @@ export class Window extends Component {
         this.setState({ cursorType: "cursor-default", grabbed: false })
     }
 
+    triggerEdgeFeedback = () => {
+        const node = document.getElementById(this.id);
+        if (!node) return;
+        const className = styles.edgeFeedback;
+        if (!className) return;
+        if (node.classList.contains(className)) {
+            return;
+        }
+        node.classList.add(className);
+        if (this._edgeFeedbackTimeout) {
+            clearTimeout(this._edgeFeedbackTimeout);
+        }
+        this._edgeFeedbackTimeout = window.setTimeout(() => {
+            node.classList.remove(className);
+            this._edgeFeedbackTimeout = null;
+        }, EDGE_FEEDBACK_DURATION);
+    }
+
+    detectEdgeContact = ({ deltaX = 0, deltaY = 0, positionX, positionY, maxX, maxY } = {}) => {
+        if (!deltaX && !deltaY) {
+            return;
+        }
+        const node = document.getElementById(this.id);
+        if (!node) return;
+
+        let edgeTriggered = false;
+
+        if (typeof positionX === 'number' && typeof maxX === 'number' && deltaX !== 0) {
+            if (deltaX < 0 && positionX <= EDGE_TOLERANCE) {
+                edgeTriggered = true;
+            } else if (deltaX > 0 && positionX >= maxX - EDGE_TOLERANCE) {
+                edgeTriggered = true;
+            }
+        }
+
+        if (!edgeTriggered && typeof positionY === 'number' && typeof maxY === 'number' && deltaY !== 0) {
+            if (deltaY < 0 && positionY <= EDGE_TOLERANCE) {
+                edgeTriggered = true;
+            } else if (deltaY > 0 && positionY >= maxY - EDGE_TOLERANCE) {
+                edgeTriggered = true;
+            }
+        }
+
+        if (!edgeTriggered) {
+            const rect = node.getBoundingClientRect();
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+
+            if (deltaX < 0 && rect.left <= EDGE_TOLERANCE) {
+                edgeTriggered = true;
+            } else if (deltaX > 0 && rect.right >= viewportWidth - EDGE_TOLERANCE) {
+                edgeTriggered = true;
+            } else if (deltaY < 0 && rect.top <= EDGE_TOLERANCE) {
+                edgeTriggered = true;
+            } else if (deltaY > 0 && rect.bottom >= viewportHeight - EDGE_TOLERANCE) {
+                edgeTriggered = true;
+            }
+        }
+
+        if (edgeTriggered) {
+            this.triggerEdgeFeedback();
+        }
+    }
+
     snapToGrid = (value) => {
         if (!this.props.snapEnabled) return value;
         return Math.round(value / 8) * 8;
@@ -207,18 +280,32 @@ export class Window extends Component {
 
     handleVerticleResize = () => {
         if (this.props.resizable === false) return;
-        const px = (this.state.height / 100) * window.innerHeight + 1;
+        const previousHeight = this.state.height;
+        const px = (previousHeight / 100) * window.innerHeight + 1;
         const snapped = this.snapToGrid(px);
         const heightPercent = snapped / window.innerHeight * 100;
-        this.setState({ height: heightPercent }, this.resizeBoundries);
+        const deltaHeight = heightPercent - previousHeight;
+        this.setState({ height: heightPercent }, () => {
+            this.resizeBoundries();
+            if (deltaHeight !== 0) {
+                this.detectEdgeContact({ deltaY: deltaHeight });
+            }
+        });
     }
 
     handleHorizontalResize = () => {
         if (this.props.resizable === false) return;
-        const px = (this.state.width / 100) * window.innerWidth + 1;
+        const previousWidth = this.state.width;
+        const px = (previousWidth / 100) * window.innerWidth + 1;
         const snapped = this.snapToGrid(px);
         const widthPercent = snapped / window.innerWidth * 100;
-        this.setState({ width: widthPercent }, this.resizeBoundries);
+        const deltaWidth = widthPercent - previousWidth;
+        this.setState({ width: widthPercent }, () => {
+            this.resizeBoundries();
+            if (deltaWidth !== 0) {
+                this.detectEdgeContact({ deltaX: deltaWidth });
+            }
+        });
     }
 
     setWinowsPosition = () => {
@@ -344,6 +431,13 @@ export class Window extends Component {
         const maxX = this.state.parentSize.width;
         const maxY = this.state.parentSize.height;
 
+        const attemptX = x;
+        const attemptY = y;
+        const previous = this._lastDragPosition || { x: attemptX, y: attemptY };
+        const deltaX = typeof data.deltaX === 'number' ? data.deltaX : attemptX - previous.x;
+        const deltaY = typeof data.deltaY === 'number' ? data.deltaY : attemptY - previous.y;
+        this._lastDragPosition = { x: attemptX, y: attemptY };
+
         const resist = (pos, min, max) => {
             if (pos < min) return min;
             if (pos < min + threshold) return min + (pos - min) * resistance;
@@ -355,6 +449,14 @@ export class Window extends Component {
         x = resist(x, 0, maxX);
         y = resist(y, 0, maxY);
         node.style.transform = `translate(${x}px, ${y}px)`;
+        this.detectEdgeContact({
+            deltaX,
+            deltaY,
+            positionX: x,
+            positionY: y,
+            maxX,
+            maxY,
+        });
     }
 
     handleDrag = (e, data) => {
@@ -547,19 +649,51 @@ export class Window extends Component {
             if (e.key === 'ArrowLeft') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
+                const previousWidth = this.state.width;
+                const nextWidth = Math.max(previousWidth - step, 20);
+                this.setState({ width: nextWidth }, () => {
+                    this.resizeBoundries();
+                    const deltaWidth = nextWidth - previousWidth;
+                    if (deltaWidth !== 0) {
+                        this.detectEdgeContact({ deltaX: deltaWidth });
+                    }
+                });
             } else if (e.key === 'ArrowRight') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
+                const previousWidth = this.state.width;
+                const nextWidth = Math.min(previousWidth + step, 100);
+                this.setState({ width: nextWidth }, () => {
+                    this.resizeBoundries();
+                    const deltaWidth = nextWidth - previousWidth;
+                    if (deltaWidth !== 0) {
+                        this.detectEdgeContact({ deltaX: deltaWidth });
+                    }
+                });
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
+                const previousHeight = this.state.height;
+                const nextHeight = Math.max(previousHeight - step, 20);
+                this.setState({ height: nextHeight }, () => {
+                    this.resizeBoundries();
+                    const deltaHeight = nextHeight - previousHeight;
+                    if (deltaHeight !== 0) {
+                        this.detectEdgeContact({ deltaY: deltaHeight });
+                    }
+                });
             } else if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
+                const previousHeight = this.state.height;
+                const nextHeight = Math.min(previousHeight + step, 100);
+                this.setState({ height: nextHeight }, () => {
+                    this.resizeBoundries();
+                    const deltaHeight = nextHeight - previousHeight;
+                    if (deltaHeight !== 0) {
+                        this.detectEdgeContact({ deltaY: deltaHeight });
+                    }
+                });
             }
             this.focusWindow();
         }
