@@ -184,7 +184,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
             {t.closable !== false && tabs.length > 1 && (
               <button
-                className="p-0.5"
+                className="kali-button h-6 w-6 rounded-full p-0"
                 onClick={(e) => {
                   e.stopPropagation();
                   closeTab(t.id);
@@ -198,7 +198,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         ))}
         {onNewTab && (
           <button
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700"
+            className="kali-button px-2 py-1"
             onClick={addTab}
             aria-label="New Tab"
           >

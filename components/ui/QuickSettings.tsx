@@ -29,7 +29,7 @@ const QuickSettings = ({ open }: Props) => {
     >
       <div className="px-4 pb-2">
         <button
-          className="w-full flex justify-between"
+          className="kali-button w-full justify-between"
           onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
         >
           <span>Theme</span>
