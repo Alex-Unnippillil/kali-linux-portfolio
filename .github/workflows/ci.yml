@@ -25,6 +25,7 @@ jobs:
           cache: yarn
       - run: yarn install --immutable --immutable-cache
       - run: npm run lint
+      - run: yarn lint:icons
 
   typecheck:
     runs-on: ubuntu-latest

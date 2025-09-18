@@ -25,6 +25,9 @@ jobs:
       - name: Lint
         run: yarn lint
 
+      - name: Icon Lint
+        run: yarn lint:icons
+
       - name: Type Check
         run: yarn tsc --noEmit
 
