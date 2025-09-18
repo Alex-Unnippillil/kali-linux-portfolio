@@ -2,6 +2,74 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
 
+const SUMMARY_STATUSES = ['success', 'failure', 'throttled', 'lockout'];
+const STOPPED_STATUS = 'stopped';
+const FILTER_STATUSES = [...SUMMARY_STATUSES, STOPPED_STATUS];
+
+const STATUS_LABELS = {
+  success: 'Success',
+  failure: 'Failure',
+  throttled: 'Throttled',
+  lockout: 'Lockout',
+  stopped: 'Stopped',
+};
+
+const normalizeStatus = (status) => {
+  if (!status) return 'failure';
+  if (FILTER_STATUSES.includes(status)) return status;
+  if (status === 'attempt') return 'failure';
+  return 'failure';
+};
+
+const formatTimelineEntry = (entry, fallbackHost = '') => {
+  const status = normalizeStatus(entry.status || entry.result);
+  const attemptValue =
+    typeof entry.attempt === 'number'
+      ? entry.attempt
+      : entry.attempt
+      ? Number(entry.attempt) || 0
+      : 0;
+  const timeValue =
+    typeof entry.time === 'number'
+      ? entry.time
+      : entry.time
+      ? Number(entry.time) || 0
+      : 0;
+
+  return {
+    attempt: attemptValue,
+    time: timeValue,
+    user: entry.user || '',
+    password: entry.password || '',
+    host: entry.host || fallbackHost || 'N/A',
+    status,
+    result: status,
+    timestamp: entry.timestamp || new Date().toISOString(),
+    note: entry.note,
+  };
+};
+
+const normalizeTimelineEntries = (entries = [], fallbackHost = '') => {
+  const now = Date.now();
+  return entries.map((entry, index) =>
+    formatTimelineEntry(
+      {
+        ...entry,
+        attempt:
+          typeof entry.attempt === 'number'
+            ? entry.attempt
+            : entry.attempt
+            ? Number(entry.attempt) || 0
+            : index + 1,
+        timestamp:
+          entry.timestamp ||
+          new Date(now - (entries.length - index) * 1000).toISOString(),
+      },
+      fallbackHost
+    )
+  );
+};
+
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
 
@@ -71,6 +139,7 @@ const HydraApp = () => {
   const [announce, setAnnounce] = useState('');
   const announceRef = useRef(0);
   const [timeline, setTimeline] = useState([]);
+  const [statusFilters, setStatusFilters] = useState(() => [...FILTER_STATUSES]);
   const [initialAttempt, setInitialAttempt] = useState(0);
   const startRef = useRef(null);
   const [charset, setCharset] = useState('abc123');
@@ -159,9 +228,13 @@ const HydraApp = () => {
       setService(session.service || 'ssh');
       setSelectedUser(session.selectedUser || '');
       setSelectedPass(session.selectedPass || '');
-      setTimeline(session.timeline || []);
+      const normalized = normalizeTimelineEntries(
+        session.timeline || [],
+        session.target || ''
+      );
+      setTimeline(normalized);
       setInitialAttempt(session.attempt || 0);
-      const lastTime = session.timeline?.slice(-1)[0]?.time || 0;
+      const lastTime = normalized.slice(-1)[0]?.time || 0;
       startRef.current = Date.now() - lastTime * 1000;
       resumeAttack(session);
     }
@@ -236,6 +309,28 @@ const HydraApp = () => {
     0
   );
 
+  const statusCounts = useMemo(() => {
+    const counts = SUMMARY_STATUSES.reduce((acc, status) => {
+      acc[status] = 0;
+      return acc;
+    }, {});
+    timeline.forEach((entry) => {
+      const status = normalizeStatus(entry.status || entry.result);
+      if (typeof counts[status] === 'number') {
+        counts[status] += 1;
+      }
+    });
+    return counts;
+  }, [timeline]);
+
+  const filteredTimeline = useMemo(
+    () =>
+      timeline.filter((entry) =>
+        statusFilters.includes(normalizeStatus(entry.status || entry.result))
+      ),
+    [timeline, statusFilters]
+  );
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -263,10 +358,57 @@ const HydraApp = () => {
     });
   }, [candidateStats]);
 
+  const toggleStatusFilter = (status) => {
+    setStatusFilters((current) => {
+      if (current.includes(status)) {
+        return current.filter((s) => s !== status);
+      }
+      return [...current, status];
+    });
+  };
+
+  const exportCSV = () => {
+    if (typeof window === 'undefined' || timeline.length === 0) return;
+    const allStatusesSelected =
+      statusFilters.length === FILTER_STATUSES.length &&
+      FILTER_STATUSES.every((status) => statusFilters.includes(status));
+    const data = allStatusesSelected ? timeline : filteredTimeline;
+    const header = ['Host', 'User', 'Password', 'Result', 'Timestamp'];
+    const escapeValue = (value) => {
+      const stringValue = String(value ?? '').replace(/"/g, '""');
+      return `"${stringValue}"`;
+    };
+    const rows = data.map((entry) => {
+      const statusKey = normalizeStatus(entry.status || entry.result);
+      const statusLabel =
+        STATUS_LABELS[statusKey] || entry.status || '';
+      const statusWithNote = entry.note
+        ? `${statusLabel} — ${entry.note}`
+        : statusLabel;
+      return [
+        escapeValue(entry.host || target || 'N/A'),
+        escapeValue(entry.user || ''),
+        escapeValue(entry.password || ''),
+        escapeValue(statusWithNote),
+        escapeValue(entry.timestamp || ''),
+      ].join(',');
+    });
+    const csvContent = [header.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `hydra_attempts_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const handleAttempt = (attempt) => {
     const now = Date.now();
     if (attempt > 0 && startRef.current) {
-      const elapsed = ((now - startRef.current) / 1000).toFixed(1);
+      const elapsed = Number(((now - startRef.current) / 1000).toFixed(1));
       const users =
         selectedUserList?.content.split('\n').filter(Boolean) || [];
       const passes =
@@ -274,16 +416,29 @@ const HydraApp = () => {
       const passCount = passes.length || 1;
       const user = users[Math.floor((attempt - 1) / passCount)] || '';
       const password = passes[(attempt - 1) % passCount] || '';
-      const result =
+      const status =
         attempt >= LOCKOUT_THRESHOLD
           ? 'lockout'
+          : totalAttempts > 0 && attempt >= totalAttempts
+          ? 'success'
           : attempt >= BACKOFF_THRESHOLD
           ? 'throttled'
-          : 'attempt';
+          : 'failure';
       setTimeline((t) => {
         const newTimeline = [
           ...t,
-          { time: parseFloat(elapsed), user, password, result },
+          formatTimelineEntry(
+            {
+              attempt,
+              time: elapsed,
+              user,
+              password,
+              status,
+              host: target,
+              timestamp: new Date(now).toISOString(),
+            },
+            target
+          ),
         ];
         saveSession({
           target,
@@ -295,11 +450,22 @@ const HydraApp = () => {
         });
         return newTimeline;
       });
-    }
-    if (now - announceRef.current > 1000) {
-      const limit = Math.min(LOCKOUT_THRESHOLD, totalAttempts);
-      setAnnounce(`Attempt ${attempt} of ${limit}`);
-      announceRef.current = now;
+      const limit = Math.min(
+        LOCKOUT_THRESHOLD,
+        totalAttempts || LOCKOUT_THRESHOLD
+      );
+      let message = `Attempt ${attempt} of ${limit}`;
+      if (status === 'success') {
+        message = `Success with ${user}/${password}`;
+      } else if (status === 'lockout') {
+        message = `Lockout triggered after ${attempt} attempts`;
+      } else if (status === 'throttled') {
+        message = `Throttled after attempt ${attempt}`;
+      }
+      if (status !== 'failure' || now - announceRef.current > 1000) {
+        setAnnounce(message);
+        announceRef.current = now;
+      }
     }
   };
 
@@ -315,6 +481,7 @@ const HydraApp = () => {
     setPaused(false);
     setRunId((id) => id + 1);
     setOutput('');
+    setStatusFilters([...FILTER_STATUSES]);
     setTimeline([]);
     startRef.current = Date.now();
     setInitialAttempt(0);
@@ -417,12 +584,38 @@ const HydraApp = () => {
     }
   };
 
-  const cancelHydra = async () => {
+  const stopHydra = async () => {
+    if (!running && !paused) {
+      return;
+    }
+    const now = Date.now();
+    const elapsedSeconds = startRef.current
+      ? Number(((now - startRef.current) / 1000).toFixed(1))
+      : 0;
+    const lastAttempt = [...timeline]
+      .reverse()
+      .find((entry) => typeof entry.attempt === 'number' && entry.attempt > 0)
+      ?.attempt;
+    const stopEntry = formatTimelineEntry(
+      {
+        attempt: lastAttempt ?? 0,
+        time: elapsedSeconds,
+        user: '',
+        password: '',
+        status: STOPPED_STATUS,
+        host: target,
+        timestamp: new Date(now).toISOString(),
+        note: 'Run stopped by user',
+      },
+      target
+    );
+    setTimeline((current) => [...current, stopEntry]);
     setRunning(false);
     setPaused(false);
     setRunId((id) => id + 1);
     setOutput('');
-    setTimeline([]);
+    setAnnounce('Hydra stopped by user');
+    announceRef.current = now;
     startRef.current = null;
     if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
       await fetch('/api/hydra', {
@@ -431,7 +624,6 @@ const HydraApp = () => {
         body: JSON.stringify({ action: 'cancel' }),
       });
     }
-    setAnnounce('Hydra cancelled');
     clearSession();
   };
 
@@ -456,21 +648,29 @@ const HydraApp = () => {
           ))}
         </div>
         <div>
-          <label className="block mb-1">Target</label>
+          <label className="block mb-1" htmlFor="hydra-target">
+            Target
+          </label>
           <input
+            id="hydra-target"
             type="text"
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="192.168.0.1"
+            aria-label="Target host or IP address"
           />
         </div>
         <div>
-          <label className="block mb-1">Service</label>
+          <label className="block mb-1" htmlFor="hydra-service">
+            Service
+          </label>
           <select
+            id="hydra-service"
             value={service}
             onChange={(e) => setService(e.target.value)}
             className="w-full p-2 rounded text-black"
+            aria-label="Protocol or service to target"
           >
             {availableServices.map((s) => (
               <option key={s} value={s}>
@@ -480,11 +680,15 @@ const HydraApp = () => {
           </select>
         </div>
         <div>
-          <label className="block mb-1">User List</label>
+          <label className="block mb-1" htmlFor="hydra-user-list">
+            User List
+          </label>
           <select
+            id="hydra-user-list"
             value={selectedUser}
             onChange={(e) => setSelectedUser(e.target.value)}
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Select user wordlist"
           >
             {userLists.map((l) => (
               <option key={l.name} value={l.name}>
@@ -494,12 +698,14 @@ const HydraApp = () => {
           </select>
           <input
             data-testid="user-file-input"
+            id="hydra-user-upload"
             type="file"
             accept="text/plain"
             onChange={(e) =>
               addWordList(e.target.files[0], setUserLists, userLists)
             }
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Upload user wordlist"
           />
           <ul>
             {userLists.map((l) => (
@@ -516,11 +722,15 @@ const HydraApp = () => {
           </ul>
         </div>
         <div>
-          <label className="block mb-1">Password List</label>
+          <label className="block mb-1" htmlFor="hydra-pass-list">
+            Password List
+          </label>
           <select
+            id="hydra-pass-list"
             value={selectedPass}
             onChange={(e) => setSelectedPass(e.target.value)}
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Select password wordlist"
           >
             {passLists.map((l) => (
               <option key={l.name} value={l.name}>
@@ -530,12 +740,14 @@ const HydraApp = () => {
           </select>
           <input
             data-testid="pass-file-input"
+            id="hydra-pass-upload"
             type="file"
             accept="text/plain"
             onChange={(e) =>
               addWordList(e.target.files[0], setPassLists, passLists)
             }
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Upload password wordlist"
           />
           <ul>
             {passLists.map((l) => (
@@ -552,23 +764,31 @@ const HydraApp = () => {
           </ul>
         </div>
         <div>
-          <label className="block mb-1">Charset</label>
+          <label className="block mb-1" htmlFor="hydra-charset">
+            Charset
+          </label>
           <input
+            id="hydra-charset"
             type="text"
             value={charset}
             onChange={(e) => setCharset(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="abc123"
+            aria-label="Candidate character set"
           />
         </div>
         <div className="col-span-2">
-          <label className="block mb-1">Rule (min:max length)</label>
+          <label className="block mb-1" htmlFor="hydra-rule">
+            Rule (min:max length)
+          </label>
           <input
+            id="hydra-rule"
             type="text"
             value={rule}
             onChange={(e) => setRule(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="1:3"
+            aria-label="Candidate length range"
           />
           <p className="mt-1 text-sm">
             Candidate space: {candidateSpace.toLocaleString()}
@@ -578,6 +798,7 @@ const HydraApp = () => {
             width="300"
             height="100"
             className="bg-gray-800 mt-2 w-full"
+            aria-label="Candidate space visualization"
           ></canvas>
         </div>
         <div className="col-span-2 flex flex-wrap gap-1.5 mt-2">
@@ -627,11 +848,11 @@ const HydraApp = () => {
           )}
           {running && (
             <button
-              data-testid="cancel-button"
-              onClick={cancelHydra}
-              className="px-4 py-2 bg-red-600 rounded"
+              data-testid="stop-button"
+              onClick={stopHydra}
+              className="px-4 py-2 bg-red-600 rounded font-semibold shadow-md"
             >
-              Cancel
+              Stop
             </button>
           )}
         </div>
@@ -666,24 +887,123 @@ const HydraApp = () => {
       </p>
       <AttemptTimeline attempts={timeline} />
       {timeline.length > 0 && (
-        <table className="mt-4 w-full text-sm">
-          <thead>
-            <tr className="text-left">
-              <th className="px-2">Host</th>
-              <th className="px-2">User</th>
-              <th className="px-2">Pass</th>
-            </tr>
-          </thead>
-          <tbody>
-            {timeline.map((t, idx) => (
-              <tr key={idx} className="border-t border-gray-800">
-                <td className="px-2">{target}</td>
-                <td className="px-2">{t.user}</td>
-                <td className="px-2">{t.password}</td>
+        <div className="mt-4 rounded border border-gray-800 bg-gray-900/60 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-lg font-semibold">Results Summary</h3>
+            <button
+              onClick={exportCSV}
+              disabled={timeline.length === 0}
+              className="px-3 py-1.5 rounded border border-gray-600 bg-gray-800 text-sm disabled:opacity-50"
+            >
+              Export CSV
+            </button>
+          </div>
+          <table
+            className="mt-2 w-full text-sm"
+            aria-label="Attempt summary"
+          >
+            <thead>
+              <tr className="text-left text-xs uppercase tracking-wide text-gray-400">
+                <th className="px-2 py-1">Status</th>
+                <th className="px-2 py-1">Count</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {SUMMARY_STATUSES.map((status) => (
+                <tr key={status} className="border-t border-gray-800/60">
+                  <td className="px-2 py-1">{STATUS_LABELS[status]}</td>
+                  <td className="px-2 py-1">{statusCounts[status] || 0}</td>
+                </tr>
+              ))}
+              <tr className="border-t border-gray-800/60 font-semibold">
+                <td className="px-2 py-1">Total logged attempts</td>
+                <td className="px-2 py-1">
+                  {SUMMARY_STATUSES.reduce(
+                    (sum, status) => sum + (statusCounts[status] || 0),
+                    0
+                  )}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div className="mt-3">
+            <span className="text-xs uppercase tracking-wide text-gray-400">
+              Filter attempt log
+            </span>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {FILTER_STATUSES.map((status) => {
+                const inputId = `hydra-status-${status}`;
+                const checked = statusFilters.includes(status);
+                return (
+                  <label
+                    key={status}
+                    htmlFor={inputId}
+                    className={`flex items-center gap-1 rounded border px-2 py-1 text-sm ${
+                      checked
+                        ? 'border-blue-400 bg-blue-600/40'
+                        : 'border-gray-700 bg-gray-900'
+                    }`}
+                  >
+                    <input
+                      id={inputId}
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleStatusFilter(status)}
+                      className="accent-blue-400"
+                      aria-label={`Toggle ${STATUS_LABELS[status]} attempts`}
+                    />
+                    <span>{STATUS_LABELS[status]}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+          {filteredTimeline.length > 0 ? (
+            <table
+              className="mt-3 w-full text-xs md:text-sm"
+              aria-label="Attempt log"
+            >
+              <thead>
+                <tr className="text-left text-gray-300">
+                  <th className="px-2 py-1">Attempt</th>
+                  <th className="px-2 py-1">Host</th>
+                  <th className="px-2 py-1">User</th>
+                  <th className="px-2 py-1">Password</th>
+                  <th className="px-2 py-1">Result</th>
+                  <th className="px-2 py-1">Timestamp</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredTimeline.map((entry, idx) => {
+                  const status = normalizeStatus(entry.status || entry.result);
+                  const statusLabel = STATUS_LABELS[status] || status || '';
+                  return (
+                    <tr
+                      key={`${entry.timestamp || idx}-${status}-${idx}`}
+                      className="border-t border-gray-800/60"
+                    >
+                      <td className="px-2 py-1">{entry.attempt ?? idx + 1}</td>
+                      <td className="px-2 py-1">{entry.host || target || 'N/A'}</td>
+                      <td className="px-2 py-1">{entry.user || '—'}</td>
+                      <td className="px-2 py-1">{entry.password || '—'}</td>
+                      <td className="px-2 py-1">
+                        {statusLabel}
+                        {entry.note ? ` — ${entry.note}` : ''}
+                      </td>
+                      <td className="px-2 py-1 whitespace-pre-wrap break-words">
+                        {entry.timestamp}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <p className="mt-3 text-sm text-gray-400">
+              No attempts match the selected filters.
+            </p>
+          )}
+        </div>
       )}
 
       <p className="mt-4 text-sm text-gray-300">
