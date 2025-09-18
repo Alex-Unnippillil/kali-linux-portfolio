@@ -70,6 +70,7 @@ const QrApp = createDynamicApp('qr', 'QR Tool');
 const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
 const QuoteApp = createDynamicApp('quote', 'Quote');
 const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery');
+const MapJournalApp = createDynamicApp('map-journal', 'Map Journal');
 const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
 const InputLabApp = createDynamicApp('input-lab', 'Input Lab');
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
@@ -160,6 +161,7 @@ const displayQr = createDisplay(QrApp);
 const displayAsciiArt = createDisplay(AsciiArtApp);
 const displayQuote = createDisplay(QuoteApp);
 const displayProjectGallery = createDisplay(ProjectGalleryApp);
+const displayMapJournal = createDisplay(MapJournalApp);
 const displayTrash = createDisplay(TrashApp);
 const displayStickyNotes = createDisplay(StickyNotesApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);
@@ -257,6 +259,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayProjectGallery,
+  },
+  {
+    id: 'map-journal',
+    title: 'Map Journal',
+    icon: '/themes/Yaru/apps/map-journal.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMapJournal,
   },
   {
     id: 'input-lab',
