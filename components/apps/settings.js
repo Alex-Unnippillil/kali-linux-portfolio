@@ -3,12 +3,54 @@ import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const {
+        accent,
+        setAccent,
+        wallpaper,
+        setWallpaper,
+        density,
+        setDensity,
+        reducedMotion,
+        setReducedMotion,
+        largeHitAreas,
+        setLargeHitAreas,
+        fontScale,
+        setFontScale,
+        highContrast,
+        setHighContrast,
+        pongSpin,
+        setPongSpin,
+        allowNetwork,
+        setAllowNetwork,
+        haptics,
+        setHaptics,
+        theme,
+        setTheme,
+        proxyProfiles,
+        proxyProfile,
+        setProxyProfile,
+        proxyEnabled,
+        setProxyEnabled,
+        proxyCheckInProgress,
+        proxyError,
+        activeProxy,
+    } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
+
+    const handleProxyToggle = useCallback((checked) => {
+        const message = checked
+            ? `Enable ${activeProxy.label}? All simulated requests will route through this proxy profile.`
+            : 'Disable the system proxy and return to a direct connection?';
+        if (typeof window !== 'undefined') {
+            const confirmed = window.confirm(message);
+            if (!confirmed) return;
+        }
+        setProxyEnabled(checked);
+    }, [activeProxy.label, setProxyEnabled]);
 
     const changeBackgroundImage = (e) => {
         const name = e.currentTarget.dataset.path;
@@ -154,6 +196,40 @@ export function Settings() {
                     />
                     Allow Network Requests
                 </label>
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey flex items-center">
+                    <input
+                        type="checkbox"
+                        checked={proxyEnabled}
+                        onChange={(e) => handleProxyToggle(e.target.checked)}
+                        className="mr-2"
+                        disabled={proxyCheckInProgress}
+                    />
+                    System Proxy ({activeProxy.label})
+                </label>
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey">Proxy Profile:</label>
+                <select
+                    value={proxyProfile}
+                    onChange={(e) => setProxyProfile(e.target.value)}
+                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                    disabled={proxyCheckInProgress}
+                >
+                    {proxyProfiles.map((profile) => (
+                        <option key={profile.id} value={profile.id}>
+                            {profile.label}
+                        </option>
+                    ))}
+                </select>
+            </div>
+            <div className="flex justify-center my-2 text-xs px-4 text-center">
+                <p className={proxyError ? 'text-red-400' : 'text-ubt-grey'}>
+                    {proxyCheckInProgress
+                        ? 'Checking proxy connectivity…'
+                        : proxyError || activeProxy.description || 'Choose a proxy profile to simulate routed traffic.'}
+                </p>
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey flex items-center">

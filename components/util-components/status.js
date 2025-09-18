@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Image from 'next/image';
 import SmallArrow from "./small_arrow";
 import { useSettings } from '../../hooks/useSettings';
@@ -6,8 +6,17 @@ import { useSettings } from '../../hooks/useSettings';
 const VOLUME_ICON = "/themes/Yaru/status/audio-volume-medium-symbolic.svg";
 
 export default function Status() {
-  const { allowNetwork } = useSettings();
+  const { allowNetwork, proxyEnabled, activeProxy, proxyCheckInProgress, proxyError } = useSettings();
   const [online, setOnline] = useState(true);
+
+  const statusTitle = useMemo(() => {
+    const parts = [online ? 'Online' : 'Offline'];
+    parts.push(proxyEnabled ? `Proxy: ${activeProxy.label}` : 'Direct connection');
+    if (!allowNetwork) parts.push('Requests blocked');
+    if (proxyCheckInProgress) parts.push('Checking proxy…');
+    if (proxyError) parts.push(proxyError);
+    return parts.join(' • ');
+  }, [activeProxy.label, allowNetwork, online, proxyEnabled, proxyCheckInProgress, proxyError]);
 
   useEffect(() => {
     const pingServer = async () => {
@@ -42,7 +51,7 @@ export default function Status() {
     <div className="flex justify-center items-center">
       <span
         className="mx-1.5 relative"
-        title={online ? (allowNetwork ? 'Online' : 'Online (requests blocked)') : 'Offline'}
+        title={statusTitle}
       >
         <Image
           width={16}
@@ -54,6 +63,17 @@ export default function Status() {
         />
         {!allowNetwork && (
           <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+        )}
+        {(proxyEnabled || proxyCheckInProgress || proxyError) && (
+          <span
+            className={`absolute -bottom-1 -right-1 w-2 h-2 rounded-full ${
+              proxyError
+                ? 'bg-red-500'
+                : proxyCheckInProgress
+                ? 'bg-yellow-400 animate-pulse'
+                : 'bg-blue-500'
+            }`}
+          />
         )}
       </span>
       <span className="mx-1.5">

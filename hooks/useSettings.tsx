@@ -1,4 +1,13 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useRef,
+  useCallback,
+  useMemo,
+} from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -20,10 +29,76 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getProxyProfile as loadProxyProfile,
+  setProxyProfile as saveProxyProfile,
+  getProxyEnabled as loadProxyEnabled,
+  setProxyEnabled as saveProxyEnabled,
+  getLastKnownProxyState as loadLastKnownProxyState,
+  setLastKnownProxyState as saveLastKnownProxyState,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import { setActiveProxySnapshot } from '../lib/fetchProxy';
 type Density = 'regular' | 'compact';
+
+export interface ProxyProfile {
+  id: string;
+  label: string;
+  type?: string;
+  description?: string;
+  checkUrl?: string;
+  timeout?: number;
+}
+
+export interface ActiveProxyProfile extends ProxyProfile {
+  enabled: boolean;
+}
+
+interface ProxyStateSnapshot {
+  profile: string;
+  enabled: boolean;
+}
+
+export const PROXY_PROFILES: ProxyProfile[] = [
+  {
+    id: 'direct',
+    label: 'Direct Connection',
+    type: 'direct',
+    description: 'Bypass the proxy and reach services directly.',
+    checkUrl: '/favicon.ico',
+  },
+  {
+    id: 'sim-tor',
+    label: 'Tor Gateway (Simulated)',
+    type: 'tor',
+    description: 'Route traffic through a simulated Tor entry node.',
+    timeout: 8000,
+    checkUrl: '/favicon.ico?via=tor',
+  },
+  {
+    id: 'sim-proxychain',
+    label: 'ProxyChains (Simulated)',
+    type: 'chain',
+    description: 'Emulate chained corporate proxies with additional latency.',
+    timeout: 6000,
+    checkUrl: '/favicon.ico?via=chain',
+  },
+];
+
+const FALLBACK_PROXY_PROFILE_ID = PROXY_PROFILES[0]?.id ?? 'direct';
+
+const resolveProxyProfile = (id: string): ProxyProfile =>
+  PROXY_PROFILES.find((profile) => profile.id === id) ?? PROXY_PROFILES[0];
+
+const DEFAULT_PROXY_STATE: ProxyStateSnapshot = {
+  profile: defaults.proxyProfile ?? FALLBACK_PROXY_PROFILE_ID,
+  enabled: defaults.proxyEnabled ?? false,
+};
+
+const DEFAULT_ACTIVE_PROXY: ActiveProxyProfile = {
+  ...resolveProxyProfile(DEFAULT_PROXY_STATE.profile),
+  enabled: DEFAULT_PROXY_STATE.enabled,
+};
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -63,6 +138,12 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  proxyEnabled: boolean;
+  proxyProfile: string;
+  proxyProfiles: ProxyProfile[];
+  proxyCheckInProgress: boolean;
+  proxyError: string | null;
+  activeProxy: ActiveProxyProfile;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +155,8 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setProxyEnabled: (value: boolean) => void;
+  setProxyProfile: (profile: string) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +171,12 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  proxyEnabled: DEFAULT_PROXY_STATE.enabled,
+  proxyProfile: DEFAULT_PROXY_STATE.profile,
+  proxyProfiles: PROXY_PROFILES,
+  proxyCheckInProgress: false,
+  proxyError: null,
+  activeProxy: DEFAULT_ACTIVE_PROXY,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +188,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setProxyEnabled: () => {},
+  setProxyProfile: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -113,20 +204,67 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [proxyProfile, setProxyProfileState] = useState<string>(DEFAULT_PROXY_STATE.profile);
+  const [proxyEnabled, setProxyEnabledState] = useState<boolean>(DEFAULT_PROXY_STATE.enabled);
+  const [proxyCheckInProgress, setProxyCheckInProgress] = useState(false);
+  const [proxyError, setProxyError] = useState<string | null>(null);
   const fetchRef = useRef<typeof fetch | null>(null);
+  const proxyRequestRef = useRef(0);
+  const lastKnownGoodProxyRef = useRef<ProxyStateSnapshot>(DEFAULT_PROXY_STATE);
 
   useEffect(() => {
     (async () => {
-      setAccent(await loadAccent());
-      setWallpaper(await loadWallpaper());
-      setDensity((await loadDensity()) as Density);
-      setReducedMotion(await loadReducedMotion());
-      setFontScale(await loadFontScale());
-      setHighContrast(await loadHighContrast());
-      setLargeHitAreas(await loadLargeHitAreas());
-      setPongSpin(await loadPongSpin());
-      setAllowNetwork(await loadAllowNetwork());
-      setHaptics(await loadHaptics());
+      const [
+        accentValue,
+        wallpaperValue,
+        densityValue,
+        reducedMotionValue,
+        fontScaleValue,
+        highContrastValue,
+        largeHitAreasValue,
+        pongSpinValue,
+        allowNetworkValue,
+        hapticsValue,
+        proxyProfileValue,
+        proxyEnabledValue,
+        lastGoodProxyValue,
+      ] = await Promise.all([
+        loadAccent(),
+        loadWallpaper(),
+        loadDensity(),
+        loadReducedMotion(),
+        loadFontScale(),
+        loadHighContrast(),
+        loadLargeHitAreas(),
+        loadPongSpin(),
+        loadAllowNetwork(),
+        loadHaptics(),
+        loadProxyProfile(),
+        loadProxyEnabled(),
+        loadLastKnownProxyState(),
+      ]);
+
+      setAccent(accentValue);
+      setWallpaper(wallpaperValue);
+      setDensity(densityValue as Density);
+      setReducedMotion(reducedMotionValue);
+      setFontScale(fontScaleValue);
+      setHighContrast(highContrastValue);
+      setLargeHitAreas(largeHitAreasValue);
+      setPongSpin(pongSpinValue);
+      setAllowNetwork(allowNetworkValue);
+      setHaptics(hapticsValue);
+      setProxyProfileState(proxyProfileValue ?? FALLBACK_PROXY_PROFILE_ID);
+      setProxyEnabledState(!!proxyEnabledValue);
+      lastKnownGoodProxyRef.current =
+        lastGoodProxyValue &&
+        typeof lastGoodProxyValue.profile === 'string' &&
+        typeof lastGoodProxyValue.enabled === 'boolean'
+          ? lastGoodProxyValue
+          : {
+              profile: proxyProfileValue ?? FALLBACK_PROXY_PROFILE_ID,
+              enabled: !!proxyEnabledValue,
+            };
       setTheme(loadTheme());
     })();
   }, []);
@@ -236,6 +374,132 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  const proxyProfileConfig = useMemo(() => resolveProxyProfile(proxyProfile), [proxyProfile]);
+
+  const activeProxy = useMemo<ActiveProxyProfile>(
+    () => ({
+      ...proxyProfileConfig,
+      enabled: proxyEnabled,
+    }),
+    [proxyProfileConfig, proxyEnabled],
+  );
+
+  useEffect(() => {
+    setActiveProxySnapshot(activeProxy);
+  }, [activeProxy]);
+
+  const runProxyHealthCheck = useCallback(async (profile: ProxyProfile) => {
+    if (typeof window === 'undefined') return true;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), profile.timeout ?? 5000);
+    const checkTarget = profile.checkUrl ?? '/favicon.ico';
+    try {
+      const url = new URL(checkTarget, window.location.origin).toString();
+      const response = await fetch(url, {
+        method: 'HEAD',
+        cache: 'no-store',
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error(`Status ${response.status}`);
+      return true;
+    } catch (err) {
+      console.warn(`Connectivity check failed for proxy ${profile.id}`, err);
+      return false;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }, []);
+
+  const applyProxyState = useCallback(
+    async (nextState: ProxyStateSnapshot) => {
+      if (nextState.profile === proxyProfile && nextState.enabled === proxyEnabled) {
+        return;
+      }
+
+      setProxyProfileState(nextState.profile);
+      setProxyEnabledState(nextState.enabled);
+
+      if (typeof window === 'undefined') {
+        lastKnownGoodProxyRef.current = nextState;
+        return;
+      }
+
+      const requestId = ++proxyRequestRef.current;
+      setProxyError(null);
+
+      const profileConfig = resolveProxyProfile(nextState.profile);
+
+      if (!nextState.enabled) {
+        setProxyCheckInProgress(false);
+        lastKnownGoodProxyRef.current = nextState;
+        try {
+          await Promise.all([
+            saveProxyProfile(nextState.profile),
+            saveProxyEnabled(nextState.enabled),
+            saveLastKnownProxyState(nextState),
+          ]);
+        } catch (err) {
+          console.warn('Failed to persist proxy settings', err);
+        }
+        return;
+      }
+
+      setProxyCheckInProgress(true);
+      const success = await runProxyHealthCheck(profileConfig);
+
+      if (proxyRequestRef.current !== requestId) {
+        return;
+      }
+
+      if (success) {
+        lastKnownGoodProxyRef.current = nextState;
+        setProxyCheckInProgress(false);
+        try {
+          await Promise.all([
+            saveProxyProfile(nextState.profile),
+            saveProxyEnabled(nextState.enabled),
+            saveLastKnownProxyState(nextState),
+          ]);
+        } catch (err) {
+          console.warn('Failed to persist proxy settings', err);
+        }
+      } else {
+        const fallback = lastKnownGoodProxyRef.current;
+        const fallbackProfile = resolveProxyProfile(fallback.profile);
+        setProxyCheckInProgress(false);
+        setProxyError(
+          `Connectivity failed for ${profileConfig.label}. Restored ${fallbackProfile.label}.`,
+        );
+        setProxyProfileState(fallback.profile);
+        setProxyEnabledState(fallback.enabled);
+        try {
+          await Promise.all([
+            saveProxyProfile(fallback.profile),
+            saveProxyEnabled(fallback.enabled),
+            saveLastKnownProxyState(fallback),
+          ]);
+        } catch (err) {
+          console.warn('Failed to persist proxy settings', err);
+        }
+      }
+    },
+    [proxyProfile, proxyEnabled, runProxyHealthCheck],
+  );
+
+  const handleProxyEnabled = useCallback(
+    (value: boolean) => {
+      void applyProxyState({ profile: proxyProfile, enabled: value });
+    },
+    [applyProxyState, proxyProfile],
+  );
+
+  const handleProxyProfileChange = useCallback(
+    (profileId: string) => {
+      void applyProxyState({ profile: profileId, enabled: proxyEnabled });
+    },
+    [applyProxyState, proxyEnabled],
+  );
+
   return (
     <SettingsContext.Provider
       value={{
@@ -250,6 +514,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        proxyEnabled,
+        proxyProfile,
+        proxyProfiles: PROXY_PROFILES,
+        proxyCheckInProgress,
+        proxyError,
+        activeProxy,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +531,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setProxyEnabled: handleProxyEnabled,
+        setProxyProfile: handleProxyProfileChange,
       }}
     >
       {children}
