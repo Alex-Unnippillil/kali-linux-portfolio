@@ -4,6 +4,7 @@ import ReactGA from 'react-ga4';
 import emailjs from '@emailjs/browser';
 import ProgressBar from '../ui/ProgressBar';
 import { createDisplay } from '../../utils/createDynamicApp';
+import { scheduleMotionFrame, observeMotionPreference } from '../../utils/motion';
 
 export class Gedit extends Component {
 
@@ -26,15 +27,28 @@ export class Gedit extends Component {
         }
         this.progressTimer = null;
         this.progressInterval = null;
+        this.clockHandle = null;
+        this.prefersReducedMotion = false;
+        this.stopMotionObserver = null;
     }
 
     componentDidMount() {
         emailjs.init(process.env.NEXT_PUBLIC_USER_ID);
         this.fetchLocation();
+        this.stopMotionObserver = observeMotionPreference((prefers) => {
+            this.prefersReducedMotion = prefers;
+            this.scheduleNextTick();
+        });
+        this.updateTime();
+        this.scheduleNextTick();
     }
 
     componentWillUnmount() {
-        if (this.timeFrame) cancelAnimationFrame(this.timeFrame);
+        this.teardownTimeUpdate();
+        if (this.stopMotionObserver) {
+            this.stopMotionObserver();
+            this.stopMotionObserver = null;
+        }
         if (this.progressTimer) clearTimeout(this.progressTimer);
         if (this.progressInterval) clearInterval(this.progressInterval);
     }
@@ -50,6 +64,28 @@ export class Gedit extends Component {
             .catch(() => { });
     }
 
+    teardownTimeUpdate = () => {
+        if (this.clockHandle) {
+            this.clockHandle.cancel();
+            this.clockHandle = null;
+        }
+    }
+
+    scheduleNextTick = () => {
+        if (typeof window === 'undefined') return;
+        this.teardownTimeUpdate();
+        const delay = this.prefersReducedMotion ? 1000 : 16;
+        this.clockHandle = scheduleMotionFrame(() => {
+            this.clockHandle = null;
+            this.tickClock();
+        }, { fallbackDelay: delay });
+    }
+
+    tickClock = () => {
+        this.updateTime();
+        this.scheduleNextTick();
+    }
+
     updateTime = () => {
         const { timezone } = this.state;
         if (timezone) {
@@ -61,7 +97,6 @@ export class Gedit extends Component {
             });
             this.setState({ localTime: formatter.format(new Date()) });
         }
-        this.timeFrame = requestAnimationFrame(this.updateTime);
     }
 
     handleChange = (field) => (e) => {

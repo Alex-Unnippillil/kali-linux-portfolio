@@ -3,17 +3,21 @@
 @tailwind utilities;
 
 @layer utilities {
-  .transition-hover {
-    @apply transition ease-out duration-150;
-  }
-  .transition-active {
-    @apply transition ease-out duration-100;
+  @media (prefers-reduced-motion: no-preference) {
+    .transition-hover {
+      @apply transition ease-out duration-150;
+    }
+    .transition-active {
+      @apply transition ease-out duration-100;
+    }
   }
 }
 
 @layer base {
-  button {
-    @apply transition-hover transition-active;
+  @media (prefers-reduced-motion: no-preference) {
+    button {
+      @apply transition-hover transition-active;
+    }
   }
 }
 
