@@ -12,6 +12,7 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import TelemetryControls from "../../components/apps/settings/privacy/TelemetryControls";
 
 export default function Settings() {
   const {
@@ -271,7 +272,8 @@ export default function Settings() {
         </>
       )}
       {activeTab === "privacy" && (
-        <>
+        <div className="space-y-6">
+          <TelemetryControls />
           <div className="flex justify-center my-4 space-x-4">
             <button
               onClick={handleExport}
@@ -286,7 +288,7 @@ export default function Settings() {
               Import Settings
             </button>
           </div>
-        </>
+        </div>
       )}
         <input
           type="file"

@@ -2,6 +2,12 @@
 
 import { get, set, del } from 'idb-keyval';
 import { getTheme, setTheme } from './theme';
+import {
+  getTelemetryPreferences,
+  resetTelemetryPreferences,
+  setTelemetryPreferences,
+  TELEMETRY_DEFAULTS,
+} from '../modules/telemetry/preferences';
 
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
@@ -14,6 +20,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  telemetry: TELEMETRY_DEFAULTS,
 };
 
 export async function getAccent() {
@@ -137,6 +144,8 @@ export async function resetSettings() {
   window.localStorage.removeItem('pong-spin');
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
+  window.localStorage.removeItem('telemetry-preferences');
+  resetTelemetryPreferences();
 }
 
 export async function exportSettings() {
@@ -151,6 +160,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    telemetry,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +172,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    Promise.resolve(getTelemetryPreferences()),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -176,6 +187,7 @@ export async function exportSettings() {
     allowNetwork,
     haptics,
     theme,
+    telemetry,
   });
 }
 
@@ -200,6 +212,7 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    telemetry,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -212,6 +225,9 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (telemetry && typeof telemetry === 'object') {
+    setTelemetryPreferences(telemetry);
+  }
 }
 
 export const defaults = DEFAULT_SETTINGS;
