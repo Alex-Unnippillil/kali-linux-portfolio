@@ -23,6 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { sanitizeGeometry, buildWindowDefaults } from '../../utils/windowGeometry';
 
 export class Desktop extends Component {
     constructor() {
@@ -40,6 +41,7 @@ export class Desktop extends Component {
             hideSideBar: false,
             minimized_windows: {},
             window_positions: {},
+            window_sizes: {},
             desktop_apps: [],
             context_menus: {
                 desktop: false,
@@ -71,11 +73,32 @@ export class Desktop extends Component {
             }
 
             if (session.windows && session.windows.length) {
-                session.windows.forEach(({ id, x, y }) => {
-                    positions[id] = { x, y };
+                const viewport = {
+                    width: window.innerWidth || 0,
+                    height: window.innerHeight || 0,
+                };
+                const sizes = {};
+                const reopened = [];
+                session.windows.forEach((entry) => {
+                    if (!entry || !entry.id) return;
+                    const appMeta = apps.find(app => app.id === entry.id);
+                    if (!appMeta) return;
+                    const defaults = buildWindowDefaults(viewport, {
+                        widthPercent: typeof appMeta.defaultWidth === 'number' ? appMeta.defaultWidth : undefined,
+                        heightPercent: typeof appMeta.defaultHeight === 'number' ? appMeta.defaultHeight : undefined,
+                    });
+                    const sanitized = sanitizeGeometry(entry, viewport, defaults);
+                    positions[entry.id] = sanitized.position;
+                    sizes[entry.id] = {
+                        widthPercent: sanitized.sizePercent.widthPercent,
+                        heightPercent: sanitized.sizePercent.heightPercent,
+                        viewportWidth: sanitized.sizePercent.viewportWidth,
+                        viewportHeight: sanitized.sizePercent.viewportHeight,
+                    };
+                    reopened.push(entry.id);
                 });
-                this.setState({ window_positions: positions }, () => {
-                    session.windows.forEach(({ id }) => this.openApp(id));
+                this.setState({ window_positions: positions, window_sizes: sizes }, () => {
+                    reopened.forEach(id => this.openApp(id));
                 });
             } else {
                 this.openApp('about-alex');
@@ -478,6 +501,7 @@ export class Desktop extends Component {
                     defaultHeight: app.defaultHeight,
                     initialX: pos ? pos.x : undefined,
                     initialY: pos ? pos.y : undefined,
+                    initialSize: this.state.window_sizes[app.id],
                     onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                     snapEnabled: this.props.snapEnabled,
                 }
@@ -502,13 +526,68 @@ export class Desktop extends Component {
     saveSession = () => {
         if (!this.props.setSession) return;
         const openWindows = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
-        const windows = openWindows.map(id => ({
-            id,
-            x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
-            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10
-        }));
+        const viewport = {
+            width: window.innerWidth || 0,
+            height: window.innerHeight || 0,
+        };
+        const sizeUpdates = {};
+        const windows = openWindows.map(id => {
+            const position = this.state.window_positions[id];
+            const x = position ? position.x : 60;
+            const y = position ? position.y : 10;
+            const node = document.getElementById(id);
+            let width = 0;
+            let height = 0;
+            if (node) {
+                const rect = node.getBoundingClientRect();
+                width = Math.round(rect.width);
+                height = Math.round(rect.height);
+                if (viewport.width > 0 && viewport.height > 0) {
+                    sizeUpdates[id] = {
+                        widthPercent: (rect.width / viewport.width) * 100,
+                        heightPercent: (rect.height / viewport.height) * 100,
+                        viewportWidth: viewport.width,
+                        viewportHeight: viewport.height,
+                    };
+                }
+            } else if (viewport.width > 0 && viewport.height > 0) {
+                const appMeta = apps.find(app => app.id === id);
+                if (appMeta) {
+                    const defaults = buildWindowDefaults(viewport, {
+                        widthPercent: typeof appMeta.defaultWidth === 'number' ? appMeta.defaultWidth : undefined,
+                        heightPercent: typeof appMeta.defaultHeight === 'number' ? appMeta.defaultHeight : undefined,
+                    });
+                    width = Math.round((defaults.widthPercent / 100) * viewport.width);
+                    height = Math.round((defaults.heightPercent / 100) * viewport.height);
+                    sizeUpdates[id] = {
+                        widthPercent: defaults.widthPercent,
+                        heightPercent: defaults.heightPercent,
+                        viewportWidth: viewport.width,
+                        viewportHeight: viewport.height,
+                    };
+                }
+            }
+            return {
+                id,
+                x,
+                y,
+                width,
+                height,
+                viewportWidth: viewport.width,
+                viewportHeight: viewport.height,
+            };
+        });
         const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
-        this.props.setSession({ ...this.props.session, windows, dock });
+        const applySession = () => {
+            this.props.setSession({ ...this.props.session, windows, dock });
+        };
+        if (Object.keys(sizeUpdates).length) {
+            this.setState(prev => ({
+                window_sizes: { ...prev.window_sizes, ...sizeUpdates }
+            }), applySession);
+        } else {
+            applySession();
+        }
     }
 
     hideSideBar = (objId, hide) => {

@@ -7,21 +7,30 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import styles from './window.module.css';
+import { sanitizeGeometry, buildWindowDefaults } from '../../utils/windowGeometry';
 
 export class Window extends Component {
     constructor(props) {
         super(props);
         this.id = null;
-        const isPortrait =
-            typeof window !== "undefined" && window.innerHeight > window.innerWidth;
-        this.startX =
-            props.initialX ??
-            (isPortrait ? window.innerWidth * 0.05 : 60);
-        this.startY = props.initialY ?? 10;
+        this._hasPersistedGeometry = Boolean(
+            props.initialSize ||
+            typeof props.initialX === 'number' ||
+            typeof props.initialY === 'number'
+        );
+        const initialGeometry = this.computeInitialGeometry(props);
+        const initialPosition = initialGeometry.position || { x: 60, y: 10 };
+        const initialSize = initialGeometry.sizePercent || {};
+        this.startX = initialPosition.x;
+        this.startY = initialPosition.y;
         this.state = {
             cursorType: "cursor-default",
-            width: props.defaultWidth || (isPortrait ? 90 : 60),
-            height: props.defaultHeight || 85,
+            width: typeof initialSize.widthPercent === 'number'
+                ? initialSize.widthPercent
+                : (props.defaultWidth || 60),
+            height: typeof initialSize.heightPercent === 'number'
+                ? initialSize.heightPercent
+                : (props.defaultHeight || 85),
             closed: false,
             maximized: false,
             parentSize: {
@@ -37,6 +46,33 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+    }
+
+    computeInitialGeometry(props) {
+        const viewport = {
+            width: typeof window !== 'undefined' ? window.innerWidth : 0,
+            height: typeof window !== 'undefined' ? window.innerHeight : 0,
+        };
+        const defaults = buildWindowDefaults(viewport, {
+            widthPercent: typeof props.defaultWidth === 'number' ? props.defaultWidth : undefined,
+            heightPercent: typeof props.defaultHeight === 'number' ? props.defaultHeight : undefined,
+        });
+        const persisted = {};
+        if (typeof props.initialX === 'number') persisted.x = props.initialX;
+        if (typeof props.initialY === 'number') persisted.y = props.initialY;
+        if (props.initialSize && typeof props.initialSize.widthPercent === 'number' && viewport.width > 0) {
+            persisted.width = (props.initialSize.widthPercent / 100) * viewport.width;
+        }
+        if (props.initialSize && typeof props.initialSize.heightPercent === 'number' && viewport.height > 0) {
+            persisted.height = (props.initialSize.heightPercent / 100) * viewport.height;
+        }
+        if (props.initialSize && typeof props.initialSize.viewportWidth === 'number') {
+            persisted.viewportWidth = props.initialSize.viewportWidth;
+        }
+        if (props.initialSize && typeof props.initialSize.viewportHeight === 'number') {
+            persisted.viewportHeight = props.initialSize.viewportHeight;
+        }
+        return sanitizeGeometry(persisted, viewport, defaults);
     }
 
     componentDidMount() {
@@ -72,6 +108,14 @@ export class Window extends Component {
     }
 
     setDefaultWindowDimenstion = () => {
+        if (this._hasPersistedGeometry) {
+            this.resizeBoundries();
+            return;
+        }
+        const viewport = {
+            width: typeof window !== 'undefined' ? window.innerWidth : 0,
+            height: typeof window !== 'undefined' ? window.innerHeight : 0,
+        };
         if (this.props.defaultHeight && this.props.defaultWidth) {
             this.setState(
                 { height: this.props.defaultHeight, width: this.props.defaultWidth },
@@ -80,15 +124,9 @@ export class Window extends Component {
             return;
         }
 
-        const isPortrait = window.innerHeight > window.innerWidth;
-        if (isPortrait) {
-            this.startX = window.innerWidth * 0.05;
-            this.setState({ height: 85, width: 90 }, this.resizeBoundries);
-        } else if (window.innerWidth < 640) {
-            this.setState({ height: 60, width: 85 }, this.resizeBoundries);
-        } else {
-            this.setState({ height: 85, width: 60 }, this.resizeBoundries);
-        }
+        const defaults = buildWindowDefaults(viewport);
+        this.startX = defaults.startX;
+        this.setState({ height: defaults.heightPercent, width: defaults.widthPercent }, this.resizeBoundries);
     }
 
     resizeBoundries = () => {
