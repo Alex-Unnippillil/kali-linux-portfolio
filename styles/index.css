@@ -530,3 +530,62 @@ textarea:focus-visible {
     color: #000 !important;
 }
 
+.settings-search-target {
+    position: relative;
+    border-radius: 0.75rem;
+    transition: box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.settings-search-highlight {
+    background-color: color-mix(in srgb, var(--color-primary), transparent 88%);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary), transparent 55%);
+}
+
+.settings-search-active {
+    background-color: color-mix(in srgb, var(--color-primary), transparent 80%);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary), transparent 45%);
+}
+
+.settings-search-results {
+    display: grid;
+    gap: var(--space-2, 0.5rem);
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.settings-search-result-button {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-2, 0.5rem);
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.75rem;
+    border: 1px solid color-mix(in srgb, var(--color-primary), transparent 70%);
+    background-color: color-mix(in srgb, var(--color-primary), transparent 90%);
+    color: var(--color-text);
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.settings-search-result-button:hover,
+.settings-search-result-button:focus-visible {
+    background-color: color-mix(in srgb, var(--color-primary), transparent 75%);
+    border-color: color-mix(in srgb, var(--color-primary), transparent 40%);
+    color: var(--color-inverse);
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-focus-ring);
+}
+
+.settings-search-result-meta {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.settings-search-empty {
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.75rem;
+    background-color: color-mix(in srgb, var(--color-primary), transparent 92%);
+}
+

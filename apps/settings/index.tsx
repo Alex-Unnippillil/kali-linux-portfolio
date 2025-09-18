@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -12,6 +12,9 @@ import {
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
+import { useSectionSearch } from "./hooks/useSectionSearch";
+import { navigation, SettingsSectionId } from "./navigation";
+import { logSettingsSearchNavigation } from "../../utils/analytics";
 
 export default function Settings() {
   const {
@@ -33,14 +36,10 @@ export default function Settings() {
     setTheme,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const tabs = [
-    { id: "appearance", label: "Appearance" },
-    { id: "accessibility", label: "Accessibility" },
-    { id: "privacy", label: "Privacy" },
-  ] as const;
-  type TabId = (typeof tabs)[number]["id"];
-  const [activeTab, setActiveTab] = useState<TabId>("appearance");
+  const [activeTab, setActiveTab] = useState<SettingsSectionId>("appearance");
+  const search = useSectionSearch(activeTab);
+  const [activeHighlight, setActiveHighlight] = useState<string | null>(null);
+  const controlRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const wallpapers = [
     "wall-1",
@@ -105,10 +104,155 @@ export default function Settings() {
 
   const [showKeymap, setShowKeymap] = useState(false);
 
+  const registerControlRef = (slug: string) =>
+    (element: HTMLDivElement | null) => {
+      if (element) {
+        controlRefs.current[slug] = element;
+      } else {
+        delete controlRefs.current[slug];
+      }
+    };
+
+  const highlightClass = (slug: string) => {
+    const classes = ["settings-search-target"];
+    if (search.highlightSlugs.has(slug)) {
+      classes.push("settings-search-highlight");
+    }
+    if (activeHighlight === slug) {
+      classes.push("settings-search-active");
+    }
+    return classes.join(" ");
+  };
+
+  const focusControl = (slug: string) => {
+    const element = controlRefs.current[slug];
+    if (!element) return;
+    if (typeof element.focus === "function") {
+      element.focus({ preventScroll: true });
+    }
+    element.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
+  const navigateToResult = (slug: string, index: number) => {
+    focusControl(slug);
+    setActiveHighlight(slug);
+    logSettingsSearchNavigation({
+      query: search.query,
+      sectionId: activeTab,
+      controlSlug: slug,
+      position: index,
+      total: search.results.length,
+    });
+  };
+
+  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (search.results.length === 0) return;
+    navigateToResult(search.results[0].slug, 0);
+  };
+
+  const handleClearSearch = () => {
+    search.clear();
+    setActiveHighlight(null);
+  };
+
+  useEffect(() => {
+    if (activeHighlight && !search.highlightSlugs.has(activeHighlight)) {
+      setActiveHighlight(null);
+    }
+  }, [activeHighlight, search.highlightSlugs]);
+
+  useEffect(() => {
+    setActiveHighlight(null);
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (!search.hasQuery) {
+      setActiveHighlight(null);
+    }
+  }, [search.hasQuery]);
+
   return (
     <div className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey">
       <div className="flex justify-center border-b border-gray-900">
-        <Tabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
+        <Tabs tabs={navigation} active={activeTab} onChange={setActiveTab} />
+      </div>
+      <div className="border-b border-gray-900 bg-ub-cool-grey px-4 py-3">
+        <form
+          onSubmit={handleSearchSubmit}
+          className="space-y-2"
+          role="search"
+          aria-label="Search settings"
+        >
+          <div className="flex items-center gap-2">
+            <label htmlFor="settings-search" className="sr-only">
+              Search settings
+            </label>
+            <input
+              id="settings-search"
+              type="search"
+              value={search.query}
+              onChange={(e) => search.setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape" && search.query) {
+                  e.preventDefault();
+                  handleClearSearch();
+                }
+              }}
+              placeholder={`Search ${search.section?.label ?? "settings"}`}
+              autoComplete="off"
+              className="flex-1 rounded border border-ubt-cool-grey bg-ub-cool-grey px-3 py-2 text-ubt-grey focus:outline-none focus:ring-2 focus:ring-ub-orange"
+            />
+            {search.query && (
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                className="rounded border border-ubt-cool-grey px-3 py-2 text-sm text-ubt-grey hover:bg-ubt-cool-grey focus:outline-none focus:ring-2 focus:ring-ub-orange"
+              >
+                Clear
+              </button>
+            )}
+            <button type="submit" className="sr-only">
+              Submit search
+            </button>
+          </div>
+          <div className="sr-only" aria-live="polite">
+            {search.hasQuery
+              ? search.results.length
+                ? `${search.results.length} results in ${search.section?.label ?? "this section"}.`
+                : `No settings match ${search.query}.`
+              : ""}
+          </div>
+          {search.hasQuery && (
+            <>
+              {search.results.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-xs uppercase tracking-wide text-ubt-grey">
+                    Matching controls
+                  </p>
+                  <ul className="settings-search-results" role="list">
+                    {search.results.map((result, index) => (
+                      <li key={result.slug}>
+                        <button
+                          type="button"
+                          className="settings-search-result-button"
+                          onClick={() => navigateToResult(result.slug, index)}
+                        >
+                          <span>{result.label}</span>
+                          <span className="settings-search-result-meta">Jump</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <p className="settings-search-empty text-sm text-ubt-grey">
+                  No matches in {search.section?.label}.
+                </p>
+              )}
+            </>
+          )}
+        </form>
       </div>
       {activeTab === "appearance" && (
         <>
@@ -121,7 +265,12 @@ export default function Settings() {
               backgroundPosition: "center center",
             }}
           ></div>
-          <div className="flex justify-center my-4">
+          <div
+            ref={registerControlRef("theme")}
+            data-settings-control="theme"
+            tabIndex={-1}
+            className={`${highlightClass("theme")} flex justify-center my-4`}
+          >
             <label className="mr-2 text-ubt-grey">Theme:</label>
             <select
               value={theme}
@@ -134,7 +283,12 @@ export default function Settings() {
               <option value="matrix">Matrix</option>
             </select>
           </div>
-          <div className="flex justify-center my-4">
+          <div
+            ref={registerControlRef("accent")}
+            data-settings-control="accent"
+            tabIndex={-1}
+            className={`${highlightClass("accent")} flex justify-center my-4`}
+          >
             <label className="mr-2 text-ubt-grey">Accent:</label>
             <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
               {ACCENT_OPTIONS.map((c) => (
@@ -150,7 +304,12 @@ export default function Settings() {
               ))}
             </div>
           </div>
-          <div className="flex justify-center my-4">
+          <div
+            ref={registerControlRef("wallpaper-slider")}
+            data-settings-control="wallpaper-slider"
+            tabIndex={-1}
+            className={`${highlightClass("wallpaper-slider")} flex justify-center my-4`}
+          >
             <label htmlFor="wallpaper-slider" className="mr-2 text-ubt-grey">Wallpaper:</label>
             <input
               id="wallpaper-slider"
@@ -166,15 +325,26 @@ export default function Settings() {
               aria-label="Wallpaper"
             />
           </div>
-          <div className="flex justify-center my-4">
+          <div
+            ref={registerControlRef("wallpaper-slideshow")}
+            data-settings-control="wallpaper-slideshow"
+            tabIndex={-1}
+            className={`${highlightClass("wallpaper-slideshow")} flex justify-center my-4`}
+          >
             <BackgroundSlideshow />
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 justify-items-center border-t border-gray-900">
-            {wallpapers.map((name) => (
-              <div
-                key={name}
-                role="button"
-                aria-label={`Select ${name.replace("wall-", "wallpaper ")}`}
+          <div
+            ref={registerControlRef("wallpaper-gallery")}
+            data-settings-control="wallpaper-gallery"
+            tabIndex={-1}
+            className={`${highlightClass("wallpaper-gallery")} border-t border-gray-900 mt-4 pt-4`}
+          >
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 justify-items-center">
+              {wallpapers.map((name) => (
+                <div
+                  key={name}
+                  role="button"
+                  aria-label={`Select ${name.replace("wall-", "wallpaper ")}`}
                 aria-pressed={name === wallpaper}
                 tabIndex={0}
                 onClick={() => changeBackground(name)}
@@ -198,8 +368,14 @@ export default function Settings() {
                 }}
               ></div>
             ))}
+            </div>
           </div>
-          <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
+          <div
+            ref={registerControlRef("reset-desktop")}
+            data-settings-control="reset-desktop"
+            tabIndex={-1}
+            className={`${highlightClass("reset-desktop")} border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center`}
+          >
             <button
               onClick={handleReset}
               className="px-4 py-2 rounded bg-ub-orange text-white"
@@ -211,7 +387,12 @@ export default function Settings() {
       )}
       {activeTab === "accessibility" && (
         <>
-          <div className="flex justify-center my-4">
+          <div
+            ref={registerControlRef("icon-size")}
+            data-settings-control="icon-size"
+            tabIndex={-1}
+            className={`${highlightClass("icon-size")} flex justify-center my-4`}
+          >
             <label htmlFor="font-scale" className="mr-2 text-ubt-grey">Icon Size:</label>
             <input
               id="font-scale"
@@ -225,7 +406,12 @@ export default function Settings() {
               aria-label="Icon size"
             />
           </div>
-          <div className="flex justify-center my-4">
+          <div
+            ref={registerControlRef("density")}
+            data-settings-control="density"
+            tabIndex={-1}
+            className={`${highlightClass("density")} flex justify-center my-4`}
+          >
             <label className="mr-2 text-ubt-grey">Density:</label>
             <select
               value={density}
@@ -236,7 +422,12 @@ export default function Settings() {
               <option value="compact">Compact</option>
             </select>
           </div>
-          <div className="flex justify-center my-4 items-center">
+          <div
+            ref={registerControlRef("reduced-motion")}
+            data-settings-control="reduced-motion"
+            tabIndex={-1}
+            className={`${highlightClass("reduced-motion")} flex justify-center my-4 items-center`}
+          >
             <span className="mr-2 text-ubt-grey">Reduced Motion:</span>
             <ToggleSwitch
               checked={reducedMotion}
@@ -244,7 +435,12 @@ export default function Settings() {
               ariaLabel="Reduced Motion"
             />
           </div>
-          <div className="flex justify-center my-4 items-center">
+          <div
+            ref={registerControlRef("high-contrast")}
+            data-settings-control="high-contrast"
+            tabIndex={-1}
+            className={`${highlightClass("high-contrast")} flex justify-center my-4 items-center`}
+          >
             <span className="mr-2 text-ubt-grey">High Contrast:</span>
             <ToggleSwitch
               checked={highContrast}
@@ -252,7 +448,12 @@ export default function Settings() {
               ariaLabel="High Contrast"
             />
           </div>
-          <div className="flex justify-center my-4 items-center">
+          <div
+            ref={registerControlRef("haptics")}
+            data-settings-control="haptics"
+            tabIndex={-1}
+            className={`${highlightClass("haptics")} flex justify-center my-4 items-center`}
+          >
             <span className="mr-2 text-ubt-grey">Haptics:</span>
             <ToggleSwitch
               checked={haptics}
@@ -260,7 +461,12 @@ export default function Settings() {
               ariaLabel="Haptics"
             />
           </div>
-          <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
+          <div
+            ref={registerControlRef("keyboard-shortcuts")}
+            data-settings-control="keyboard-shortcuts"
+            tabIndex={-1}
+            className={`${highlightClass("keyboard-shortcuts")} border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center`}
+          >
             <button
               onClick={() => setShowKeymap(true)}
               className="px-4 py-2 rounded bg-ub-orange text-white"
@@ -272,19 +478,33 @@ export default function Settings() {
       )}
       {activeTab === "privacy" && (
         <>
-          <div className="flex justify-center my-4 space-x-4">
-            <button
-              onClick={handleExport}
-              className="px-4 py-2 rounded bg-ub-orange text-white"
+          <div className="flex flex-wrap justify-center gap-4 my-4">
+            <div
+              ref={registerControlRef("export-settings")}
+              data-settings-control="export-settings"
+              tabIndex={-1}
+              className={`${highlightClass("export-settings")} inline-flex`}
             >
-              Export Settings
-            </button>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="px-4 py-2 rounded bg-ub-orange text-white"
+              <button
+                onClick={handleExport}
+                className="px-4 py-2 rounded bg-ub-orange text-white"
+              >
+                Export Settings
+              </button>
+            </div>
+            <div
+              ref={registerControlRef("import-settings")}
+              data-settings-control="import-settings"
+              tabIndex={-1}
+              className={`${highlightClass("import-settings")} inline-flex`}
             >
-              Import Settings
-            </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="px-4 py-2 rounded bg-ub-orange text-white"
+              >
+                Import Settings
+              </button>
+            </div>
           </div>
         </>
       )}

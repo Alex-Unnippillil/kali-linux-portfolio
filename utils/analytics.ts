@@ -28,3 +28,32 @@ export const logGameEnd = (game: string, label?: string): void => {
 export const logGameError = (game: string, message?: string): void => {
   logEvent({ category: game, action: 'error', label: message });
 };
+
+interface SettingsSearchEvent {
+  query: string;
+  sectionId: string;
+  controlSlug: string;
+  position?: number;
+  total?: number;
+}
+
+export const logSettingsSearchNavigation = ({
+  query,
+  sectionId,
+  controlSlug,
+  position,
+  total,
+}: SettingsSearchEvent): void => {
+  const params: Record<string, unknown> = {
+    section_id: sectionId,
+    control_slug: controlSlug,
+    query,
+  };
+  if (typeof position === 'number') {
+    params.match_position = position + 1;
+  }
+  if (typeof total === 'number') {
+    params.match_total = total;
+  }
+  safeEvent('settings_search', params);
+};
