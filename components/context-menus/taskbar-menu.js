@@ -28,6 +28,7 @@ function TaskbarMenu(props) {
             id="taskbar-menu"
             role="menu"
             aria-hidden={!props.active}
+            aria-label="Taskbar context menu"
             ref={menuRef}
             onKeyDown={handleKeyDown}
             className={(props.active ? ' block ' : ' hidden ') + ' cursor-default w-40 context-menu-bg border text-left border-gray-900 rounded text-white py-2 absolute z-50 text-sm'}

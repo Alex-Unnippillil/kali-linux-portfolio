@@ -21,3 +21,10 @@
 1. After resizing or snapping, press **Tab** to move focus inside the window.
 2. Continue pressing **Tab** to confirm focus can leave the window and is not trapped.
 3. Shift+Tab moves focus backward as expected.
+
+## Screen reader behavior
+
+- The desktop workspace exposes a polite live region that announces window, menu, and launcher state changes so announcements such as “Application launcher closed. About Alex window opened.” are read aloud.
+- The taskbar is now a navigation landmark with a labeled toolbar, and running app buttons toggle `aria-pressed` to indicate the active window.
+- The application launcher opens as a modal dialog with a labeled search box and application region. The dock button reports its expanded state and advertises the dialog via `aria-haspopup`.
+- The notification center streams updates through a labeled live region and groups messages into per-app regions for quick navigation.
