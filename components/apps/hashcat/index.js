@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import progressInfo from './progress.json';
 import StatsChart from '../../StatsChart';
 
@@ -56,6 +56,66 @@ const ruleSets = {
   quick: ['l', 'u', 'c', 'd'],
 };
 
+const maskCharset = {
+  '?l': 'abcdefghijklmnopqrstuvwxyz',
+  '?u': 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+  '?d': '0123456789',
+  '?s': "!@#$%^&*()-_=+[]{};:'\",.<>/?`~",
+  '?a':
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+[]{};:'\",.<>/?`~",
+};
+
+const wordlistSources = [
+  {
+    id: 'rockyou',
+    label: 'rockyou.txt (demo)',
+    count: 14344392,
+    preview: ['password', '123456', 'qwerty', 'letmein', 'dragon'],
+  },
+  {
+    id: 'top100',
+    label: 'top-100.txt (demo)',
+    count: 100,
+    preview: [
+      '123456',
+      '123456789',
+      'password1',
+      'abc123',
+      'iloveyou',
+    ],
+  },
+  {
+    id: 'seclists-mini',
+    label: 'SecLists small (demo)',
+    count: 500,
+    preview: ['welcome1', 'changeme', 'trustno1', 'summer2024', 'admin!23'],
+  },
+];
+
+const combinatorRuleOptions = [
+  {
+    id: 'word-number',
+    label: 'Common word + 2-digit number',
+    left: ['password', 'summer', 'winter', 'welcome', 'dragon'],
+    right: ['01', '12', '22', '42', '99'],
+    joiner: '',
+  },
+  {
+    id: 'leet-symbol',
+    label: 'Leetspeak base + symbol suffix',
+    left: ['p@ss', 'h4ck', 's3cur3', 'n3tw0rk', 'r00t'],
+    right: ['!', '#', '$', '123', '*'],
+    joiner: '',
+  },
+  {
+    id: 'first-last-dot',
+    label: 'First name + last name with dot',
+    left: ['alex', 'maria', 'li', 'noah', 'fatima'],
+    right: ['smith', 'garcia', 'chen', 'patel', 'singh'],
+    joiner: '.',
+  },
+];
+
 const sampleOutput = `hashcat (v6.2.6) starting in benchmark mode...
 OpenCL API (OpenCL 3.0) - Platform #1 [MockGPU]
 * Device #1: Mock GPU
@@ -93,6 +153,62 @@ export const generateWordlist = (pattern) => {
   };
   helper('', pattern || '');
   return results;
+};
+
+const buildMaskPreview = (mask, limit = 50) => {
+  if (!mask) {
+    return { total: 0, preview: [] };
+  }
+  const sets = [];
+  for (let i = 0; i < mask.length; i += 1) {
+    const char = mask[i];
+    if (char === '?' && i < mask.length - 1) {
+      const token = mask.slice(i, i + 2);
+      if (maskCharset[token]) {
+        sets.push(maskCharset[token].split(''));
+        i += 1;
+        continue;
+      }
+    }
+    sets.push([char]);
+  }
+  const total = sets.reduce((acc, set) => acc * set.length, 1);
+  if (!sets.length) {
+    return { total: 0, preview: [] };
+  }
+  const indices = new Array(sets.length).fill(0);
+  const preview = [];
+  let finished = false;
+  while (!finished && preview.length < limit) {
+    preview.push(sets.map((set, idx) => set[indices[idx]]).join(''));
+    let position = sets.length - 1;
+    while (position >= 0) {
+      indices[position] += 1;
+      if (indices[position] < sets[position].length) {
+        break;
+      }
+      indices[position] = 0;
+      position -= 1;
+    }
+    if (position < 0) {
+      finished = true;
+    }
+  }
+  return { total, preview };
+};
+
+const buildCombinatorPreview = (config, limit = 50) => {
+  const left = Array.isArray(config?.left) ? config.left : [];
+  const right = Array.isArray(config?.right) ? config.right : [];
+  const joiner = typeof config?.joiner === 'string' ? config.joiner : '';
+  const total = left.length * right.length;
+  const preview = [];
+  for (let i = 0; i < left.length && preview.length < limit; i += 1) {
+    for (let j = 0; j < right.length && preview.length < limit; j += 1) {
+      preview.push(`${left[i]}${joiner}${right[j]}`);
+    }
+  }
+  return { total, preview };
 };
 
 const Gauge = ({ value }) => (
@@ -165,7 +281,14 @@ function HashcatApp() {
   const [benchmark, setBenchmark] = useState('');
   const [pattern, setPattern] = useState('');
   const [wordlistUrl, setWordlistUrl] = useState('');
-  const [wordlist, setWordlist] = useState('');
+  const [wordlist, setWordlist] = useState(wordlistSources[0].id);
+  const [sourceType, setSourceType] = useState('wordlist');
+  const [generatedPreview, setGeneratedPreview] = useState([]);
+  const [sourceLoading, setSourceLoading] = useState(false);
+  const [candidateStats, setCandidateStats] = useState({ count: 0, time: 0 });
+  const [combinatorRule, setCombinatorRule] = useState(
+    combinatorRuleOptions[0].id
+  );
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState('');
   const [isCracking, setIsCracking] = useState(false);
@@ -173,12 +296,30 @@ function HashcatApp() {
   const [attackMode, setAttackMode] = useState('0');
   const [mask, setMask] = useState('');
   const appendMask = (token) => setMask((m) => m + token);
-  const [maskStats, setMaskStats] = useState({ count: 0, time: 0 });
-  const showMask = ['3', '6', '7'].includes(attackMode);
   const [ruleSet, setRuleSet] = useState('none');
   const rulePreview = (ruleSets[ruleSet] || []).slice(0, 10).join('\n');
+  const [cpuDropMs, setCpuDropMs] = useState(null);
   const workerRef = useRef(null);
   const frameRef = useRef(null);
+  const candidateWorkerRef = useRef(null);
+  const candidateJobRef = useRef(0);
+  const cpuDropTimeoutRef = useRef(null);
+
+  const selectedWordlistMeta = useMemo(
+    () => wordlistSources.find((source) => source.id === wordlist),
+    [wordlist]
+  );
+
+  const selectedCombinator = useMemo(
+    () =>
+      combinatorRuleOptions.find((ruleOption) => ruleOption.id === combinatorRule),
+    [combinatorRule]
+  );
+
+  const previewList =
+    sourceType === 'wordlist'
+      ? selectedWordlistMeta?.preview || []
+      : generatedPreview;
 
   const formatTime = (seconds) => {
     if (seconds < 60) return `${seconds.toFixed(2)}s`;
@@ -190,26 +331,124 @@ function HashcatApp() {
     return `${days.toFixed(2)}d`;
   };
 
+  const requestGeneratedPreview = useCallback(
+    (type, payload) => {
+      setCandidateStats({ count: 0, time: 0 });
+      setGeneratedPreview([]);
+      setSourceLoading(true);
+      if (candidateWorkerRef.current) {
+        candidateWorkerRef.current.postMessage({ type: 'cancel' });
+      }
+      candidateJobRef.current += 1;
+      const jobId = candidateJobRef.current;
+
+      if (candidateWorkerRef.current) {
+        candidateWorkerRef.current.postMessage({
+          id: jobId,
+          type: 'generate',
+          sourceType: type,
+          payload,
+          limit: 50,
+        });
+        return;
+      }
+
+      if (type === 'mask') {
+        const { total, preview } = buildMaskPreview(payload?.mask || '');
+        setCandidateStats({ count: total, time: total / 1_000_000 || 0 });
+        setGeneratedPreview(preview);
+      } else if (type === 'combinator') {
+        const { total, preview } = buildCombinatorPreview(payload);
+        setCandidateStats({ count: total, time: total / 1_000_000 || 0 });
+        setGeneratedPreview(preview);
+      }
+      setSourceLoading(false);
+    },
+    []
+  );
+
   useEffect(() => {
-    if (!mask) {
-      setMaskStats({ count: 0, time: 0 });
+    if (typeof window === 'undefined' || typeof Worker !== 'function') return;
+    const worker = new Worker(new URL('./candidate.worker.js', import.meta.url));
+    candidateWorkerRef.current = worker;
+    worker.onmessage = ({ data }) => {
+      if (!data || data.id !== candidateJobRef.current) return;
+      if (typeof data.total === 'number' && !Number.isNaN(data.total)) {
+        setCandidateStats({
+          count: data.total,
+          time: data.total / 1_000_000 || 0,
+        });
+      }
+      if (Array.isArray(data.chunk) && data.chunk.length) {
+        setGeneratedPreview((prev) => {
+          const next = [...prev, ...data.chunk];
+          return next.slice(0, 50);
+        });
+      }
+      if (data.done || data.cancelled) {
+        setSourceLoading(false);
+      }
+    };
+    return () => {
+      worker.postMessage({ type: 'cancel' });
+      worker.terminate();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (sourceType !== 'wordlist') {
       return;
     }
-    const sets = { '?l': 26, '?u': 26, '?d': 10, '?s': 33, '?a': 95 };
-    let total = 1;
-    for (let i = 0; i < mask.length; i++) {
-      if (mask[i] === '?' && i < mask.length - 1) {
-        const token = mask.slice(i, i + 2);
-        if (sets[token]) {
-          total *= sets[token];
-          i++;
-          continue;
-        }
-      }
-      total *= 1;
+    const count = selectedWordlistMeta?.count || 0;
+    setCandidateStats({ count, time: count / 1_000_000 || 0 });
+    setSourceLoading(false);
+    setGeneratedPreview([]);
+  }, [sourceType, selectedWordlistMeta]);
+
+  useEffect(() => {
+    if (sourceType !== 'mask') {
+      return;
     }
-    setMaskStats({ count: total, time: total / 1_000_000 });
-  }, [mask]);
+    if (!mask) {
+      setCandidateStats({ count: 0, time: 0 });
+      setGeneratedPreview([]);
+      setSourceLoading(false);
+      if (candidateWorkerRef.current) {
+        candidateWorkerRef.current.postMessage({ type: 'cancel' });
+      }
+      return;
+    }
+    requestGeneratedPreview('mask', { mask });
+  }, [mask, sourceType, requestGeneratedPreview]);
+
+  useEffect(() => {
+    if (sourceType !== 'combinator') {
+      return;
+    }
+    if (!selectedCombinator) {
+      setCandidateStats({ count: 0, time: 0 });
+      setGeneratedPreview([]);
+      setSourceLoading(false);
+      return;
+    }
+    requestGeneratedPreview('combinator', {
+      left: selectedCombinator.left,
+      right: selectedCombinator.right,
+      joiner: selectedCombinator.joiner,
+    });
+  }, [sourceType, selectedCombinator, requestGeneratedPreview]);
+
+  useEffect(() => {
+    if (sourceType === 'mask' || sourceType === 'combinator') {
+      return;
+    }
+    if (candidateWorkerRef.current) {
+      candidateWorkerRef.current.postMessage({ type: 'cancel' });
+    }
+    candidateJobRef.current += 1;
+    setSourceLoading(false);
+    setGeneratedPreview([]);
+  }, [sourceType]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -233,6 +472,20 @@ function HashcatApp() {
     setIsCracking(true);
     setProgress(0);
     setResult('');
+    setCpuDropMs(null);
+    if (cpuDropTimeoutRef.current) {
+      clearTimeout(cpuDropTimeoutRef.current);
+      cpuDropTimeoutRef.current = null;
+    }
+    if (typeof performance !== 'undefined') {
+      if (performance.clearMarks) {
+        performance.clearMarks('hashcat-cancel');
+        performance.clearMarks('hashcat-cpu-drop');
+      }
+      if (performance.clearMeasures) {
+        performance.clearMeasures('hashcat-cpu-stabilize');
+      }
+    }
     if (typeof window === 'undefined') return;
     if (typeof Worker === 'function') {
       workerRef.current = new Worker(
@@ -244,7 +497,7 @@ function HashcatApp() {
           setProgress(data);
           if (data >= progressInfo.progress) {
             setResult(expected);
-            cancelCracking(false);
+            cancelCracking(false, false);
           }
         };
         if (prefersReducedMotion) {
@@ -259,7 +512,7 @@ function HashcatApp() {
         setProgress((p) => {
           if (p >= target) {
             setResult(expected);
-            cancelCracking(false);
+            cancelCracking(false, false);
             return p;
           }
           frameRef.current = requestAnimationFrame(animate);
@@ -270,7 +523,7 @@ function HashcatApp() {
     }
   };
 
-  const cancelCracking = (reset = true) => {
+  const cancelCracking = (reset = true, measureDrop = true) => {
     if (workerRef.current) {
       workerRef.current.postMessage({ cancel: true });
       workerRef.current.terminate();
@@ -280,7 +533,41 @@ function HashcatApp() {
       cancelAnimationFrame(frameRef.current);
       frameRef.current = null;
     }
+    if (candidateWorkerRef.current) {
+      candidateWorkerRef.current.postMessage({ type: 'cancel' });
+    }
+    candidateJobRef.current += 1;
+    if (cpuDropTimeoutRef.current) {
+      clearTimeout(cpuDropTimeoutRef.current);
+      cpuDropTimeoutRef.current = null;
+    }
     setIsCracking(false);
+    setSourceLoading(false);
+    setGpuUsage(0);
+    if (measureDrop && typeof performance !== 'undefined' && performance.mark) {
+      performance.mark('hashcat-cancel');
+      cpuDropTimeoutRef.current = setTimeout(() => {
+        if (typeof performance === 'undefined' || !performance.mark) {
+          cpuDropTimeoutRef.current = null;
+          return;
+        }
+        performance.mark('hashcat-cpu-drop');
+        const measure =
+          performance.measure &&
+          performance.measure(
+            'hashcat-cpu-stabilize',
+            'hashcat-cancel',
+            'hashcat-cpu-drop'
+          );
+        setCpuDropMs(measure?.duration ?? 0);
+        performance.clearMarks?.('hashcat-cancel');
+        performance.clearMarks?.('hashcat-cpu-drop');
+        performance.clearMeasures?.('hashcat-cpu-stabilize');
+        cpuDropTimeoutRef.current = null;
+      }, 200);
+    } else if (!measureDrop) {
+      setCpuDropMs(null);
+    }
     if (reset) {
       setProgress(0);
       setResult('');
@@ -288,7 +575,7 @@ function HashcatApp() {
   };
 
   useEffect(() => {
-    return () => cancelCracking();
+    return () => cancelCracking(true, false);
   }, []);
 
   const selected = hashTypes.find((h) => h.id === hashType) || hashTypes[0];
@@ -317,12 +604,38 @@ function HashcatApp() {
     }, 500);
   };
 
+  const baseCommand = `hashcat -m ${hashType} -a ${attackMode} ${
+    hashInput || 'hash.txt'
+  }`;
+  let sourceSegment = ' wordlist.txt';
+  if (sourceType === 'mask') {
+    sourceSegment = ` ${mask || '?l?l?d?d'}`;
+  } else if (sourceType === 'combinator') {
+    const id = selectedCombinator?.id || 'combo';
+    sourceSegment = ` ${id}-left.txt ${id}-right.txt`;
+  } else if (selectedWordlistMeta) {
+    sourceSegment = ` ${selectedWordlistMeta.id}.txt`;
+  }
+  const ruleSegment = ruleSet !== 'none' ? ` -r ${ruleSet}.rule` : '';
+  const demoCommand = `${baseCommand}${sourceSegment}${ruleSegment}`;
+
   const createWordlist = () => {
     const list = generateWordlist(pattern);
     const blob = new Blob([list.join('\n')], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
+    if (wordlistUrl) {
+      URL.revokeObjectURL(wordlistUrl);
+    }
     setWordlistUrl(url);
   };
+
+  useEffect(() => {
+    return () => {
+      if (wordlistUrl) {
+        URL.revokeObjectURL(wordlistUrl);
+      }
+    };
+  }, [wordlistUrl]);
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center gap-4 bg-ub-cool-grey text-white">
@@ -386,10 +699,25 @@ function HashcatApp() {
           ))}
         </select>
       </div>
-      {showMask && (
-        <div>
+      <div>
+        <label className="mr-2" htmlFor="credential-source">
+          Credential Source:
+        </label>
+        <select
+          id="credential-source"
+          className="text-black px-2 py-1"
+          value={sourceType}
+          onChange={(e) => setSourceType(e.target.value)}
+        >
+          <option value="wordlist">Wordlist</option>
+          <option value="mask">Mask pattern</option>
+          <option value="combinator">Combinator rule</option>
+        </select>
+      </div>
+      {sourceType === 'mask' && (
+        <div className="w-full max-w-md">
           <label className="block" htmlFor="mask-input">
-            Mask
+            Mask Pattern
           </label>
           <input
             id="mask-input"
@@ -404,17 +732,155 @@ function HashcatApp() {
               </button>
             ))}
           </div>
-          {mask && (
-            <div className="mt-2">
-              <p>Candidate space: {maskStats.count.toLocaleString()}</p>
-              <p className="text-sm">
-                Estimated @1M/s: {formatTime(maskStats.time)}
-              </p>
-              <StatsChart count={maskStats.count} time={maskStats.time} />
+          <div className="text-xs mt-1 text-gray-200">
+            Use Hashcat mask tokens such as <code>?l</code> (lowercase) or{' '}
+            <code>?d</code> (digits). Patterns expand automatically in the
+            background worker.
+          </div>
+        </div>
+      )}
+      {sourceType === 'combinator' && (
+        <div className="w-full max-w-md">
+          <label className="mr-2" htmlFor="combinator-rule">
+            Combinator Rule:
+          </label>
+          <select
+            id="combinator-rule"
+            className="text-black px-2 py-1"
+            value={combinatorRule}
+            onChange={(e) => setCombinatorRule(e.target.value)}
+          >
+            {combinatorRuleOptions.map((rule) => (
+              <option key={rule.id} value={rule.id}>
+                {rule.label}
+              </option>
+            ))}
+          </select>
+          {selectedCombinator && (
+            <div className="text-xs mt-2 space-y-1 text-gray-200">
+              <div>
+                Left list ({selectedCombinator.left.length}):{' '}
+                {selectedCombinator.left.join(', ')}
+              </div>
+              <div>
+                Right list ({selectedCombinator.right.length}):{' '}
+                {selectedCombinator.right.join(', ')}
+              </div>
+              <div>
+                Joiner: {selectedCombinator.joiner || '(concatenate)'}
+              </div>
             </div>
           )}
         </div>
       )}
+      {sourceType === 'wordlist' && (
+        <div className="w-full max-w-md space-y-3">
+          <div>
+            <label className="mr-2" htmlFor="wordlist-select">
+              Wordlist:
+            </label>
+            <select
+              id="wordlist-select"
+              className="text-black px-2 py-1"
+              value={wordlist}
+              onChange={(e) => setWordlist(e.target.value)}
+            >
+              {wordlistSources.map((source) => (
+                <option key={source.id} value={source.id}>
+                  {source.label}
+                </option>
+              ))}
+            </select>
+            <div className="text-xs mt-1">
+              Wordlist selection is simulated. Common files live under{' '}
+              <code>/usr/share/wordlists/</code> such as{' '}
+              <code>/usr/share/wordlists/rockyou.txt</code>.
+            </div>
+            <div className="text-xs">
+              Learn more at{' '}
+              <a
+                className="underline"
+                href="https://hashcat.net/wiki/doku.php?id=wordlists"
+                target="_blank"
+                rel="noreferrer"
+              >
+                hashcat.net
+              </a>
+              .
+            </div>
+          </div>
+          <div>
+            <label className="mr-2" htmlFor="word-pattern">
+              Pattern Generator:
+            </label>
+            <input
+              id="word-pattern"
+              className="text-black px-2 py-1"
+              value={pattern}
+              onChange={(e) => setPattern(e.target.value)}
+            />
+            <button className="ml-2" onClick={createWordlist}>
+              Generate
+            </button>
+            {wordlistUrl && (
+              <a
+                className="ml-2 underline"
+                href={wordlistUrl}
+                download="wordlist.txt"
+              >
+                Download
+              </a>
+            )}
+            <div className="text-xs mt-1">
+              The demo expands <code>?</code> to digits; uploading custom
+              wordlists is disabled.
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="w-full max-w-md bg-black/40 rounded p-3">
+        <div className="text-sm font-semibold">Candidate space</div>
+        <p className="mt-1 text-sm">
+          Count: {candidateStats.count.toLocaleString()}
+        </p>
+        <p className="text-xs text-gray-200">
+          Estimated @1M/s: {formatTime(candidateStats.time)}
+        </p>
+        <StatsChart count={candidateStats.count} time={candidateStats.time} />
+        {sourceLoading && (
+          <div className="text-xs italic mt-1">Generating preview...</div>
+        )}
+        {!sourceLoading &&
+          previewList.length === 0 &&
+          candidateStats.count === 0 && (
+            <div className="text-xs mt-1 text-gray-300">
+              {sourceType === 'mask'
+                ? 'Enter a mask token like ?l?d to populate the candidate pool.'
+                : sourceType === 'combinator'
+                ? 'Choose a combinator rule to see generated pairs.'
+                : 'Select a wordlist to inspect sample entries.'}
+            </div>
+          )}
+        {previewList.length > 0 && (
+          <div className="mt-2">
+            <div className="text-sm">Preview (demo):</div>
+            <pre className="bg-black p-2 text-xs h-24 overflow-auto">
+              {previewList.join('\n')}
+            </pre>
+          </div>
+        )}
+        {sourceType === 'combinator' && selectedCombinator && (
+          <div className="text-xs mt-1 text-gray-200">
+            {selectedCombinator.left.length} × {selectedCombinator.right.length} ={' '}
+            {candidateStats.count.toLocaleString()} combinations
+          </div>
+        )}
+        {sourceType === 'mask' && mask && (
+          <div className="text-xs mt-1 text-gray-200">
+            Mask length: {mask.length} characters
+          </div>
+        )}
+      </div>
       <div>
         <label className="mr-2" htmlFor="rule-set">
           Rule Set:
@@ -442,63 +908,6 @@ function HashcatApp() {
       {benchmark && (
         <div data-testid="benchmark-output">{benchmark}</div>
       )}
-      <div>
-        <label className="mr-2" htmlFor="wordlist-select">
-          Wordlist:
-        </label>
-        <select
-          id="wordlist-select"
-          className="text-black px-2 py-1"
-          value={wordlist}
-          onChange={(e) => setWordlist(e.target.value)}
-        >
-          <option value="">Select wordlist (demo)</option>
-          <option value="rockyou">rockyou.txt</option>
-          <option value="top100">top-100.txt</option>
-        </select>
-        <div className="text-xs mt-1">
-          Wordlist selection is simulated. Common files live under{' '}
-          <code>/usr/share/wordlists/</code> e.g.{' '}
-          <code>/usr/share/wordlists/rockyou.txt</code>. Learn more at{' '}
-          <a
-            className="underline"
-            href="https://hashcat.net/wiki/doku.php?id=wordlists"
-            target="_blank"
-            rel="noreferrer"
-          >
-            hashcat.net
-          </a>
-          .
-        </div>
-        <div className="text-xs mt-1">
-          Sample entries: <code>password123</code>, <code>qwerty</code>,{' '}
-          <code>letmein</code>
-        </div>
-      </div>
-      <div>
-        <label className="mr-2" htmlFor="word-pattern">
-          Wordlist Pattern:
-        </label>
-        <input
-          id="word-pattern"
-          className="text-black px-2 py-1"
-          value={pattern}
-          onChange={(e) => setPattern(e.target.value)}
-        />
-        <button className="ml-2" onClick={createWordlist}>
-          Generate
-        </button>
-        {wordlistUrl && (
-          <a
-            className="ml-2 underline"
-            href={wordlistUrl}
-            download="wordlist.txt"
-          >
-            Download
-          </a>
-        )}
-        <div className="text-xs mt-1">Uploading wordlists is disabled.</div>
-      </div>
       <div className="mt-2">
         <div className="text-sm">Demo Command:</div>
         <div className="flex items-center">
@@ -506,23 +915,13 @@ function HashcatApp() {
             className="bg-black px-2 py-1 text-xs"
             data-testid="demo-command"
           >
-            {`hashcat -m ${hashType} -a ${attackMode} ${
-              hashInput || 'hash.txt'
-            } ${wordlist ? `${wordlist}.txt` : 'wordlist.txt'}${
-              showMask && mask ? ` ${mask}` : ''
-            }${ruleSet !== 'none' ? ` -r ${ruleSet}.rule` : ''}`}
+            {demoCommand}
           </code>
           <button
             className="ml-2"
             onClick={() => {
               if (navigator?.clipboard?.writeText) {
-                navigator.clipboard.writeText(
-                  `hashcat -m ${hashType} -a ${attackMode} ${
-                    hashInput || 'hash.txt'
-                  } ${wordlist ? `${wordlist}.txt` : 'wordlist.txt'}${
-                    showMask && mask ? ` ${mask}` : ''
-                  }${ruleSet !== 'none' ? ` -r ${ruleSet}.rule` : ''}`
-                );
+                navigator.clipboard.writeText(demoCommand);
               }
             }}
           >
@@ -546,6 +945,15 @@ function HashcatApp() {
         <button onClick={startCracking}>Start Cracking</button>
       ) : (
         <button onClick={() => cancelCracking()}>Cancel</button>
+      )}
+      {cpuDropMs !== null && (
+        <div
+          className={`text-xs ${
+            cpuDropMs <= 200 ? 'text-green-300' : 'text-yellow-300'
+          }`}
+        >
+          CPU load stabilized in {cpuDropMs.toFixed(0)} ms (target ≤ 200 ms)
+        </div>
       )}
       <ProgressGauge
         progress={progress}
