@@ -620,7 +620,7 @@ const apps = [
   {
     id: 'terminal',
     title: 'Terminal',
-    icon: '/themes/Yaru/apps/bash.png',
+    icon: '/icons/apps/kali-terminal.svg',
     disabled: false,
     favourite: true,
     desktop_shortcut: false,
@@ -695,7 +695,7 @@ const apps = [
   {
     id: 'files',
     title: 'Files',
-    icon: '/themes/Yaru/system/folder.png',
+    icon: '/icons/apps/kali-file-manager.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -955,7 +955,7 @@ const apps = [
   {
     id: 'serial-terminal',
     title: 'Serial Terminal',
-    icon: '/themes/Yaru/apps/bash.png',
+    icon: '/icons/apps/kali-terminal.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
