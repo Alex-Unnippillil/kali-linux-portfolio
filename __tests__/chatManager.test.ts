@@ -1,9 +1,13 @@
 import { getChatId } from '../src/chat/chatManager';
-import { createLogger } from '../lib/logger';
+import { clearAppLogBuffer, createLogger } from '../lib/logger';
 
 describe('getChatId', () => {
+  afterEach(() => {
+    clearAppLogBuffer('chat-test');
+  });
+
   it('throws and logs when chat is undefined', () => {
-    const logger = createLogger('test');
+    const logger = createLogger({ correlationId: 'test', appId: 'chat-test' });
     const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
     expect(() => getChatId(undefined as any, logger)).toThrow('chat is required');
     expect(spy).toHaveBeenCalled();

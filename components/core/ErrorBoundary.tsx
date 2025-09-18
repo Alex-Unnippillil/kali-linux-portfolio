@@ -9,7 +9,7 @@ interface State {
   hasError: boolean;
 }
 
-const log = createLogger();
+const log = createLogger({ appId: 'error-boundary' });
 
 class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
