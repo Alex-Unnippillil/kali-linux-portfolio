@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect, useId } from 'react';
 import UbuntuApp from '../base/ubuntu_app';
 import apps from '../../apps.config';
 import AutoSizer from 'react-virtualized-auto-sizer';
@@ -25,6 +25,8 @@ export default function AppGrid({ openApp }) {
   const gridRef = useRef(null);
   const columnCountRef = useRef(1);
   const [focusedIndex, setFocusedIndex] = useState(0);
+  const searchInputId = useId();
+  const listLabelId = useId();
 
   const filtered = useMemo(() => {
     if (!query) return apps.map((app) => ({ ...app, nodes: app.title }));
@@ -75,8 +77,14 @@ export default function AppGrid({ openApp }) {
     const index = rowIndex * data.columnCount + columnIndex;
     if (index >= data.items.length) return null;
     const app = data.items[index];
+    const posInSet = index + 1;
     return (
-      <div style={{ ...style, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 12 }}>
+      <div
+        role="listitem"
+        aria-posinset={posInSet}
+        aria-setsize={data.totalCount}
+        style={{ ...style, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 12 }}
+      >
         <UbuntuApp
           id={app.id}
           icon={app.icon}
@@ -88,15 +96,37 @@ export default function AppGrid({ openApp }) {
     );
   };
 
+  const InnerElementType = useMemo(() => {
+    const Inner = React.forwardRef(({ style, ...rest }, ref) => (
+      <div
+        ref={ref}
+        role="list"
+        aria-labelledby={listLabelId}
+        {...rest}
+        style={style}
+      />
+    ));
+    Inner.displayName = 'AppGridInnerList';
+    return Inner;
+  }, [listLabelId]);
+
   return (
     <div className="flex flex-col items-center h-full">
+      <label htmlFor={searchInputId} className="sr-only">
+        Search applications
+      </label>
       <input
+        id={searchInputId}
         className="mb-6 mt-4 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
         placeholder="Search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
+        aria-describedby={listLabelId}
       />
       <div className="w-full flex-1 h-[70vh] outline-none" onKeyDown={handleKeyDown}>
+        <h2 id={listLabelId} className="sr-only">
+          Application shortcuts
+        </h2>
         <AutoSizer>
           {({ height, width }) => {
             const columnCount = getColumnCount(width);
@@ -112,8 +142,14 @@ export default function AppGrid({ openApp }) {
                 rowHeight={112}
                 width={width}
                 className="scroll-smooth"
+                innerElementType={InnerElementType}
               >
-                {(props) => <Cell {...props} data={{ items: filtered, columnCount }} />}
+                {(props) => (
+                  <Cell
+                    {...props}
+                    data={{ items: filtered, columnCount, totalCount: filtered.length }}
+                  />
+                )}
               </Grid>
             );
           }}
