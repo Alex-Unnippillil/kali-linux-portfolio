@@ -16,11 +16,12 @@ export default function ToggleSwitch({
 }: ToggleSwitchProps) {
   return (
     <button
+      type="button"
       role="switch"
       aria-checked={checked}
       aria-label={ariaLabel}
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex w-10 h-5 rounded-full transition-colors focus:outline-none ${
+      className={`relative inline-flex w-10 h-5 rounded-full transition-colors ${
         checked ? "bg-ub-orange" : "bg-ubt-cool-grey"
       } ${className}`.trim()}
     >

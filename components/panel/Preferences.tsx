@@ -60,11 +60,25 @@ export default function Preferences() {
     localStorage.setItem(`${PANEL_PREFIX}autohide`, autohide ? "true" : "false");
   }, [autohide]);
 
+  const panelIdFor = (id: TabId) => `preferences-panel-${id}`;
+
   return (
     <div>
-      <Tabs tabs={TABS} active={active} onChange={setActive} />
+      <Tabs
+        tabs={TABS}
+        active={active}
+        onChange={setActive}
+        idPrefix="preferences-tab"
+        getPanelId={(id) => panelIdFor(id)}
+      />
       <div className="p-4">
-        {active === "display" && (
+        <section
+          id={panelIdFor("display")}
+          role="tabpanel"
+          aria-labelledby="preferences-tab-display"
+          hidden={active !== "display"}
+          aria-hidden={active !== "display"}
+        >
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <label htmlFor="orientation" className="text-ubt-grey">
@@ -91,8 +105,14 @@ export default function Preferences() {
               />
             </div>
           </div>
-        )}
-        {active === "measurements" && (
+        </section>
+        <section
+          id={panelIdFor("measurements")}
+          role="tabpanel"
+          aria-labelledby="preferences-tab-measurements"
+          hidden={active !== "measurements"}
+          aria-hidden={active !== "measurements"}
+        >
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <label htmlFor="panel-size" className="text-ubt-grey">
@@ -125,16 +145,34 @@ export default function Preferences() {
               />
             </div>
           </div>
-        )}
-        {active === "appearance" && (
+        </section>
+        <section
+          id={panelIdFor("appearance")}
+          role="tabpanel"
+          aria-labelledby="preferences-tab-appearance"
+          hidden={active !== "appearance"}
+          aria-hidden={active !== "appearance"}
+        >
           <p className="text-ubt-grey">Appearance settings are not available yet.</p>
-        )}
-        {active === "opacity" && (
+        </section>
+        <section
+          id={panelIdFor("opacity")}
+          role="tabpanel"
+          aria-labelledby="preferences-tab-opacity"
+          hidden={active !== "opacity"}
+          aria-hidden={active !== "opacity"}
+        >
           <p className="text-ubt-grey">Opacity settings are not available yet.</p>
-        )}
-        {active === "items" && (
+        </section>
+        <section
+          id={panelIdFor("items")}
+          role="tabpanel"
+          aria-labelledby="preferences-tab-items"
+          hidden={active !== "items"}
+          aria-hidden={active !== "items"}
+        >
           <p className="text-ubt-grey">Item settings are not available yet.</p>
-        )}
+        </section>
       </div>
     </div>
   );
