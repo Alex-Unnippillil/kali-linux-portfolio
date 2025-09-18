@@ -20,8 +20,15 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getPowerPlan as loadPowerPlan,
+  setPowerPlan as savePowerPlan,
+  getCpuGovernor as loadCpuGovernor,
+  setCpuGovernor as saveCpuGovernor,
+  getDisplaySleep as loadDisplaySleep,
+  setDisplaySleep as saveDisplaySleep,
   defaults,
 } from '../utils/settingsStore';
+import type { CpuGovernor, DisplaySleep, PowerPlan } from '../utils/powerManager';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
 
@@ -63,6 +70,9 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  powerPlan: PowerPlan;
+  cpuGovernor: CpuGovernor;
+  displaySleep: DisplaySleep;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -74,6 +84,9 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setPowerPlan: (value: PowerPlan) => void;
+  setCpuGovernor: (value: CpuGovernor) => void;
+  setDisplaySleep: (value: DisplaySleep) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -88,6 +101,9 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  powerPlan: defaults.powerPlan as PowerPlan,
+  cpuGovernor: defaults.cpuGovernor as CpuGovernor,
+  displaySleep: defaults.displaySleep as DisplaySleep,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -99,6 +115,9 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setPowerPlan: () => {},
+  setCpuGovernor: () => {},
+  setDisplaySleep: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -113,6 +132,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [powerPlan, setPowerPlan] = useState<PowerPlan>(defaults.powerPlan as PowerPlan);
+  const [cpuGovernor, setCpuGovernor] = useState<CpuGovernor>(defaults.cpuGovernor as CpuGovernor);
+  const [displaySleep, setDisplaySleep] = useState<DisplaySleep>(defaults.displaySleep as DisplaySleep);
   const fetchRef = useRef<typeof fetch | null>(null);
 
   useEffect(() => {
@@ -128,6 +150,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
+      setPowerPlan((await loadPowerPlan()) as PowerPlan);
+      setCpuGovernor((await loadCpuGovernor()) as CpuGovernor);
+      setDisplaySleep((await loadDisplaySleep()) as DisplaySleep);
     })();
   }, []);
 
@@ -155,6 +180,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveWallpaper(wallpaper);
   }, [wallpaper]);
+
+  useEffect(() => {
+    savePowerPlan(powerPlan);
+  }, [powerPlan]);
+
+  useEffect(() => {
+    saveCpuGovernor(cpuGovernor);
+  }, [cpuGovernor]);
+
+  useEffect(() => {
+    saveDisplaySleep(displaySleep);
+  }, [displaySleep]);
 
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {
@@ -250,6 +287,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        powerPlan,
+        cpuGovernor,
+        displaySleep,
         setAccent,
         setWallpaper,
         setDensity,
@@ -261,6 +301,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setPowerPlan,
+        setCpuGovernor,
+        setDisplaySleep,
       }}
     >
       {children}

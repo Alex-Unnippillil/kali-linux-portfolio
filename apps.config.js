@@ -10,6 +10,7 @@ import { displayWeather } from './components/apps/weather';
 import { displayClipboardManager } from './components/apps/ClipboardManager';
 import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
+import { displayPowerDashboard } from './components/apps/power-dashboard';
 import { displayScreenRecorder } from './components/apps/screen-recorder';
 import { displayNikto } from './components/apps/nikto';
 
@@ -266,6 +267,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayInputLab,
+  },
+  {
+    id: 'power-dashboard',
+    title: 'Power Dashboard',
+    icon: '/themes/Yaru/apps/resource-monitor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPowerDashboard,
   },
 ];
 

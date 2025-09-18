@@ -14,6 +14,18 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  powerPlan: 'balanced',
+  cpuGovernor: 'balanced',
+  displaySleep: 10,
+};
+
+const getLocalStorage = () => {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
 };
 
 export async function getAccent() {
@@ -37,18 +49,21 @@ export async function setWallpaper(wallpaper) {
 }
 
 export async function getDensity() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.density;
-  return window.localStorage.getItem('density') || DEFAULT_SETTINGS.density;
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.density;
+  return storage.getItem('density') || DEFAULT_SETTINGS.density;
 }
 
 export async function setDensity(density) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem('density', density);
+  const storage = getLocalStorage();
+  if (!storage) return;
+  storage.setItem('density', density);
 }
 
 export async function getReducedMotion() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.reducedMotion;
-  const stored = window.localStorage.getItem('reduced-motion');
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.reducedMotion;
+  const stored = storage.getItem('reduced-motion');
   if (stored !== null) {
     return stored === 'true';
   }
@@ -56,87 +71,145 @@ export async function getReducedMotion() {
 }
 
 export async function setReducedMotion(value) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem('reduced-motion', value ? 'true' : 'false');
+  const storage = getLocalStorage();
+  if (!storage) return;
+  storage.setItem('reduced-motion', value ? 'true' : 'false');
 }
 
 export async function getFontScale() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.fontScale;
-  const stored = window.localStorage.getItem('font-scale');
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.fontScale;
+  const stored = storage.getItem('font-scale');
   return stored ? parseFloat(stored) : DEFAULT_SETTINGS.fontScale;
 }
 
 export async function setFontScale(scale) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem('font-scale', String(scale));
+  const storage = getLocalStorage();
+  if (!storage) return;
+  storage.setItem('font-scale', String(scale));
 }
 
 export async function getHighContrast() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.highContrast;
-  return window.localStorage.getItem('high-contrast') === 'true';
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.highContrast;
+  return storage.getItem('high-contrast') === 'true';
 }
 
 export async function setHighContrast(value) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem('high-contrast', value ? 'true' : 'false');
+  const storage = getLocalStorage();
+  if (!storage) return;
+  storage.setItem('high-contrast', value ? 'true' : 'false');
 }
 
 export async function getLargeHitAreas() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.largeHitAreas;
-  return window.localStorage.getItem('large-hit-areas') === 'true';
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.largeHitAreas;
+  return storage.getItem('large-hit-areas') === 'true';
 }
 
 export async function setLargeHitAreas(value) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem('large-hit-areas', value ? 'true' : 'false');
+  const storage = getLocalStorage();
+  if (!storage) return;
+  storage.setItem('large-hit-areas', value ? 'true' : 'false');
 }
 
 export async function getHaptics() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.haptics;
-  const val = window.localStorage.getItem('haptics');
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.haptics;
+  const val = storage.getItem('haptics');
   return val === null ? DEFAULT_SETTINGS.haptics : val === 'true';
 }
 
 export async function setHaptics(value) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem('haptics', value ? 'true' : 'false');
+  const storage = getLocalStorage();
+  if (!storage) return;
+  storage.setItem('haptics', value ? 'true' : 'false');
 }
 
 export async function getPongSpin() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.pongSpin;
-  const val = window.localStorage.getItem('pong-spin');
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.pongSpin;
+  const val = storage.getItem('pong-spin');
   return val === null ? DEFAULT_SETTINGS.pongSpin : val === 'true';
 }
 
 export async function setPongSpin(value) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem('pong-spin', value ? 'true' : 'false');
+  const storage = getLocalStorage();
+  if (!storage) return;
+  storage.setItem('pong-spin', value ? 'true' : 'false');
 }
 
 export async function getAllowNetwork() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.allowNetwork;
-  return window.localStorage.getItem('allow-network') === 'true';
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.allowNetwork;
+  return storage.getItem('allow-network') === 'true';
 }
 
 export async function setAllowNetwork(value) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem('allow-network', value ? 'true' : 'false');
+  const storage = getLocalStorage();
+  if (!storage) return;
+  storage.setItem('allow-network', value ? 'true' : 'false');
+}
+
+export async function getPowerPlan() {
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.powerPlan;
+  return storage.getItem('power-plan') || DEFAULT_SETTINGS.powerPlan;
+}
+
+export async function setPowerPlan(value) {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  storage.setItem('power-plan', value);
+}
+
+export async function getCpuGovernor() {
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.cpuGovernor;
+  return storage.getItem('cpu-governor') || DEFAULT_SETTINGS.cpuGovernor;
+}
+
+export async function setCpuGovernor(value) {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  storage.setItem('cpu-governor', value);
+}
+
+export async function getDisplaySleep() {
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.displaySleep;
+  const stored = storage.getItem('display-sleep');
+  if (stored === null) return DEFAULT_SETTINGS.displaySleep;
+  if (stored === 'never') return 'never';
+  const parsed = parseInt(stored, 10);
+  return Number.isNaN(parsed) ? DEFAULT_SETTINGS.displaySleep : parsed;
+}
+
+export async function setDisplaySleep(value) {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  const serialised = value === 'never' ? 'never' : String(value);
+  storage.setItem('display-sleep', serialised);
 }
 
 export async function resetSettings() {
-  if (typeof window === 'undefined') return;
+  const storage = getLocalStorage();
+  if (!storage) return;
   await Promise.all([
     del('accent'),
     del('bg-image'),
   ]);
-  window.localStorage.removeItem('density');
-  window.localStorage.removeItem('reduced-motion');
-  window.localStorage.removeItem('font-scale');
-  window.localStorage.removeItem('high-contrast');
-  window.localStorage.removeItem('large-hit-areas');
-  window.localStorage.removeItem('pong-spin');
-  window.localStorage.removeItem('allow-network');
-  window.localStorage.removeItem('haptics');
+  storage.removeItem('density');
+  storage.removeItem('reduced-motion');
+  storage.removeItem('font-scale');
+  storage.removeItem('high-contrast');
+  storage.removeItem('large-hit-areas');
+  storage.removeItem('pong-spin');
+  storage.removeItem('allow-network');
+  storage.removeItem('haptics');
+  storage.removeItem('power-plan');
+  storage.removeItem('cpu-governor');
+  storage.removeItem('display-sleep');
 }
 
 export async function exportSettings() {
@@ -151,6 +224,9 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    powerPlan,
+    cpuGovernor,
+    displaySleep,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -162,6 +238,9 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getPowerPlan(),
+    getCpuGovernor(),
+    getDisplaySleep(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -176,6 +255,9 @@ export async function exportSettings() {
     allowNetwork,
     haptics,
     theme,
+    powerPlan,
+    cpuGovernor,
+    displaySleep,
   });
 }
 
@@ -200,6 +282,9 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    powerPlan,
+    cpuGovernor,
+    displaySleep,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -212,6 +297,9 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (powerPlan !== undefined) await setPowerPlan(powerPlan);
+  if (cpuGovernor !== undefined) await setCpuGovernor(cpuGovernor);
+  if (displaySleep !== undefined) await setDisplaySleep(displaySleep);
 }
 
 export const defaults = DEFAULT_SETTINGS;
