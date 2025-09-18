@@ -52,7 +52,18 @@ export class Desktop extends Component {
             showShortcutSelector: false,
             showWindowSwitcher: false,
             switcherWindows: [],
+            dragState: {
+                active: false,
+                originFocusId: null,
+                hoveredTaskbarId: null,
+                raisedWindowId: null,
+            },
+            prefersReducedMotion: false,
         }
+        this.taskbarHoverTimeout = null;
+        this.liveRegionTimeout = null;
+        this.reducedMotionQuery = null;
+        this.taskbarHoverDelay = 350;
     }
 
     componentDidMount() {
@@ -89,6 +100,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        this.setupReducedMotionPreference();
     }
 
     componentWillUnmount() {
@@ -96,6 +108,19 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
+        this.clearTaskbarHoverTimer();
+        if (this.liveRegionTimeout) {
+            clearTimeout(this.liveRegionTimeout);
+            this.liveRegionTimeout = null;
+        }
+        if (this.reducedMotionQuery) {
+            if (typeof this.reducedMotionQuery.removeEventListener === 'function') {
+                this.reducedMotionQuery.removeEventListener('change', this.handleReducedMotionChange);
+            } else if (typeof this.reducedMotionQuery.removeListener === 'function') {
+                this.reducedMotionQuery.removeListener(this.handleReducedMotionChange);
+            }
+            this.reducedMotionQuery = null;
+        }
     }
 
     checkForNewFolders = () => {
@@ -144,6 +169,151 @@ export class Desktop extends Component {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
         document.removeEventListener('keydown', this.handleContextKey);
+    }
+
+    setupReducedMotionPreference = () => {
+        if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+        const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+        this.reducedMotionQuery = query;
+        this.setState({ prefersReducedMotion: query.matches });
+        if (typeof query.addEventListener === 'function') {
+            query.addEventListener('change', this.handleReducedMotionChange);
+        } else if (typeof query.addListener === 'function') {
+            query.addListener(this.handleReducedMotionChange);
+        }
+    }
+
+    handleReducedMotionChange = (event) => {
+        const { active, originFocusId, raisedWindowId } = this.state.dragState;
+        const shouldRestoreFocus = event.matches && active && originFocusId && raisedWindowId && originFocusId !== raisedWindowId;
+        this.setState(prev => ({
+            prefersReducedMotion: event.matches,
+            dragState: shouldRestoreFocus
+                ? { ...prev.dragState, raisedWindowId: null }
+                : prev.dragState,
+        }), () => {
+            if (shouldRestoreFocus && originFocusId) {
+                this.focus(originFocusId);
+            }
+        });
+        if (event.matches) {
+            this.clearTaskbarHoverTimer();
+        }
+    }
+
+    clearTaskbarHoverTimer = () => {
+        if (this.taskbarHoverTimeout) {
+            clearTimeout(this.taskbarHoverTimeout);
+            this.taskbarHoverTimeout = null;
+        }
+    }
+
+    handleDesktopDragStart = () => {
+        const origin = this.getFocusedWindowId();
+        this.setState(prev => ({
+            dragState: {
+                ...prev.dragState,
+                active: true,
+                originFocusId: origin,
+                hoveredTaskbarId: null,
+                raisedWindowId: null,
+            }
+        }));
+    }
+
+    handleDesktopDragEnd = () => {
+        this.clearTaskbarHoverTimer();
+        this.setState({
+            dragState: {
+                active: false,
+                originFocusId: null,
+                hoveredTaskbarId: null,
+                raisedWindowId: null,
+            }
+        });
+    }
+
+    handleTaskbarDragHover = (appId, event) => {
+        if (event) event.preventDefault();
+        if (!this.state.dragState.active || this.state.prefersReducedMotion) return;
+        if (this.state.dragState.hoveredTaskbarId === appId) return;
+        this.clearTaskbarHoverTimer();
+        this.setState(prev => ({
+            dragState: { ...prev.dragState, hoveredTaskbarId: appId }
+        }));
+        const targetId = appId;
+        this.taskbarHoverTimeout = window.setTimeout(() => {
+            this.raiseWindowForDrag(targetId);
+        }, this.taskbarHoverDelay);
+    }
+
+    handleTaskbarDragLeave = (appId, event) => {
+        if (!this.state.dragState.active) return;
+        if (this.state.dragState.hoveredTaskbarId !== appId) {
+            return;
+        }
+        const { originFocusId, raisedWindowId } = this.state.dragState;
+        const related = event?.relatedTarget || null;
+        const raisedElement = raisedWindowId ? document.getElementById(raisedWindowId) : null;
+        const movingToRaisedWindow = !!(raisedElement && typeof Node !== 'undefined' && related instanceof Node && raisedElement.contains(related));
+        const shouldRestoreFocus = originFocusId && raisedWindowId === appId && originFocusId !== appId && !movingToRaisedWindow;
+
+        this.clearTaskbarHoverTimer();
+        this.setState(prev => ({
+            dragState: {
+                ...prev.dragState,
+                hoveredTaskbarId: null,
+                raisedWindowId: shouldRestoreFocus ? null : prev.dragState.raisedWindowId,
+            }
+        }));
+
+        if (shouldRestoreFocus) {
+            this.focus(originFocusId);
+        }
+    }
+
+    raiseWindowForDrag = (appId) => {
+        if (!this.state.dragState.active) return;
+        if (this.state.dragState.hoveredTaskbarId !== appId) return;
+        if (this.state.closed_windows[appId] !== false) return;
+
+        if (this.state.minimized_windows[appId]) {
+            const node = document.getElementById(appId);
+            if (node) {
+                const x = node.style.getPropertyValue('--window-transform-x');
+                const y = node.style.getPropertyValue('--window-transform-y');
+                node.style.transform = `translate(${x},${y}) scale(1)`;
+            }
+            this.setState(prev => ({
+                minimized_windows: { ...prev.minimized_windows, [appId]: false }
+            }), this.saveSession);
+        }
+
+        this.focus(appId);
+        this.saveSession();
+        this.announceWindowRaised(appId);
+        this.setState(prev => ({
+            dragState: { ...prev.dragState, raisedWindowId: appId }
+        }));
+    }
+
+    announceWindowRaised = (appId) => {
+        const appMeta = apps.find(app => app.id === appId);
+        const title = appMeta?.title || appId;
+        this.updateLiveRegion(`${title} window raised for drop.`);
+    }
+
+    updateLiveRegion = (message) => {
+        if (!message) return;
+        const region = document.getElementById('live-region');
+        if (!region) return;
+        region.textContent = '';
+        if (this.liveRegionTimeout) {
+            clearTimeout(this.liveRegionTimeout);
+        }
+        this.liveRegionTimeout = window.setTimeout(() => {
+            region.textContent = message;
+        }, 50);
     }
 
     handleGlobalShortcut = (e) => {
@@ -444,6 +614,8 @@ export class Desktop extends Component {
                     openApp: this.openApp,
                     disabled: this.state.disabled_apps[app.id],
                     prefetch: app.screen?.prefetch,
+                    onDragStart: this.handleDesktopDragStart,
+                    onDragEnd: this.handleDesktopDragEnd,
                 }
 
                 appsJsx.push(
@@ -900,6 +1072,11 @@ export class Desktop extends Component {
                     focused_windows={this.state.focused_windows}
                     openApp={this.openApp}
                     minimize={this.hasMinimised}
+                    onDragHover={this.handleTaskbarDragHover}
+                    onDragLeave={this.handleTaskbarDragLeave}
+                    dragActive={this.state.dragState.active}
+                    dragRaisedWindowId={this.state.dragState.raisedWindowId}
+                    prefersReducedMotion={this.state.prefersReducedMotion}
                 />
 
                 {/* Desktop Apps */}
